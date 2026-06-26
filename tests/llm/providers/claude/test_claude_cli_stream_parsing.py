@@ -858,3 +858,54 @@ class TestMcpRetryInAskClaude:
 
         assert mock_execute.call_count == 1
         mock_sleep.assert_not_called()
+
+
+class TestStreamMcpGuard:
+    """Streaming path aborts on init-pending even with trailing thinking_tokens (#998)."""
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_aborts_on_pending_init(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [{"name": "mcp-workspace", "status": "pending"}],
+            }
+        )
+        think = json.dumps(
+            {"type": "system", "subtype": "thinking_tokens", "session_id": "s"}
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "leak"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, think, assistant])
+
+        events: list[StreamEvent] = []
+        with pytest.raises(McpServersUnavailableError) as exc:
+            for event in ask_claude_code_cli_stream("q"):
+                events.append(event)
+
+        assert "mcp-workspace=pending" in str(exc.value)
+        # Aborted before any assistant content was leaked to the consumer.
+        assert not any(e.get("type") == "text_delta" for e in events)

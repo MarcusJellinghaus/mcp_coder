@@ -162,7 +162,9 @@ def ask_claude_code_cli_stream(
                         f"runs blind. Stream log: {stream_file}"
                     )
                     logger.error(mcp_error_msg)
-                    raise McpServersUnavailableError(mcp_error_msg)
+                    raise McpServersUnavailableError(
+                        mcp_error_msg, unavailable_servers=unavailable_servers
+                    )
             yield from _map_stream_message_to_event(msg)
 
     cmd_result: CommandResult = stream.result
