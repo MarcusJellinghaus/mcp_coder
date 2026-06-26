@@ -259,6 +259,39 @@ class TestClosedIssueIntegration:
         cached_issues = {"owner/repo": {414: issue_414}}
         eligible_issues: list[tuple[str, IssueData]] = []
 
+        # Closed issue whose folder still exists -> inactive, marked for deletion.
+        # The status row reads this assessment (is_open=False drives the prefix).
+        assessments = {
+            s["folder"]: SessionAssessment(
+                folder=s["folder"],
+                signals=DetectionSignals(
+                    folder_exists=True,
+                    title_match=False,
+                    cmdline_match=False,
+                    pid_alive=False,
+                    found_pid=None,
+                    age_seconds=0.0,
+                    within_grace=False,
+                    directory_empty=False,
+                ),
+                verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH),
+                issue_state=IssueState(
+                    is_open=False,
+                    is_stale=False,
+                    is_blocked=False,
+                    is_unassigned=False,
+                    is_eligible=False,
+                ),
+                transition=Transition(flipped_to_inactive=False),
+                decision=Decision(
+                    action=SessionAction.DELETE, reason="closed", destructive=True
+                ),
+                pid_needs_refresh=False,
+                found_pid=None,
+            )
+            for s in sessions
+        }
+
         with (
             patch("builtins.print") as mock_print,
             patch("pathlib.Path.exists", return_value=True),
@@ -268,7 +301,7 @@ class TestClosedIssueIntegration:
                 sessions=sessions,
                 eligible_issues=eligible_issues,
                 workspace_base=str(tmp_path),
-                active_set={s["folder"]: False for s in sessions},
+                assessments=assessments,
                 cached_issues_by_repo=cached_issues,
             )
 
@@ -513,6 +546,38 @@ class TestClosedIssueIntegration:
 
         # Step 2: Test status display
         eligible_issues: list[tuple[str, IssueData]] = []
+        # The display reads a closed-issue assessment (is_open=False) so the row
+        # renders the "(Closed)" prefix.
+        display_assessments = {
+            s["folder"]: SessionAssessment(
+                folder=s["folder"],
+                signals=DetectionSignals(
+                    folder_exists=True,
+                    title_match=False,
+                    cmdline_match=False,
+                    pid_alive=False,
+                    found_pid=None,
+                    age_seconds=0.0,
+                    within_grace=False,
+                    directory_empty=False,
+                ),
+                verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH),
+                issue_state=IssueState(
+                    is_open=False,
+                    is_stale=False,
+                    is_blocked=False,
+                    is_unassigned=False,
+                    is_eligible=False,
+                ),
+                transition=Transition(flipped_to_inactive=False),
+                decision=Decision(
+                    action=SessionAction.DELETE, reason="closed", destructive=True
+                ),
+                pid_needs_refresh=False,
+                found_pid=None,
+            )
+            for s in sessions
+        }
         with (
             patch("builtins.print") as mock_print,
             patch("pathlib.Path.exists", return_value=True),
@@ -522,7 +587,7 @@ class TestClosedIssueIntegration:
                 sessions=sessions,
                 eligible_issues=eligible_issues,
                 workspace_base=str(tmp_path),
-                active_set={s["folder"]: False for s in sessions},
+                assessments=display_assessments,
                 cached_issues_by_repo=cached_issues,
             )
 

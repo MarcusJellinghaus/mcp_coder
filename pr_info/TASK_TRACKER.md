@@ -89,9 +89,9 @@ Read-only `build_assessments` (snapshot once, gather+assess each session) and ap
 
 `display_status_table` consumes `assessments` (+ call site); enriched `VSCode`/`Next Action` columns via shared serializer; retire `active_set` shim (keep wrapper); confirm write-free. See [step_8.md](./steps/step_8.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: Audit trail + transition/decision logging
 

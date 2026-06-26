@@ -710,12 +710,9 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
 
     # Build the assessment for every session once at command entry. Status is
     # WRITE-FREE: it never calls apply_assessments, so no PID refresh or
-    # last_active advance happens here. Project verdicts onto the legacy
-    # active_set shape for the not-yet-migrated display consumer.
+    # last_active advance happens here. The display consumes the assessments
+    # directly now, so the legacy active_set shim is no longer built here.
     assessments = build_assessments(sessions, cached_issues_by_repo)
-    active_set = {
-        folder: assessment.verdict.active for folder, assessment in assessments.items()
-    }
 
     # Build eligible issues list and issues_without_branch set.
     # Pass the pre-fetched cached_issues_by_repo so build_eligible_issues_with_branch_check
@@ -730,7 +727,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         sessions=sessions,
         eligible_issues=eligible_issues,
         workspace_base=vscodeclaude_config["workspace_base"],
-        active_set=active_set,
+        assessments=assessments,
         repo_filter=args.repo,
         cached_issues_by_repo=cached_issues_by_repo,
         issues_without_branch=issues_without_branch,

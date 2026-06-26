@@ -213,6 +213,6 @@ class TestBuildOnceInvariant:
         assert result == 0
         assert build_mock.call_count == 1
         apply_mock.assert_not_called()
-        # The projected active_set was threaded through to the display function
-        assert "active_set" in captured
-        assert set(captured["active_set"].keys()) == {s["folder"] for s in sessions}
+        # The prebuilt assessments were threaded through to the display function
+        assert "assessments" in captured
+        assert set(captured["assessments"].keys()) == {s["folder"] for s in sessions}
