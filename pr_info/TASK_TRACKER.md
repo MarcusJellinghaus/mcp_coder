@@ -97,9 +97,9 @@ Read-only `build_assessments` (snapshot once, gather+assess each session) and ap
 
 Create `audit.py` (global file, 50-run ring buffer, atomic write); `apply_assessments` writes one run-block when `write_audit=True`; decision/transition log lines. See [step_9.md](./steps/step_9.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 10: `--explain` flag (on-demand transparency)
 

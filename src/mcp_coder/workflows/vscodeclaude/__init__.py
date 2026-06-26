@@ -250,6 +250,13 @@ from .assessment import (
     decide,
 )
 
+# Audit trail
+from .audit import (
+    append_run,
+    assessment_to_record,
+    get_audit_file_path,
+)
+
 # Cleanup
 from .cleanup import (
     cleanup_stale_sessions,
@@ -389,6 +396,10 @@ __all__ = [
     "assess_session",
     "build_assessments",
     "apply_assessments",
+    # Audit trail
+    "get_audit_file_path",
+    "append_run",
+    "assessment_to_record",
     # Detection (Windows / IO boundary)
     "DetectionSnapshot",
     "capture_detection_snapshot",

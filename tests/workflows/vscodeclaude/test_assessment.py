@@ -781,3 +781,235 @@ class TestApplyAssessments:
         assert saved["last_active_rule"] == "no_match"
         mock_ct.assert_not_called()
         mock_save.assert_called_once()
+
+
+_AUDIT_PATH = "mcp_coder.workflows.vscodeclaude.audit.get_audit_file_path"
+
+
+class TestApplyAssessmentsAudit:
+    """apply_assessments writes ONE run-block per invocation when write_audit=True."""
+
+    @patch(_CREATE_TIME)
+    @patch(_SAVE)
+    @patch(_LOAD)
+    def test_apply_writes_one_record_per_session(
+        self,
+        mock_load: Mock,
+        mock_save: Mock,
+        mock_ct: Mock,
+        tmp_path: object,
+        monkeypatch: object,
+    ) -> None:
+        """write_audit=True appends one run-block with one record per session."""
+        import json as _json
+        from pathlib import Path as _Path
+
+        audit_file = _Path(str(tmp_path)) / "vscodeclaude_audit.json"
+        monkeypatch.setattr(_AUDIT_PATH, lambda: audit_file)  # type: ignore[attr-defined]
+
+        session_a = _session_at("C:/work/a", 1)
+        session_b = _session_at("C:/work/b", 38)
+        mock_load.return_value = {
+            "sessions": [session_a, session_b],
+            "last_updated": "",
+        }
+
+        active = assess_session(
+            folder="C:/work/a",
+            signals=_signals(title_match=True),
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+        # #38-shaped: inactive + stale + clean -> destructive DELETE.
+        deleting = assess_session(
+            folder="C:/work/b",
+            signals=_signals(folder_exists=True),
+            issue_facts=_issue_facts(
+                is_stale=True, stale_target="status-05:bot-pickup"
+            ),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+
+        apply_assessments(
+            {"C:/work/a": active, "C:/work/b": deleting}, write_audit=True
+        )
+
+        data = _json.loads(audit_file.read_text(encoding="utf-8"))
+        assert len(data["runs"]) == 1
+        records = data["runs"][0]["records"]
+        assert len(records) == 2
+        # The #38-shaped record is greppable as a one-glance post-mortem.
+        deletes = [r for r in records if r["decision"]["action"] == "delete"]
+        assert len(deletes) == 1
+        assert deletes[0]["verdict"]["rule"] == "no_match"
+        assert deletes[0]["decision"]["destructive"] is True
+        assert deletes[0]["issue_number"] == 38
+
+    @patch(_CREATE_TIME)
+    @patch(_SAVE)
+    @patch(_LOAD)
+    def test_status_path_writes_no_audit_record(
+        self,
+        mock_load: Mock,
+        mock_save: Mock,
+        mock_ct: Mock,
+        tmp_path: object,
+        monkeypatch: object,
+    ) -> None:
+        """write_audit=False (the status path never calls apply) leaves no file."""
+        from pathlib import Path as _Path
+
+        audit_file = _Path(str(tmp_path)) / "vscodeclaude_audit.json"
+        monkeypatch.setattr(_AUDIT_PATH, lambda: audit_file)  # type: ignore[attr-defined]
+
+        session = _session_at("C:/work/a", 1)
+        mock_load.return_value = {"sessions": [session], "last_updated": ""}
+
+        assessment = assess_session(
+            folder="C:/work/a",
+            signals=_signals(title_match=True),
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+
+        apply_assessments({"C:/work/a": assessment}, write_audit=False)
+
+        assert not audit_file.exists()
+
+    @patch(_CREATE_TIME)
+    @patch(_SAVE)
+    @patch(_LOAD)
+    def test_locked_folder_retry_recurs_across_runs(
+        self,
+        mock_load: Mock,
+        mock_save: Mock,
+        mock_ct: Mock,
+        tmp_path: object,
+        monkeypatch: object,
+    ) -> None:
+        """A still-stale session recurs as a delete record across consecutive runs."""
+        import json as _json
+        from pathlib import Path as _Path
+
+        audit_file = _Path(str(tmp_path)) / "vscodeclaude_audit.json"
+        monkeypatch.setattr(_AUDIT_PATH, lambda: audit_file)  # type: ignore[attr-defined]
+
+        session = _session_at("C:/work/b", 38)
+        mock_load.return_value = {"sessions": [session], "last_updated": ""}
+
+        deleting = assess_session(
+            folder="C:/work/b",
+            signals=_signals(folder_exists=True),
+            issue_facts=_issue_facts(
+                is_stale=True, stale_target="status-05:bot-pickup"
+            ),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+
+        apply_assessments({"C:/work/b": deleting}, write_audit=True)
+        apply_assessments({"C:/work/b": deleting}, write_audit=True)
+
+        data = _json.loads(audit_file.read_text(encoding="utf-8"))
+        assert len(data["runs"]) == 2
+        for run in data["runs"]:
+            assert run["records"][0]["decision"]["action"] == "delete"
+            assert run["records"][0]["issue_number"] == 38
+
+
+class TestBuildAssessmentsLogging:
+    """Decision + transition logging emitted by build_assessments."""
+
+    @patch(_SAVE)
+    @patch(_GIT_STATUS, return_value="Clean")
+    @patch(_GATHER)
+    @patch(_SNAP)
+    @patch(_USERNAME, return_value="testuser")
+    @patch(_IGNORE, return_value=set())
+    def test_transition_log_on_true_flip(
+        self,
+        mock_ignore: object,
+        mock_username: object,
+        mock_snap: object,
+        mock_gather: Mock,
+        mock_git: object,
+        mock_save: object,
+        caplog: object,
+    ) -> None:
+        """A prior-active session now inactive logs the active->inactive flip."""
+        import logging as _logging
+
+        mock_gather.return_value = _signals(folder_exists=True)  # all miss -> inactive
+        session = _session_at("C:/work/a", 1)
+        session["last_active"] = True
+        session["last_active_rule"] = "title"
+
+        with caplog.at_level(_logging.INFO):  # type: ignore[attr-defined]
+            build_assessments([session])
+
+        assert "flipped active->inactive" in caplog.text  # type: ignore[attr-defined]
+        assert "was rule=title" in caplog.text  # type: ignore[attr-defined]
+
+    @patch(_SAVE)
+    @patch(_GIT_STATUS, return_value="Clean")
+    @patch(_GATHER)
+    @patch(_SNAP)
+    @patch(_USERNAME, return_value="testuser")
+    @patch(_IGNORE, return_value=set())
+    def test_no_transition_log_on_none_prior(
+        self,
+        mock_ignore: object,
+        mock_username: object,
+        mock_snap: object,
+        mock_gather: Mock,
+        mock_git: object,
+        mock_save: object,
+        caplog: object,
+    ) -> None:
+        """A None prior baseline is a blind spot, never logged as a flip."""
+        import logging as _logging
+
+        mock_gather.return_value = _signals(folder_exists=True)  # all miss -> inactive
+        session = _session_at("C:/work/a", 1)
+        session["last_active"] = None
+
+        with caplog.at_level(_logging.INFO):  # type: ignore[attr-defined]
+            build_assessments([session])
+
+        assert "flipped active->inactive" not in caplog.text  # type: ignore[attr-defined]
+
+    @patch(_SAVE)
+    @patch(_GIT_STATUS, return_value="Clean")
+    @patch(_GATHER)
+    @patch(_SNAP)
+    @patch(_USERNAME, return_value="testuser")
+    @patch(_IGNORE, return_value=set())
+    def test_decision_line_logged(
+        self,
+        mock_ignore: object,
+        mock_username: object,
+        mock_snap: object,
+        mock_gather: Mock,
+        mock_git: object,
+        mock_save: object,
+        caplog: object,
+    ) -> None:
+        """Each assessed session logs a one-glance verdict/action decision line."""
+        import logging as _logging
+
+        mock_gather.return_value = _signals(title_match=True)
+        session = _session_at("C:/work/a", 1)
+
+        with caplog.at_level(_logging.INFO):  # type: ignore[attr-defined]
+            build_assessments([session])
+
+        assert "assess #1" in caplog.text  # type: ignore[attr-defined]
+        assert "rule=title" in caplog.text  # type: ignore[attr-defined]
+        assert "action=keep_active" in caplog.text  # type: ignore[attr-defined]

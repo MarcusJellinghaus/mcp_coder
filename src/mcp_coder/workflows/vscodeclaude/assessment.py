@@ -15,6 +15,7 @@ pure issue-state layer classifies issues identically to today's cleanup path.
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from ...mcp_workspace_github import (
     IssueData,
@@ -22,6 +23,7 @@ from ...mcp_workspace_github import (
     RepoIdentifier,
     get_all_cached_issues,
 )
+from .audit import append_run, assessment_to_record
 from .config import get_github_username
 from .detection import capture_detection_snapshot, gather_signals
 from .issues import (
@@ -281,7 +283,7 @@ def build_assessments(
 
         git_status = get_folder_git_status(Path(session["folder"]))
 
-        assessments[session["folder"]] = assess_session(
+        assessment = assess_session(
             folder=session["folder"],
             signals=signals,
             issue_facts=issue_facts,
@@ -289,7 +291,51 @@ def build_assessments(
             directory_empty=signals.directory_empty,
             prior_last_active=session.get("last_active"),
         )
+        assessments[session["folder"]] = assessment
+        _log_assessment(session, signals, assessment)
     return assessments
+
+
+def _log_assessment(
+    session: VSCodeClaudeSession,
+    signals: DetectionSignals,
+    assessment: SessionAssessment,
+) -> None:
+    """Emit the per-session decision line + per-signal debug + transition log.
+
+    The one-glance post-mortem (#38): a single ``logger.info`` carries the winning
+    rule, the resolved action, the destructive bit, and the reason; the per-signal
+    breakdown drops to ``logger.debug``. A true active->inactive flip is logged
+    once (a ``None`` prior baseline is a blind spot, never a flip).
+    """
+    logger.info(
+        "assess #%s: verdict=%s rule=%s -> action=%s destructive=%s reason=%s",
+        session["issue_number"],
+        assessment.verdict.active,
+        assessment.verdict.rule.value,
+        assessment.decision.action.value,
+        assessment.decision.destructive,
+        assessment.decision.reason,
+    )
+    logger.debug(
+        "assess #%s signals: folder_exists=%s title=%s cmdline=%s pid_alive=%s "
+        "found_pid=%s age=%.0fs within_grace=%s directory_empty=%s",
+        session["issue_number"],
+        signals.folder_exists,
+        signals.title_match,
+        signals.cmdline_match,
+        signals.pid_alive,
+        signals.found_pid,
+        signals.age_seconds,
+        signals.within_grace,
+        signals.directory_empty,
+    )
+    if assessment.transition.flipped_to_inactive:
+        logger.info(
+            "Session #%s flipped active->inactive (was rule=%s)",
+            session["issue_number"],
+            session.get("last_active_rule"),
+        )
 
 
 def build_active_session_set(
@@ -315,20 +361,24 @@ def build_active_session_set(
 def apply_assessments(
     assessments: dict[str, SessionAssessment],
     *,
-    write_audit: bool,  # pylint: disable=unused-argument  # reserved for Step 9 audit
+    write_audit: bool,
 ) -> None:
-    """Apply-only: refresh stale PIDs and advance the ``last_active`` baseline.
+    """Apply-only: refresh stale PIDs, advance ``last_active``, write the audit.
 
     The single mutation point of the pipeline. Loads the session store once,
     applies each assessment's PID refresh and ``last_active``/``last_active_rule``
     advance, then writes the store back in ONE atomic save (no double-write).
-    Read-only consumers (status) must NOT call this.
+    When ``write_audit`` is True, also appends ONE audit run-block (one record per
+    assessed session) — a run is one command invocation across all repos, so the
+    status path (which never calls apply) leaves no audit record. Read-only
+    consumers (status) must NOT call this.
 
     Args:
         assessments: Folder -> assessment map from :func:`build_assessments`.
-        write_audit: Reserved for the Step 9 audit trail; currently unused.
+        write_audit: When True, append one run-block to the audit trail.
     """
     store = load_sessions()
+    audit_records: list[dict[str, Any]] = []
     for session in store["sessions"]:
         assessment = assessments.get(session["folder"])
         if assessment is None:
@@ -344,7 +394,11 @@ def apply_assessments(
             )
         session["last_active"] = assessment.verdict.active
         session["last_active_rule"] = assessment.verdict.rule.value
+        if write_audit:
+            audit_records.append(assessment_to_record(assessment, session))
     save_sessions(store)
+    if write_audit:
+        append_run(audit_records)
 
 
 def _fetch_issue_individually(
