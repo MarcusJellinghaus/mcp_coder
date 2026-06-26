@@ -1,13 +1,28 @@
-"""Pure assessment layers for vscodeclaude session state.
+"""Assessment layers for vscodeclaude session state.
 
 This module is the ``assess`` stage of the detect -> assess -> decide ->
-render/apply pipeline. Every function here is PURE: it imports only ``types``
-(no ``sessions``/``psutil``/``win32``), so the rule matrix is unit-testable
-without Windows.
+render/apply pipeline. The layer functions (:func:`assess_liveness`,
+:func:`assess_issue_state`, :func:`assess_transition`, :func:`decide`,
+:func:`assess_session`) are PURE: they import only ``types`` (no
+``sessions``/``psutil``/``win32``), so the rule matrix is unit-testable without
+Windows.
+
+The IssueFacts producer (:func:`_issue_facts`) is the one issue-data IO boundary
+here: it reuses the cached-issue eligibility logic of ``get_stale_sessions`` so the
+pure issue-state layer classifies issues identically to today's cleanup path.
 """
 
+import logging
 from dataclasses import dataclass
 
+from ...mcp_workspace_github import (
+    IssueData,
+    IssueManager,
+    RepoIdentifier,
+    get_all_cached_issues,
+)
+from .issues import get_matching_ignore_label, is_status_eligible_for_session
+from .status import is_session_stale
 from .types import (
     Decision,
     DetectionSignals,
@@ -17,7 +32,10 @@ from .types import (
     SessionAction,
     SessionAssessment,
     Transition,
+    VSCodeClaudeSession,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -190,4 +208,122 @@ def assess_session(
         decision=decision,
         pid_needs_refresh=pid_needs_refresh,
         found_pid=signals.found_pid,
+    )
+
+
+def _fetch_issue_individually(
+    repo_full_name: str,
+    issue_number: int,
+) -> dict[int, IssueData] | None:
+    """Individual-issue API fallback when a session issue is missing from cache.
+
+    Mirrors ``get_stale_sessions``' fallback (cleanup.py): fetches through the
+    caching layer with ``additional_issues=[issue_number]`` so the missing issue
+    is populated without a double API round-trip. Returns the fetched issues
+    keyed by number, or ``None`` when the fetch fails.
+    """
+    try:
+        repo_url = f"https://github.com/{repo_full_name}"
+        issue_manager = IssueManager(repo_url=repo_url)
+        fetched = get_all_cached_issues(
+            RepoIdentifier.from_full_name(repo_full_name),
+            issue_manager=issue_manager,
+            additional_issues=[issue_number],
+        )
+        return {issue["number"]: issue for issue in fetched}
+    except (
+        Exception
+    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        logger.debug(
+            "Failed to fetch issue #%d individually; skipping eligibility checks",
+            issue_number,
+        )
+        return None
+
+
+def _issue_facts(
+    session: VSCodeClaudeSession,
+    cached_issue: IssueData | None,
+    *,
+    github_username: str | None,
+    ignore_labels: set[str],
+    cached_for_stale_check: dict[int, IssueData] | None,
+) -> IssueFacts:
+    """Derive frozen :class:`IssueFacts` from cached issue data.
+
+    Replicates the eligibility logic of ``get_stale_sessions`` (cleanup.py):
+    closed/blocked/ineligible/unassigned, plus ``is_session_stale`` — the inputs
+    :func:`assess_issue_state` classifies. Reuses the existing helpers rather than
+    re-implementing them.
+
+    When ``cached_issue`` is ``None`` (the issue is missing from the cache) the
+    individual-issue API fallback is invoked to populate it. Staleness is computed
+    ONLY when the issue is not closed/blocked/unassigned/ineligible — calling
+    ``is_session_stale`` on such an issue triggers a spurious staleness warning the
+    current code explicitly guards against (cleanup.py short-circuit).
+    """
+    issue = cached_issue
+    stale_cache = cached_for_stale_check
+
+    # Individual-issue API fallback when the issue is missing from the cache.
+    if issue is None:
+        fetched_dict = _fetch_issue_individually(
+            session["repo"], session["issue_number"]
+        )
+        if fetched_dict is not None:
+            issue = fetched_dict.get(session["issue_number"])
+            if issue is not None:
+                stale_cache = fetched_dict
+
+    is_closed = False
+    is_blocked = False
+    is_ineligible = False
+    is_unassigned = False
+    status_labels: list[str] = []
+
+    if issue is not None:
+        # Issue is closed?
+        is_closed = issue["state"] == "closed"
+        # Has a blocked/ignore label?
+        if get_matching_ignore_label(issue["labels"], ignore_labels):
+            is_blocked = True
+        # Current status eligible for a session?
+        status_labels = [lbl for lbl in issue["labels"] if lbl.startswith("status-")]
+        if status_labels:
+            current_status = status_labels[0]
+            is_ineligible = not is_status_eligible_for_session(current_status)
+            # Assignment only matters for open, eligible statuses — if the issue
+            # is closed, blocked, or ineligible, assignment is irrelevant.
+            if (
+                github_username is not None
+                and not is_closed
+                and not is_blocked
+                and not is_ineligible
+                and is_status_eligible_for_session(current_status)
+            ):
+                is_unassigned = github_username not in issue["assignees"]
+
+    # Short-circuit: compute staleness ONLY when the issue is otherwise eligible.
+    # The ``and``-chain stops before ``is_session_stale`` for closed/blocked/
+    # unassigned/ineligible issues, preserving the cleanup.py guard.
+    is_stale = (
+        not is_closed
+        and not is_blocked
+        and not is_unassigned
+        and not is_ineligible
+        and is_session_stale(session, cached_issues=stale_cache)
+    )
+
+    # Stale target for the reason string, derived exactly as cleanup.py does.
+    stale_target: str | None = None
+    if stale_cache is not None and status_labels:
+        stale_target = status_labels[0]
+
+    return IssueFacts(
+        is_closed=is_closed,
+        is_stale=is_stale,
+        is_blocked=is_blocked,
+        is_unassigned=is_unassigned,
+        is_ineligible=is_ineligible,
+        stale_target=stale_target,
     )

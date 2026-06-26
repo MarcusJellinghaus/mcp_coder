@@ -57,9 +57,9 @@ Create `detection.py` with `DetectionSnapshot`, `capture_detection_snapshot` (al
 
 Extract `get_stale_sessions` eligibility block into `_issue_facts` (preserve staleness short-circuit + individual-issue API fallback), producing frozen `IssueFacts`. See [step_5.md](./steps/step_5.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5b: `build_assessments` + `apply_assessments` orchestration
 
