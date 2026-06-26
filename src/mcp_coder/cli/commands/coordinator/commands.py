@@ -549,9 +549,12 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 dry_run=True,
             )
 
-        # Step 2: Restart closed sessions (pass cache for staleness checks)
+        # Step 2: Restart closed sessions (pass cache for staleness checks).
+        # Restart now consumes the prebuilt assessments directly (verdict +
+        # decision); the active_set shim survives only for the launch-capacity
+        # message and the not-yet-migrated status table (Step 8).
         restarted = restart_closed_sessions(
-            active_set=active_set, cached_issues_by_repo=cached_issues_by_repo
+            assessments=assessments, cached_issues_by_repo=cached_issues_by_repo
         )
         for session in restarted:
             repo_short = session["repo"].split("/")[-1]
@@ -576,9 +579,11 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
 
         # Step 4: Process each repository
         # current_count tracks active+restarted+newly-launched sessions across
-        # the per-repo loop. active_set records restarted sessions as inactive
+        # the per-repo loop. The assessments record restarted sessions as inactive
         # (their snapshot was taken before restart), so add len(restarted).
-        current_count = sum(active_set.values()) + len(restarted)
+        current_count = sum(1 for a in assessments.values() if a.verdict.active) + len(
+            restarted
+        )
         skip_github_install = getattr(args, "no_install_from_github", False)
         total_started: List[VSCodeClaudeSession] = []
         for repo_name in repo_names:

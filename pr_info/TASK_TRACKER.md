@@ -81,9 +81,9 @@ Read-only `build_assessments` (snapshot once, gather+assess each session) and ap
 
 `restart_closed_sessions` consumes `assessments` (+ call site); branch on verdict/decision (KEEP_ACTIVE/INVESTIGATE_ZOMBIE skip, REMOVE_MISSING, RESTART); branch skip-reasons stay local. See [step_7.md](./steps/step_7.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Status migration (enriched column, write-free)
 

@@ -11,6 +11,51 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
     BranchPrepResult,
     restart_closed_sessions,
 )
+from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
+    DetectionSignals,
+    IssueState,
+    LivenessRule,
+    LivenessVerdict,
+    SessionAction,
+    SessionAssessment,
+    Transition,
+)
+
+
+def _make_assessment(
+    folder: str,
+    *,
+    active: bool = False,
+    action: SessionAction = SessionAction.RESTART,
+) -> SessionAssessment:
+    """Build a minimal RESTART-candidate assessment for restart consumer tests."""
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=DetectionSignals(
+            folder_exists=True,
+            title_match=active,
+            cmdline_match=False,
+            pid_alive=False,
+            found_pid=None,
+            age_seconds=0.0,
+            within_grace=False,
+            directory_empty=False,
+        ),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=action, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
 
 
 class TestRestartClosedSessionsBranchHandling:
@@ -117,7 +162,7 @@ class TestRestartClosedSessionsBranchHandling:
         }
 
         restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -199,7 +244,9 @@ class TestRestartClosedSessionsBranchHandling:
 
         with caplog.at_level(logging.WARNING):
             result = restart_closed_sessions(
-                active_set={str(working_folder): False},
+                assessments={
+                    str(working_folder): _make_assessment(str(working_folder))
+                },
                 cached_issues_by_repo=cached_issues,
             )
 
@@ -280,7 +327,9 @@ class TestRestartClosedSessionsBranchHandling:
 
         with caplog.at_level(logging.WARNING):
             result = restart_closed_sessions(
-                active_set={str(working_folder): False},
+                assessments={
+                    str(working_folder): _make_assessment(str(working_folder))
+                },
                 cached_issues_by_repo=cached_issues,
             )
 
@@ -405,7 +454,7 @@ class TestRestartClosedSessionsBranchHandling:
         }
 
         result = restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -470,7 +519,9 @@ class TestRestartClosedSessionsBranchHandling:
 
         with caplog.at_level(logging.WARNING):
             result = restart_closed_sessions(
-                active_set={str(working_folder): False},
+                assessments={
+                    str(working_folder): _make_assessment(str(working_folder))
+                },
                 cached_issues_by_repo=cached_issues,
             )
 

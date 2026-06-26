@@ -19,9 +19,56 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
 )
 from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
 from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
+    DetectionSignals,
+    IssueState,
+    LivenessRule,
+    LivenessVerdict,
     RepoVSCodeClaudeConfig,
+    SessionAction,
+    SessionAssessment,
+    Transition,
     VSCodeClaudeConfig,
 )
+
+
+def _make_assessment(
+    folder: str,
+    *,
+    active: bool = False,
+    action: SessionAction = SessionAction.RESTART,
+) -> SessionAssessment:
+    """Build a minimal :class:`SessionAssessment` for restart consumer tests.
+
+    Restart reads ``verdict.active`` and ``decision.action``; the remaining typed
+    sub-results are filled with neutral defaults.
+    """
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=DetectionSignals(
+            folder_exists=True,
+            title_match=active,
+            cmdline_match=False,
+            pid_alive=False,
+            found_pid=None,
+            age_seconds=0.0,
+            within_grace=False,
+            directory_empty=False,
+        ),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=action, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
 
 
 class TestSessionRestart:
@@ -284,7 +331,11 @@ class TestSessionRestart:
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        restarted = restart_closed_sessions(active_set={folder: False})
+        restarted = restart_closed_sessions(
+            assessments={
+                folder: _make_assessment(folder, action=SessionAction.REMOVE_MISSING)
+            }
+        )
 
         # No sessions restarted
         assert restarted == []
@@ -326,7 +377,9 @@ class TestSessionRestart:
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        restarted = restart_closed_sessions(active_set={str(working_folder): False})
+        restarted = restart_closed_sessions(
+            assessments={str(working_folder): _make_assessment(str(working_folder))}
+        )
 
         # No sessions restarted because repo not in config
         assert restarted == []
@@ -407,7 +460,7 @@ class TestSessionRestart:
         }
 
         restarted = restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -441,10 +494,54 @@ class TestSessionRestart:
         store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
         sessions_file.write_text(json.dumps(store))
 
-        restarted = restart_closed_sessions(active_set={folder: True})
+        restarted = restart_closed_sessions(
+            assessments={folder: _make_assessment(folder, active=True)}
+        )
 
         # No sessions restarted since vscode is running
         assert restarted == []
+
+    def test_restart_closed_sessions_skips_zombie(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: Any
+    ) -> None:
+        """Zombie (process alive, folder gone) is kept tracked, warned, not restarted."""
+        import logging
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        folder = str(tmp_path / "zombie")
+        session = {
+            "folder": folder,
+            "repo": "owner/repo",
+            "issue_number": 123,
+            "status": "status-07:code-review",
+            "vscode_pid": 1234,
+            "started_at": "2024-01-22T10:30:00Z",
+            "is_intervention": False,
+        }
+        store = {"sessions": [session], "last_updated": "2024-01-22T10:30:00Z"}
+        sessions_file.write_text(json.dumps(store))
+
+        with caplog.at_level(logging.WARNING):
+            restarted = restart_closed_sessions(
+                assessments={
+                    folder: _make_assessment(
+                        folder,
+                        active=True,
+                        action=SessionAction.INVESTIGATE_ZOMBIE,
+                    )
+                }
+            )
+
+        # Not restarted, warning logged, session retained.
+        assert restarted == []
+        assert "Zombie session for issue #123" in caplog.text
+        loaded = load_sessions()
+        assert len(loaded["sessions"]) == 1
 
     def test_handle_pr_created_issues_prints_url(
         self, capsys: pytest.CaptureFixture[str]
@@ -528,7 +625,7 @@ class TestSessionRestart:
         }
 
         result = restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -599,7 +696,7 @@ class TestSessionRestart:
         }
 
         restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -657,7 +754,7 @@ class TestSessionRestart:
         }
 
         result = restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -714,7 +811,7 @@ class TestSessionRestart:
         }
 
         result = restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -771,7 +868,7 @@ class TestSessionRestart:
         }
 
         result = restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -843,7 +940,7 @@ class TestSessionRestart:
         }
 
         result = restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -924,7 +1021,7 @@ class TestSessionRestart:
         }
 
         result = restart_closed_sessions(
-            active_set={str(working_folder): False},
+            assessments={str(working_folder): _make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 

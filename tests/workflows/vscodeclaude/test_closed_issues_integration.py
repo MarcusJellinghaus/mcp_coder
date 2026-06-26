@@ -10,7 +10,52 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
+    DetectionSignals,
+    IssueState,
+    LivenessRule,
+    LivenessVerdict,
+    SessionAction,
+    SessionAssessment,
+    Transition,
+    VSCodeClaudeSession,
+)
+
+
+def _make_assessment(
+    folder: str,
+    *,
+    active: bool = False,
+    action: SessionAction = SessionAction.RESTART,
+) -> SessionAssessment:
+    """Build a minimal RESTART-candidate assessment for restart consumer tests."""
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=DetectionSignals(
+            folder_exists=True,
+            title_match=active,
+            cmdline_match=False,
+            pid_alive=False,
+            found_pid=None,
+            age_seconds=0.0,
+            within_grace=False,
+            directory_empty=False,
+        ),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=action, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
 
 
 class TestClosedIssueIntegration:
@@ -74,7 +119,7 @@ class TestClosedIssueIntegration:
             "updated_at": "2025-12-31T08:00:00Z",
         }
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -98,7 +143,7 @@ class TestClosedIssueIntegration:
             mock_exists.return_value = True  # Folder exists
 
             # Call restart_closed_sessions
-            result = restart_closed_sessions(active_set=active_set)
+            result = restart_closed_sessions(assessments=assessments)
 
             # Verify closed issue was skipped in logs
             assert "Skipping closed issue #414" in caplog.text
@@ -338,7 +383,7 @@ class TestClosedIssueIntegration:
 
         cached_issues = {"owner/repo": {414: issue_414, 408: issue_408, 100: issue_100}}
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -362,7 +407,7 @@ class TestClosedIssueIntegration:
             mock_exists.return_value = True
 
             # Call restart_closed_sessions
-            _ = restart_closed_sessions(active_set=active_set)
+            _ = restart_closed_sessions(assessments=assessments)
 
             # Verify cache was built with all three issues
             assert 414 in cached_issues["owner/repo"]
@@ -435,7 +480,7 @@ class TestClosedIssueIntegration:
 
         cached_issues = {"owner/repo": {414: issue_414}}
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         # Step 1: Test restart_closed_sessions
         with (
@@ -459,7 +504,7 @@ class TestClosedIssueIntegration:
             mock_exists.return_value = True
 
             # Call restart
-            result = restart_closed_sessions(active_set=active_set)
+            result = restart_closed_sessions(assessments=assessments)
 
             # Verify issue #414 was not restarted
             assert len(result) == 0
