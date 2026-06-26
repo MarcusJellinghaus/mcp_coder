@@ -648,6 +648,11 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
         metavar="NAME",
         help="Filter to specific repository only",
     )
+    status_parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="Dump the full detection signals and decision per session (read-only)",
+    )
 
 
 def add_init_parser(subparsers: Any) -> None:

@@ -358,6 +358,28 @@ def build_active_session_set(
     }
 
 
+def render_explain(assessments: dict[str, SessionAssessment]) -> str:
+    """Render full per-session explanation blocks (on-demand transparency).
+
+    One block per session, produced by the shared
+    :meth:`SessionAssessment.to_explain` serializer (the same source feeding the
+    audit trail and the enriched VSCode column, so the three surfaces cannot
+    drift). Each block dumps the full ``DetectionSignals``, the winning liveness
+    rule, the issue-state, transition flip, and the decision/action.
+
+    Pure and READ-ONLY: it consumes the already-built assessments and performs no
+    writes — consistent with status being write-free. It must NOT trigger
+    :func:`apply_assessments`.
+
+    Args:
+        assessments: Folder -> assessment map from :func:`build_assessments`.
+
+    Returns:
+        Newline-separated explanation blocks (empty string when no sessions).
+    """
+    return "\n\n".join(assessment.to_explain() for assessment in assessments.values())
+
+
 def apply_assessments(
     assessments: dict[str, SessionAssessment],
     *,

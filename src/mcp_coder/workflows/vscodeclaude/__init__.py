@@ -248,6 +248,7 @@ from .assessment import (
     build_active_session_set,
     build_assessments,
     decide,
+    render_explain,
 )
 
 # Audit trail
@@ -396,6 +397,7 @@ __all__ = [
     "assess_session",
     "build_assessments",
     "apply_assessments",
+    "render_explain",
     # Audit trail
     "get_audit_file_path",
     "append_run",

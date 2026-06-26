@@ -105,9 +105,9 @@ Create `audit.py` (global file, 50-run ring buffer, atomic write); `apply_assess
 
 Add `--explain` (store_true) to vscodeclaude CLI; `render_explain` over already-built assessments via `to_explain()` (no writes); update `docs/coordinator-vscodeclaude.md` Options table. See [step_10.md](./steps/step_10.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
