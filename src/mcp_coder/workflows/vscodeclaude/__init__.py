@@ -237,13 +237,16 @@ PR CREATED (status-10:pr-created)
 ```
 """
 
-# Assessment (pure layers)
+# Assessment (pure layers + orchestration)
 from .assessment import (
     IssueFacts,
+    apply_assessments,
     assess_issue_state,
     assess_liveness,
     assess_session,
     assess_transition,
+    build_active_session_set,
+    build_assessments,
     decide,
 )
 
@@ -304,7 +307,6 @@ from .session_restart import (
 # Session management
 from .sessions import (
     add_session,
-    build_active_session_set,
     check_vscode_running,
     clear_vscode_process_cache,
     clear_vscode_window_cache,
@@ -378,13 +380,15 @@ __all__ = [
     "Transition",
     "Decision",
     "SessionAssessment",
-    # Assessment (pure layers)
+    # Assessment (pure layers + orchestration)
     "IssueFacts",
     "assess_liveness",
     "assess_issue_state",
     "assess_transition",
     "decide",
     "assess_session",
+    "build_assessments",
+    "apply_assessments",
     # Detection (Windows / IO boundary)
     "DetectionSnapshot",
     "capture_detection_snapshot",

@@ -2522,14 +2522,14 @@ class TestCompositionScenarios:
         ``build_active_session_set``) and ``cleanup_stale_sessions`` end-to-end
         against ``tmp_path``.
         """
+        from mcp_coder.workflows.vscodeclaude.assessment import (
+            build_active_session_set,
+        )
         from mcp_coder.workflows.vscodeclaude.helpers import (
             TO_BE_DELETED_FILENAME,
             load_to_be_deleted,
         )
-        from mcp_coder.workflows.vscodeclaude.sessions import (
-            build_active_session_set,
-            load_sessions,
-        )
+        from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
 
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(

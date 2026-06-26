@@ -30,7 +30,8 @@ from ....utils.user_config import (
 from ....workflows.vscodeclaude import (
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
-    build_active_session_set,
+    apply_assessments,
+    build_assessments,
     cleanup_stale_sessions,
     load_repo_vscodeclaude_config,
     load_sessions,
@@ -516,15 +517,21 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         store = load_sessions()
         sessions_list = store["sessions"]
 
-        # Build active-session snapshot once at command entry. Used by cleanup
-        # and restart so each session is checked exactly once per command.
-        active_set = build_active_session_set(sessions_list)
-
         # Build cached issues for all repos (used for staleness checks)
         # Pass sessions so closed session issues are included (mirrors status command)
         cached_issues_by_repo, _ = _build_cached_issues_by_repo(
             repo_names, sessions_list
         )
+
+        # Build the full assessment for every session once at command entry
+        # (read-only: snapshot taken once, no disk writes here). Cleanup and
+        # restart still consume the legacy active_set shape, so project the
+        # verdicts onto it until those consumers are migrated.
+        assessments = build_assessments(sessions_list, cached_issues_by_repo)
+        active_set = {
+            folder: assessment.verdict.active
+            for folder, assessment in assessments.items()
+        }
 
         # Step 1: Handle cleanup (BEFORE restart)
         # - Always runs: dry_run=True shows what would be cleaned, dry_run=False actually deletes
@@ -558,6 +565,11 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 session["status"],
                 session["vscode_pid"],
             )
+
+        # Apply the assessment (PID refresh + last_active advance) in one atomic
+        # write. This is the single mutation point of the pipeline; status never
+        # calls it (it is write-free).
+        apply_assessments(assessments, write_audit=True)
 
         # Step 3: Check repo list (already loaded above)
         if not repo_names:
@@ -681,10 +693,6 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     store = load_sessions()
     sessions = store["sessions"]
 
-    # Build active-session snapshot once at command entry. Each session is
-    # checked exactly once per status command via is_session_active.
-    active_set = build_active_session_set(sessions)
-
     # Get repo list for cache building
     config_data = load_config()
     repos_section = config_data.get("coordinator", {}).get("repos", {})
@@ -696,6 +704,15 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     # Build cached issues for staleness checks, including session issues
     # to ensure closed issues from existing sessions are properly detected
     cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names, sessions)
+
+    # Build the assessment for every session once at command entry. Status is
+    # WRITE-FREE: it never calls apply_assessments, so no PID refresh or
+    # last_active advance happens here. Project verdicts onto the legacy
+    # active_set shape for the not-yet-migrated display consumer.
+    assessments = build_assessments(sessions, cached_issues_by_repo)
+    active_set = {
+        folder: assessment.verdict.active for folder, assessment in assessments.items()
+    }
 
     # Build eligible issues list and issues_without_branch set.
     # Pass the pre-fetched cached_issues_by_repo so build_eligible_issues_with_branch_check

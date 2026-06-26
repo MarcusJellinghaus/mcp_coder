@@ -5,7 +5,7 @@ contract: title -> pid -> cmdline -> folder-existence. PID is a tie-breaker,
 not a gate.
 """
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.assessment import (
@@ -15,10 +15,12 @@ from mcp_coder.workflows.vscodeclaude.assessment import (
     _issue_facts as _produce_issue_facts,
 )
 from mcp_coder.workflows.vscodeclaude.assessment import (
+    apply_assessments,
     assess_issue_state,
     assess_liveness,
     assess_session,
     assess_transition,
+    build_assessments,
     decide,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
@@ -633,3 +635,149 @@ class TestIssueFacts:
         state = assess_issue_state(facts)
         assert state.is_open is True
         assert state.is_eligible is True
+
+
+_SNAP = "mcp_coder.workflows.vscodeclaude.assessment.capture_detection_snapshot"
+_GATHER = "mcp_coder.workflows.vscodeclaude.assessment.gather_signals"
+_GIT_STATUS = "mcp_coder.workflows.vscodeclaude.assessment.get_folder_git_status"
+_IGNORE = "mcp_coder.workflows.vscodeclaude.assessment.get_ignore_labels"
+_USERNAME = "mcp_coder.workflows.vscodeclaude.assessment.get_github_username"
+_LOAD = "mcp_coder.workflows.vscodeclaude.assessment.load_sessions"
+_SAVE = "mcp_coder.workflows.vscodeclaude.assessment.save_sessions"
+_CREATE_TIME = "mcp_coder.workflows.vscodeclaude.assessment.get_pid_create_time"
+
+
+def _session_at(folder: str, issue_number: int = 42) -> VSCodeClaudeSession:
+    """A minimal session at a specific folder/issue for orchestration tests."""
+    session = _session()
+    session["folder"] = folder
+    session["issue_number"] = issue_number
+    return session
+
+
+class TestBuildAssessments:
+    """READ-ONLY builder: snapshot once, no disk writes, one entry per session."""
+
+    @patch(_SAVE)
+    @patch(_GIT_STATUS, return_value="Clean")
+    @patch(_GATHER)
+    @patch(_SNAP)
+    @patch(_USERNAME, return_value="testuser")
+    @patch(_IGNORE, return_value=set())
+    def test_build_assessments_performs_no_disk_writes(
+        self,
+        mock_ignore: object,
+        mock_username: object,
+        mock_snap: object,
+        mock_gather: Mock,
+        mock_git: object,
+        mock_save: Mock,
+    ) -> None:
+        """build_assessments never writes sessions.json (save_sessions untouched)."""
+        mock_gather.return_value = _signals(title_match=True, found_pid=7)
+        sessions = [_session_at("C:/work/a", 1)]
+
+        result = build_assessments(sessions, cached_issues_by_repo=None)
+
+        assert set(result) == {"C:/work/a"}
+        assert result["C:/work/a"].verdict.active is True
+        mock_save.assert_not_called()
+
+    @patch(_SAVE)
+    @patch(_GIT_STATUS, return_value="Clean")
+    @patch(_GATHER)
+    @patch(_SNAP)
+    @patch(_USERNAME, return_value="testuser")
+    @patch(_IGNORE, return_value=set())
+    def test_snapshot_captured_exactly_once_per_call(
+        self,
+        mock_ignore: object,
+        mock_username: object,
+        mock_snap: Mock,
+        mock_gather: Mock,
+        mock_git: object,
+        mock_save: object,
+    ) -> None:
+        """One DetectionSnapshot per build (R4), gathered once per session."""
+        mock_gather.return_value = _signals()
+        sessions = [
+            _session_at("C:/work/a", 1),
+            _session_at("C:/work/b", 2),
+            _session_at("C:/work/c", 3),
+        ]
+
+        result = build_assessments(sessions)
+
+        assert mock_snap.call_count == 1
+        assert mock_gather.call_count == len(sessions)
+        assert set(result) == {"C:/work/a", "C:/work/b", "C:/work/c"}
+
+
+class TestApplyAssessments:
+    """Apply-only mutation point: PID refresh + last_active advance, single save."""
+
+    @patch(_CREATE_TIME, return_value=123.5)
+    @patch(_SAVE)
+    @patch(_LOAD)
+    def test_apply_advances_last_active_and_refreshes_pid_once(
+        self,
+        mock_load: Mock,
+        mock_save: Mock,
+        mock_ct: Mock,
+    ) -> None:
+        """An active session refreshes the stale PID and advances last_active."""
+        session = _session_at("C:/work/a", 1)
+        session["vscode_pid"] = 100
+        mock_load.return_value = {"sessions": [session], "last_updated": ""}
+
+        assessment = assess_session(
+            folder="C:/work/a",
+            signals=_signals(title_match=True, found_pid=200),
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=None,
+        )
+
+        apply_assessments({"C:/work/a": assessment}, write_audit=False)
+
+        saved_store = mock_save.call_args[0][0]
+        saved = saved_store["sessions"][0]
+        assert saved["vscode_pid"] == 200
+        assert saved["vscode_pid_create_time"] == 123.5
+        assert saved["last_active"] is True
+        assert saved["last_active_rule"] == "title"
+        mock_ct.assert_called_once_with(200)
+        mock_save.assert_called_once()
+
+    @patch(_CREATE_TIME)
+    @patch(_SAVE)
+    @patch(_LOAD)
+    def test_apply_inactive_skips_pid_refresh(
+        self,
+        mock_load: Mock,
+        mock_save: Mock,
+        mock_ct: Mock,
+    ) -> None:
+        """An inactive session advances last_active to False without touching PID."""
+        session = _session_at("C:/work/a", 1)
+        session["vscode_pid"] = 100
+        mock_load.return_value = {"sessions": [session], "last_updated": ""}
+
+        assessment = assess_session(
+            folder="C:/work/a",
+            signals=_signals(folder_exists=True),  # all miss -> INACTIVE(NO_MATCH)
+            issue_facts=_issue_facts(),
+            git_status="Clean",
+            directory_empty=False,
+            prior_last_active=True,
+        )
+
+        apply_assessments({"C:/work/a": assessment}, write_audit=False)
+
+        saved = mock_save.call_args[0][0]["sessions"][0]
+        assert saved["vscode_pid"] == 100  # unchanged
+        assert saved["last_active"] is False
+        assert saved["last_active_rule"] == "no_match"
+        mock_ct.assert_not_called()
+        mock_save.assert_called_once()

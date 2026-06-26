@@ -14,6 +14,7 @@ pure issue-state layer classifies issues identically to today's cleanup path.
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 from ...mcp_workspace_github import (
     IssueData,
@@ -21,8 +22,15 @@ from ...mcp_workspace_github import (
     RepoIdentifier,
     get_all_cached_issues,
 )
-from .issues import get_matching_ignore_label, is_status_eligible_for_session
-from .status import is_session_stale
+from .config import get_github_username
+from .detection import capture_detection_snapshot, gather_signals
+from .issues import (
+    get_ignore_labels,
+    get_matching_ignore_label,
+    is_status_eligible_for_session,
+)
+from .sessions import get_pid_create_time, load_sessions, save_sessions
+from .status import get_folder_git_status, is_session_stale
 from .types import (
     Decision,
     DetectionSignals,
@@ -209,6 +217,134 @@ def assess_session(
         pid_needs_refresh=pid_needs_refresh,
         found_pid=signals.found_pid,
     )
+
+
+def build_assessments(
+    sessions: list[VSCodeClaudeSession],
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
+) -> dict[str, SessionAssessment]:
+    """READ-ONLY builder: snapshot once, then gather + assess each session.
+
+    Captures a single :class:`DetectionSnapshot` (R4: all detection caches at
+    one instant, no age-skew), then per session: gathers signals, derives frozen
+    :class:`IssueFacts` from the cache (with the individual-issue fallback), reads
+    the git status, and composes a frozen :class:`SessionAssessment`. The prior
+    ``last_active`` baseline is read from the session dict and threaded into the
+    transition layer. Performs NO disk writes — every mutation lives in
+    :func:`apply_assessments`, so read-only consumers (status) can call this
+    safely.
+
+    Args:
+        sessions: Sessions to assess (typically ``load_sessions()["sessions"]``).
+        cached_issues_by_repo: Optional pre-fetched issues for issue-state facts.
+
+    Returns:
+        Mapping of each session's folder path to its :class:`SessionAssessment`.
+    """
+    snapshot = capture_detection_snapshot()
+
+    ignore_labels = get_ignore_labels()
+    try:
+        github_username: str | None = get_github_username()
+    except ValueError:
+        logger.debug("GitHub username not configured, skipping assignment checks")
+        github_username = None
+
+    assessments: dict[str, SessionAssessment] = {}
+    for session in sessions:
+        signals = gather_signals(session, snapshot)
+
+        # Mirror get_stale_sessions: issue-state facts (and the individual-issue
+        # API fallback inside _issue_facts) are derived ONLY when a cache is
+        # available. Without one, default to an all-clear (eligible) IssueFacts
+        # so the read-only liveness projection stays network-free.
+        if cached_issues_by_repo:
+            repo_issues = cached_issues_by_repo.get(session["repo"], {})
+            cached_issue = repo_issues.get(session["issue_number"])
+            cached_for_stale_check = repo_issues if cached_issue is not None else None
+            issue_facts = _issue_facts(
+                session,
+                cached_issue,
+                github_username=github_username,
+                ignore_labels=ignore_labels,
+                cached_for_stale_check=cached_for_stale_check,
+            )
+        else:
+            issue_facts = IssueFacts(
+                is_closed=False,
+                is_stale=False,
+                is_blocked=False,
+                is_unassigned=False,
+                is_ineligible=False,
+                stale_target=None,
+            )
+
+        git_status = get_folder_git_status(Path(session["folder"]))
+
+        assessments[session["folder"]] = assess_session(
+            folder=session["folder"],
+            signals=signals,
+            issue_facts=issue_facts,
+            git_status=git_status,
+            directory_empty=signals.directory_empty,
+            prior_last_active=session.get("last_active"),
+        )
+    return assessments
+
+
+def build_active_session_set(
+    sessions: list[VSCodeClaudeSession],
+) -> dict[str, bool]:
+    """Build active-set snapshot (thin read-only wrapper over build_assessments).
+
+    Computes one ``DetectionSnapshot`` and assesses every session, projecting the
+    result onto the legacy ``dict[folder, bool]`` contract that the cleanup,
+    restart, and status consumers still read. READ-ONLY: unlike the apply path
+    this performs no ``sessions.json`` writes — the PID refresh and ``last_active``
+    advance moved into :func:`apply_assessments`.
+
+    Returns:
+        Mapping of each session's folder path to its liveness ``active`` bool.
+    """
+    return {
+        folder: assessment.verdict.active
+        for folder, assessment in build_assessments(sessions).items()
+    }
+
+
+def apply_assessments(
+    assessments: dict[str, SessionAssessment],
+    *,
+    write_audit: bool,  # pylint: disable=unused-argument  # reserved for Step 9 audit
+) -> None:
+    """Apply-only: refresh stale PIDs and advance the ``last_active`` baseline.
+
+    The single mutation point of the pipeline. Loads the session store once,
+    applies each assessment's PID refresh and ``last_active``/``last_active_rule``
+    advance, then writes the store back in ONE atomic save (no double-write).
+    Read-only consumers (status) must NOT call this.
+
+    Args:
+        assessments: Folder -> assessment map from :func:`build_assessments`.
+        write_audit: Reserved for the Step 9 audit trail; currently unused.
+    """
+    store = load_sessions()
+    for session in store["sessions"]:
+        assessment = assessments.get(session["folder"])
+        if assessment is None:
+            continue
+        if (
+            assessment.pid_needs_refresh
+            and assessment.found_pid is not None
+            and assessment.found_pid != session.get("vscode_pid")
+        ):
+            session["vscode_pid"] = assessment.found_pid
+            session["vscode_pid_create_time"] = get_pid_create_time(
+                assessment.found_pid
+            )
+        session["last_active"] = assessment.verdict.active
+        session["last_active_rule"] = assessment.verdict.rule.value
+    save_sessions(store)
 
 
 def _fetch_issue_individually(

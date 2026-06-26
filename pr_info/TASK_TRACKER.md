@@ -65,9 +65,9 @@ Extract `get_stale_sessions` eligibility block into `_issue_facts` (preserve sta
 
 Read-only `build_assessments` (snapshot once, gather+assess each session) and apply-only `apply_assessments` (PID refresh + `last_active`); thin `build_active_session_set` wrapper; wire launch/status entrypoints with green-state `active_set` shim + `prior_last_active`. See [step_5b.md](./steps/step_5b.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Cleanup migration
 
