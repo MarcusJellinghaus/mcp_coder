@@ -1,0 +1,67 @@
+# Step 5 — `build_assessments` + `apply_assessments`; wire entrypoints (observe/apply split)
+
+**Read first:** [summary.md](./summary.md) (sections "The pipeline", R2 observe/apply,
+"`status` is write-free"). This is the hinge: one read-only builder feeds all five
+consumers; one apply step holds every mutation.
+
+## WHERE
+- Modify: `src/mcp_coder/workflows/vscodeclaude/assessment.py`
+- Modify: `src/mcp_coder/workflows/vscodeclaude/sessions.py` (`build_active_session_set` → thin wrapper)
+- Modify: `src/mcp_coder/cli/commands/coordinator/commands.py` (launch + status entrypoints)
+- Tests: `tests/workflows/vscodeclaude/test_assessment.py`, update `tests/workflows/vscodeclaude/test_active_set_invariant.py`, `test_sessions.py`
+
+## WHAT
+```python
+def build_assessments(
+    sessions: list[VSCodeClaudeSession],
+    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
+) -> dict[str, SessionAssessment]:
+    """READ-ONLY. Snapshot once, gather+assess each session. No disk writes."""
+
+def apply_assessments(
+    assessments: dict[str, SessionAssessment],
+    *, write_audit: bool,
+) -> None:
+    """apply()-runs only: refresh PIDs, advance last_active/last_active_rule.
+    (Audit writing added in Step 9; write_audit param reserved.)"""
+```
+
+## HOW
+- `build_assessments` calls `capture_detection_snapshot()` once, then per session:
+  `gather_signals` → derive `IssueFacts` + `git_status` (reuse `is_issue_closed`,
+  `is_session_stale`, `get_folder_git_status`, blocked/assignment logic — extract a
+  small `_issue_facts(session, cached_issue)` helper) → `assess_session`.
+- `build_active_session_set` becomes:
+  `return {f: a.active for f, a in build_assessments(sessions).items()}` —
+  preserves the existing dict-shape contract while computing the snapshot once.
+- `commands.py` launch path: replace `active_set = build_active_session_set(...)`
+  with `assessments = build_assessments(sessions_list, cached_issues_by_repo)`;
+  after cleanup/restart, call `apply_assessments(assessments, write_audit=True)`.
+  Pass `assessments` (not `active_set`) onward in Steps 6–8.
+- `commands.py` status path: `assessments = build_assessments(...)`; **never** call
+  `apply_assessments` (write-free).
+
+## ALGORITHM (`apply_assessments`)
+```
+store = load_sessions()
+for s in store["sessions"]:
+    a = assessments.get(s["folder"])
+    if a is None: continue
+    if a.pid_needs_refresh and a.found_pid != s.get("vscode_pid"): update fields
+    s["last_active"], s["last_active_rule"] = a.active, a.rule.value
+save_sessions(store)   # single atomic write (no double-write like today)
+```
+
+## DATA
+`dict[folder, SessionAssessment]`; `apply_assessments` returns `None` (side effects only).
+
+## Tests (write first)
+- `build_assessments` performs **no** disk writes (assert `sessions.json` mtime/content
+  unchanged; patch `save_sessions` and assert not called).
+- snapshot captured exactly once per `build_assessments` call (patch
+  `capture_detection_snapshot`, assert call count == 1).
+- `apply_assessments` advances `last_active`/`last_active_rule` and refreshes PID once.
+- `build_active_session_set` still returns `dict[folder, bool]` (back-compat invariant test).
+
+## Done when
+All three checks pass; existing active-set invariant tests updated and green. One commit.
