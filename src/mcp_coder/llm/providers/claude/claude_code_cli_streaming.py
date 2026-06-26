@@ -14,9 +14,11 @@ from ....utils.subprocess_runner import CommandOptions, CommandResult
 from ....utils.subprocess_streaming import stream_subprocess
 from ...types import StreamEvent
 from .claude_code_cli import (
+    McpServersUnavailableError,
     StreamMessage,
     _find_claude_executable,
     build_cli_command,
+    find_unavailable_mcp_servers,
     format_stream_json_input,
     parse_stream_json_line,
 )
@@ -98,6 +100,9 @@ def ask_claude_code_cli_stream(
 
     Raises:
         ValueError: If the question is empty/whitespace or timeout is not positive.
+        McpServersUnavailableError: If the init event reports a configured MCP
+            server that did not reach ``connected`` status; aborted before any
+            assistant content is yielded.
 
     The "done" event includes session_id and usage data from the result message.
     The "raw_line" event wraps each raw NDJSON line for json-raw mode consumers.
@@ -140,8 +145,25 @@ def ask_claude_code_cli_stream(
             log.flush()
             yield {"type": "raw_line", "line": line}
             msg = parse_stream_json_line(line)
-            if msg:
-                yield from _map_stream_message_to_event(msg)
+            if not msg:
+                continue
+            if msg.get("type") == "system":
+                # Fail fast: if configured MCP servers did not connect, the
+                # session has no tools and the model may hallucinate. Abort
+                # before yielding any assistant content instead of running blind.
+                unavailable_servers = find_unavailable_mcp_servers(msg)
+                if unavailable_servers:
+                    detail = ", ".join(
+                        f"{name}={status}" for name, status in unavailable_servers
+                    )
+                    mcp_error_msg = (
+                        f"MCP servers not available: {detail}. The session started "
+                        f"without its configured tools; aborting before the model "
+                        f"runs blind. Stream log: {stream_file}"
+                    )
+                    logger.error(mcp_error_msg)
+                    raise McpServersUnavailableError(mcp_error_msg)
+            yield from _map_stream_message_to_event(msg)
 
     cmd_result: CommandResult = stream.result
     if cmd_result.timed_out:
