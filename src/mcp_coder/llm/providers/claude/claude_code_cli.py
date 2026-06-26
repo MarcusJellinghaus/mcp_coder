@@ -67,6 +67,11 @@ class ParsedCliResponse(TypedDict):
 # MCP server status (from the init event) that means the server is ready to use.
 _MCP_SERVER_READY_STATUS = "connected"
 
+# Statuses worth retrying: a server still cold-starting ("pending") usually
+# connects on a fresh attempt with a warm cache. Anything else (e.g. "failed",
+# "unknown") is treated as terminal — a retry won't fix it.
+_MCP_RETRYABLE_STATUSES = frozenset({"pending"})
+
 
 class McpServersUnavailableError(RuntimeError):
     """Raised when a Claude session starts without its configured MCP servers.
@@ -75,7 +80,18 @@ class McpServersUnavailableError(RuntimeError):
     servers that did not reach ``connected`` status (e.g. ``failed`` /
     ``pending``). Continuing would run the model with no tools, which can
     silently yield hallucinated results, so the call is aborted instead.
+
+    ``unavailable_servers`` carries the ``(name, status)`` pairs so callers can
+    decide whether to retry (see :func:`mcp_failure_is_retryable`).
     """
+
+    def __init__(
+        self,
+        message: str,
+        unavailable_servers: list[tuple[str, str]] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.unavailable_servers: list[tuple[str, str]] = unavailable_servers or []
 
 
 def find_unavailable_mcp_servers(
@@ -106,6 +122,21 @@ def find_unavailable_mcp_servers(
         if status != _MCP_SERVER_READY_STATUS:
             unavailable.append((str(server.get("name", "?")), status or "unknown"))
     return unavailable
+
+
+def mcp_failure_is_retryable(unavailable_servers: list[tuple[str, str]]) -> bool:
+    """Return True when every unavailable server is in a transient state.
+
+    ``pending`` means a server is still cold-starting (common when several
+    sessions start at once and contend for CPU/disk); a fresh attempt with a
+    warm cache usually connects. A terminal status (``failed`` / ``unknown``,
+    e.g. a missing executable or a crash) is not worth retrying.
+    """
+    if not unavailable_servers:
+        return False
+    return all(
+        status in _MCP_RETRYABLE_STATUSES for _name, status in unavailable_servers
+    )
 
 
 def parse_stream_json_line(line: str) -> StreamMessage | None:
@@ -158,7 +189,12 @@ def _parse_stream_lines(lines: list[str]) -> ParsedStreamResponse:
 
         # Handle different message types
         if msg_type == "system":
-            system_message = msg
+            # Keep the init event specifically. Later `system` events (e.g.
+            # `thinking_tokens` heartbeats emitted during extended thinking) must
+            # NOT overwrite it, or the MCP-availability guard would read a
+            # message with no `mcp_servers` field and miss a failed startup. (#998)
+            if msg.get("subtype") == "init" or system_message is None:
+                system_message = msg
         elif msg_type == "assistant":
             # Extract text from assistant message content blocks
             message_data = msg.get("message", {})
@@ -705,7 +741,9 @@ def ask_claude_code_cli(
             )
             logger.error(mcp_error_msg)
             duration_ms = int((time.time() - start_time) * 1000)
-            mcp_error: Exception = McpServersUnavailableError(mcp_error_msg)
+            mcp_error: Exception = McpServersUnavailableError(
+                mcp_error_msg, unavailable_servers=unavailable_servers
+            )
             log_llm_error(error=mcp_error, duration_ms=duration_ms)
             raise mcp_error
 

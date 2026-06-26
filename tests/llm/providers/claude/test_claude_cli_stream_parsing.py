@@ -16,6 +16,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
     ask_claude_code_cli,
     create_response_dict_from_stream,
     find_unavailable_mcp_servers,
+    mcp_failure_is_retryable,
     parse_stream_json_file,
     parse_stream_json_line,
     parse_stream_json_string,
@@ -671,3 +672,88 @@ class TestMcpServerGuardInStream:
         events = list(ask_claude_code_cli_stream("test question"))
         text_deltas = [e for e in events if e.get("type") == "text_delta"]
         assert [e["text"] for e in text_deltas] == ["blind answer"]
+
+
+class TestInitMessageCapture:
+    """Regression for #998: the init event must survive later `system` events."""
+
+    def test_init_kept_despite_trailing_thinking_tokens(self) -> None:
+        """Stream shaped like the 21:41/21:52 runs: init(pending) then thinking_tokens.
+
+        Previously `_parse_stream_lines` kept the LAST system event, so a trailing
+        `thinking_tokens` (no `mcp_servers`) hid the failed startup from the guard.
+        """
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s1",
+                "tools": [],
+                "mcp_servers": [
+                    {"name": "mcp-tools-py", "status": "pending"},
+                    {"name": "mcp-workspace", "status": "pending"},
+                ],
+            }
+        )
+        think1 = json.dumps(
+            {"type": "system", "subtype": "thinking_tokens", "session_id": "s1"}
+        )
+        think2 = json.dumps(
+            {"type": "system", "subtype": "thinking_tokens", "session_id": "s1"}
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "hi"}]},
+                "session_id": "s1",
+            }
+        )
+        result = json.dumps(
+            {"type": "result", "subtype": "success", "result": "hi", "session_id": "s1"}
+        )
+        content = "\n".join([init, think1, assistant, think2, result])
+
+        parsed = parse_stream_json_string(content)
+        sm = parsed["system_message"]
+        assert sm is not None
+        assert sm.get("subtype") == "init"
+        # The guard now sees the init's pending servers (it would have missed them).
+        assert find_unavailable_mcp_servers(sm) == [
+            ("mcp-tools-py", "pending"),
+            ("mcp-workspace", "pending"),
+        ]
+
+    def test_first_system_kept_when_no_init(self) -> None:
+        """With no init event, fall back to the first system message (not the last)."""
+        sys1 = json.dumps(
+            {
+                "type": "system",
+                "subtype": "other",
+                "session_id": "s1",
+                "marker": "first",
+            }
+        )
+        sys2 = json.dumps(
+            {"type": "system", "subtype": "thinking_tokens", "session_id": "s1"}
+        )
+        result = json.dumps({"type": "result", "result": "x", "session_id": "s1"})
+        parsed = parse_stream_json_string("\n".join([sys1, sys2, result]))
+        sm = parsed["system_message"]
+        assert sm is not None
+        assert sm.get("marker") == "first"
+
+
+class TestMcpFailureIsRetryable:
+    """Classify which MCP-unavailable failures are worth retrying."""
+
+    def test_all_pending_is_retryable(self) -> None:
+        assert mcp_failure_is_retryable([("a", "pending"), ("b", "pending")]) is True
+
+    def test_any_failed_is_not_retryable(self) -> None:
+        assert mcp_failure_is_retryable([("a", "pending"), ("b", "failed")]) is False
+
+    def test_unknown_is_not_retryable(self) -> None:
+        assert mcp_failure_is_retryable([("a", "unknown")]) is False
+
+    def test_empty_is_not_retryable(self) -> None:
+        assert mcp_failure_is_retryable([]) is False
