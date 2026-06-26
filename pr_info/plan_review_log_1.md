@@ -27,3 +27,20 @@ Started: 2026-06-26
 **Changes**: summary.md rewritten (explicit layered model, updated pipeline + file tables); step_1 (frozen typed sub-results + enums + serializer, `within_grace`/`directory_empty` bools, dependency-free types); step_2 (`assess_liveness`→frozen verdict); step_3 (layered `assess_issue_state`/`assess_transition`/`decide` with full safety matrix + invariant test + composer); step_4 (`directory_empty`/`within_grace` at IO boundary); step_5 (green-state shim, `prior_last_active`, one-consumer-per-commit); step_6 (retry-loop mapping + fallback); step_7/8 (consumer field access, status retires `active_set`); step_9 (single serializer for audit); step_10 (`--explain` via `to_explain()`); new Decisions.md.
 
 **Status**: plan changed — pending commit; loop continues (fresh review next round).
+
+## Round 2 — 2026-06-26
+
+**Findings** (verification of Round 1 revision, cross-checked against source):
+- Explicit layered model applied consistently — frozen sub-results + enums + single serializer; all consumers (steps 5–10) read via embedded `a.verdict.*`/`a.decision.*`/`a.transition.*`; no leftover flat layout or `tuple[bool, LivenessRule]`.
+- Git-status safety matrix correctly in pure `decide`, mirrors today's `cleanup_stale_sessions` incl. `is_directory_empty` guard; injected inputs; invariant test present.
+- All five straightforward fixes present; no contradictions with asymmetry / status-write-free / frozen-immutability / single-serializer constraints.
+- **Defect:** step_3 `decide` zombie branch distinguished via `signals.folder_exists` / `verdict.rule == NO_ARTIFACTS`, but the agreed `decide(verdict, issue_state, transition, git_status, directory_empty)` signature receives neither, and an active rule is never `NO_ARTIFACTS` → self-contradictory wording.
+- Minor: step 5 is the heaviest step (build/apply + wrapper + 2 call sites + `_issue_facts` replicating ~80 lines of eligibility); step 8 "retire `build_active_session_set`" understated blast radius (4 test files + 2 call sites).
+
+**Decisions**: all *accept (straightforward)* — no user escalation needed (Round 1 design items settled and correctly implemented).
+
+**User decisions**: none this round.
+
+**Changes**: step_3 — zombie/remove-missing tested in-signature via `git_status == "Missing"` (validated vs `status.py:332`), off-contract refs removed; step 5 split into step_5 (`_issue_facts` + `assess_issue_state` wiring, with `is_session_stale` short-circuit note) and new step_5b (build/apply orchestration + thin read-only wrapper + call sites + green shim + `prior_last_active`); step_8 keeps the thin read-only `build_active_session_set` wrapper, retires only the `active_set` shim; summary/Decisions/step cross-refs updated (steps 6–10 not renumbered).
+
+**Status**: plan changed — pending commit; loop continues (fresh review next round).

@@ -16,7 +16,7 @@ zombie self-resolution; "Out of scope" branch skip-reasons). Restart becomes the
 
 ## HOW
 - One consumer migration: flip `restart_closed_sessions`'s signature **and** its
-  `commands.py` call site in the **same** commit (green-state ordering, Step 5).
+  `commands.py` call site in the **same** commit (green-state ordering, Step 5b).
 - Replace `if active_set.get(folder): continue` with branch on
   `assessments[folder]` (verdict + decision):
   - `verdict.active` (KEEP_ACTIVE or INVESTIGATE_ZOMBIE) → skip (do not restart; zombie

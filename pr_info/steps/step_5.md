@@ -1,74 +1,64 @@
-# Step 5 — `build_assessments` + `apply_assessments`; wire entrypoints (observe/apply split)
+# Step 5 — `_issue_facts` helper + `assess_issue_state` wiring (IssueFacts production)
 
-**Read first:** [summary.md](./summary.md) (sections "The pipeline", R2 observe/apply,
-"`status` is write-free"). This is the hinge: one read-only builder feeds all five
-consumers; one apply step holds every mutation.
+**Read first:** [summary.md](./summary.md) (sections "The pipeline", R1, R2 observe/apply).
+This is the first half of the observe/apply hinge: produce a frozen `IssueFacts` per
+session from cached issue data, reusing today's eligibility logic so the assessment
+layer classifies issues identically to `get_stale_sessions`. Step 5b then wires the
+orchestration (`build_assessments`/`apply_assessments`) on top of it.
 
 ## WHERE
 - Modify: `src/mcp_coder/workflows/vscodeclaude/assessment.py`
-- Modify: `src/mcp_coder/workflows/vscodeclaude/sessions.py` (`build_active_session_set` → thin wrapper)
-- Modify: `src/mcp_coder/cli/commands/coordinator/commands.py` (launch + status entrypoints)
-- Tests: `tests/workflows/vscodeclaude/test_assessment.py`, update `tests/workflows/vscodeclaude/test_active_set_invariant.py`, `test_sessions.py`
+- Tests: `tests/workflows/vscodeclaude/test_assessment.py`
 
 ## WHAT
 ```python
-def build_assessments(
-    sessions: list[VSCodeClaudeSession],
-    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
-) -> dict[str, SessionAssessment]:
-    """READ-ONLY. Snapshot once, gather+assess each session. No disk writes."""
+def _issue_facts(
+    session: VSCodeClaudeSession,
+    cached_issue: IssueData | None,
+    *,
+    github_username: str | None,
+    ignore_labels: list[str],
+    cached_for_stale_check: dict[int, IssueData] | None,
+) -> IssueFacts:
+    """Derive frozen IssueFacts from cached issue data.
 
-def apply_assessments(
-    assessments: dict[str, SessionAssessment],
-    *, write_audit: bool,
-) -> None:
-    """apply()-runs only: refresh PIDs, advance last_active/last_active_rule.
-    (Audit writing added in Step 9; write_audit param reserved.)"""
+    Replicates the eligibility logic of get_stale_sessions
+    (cleanup.py:99-180): closed/blocked/ineligible/unassigned, plus
+    is_session_stale — feeding assess_issue_state in Step 3.
+    """
 ```
 
 ## HOW
-- `build_assessments` calls `capture_detection_snapshot()` once, then per session:
-  `gather_signals` → derive `IssueFacts` + `git_status` (reuse `is_issue_closed`,
-  `is_session_stale`, `get_folder_git_status`, blocked/assignment logic — extract a
-  small `_issue_facts(session, cached_issue)` helper) → `assess_session`.
-- **`prior_last_active` wiring:** `build_assessments` reads `session["last_active"]`
-  (backfilled `None` in Step 1) and passes it into `assess_session`, which forwards it
-  to `assess_transition`. `directory_empty` comes from `signals.directory_empty`.
-- `build_active_session_set` becomes:
-  `return {f: a.verdict.active for f, a in build_assessments(sessions).items()}` —
-  preserves the existing `dict[folder, bool]` contract while computing the snapshot once.
-- **Green-state ordering:** after building `assessments`, the launch path keeps feeding
-  the **old-shape** `active_set = {f: a.verdict.active for f, a in assessments.items()}`
-  to not-yet-migrated consumers so the build stays green. Steps 6/7/8 each then flip
-  **one** consumer's signature **and** its `commands.py` call site together (one
-  consumer per commit); `active_set` is removed once the last consumer is migrated.
-- `commands.py` launch path: replace `active_set = build_active_session_set(...)`
-  with `assessments = build_assessments(sessions_list, cached_issues_by_repo)`;
-  after cleanup/restart, call `apply_assessments(assessments, write_audit=True)`.
-- `commands.py` status path: `assessments = build_assessments(...)`; **never** call
-  `apply_assessments` (write-free).
-
-## ALGORITHM (`apply_assessments`)
-```
-store = load_sessions()
-for s in store["sessions"]:
-    a = assessments.get(s["folder"])
-    if a is None: continue
-    if a.pid_needs_refresh and a.found_pid != s.get("vscode_pid"): update fields
-    s["last_active"], s["last_active_rule"] = a.verdict.active, a.verdict.rule.value
-save_sessions(store)   # single atomic write (no double-write like today)
-```
+- Extract the ~80-line eligibility block from `get_stale_sessions`
+  (`cleanup.py:99-180`) into this helper: the `is_closed` / blocked-label /
+  status-eligibility / assignment checks, including the **individual-issue API
+  fallback** (`get_all_cached_issues(..., additional_issues=[issue_number])`) when an
+  issue is missing from the cache, and the `github_username`-gated assignment check.
+- **MUST preserve the current short-circuit:** compute `is_session_stale` **only**
+  when the session is not closed/blocked/unassigned/ineligible (mirror the
+  `cleanup.py:174-180` `and`-chain). Calling `is_session_stale` on a
+  closed/blocked/etc. issue triggers the spurious staleness warning the current code
+  explicitly guards against — do not regress this.
+- Reuse the existing helpers (`is_issue_closed` / `get_matching_ignore_label`,
+  `is_status_eligible_for_session`, `is_session_stale`); do not re-implement them.
+- The resulting `IssueFacts` is then classified by `assess_issue_state` (Step 3) —
+  this step only *produces* the facts; `build_assessments` (Step 5b) consumes them.
+- `stale_target` is populated for the reason string exactly as today's code derives it.
 
 ## DATA
-`dict[folder, SessionAssessment]`; `apply_assessments` returns `None` (side effects only).
+Frozen `IssueFacts` (Step 1/Step 3 shape).
 
 ## Tests (write first)
-- `build_assessments` performs **no** disk writes (assert `sessions.json` mtime/content
-  unchanged; patch `save_sessions` and assert not called).
-- snapshot captured exactly once per `build_assessments` call (patch
-  `capture_detection_snapshot`, assert call count == 1).
-- `apply_assessments` advances `last_active`/`last_active_rule` and refreshes PID once.
-- `build_active_session_set` still returns `dict[folder, bool]` (back-compat invariant test).
+- `_issue_facts` maps a closed issue → `is_closed=True`, and (short-circuit) does
+  **not** call `is_session_stale` (patch it, assert not called).
+- Blocked / ineligible / unassigned each map to the matching `IssueFacts` flag, and
+  each short-circuits `is_session_stale`.
+- Eligible, assigned, open issue → `is_session_stale` **is** called; result flows to
+  `is_stale`.
+- Issue missing from cache → individual-issue API fallback is invoked
+  (patch `get_all_cached_issues`, assert called with `additional_issues=[issue_number]`).
+- `IssueFacts` round-trips through `assess_issue_state` (Step 3) to the expected
+  `IssueState` for each combo.
 
 ## Done when
-All three checks pass; existing active-set invariant tests updated and green. One commit.
+All three checks pass. One commit.

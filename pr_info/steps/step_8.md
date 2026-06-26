@@ -7,7 +7,7 @@ transparency surface.
 ## WHERE
 - Modify: `src/mcp_coder/workflows/vscodeclaude/status.py` (`display_status_table`)
 - Modify: `src/mcp_coder/cli/commands/coordinator/commands.py` (status entrypoint
-  already builds assessments in Step 5 — pass them in)
+  already builds assessments in Step 5b — pass them in)
 - Tests: `tests/workflows/vscodeclaude/test_status_display.py`,
   `tests/workflows/vscodeclaude/test_next_action.py`
 
@@ -17,8 +17,14 @@ the `active_set` parameter. The `VSCode`/`Next Action` columns render the assess
 
 ## HOW
 - One consumer migration: flip `display_status_table`'s signature **and** its
-  `commands.py` status call site in the **same** commit (green-state ordering, Step 5).
-  This is the last consumer; `active_set` / `build_active_session_set` can be retired.
+  `commands.py` status call site in the **same** commit (green-state ordering, Step 5b).
+  This is the last consumer, so the green-state **`active_set` shim** can be retired.
+  **Keep** the thin read-only `build_active_session_set` wrapper (defined in Step 5b):
+  it is still used by `test_sessions.py::test_build_active_session_set`,
+  `test_active_set_invariant.py`, `test_cleanup.py:2568`, `test_status_display.py:1880`,
+  and two `commands.py` call sites. Removing it would churn four test files for no gain;
+  status consumes assessments via the embedded sub-results while the wrapper stays
+  available for backward compat. Do **not** delete `build_active_session_set`.
 - Per session row, read `a = assessments[folder]`; **do not** recompute liveness,
   staleness, closed, or next action (R1). Prefer the shared serializer
   (`a.to_explain()` / fields off `a.to_audit_record()`) so the column cannot drift from
@@ -33,7 +39,7 @@ the `active_set` parameter. The `VSCode`/`Next Action` columns render the assess
 - Keep `get_next_action` only for the **eligible-issues-without-session** rows (no
   assessment exists for those); session rows use the assessment.
 - **Write-free:** confirm no `update_session_pid` / `save_sessions` reachable from
-  the status path (the old write happened via `build_active_session_set`; Step 5
+  the status path (the old write happened via `build_active_session_set`; Step 5b
   already removed it from status).
 - Remove the now-dead `display_status_table` recompute block that called
   `is_session_stale` / `is_issue_closed` / `check_folder_dirty` for the action

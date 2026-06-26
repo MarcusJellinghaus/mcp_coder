@@ -17,7 +17,7 @@ cleanup ordering, lock-failure veto, `.to_be_deleted` retry loop). This closes t
 ## HOW
 - This is one consumer migration: flip `get_stale_sessions`/`cleanup_stale_sessions`
   to take `assessments` **and** their `commands.py` call site in the **same** commit
-  (green-state ordering from Step 5).
+  (green-state ordering from Step 5b).
 - **Skip active:** `if assessments[folder].verdict.active: continue` (covers KEEP_ACTIVE
   and zombie INVESTIGATE_ZOMBIE — both stay tracked).
 - **Drive action from the assessment**, not re-derived stale/closed logic: branch on

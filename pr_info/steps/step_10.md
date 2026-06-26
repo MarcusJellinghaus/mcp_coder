@@ -24,7 +24,7 @@ CLI: add `--explain` (store_true) to the vscodeclaude `status` (and optionally
 
 ## HOW
 - `--explain` is read-only: it renders the **already-built** assessments
-  (`build_assessments` from Step 5) via the shared `SessionAssessment.to_explain()`
+  (`build_assessments` from Step 5b) via the shared `SessionAssessment.to_explain()`
   serializer (same source as audit/column — cannot drift). It must **not** trigger
   `apply_assessments` (no writes, no audit) — consistent with status being write-free.
 - Print per session: folder, `signals.*` (folder_exists, title_match, cmdline_match,

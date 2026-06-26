@@ -166,7 +166,8 @@ not session-state).
 2. Liveness layer (`assess_liveness -> LivenessVerdict`) — pure
 3. Issue-state + transition + decision + composition (`assess_issue_state`, `assess_transition`, `decide`, `assess_session`, `IssueFacts`, serializer, invariant test) — pure
 4. Detection snapshot + `gather_signals` (Windows/IO boundary; gathers `directory_empty` + `within_grace`)
-5. `build_assessments` + `apply_assessments`; wire entrypoints (observe/apply split)
+5. `_issue_facts` helper + `assess_issue_state` wiring (IssueFacts production; replicates `get_stale_sessions` eligibility incl. short-circuit)
+5b. `build_assessments` + `apply_assessments` orchestration; thin read-only `build_active_session_set` wrapper; wire entrypoints (observe/apply split, green-state `active_set` shim, `prior_last_active`)
 6. Cleanup migration (ordering fix, lock veto, retry-loop consumes assessment)
 7. Restart migration (zombie / remove-missing)
 8. Status migration (enriched column, write-free)
@@ -174,7 +175,7 @@ not session-state).
 10. `--explain` flag
 
 Each step = exactly one commit (tests + implementation + pylint/pytest/mypy green).
-**Green-state ordering (Steps 5–8):** Step 5 keeps feeding the old-shape `active_set`
+**Green-state ordering (Steps 5b–8):** Step 5b keeps feeding the old-shape `active_set`
 (`{f: a.verdict.active for f, a in assessments.items()}`) to not-yet-migrated
 consumers so the build stays green; Steps 6/7/8 each flip exactly **one** consumer's
 signature **and** its `commands.py` call site together (one consumer per commit).

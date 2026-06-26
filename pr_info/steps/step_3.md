@@ -58,7 +58,7 @@ def assess_session(
   `transition = assess_transition(prior_last_active, verdict)`;
   `decision = decide(verdict, issue_state, transition, git_status, directory_empty)`.
 - `pid_needs_refresh = verdict.active and signals.found_pid is not None`; pass
-  `found_pid` through. (The actual write happens in `apply_assessments`, Step 5.)
+  `found_pid` through. (The actual write happens in `apply_assessments`, Step 5b.)
 - `decision.destructive` is an **explicit bool**, set True **only** on `DELETE`.
 - `decide` owns the **full safety matrix** (DECISION 2), mirroring today's
   `cleanup_stale_sessions` — no consumer re-derives it.
@@ -67,7 +67,7 @@ def assess_session(
 
 ## ALGORITHM (`decide`)
 ```
-if verdict.active and not <folder present>:  return Decision(INVESTIGATE_ZOMBIE, "folder missing, process alive", False)
+if verdict.active and git_status == "Missing":  return Decision(INVESTIGATE_ZOMBIE, "folder missing, process alive", False)
 if verdict.active:                           return Decision(KEEP_ACTIVE, "active (%s)" % verdict.rule.value, False)
 if git_status == "Missing":                  return Decision(REMOVE_MISSING, "folder missing", False)
 if git_status == "Dirty":                    return Decision(SKIP, "dirty", False)
@@ -78,8 +78,13 @@ if not issue_state.is_eligible:              # stale/closed/blocked/unassigned -
     return Decision(SKIP, "unverified git status (%s), non-empty" % git_status, False)
 return Decision(RESTART, "restartable", False)
 ```
-Note: zombie vs. remove-missing distinguishes folder presence via `verdict.rule ==
-NO_ARTIFACTS` / `signals.folder_exists`; `assess_session` passes what `decide` needs.
+Note: folder-gone is tested **in-signature** as `git_status == "Missing"` — the pipeline
+sets `git_status` to `"Missing"` exactly when the folder is absent (`status.py:332`), so
+`decide` needs neither `signals` nor `folder_exists`. Thus `INVESTIGATE_ZOMBIE =
+verdict.active and git_status == "Missing"` and `REMOVE_MISSING = not verdict.active and
+git_status == "Missing"` (reached after the `verdict.active` branch returns). Adding a
+`folder_exists`/`NO_ARTIFACTS` parameter would break the locked `decide` signature and the
+destructive-invariant test — do not.
 The full matrix is: `Clean → DELETE`, `Missing → REMOVE_MISSING`, `Dirty → SKIP`,
 `No Git`/`Error` → DELETE only if `directory_empty` else `SKIP`, plus zombie /
 keep-active / restart.
@@ -92,7 +97,7 @@ Frozen `IssueState`, `Transition`, `Decision`; a fully-populated frozen
 - **Per-layer (injected inputs):** `assess_issue_state` maps each fact combo;
   `assess_transition(True, inactive verdict) → flipped_to_inactive=True`,
   `assess_transition(None, ...) → False`; `decide` matrix cases below.
-- Zombie: `active via PID + folder gone` → `INVESTIGATE_ZOMBIE`, `destructive=False`.
+- Zombie: `active via PID + git_status="Missing"` → `INVESTIGATE_ZOMBIE`, `destructive=False`.
 - Remove-missing: inactive + `git_status="Missing"` → `REMOVE_MISSING`.
 - Delete: inactive + folder exists + stale + `Clean` → `DELETE`, `destructive=True`,
   reason contains `stale_target`.
