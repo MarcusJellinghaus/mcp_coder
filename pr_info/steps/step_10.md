@@ -1,7 +1,7 @@
 # Step 10 — `--explain` flag (on-demand transparency)
 
 **Read first:** [summary.md](./summary.md) (section "Transparency" surface 2). The
-flat `SessionAssessment` makes this a near-trivial dump.
+`SessionAssessment.to_explain()` serializer makes this a near-trivial dump.
 
 ## WHERE
 - Modify: the vscodeclaude CLI argument parser (where `--cleanup`, `--repo`,
@@ -24,19 +24,22 @@ CLI: add `--explain` (store_true) to the vscodeclaude `status` (and optionally
 
 ## HOW
 - `--explain` is read-only: it renders the **already-built** assessments
-  (`build_assessments` from Step 5). It must **not** trigger `apply_assessments`
-  (no writes, no audit) — consistent with status being write-free.
+  (`build_assessments` from Step 5) via the shared `SessionAssessment.to_explain()`
+  serializer (same source as audit/column — cannot drift). It must **not** trigger
+  `apply_assessments` (no writes, no audit) — consistent with status being write-free.
 - Print per session: folder, `signals.*` (folder_exists, title_match, cmdline_match,
-  pid_alive, found_pid, age_seconds, within_grace), `active`, `rule`, `action`,
-  `destructive`, `reason`, `flipped_to_inactive`.
+  pid_alive, found_pid, age_seconds, within_grace, directory_empty), `verdict.active`,
+  `verdict.rule`, `decision.action`, `decision.destructive`, `decision.reason`,
+  `transition.flipped_to_inactive`.
 - When `--explain` is absent, behaviour is unchanged.
 
 ## ALGORITHM
 ```
 for folder, a in assessments.items():
-    lines.append(f"{folder}: active={a.active} rule={a.rule.value} action={a.action.value} "
-                 f"destructive={a.destructive} flip={a.flipped_to_inactive}")
-    lines.append(f"  signals: {a.signals}")
+    lines.append(a.to_explain())   # e.g. "{folder}: active={verdict.active} "
+                                   #      "rule={verdict.rule.value} action={decision.action.value} "
+                                   #      "destructive={decision.destructive} "
+                                   #      "flip={transition.flipped_to_inactive}\n  signals: {signals}"
 return "\n".join(lines)
 ```
 

@@ -15,13 +15,15 @@ zombie self-resolution; "Out of scope" branch skip-reasons). Restart becomes the
 — replace the `active_set` parameter.
 
 ## HOW
+- One consumer migration: flip `restart_closed_sessions`'s signature **and** its
+  `commands.py` call site in the **same** commit (green-state ordering, Step 5).
 - Replace `if active_set.get(folder): continue` with branch on
-  `assessments[folder]`:
-  - `active` (KEEP_ACTIVE or INVESTIGATE_ZOMBIE) → skip (do not restart; zombie is
-    kept tracked + warned, never restarted).
-  - `REMOVE_MISSING` → keep the existing `remove_session` orphan-cleanup branch
-    (this is the folder-missing path it already has at `session_restart.py:261-268`).
-  - `RESTART` → proceed with the existing restart flow.
+  `assessments[folder]` (verdict + decision):
+  - `verdict.active` (KEEP_ACTIVE or INVESTIGATE_ZOMBIE) → skip (do not restart; zombie
+    is kept tracked + warned, never restarted).
+  - `decision.action is REMOVE_MISSING` → keep the existing `remove_session`
+    orphan-cleanup branch (the folder-missing path at `session_restart.py:261-268`).
+  - `decision.action is RESTART` → proceed with the existing restart flow.
   - `SKIP`/`DELETE` → skip (cleanup owns deletion).
 - **Branch skip-reasons stay local:** the `!! No branch` / `!! Multi-branch` /
   `!! Dirty` git checks inside the restart flow are unchanged — they are launch-time
@@ -29,15 +31,15 @@ zombie self-resolution; "Out of scope" branch skip-reasons). Restart becomes the
   *whether the session is a restart candidate*; the branch checks still gate the
   actual relaunch.
 - `commands.py`: pass `assessments` instead of `active_set`; `current_count`
-  computation uses `sum(1 for a in assessments.values() if a.active)`.
+  computation uses `sum(1 for a in assessments.values() if a.verdict.active)`.
 
 ## ALGORITHM
 ```
 for session in store["sessions"]:
     a = assessments.get(session["folder"])
-    if a is None or a.active: continue          # keep-active + zombie skip here
-    if a.action is REMOVE_MISSING: remove_session(...); continue
-    if a.action is not RESTART: continue        # SKIP / DELETE handled elsewhere
+    if a is None or a.verdict.active: continue       # keep-active + zombie skip here
+    if a.decision.action is REMOVE_MISSING: remove_session(...); continue
+    if a.decision.action is not RESTART: continue    # SKIP / DELETE handled elsewhere
     ... existing branch-verify + relaunch ...
 ```
 

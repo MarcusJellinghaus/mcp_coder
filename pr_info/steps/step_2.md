@@ -11,10 +11,10 @@ pure function unit-tested without Windows.
 
 ## WHAT
 ```python
-from .types import DetectionSignals, LivenessRule
+from .types import DetectionSignals, LivenessRule, LivenessVerdict
 
-def assess_liveness(signals: DetectionSignals) -> tuple[bool, LivenessRule]:
-    """Pure liveness verdict. Returns (active, winning_rule)."""
+def assess_liveness(signals: DetectionSignals) -> LivenessVerdict:
+    """Pure liveness verdict. Returns a frozen LivenessVerdict(active, rule)."""
 ```
 
 ## HOW
@@ -27,24 +27,24 @@ def assess_liveness(signals: DetectionSignals) -> tuple[bool, LivenessRule]:
 
 ## ALGORITHM
 ```
-if signals.title_match:   return True,  LivenessRule.TITLE
-if signals.pid_alive:     return True,  LivenessRule.PID
-if signals.cmdline_match: return True,  LivenessRule.CMDLINE
-if not signals.folder_exists: return False, LivenessRule.NO_ARTIFACTS
-return False, LivenessRule.NO_MATCH
+if signals.title_match:   return LivenessVerdict(True,  LivenessRule.TITLE)
+if signals.pid_alive:     return LivenessVerdict(True,  LivenessRule.PID)
+if signals.cmdline_match: return LivenessVerdict(True,  LivenessRule.CMDLINE)
+if not signals.folder_exists: return LivenessVerdict(False, LivenessRule.NO_ARTIFACTS)
+return LivenessVerdict(False, LivenessRule.NO_MATCH)
 ```
 
 ## DATA
-`tuple[bool, LivenessRule]`.
+Frozen `LivenessVerdict(active: bool, rule: LivenessRule)`.
 
 ## Tests (write first) — full matrix, no Windows
-- title hit, cmdline miss (the **#38 restore case**) → `(True, TITLE)`.
-- bare folder: title miss, cmdline hit → `(True, CMDLINE)` (fallthrough).
-- pid alive only → `(True, PID)`.
-- everything miss, folder exists → `(False, NO_MATCH)`.
-- everything miss, folder gone → `(False, NO_ARTIFACTS)`.
-- **zombie precursor**: folder gone but pid alive → `(True, PID)` (proves no
-  folder-gone short-circuit; decision layer turns this into the zombie action in Step 3).
+- title hit, cmdline miss (the **#38 restore case**) → `LivenessVerdict(True, TITLE)`.
+- bare folder: title miss, cmdline hit → `LivenessVerdict(True, CMDLINE)` (fallthrough).
+- pid alive only → `LivenessVerdict(True, PID)`.
+- everything miss, folder exists → `LivenessVerdict(False, NO_MATCH)`.
+- everything miss, folder gone → `LivenessVerdict(False, NO_ARTIFACTS)`.
+- **zombie precursor**: folder gone but pid alive → `LivenessVerdict(True, PID)` (proves
+  no folder-gone short-circuit; decision layer turns this into the zombie action in Step 3).
 
 ## Done when
 All three checks pass (use the pytest exclusion marker string from Step 1). One commit.

@@ -15,13 +15,17 @@ cleanup ordering, lock-failure veto, `.to_be_deleted` retry loop). This closes t
   workspace-file unlink.
 
 ## HOW
-- **Skip active:** `if assessments[folder].active: continue` (covers KEEP_ACTIVE and
-  zombie INVESTIGATE_ZOMBIE — both stay tracked).
+- This is one consumer migration: flip `get_stale_sessions`/`cleanup_stale_sessions`
+  to take `assessments` **and** their `commands.py` call site in the **same** commit
+  (green-state ordering from Step 5).
+- **Skip active:** `if assessments[folder].verdict.active: continue` (covers KEEP_ACTIVE
+  and zombie INVESTIGATE_ZOMBIE — both stay tracked).
 - **Drive action from the assessment**, not re-derived stale/closed logic: branch on
-  `assessment.action` (`DELETE` → delete-if-clean; `REMOVE_MISSING` → remove session +
-  orphan workspace file; `SKIP` → report; `INVESTIGATE_ZOMBIE` → warn, keep). This is
-  the R1 fix — `get_stale_sessions`'s big eligibility block is replaced by reading
-  `assessment.reason`/`action`.
+  `a.decision.action` (`DELETE` → delete-if-clean; `REMOVE_MISSING` → remove session +
+  orphan workspace file; `SKIP` → report `a.decision.reason`; `INVESTIGATE_ZOMBIE` →
+  warn, keep). This is the R1 fix — `get_stale_sessions`'s big eligibility block is
+  replaced by reading `a.decision`. The destruction-safety matrix already lives in
+  `decide` (Step 3), so cleanup never re-checks git status to gate a DELETE.
 - **Ordering fix (`delete_session_folder`):** attempt `safe_delete_folder(folder)`
   **first**; only on success delete the `.code-workspace` file. Remove the
   "always delete workspace file before folder deletion" block (`cleanup.py:225-232`).
@@ -29,11 +33,16 @@ cleanup ordering, lock-failure veto, `.to_be_deleted` retry loop). This closes t
   **do not** unlink the workspace file. Add the folder to `.to_be_deleted` (retry
   queue) and return `False`. The session stays tracked. (Removes the `was_clean`
   soft-delete-then-`remove_session` asymmetry.)
-- **`.to_be_deleted` retry loop (`cleanup.py:308-330`):** replace the cmdline-only
-  `is_vscode_open_for_folder(...)` reconciliation with the session's assessment:
-  if `assessments[folder].active` → leave in queue (do not delete), else retry
-  `safe_delete_folder`. Legacy orphan entries (no tracked session) fall to the
-  existing folder-gone → drop branch.
+- **`.to_be_deleted` retry loop (`cleanup.py:308-330`):** `.to_be_deleted` is keyed by
+  folder **name**; `assessments` is keyed by folder **path**. Map each queue entry to
+  its assessment by resolving the entry name under `workspace_base` to a path
+  (`assessments.get(str(workspace_base / name))`). Then:
+  - **assessment exists + `a.verdict.active`** → leave in queue (a live folder is spared;
+    closes the second #38 door, replacing the cmdline-only `is_vscode_open_for_folder`).
+  - **assessment exists + inactive** → retry `safe_delete_folder`.
+  - **no assessment + folder still exists** (locked, no tracked session) → retry delete
+    (today's behaviour).
+  - **no assessment + folder gone** → drop the entry.
 
 ## ALGORITHM (`delete_session_folder`)
 ```
@@ -53,8 +62,10 @@ return True
 ## Tests (write first)
 - Locked clean folder, dead session: workspace file **retained**, session **still
   tracked**, entry in `.to_be_deleted`, returns `False`.
-- Retry loop: `.to_be_deleted` entry whose session assessment is `active` (title hit,
-  cmdline miss) is **spared** — `safe_delete_folder` not called for it.
+- Retry loop: `.to_be_deleted` entry whose session assessment is `verdict.active`
+  (title hit, cmdline miss) is **spared** — `safe_delete_folder` not called for it.
+- Retry loop fallback: entry with **no** assessment but folder still exists → retry
+  delete; entry with no assessment and folder gone → dropped from queue.
 - `DELETE` action on a clean folder removes folder then workspace file then session.
 - `REMOVE_MISSING` removes session + orphan workspace file.
 - Zombie (`INVESTIGATE_ZOMBIE`) is skipped, never deleted.

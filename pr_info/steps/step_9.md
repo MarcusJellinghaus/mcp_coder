@@ -20,8 +20,10 @@ def append_run(records: list[dict[str, Any]], *, max_runs: int = 50) -> None:
     """Append one run-block, trim to the last max_runs runs (ring buffer), atomic write."""
 
 def assessment_to_record(a: SessionAssessment, session: VSCodeClaudeSession) -> dict[str, Any]:
-    """Flatten one assessment into a JSON-safe record (verdict, rule, action, destructive,
-       reason, all raw signals, flipped_to_inactive)."""
+    """Thin wrapper that delegates to `a.to_audit_record(session)` — the ONE
+       serializer (Step 1/3). Do NOT re-flatten here; the audit trail, --explain,
+       and the VSCode column must all read the same source so they cannot drift."""
+    return a.to_audit_record(session)
 ```
 
 ## HOW
@@ -32,10 +34,12 @@ def assessment_to_record(a: SessionAssessment, session: VSCodeClaudeSession) -> 
   assessments and calls `append_run` once (a run = one command invocation across all
   repos = one run-block). `write_audit=False` (or the `status` path never calling
   apply) → no record. This satisfies "written only by apply() runs".
-- **Decision-line logging** (in `assess_session` or `build_assessments`):
-  `logger.info("assess #%s: verdict=%s rule=%s -> action=%s destructive=%s reason=%s", ...)`
-  and a `logger.debug(...)` per-signal breakdown.
-- **Transition logging:** when `a.flipped_to_inactive`,
+- **Decision-line logging** (in `assess_session` or `build_assessments`), reading the
+  embedded sub-results:
+  `logger.info("assess #%s: verdict=%s rule=%s -> action=%s destructive=%s reason=%s",
+  ..., a.verdict.active, a.verdict.rule.value, a.decision.action.value,
+  a.decision.destructive, a.decision.reason)` and a `logger.debug(...)` per-signal breakdown.
+- **Transition logging:** when `a.transition.flipped_to_inactive`,
   `logger.info("Session #%s flipped active->inactive (was rule=%s)", ...)`.
 
 ## ALGORITHM (`append_run`)

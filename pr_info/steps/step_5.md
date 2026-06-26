@@ -31,13 +31,20 @@ def apply_assessments(
   `gather_signals` → derive `IssueFacts` + `git_status` (reuse `is_issue_closed`,
   `is_session_stale`, `get_folder_git_status`, blocked/assignment logic — extract a
   small `_issue_facts(session, cached_issue)` helper) → `assess_session`.
+- **`prior_last_active` wiring:** `build_assessments` reads `session["last_active"]`
+  (backfilled `None` in Step 1) and passes it into `assess_session`, which forwards it
+  to `assess_transition`. `directory_empty` comes from `signals.directory_empty`.
 - `build_active_session_set` becomes:
-  `return {f: a.active for f, a in build_assessments(sessions).items()}` —
-  preserves the existing dict-shape contract while computing the snapshot once.
+  `return {f: a.verdict.active for f, a in build_assessments(sessions).items()}` —
+  preserves the existing `dict[folder, bool]` contract while computing the snapshot once.
+- **Green-state ordering:** after building `assessments`, the launch path keeps feeding
+  the **old-shape** `active_set = {f: a.verdict.active for f, a in assessments.items()}`
+  to not-yet-migrated consumers so the build stays green. Steps 6/7/8 each then flip
+  **one** consumer's signature **and** its `commands.py` call site together (one
+  consumer per commit); `active_set` is removed once the last consumer is migrated.
 - `commands.py` launch path: replace `active_set = build_active_session_set(...)`
   with `assessments = build_assessments(sessions_list, cached_issues_by_repo)`;
   after cleanup/restart, call `apply_assessments(assessments, write_audit=True)`.
-  Pass `assessments` (not `active_set`) onward in Steps 6–8.
 - `commands.py` status path: `assessments = build_assessments(...)`; **never** call
   `apply_assessments` (write-free).
 
@@ -48,7 +55,7 @@ for s in store["sessions"]:
     a = assessments.get(s["folder"])
     if a is None: continue
     if a.pid_needs_refresh and a.found_pid != s.get("vscode_pid"): update fields
-    s["last_active"], s["last_active_rule"] = a.active, a.rule.value
+    s["last_active"], s["last_active_rule"] = a.verdict.active, a.verdict.rule.value
 save_sessions(store)   # single atomic write (no double-write like today)
 ```
 

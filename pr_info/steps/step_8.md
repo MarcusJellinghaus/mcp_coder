@@ -16,12 +16,17 @@ transparency surface.
 the `active_set` parameter. The `VSCode`/`Next Action` columns render the assessment.
 
 ## HOW
+- One consumer migration: flip `display_status_table`'s signature **and** its
+  `commands.py` status call site in the **same** commit (green-state ordering, Step 5).
+  This is the last consumer; `active_set` / `build_active_session_set` can be retired.
 - Per session row, read `a = assessments[folder]`; **do not** recompute liveness,
-  staleness, closed, or next action (R1). Map to display:
+  staleness, closed, or next action (R1). Prefer the shared serializer
+  (`a.to_explain()` / fields off `a.to_audit_record()`) so the column cannot drift from
+  audit/`--explain`. Map to display:
   - `VSCode` column: enrich with the winning rule —
-    `active` → `f"Running ({a.rule.value})"`; inactive → `f"Closed ({a.rule.value})"`;
-    `INVESTIGATE_ZOMBIE` → `"Running (zombie)"`.
-  - `Next Action` column: derive from `a.action` (KEEP_ACTIVE → `(active)`,
+    `a.verdict.active` → `f"Running ({a.verdict.rule.value})"`; inactive →
+    `f"Closed ({a.verdict.rule.value})"`; `INVESTIGATE_ZOMBIE` → `"Running (zombie)"`.
+  - `Next Action` column: derive from `a.decision.action` (KEEP_ACTIVE → `(active)`,
     RESTART → `-> Restart`, DELETE → `-> Delete (with --cleanup)`,
     REMOVE_MISSING → `-> Remove`, INVESTIGATE_ZOMBIE → `-> Investigate zombie`,
     SKIP → `!! <reason>`).
@@ -37,8 +42,10 @@ the `active_set` parameter. The `VSCode`/`Next Action` columns render the assess
 ## ALGORITHM (session row)
 ```
 a = assessments.get(session["folder"])
-vscode = "Running (%s)" % a.rule.value if a.active else "Closed (%s)" % a.rule.value
-action = ACTION_DISPLAY[a.action] if a.action is not SKIP else "!! %s" % a.reason
+vscode = ("Running (%s)" % a.verdict.rule.value if a.verdict.active
+          else "Closed (%s)" % a.verdict.rule.value)
+action = (ACTION_DISPLAY[a.decision.action] if a.decision.action is not SKIP
+          else "!! %s" % a.decision.reason)
 row = [repo, issue, status_label, folder, git_status, vscode, action]
 ```
 
