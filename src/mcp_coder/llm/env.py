@@ -15,36 +15,38 @@ from mcp_coder.utils.mcp_verification import get_bin_dir
 logger = logging.getLogger(__name__)
 
 
-def _get_runner_environment() -> tuple[str, str]:
-    """Get runner environment path and source name.
+def _get_tool_environment() -> tuple[str, str]:
+    """Get the tool environment root and the source it was resolved from.
+
+    The "tool environment" is where mcp-coder *and the MCP server executables*
+    (``mcp-tools-py``, ``mcp-workspace``) are installed. Because the servers are
+    co-installed with mcp-coder, the reliable signal is the prefix of the
+    **running** mcp-coder interpreter (``sys.prefix``) -- NOT ``VIRTUAL_ENV``.
+
+    In the two-environment model a launcher activates the *project* venv
+    (so ``VIRTUAL_ENV`` points at it, and pytest/mypy run against the project's
+    Python) while mcp-coder itself runs from the tool env. ``VIRTUAL_ENV`` then
+    points at the project venv, which need not contain the MCP server
+    executables -- using it would make the servers fail to start. The project
+    venv reaches the servers via ``${VIRTUAL_ENV}`` in ``.mcp.json`` (for
+    ``--venv-path`` / ``--python-executable``), not through this value.
+
+    Resolution order:
+        1. A pre-set ``MCP_CODER_VENV_DIR`` (a two-env-aware launcher already
+           pointed it at the tool env), if it exists.
+        2. ``sys.prefix`` (the running mcp-coder interpreter).
 
     Returns:
-        Tuple of (environment_path, source_name)
-
-    Priority: VIRTUAL_ENV > CONDA_PREFIX > sys.prefix
-    Invalid paths trigger fallback to next option with warning.
+        Tuple of (environment_path, source_name).
     """
-    # Try VIRTUAL_ENV first
-    virtual_env = os.environ.get("VIRTUAL_ENV", "").strip()
-    if virtual_env and Path(virtual_env).exists():
-        return virtual_env, "VIRTUAL_ENV"
-    elif virtual_env:
+    preset = os.environ.get("MCP_CODER_VENV_DIR", "").strip()
+    if preset and Path(preset).exists():
+        return preset, "MCP_CODER_VENV_DIR"
+    if preset:
         logger.warning(
-            "VIRTUAL_ENV points to non-existent path: %s, trying next option",
-            virtual_env,
+            "MCP_CODER_VENV_DIR points to non-existent path: %s, using sys.prefix",
+            preset,
         )
-
-    # Try CONDA_PREFIX second
-    conda_prefix = os.environ.get("CONDA_PREFIX", "").strip()
-    if conda_prefix and Path(conda_prefix).exists():
-        return conda_prefix, "CONDA_PREFIX"
-    elif conda_prefix:
-        logger.warning(
-            "CONDA_PREFIX points to non-existent path: %s, using sys.prefix",
-            conda_prefix,
-        )
-
-    # Fall back to sys.prefix (always valid)
     return sys.prefix, "sys.prefix"
 
 
@@ -54,8 +56,11 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
     This function prepares environment variables that can be used in .mcp.json
     configuration files to make them portable across different machines.
 
-    The runner environment (MCP_CODER_VENV_DIR) is where mcp-coder is currently
-    executing, detected from VIRTUAL_ENV, CONDA_PREFIX, or sys.prefix.
+    ``MCP_CODER_VENV_DIR`` / ``MCP_CODER_VENV_PATH`` point at the **tool env**
+    (where mcp-coder and the MCP servers are installed), resolved from the
+    running interpreter -- not from ``VIRTUAL_ENV``. See ``_get_tool_environment``
+    for the rationale. The project's own Python is passed separately via
+    ``${VIRTUAL_ENV}`` in ``.mcp.json``.
 
     Args:
         project_dir: Absolute path to project directory
@@ -63,24 +68,32 @@ def prepare_llm_environment(project_dir: Path) -> dict[str, str]:
     Returns:
         Dictionary with MCP_CODER_PROJECT_DIR, MCP_CODER_VENV_DIR,
         MCP_CODER_VENV_PATH, DISABLE_AUTOUPDATER, and MCP_TIMEOUT
-        environment variables. MCP_CODER_VENV_PATH points to the venv's
-        Scripts (Windows) or bin (POSIX) subdirectory. DISABLE_AUTOUPDATER
-        defaults to "1" but preserves any value already set in the parent
-        environment. MCP_TIMEOUT defaults to "30000" but preserves any value
-        already set in the parent environment.
+        environment variables. MCP_CODER_VENV_PATH points to the tool env's
+        Scripts (Windows) or bin (POSIX) subdirectory. A pre-set
+        MCP_CODER_VENV_PATH is preserved (honoring a launcher-provided value);
+        otherwise it is derived from the tool env. DISABLE_AUTOUPDATER defaults
+        to "1" and MCP_TIMEOUT to "30000", each preserving any value already set
+        in the parent environment.
     """
     logger.debug("Preparing LLM environment for project: %s", project_dir)
 
-    # Get runner environment with validation and source tracking
-    runner_venv, source = _get_runner_environment()
+    # Tool env = where mcp-coder + the MCP servers live (running interpreter),
+    # NOT the active VIRTUAL_ENV which may be the project venv.
+    tool_env, source = _get_tool_environment()
 
-    logger.debug("Detected runner environment from %s: %s", source, runner_venv)
+    logger.debug("Detected tool environment from %s: %s", source, tool_env)
 
     # Convert paths to absolute OS-native strings
     project_dir_absolute = str(Path(project_dir).resolve())
-    venv_dir_absolute = str(Path(runner_venv).resolve())
+    venv_dir_absolute = str(Path(tool_env).resolve())
 
-    venv_path = str(get_bin_dir(Path(runner_venv)).resolve())
+    # Honor a launcher-provided bin dir (same contract as MCP_TIMEOUT); else
+    # derive it from the tool env.
+    preset_path = os.environ.get("MCP_CODER_VENV_PATH", "").strip()
+    if preset_path:
+        venv_path = str(Path(preset_path).resolve())
+    else:
+        venv_path = str(get_bin_dir(Path(tool_env)).resolve())
 
     env_vars = {
         "MCP_CODER_PROJECT_DIR": project_dir_absolute,
