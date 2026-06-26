@@ -107,6 +107,13 @@ _.setup_commands_macos
 # _usage.py, which vulture cannot detect at 60% confidence.
 _.cache_creation_input_tokens
 
+# claude_code_cli.py - StreamMessage TypedDict fields describing Claude CLI
+# stream-json output. Only accessed via string-literal dict keys
+# (e.g. .get("total_cost_usd")), which vulture does not count as usage. The
+# usages that previously suppressed these lived in the now-removed SDK/API path.
+_.subtype
+_.total_cost_usd
+
 # =============================================================================
 # FALSE POSITIVES - Argparse Pattern
 # =============================================================================
