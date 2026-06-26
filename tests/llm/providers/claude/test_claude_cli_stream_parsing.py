@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import (
+    MCP_UNAVAILABLE_MAX_RETRIES,
     McpServersUnavailableError,
     ParsedStreamResponse,
     StreamMessage,
@@ -757,3 +758,103 @@ class TestMcpFailureIsRetryable:
 
     def test_empty_is_not_retryable(self) -> None:
         assert mcp_failure_is_retryable([]) is False
+
+
+class TestMcpRetryInAskClaude:
+    """ask_claude_code_cli retries transient 'pending' MCP startups (#998)."""
+
+    @staticmethod
+    def _stream(servers: list[dict[str, str]], text: str = "done") -> str:
+        # Trailing thinking_tokens mirrors real long sessions (the #998 shape).
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "sess-r",
+                "tools": [],
+                "mcp_servers": servers,
+            }
+        )
+        think = json.dumps(
+            {"type": "system", "subtype": "thinking_tokens", "session_id": "sess-r"}
+        )
+        result = json.dumps(
+            {
+                "type": "result",
+                "subtype": "success",
+                "result": text,
+                "session_id": "sess-r",
+            }
+        )
+        return f"{init}\n{think}\n{result}"
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.time.sleep")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    def test_pending_then_connected_succeeds_after_retry(
+        self, mock_execute: MagicMock, mock_find: MagicMock, mock_sleep: MagicMock
+    ) -> None:
+        mock_find.return_value = "claude"
+        pending = CommandResult(
+            return_code=0,
+            stdout=self._stream([{"name": "mcp-workspace", "status": "pending"}]),
+            stderr="",
+            timed_out=False,
+        )
+        connected = CommandResult(
+            return_code=0,
+            stdout=self._stream([{"name": "mcp-workspace", "status": "connected"}]),
+            stderr="",
+            timed_out=False,
+        )
+        mock_execute.side_effect = [pending, connected]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = ask_claude_code_cli("q", logs_dir=tmpdir)
+
+        assert result["session_id"] == "sess-r"
+        assert result["text"] == "done"
+        assert mock_execute.call_count == 2
+        mock_sleep.assert_called_once()
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.time.sleep")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    def test_pending_exhausts_retries_then_raises(
+        self, mock_execute: MagicMock, mock_find: MagicMock, mock_sleep: MagicMock
+    ) -> None:
+        mock_find.return_value = "claude"
+        mock_execute.return_value = CommandResult(
+            return_code=0,
+            stdout=self._stream([{"name": "mcp-workspace", "status": "pending"}]),
+            stderr="",
+            timed_out=False,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with pytest.raises(McpServersUnavailableError):
+                ask_claude_code_cli("q", logs_dir=tmpdir)
+
+        # one initial attempt + MCP_UNAVAILABLE_MAX_RETRIES retries
+        assert mock_execute.call_count == MCP_UNAVAILABLE_MAX_RETRIES + 1
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.time.sleep")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    def test_failed_status_not_retried(
+        self, mock_execute: MagicMock, mock_find: MagicMock, mock_sleep: MagicMock
+    ) -> None:
+        mock_find.return_value = "claude"
+        mock_execute.return_value = CommandResult(
+            return_code=0,
+            stdout=self._stream([{"name": "mcp-tools-py", "status": "failed"}]),
+            stderr="",
+            timed_out=False,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with pytest.raises(McpServersUnavailableError):
+                ask_claude_code_cli("q", logs_dir=tmpdir)
+
+        assert mock_execute.call_count == 1
+        mock_sleep.assert_not_called()
