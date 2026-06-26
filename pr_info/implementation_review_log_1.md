@@ -34,3 +34,6 @@ Scope: Fix MCP server path resolution (env.py tool-env vs VIRTUAL_ENV) + fail-fa
 - **Acceptance criteria**: all 4 met (tool-env resolution ignores VIRTUAL_ENV + unit test; fail-fast abort on non-connected MCP server, now on both streaming and non-streaming paths; docs updated).
 - **Skipped findings**: workflow `mcp_unavailable` classification (optional, AC met by typed error); `tools == []` direct check (status-based check is more precise); preset `MCP_CODER_VENV_PATH` existence validation (speculative/YAGNI).
 - **Quality gates**: pylint, pytest (3991 passed / 2 skipped), mypy — all pass. vulture: no output. lint-imports: 19 contracts kept, 0 broken.
+
+### Post-review addendum — CI fix
+The `/check_branch_status` run after the review loop found CI failing on `ruff-docstrings` (DOC501): `ask_claude_code_cli` raises `McpServersUnavailableError` (added pre-review in commit 3a21575) but its `Raises:` docstring section didn't list it. This rule is not part of the local pylint/mypy/ruff default checks. Fixed in commit `554bd41` (docstring-only; sibling `ask_claude_code_cli_stream` already documented it; `env.py` functions raise nothing). CI now PASSED, rebase up to date, ready to merge.
