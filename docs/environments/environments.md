@@ -57,7 +57,7 @@ There are two paths that set up environment variables: batch launchers (for inte
 | `.vscodeclaude_start.bat` (coordinator) | `MCP_CODER_VENV_PATH` on PATH | activates project `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `claude.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
-| `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from `VIRTUAL_ENV` / `CONDA_PREFIX` / `sys.prefix` | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg | **Partial** — reads whatever venv is active |
+| `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from a pre-set value or `sys.prefix` (the running mcp-coder interpreter) | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg; project Python reaches the servers via `${VIRTUAL_ENV}` in `.mcp.json` | **Yes** — tool env tracks the runtime, not the active venv |
 
 > All launcher scripts (`claude.bat`, `claude_local.bat`, `icoder_local.bat`) print MCP server versions (`mcp-workspace --version`, `mcp-tools-py --version`) at startup after tool verification.
 
@@ -85,16 +85,20 @@ The coordinator knows the tool env path because it **runs from it** — `get_mcp
 When mcp-coder invokes Claude programmatically (e.g. `mcp-coder prompt`), `prepare_llm_environment()` sets environment variables for the subprocess:
 
 ```python
-# Priority: VIRTUAL_ENV > CONDA_PREFIX > sys.prefix
-runner_venv = os.environ.get("VIRTUAL_ENV") or ...
+# Tool env = where mcp-coder AND the MCP servers are installed.
+# Honor a launcher-provided value, else use the running interpreter — NOT VIRTUAL_ENV.
+tool_env = os.environ.get("MCP_CODER_VENV_DIR") or sys.prefix
 
 env_vars = {
     "MCP_CODER_PROJECT_DIR": str(project_dir),
-    "MCP_CODER_VENV_DIR": runner_venv,
+    "MCP_CODER_VENV_DIR": tool_env,
+    "MCP_CODER_VENV_PATH": get_bin_dir(tool_env),  # honors a pre-set value too
 }
 ```
 
-This sets `MCP_CODER_VENV_DIR` to whatever venv is currently active. In the two-env model, `VIRTUAL_ENV` is the project env at this point (the tool env is only on PATH), so `MCP_CODER_VENV_DIR` ends up pointing to the **project** env — not the tool env. This is a known limitation.
+`MCP_CODER_VENV_DIR` / `MCP_CODER_VENV_PATH` identify the **tool env** — where the MCP server executables live. The reliable signal is the prefix of the running mcp-coder interpreter (`sys.prefix`), or a value the launcher already set; **`VIRTUAL_ENV` is deliberately not used** for these, since in the two-env model it points at the *project* venv, which need not contain the MCP server executables. (The project's Python still reaches the servers through `${VIRTUAL_ENV}` in `.mcp.json` — `--venv-path` / `--python-executable`.)
+
+> Earlier this was derived from `VIRTUAL_ENV` first, so running a workflow against a project whose `.venv` lacked `mcp-tools-py`/`mcp-workspace` made the servers fail to start (`tools: []`) and the model run blind. Fixed in #995; the CLI now also aborts fast when a configured MCP server isn't `connected`.
 
 ### How `claude.bat` Does It
 
