@@ -73,9 +73,9 @@ Read-only `build_assessments` (snapshot once, gather+assess each session) and ap
 
 `get_stale_sessions`/`cleanup_stale_sessions` consume `assessments` (+ call site); deletion ordering fix; lock-failure veto (never `remove_session` on failed delete); `.to_be_deleted` retry loop consumes assessment. See [step_6.md](./steps/step_6.md).
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Restart migration (zombie / remove-missing)
 

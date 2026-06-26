@@ -1,203 +1,68 @@
-"""Cleanup functions for vscodeclaude feature."""
+"""Cleanup functions for vscodeclaude feature.
+
+This is an ``apply()`` consumer of the assessment pipeline: it reads the prebuilt
+:class:`SessionAssessment` map (the eligibility + git-status safety matrix already
+decided in ``assess_session``) and never re-derives stale/closed logic or re-checks
+git status to gate a destructive delete.
+"""
 
 import logging
 from pathlib import Path
 
-from ...mcp_workspace_github import (
-    IssueData,
-    IssueManager,
-    RepoIdentifier,
-    get_all_cached_issues,
-)
 from ...utils.folder_deletion import (
     DeletionFailureReason,
-    is_directory_empty,
     safe_delete_folder,
 )
-from .config import _get_configured_repos, get_github_username
 from .helpers import (
     add_to_be_deleted,
     load_to_be_deleted,
     remove_from_to_be_deleted,
 )
-from .issues import (
-    get_ignore_labels,
-    get_matching_ignore_label,
-    is_status_eligible_for_session,
-)
 from .sessions import (
-    is_vscode_open_for_folder,
     load_sessions,
     remove_session,
     warn_orphan_folders,
 )
-from .status import get_folder_git_status, is_session_stale
-from .types import VSCodeClaudeSession
+from .types import SessionAction, SessionAssessment, VSCodeClaudeSession
 from .workspace import get_workspace_file_path
 
 logger = logging.getLogger(__name__)
 
 
 def get_stale_sessions(
-    active_set: dict[str, bool],
-    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
-) -> list[tuple[VSCodeClaudeSession, str, str]]:
-    """Get stale sessions with git status.
+    assessments: dict[str, SessionAssessment],
+) -> list[tuple[VSCodeClaudeSession, SessionAssessment]]:
+    """Return non-active sessions whose decision implies cleanup handling.
 
-    Only checks sessions for repos that are still configured.
-    Includes sessions that are:
-    - Stale (status changed)
-    - Blocked (has ignore labels like blocked/wait)
-    - Closed (issue state is closed)
-    - Unassigned (user no longer assigned to issue)
-    - Ineligible (bot statuses or pr-created - no commands)
+    Reads the prebuilt assessments instead of re-deriving eligibility: the
+    closed/stale/blocked/unassigned/ineligible classification and the next action
+    were decided once in ``assess_session`` (R1). Active sessions are skipped here
+    (``a.verdict.active`` covers both ``KEEP_ACTIVE`` and zombie
+    ``INVESTIGATE_ZOMBIE`` — both stay tracked), and ``RESTART`` sessions are left
+    for the restart path. What remains is the cleanup action space:
+    ``DELETE`` / ``REMOVE_MISSING`` / ``SKIP``.
 
     Args:
-        active_set: Snapshot mapping session folder -> is_active. Sessions
-            recorded as active (or removed mid-flow) are skipped.
-        cached_issues_by_repo: Optional cache of issues for state/blocked/eligibility detection
+        assessments: Folder-path -> :class:`SessionAssessment` map built once per
+            run by ``build_assessments``.
 
     Returns:
-        List of (session, git_status, reason) tuples where git_status is one of:
-        "Clean", "Dirty", "Missing", "No Git", "Error"
+        List of ``(session, assessment)`` pairs that cleanup must act on.
     """
     store = load_sessions()
-    stale_sessions: list[tuple[VSCodeClaudeSession, str, str]] = []
-
-    # Load configured repos (skip sessions for repos no longer in config)
-    configured_repos = _get_configured_repos()
-
-    # Load ignore labels for blocked detection
-    ignore_labels = get_ignore_labels()
-
-    # Get GitHub username for assignment check
-    try:
-        github_username = get_github_username()
-    except ValueError:
-        # If GitHub username is not configured, skip assignment checks
-        logger.debug("GitHub username not configured, skipping assignment checks")
-        github_username = None
+    stale_sessions: list[tuple[VSCodeClaudeSession, SessionAssessment]] = []
 
     for session in store["sessions"]:
-        # Skip sessions with running VSCode, but only when session artifacts exist.
-        # If both the folder and workspace file are gone, the VSCode process is a
-        # zombie (launched for this session but kept running after its files were
-        # deleted). Don't let a zombie process block cleanup.
-        if active_set.get(session["folder"], False):
+        assessment = assessments.get(session["folder"])
+        if assessment is None:
             continue
-
-        # Skip sessions for unconfigured repos
-        repo_full_name = session["repo"]
-        if repo_full_name not in configured_repos:
-            logger.debug(
-                "Skipping stale check for issue #%d: repo %s not in config",
-                session["issue_number"],
-                repo_full_name,
-            )
+        # Skip active (KEEP_ACTIVE + zombie INVESTIGATE_ZOMBIE both stay tracked).
+        if assessment.verdict.active:
             continue
-
-        # Check issue state, blocked label, eligibility, and assignment from cache
-        is_blocked = False
-        is_closed = False
-        is_ineligible = False
-        is_unassigned = False
-        issue_number = session["issue_number"]
-        cached_for_stale_check: dict[int, IssueData] | None = None
-        status_labels: list[str] = []
-        if cached_issues_by_repo:
-            repo_issues = cached_issues_by_repo.get(repo_full_name, {})
-            if issue_number not in repo_issues:
-                # Issue missing from cache — unexpected, since _build_cached_issues_by_repo
-                # uses additional_issues to include all session issues.
-                # Fetch through the caching layer to populate and avoid double API calls.
-                logger.warning(
-                    "Issue #%d missing from cache for %s, fetching individually",
-                    issue_number,
-                    repo_full_name,
-                )
-                try:
-                    repo_url = f"https://github.com/{repo_full_name}"
-                    issue_manager = IssueManager(repo_url=repo_url)
-                    fetched = get_all_cached_issues(
-                        RepoIdentifier.from_full_name(repo_full_name),
-                        issue_manager=issue_manager,
-                        additional_issues=[issue_number],
-                    )
-                    fetched_dict: dict[int, IssueData] = {
-                        i["number"]: i for i in fetched
-                    }
-                    cached_issues_by_repo[repo_full_name] = fetched_dict
-                    repo_issues = fetched_dict
-                except (
-                    Exception
-                ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-                    logger.debug(
-                        "Failed to fetch issue #%d individually; skipping eligibility checks",
-                        issue_number,
-                    )
-            if issue_number in repo_issues:
-                issue = repo_issues[issue_number]
-                # Check if issue is closed
-                is_closed = issue["state"] == "closed"
-                # Check for blocked label
-                blocked_label = get_matching_ignore_label(
-                    issue["labels"], ignore_labels
-                )
-                if blocked_label:
-                    is_blocked = True
-                # Check if current status is eligible for session
-                # Get status from issue labels (most current)
-                status_labels = [  # noqa: PLW2901 – intentional reassignment from [] init above
-                    lbl for lbl in issue["labels"] if lbl.startswith("status-")
-                ]
-                if status_labels:
-                    current_status = status_labels[0]
-                    is_ineligible = not is_status_eligible_for_session(current_status)
-                    # Check if issue is unassigned (user not in assignees)
-                    # Only check for open, eligible statuses - if issue is closed,
-                    # blocked, or ineligible, assignment doesn't matter
-                    if (
-                        github_username is not None
-                        and not is_closed
-                        and not is_blocked
-                        and not is_ineligible
-                        and is_status_eligible_for_session(current_status)
-                    ):
-                        is_unassigned = github_username not in issue["assignees"]
-                # Only pass cache to is_session_stale when issue is in it
-                # (passing cache with a missing issue causes ValueError in fallback)
-                cached_for_stale_check = repo_issues
-
-        # Check if session is stale, blocked, closed, unassigned, or ineligible
-        # Check is_closed first to short-circuit and avoid calling is_session_stale
-        # on closed issues (which would trigger a spurious warning)
-        is_stale = (
-            not is_closed
-            and not is_blocked
-            and not is_unassigned
-            and not is_ineligible
-            and is_session_stale(session, cached_issues=cached_for_stale_check)
-        )
-
-        if is_closed or is_blocked or is_unassigned or is_ineligible or is_stale:
-            reasons: list[str] = []
-            if is_closed:
-                reasons.append("closed")
-            if is_blocked:
-                reasons.append("blocked")
-            if is_unassigned:
-                reasons.append("unassigned")
-            if is_ineligible:
-                reasons.append("bot status")
-            if is_stale:
-                if cached_for_stale_check is not None and status_labels:
-                    reasons.append(f"stale → {status_labels[0]}")
-                else:
-                    reasons.append("stale")
-            reason = ", ".join(reasons)
-            folder_path = Path(session["folder"])
-            git_status = get_folder_git_status(folder_path)
-            stale_sessions.append((session, git_status, reason))
+        # RESTART is the restart path's job, not cleanup's.
+        if assessment.decision.action == SessionAction.RESTART:
+            continue
+        stale_sessions.append((session, assessment))
 
     return stale_sessions
 
@@ -205,131 +70,132 @@ def get_stale_sessions(
 def delete_session_folder(
     session: VSCodeClaudeSession,
     workspace_base: str,
-    was_clean: bool = False,
 ) -> bool:
-    """Delete session folder and remove from session store.
+    """Delete session folder, then workspace file, then session record.
+
+    Ordering fix + lock veto: the folder is deleted FIRST, and the
+    ``.code-workspace`` launcher only AFTER folder deletion succeeds. On a failed
+    delete (locked folder) the entry is queued in ``.to_be_deleted`` for retry and
+    the session is left tracked — ``remove_session`` is never called on a failed
+    delete and the workspace file is never unlinked (lock-failure veto).
 
     Args:
-        session: Session to delete
-        workspace_base: Path to workspace directory
-        was_clean: True when caller verified git status was "Clean" before calling
+        session: Session to delete.
+        workspace_base: Path to workspace directory.
 
     Returns:
-        True if folder was successfully deleted and session removed, False on error.
-
-    Uses safe_delete_folder for robust folder deletion.
-    When folder deletion fails and was_clean is True, the folder is soft-deleted
-    (added to .to_be_deleted registry) and the session is removed.
-    The .code-workspace file is always deleted before attempting folder deletion.
+        True if the folder was removed (or already gone) and the session record
+        removed; False on a failed delete (entry queued for retry).
     """
     folder_path = Path(session["folder"])
     folder_name = folder_path.name
 
-    try:
-        # Always delete the workspace file before attempting folder deletion
+    if folder_path.exists():
+        deletion = safe_delete_folder(folder_path)
+        if not deletion.success:
+            if deletion.reason == DeletionFailureReason.LOCKED_EMPTY_DIR:
+                logger.error(
+                    "Failed to delete session folder - directory is empty "
+                    "but locked by Windows (close Explorer or any app with "
+                    "a window open to this folder, then retry): %s",
+                    deletion.detail or folder_path,
+                )
+            else:
+                reason_label = deletion.reason.value if deletion.reason else "unknown"
+                logger.error(
+                    "Failed to delete session folder (%s): %s",
+                    reason_label,
+                    deletion.detail or folder_path,
+                )
+            # Lock veto: queue for retry, keep the session tracked, do NOT unlink
+            # the workspace file.
+            add_to_be_deleted(workspace_base, folder_name)
+            return False
+        logger.info("Deleted folder: %s", folder_path)
+
+        # Only AFTER the folder is gone, remove the launcher file.
         workspace_file = get_workspace_file_path(workspace_base, folder_name)
-        if workspace_file.exists():
-            try:
-                workspace_file.unlink()
-                logger.info("Deleted workspace file: %s", workspace_file)
-            except OSError:
-                logger.warning("Failed to delete workspace file: %s", workspace_file)
+        try:
+            workspace_file.unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Failed to delete workspace file: %s", workspace_file)
 
-        # Use safe_delete_folder for robust folder deletion
-        if folder_path.exists():
-            deletion = safe_delete_folder(folder_path)
-            if not deletion.success:
-                if deletion.reason == DeletionFailureReason.LOCKED_EMPTY_DIR:
-                    logger.error(
-                        "Failed to delete session folder - directory is empty "
-                        "but locked by Windows (close Explorer or any app with "
-                        "a window open to this folder, then retry): %s",
-                        deletion.detail or folder_path,
-                    )
-                else:
-                    reason_label = (
-                        deletion.reason.value if deletion.reason else "unknown"
-                    )
-                    logger.error(
-                        "Failed to delete session folder (%s): %s",
-                        reason_label,
-                        deletion.detail or folder_path,
-                    )
-                # Soft-delete on failure when folder was clean
-                if was_clean:
-                    add_to_be_deleted(workspace_base, folder_name)
-                    remove_session(session["folder"])
-                    logger.info("Soft-deleted: %s", folder_name)
-                return False
-            logger.info("Deleted folder: %s", folder_path)
+    # Remove session from store.
+    remove_session(session["folder"])
+    return True
 
-        # Remove session from store
-        remove_session(session["folder"])
 
-        return True
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.error("Failed to delete session folder %s: %s", folder_path, e)
-        if was_clean:
-            add_to_be_deleted(workspace_base, folder_path.name)
-            remove_session(session["folder"])
-            logger.info("Soft-deleted (exception path): %s", folder_path.name)
-        return False
+def _retry_to_be_deleted(
+    workspace_base: str,
+    assessments: dict[str, SessionAssessment],
+) -> None:
+    """Retry queued ``.to_be_deleted`` folders, consuming the assessment map.
+
+    ``.to_be_deleted`` is keyed by folder NAME; ``assessments`` is keyed by folder
+    PATH, so each entry is resolved under ``workspace_base`` to look up its
+    assessment. A live folder (assessment ``verdict.active``) is spared and left in
+    the queue — replacing the cmdline-only ``is_vscode_open_for_folder`` check and
+    closing the second #38 door.
+    """
+    to_delete = load_to_be_deleted(workspace_base)
+    for folder_name in list(to_delete):
+        folder_path = Path(workspace_base) / folder_name
+        assessment = assessments.get(str(folder_path))
+
+        # Assessment exists + active -> spare the live folder; leave it queued.
+        if assessment is not None and assessment.verdict.active:
+            logger.debug(
+                "Sparing .to_be_deleted entry — session is live on %s; "
+                "leaving entry queued.",
+                folder_name,
+            )
+            continue
+
+        # Folder gone (inactive assessment or no assessment) -> drop the entry.
+        if not folder_path.exists():
+            remove_from_to_be_deleted(workspace_base, folder_name)
+            logger.info("Removed stale .to_be_deleted entry: %s", folder_name)
+            continue
+
+        # Inactive assessment OR no assessment, folder still present -> retry.
+        deletion = safe_delete_folder(folder_path)
+        if deletion.success:
+            remove_from_to_be_deleted(workspace_base, folder_name)
+            logger.info("Retry-deleted soft-deleted folder: %s", folder_name)
 
 
 def cleanup_stale_sessions(
     workspace_base: str,
-    active_set: dict[str, bool],
+    assessments: dict[str, SessionAssessment],
     dry_run: bool = True,
-    cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> dict[str, list[str]]:
-    """Clean up stale session folders.
+    """Clean up stale session folders by consuming prebuilt assessments.
 
     Args:
-        workspace_base: Path to workspace directory
-        active_set: Snapshot mapping session folder -> is_active.
-        dry_run: If True, only report what would be deleted
-        cached_issues_by_repo: Optional cache for blocked detection
+        workspace_base: Path to workspace directory.
+        assessments: Folder-path -> :class:`SessionAssessment` map built once per
+            run by ``build_assessments``.
+        dry_run: If True, only report what would be deleted.
 
     Returns:
-        Dict with "deleted" and "skipped" folder lists
+        Dict with "deleted" and "skipped" folder lists.
 
-    Behavior by status:
-    - Clean: delete folder and session
-    - Dirty: skip with warning (uncommitted changes)
-    - Missing: remove session only (folder already gone)
-    - No Git / Error: skip with warning (investigate manually)
+    The action is driven entirely by ``a.decision.action`` (decided upstream in
+    ``decide``); cleanup never re-checks git status to gate a destructive delete:
+    - ``DELETE``: delete folder, then workspace file, then session record.
+    - ``REMOVE_MISSING``: remove session + orphan workspace file (folder gone).
+    - ``SKIP``: report ``a.decision.reason`` (dirty / unverified non-empty).
 
-    Retry logic: on non-dry-run, retries .to_be_deleted entries first.
+    Retry logic: on non-dry-run, retries ``.to_be_deleted`` entries first,
+    consuming the assessment map (live folders are spared, never deleted).
     """
     result: dict[str, list[str]] = {"deleted": [], "skipped": []}
 
-    # Retry .to_be_deleted entries before processing stale sessions
+    # Retry .to_be_deleted entries before processing stale sessions.
     if not dry_run:
-        to_delete = load_to_be_deleted(workspace_base)
-        for folder_name in list(to_delete):
-            folder_path = Path(workspace_base) / folder_name
-            if not folder_path.exists():
-                remove_from_to_be_deleted(workspace_base, folder_name)
-                logger.info("Removed stale .to_be_deleted entry: %s", folder_name)
-                continue
-            is_open, _ = is_vscode_open_for_folder(str(folder_path))
-            if is_open:
-                remove_from_to_be_deleted(workspace_base, folder_name)
-                logger.warning(
-                    "Reconciled .to_be_deleted entry — VSCode is open on %s; "
-                    "removing entry without deletion (prior soft-delete was a "
-                    "false negative).",
-                    folder_name,
-                )
-                continue
-            deletion = safe_delete_folder(folder_path)
-            if deletion.success:
-                remove_from_to_be_deleted(workspace_base, folder_name)
-                logger.info("Retry-deleted soft-deleted folder: %s", folder_name)
+        _retry_to_be_deleted(workspace_base, assessments)
 
-    # Run orphan detection for all repos with active sessions
+    # Run orphan detection for all repos with active sessions.
     if not dry_run:
         store = load_sessions()
         session_folders = {Path(s["folder"]).name for s in store["sessions"]}
@@ -349,29 +215,26 @@ def cleanup_stale_sessions(
                     to_be_deleted=to_be_deleted_set,
                 )
 
-    stale_sessions = get_stale_sessions(
-        active_set=active_set, cached_issues_by_repo=cached_issues_by_repo
-    )
+    stale_sessions = get_stale_sessions(assessments)
 
-    for session, git_status, reason in stale_sessions:
+    for session, assessment in stale_sessions:
         folder = session["folder"]
+        action = assessment.decision.action
+        reason = assessment.decision.reason
 
-        if git_status == "Clean":
-            # Clean folder - delete or report
+        if action == SessionAction.DELETE:
             if dry_run:
-                print(f"Add --cleanup to delete: {folder}")
+                print(f"Add --cleanup to delete ({reason}): {folder}")
                 # Don't add to deleted list in dry run - it wasn't actually deleted
             else:
-                if delete_session_folder(
-                    session, workspace_base=workspace_base, was_clean=True
-                ):
+                if delete_session_folder(session, workspace_base=workspace_base):
                     print(f"Deleted: {folder}")
                     result["deleted"].append(folder)
                 else:
                     print(f"Failed to delete: {folder}")
                     result["skipped"].append(folder)
 
-        elif git_status == "Missing":
+        elif action == SessionAction.REMOVE_MISSING:
             # Folder gone - also clean up orphan workspace file to break the
             # orphan-workspace -> false-active -> cleanup-skipped loop.
             workspace_file = get_workspace_file_path(workspace_base, Path(folder).name)
@@ -384,34 +247,10 @@ def cleanup_stale_sessions(
                 print(f"Removed session (folder missing): {folder}")
                 result["deleted"].append(folder)
 
-        elif git_status == "Dirty":
-            # Skip - has uncommitted changes
-            logger.warning("Skipping dirty folder: %s", folder)
-            print(f"[WARN] Skipping (dirty): {folder}")
+        else:  # SessionAction.SKIP
+            logger.warning("Skipping (%s): %s", reason, folder)
+            print(f"[WARN] Skipping ({reason}): {folder}")
             result["skipped"].append(folder)
-
-        else:  # "No Git" or "Error"
-            folder_path = Path(folder)
-            if is_directory_empty(folder_path):
-                # Empty folder — safe to delete regardless of git status
-                if dry_run:
-                    print(
-                        f"Add --cleanup to delete (empty, {git_status.lower()}): {folder}"
-                    )
-                else:
-                    if delete_session_folder(session, workspace_base=workspace_base):
-                        print(f"Deleted: {folder}")
-                        result["deleted"].append(folder)
-                    else:
-                        print(f"Failed to delete: {folder}")
-                        result["skipped"].append(folder)
-            else:
-                # Non-empty — needs manual investigation
-                logger.warning(
-                    "Skipping folder (%s, %s): %s", git_status.lower(), reason, folder
-                )
-                print(f"[WARN] Skipping ({git_status.lower()}, {reason}): {folder}")
-                result["skipped"].append(folder)
 
     if not stale_sessions:
         print("No stale sessions to clean up.")

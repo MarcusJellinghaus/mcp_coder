@@ -524,9 +524,9 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         )
 
         # Build the full assessment for every session once at command entry
-        # (read-only: snapshot taken once, no disk writes here). Cleanup and
-        # restart still consume the legacy active_set shape, so project the
-        # verdicts onto it until those consumers are migrated.
+        # (read-only: snapshot taken once, no disk writes here). Cleanup now
+        # consumes the assessments directly; restart still reads the legacy
+        # active_set shape, so project the verdicts onto it until it is migrated.
         assessments = build_assessments(sessions_list, cached_issues_by_repo)
         active_set = {
             folder: assessment.verdict.active
@@ -539,16 +539,14 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         if args.cleanup:
             cleanup_stale_sessions(
                 workspace_base=vscodeclaude_config["workspace_base"],
-                active_set=active_set,
+                assessments=assessments,
                 dry_run=False,
-                cached_issues_by_repo=cached_issues_by_repo,
             )
         else:
             cleanup_stale_sessions(
                 workspace_base=vscodeclaude_config["workspace_base"],
-                active_set=active_set,
+                assessments=assessments,
                 dry_run=True,
-                cached_issues_by_repo=cached_issues_by_repo,
             )
 
         # Step 2: Restart closed sessions (pass cache for staleness checks)

@@ -1867,12 +1867,19 @@ class TestScenarioACrossModule:
         import json
 
         from mcp_coder.utils.folder_deletion import DeletionResult
-        from mcp_coder.workflows.vscodeclaude.assessment import (
-            build_active_session_set,
-        )
         from mcp_coder.workflows.vscodeclaude.cleanup import cleanup_stale_sessions
         from mcp_coder.workflows.vscodeclaude.helpers import TO_BE_DELETED_FILENAME
         from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
+        from mcp_coder.workflows.vscodeclaude.types import (
+            Decision,
+            DetectionSignals,
+            IssueState,
+            LivenessRule,
+            LivenessVerdict,
+            SessionAction,
+            SessionAssessment,
+            Transition,
+        )
 
         sessions_file = tmp_path / "sessions.json"
         monkeypatch.setattr(
@@ -1923,33 +1930,48 @@ class TestScenarioACrossModule:
         }
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
-            lambda: {"owner/repo"},
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
-            lambda: "testuser",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
-            lambda path: (False, None),
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
-            lambda path: (False, None),
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
             lambda path: DeletionResult(success=True),
         )
 
-        active_set = build_active_session_set(load_sessions()["sessions"])
+        # The closed issue's folder is gone -> the upstream assessment resolves
+        # to REMOVE_MISSING; cleanup consumes that decision directly.
+        assessments = {
+            str(folder): SessionAssessment(
+                folder=str(folder),
+                signals=DetectionSignals(
+                    folder_exists=False,
+                    title_match=False,
+                    cmdline_match=False,
+                    pid_alive=False,
+                    found_pid=None,
+                    age_seconds=0.0,
+                    within_grace=False,
+                    directory_empty=True,
+                ),
+                verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_ARTIFACTS),
+                issue_state=IssueState(
+                    is_open=False,
+                    is_stale=False,
+                    is_blocked=False,
+                    is_unassigned=False,
+                    is_eligible=False,
+                ),
+                transition=Transition(flipped_to_inactive=False),
+                decision=Decision(
+                    action=SessionAction.REMOVE_MISSING,
+                    reason="folder missing",
+                    destructive=False,
+                ),
+                pid_needs_refresh=False,
+                found_pid=None,
+            )
+        }
 
         cleanup_stale_sessions(
             workspace_base=str(tmp_path),
-            active_set=active_set,
+            assessments=assessments,
             dry_run=False,
-            cached_issues_by_repo=cached_issues_by_repo,
         )
 
         post_cleanup_sessions = load_sessions()["sessions"]
