@@ -199,21 +199,6 @@ ignore_imports =
     mcp_coder.utils.jenkins_operations.** -> jenkins
 
 # -----------------------------------------------------------------------------
-# Contract: Claude Code SDK Isolation
-# -----------------------------------------------------------------------------
-# The 'claude_code_sdk' should only be used by llm.providers.claude.
-# -----------------------------------------------------------------------------
-[importlinter:contract:claude_sdk_isolation]
-name = Claude Code SDK Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    claude_code_sdk
-ignore_imports =
-    mcp_coder.llm.providers.claude.** -> claude_code_sdk
-
-# -----------------------------------------------------------------------------
 # Contract: LangChain Library Isolation
 # -----------------------------------------------------------------------------
 # langchain_core, langchain_openai, langchain_google_genai are optional
@@ -301,21 +286,6 @@ ignore_imports =
     mcp_coder.llm.providers.langchain.** -> truststore
 
 # -----------------------------------------------------------------------------
-# Contract: Pyperclip Library Isolation
-# -----------------------------------------------------------------------------
-# The 'pyperclip' package should only be used by utils.clipboard.
-# -----------------------------------------------------------------------------
-[importlinter:contract:pyperclip_isolation]
-name = Pyperclip Library Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    pyperclip
-ignore_imports =
-    mcp_coder.utils.clipboard -> pyperclip
-
-# -----------------------------------------------------------------------------
 # Contract: MCP Tools Py Isolation
 # -----------------------------------------------------------------------------
 # The 'mcp_tools_py' external package should only be used by mcp_tools_py module.
@@ -344,33 +314,6 @@ forbidden_modules =
     requests
 ignore_imports =
     mcp_coder.utils.jenkins_operations.client -> requests
-
-# -----------------------------------------------------------------------------
-# Contract: Structlog Library Isolation
-# -----------------------------------------------------------------------------
-# The 'structlog' library should only be used by log_utils.
-# Other modules should use log_utils for logging setup.
-# -----------------------------------------------------------------------------
-[importlinter:contract:structlog_isolation]
-name = Structlog Library Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    structlog
-
-# -----------------------------------------------------------------------------
-# Contract: Python JSON Logger Isolation
-# -----------------------------------------------------------------------------
-# The 'pythonjsonlogger' should only be used by log_utils.
-# -----------------------------------------------------------------------------
-[importlinter:contract:jsonlogger_isolation]
-name = Python JSON Logger Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    pythonjsonlogger
 
 # -----------------------------------------------------------------------------
 # Contract: Black Library Isolation

@@ -12,7 +12,7 @@ from mcp_coder.mcp_workspace_git import get_git_diff_for_commit, stage_all_chang
 from ..constants import PROMPTS_FILE_PATH
 from ..llm.env import prepare_llm_environment
 from ..llm.interface import prompt_llm
-from ..llm.providers.claude.claude_code_api import ClaudeAPIError
+from ..llm.providers.claude.errors import ClaudeAPIError
 from ..utils.git_utils import get_branch_name_for_logging
 
 # Constants

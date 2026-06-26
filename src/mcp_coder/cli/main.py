@@ -15,7 +15,7 @@ faulthandler.enable(file=sys.stderr, all_threads=True)
 from .. import __version__
 from ..utils.log_utils import OUTPUT, setup_logging
 from .commands.check_file_sizes import execute_check_file_sizes
-from .commands.commit import execute_commit_auto, execute_commit_clipboard
+from .commands.commit import execute_commit_auto
 from .commands.coordinator import (
     execute_coordinator_run,
     execute_coordinator_test,
@@ -278,8 +278,6 @@ def _handle_commit_command(args: argparse.Namespace) -> int:
     """
     if args.commit_mode == "auto":
         return execute_commit_auto(args)
-    elif args.commit_mode == "clipboard":
-        return execute_commit_clipboard(args)
     else:
         logger.debug(f"Commit mode '{args.commit_mode}' not yet implemented")
         logger.error("Commit mode '%s' is not yet implemented.", args.commit_mode)

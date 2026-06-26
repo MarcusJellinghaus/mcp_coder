@@ -14,11 +14,6 @@ Note: Import order is critical to prevent circular imports.
 # isort: skip_file
 
 # Layer 1: Core utilities (no dependencies on other utils submodules)
-from .clipboard import (
-    get_clipboard_text,
-    parse_commit_message,
-    validate_commit_message,
-)
 from .log_utils import OUTPUT, log_function_call, setup_logging
 from .subprocess_runner import (
     CommandOptions,
@@ -39,10 +34,6 @@ from .jenkins_operations import (
 )
 
 __all__ = [
-    # Clipboard operations
-    "get_clipboard_text",
-    "parse_commit_message",
-    "validate_commit_message",
     # Logging utilities
     "OUTPUT",
     "log_function_call",

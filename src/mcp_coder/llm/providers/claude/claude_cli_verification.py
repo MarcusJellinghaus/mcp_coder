@@ -1,12 +1,56 @@
 """Claude CLI verification functionality."""
 
 import logging
-from typing import Any
+from typing import Any, Optional, Tuple
 
-from .claude_code_api import _verify_claude_before_use
-from .claude_executable_finder import verify_claude_installation
+from .claude_executable_finder import (
+    setup_claude_path,
+    verify_claude_installation,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
+    """Verify Claude installation before attempting to use it.
+
+    Returns:
+        Tuple of (success, claude_path, error_message)
+    """
+    logger.debug("Verifying Claude installation before use")
+
+    try:
+        # First try to setup the PATH
+        claude_path = setup_claude_path()
+        if claude_path:
+            logger.debug("Claude CLI found and PATH configured: %s", claude_path)
+        else:
+            logger.warning(
+                "setup_claude_path() returned None - Claude not found in standard locations"
+            )
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        logger.warning("Error during PATH setup: %s", e)
+        claude_path = None
+
+    # Run detailed verification
+    verification_result = verify_claude_installation()
+
+    logger.debug("Claude verification result: %s", verification_result)
+
+    if verification_result["found"] and verification_result["works"]:
+        return True, verification_result["path"], None
+    else:
+        error_msg = verification_result.get("error", "Claude CLI verification failed")
+
+        # If verification failed but we found Claude, provide more helpful error message
+        if verification_result["found"] and verification_result["path"]:
+            detailed_error = f"Claude found at {verification_result['path']} but version check failed: {error_msg}"
+            logger.warning("Claude verification detailed error: %s", detailed_error)
+            return False, verification_result.get("path"), detailed_error
+
+        return False, verification_result.get("path"), error_msg
 
 
 def verify_claude() -> dict[str, Any]:

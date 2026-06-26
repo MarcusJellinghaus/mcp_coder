@@ -718,7 +718,6 @@ This could benefit from `format_and_commit` tool.
 **Tools:**
 
 - `tools/format_all.bat` - Run all formatting tools (ruff, black, isort)
-- `mcp-coder commit clipboard` - to commit all changes with a commit message from the clipboard
 - `mcp-coder commit auto` - to commit all changes with a commit message generated via LLM from the git diff
 
 > **Slash Command:** `/commit_push` ([`.claude/skills/commit_push/SKILL.md`](../../.claude/skills/commit_push/SKILL.md))

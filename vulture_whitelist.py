@@ -79,9 +79,6 @@ _._repo_name
 # mcp_tools_py.py - Convenience function for simple pass/fail checks
 _.has_mypy_errors
 
-# claude_code_api.py - Retry utility for future API retry logic
-_._retry_with_backoff
-
 # task_tracker.py - Convenience function for simple yes/no checks
 _.has_incomplete_work
 
@@ -110,6 +107,13 @@ _.setup_commands_macos
 # _usage.py, which vulture cannot detect at 60% confidence.
 _.cache_creation_input_tokens
 
+# claude_code_cli.py - StreamMessage TypedDict fields describing Claude CLI
+# stream-json output. Only accessed via string-literal dict keys
+# (e.g. .get("total_cost_usd")), which vulture does not count as usage. The
+# usages that previously suppressed these lived in the now-removed SDK/API path.
+_.subtype
+_.total_cost_usd
+
 # =============================================================================
 # FALSE POSITIVES - Argparse Pattern
 # =============================================================================
@@ -129,10 +133,8 @@ _.require_copilot_cli
 # test_copilot_cli.py - @patch decorator requires accepting the mock parameter
 _.mock_settings
 
-# test_commit.py - @patch decorator parameters for push/clipboard tests
+# test_commit.py - @patch decorator parameters for push tests
 _.mock_has_tracking
-_.mock_parse_msg
-_.mock_clipboard
 
 # test_issue_manager_label_update.py - Fixture used for side effect (patching)
 _._mock_git_repo

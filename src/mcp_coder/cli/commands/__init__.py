@@ -1,7 +1,7 @@
 """CLI command modules."""
 
 from . import coordinator
-from .commit import execute_commit_auto, execute_commit_clipboard
+from .commit import execute_commit_auto
 from .coordinator import execute_coordinator_test
 from .create_plan import execute_create_plan
 from .create_pr import execute_create_pr
@@ -18,7 +18,6 @@ __all__ = [
     "execute_verify",
     "execute_prompt",
     "execute_commit_auto",
-    "execute_commit_clipboard",
     "execute_implement",
     "execute_create_plan",
     "execute_create_pr",

@@ -2,9 +2,7 @@
 
 ## Overview
 
-The Copilot CLI outputs JSONL (one JSON object per line). This differs from the Claude Code SDK which uses typed Python message objects (`SystemMessage`, `AssistantMessage`, `ResultMessage`).
-
-For the Claude SDK response format, see [claude_sdk_response_structure.md](claude_sdk_response_structure.md).
+The Copilot CLI outputs JSONL (one JSON object per line).
 
 ## JSONL Message Types
 

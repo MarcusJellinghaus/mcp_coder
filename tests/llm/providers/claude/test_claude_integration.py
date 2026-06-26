@@ -1,50 +1,23 @@
-"""Consolidated integration tests for Claude CLI and API methods.
+"""Consolidated integration tests for the Claude CLI method.
 
-This module combines all Claude integration tests using parameterization to:
-- Reduce code duplication by ~50%
-- Reduce test runtime by ~40-50%
-- Maintain 100% test coverage
-- Improve maintainability
-
-Tests both CLI and API methods with the same test logic using @pytest.mark.parametrize.
+Tests exercise the full stack (prompt_llm -> ask_claude_code_cli) against the
+real Claude CLI under the @pytest.mark.claude_cli_integration marker.
 """
 
 from pathlib import Path
-from typing import Any, Callable
 
 import pytest
 
 from mcp_coder import prompt_llm
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.providers.claude.claude_code_api import ask_claude_code_api
-from mcp_coder.llm.providers.claude.claude_code_cli import ask_claude_code_cli
-from mcp_coder.llm.types import LLMResponseDict
-
-# TODO: Removed Claude Code SDK imports and working check functions
-# Will be cleaned up when SDK usage is removed from the codebase
-
-
-# Shared fixtures for parameterized tests
-@pytest.fixture(params=["cli", "api"])
-def method(request: pytest.FixtureRequest) -> str:
-    """Fixture providing both CLI and API methods for parameterized tests."""
-    return str(request.param)
-
-
-@pytest.fixture
-def ask_function(method: str) -> Callable[..., Any]:
-    """Fixture providing the appropriate ask function based on method."""
-    if method == "cli":
-        return ask_claude_code_cli
-    return ask_claude_code_api
 
 
 class TestCriticalPathIntegration:
     """Critical path integration tests - minimal set covering all major code paths."""
 
     @pytest.mark.claude_cli_integration
-    def test_basic_cli_api_integration(self) -> None:
-        """Test both CLI and API paths work end-to-end.
+    def test_basic_cli_integration(self) -> None:
+        """Test the CLI path works end-to-end.
 
         Note: This is a real integration test that makes actual API calls.
         Uses longer timeouts to accommodate real API response times.
@@ -62,24 +35,6 @@ class TestCriticalPathIntegration:
         assert isinstance(cli_result, dict)
         assert len(cli_result["text"]) > 0
         assert "yes" in cli_result["text"].lower()
-
-        # Test API path: ask_llm → ask_claude_code → ask_claude_code_api
-        # TODO: Commented out due to Claude Code SDK compatibility issues
-        # Will be removed when SDK usage is removed from the codebase
-        # Skip API test if SDK is not working in this environment
-        # if not claude_sdk_working():
-        #     pytest.skip("Claude Code SDK not working in this environment")
-        #
-        # api_result = ask_llm(
-        #     "Yes or no: Is 2+2=4?",
-        #     provider="claude",
-        #     method="api",
-        #     timeout=60,  # Increased for real API calls
-        #     env_vars=env_vars,
-        # )
-        # assert isinstance(api_result, str)
-        # assert len(api_result) > 0
-        # assert "yes" in api_result.lower()
 
     @pytest.mark.claude_cli_integration
     def test_session_continuity(self) -> None:

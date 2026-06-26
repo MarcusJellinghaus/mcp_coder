@@ -164,9 +164,8 @@ mcp-coder implement --project-dir /path/to/project
     - **Rationale**: Use Python's built-in environment information (`VIRTUAL_ENV`, `CONDA_PREFIX`, `sys.prefix`) instead of complex filesystem searches
     - **Benefits**: Universal compatibility (venv/conda/system Python), simpler code (~90% less complexity), more reliable
     - **Key Change**: `MCP_CODER_VENV_DIR` now points to runner environment (where mcp-coder executes), not project directory
-- **Formatting**: `llm/formatting/` - Response formatters and SDK utilities
-  - `formatters.py` - Text/verbose/raw output formatting (tests: `llm/formatting/test_formatters.py`)
-  - `sdk_serialization.py` - SDK message object handling (tests: `llm/formatting/test_sdk_serialization.py`)
+- **Formatting**: `llm/formatting/` - Response formatters
+  - `formatters.py` - Streaming output via `print_stream_event` (tests: `llm/formatting/test_formatters.py`)
 - **Storage**: `llm/storage/` - Session persistence
   - `session_storage.py` - Store/load session data (tests: `llm/storage/test_session_storage.py`)
   - **LangChain session history**: `store_langchain_history()` / `load_langchain_history()`
@@ -179,7 +178,6 @@ mcp-coder implement --project-dir /path/to/project
 - **Providers**: `llm/providers/` - Provider implementations (claude, copilot, langchain)
   - `claude/` - Claude Code CLI integration (tests: `llm/providers/claude/test_*.py`)
     - `claude_code_cli.py` - Claude Code CLI integration with stream-json session logging
-    - `claude_code_api.py` - Claude Code API integration (legacy, not used by interface)
     - `logging_utils.py` - Logging utilities for LLM requests/responses/errors (tests: `test_logging_utils.py`)
       - **Design Decision**: Added structured logging for LLM operations (Nov 2025)
         - **Rationale**: Centralized logging functions for request, response, and error tracking in Claude provider integrations
@@ -265,7 +263,6 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
 - **Task tracking**: `workflow_utils/task_tracker.py` - Progress management (tests: `workflow_utils/test_task_tracker.py`)
 - **Commit operations**: `workflow_utils/commit_operations.py` - LLM-assisted commit message generation (tests: `workflow_utils/test_commit_operations.py`)
 - **Base branch detection**: `workflow_utils/base_branch.py` - Unified base branch detection (tests: `workflow_utils/test_base_branch.py`)
-- **Clipboard operations**: `utils/clipboard.py` - Commit message clipboard utilities (tests: `utils/test_clipboard.py`)
 - **Data file utilities**: `utils/data_files.py` - Package data file location (tests: `utils/test_data_files.py`)
 - **Subprocess execution**: `utils/subprocess_runner.py` - MCP STDIO isolation support (tests: `utils/test_subprocess_runner.py`)
 - **Git utilities**: `utils/git_utils.py` - Branch name utilities for LLM log correlation (tests: `utils/test_git_utils.py`)

@@ -17,11 +17,6 @@ from mcp_coder.mcp_workspace_git import (
     stage_all_changes,
 )
 
-from ...utils.clipboard import (
-    get_clipboard_text,
-    parse_commit_message,
-    validate_commit_message,
-)
 from ...utils.log_utils import OUTPUT
 from ...workflow_utils.commit_operations import generate_commit_message_with_llm
 from ..utils import (
@@ -177,82 +172,3 @@ def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]:
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error("Error validating git repository: %s", e)
         return False, f"Git validation error: {str(e)}"
-
-
-def execute_commit_clipboard(args: argparse.Namespace) -> int:
-    """Execute commit clipboard command.
-
-    Returns:
-        Exit code (0 for success, 1 for validation error, 2 for commit/push error).
-    """
-    logger.info("Starting commit clipboard")
-
-    project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
-
-    # 1. Validate git repository
-    success, error = validate_git_repository(project_dir)
-    if not success:
-        logger.error("%s", error)
-        return 1
-
-    # 2. Get and validate commit message from clipboard
-    success, commit_message, error = get_commit_message_from_clipboard()
-    if not success:
-        logger.error("%s", error)
-        return 1
-
-    # 3. Stage all changes
-    if not stage_all_changes(project_dir):
-        logger.error("Failed to stage changes")
-        return 2
-
-    # 4. Create commit
-    commit_result = commit_staged_files(commit_message, project_dir)
-    if not commit_result["success"]:
-        logger.error("%s", commit_result["error"])
-        return 2
-
-    # Parse commit message to get summary for user feedback
-    summary, _ = parse_commit_message(commit_message)
-    logger.log(OUTPUT, "SUCCESS: Successfully committed with message: %s", summary)
-    if commit_result["commit_hash"]:
-        logger.log(OUTPUT, "COMMIT: %s", commit_result["commit_hash"])
-
-    if getattr(args, "push", False):
-        push_result = _push_after_commit(project_dir)
-        if push_result != 0:
-            return push_result
-
-    return 0
-
-
-def get_commit_message_from_clipboard() -> Tuple[bool, str, Optional[str]]:
-    """Get and validate commit message from clipboard.
-
-    Returns:
-        Tuple containing:
-        - bool: True if successful, False otherwise
-        - str: The formatted commit message (empty string on failure)
-        - Optional[str]: Error message if failed, None if successful
-    """
-    # Get text from clipboard
-    success, clipboard_text, error = get_clipboard_text()
-    if not success:
-        return False, "", error
-
-    # Validate commit message format
-    is_valid, validation_error = validate_commit_message(clipboard_text)
-    if not is_valid:
-        return False, "", f"Invalid commit message format - {validation_error}"
-
-    # Parse message into components (this also formats it properly)
-    summary, body = parse_commit_message(clipboard_text)
-
-    # Format the final commit message
-    if body:
-        formatted_message = f"{summary}\n\n{body}"
-    else:
-        formatted_message = summary
-
-    logger.debug("Successfully validated clipboard commit message: %s", summary)
-    return True, formatted_message, None

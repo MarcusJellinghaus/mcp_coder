@@ -135,7 +135,7 @@ def add_prompt_parser(subparsers: Any) -> None:
 
 
 def add_commit_parsers(subparsers: Any) -> None:
-    """Add commit command parsers (auto, clipboard)."""
+    """Add commit command parsers (auto)."""
     commit_parser = subparsers.add_parser("commit", help="Git commit operations")
     commit_subparsers = commit_parser.add_subparsers(
         dest="commit_mode", help="Available commit modes", metavar="MODE"
@@ -171,24 +171,6 @@ def add_commit_parsers(subparsers: Any) -> None:
         help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
     )
     auto_parser.add_argument(
-        "--push",
-        action="store_true",
-        help="Push to origin after successful commit",
-    )
-
-    # commit clipboard command
-    clipboard_parser = commit_subparsers.add_parser(
-        "clipboard",
-        help="Use commit message from clipboard",
-        formatter_class=WideHelpFormatter,
-    )
-    clipboard_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    clipboard_parser.add_argument(
         "--push",
         action="store_true",
         help="Push to origin after successful commit",
