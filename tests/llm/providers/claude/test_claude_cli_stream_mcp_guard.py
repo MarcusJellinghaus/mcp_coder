@@ -366,8 +366,9 @@ class TestMcpServerGuardInStream:
             for event in ask_claude_code_cli_stream("test question"):
                 events.append(event)
 
+        # Only the fatal server is carried in the abort message; pending is
+        # tolerated (self-heals via ToolSearch) and need not appear.
         assert "mcp-tools-py=failed" in str(exc_info.value)
-        assert "mcp-workspace=pending" in str(exc_info.value)
         # Aborted before any assistant content was yielded.
         assert not [e for e in events if e.get("type") == "text_delta"]
 
@@ -467,7 +468,7 @@ class TestInitMessageCapture:
 
 
 class TestStreamMcpGuard:
-    """Streaming path aborts on init-pending even with trailing thinking_tokens (#998)."""
+    """Streaming path tolerates pending but still aborts on fatal (#998, #999)."""
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
@@ -479,13 +480,19 @@ class TestStreamMcpGuard:
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
     )
-    def test_stream_aborts_on_pending_init(
+    def test_stream_pending_init_proceeds(
         self,
         mock_stream_sub: MagicMock,
         mock_log_path: MagicMock,
         _mock_find: MagicMock,
         tmp_path: Path,
     ) -> None:
+        """Pending-only init self-heals via ToolSearch: proceed and yield content.
+
+        Matches the blocking path (D4): a still-starting server is tolerated,
+        even with a trailing thinking_tokens system event, so the stream
+        proceeds and the assistant text_delta reaches the consumer.
+        """
         mock_log_path.return_value = tmp_path / "stream.ndjson"
         init = json.dumps(
             {
@@ -494,6 +501,50 @@ class TestStreamMcpGuard:
                 "session_id": "s",
                 "tools": [],
                 "mcp_servers": [{"name": "mcp-workspace", "status": "pending"}],
+            }
+        )
+        think = json.dumps(
+            {"type": "system", "subtype": "thinking_tokens", "session_id": "s"}
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "real answer"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, think, assistant])
+
+        events = list(ask_claude_code_cli_stream("q"))
+
+        text_deltas = [e for e in events if e.get("type") == "text_delta"]
+        assert [e["text"] for e in text_deltas] == ["real answer"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_aborts_on_fatal_despite_thinking(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A failed server still aborts even when followed by thinking_tokens (#998)."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [{"name": "mcp-workspace", "status": "failed"}],
             }
         )
         think = json.dumps(
@@ -512,6 +563,6 @@ class TestStreamMcpGuard:
             for event in ask_claude_code_cli_stream("q"):
                 events.append(event)
 
-        assert "mcp-workspace=pending" in str(exc.value)
+        assert "mcp-workspace=failed" in str(exc.value)
         # Aborted before any assistant content was leaked to the consumer.
         assert not any(e.get("type") == "text_delta" for e in events)
