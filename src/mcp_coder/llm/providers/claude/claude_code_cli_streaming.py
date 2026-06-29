@@ -14,15 +14,17 @@ from ....utils.subprocess_runner import CommandOptions, CommandResult
 from ....utils.subprocess_streaming import stream_subprocess
 from ...types import StreamEvent
 from .claude_code_cli import (
-    McpServersUnavailableError,
-    StreamMessage,
     _find_claude_executable,
     build_cli_command,
-    find_unavailable_mcp_servers,
     format_stream_json_input,
-    parse_stream_json_line,
 )
 from .claude_code_cli_log_paths import get_stream_log_path
+from .claude_mcp_guard import (
+    McpServersUnavailableError,
+    StreamMessage,
+    find_unavailable_mcp_servers,
+    parse_stream_json_line,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +164,13 @@ def ask_claude_code_cli_stream(
                         f"runs blind. Stream log: {stream_file}"
                     )
                     logger.error(mcp_error_msg)
-                    raise McpServersUnavailableError(mcp_error_msg)
+                    # Intentional asymmetry vs the blocking path: this generator
+                    # fails fast on `pending`, skipping the bounded retry that
+                    # ask_claude_code_cli does, since a generator can't cheaply
+                    # restart the subprocess mid-iteration.
+                    raise McpServersUnavailableError(
+                        mcp_error_msg, unavailable_servers=unavailable_servers
+                    )
             yield from _map_stream_message_to_event(msg)
 
     cmd_result: CommandResult = stream.result

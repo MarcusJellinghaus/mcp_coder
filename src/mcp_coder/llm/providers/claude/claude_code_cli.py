@@ -5,8 +5,7 @@ import json
 import logging
 import time
 from datetime import datetime
-from pathlib import Path
-from typing import Any, TypedDict, cast
+from typing import Any, TypedDict
 
 from ....utils.subprocess_runner import (
     CalledProcessError,
@@ -20,6 +19,22 @@ from ...types import LLM_RESPONSE_VERSION, LLMResponseDict
 from .claude_code_cli_log_paths import get_stream_log_path, sanitize_branch_identifier
 from .claude_executable_finder import find_claude_executable
 
+# Stream-json parsing and the MCP-availability guard live in claude_mcp_guard.
+# They are re-exported here so existing importers (and patch targets) keep
+# working from claude_code_cli unchanged.
+from .claude_mcp_guard import (
+    MCP_UNAVAILABLE_MAX_RETRIES,
+    MCP_UNAVAILABLE_RETRY_WAIT_SECONDS,
+    McpServersUnavailableError,
+    ParsedStreamResponse,
+    StreamMessage,
+    find_unavailable_mcp_servers,
+    mcp_failure_is_retryable,
+    parse_stream_json_file,
+    parse_stream_json_line,
+    parse_stream_json_string,
+)
+
 logger = logging.getLogger(__name__)
 
 # Heartbeat interval for LLM subprocess calls (2 minutes)
@@ -29,31 +44,27 @@ LLM_HEARTBEAT_INTERVAL_SECONDS = 120
 # Forces Claude to use only MCP-provided tools
 CLAUDE_BUILTIN_TOOLS = ""
 
-
-class StreamMessage(TypedDict, total=False):
-    """A single message from Claude CLI stream-json output."""
-
-    type: str
-    subtype: str
-    session_id: str
-    message: dict[str, Any]
-    result: str
-    is_error: bool
-    total_cost_usd: float
-    duration_ms: int
-    usage: dict[str, Any]
-    tools: list[Any]
-    mcp_servers: list[dict[str, Any]]
-
-
-class ParsedStreamResponse(TypedDict):
-    """Parsed stream-json response with all messages."""
-
-    text: str
-    session_id: str | None
-    messages: list[StreamMessage]
-    result_message: StreamMessage | None
-    system_message: StreamMessage | None
+__all__ = [
+    "CLAUDE_BUILTIN_TOOLS",
+    "LLM_HEARTBEAT_INTERVAL_SECONDS",
+    "MCP_UNAVAILABLE_MAX_RETRIES",
+    "MCP_UNAVAILABLE_RETRY_WAIT_SECONDS",
+    "McpServersUnavailableError",
+    "ParsedCliResponse",
+    "ParsedStreamResponse",
+    "StreamMessage",
+    "ask_claude_code_cli",
+    "build_cli_command",
+    "create_response_dict",
+    "create_response_dict_from_stream",
+    "find_unavailable_mcp_servers",
+    "format_stream_json_input",
+    "mcp_failure_is_retryable",
+    "parse_cli_json_string",
+    "parse_stream_json_file",
+    "parse_stream_json_line",
+    "parse_stream_json_string",
+]
 
 
 class ParsedCliResponse(TypedDict):
@@ -62,169 +73,6 @@ class ParsedCliResponse(TypedDict):
     text: str
     session_id: str | None
     raw_response: dict[str, Any]
-
-
-# MCP server status (from the init event) that means the server is ready to use.
-_MCP_SERVER_READY_STATUS = "connected"
-
-
-class McpServersUnavailableError(RuntimeError):
-    """Raised when a Claude session starts without its configured MCP servers.
-
-    The session's ``system``/``init`` event reported one or more configured MCP
-    servers that did not reach ``connected`` status (e.g. ``failed`` /
-    ``pending``). Continuing would run the model with no tools, which can
-    silently yield hallucinated results, so the call is aborted instead.
-    """
-
-
-def find_unavailable_mcp_servers(
-    system_message: StreamMessage | None,
-) -> list[tuple[str, str]]:
-    """Return ``(name, status)`` for configured MCP servers that aren't ready.
-
-    Reads the ``mcp_servers`` list from the init event. Returns an empty list
-    when there is no init message or no servers were configured, so sessions
-    that intentionally run without MCP are unaffected.
-
-    Args:
-        system_message: The parsed ``system``/``init`` StreamMessage, or None.
-
-    Returns:
-        List of ``(name, status)`` tuples for servers whose status is not
-        ``connected``; empty when all servers are ready (or none configured).
-    """
-    if not system_message:
-        return []
-    # Typed as list[dict] but really parsed JSON; stay defensive about shape.
-    servers = cast(list[Any], system_message.get("mcp_servers") or [])
-    unavailable: list[tuple[str, str]] = []
-    for server in servers:
-        if not isinstance(server, dict):
-            continue
-        status = str(server.get("status", "")).strip().lower()
-        if status != _MCP_SERVER_READY_STATUS:
-            unavailable.append((str(server.get("name", "?")), status or "unknown"))
-    return unavailable
-
-
-def parse_stream_json_line(line: str) -> StreamMessage | None:
-    """Parse a single line of stream-json output.
-
-    Args:
-        line: A single line from stream-json output
-
-    Returns:
-        Parsed StreamMessage or None if line is empty/invalid
-    """
-    line = line.strip()
-    if not line:
-        return None
-
-    try:
-        parsed = json.loads(line)
-        return cast(StreamMessage, parsed)
-    except json.JSONDecodeError as e:
-        logger.warning(f"Failed to parse stream line: {e}")
-        return None
-
-
-def _parse_stream_lines(lines: list[str]) -> ParsedStreamResponse:
-    """Parse stream-json lines into structured response (internal helper).
-
-    Args:
-        lines: List of NDJSON lines to parse
-
-    Returns:
-        ParsedStreamResponse with extracted text, session_id, and all messages
-    """
-    messages: list[StreamMessage] = []
-    text_parts: list[str] = []
-    session_id: str | None = None
-    result_message: StreamMessage | None = None
-    system_message: StreamMessage | None = None
-
-    for line in lines:
-        msg = parse_stream_json_line(line)
-        if msg is None:
-            continue
-
-        messages.append(msg)
-        msg_type = msg.get("type", "")
-
-        # Extract session_id from system init or result messages
-        if "session_id" in msg:
-            session_id = msg["session_id"]
-
-        # Handle different message types
-        if msg_type == "system":
-            system_message = msg
-        elif msg_type == "assistant":
-            # Extract text from assistant message content blocks
-            message_data = msg.get("message", {})
-            content_blocks = message_data.get("content", [])
-            for block in content_blocks:
-                if isinstance(block, dict) and block.get("type") == "text":
-                    text_parts.append(block.get("text", ""))
-        elif msg_type == "result":
-            result_message = msg
-            # Result message also contains the final text
-            if "result" in msg:
-                # Only use result text if we didn't get text from assistant messages
-                if not text_parts:
-                    text_parts.append(str(msg["result"]))
-
-    return ParsedStreamResponse(
-        text="".join(text_parts).strip(),
-        session_id=session_id,
-        messages=messages,
-        result_message=result_message,
-        system_message=system_message,
-    )
-
-
-def parse_stream_json_file(file_path: Path) -> ParsedStreamResponse:
-    """Parse a stream-json log file into structured response.
-
-    Args:
-        file_path: Path to the NDJSON stream log file
-
-    Returns:
-        ParsedStreamResponse with extracted text, session_id, and all messages
-    """
-    if not file_path.exists():
-        return ParsedStreamResponse(
-            text="",
-            session_id=None,
-            messages=[],
-            result_message=None,
-            system_message=None,
-        )
-
-    try:
-        content = file_path.read_text(encoding="utf-8")
-        return _parse_stream_lines(content.splitlines())
-    except (OSError, IOError) as e:
-        logger.error(f"Failed to read stream file {file_path}: {e}")
-        return ParsedStreamResponse(
-            text="",
-            session_id=None,
-            messages=[],
-            result_message=None,
-            system_message=None,
-        )
-
-
-def parse_stream_json_string(content: str) -> ParsedStreamResponse:
-    """Parse stream-json content from a string.
-
-    Args:
-        content: NDJSON content as a string
-
-    Returns:
-        ParsedStreamResponse with extracted data
-    """
-    return _parse_stream_lines(content.splitlines())
 
 
 def parse_cli_json_string(json_str: str) -> ParsedCliResponse:
@@ -630,7 +478,6 @@ def ask_claude_code_cli(
         f"Executing CLI command with stdin (prompt_len={len(question)}, "
         f"input_format=stream-json, session_id={session_id}, cwd={cwd})"
     )
-    start_time = time.time()
     options = CommandOptions(
         timeout_seconds=timeout,
         input_data=input_data,  # Pass JSON-formatted question via stdin
@@ -643,71 +490,95 @@ def ask_claude_code_cli(
     stream_file_str = str(stream_file_path)
 
     try:
-        result = execute_subprocess(
-            command,
-            options,
-            heartbeat_interval_seconds=LLM_HEARTBEAT_INTERVAL_SECONDS,
-            heartbeat_message="LLM call in progress",
-        )
-
-        # Save stream output to file
-        if result.stdout:
-            try:
-                stream_file_path.write_text(result.stdout, encoding="utf-8")
-                logger.debug(f"Wrote {len(result.stdout)} bytes to {stream_file_path}")
-            except (OSError, IOError) as e:
-                logger.warning(f"Failed to write stream file: {e}")
-
-        # Parse stream output
-        parsed = parse_stream_json_string(result.stdout)
-
-        # Error handling
-        if result.timed_out:
-            logger.error(f"CLI timed out after {timeout}s")
-            duration_ms = int((time.time() - start_time) * 1000)
-            timeout_error: Exception = TimeoutExpired(command, timeout)
-            log_llm_error(error=timeout_error, duration_ms=duration_ms)
-            raise timeout_error
-
-        if result.return_code != 0:
-            logger.error(f"CLI failed with code {result.return_code}")
-            logger.error(f"Stream file for diagnosis: {stream_file_path}")
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Include stream file path in error for diagnosis
-            error_msg = (
-                f"CLI failed with code {result.return_code}. "
-                f"Stream log: {stream_file_path}"
-            )
-            if result.stderr:
-                error_msg += f"\nStderr: {result.stderr[:500]}"
-
-            called_process_error = CalledProcessError(
-                result.return_code,
+        attempt = 0
+        while True:
+            attempt += 1
+            start_time = time.time()
+            result = execute_subprocess(
                 command,
-                output=result.stdout,
-                stderr=f"{result.stderr}\nStream file: {stream_file_path}",
+                options,
+                heartbeat_interval_seconds=LLM_HEARTBEAT_INTERVAL_SECONDS,
+                heartbeat_message="LLM call in progress",
             )
-            log_llm_error(error=called_process_error, duration_ms=duration_ms)
-            raise called_process_error
 
-        # Fail fast: if configured MCP servers did not connect, the session has
-        # no tools and the model may hallucinate. Abort instead of running blind.
-        unavailable_servers = find_unavailable_mcp_servers(parsed["system_message"])
-        if unavailable_servers:
-            detail = ", ".join(
-                f"{name}={status}" for name, status in unavailable_servers
-            )
-            mcp_error_msg = (
-                f"MCP servers not available: {detail}. The session started without "
-                f"its configured tools; aborting before the model runs blind. "
-                f"Stream log: {stream_file_path}"
-            )
-            logger.error(mcp_error_msg)
-            duration_ms = int((time.time() - start_time) * 1000)
-            mcp_error: Exception = McpServersUnavailableError(mcp_error_msg)
-            log_llm_error(error=mcp_error, duration_ms=duration_ms)
-            raise mcp_error
+            # Save stream output to file
+            if result.stdout:
+                try:
+                    stream_file_path.write_text(result.stdout, encoding="utf-8")
+                    logger.debug(
+                        f"Wrote {len(result.stdout)} bytes to {stream_file_path}"
+                    )
+                except (OSError, IOError) as e:
+                    logger.warning(f"Failed to write stream file: {e}")
+
+            # Parse stream output
+            parsed = parse_stream_json_string(result.stdout)
+
+            # Error handling
+            if result.timed_out:
+                logger.error(f"CLI timed out after {timeout}s")
+                duration_ms = int((time.time() - start_time) * 1000)
+                timeout_error: Exception = TimeoutExpired(command, timeout)
+                log_llm_error(error=timeout_error, duration_ms=duration_ms)
+                raise timeout_error
+
+            if result.return_code != 0:
+                logger.error(f"CLI failed with code {result.return_code}")
+                logger.error(f"Stream file for diagnosis: {stream_file_path}")
+                duration_ms = int((time.time() - start_time) * 1000)
+
+                # Include stream file path in error for diagnosis
+                error_msg = (
+                    f"CLI failed with code {result.return_code}. "
+                    f"Stream log: {stream_file_path}"
+                )
+                if result.stderr:
+                    error_msg += f"\nStderr: {result.stderr[:500]}"
+
+                called_process_error = CalledProcessError(
+                    result.return_code,
+                    command,
+                    output=result.stdout,
+                    stderr=f"{result.stderr}\nStream file: {stream_file_path}",
+                )
+                log_llm_error(error=called_process_error, duration_ms=duration_ms)
+                raise called_process_error
+
+            # MCP availability guard. A "pending" server is usually still
+            # cold-starting; retry a bounded number of times (a warm cache
+            # normally connects) before aborting so the model never runs blind.
+            unavailable_servers = find_unavailable_mcp_servers(parsed["system_message"])
+            if unavailable_servers:
+                detail = ", ".join(
+                    f"{name}={status}" for name, status in unavailable_servers
+                )
+                mcp_error_msg = (
+                    f"MCP servers not available: {detail}. The session started "
+                    f"without its configured tools. Stream log: {stream_file_path}"
+                )
+                if (
+                    mcp_failure_is_retryable(unavailable_servers)
+                    and attempt <= MCP_UNAVAILABLE_MAX_RETRIES
+                ):
+                    logger.warning(
+                        "%s Retrying (attempt %d/%d) after %.0fs.",
+                        mcp_error_msg,
+                        attempt + 1,
+                        MCP_UNAVAILABLE_MAX_RETRIES + 1,
+                        MCP_UNAVAILABLE_RETRY_WAIT_SECONDS,
+                    )
+                    time.sleep(MCP_UNAVAILABLE_RETRY_WAIT_SECONDS)
+                    continue
+                logger.error(mcp_error_msg)
+                duration_ms = int((time.time() - start_time) * 1000)
+                mcp_error: Exception = McpServersUnavailableError(
+                    mcp_error_msg, unavailable_servers=unavailable_servers
+                )
+                log_llm_error(error=mcp_error, duration_ms=duration_ms)
+                raise mcp_error
+
+            # Success — leave the retry loop.
+            break
 
         logger.debug(
             f"CLI success: {len(result.stdout)} bytes, session_id={parsed['session_id']}"
