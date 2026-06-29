@@ -156,6 +156,7 @@ class SessionAssessment:
                 "reason": self.decision.reason,
                 "destructive": self.decision.destructive,
             },
+            "git_status": self.git_status,
             "pid_needs_refresh": self.pid_needs_refresh,
             "found_pid": self.found_pid,
         }
@@ -186,6 +187,7 @@ class SessionAssessment:
             lines.append(f"{section}:")
             for key, value in data[section].items():
                 lines.append(f"  {key}: {value}")
+        lines.append(f"git_status: {data['git_status']}")
         lines.append(f"pid_needs_refresh: {data['pid_needs_refresh']}")
         lines.append(f"found_pid: {data['found_pid']}")
         return "\n".join(lines)
