@@ -136,6 +136,20 @@ _.mock_settings
 # test_commit.py - @patch decorator parameters for push tests
 _.mock_has_tracking
 
+# coordinator/test_commands.py - @patch(apply_assessments) decorator parameter
+_.mock_apply
+
+# vscodeclaude/test_assessment_orchestration.py - @patch decorator parameters
+# accepted but unused across many build_assessments tests
+_.mock_ignore
+_.mock_username
+_.mock_git
+
+# vscodeclaude/test_active_set_invariant.py + test_explain.py - build_assessments
+# mock side_effect lambda param mirroring the (sessions, cached_issues_by_repo)
+# call signature; receives the positional arg but is unused in the body
+_.cached
+
 # test_issue_manager_label_update.py - Fixture used for side effect (patching)
 _._mock_git_repo
 
@@ -311,6 +325,10 @@ _.create_github_manager
 # workflows/vscodeclaude/types.py - TypedDict field
 _.started_at
 _.vscode_pid_create_time
+# workflows/vscodeclaude/types.py - VSCodeClaudeSession fields read via string
+# dict keys (e.g. session["last_active"]); vulture cannot see that usage.
+_.last_active
+_.last_active_rule
 
 # test_session_restart_branch_integration.py - Unpacked but unused in test assertion
 _.user
