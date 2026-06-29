@@ -17,20 +17,14 @@ from typing import Any, TypedDict, cast
 
 logger = logging.getLogger(__name__)
 
-# MCP cold-start retry: a server reported "pending" at init is usually still
-# starting (common when sessions contend for CPU/disk under parallel load). A
-# fresh attempt with a warm OS cache normally connects, so retry a bounded
-# number of times before giving up. Terminal failures ("failed") are not retried.
-MCP_UNAVAILABLE_MAX_RETRIES = 2  # extra attempts after the first (3 total)
-MCP_UNAVAILABLE_RETRY_WAIT_SECONDS = 5.0
-
 # MCP server status (from the init event) that means the server is ready to use.
 _MCP_SERVER_READY_STATUS = "connected"
 
-# Statuses worth retrying: a server still cold-starting ("pending") usually
-# connects on a fresh attempt with a warm cache. Anything else (e.g. "failed",
-# "unknown") is treated as terminal — a retry won't fix it.
-_MCP_RETRYABLE_STATUSES = frozenset({"pending"})
+# A server still cold-starting ("pending") is not fatal: with "ToolSearch"
+# restored as the built-in wait-bridge, the model waits for it to connect within
+# the same session instead of running blind. Only non-connected, non-pending
+# statuses (e.g. "failed", "unknown") are terminal.
+_MCP_PENDING_STATUS = "pending"
 
 
 class StreamMessage(TypedDict, total=False):
@@ -63,66 +57,97 @@ class McpServersUnavailableError(RuntimeError):
     """Raised when a Claude session starts without its configured MCP servers.
 
     The session's ``system``/``init`` event reported one or more configured MCP
-    servers that did not reach ``connected`` status (e.g. ``failed`` /
-    ``pending``). Continuing would run the model with no tools, which can
-    silently yield hallucinated results, so the call is aborted instead.
+    servers in a **terminal** non-connected state (e.g. ``failed`` /
+    ``unknown`` — a crashed or missing server that will not self-heal).
+    Continuing would run the model with no tools, which can silently yield
+    hallucinated results, so the call is aborted instead. A ``pending`` server
+    is *not* terminal: it self-heals via ``ToolSearch`` and does not abort.
 
-    ``unavailable_servers`` carries the ``(name, status)`` pairs so callers can
-    decide whether to retry (see :func:`mcp_failure_is_retryable`).
+    ``unavailable_servers`` maps each fatal server name to its status.
     """
 
     def __init__(
         self,
         message: str,
-        unavailable_servers: list[tuple[str, str]] | None = None,
+        unavailable_servers: dict[str, str] | None = None,
     ) -> None:
         super().__init__(message)
-        self.unavailable_servers: list[tuple[str, str]] = unavailable_servers or []
+        self.unavailable_servers: dict[str, str] = unavailable_servers or {}
 
 
-def find_unavailable_mcp_servers(
+def _scan_mcp_servers(
     system_message: StreamMessage | None,
-) -> list[tuple[str, str]]:
-    """Return ``(name, status)`` for configured MCP servers that aren't ready.
+    *,
+    tolerate_pending: bool,
+) -> dict[str, str]:
+    """Map non-connected server names to their status from the init event.
 
-    Reads the ``mcp_servers`` list from the init event. Returns an empty list
+    Reads the ``mcp_servers`` list from the init event. Returns an empty dict
     when there is no init message or no servers were configured, so sessions
     that intentionally run without MCP are unaffected.
 
     Args:
         system_message: The parsed ``system``/``init`` StreamMessage, or None.
+        tolerate_pending: When True, ``pending`` servers are skipped (they
+            self-heal via ToolSearch); when False, every non-connected server
+            is reported.
 
     Returns:
-        List of ``(name, status)`` tuples for servers whose status is not
-        ``connected``; empty when all servers are ready (or none configured).
+        Mapping of server name to lowercased status for the matching servers.
     """
     if not system_message:
-        return []
+        return {}
     # Typed as list[dict] but really parsed JSON; stay defensive about shape.
     servers = cast(list[Any], system_message.get("mcp_servers") or [])
-    unavailable: list[tuple[str, str]] = []
+    result: dict[str, str] = {}
     for server in servers:
         if not isinstance(server, dict):
             continue
-        status = str(server.get("status", "")).strip().lower()
-        if status != _MCP_SERVER_READY_STATUS:
-            unavailable.append((str(server.get("name", "?")), status or "unknown"))
-    return unavailable
+        status = str(server.get("status", "")).strip().lower() or "unknown"
+        if status == _MCP_SERVER_READY_STATUS:
+            continue
+        if tolerate_pending and status == _MCP_PENDING_STATUS:
+            continue
+        result[str(server.get("name", "?"))] = status
+    return result
 
 
-def mcp_failure_is_retryable(unavailable_servers: list[tuple[str, str]]) -> bool:
-    """Return True when every unavailable server is in a transient state.
+def find_unavailable_mcp_servers(
+    system_message: StreamMessage | None,
+) -> dict[str, str]:
+    """Return ``{name: status}`` for configured MCP servers that aren't ready.
 
-    ``pending`` means a server is still cold-starting (common when several
-    sessions start at once and contend for CPU/disk); a fresh attempt with a
-    warm cache usually connects. A terminal status (``failed`` / ``unknown``,
-    e.g. a missing executable or a crash) is not worth retrying.
+    Reports every server whose status is not ``connected`` (including
+    ``pending``), so still-starting servers can be surfaced in logs.
+
+    Args:
+        system_message: The parsed ``system``/``init`` StreamMessage, or None.
+
+    Returns:
+        Mapping of server name to lowercased status for servers whose status is
+        not ``connected``; empty when all are ready (or none configured).
     """
-    if not unavailable_servers:
-        return False
-    return all(
-        status in _MCP_RETRYABLE_STATUSES for _name, status in unavailable_servers
-    )
+    return _scan_mcp_servers(system_message, tolerate_pending=False)
+
+
+def find_fatal_mcp_servers(
+    system_message: StreamMessage | None,
+) -> dict[str, str]:
+    """Return ``{name: status}`` for servers in a terminal non-connected state.
+
+    Like :func:`find_unavailable_mcp_servers` but tolerates ``pending``: a
+    still-starting server self-heals via ``ToolSearch`` within the session, so
+    it is not reported. Only terminal statuses (e.g. ``failed`` / ``unknown``)
+    appear here, identifying servers that warrant aborting the run.
+
+    Args:
+        system_message: The parsed ``system``/``init`` StreamMessage, or None.
+
+    Returns:
+        Mapping of server name to lowercased status for servers whose status is
+        neither ``connected`` nor ``pending``; empty otherwise.
+    """
+    return _scan_mcp_servers(system_message, tolerate_pending=True)
 
 
 def parse_stream_json_line(line: str) -> StreamMessage | None:

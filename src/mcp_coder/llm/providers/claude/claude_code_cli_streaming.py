@@ -156,7 +156,8 @@ def ask_claude_code_cli_stream(
                 unavailable_servers = find_unavailable_mcp_servers(msg)
                 if unavailable_servers:
                     detail = ", ".join(
-                        f"{name}={status}" for name, status in unavailable_servers
+                        f"{name}={status}"
+                        for name, status in unavailable_servers.items()
                     )
                     mcp_error_msg = (
                         f"MCP servers not available: {detail}. The session started "

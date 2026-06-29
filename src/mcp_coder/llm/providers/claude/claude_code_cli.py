@@ -23,13 +23,11 @@ from .claude_executable_finder import find_claude_executable
 # They are re-exported here so existing importers (and patch targets) keep
 # working from claude_code_cli unchanged.
 from .claude_mcp_guard import (
-    MCP_UNAVAILABLE_MAX_RETRIES,
-    MCP_UNAVAILABLE_RETRY_WAIT_SECONDS,
     McpServersUnavailableError,
     ParsedStreamResponse,
     StreamMessage,
+    find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
-    mcp_failure_is_retryable,
     parse_stream_json_file,
     parse_stream_json_line,
     parse_stream_json_string,
@@ -49,8 +47,6 @@ CLAUDE_BUILTIN_TOOLS = "ToolSearch"
 __all__ = [
     "CLAUDE_BUILTIN_TOOLS",
     "LLM_HEARTBEAT_INTERVAL_SECONDS",
-    "MCP_UNAVAILABLE_MAX_RETRIES",
-    "MCP_UNAVAILABLE_RETRY_WAIT_SECONDS",
     "McpServersUnavailableError",
     "ParsedCliResponse",
     "ParsedStreamResponse",
@@ -59,9 +55,9 @@ __all__ = [
     "build_cli_command",
     "create_response_dict",
     "create_response_dict_from_stream",
+    "find_fatal_mcp_servers",
     "find_unavailable_mcp_servers",
     "format_stream_json_input",
-    "mcp_failure_is_retryable",
     "parse_cli_json_string",
     "parse_stream_json_file",
     "parse_stream_json_line",
@@ -546,31 +542,20 @@ def ask_claude_code_cli(
                 log_llm_error(error=called_process_error, duration_ms=duration_ms)
                 raise called_process_error
 
-            # MCP availability guard. A "pending" server is usually still
-            # cold-starting; retry a bounded number of times (a warm cache
-            # normally connects) before aborting so the model never runs blind.
+            # MCP availability guard. Abort if configured MCP servers did not
+            # connect so the model never runs blind on hallucinated tools.
+            # TODO(step-3): switch to find_fatal_mcp_servers (tolerate pending,
+            # which self-heals via ToolSearch), log pending separately, and
+            # collapse this now single-attempt loop.
             unavailable_servers = find_unavailable_mcp_servers(parsed["system_message"])
             if unavailable_servers:
                 detail = ", ".join(
-                    f"{name}={status}" for name, status in unavailable_servers
+                    f"{name}={status}" for name, status in unavailable_servers.items()
                 )
                 mcp_error_msg = (
                     f"MCP servers not available: {detail}. The session started "
                     f"without its configured tools. Stream log: {stream_file_path}"
                 )
-                if (
-                    mcp_failure_is_retryable(unavailable_servers)
-                    and attempt <= MCP_UNAVAILABLE_MAX_RETRIES
-                ):
-                    logger.warning(
-                        "%s Retrying (attempt %d/%d) after %.0fs.",
-                        mcp_error_msg,
-                        attempt + 1,
-                        MCP_UNAVAILABLE_MAX_RETRIES + 1,
-                        MCP_UNAVAILABLE_RETRY_WAIT_SECONDS,
-                    )
-                    time.sleep(MCP_UNAVAILABLE_RETRY_WAIT_SECONDS)
-                    continue
                 logger.error(mcp_error_msg)
                 duration_ms = int((time.time() - start_time) * 1000)
                 mcp_error: Exception = McpServersUnavailableError(
