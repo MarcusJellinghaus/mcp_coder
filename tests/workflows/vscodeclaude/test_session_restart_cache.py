@@ -11,7 +11,52 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
+    DetectionSignals,
+    IssueState,
+    LivenessRule,
+    LivenessVerdict,
+    SessionAction,
+    SessionAssessment,
+    Transition,
+    VSCodeClaudeSession,
+)
+
+
+def _make_assessment(
+    folder: str,
+    *,
+    active: bool = False,
+    action: SessionAction = SessionAction.RESTART,
+) -> SessionAssessment:
+    """Build a minimal RESTART-candidate assessment for restart consumer tests."""
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=DetectionSignals(
+            folder_exists=True,
+            title_match=active,
+            cmdline_match=False,
+            pid_alive=False,
+            found_pid=None,
+            age_seconds=0.0,
+            within_grace=False,
+            directory_empty=False,
+        ),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=action, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
 
 
 class TestBuildCachedIssuesByRepo:
@@ -41,6 +86,8 @@ class TestBuildCachedIssuesByRepo:
                 "status": "status-04:plan-review",
                 "vscode_pid": 1234,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -51,6 +98,8 @@ class TestBuildCachedIssuesByRepo:
                 "status": "status-04:plan-review",
                 "vscode_pid": 1235,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -61,6 +110,8 @@ class TestBuildCachedIssuesByRepo:
                 "status": "status-01:created",
                 "vscode_pid": 1236,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -244,6 +295,8 @@ class TestRestartClosedSessions:
                 "status": "status-04:plan-review",
                 "vscode_pid": 9999,  # Non-existent PID
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -254,6 +307,8 @@ class TestRestartClosedSessions:
                 "status": "status-01:created",
                 "vscode_pid": 9998,  # Non-existent PID
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -287,7 +342,7 @@ class TestRestartClosedSessions:
             "updated_at": "2025-12-31T08:00:00Z",
         }
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -310,7 +365,7 @@ class TestRestartClosedSessions:
             }
 
             # Call restart_closed_sessions without providing cache
-            restart_closed_sessions(active_set=active_set)
+            restart_closed_sessions(assessments=assessments)
 
             # Verify _build_cached_issues_by_repo was called with sessions
             mock_build_cache.assert_called_once_with(sessions)
@@ -339,6 +394,8 @@ class TestRestartClosedSessions:
                 "status": "status-04:plan-review",
                 "vscode_pid": 9999,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             }
@@ -360,7 +417,7 @@ class TestRestartClosedSessions:
         }
         provided_cache = {"owner/repo": {414: issue_414}}
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -379,7 +436,7 @@ class TestRestartClosedSessions:
 
             # Call with provided cache
             restart_closed_sessions(
-                active_set=active_set, cached_issues_by_repo=provided_cache
+                assessments=assessments, cached_issues_by_repo=provided_cache
             )
 
             # Verify _build_cached_issues_by_repo was NOT called
@@ -417,6 +474,8 @@ class TestRestartClosedSessions:
                 "status": "status-04:plan-review",
                 "vscode_pid": 9999,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             }
@@ -437,7 +496,7 @@ class TestRestartClosedSessions:
             "updated_at": "2025-12-31T08:00:00Z",
         }
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -461,7 +520,7 @@ class TestRestartClosedSessions:
             mock_exists.return_value = True  # Folder exists
 
             # Call restart
-            result = restart_closed_sessions(active_set=active_set)
+            result = restart_closed_sessions(assessments=assessments)
 
             # Verify closed issue was skipped
             assert "Skipping closed issue #414" in caplog.text
@@ -498,7 +557,7 @@ class TestRestartClosedSessions:
             mock_load.return_value = {"sessions": []}
 
             # Call restart
-            result = restart_closed_sessions(active_set={})
+            result = restart_closed_sessions(assessments={})
 
             # Verify no cache built
             mock_build_cache.assert_not_called()

@@ -237,6 +237,27 @@ PR CREATED (status-10:pr-created)
 ```
 """
 
+# Assessment (pure layers + orchestration)
+from .assessment import (
+    IssueFacts,
+    apply_assessments,
+    assess_issue_state,
+    assess_liveness,
+    assess_session,
+    assess_transition,
+    build_active_session_set,
+    build_assessments,
+    decide,
+    render_explain,
+)
+
+# Audit trail
+from .audit import (
+    append_run,
+    assessment_to_record,
+    get_audit_file_path,
+)
+
 # Cleanup
 from .cleanup import (
     cleanup_stale_sessions,
@@ -250,6 +271,13 @@ from .config import (
     load_repo_vscodeclaude_config,
     load_vscodeclaude_config,
     sanitize_folder_name,
+)
+
+# Detection (Windows / IO boundary)
+from .detection import (
+    DetectionSnapshot,
+    capture_detection_snapshot,
+    gather_signals,
 )
 
 # Helpers (re-exported for backward compatibility)
@@ -287,7 +315,6 @@ from .session_restart import (
 # Session management
 from .sessions import (
     add_session,
-    build_active_session_set,
     check_vscode_running,
     clear_vscode_process_cache,
     clear_vscode_window_cache,
@@ -317,7 +344,15 @@ from .status import (
 from .types import (
     DEFAULT_MAX_SESSIONS,
     DEFAULT_PROMPT_TIMEOUT,
+    Decision,
+    DetectionSignals,
+    IssueState,
+    LivenessRule,
+    LivenessVerdict,
     RepoVSCodeClaudeConfig,
+    SessionAction,
+    SessionAssessment,
+    Transition,
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
     VSCodeClaudeSessionStore,
@@ -344,6 +379,33 @@ __all__ = [
     "VSCodeClaudeSessionStore",
     "VSCodeClaudeConfig",
     "RepoVSCodeClaudeConfig",
+    # Assessment types
+    "LivenessRule",
+    "SessionAction",
+    "DetectionSignals",
+    "LivenessVerdict",
+    "IssueState",
+    "Transition",
+    "Decision",
+    "SessionAssessment",
+    # Assessment (pure layers + orchestration)
+    "IssueFacts",
+    "assess_liveness",
+    "assess_issue_state",
+    "assess_transition",
+    "decide",
+    "assess_session",
+    "build_assessments",
+    "apply_assessments",
+    "render_explain",
+    # Audit trail
+    "get_audit_file_path",
+    "append_run",
+    "assessment_to_record",
+    # Detection (Windows / IO boundary)
+    "DetectionSnapshot",
+    "capture_detection_snapshot",
+    "gather_signals",
     # Constants
     "DEFAULT_MAX_SESSIONS",
     "DEFAULT_PROMPT_TIMEOUT",

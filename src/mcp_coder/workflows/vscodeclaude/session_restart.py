@@ -37,7 +37,7 @@ from .sessions import (
     update_session_status,
 )
 from .status import get_folder_git_status
-from .types import VSCodeClaudeSession
+from .types import SessionAction, SessionAssessment, VSCodeClaudeSession
 from .workspace import get_workspace_file_path
 
 logger = logging.getLogger(__name__)
@@ -207,24 +207,34 @@ def _build_cached_issues_by_repo(
 
 
 def restart_closed_sessions(
-    active_set: dict[str, bool],
+    assessments: dict[str, SessionAssessment],
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
 ) -> list[VSCodeClaudeSession]:
     """Restart sessions where VSCode was closed.
 
+    Restart is the 4th consumer of the assessment pipeline: it reads each
+    session's prebuilt :class:`SessionAssessment` (verdict + decision) instead of
+    re-deriving liveness, and branches on it:
+
+    - ``verdict.active`` (``KEEP_ACTIVE`` or zombie ``INVESTIGATE_ZOMBIE``) -> skip
+      (a zombie is kept tracked and warned, never restarted).
+    - ``decision.action`` is ``REMOVE_MISSING`` -> remove the orphaned session
+      (the folder-missing path, now gated by the assessment).
+    - ``decision.action`` is ``RESTART`` -> proceed with the branch-verify +
+      relaunch flow below.
+    - ``SKIP`` / ``DELETE`` -> skip (cleanup owns deletion).
+
+    The launch-time git checks inside the restart flow (``No branch`` /
+    ``Multi-branch`` / ``Dirty``) stay local: the assessment only decides whether a
+    session is a restart candidate; those branch checks still gate the actual
+    relaunch.
+
     Args:
-        active_set: Snapshot mapping session folder -> is_active. Sessions
-            recorded as active (or removed mid-flow) are skipped.
+        assessments: Folder-path -> :class:`SessionAssessment` map built once per
+            run by ``build_assessments``.
         cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
                                If provided, avoids API calls for staleness checks
                                and file regeneration.
-
-    Finds sessions where:
-    - VSCode PID no longer running
-    - Issue status unchanged (not stale)
-    - Folder still exists
-    - Repo is still configured in config file
-    - Issue is still open (closed issues are skipped)
 
     Before restarting, regenerates all session files with fresh issue data.
 
@@ -254,17 +264,36 @@ def restart_closed_sessions(
     for session in store["sessions"]:
         folder_path = Path(session["folder"])
 
-        if active_set.get(session["folder"], False):
+        assessment = assessments.get(session["folder"])
+        if assessment is None:
             continue
 
-        # Check if folder exists
-        if not folder_path.exists():
-            # Remove orphaned session
+        # Skip active sessions. KEEP_ACTIVE and the zombie INVESTIGATE_ZOMBIE both
+        # report verdict.active; a zombie (process alive, folder gone) is kept
+        # tracked and warned, never restarted (it self-resolves to REMOVE_MISSING
+        # once the process exits).
+        if assessment.verdict.active:
+            if assessment.decision.action == SessionAction.INVESTIGATE_ZOMBIE:
+                logger.warning(
+                    "Zombie session for issue #%d: process alive but folder "
+                    "missing; keeping tracked, not restarting",
+                    session["issue_number"],
+                )
+            continue
+
+        # Folder missing -> remove the orphaned session (the existing
+        # orphan-cleanup path, now gated by the assessment instead of a local
+        # folder-existence check).
+        if assessment.decision.action == SessionAction.REMOVE_MISSING:
             remove_session(session["folder"])
             logger.info(
                 "Removed orphaned session for issue #%d (folder missing)",
                 session["issue_number"],
             )
+            continue
+
+        # Only RESTART candidates proceed; SKIP / DELETE are cleanup's job.
+        if assessment.decision.action != SessionAction.RESTART:
             continue
 
         # Check if repo is still configured (skip sessions for unconfigured repos)

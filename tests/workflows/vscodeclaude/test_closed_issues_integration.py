@@ -10,7 +10,52 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
+    DetectionSignals,
+    IssueState,
+    LivenessRule,
+    LivenessVerdict,
+    SessionAction,
+    SessionAssessment,
+    Transition,
+    VSCodeClaudeSession,
+)
+
+
+def _make_assessment(
+    folder: str,
+    *,
+    active: bool = False,
+    action: SessionAction = SessionAction.RESTART,
+) -> SessionAssessment:
+    """Build a minimal RESTART-candidate assessment for restart consumer tests."""
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=DetectionSignals(
+            folder_exists=True,
+            title_match=active,
+            cmdline_match=False,
+            pid_alive=False,
+            found_pid=None,
+            age_seconds=0.0,
+            within_grace=False,
+            directory_empty=False,
+        ),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=action, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
 
 
 class TestClosedIssueIntegration:
@@ -52,6 +97,8 @@ class TestClosedIssueIntegration:
                 "status": "status-07:code-review",
                 "vscode_pid": 9999,  # Non-existent PID
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             }
@@ -72,7 +119,7 @@ class TestClosedIssueIntegration:
             "updated_at": "2025-12-31T08:00:00Z",
         }
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -96,7 +143,7 @@ class TestClosedIssueIntegration:
             mock_exists.return_value = True  # Folder exists
 
             # Call restart_closed_sessions
-            result = restart_closed_sessions(active_set=active_set)
+            result = restart_closed_sessions(assessments=assessments)
 
             # Verify closed issue was skipped in logs
             assert "Skipping closed issue #414" in caplog.text
@@ -187,6 +234,8 @@ class TestClosedIssueIntegration:
                 "status": "status-07:code-review",
                 "vscode_pid": None,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             }
@@ -210,6 +259,39 @@ class TestClosedIssueIntegration:
         cached_issues = {"owner/repo": {414: issue_414}}
         eligible_issues: list[tuple[str, IssueData]] = []
 
+        # Closed issue whose folder still exists -> inactive, marked for deletion.
+        # The status row reads this assessment (is_open=False drives the prefix).
+        assessments = {
+            s["folder"]: SessionAssessment(
+                folder=s["folder"],
+                signals=DetectionSignals(
+                    folder_exists=True,
+                    title_match=False,
+                    cmdline_match=False,
+                    pid_alive=False,
+                    found_pid=None,
+                    age_seconds=0.0,
+                    within_grace=False,
+                    directory_empty=False,
+                ),
+                verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH),
+                issue_state=IssueState(
+                    is_open=False,
+                    is_stale=False,
+                    is_blocked=False,
+                    is_unassigned=False,
+                    is_eligible=False,
+                ),
+                transition=Transition(flipped_to_inactive=False),
+                decision=Decision(
+                    action=SessionAction.DELETE, reason="closed", destructive=True
+                ),
+                pid_needs_refresh=False,
+                found_pid=None,
+            )
+            for s in sessions
+        }
+
         with (
             patch("builtins.print") as mock_print,
             patch("pathlib.Path.exists", return_value=True),
@@ -219,7 +301,7 @@ class TestClosedIssueIntegration:
                 sessions=sessions,
                 eligible_issues=eligible_issues,
                 workspace_base=str(tmp_path),
-                active_set={s["folder"]: False for s in sessions},
+                assessments=assessments,
                 cached_issues_by_repo=cached_issues,
             )
 
@@ -260,6 +342,8 @@ class TestClosedIssueIntegration:
                 "status": "status-04:plan-review",
                 "vscode_pid": None,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -270,6 +354,8 @@ class TestClosedIssueIntegration:
                 "status": "status-07:code-review",
                 "vscode_pid": None,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -280,6 +366,8 @@ class TestClosedIssueIntegration:
                 "status": "status-01:created",
                 "vscode_pid": None,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             },
@@ -328,7 +416,7 @@ class TestClosedIssueIntegration:
 
         cached_issues = {"owner/repo": {414: issue_414, 408: issue_408, 100: issue_100}}
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -352,7 +440,7 @@ class TestClosedIssueIntegration:
             mock_exists.return_value = True
 
             # Call restart_closed_sessions
-            _ = restart_closed_sessions(active_set=active_set)
+            _ = restart_closed_sessions(assessments=assessments)
 
             # Verify cache was built with all three issues
             assert 414 in cached_issues["owner/repo"]
@@ -401,6 +489,8 @@ class TestClosedIssueIntegration:
                 "status": "status-07:code-review",
                 "vscode_pid": None,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2025-01-01T00:00:00Z",
                 "is_intervention": False,
             }
@@ -423,7 +513,7 @@ class TestClosedIssueIntegration:
 
         cached_issues = {"owner/repo": {414: issue_414}}
 
-        active_set = {s["folder"]: False for s in sessions}
+        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         # Step 1: Test restart_closed_sessions
         with (
@@ -447,7 +537,7 @@ class TestClosedIssueIntegration:
             mock_exists.return_value = True
 
             # Call restart
-            result = restart_closed_sessions(active_set=active_set)
+            result = restart_closed_sessions(assessments=assessments)
 
             # Verify issue #414 was not restarted
             assert len(result) == 0
@@ -456,6 +546,38 @@ class TestClosedIssueIntegration:
 
         # Step 2: Test status display
         eligible_issues: list[tuple[str, IssueData]] = []
+        # The display reads a closed-issue assessment (is_open=False) so the row
+        # renders the "(Closed)" prefix.
+        display_assessments = {
+            s["folder"]: SessionAssessment(
+                folder=s["folder"],
+                signals=DetectionSignals(
+                    folder_exists=True,
+                    title_match=False,
+                    cmdline_match=False,
+                    pid_alive=False,
+                    found_pid=None,
+                    age_seconds=0.0,
+                    within_grace=False,
+                    directory_empty=False,
+                ),
+                verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_MATCH),
+                issue_state=IssueState(
+                    is_open=False,
+                    is_stale=False,
+                    is_blocked=False,
+                    is_unassigned=False,
+                    is_eligible=False,
+                ),
+                transition=Transition(flipped_to_inactive=False),
+                decision=Decision(
+                    action=SessionAction.DELETE, reason="closed", destructive=True
+                ),
+                pid_needs_refresh=False,
+                found_pid=None,
+            )
+            for s in sessions
+        }
         with (
             patch("builtins.print") as mock_print,
             patch("pathlib.Path.exists", return_value=True),
@@ -465,7 +587,7 @@ class TestClosedIssueIntegration:
                 sessions=sessions,
                 eligible_issues=eligible_issues,
                 workspace_base=str(tmp_path),
-                active_set={s["folder"]: False for s in sessions},
+                assessments=display_assessments,
                 cached_issues_by_repo=cached_issues,
             )
 

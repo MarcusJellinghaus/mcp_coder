@@ -8,6 +8,7 @@ This module contains tests for:
 
 import argparse
 import logging
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,6 +22,15 @@ from mcp_coder.cli.commands.coordinator import (
 from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeConfig
+
+
+def _assessment_stub(active: bool) -> SimpleNamespace:
+    """Minimal assessment stand-in exposing the ``verdict.active`` the launch.
+
+    path reads when projecting ``build_assessments`` output onto the legacy
+    active_set shape.
+    """
+    return SimpleNamespace(verdict=SimpleNamespace(active=active))
 
 
 class TestFormatJobOutput:
@@ -383,10 +393,11 @@ class TestSkipGithubInstallWiring:
 class TestAtCapacityDiagnosticLog:
     """Tests for the at-capacity diagnostic log line in execute_coordinator_vscodeclaude."""
 
+    @patch("mcp_coder.cli.commands.coordinator.commands.apply_assessments")
     @patch("mcp_coder.cli.commands.coordinator.commands.process_eligible_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions")
     @patch("mcp_coder.cli.commands.coordinator.commands.cleanup_stale_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.build_active_session_set")
+    @patch("mcp_coder.cli.commands.coordinator.commands.build_assessments")
     @patch("mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_sessions")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_config")
@@ -401,10 +412,11 @@ class TestAtCapacityDiagnosticLog:
         mock_load_config: MagicMock,
         mock_load_sessions: MagicMock,
         mock_build_cache: MagicMock,
-        mock_build_active: MagicMock,
+        mock_build_assess: MagicMock,
         mock_cleanup: MagicMock,
         mock_restart: MagicMock,
         mock_process: MagicMock,
+        mock_apply: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """At capacity, the tail log line names the folders consuming the slots."""
@@ -420,9 +432,9 @@ class TestAtCapacityDiagnosticLog:
             set(),
         )
         # Two active folders => at capacity for max_sessions=2.
-        mock_build_active.return_value = {
-            "/tmp/repo_111": True,
-            "/tmp/repo_222": True,
+        mock_build_assess.return_value = {
+            "/tmp/repo_111": _assessment_stub(active=True),
+            "/tmp/repo_222": _assessment_stub(active=True),
         }
         mock_restart.return_value = []
         mock_load_repo.return_value = {
@@ -450,10 +462,11 @@ class TestAtCapacityDiagnosticLog:
         assert "repo_111" in caplog.text
         assert "repo_222" in caplog.text
 
+    @patch("mcp_coder.cli.commands.coordinator.commands.apply_assessments")
     @patch("mcp_coder.cli.commands.coordinator.commands.process_eligible_issues")
     @patch("mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions")
     @patch("mcp_coder.cli.commands.coordinator.commands.cleanup_stale_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.build_active_session_set")
+    @patch("mcp_coder.cli.commands.coordinator.commands.build_assessments")
     @patch("mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_sessions")
     @patch("mcp_coder.cli.commands.coordinator.commands.load_config")
@@ -468,10 +481,11 @@ class TestAtCapacityDiagnosticLog:
         mock_load_config: MagicMock,
         mock_load_sessions: MagicMock,
         mock_build_cache: MagicMock,
-        mock_build_active: MagicMock,
+        mock_build_assess: MagicMock,
         mock_cleanup: MagicMock,
         mock_restart: MagicMock,
         mock_process: MagicMock,
+        mock_apply: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Below capacity with no started sessions preserves the legacy tail format."""
@@ -486,7 +500,7 @@ class TestAtCapacityDiagnosticLog:
             {"owner/mcp_coder": {1: MagicMock()}},
             set(),
         )
-        mock_build_active.return_value = {}  # No active sessions
+        mock_build_assess.return_value = {}  # No active sessions
         mock_restart.return_value = []
         mock_load_repo.return_value = {
             "repo_url": "https://github.com/owner/mcp_coder.git",

@@ -1,5 +1,6 @@
 """Test status table and display functions for VSCode Claude."""
 
+import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -7,6 +8,7 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.workflows.vscodeclaude.assessment import IssueFacts, assess_session
 from mcp_coder.workflows.vscodeclaude.status import (
     check_folder_dirty,
     display_status_table,
@@ -15,22 +17,82 @@ from mcp_coder.workflows.vscodeclaude.status import (
     is_issue_closed,
     is_session_stale,
 )
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import (
+    DetectionSignals,
+    SessionAction,
+    SessionAssessment,
+    VSCodeClaudeSession,
+)
+
+
+def _build_assessment(
+    session: VSCodeClaudeSession,
+    *,
+    is_closed: bool = False,
+    is_running: bool = False,
+    is_dirty: bool = False,
+    is_stale: bool = False,
+    is_ineligible: bool = False,
+    stale_target: str | None = None,
+) -> SessionAssessment:
+    """Build the :class:`SessionAssessment` a status row renders.
+
+    The status table now reads the assessment instead of recomputing liveness /
+    staleness / git status, so tests inject one built from the same pure layer
+    functions production uses (``assess_session``). Folder existence is detected
+    from disk so missing-folder cases need no extra flag.
+    """
+    folder_exists = Path(session["folder"]).exists()
+    if not folder_exists:
+        git_status = "Missing"
+    elif is_dirty:
+        git_status = "Dirty"
+    else:
+        git_status = "Clean"
+    signals = DetectionSignals(
+        folder_exists=folder_exists,
+        title_match=is_running,
+        cmdline_match=False,
+        pid_alive=False,
+        found_pid=None,
+        age_seconds=0.0,
+        within_grace=False,
+        directory_empty=not folder_exists,
+    )
+    issue_facts = IssueFacts(
+        is_closed=is_closed,
+        is_stale=is_stale,
+        is_blocked=False,
+        is_unassigned=False,
+        is_ineligible=is_ineligible,
+        stale_target=stale_target,
+    )
+    return assess_session(
+        folder=session["folder"],
+        signals=signals,
+        issue_facts=issue_facts,
+        git_status=git_status,
+        directory_empty=not folder_exists,
+        prior_last_active=None,
+    )
 
 
 @pytest.fixture
-def mock_status_checks(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Factory fixture to mock status check functions.
+def mock_status_checks() -> Any:
+    """Factory fixture returning a per-session assessment-map builder.
 
-    Returns the configured ``is_running`` value so callers can build the
-    ``active_set`` argument explicitly when invoking ``display_status_table``.
+    The status table is now an assessment consumer: each session row renders its
+    prebuilt :class:`SessionAssessment` rather than recomputing liveness /
+    staleness / dirtiness. This fixture captures the desired state flags and
+    returns a builder that, given the session, produces the ``assessments``
+    argument for ``display_status_table``.
 
     Usage:
         def test_something(mock_status_checks):
-            is_running = mock_status_checks(
+            make_assessments = mock_status_checks(
                 is_closed=False, is_running=False, is_dirty=False, is_stale=True
             )
-            # ... pass active_set={session["folder"]: is_running} to display_status_table
+            # ... pass assessments=make_assessments(session)
     """
 
     def _mock(
@@ -38,20 +100,19 @@ def mock_status_checks(monkeypatch: pytest.MonkeyPatch) -> Any:
         is_running: bool = False,
         is_dirty: bool = False,
         is_stale: bool = True,
-    ) -> bool:
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: is_closed,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: is_dirty,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: is_stale,
-        )
-        return is_running
+    ) -> Any:
+        def _build(session: VSCodeClaudeSession) -> dict[str, SessionAssessment]:
+            return {
+                session["folder"]: _build_assessment(
+                    session,
+                    is_closed=is_closed,
+                    is_running=is_running,
+                    is_dirty=is_dirty,
+                    is_stale=is_stale,
+                )
+            }
+
+        return _build
 
     return _mock
 
@@ -145,6 +206,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -177,6 +240,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",  # Original
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -209,6 +274,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -236,6 +303,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -269,6 +338,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -301,6 +372,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -395,7 +468,7 @@ class TestStatusDisplay:
             sessions=[],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             repo_filter=None,
         )
 
@@ -409,7 +482,7 @@ class TestStatusDisplay:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Displays session information."""
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
@@ -420,6 +493,8 @@ class TestStatusDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -428,7 +503,7 @@ class TestStatusDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -463,7 +538,7 @@ class TestStatusDisplay:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             repo_filter=None,
         )
 
@@ -497,7 +572,7 @@ class TestStatusDisplay:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             repo_filter=None,
         )
 
@@ -518,7 +593,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with existing folder shows (Closed) prefix in status column."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -529,6 +604,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -537,7 +614,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -556,7 +633,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue status shows both (Closed) prefix and original status."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -567,6 +644,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-04:plan-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -575,7 +654,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -593,7 +672,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with clean folder shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -604,6 +683,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -612,7 +693,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -626,10 +707,10 @@ class TestClosedIssuePrefixDisplay:
         mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Closed issue with dirty folder shows Manual cleanup action."""
+        """Closed issue with dirty folder is held back with a dirty skip."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=True, is_stale=True
         )
 
@@ -640,6 +721,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -648,15 +731,15 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
         captured = capsys.readouterr()
         # Should show (Closed) prefix
         assert "(Closed)" in captured.out
-        # Should show Manual cleanup for dirty folder
-        assert "Manual" in captured.out
+        # Dirty folder is never auto-deleted: surfaced as a dirty skip
+        assert "!! dirty" in captured.out
 
     def test_closed_issue_missing_folder_is_skipped(
         self,
@@ -667,7 +750,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with missing folder is not shown in status table."""
         missing_folder = tmp_path / "missing_folder"
         # Do NOT create the folder - it should not exist
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -678,6 +761,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -686,7 +771,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -705,7 +790,7 @@ class TestClosedIssuePrefixDisplay:
         """Closed issue with existing folder IS shown (contrast to missing folder)."""
         existing_folder = tmp_path / "existing_folder"
         existing_folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -716,6 +801,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -724,7 +811,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -743,7 +830,7 @@ class TestClosedIssuePrefixDisplay:
         """Open issue does not show (Closed) prefix."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
@@ -754,6 +841,8 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -762,7 +851,7 @@ class TestClosedIssuePrefixDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -775,31 +864,17 @@ class TestClosedIssuePrefixDisplay:
     def test_stale_session_shows_current_github_status(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Stale session shows current GitHub status (not stored session status).
 
         Regression test: when issue status changes from status-04:plan-review
         to status-06:implementing, the display should show
-        '-> status-06:implementing' not '-> status-04:plan-review'.
+        '-> status-06:implementing' not '-> status-04:plan-review'. The current
+        status now travels in the assessment's ``issue_state.stale_target``.
         """
         folder = tmp_path / "test_folder"
         folder.mkdir()
-
-        # Mock checks: not closed, not running (via active_set), not dirty, stale
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_issue_closed",
-            lambda s, cached_issues=None: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.check_folder_dirty",
-            lambda path: False,
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.is_session_stale",
-            lambda s, cached_issues=None: True,
-        )
 
         session: VSCodeClaudeSession = {
             "folder": str(folder),
@@ -808,36 +883,30 @@ class TestClosedIssuePrefixDisplay:
             "status": "status-04:plan-review",  # Stored (old) status
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
 
-        # Provide cache with updated (current) status
-        cached_issues_by_repo: dict[str, dict[int, IssueData]] = {
-            "owner/repo": {
-                458: {
-                    "number": 458,
-                    "title": "Test",
-                    "body": "",
-                    "state": "open",
-                    "labels": ["status-06:implementing"],  # Current (new) status
-                    "assignees": [],
-                    "user": None,
-                    "created_at": None,
-                    "updated_at": None,
-                    "url": "...",
-                    "locked": False,
-                }
-            }
+        # Assessment: open + stale, current GitHub status carried in stale_target.
+        assessments = {
+            session["folder"]: _build_assessment(
+                session,
+                is_closed=False,
+                is_running=False,
+                is_dirty=False,
+                is_stale=True,
+                stale_target="status-06:implementing",
+            )
         }
 
         display_status_table(
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: False},
+            assessments=assessments,
             repo_filter=None,
-            cached_issues_by_repo=cached_issues_by_repo,
         )
 
         captured = capsys.readouterr()
@@ -868,7 +937,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-02:awaiting-planning shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -879,6 +948,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-02:awaiting-planning",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -887,7 +958,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -908,7 +979,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-05:plan-ready shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -919,6 +990,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-05:plan-ready",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -927,7 +1000,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -944,7 +1017,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-08:ready-pr shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -955,6 +1028,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-08:ready-pr",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -963,7 +1038,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -980,7 +1055,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-03:planning shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -991,6 +1066,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-03:planning",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -999,7 +1076,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1016,7 +1093,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-06:implementing shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1027,6 +1104,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-06:implementing",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1035,7 +1114,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1052,7 +1131,7 @@ class TestBotStageSessionsDeleteAction:
         """Session at status-09:pr-creating shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1063,6 +1142,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-09:pr-creating",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1071,7 +1152,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1085,10 +1166,10 @@ class TestBotStageSessionsDeleteAction:
         mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Bot stage session with dirty folder shows Manual cleanup."""
+        """Bot stage session with dirty folder is held back with a dirty skip."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=True, is_stale=True
         )
 
@@ -1099,6 +1180,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-02:awaiting-planning",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1107,14 +1190,14 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
         captured = capsys.readouterr()
         assert "#404" in captured.out
-        # Dirty folder should show Manual cleanup
-        assert "Manual" in captured.out
+        # Dirty folder is never auto-deleted: surfaced as a dirty skip
+        assert "!! dirty" in captured.out
 
     def test_eligible_status_shows_restart_not_delete(
         self,
@@ -1126,7 +1209,7 @@ class TestBotStageSessionsDeleteAction:
         folder = tmp_path / "test_folder"
         folder.mkdir()
         # Status is the same as session (not stale from status change)
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=False
         )
 
@@ -1137,6 +1220,8 @@ class TestBotStageSessionsDeleteAction:
             "status": "status-07:code-review",  # Eligible status
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1145,7 +1230,7 @@ class TestBotStageSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1175,7 +1260,7 @@ class TestPrCreatedSessionsDeleteAction:
         """Session at status-10:pr-created shows Delete action."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1186,6 +1271,8 @@ class TestPrCreatedSessionsDeleteAction:
             "status": "status-10:pr-created",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1194,7 +1281,7 @@ class TestPrCreatedSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1212,10 +1299,10 @@ class TestPrCreatedSessionsDeleteAction:
         mock_status_checks: Any,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """PR-created session with dirty folder shows Manual cleanup."""
+        """PR-created session with dirty folder is held back with a dirty skip."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=True, is_stale=True
         )
 
@@ -1226,6 +1313,8 @@ class TestPrCreatedSessionsDeleteAction:
             "status": "status-10:pr-created",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1234,14 +1323,14 @@ class TestPrCreatedSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
         captured = capsys.readouterr()
         assert "#456" in captured.out
-        # Dirty folder should show Manual cleanup
-        assert "Manual" in captured.out
+        # Dirty folder is never auto-deleted: surfaced as a dirty skip
+        assert "!! dirty" in captured.out
 
     def test_pr_created_with_vscode_running_shows_active(
         self,
@@ -1252,7 +1341,7 @@ class TestPrCreatedSessionsDeleteAction:
         """PR-created session with VSCode running shows (active)."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=True, is_dirty=False, is_stale=True
         )
 
@@ -1263,6 +1352,8 @@ class TestPrCreatedSessionsDeleteAction:
             "status": "status-10:pr-created",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1271,7 +1362,7 @@ class TestPrCreatedSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1289,7 +1380,7 @@ class TestPrCreatedSessionsDeleteAction:
         """PR-created session with closed issue shows (Closed) prefix and Delete."""
         folder = tmp_path / "test_folder"
         folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1300,6 +1391,8 @@ class TestPrCreatedSessionsDeleteAction:
             "status": "status-10:pr-created",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1308,7 +1401,7 @@ class TestPrCreatedSessionsDeleteAction:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1330,7 +1423,7 @@ class TestDisplayStatusTableSoftDelete:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Session with folder in .to_be_deleted is not shown in output."""
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1348,6 +1441,8 @@ class TestDisplayStatusTableSoftDelete:
             "status": "status-04:implementation",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1356,7 +1451,7 @@ class TestDisplayStatusTableSoftDelete:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1371,7 +1466,7 @@ class TestDisplayStatusTableSoftDelete:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Session with folder NOT in .to_be_deleted is still shown."""
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1389,6 +1484,8 @@ class TestDisplayStatusTableSoftDelete:
             "status": "status-04:implementation",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1397,7 +1494,7 @@ class TestDisplayStatusTableSoftDelete:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1434,7 +1531,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             issues_without_branch=issues_without_branch,
         )
 
@@ -1467,7 +1564,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             issues_without_branch=issues_without_branch,
         )
 
@@ -1501,7 +1598,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             issues_without_branch=issues_without_branch,
         )
 
@@ -1545,7 +1642,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             issues_without_branch=None,  # Not provided
         )
 
@@ -1578,7 +1675,7 @@ class TestDisplayStatusTableBranchIndicators:
             sessions=[],
             eligible_issues=eligible_issues,
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             issues_without_branch=issues_without_branch,
         )
 
@@ -1673,7 +1770,7 @@ class TestZombieSessionDisplay:
         """Closed issue + missing folder + running process appears as zombie."""
         missing_folder = tmp_path / "zombie_folder"
         # Do NOT create the folder - it must not exist
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=True, is_dirty=False, is_stale=True
         )
 
@@ -1684,6 +1781,8 @@ class TestZombieSessionDisplay:
             "status": "status-07:code-review",
             "vscode_pid": 74544,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1692,7 +1791,7 @@ class TestZombieSessionDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1715,7 +1814,7 @@ class TestZombieSessionDisplay:
         """Existing behavior preserved when no live process claims the slot."""
         missing_folder = tmp_path / "missing_folder"
         # Do NOT create the folder
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=True, is_running=False, is_dirty=False, is_stale=True
         )
 
@@ -1726,6 +1825,8 @@ class TestZombieSessionDisplay:
             "status": "status-07:code-review",
             "vscode_pid": None,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1734,7 +1835,7 @@ class TestZombieSessionDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1753,7 +1854,7 @@ class TestZombieSessionDisplay:
         """Live session with present folder shows plain 'Running', not zombie."""
         existing_folder = tmp_path / "live_folder"
         existing_folder.mkdir()
-        is_running = mock_status_checks(
+        make_assessments = mock_status_checks(
             is_closed=False, is_running=True, is_dirty=False, is_stale=False
         )
 
@@ -1764,6 +1865,8 @@ class TestZombieSessionDisplay:
             "status": "status-07:code-review",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1772,7 +1875,7 @@ class TestZombieSessionDisplay:
             sessions=[session],
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={session["folder"]: is_running},
+            assessments=make_assessments(session),
             repo_filter=None,
         )
 
@@ -1800,14 +1903,19 @@ class TestScenarioACrossModule:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """After Scenario A cleanup, the status table omits the cleaned session."""
-        import json
-
         from mcp_coder.utils.folder_deletion import DeletionResult
         from mcp_coder.workflows.vscodeclaude.cleanup import cleanup_stale_sessions
         from mcp_coder.workflows.vscodeclaude.helpers import TO_BE_DELETED_FILENAME
-        from mcp_coder.workflows.vscodeclaude.sessions import (
-            build_active_session_set,
-            load_sessions,
+        from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
+        from mcp_coder.workflows.vscodeclaude.types import (
+            Decision,
+            DetectionSignals,
+            IssueState,
+            LivenessRule,
+            LivenessVerdict,
+            SessionAction,
+            SessionAssessment,
+            Transition,
         )
 
         sessions_file = tmp_path / "sessions.json"
@@ -1832,6 +1940,8 @@ class TestScenarioACrossModule:
             "status": "status-07:code-review",
             "vscode_pid": 74544,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1857,33 +1967,48 @@ class TestScenarioACrossModule:
         }
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup._get_configured_repos",
-            lambda: {"owner/repo"},
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.get_github_username",
-            lambda: "testuser",
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.cleanup.is_vscode_open_for_folder",
-            lambda path: (False, None),
-        )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
-            lambda path: (False, None),
-        )
-        monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.cleanup.safe_delete_folder",
             lambda path: DeletionResult(success=True),
         )
 
-        active_set = build_active_session_set(load_sessions()["sessions"])
+        # The closed issue's folder is gone -> the upstream assessment resolves
+        # to REMOVE_MISSING; cleanup consumes that decision directly.
+        assessments = {
+            str(folder): SessionAssessment(
+                folder=str(folder),
+                signals=DetectionSignals(
+                    folder_exists=False,
+                    title_match=False,
+                    cmdline_match=False,
+                    pid_alive=False,
+                    found_pid=None,
+                    age_seconds=0.0,
+                    within_grace=False,
+                    directory_empty=True,
+                ),
+                verdict=LivenessVerdict(active=False, rule=LivenessRule.NO_ARTIFACTS),
+                issue_state=IssueState(
+                    is_open=False,
+                    is_stale=False,
+                    is_blocked=False,
+                    is_unassigned=False,
+                    is_eligible=False,
+                ),
+                transition=Transition(flipped_to_inactive=False),
+                decision=Decision(
+                    action=SessionAction.REMOVE_MISSING,
+                    reason="folder missing",
+                    destructive=False,
+                ),
+                pid_needs_refresh=False,
+                found_pid=None,
+            )
+        }
 
         cleanup_stale_sessions(
             workspace_base=str(tmp_path),
-            active_set=active_set,
+            assessments=assessments,
             dry_run=False,
-            cached_issues_by_repo=cached_issues_by_repo,
         )
 
         post_cleanup_sessions = load_sessions()["sessions"]
@@ -1895,7 +2020,7 @@ class TestScenarioACrossModule:
             sessions=post_cleanup_sessions,
             eligible_issues=[],
             workspace_base=str(tmp_path),
-            active_set={},
+            assessments={},
             repo_filter=None,
             cached_issues_by_repo=cached_issues_by_repo,
         )
@@ -1903,3 +2028,149 @@ class TestScenarioACrossModule:
         captured = capsys.readouterr()
         assert "#188" not in captured.out
         assert folder_name not in captured.out
+
+
+class TestStatusAssessmentConsumer:
+    """Status renders the prebuilt assessment (enriched columns, write-free).
+
+    These tests exercise the Step 8 migration directly: the ``VSCode``/``Next
+    Action`` columns are derived from the embedded ``verdict``/``decision`` and
+    nothing on the status path writes ``sessions.json``.
+    """
+
+    def _session(self, folder: Path) -> VSCodeClaudeSession:
+        return {
+            "folder": str(folder),
+            "repo": "owner/repo",
+            "issue_number": 321,
+            "status": "status-07:code-review",
+            "vscode_pid": None,
+            "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
+            "started_at": "2024-01-01T00:00:00Z",
+            "is_intervention": False,
+        }
+
+    def test_vscode_column_enriched_with_running_title(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Active session (rule=TITLE) renders ``Running (title)``."""
+        folder = tmp_path / "live"
+        folder.mkdir()
+        session = self._session(folder)
+
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            assessments={
+                session["folder"]: _build_assessment(session, is_running=True)
+            },
+            repo_filter=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "Running (title)" in captured.out
+
+    def test_vscode_column_enriched_with_closed_no_match(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Inactive session with no detection match renders ``Closed (no_match)``."""
+        folder = tmp_path / "idle"
+        folder.mkdir()
+        session = self._session(folder)
+
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            assessments={session["folder"]: _build_assessment(session)},
+            repo_filter=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "Closed (no_match)" in captured.out
+
+    def test_status_path_performs_no_disk_writes(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Rendering the table never writes the session store (R2)."""
+        save_mock = Mock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.save_sessions", save_mock
+        )
+
+        folder = tmp_path / "live"
+        folder.mkdir()
+        session = self._session(folder)
+        # An active session would trigger a PID refresh on the apply path; the
+        # status path must still leave the store untouched.
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            assessments={
+                session["folder"]: _build_assessment(session, is_running=True)
+            },
+            repo_filter=None,
+        )
+
+        capsys.readouterr()
+        save_mock.assert_not_called()
+
+    def test_status_and_cleanup_agree_on_same_assessment(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """One assessment object drives both status and cleanup identically.
+
+        The SAME ``SessionAssessment`` (action=DELETE) is handed to both
+        consumers: status renders the Delete label and cleanup's dry-run reports
+        the same delete. Neither recomputes the decision, so they cannot drift.
+        """
+        from mcp_coder.workflows.vscodeclaude.cleanup import cleanup_stale_sessions
+
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+
+        folder = tmp_path / "stale"
+        folder.mkdir()
+        session = self._session(folder)
+        sessions_file.write_text(
+            json.dumps({"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"})
+        )
+
+        # Closed + clean folder -> a single shared DELETE assessment.
+        assessment = _build_assessment(session, is_closed=True)
+        assert assessment.decision.action is SessionAction.DELETE
+        assessments = {session["folder"]: assessment}
+
+        # Status consumer.
+        display_status_table(
+            sessions=[session],
+            eligible_issues=[],
+            workspace_base=str(tmp_path),
+            assessments=assessments,
+            repo_filter=None,
+        )
+        status_out = capsys.readouterr().out
+        assert "-> Delete (with --cleanup)" in status_out
+
+        # Cleanup consumer reading the SAME assessment object.
+        result = cleanup_stale_sessions(
+            workspace_base=str(tmp_path),
+            assessments=assessments,
+            dry_run=True,
+        )
+        cleanup_out = capsys.readouterr().out
+        assert "Add --cleanup to delete" in cleanup_out
+        assert result["deleted"] == []

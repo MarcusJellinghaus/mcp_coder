@@ -72,6 +72,8 @@ def load_sessions() -> VSCodeClaudeSessionStore:
             data["last_updated"] = ""
         for session in data["sessions"]:
             session.setdefault("vscode_pid_create_time", None)
+            session.setdefault("last_active", None)
+            session.setdefault("last_active_rule", None)
         return cast(VSCodeClaudeSessionStore, data)
     except (json.JSONDecodeError, OSError) as e:
         logger.warning("Failed to load sessions file: %s", e)
@@ -662,31 +664,24 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
     return False
 
 
-def build_active_session_set(
-    sessions: list[VSCodeClaudeSession],
-) -> dict[str, bool]:
-    """Build active-set snapshot.
+def get_pid_create_time(pid: int) -> float | None:
+    """Return a process's ``create_time`` for identity matching, or None.
 
-    Side effects: clears VSCode window/process caches, may call
-    update_session_pid for active sessions whose stored PID differs
-    from the currently-detected PID.
+    Captures ``psutil.Process(pid).create_time()``; returns None when the process
+    is gone or inaccessible (the loose name-only fallback used by callers that
+    skip the create_time identity check).
+
+    Args:
+        pid: Process ID to query.
 
     Returns:
-        Mapping of each session's folder path to a boolean indicating
-        whether that session is currently active.
+        The process ``create_time`` in Unix epoch seconds, or None on failure.
     """
-    clear_vscode_window_cache()
-    clear_vscode_process_cache()
-    logger.info("Checking %d session(s)...", len(sessions))
-    active_set: dict[str, bool] = {}
-    for session in sessions:
-        is_active = is_session_active(session)
-        active_set[session["folder"]] = is_active
-        if is_active:
-            _, found_pid = is_vscode_open_for_folder(session["folder"])
-            if found_pid is not None and found_pid != session.get("vscode_pid"):
-                update_session_pid(session["folder"], found_pid)
-    return active_set
+    try:
+        create_time: float = psutil.Process(pid).create_time()
+        return create_time
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def update_session_pid(folder: str, pid: int) -> None:
@@ -701,10 +696,7 @@ def update_session_pid(folder: str, pid: int) -> None:
         folder: Session folder path
         pid: New VSCode process ID
     """
-    try:
-        create_time: float | None = psutil.Process(pid).create_time()
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        create_time = None
+    create_time = get_pid_create_time(pid)
     store = load_sessions()
     for session in store["sessions"]:
         if session["folder"] == folder:

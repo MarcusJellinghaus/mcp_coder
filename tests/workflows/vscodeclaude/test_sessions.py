@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflows.vscodeclaude.assessment import build_active_session_set
 from mcp_coder.workflows.vscodeclaude.sessions import (
     VSCODE_PROCESS_NAMES,
     _get_vscode_processes,
     add_session,
-    build_active_session_set,
     check_vscode_running,
     clear_vscode_process_cache,
     get_session_for_issue,
@@ -28,9 +28,47 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     warn_orphan_folders,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
+    DetectionSignals,
+    IssueState,
+    LivenessRule,
+    LivenessVerdict,
+    SessionAction,
+    SessionAssessment,
+    Transition,
     VSCodeClaudeSession,
     VSCodeClaudeSessionStore,
 )
+
+
+def _make_assessment(folder: str, *, active: bool = False) -> SessionAssessment:
+    """Build a minimal SessionAssessment for the build_active_session_set wrapper."""
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=DetectionSignals(
+            folder_exists=True,
+            title_match=active,
+            cmdline_match=False,
+            pid_alive=False,
+            found_pid=None,
+            age_seconds=0.0,
+            within_grace=False,
+            directory_empty=False,
+        ),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=SessionAction.SKIP, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
 
 
 class TestSessionManagement:
@@ -70,6 +108,8 @@ class TestSessionManagement:
             "status": "status-07:code-review",
             "vscode_pid": 1234,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-22T10:30:00Z",
             "is_intervention": False,
         }
@@ -151,6 +191,8 @@ class TestSessionManagement:
             "status": "status-04:plan-review",
             "vscode_pid": 5678,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-22T11:00:00Z",
             "is_intervention": False,
         }
@@ -207,91 +249,73 @@ class TestSessionManagement:
     def test_build_active_session_set(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Builds snapshot dict, calls is_session_active once per session, refreshes stale PID."""
-        sessions_file = tmp_path / "sessions.json"
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
-            lambda: sessions_file,
-        )
+        """Thin read-only wrapper: projects verdict.active -> dict[folder, bool], no writes.
 
-        # Track calls to is_session_active
-        active_calls: list[str] = []
+        Back-compat invariant — the wrapper preserves the legacy
+        ``dict[folder, bool]`` contract (one entry per session) by delegating to
+        ``build_assessments`` and projecting each verdict's ``active`` flag. It
+        is read-only: the PID refresh moved into ``apply_assessments``, so
+        ``save_sessions`` is never called here.
+        """
+        folder_a = str(tmp_path / "session_a")
+        folder_b = str(tmp_path / "session_b")
 
-        def mock_is_session_active(session: VSCodeClaudeSession) -> bool:
-            active_calls.append(session["folder"])
-            # session_a (folder_a) is active, session_b is inactive
-            return session["folder"] == str(tmp_path / "session_a")
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_session_active",
-            mock_is_session_active,
-        )
-
-        # Track calls to is_vscode_open_for_folder for active sessions
-        # Return a different PID than stored to trigger update_session_pid
-        def mock_is_vscode_open_for_folder(folder: str) -> tuple[bool, int | None]:
-            return True, 5555  # Different from stored 1111
+        # Control the assessment build; the lazy import inside the wrapper
+        # resolves this attribute from the assessment module at call time.
+        def fake_build_assessments(
+            sessions: list[VSCodeClaudeSession],
+            cached_issues_by_repo: object = None,
+        ) -> dict[str, SessionAssessment]:
+            return {
+                folder_a: _make_assessment(folder_a, active=True),
+                folder_b: _make_assessment(folder_b, active=False),
+            }
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
-            mock_is_vscode_open_for_folder,
+            "mcp_coder.workflows.vscodeclaude.assessment.build_assessments",
+            fake_build_assessments,
         )
 
-        # Track update_session_pid calls
-        pid_updates: list[tuple[str, int]] = []
-
-        def mock_update_session_pid(folder: str, pid: int) -> None:
-            pid_updates.append((folder, pid))
-
+        # The wrapper must perform no disk writes.
+        save_calls: list[object] = []
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.update_session_pid",
-            mock_update_session_pid,
+            "mcp_coder.workflows.vscodeclaude.sessions.save_sessions",
+            save_calls.append,
         )
 
-        # Persist a sessions store so update_session_pid would work if called
-        store = {
-            "sessions": [
-                {
-                    "folder": str(tmp_path / "session_a"),
-                    "repo": "o/r",
-                    "issue_number": 1,
-                    "status": "s",
-                    "vscode_pid": 1111,
-                    "started_at": "2024-01-01T00:00:00Z",
-                    "is_intervention": False,
-                },
-                {
-                    "folder": str(tmp_path / "session_b"),
-                    "repo": "o/r",
-                    "issue_number": 2,
-                    "status": "s",
-                    "vscode_pid": 2222,
-                    "started_at": "2024-01-01T00:00:00Z",
-                    "is_intervention": False,
-                },
-            ],
-            "last_updated": "2024-01-01T00:00:00Z",
-        }
-        sessions_file.write_text(json.dumps(store))
-
-        sessions: list[VSCodeClaudeSession] = list(store["sessions"])  # type: ignore[arg-type]
+        sessions: list[VSCodeClaudeSession] = [
+            {
+                "folder": folder_a,
+                "repo": "o/r",
+                "issue_number": 1,
+                "status": "s",
+                "vscode_pid": 1111,
+                "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
+                "started_at": "2024-01-01T00:00:00Z",
+                "is_intervention": False,
+            },
+            {
+                "folder": folder_b,
+                "repo": "o/r",
+                "issue_number": 2,
+                "status": "s",
+                "vscode_pid": 2222,
+                "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
+                "started_at": "2024-01-01T00:00:00Z",
+                "is_intervention": False,
+            },
+        ]
 
         result = build_active_session_set(sessions)
 
-        # Snapshot has one entry per session, keyed by folder
-        assert set(result.keys()) == {
-            str(tmp_path / "session_a"),
-            str(tmp_path / "session_b"),
-        }
-        assert result[str(tmp_path / "session_a")] is True
-        assert result[str(tmp_path / "session_b")] is False
-
-        # is_session_active called exactly once per session
-        assert len(active_calls) == 2
-
-        # update_session_pid called only for the active session whose stored PID
-        # differs from the detected PID
-        assert pid_updates == [(str(tmp_path / "session_a"), 5555)]
+        # Legacy dict[folder, bool] contract: one entry per session.
+        assert result == {folder_a: True, folder_b: False}
+        # Read-only: no sessions.json writes.
+        assert save_calls == []
 
     def test_update_session_pid(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1266,6 +1290,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 28036,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": recent,
             "is_intervention": False,
         }
@@ -1310,6 +1336,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 28036,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": recent,
             "is_intervention": False,
         }
@@ -1369,6 +1397,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 28036,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": recent,
             "is_intervention": False,
         }
@@ -1417,6 +1447,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 1234,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1469,6 +1501,8 @@ class TestIsSessionActiveFallbackChain:
             "folder": str(folder),
             "status": "s",
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
             **session_data,
@@ -1506,6 +1540,8 @@ class TestIsSessionActiveFallbackChain:
             "status": "s",
             "vscode_pid": 1234,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "2024-01-01T00:00:00Z",
             "is_intervention": False,
         }
@@ -1635,6 +1671,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": self._started_at(120.0),
             "is_intervention": False,
         }
@@ -1692,6 +1730,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": self._started_at(10.0),
             "is_intervention": False,
         }
@@ -1745,6 +1785,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": self._started_at(120.0),
             "is_intervention": False,
         }
@@ -1792,6 +1834,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": "not-a-date",
             "is_intervention": False,
         }
@@ -1843,6 +1887,8 @@ class TestLaunchGrace:
             "status": "s",
             "vscode_pid": 12345,
             "vscode_pid_create_time": None,
+            "last_active": None,
+            "last_active_rule": None,
             "started_at": self._started_at(120.0),
             "is_intervention": False,
         }
@@ -1916,6 +1962,41 @@ class TestCreateTimeIdentityVerification:
         session = store["sessions"][0]
         assert "vscode_pid_create_time" in session
         assert session["vscode_pid_create_time"] is None
+
+    def test_load_sessions_backfills_missing_last_active(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Old payload without last_active/last_active_rule gets backfilled None."""
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        legacy_payload = {
+            "sessions": [
+                {
+                    "folder": "/legacy/folder",
+                    "repo": "owner/repo",
+                    "issue_number": 7,
+                    "status": "status-01:created",
+                    "vscode_pid": 1234,
+                    "vscode_pid_create_time": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            ],
+            "last_updated": "2024-01-01T00:00:00Z",
+        }
+        sessions_file.write_text(json.dumps(legacy_payload))
+
+        store = load_sessions()
+
+        assert len(store["sessions"]) == 1
+        session = store["sessions"][0]
+        assert "last_active" in session
+        assert session["last_active"] is None
+        assert "last_active_rule" in session
+        assert session["last_active_rule"] is None
 
     def test_check_vscode_running_create_time_mismatch_returns_false(
         self, monkeypatch: pytest.MonkeyPatch
@@ -2044,3 +2125,5 @@ class TestCreateTimeIdentityVerification:
         )
 
         assert session["vscode_pid_create_time"] is None
+        assert session["last_active"] is None
+        assert session["last_active_rule"] is None

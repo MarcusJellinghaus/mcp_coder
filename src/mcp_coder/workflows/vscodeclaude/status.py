@@ -9,9 +9,20 @@ from ...mcp_workspace_github import IssueData, IssueManager
 from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status, load_to_be_deleted
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
-from .types import VSCodeClaudeSession
+from .types import SessionAction, SessionAssessment, VSCodeClaudeSession
 
 logger = logging.getLogger(__name__)
+
+# Static mapping from a decided ``SessionAction`` to its status-table label.
+# ``SKIP`` is excluded: it renders ``!! <reason>`` from ``decision.reason`` so the
+# specific skip cause (dirty / unverified non-empty) is surfaced.
+ACTION_DISPLAY: dict[SessionAction, str] = {
+    SessionAction.KEEP_ACTIVE: "(active)",
+    SessionAction.RESTART: "-> Restart",
+    SessionAction.DELETE: "-> Delete (with --cleanup)",
+    SessionAction.REMOVE_MISSING: "-> Remove",
+    SessionAction.INVESTIGATE_ZOMBIE: "-> Investigate zombie",
+}
 
 
 def get_issue_current_status(
@@ -245,19 +256,28 @@ def display_status_table(
     sessions: list[VSCodeClaudeSession],
     eligible_issues: list[tuple[str, IssueData]],
     workspace_base: str,
-    active_set: dict[str, bool],
+    assessments: dict[str, SessionAssessment],
     repo_filter: str | None = None,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
     issues_without_branch: set[tuple[str, int]] | None = None,
 ) -> None:
     """Print status table to stdout.
 
+    Status is the always-on transparency surface and the 5th consumer of the
+    assessment pipeline. Each session row renders its prebuilt
+    :class:`SessionAssessment` (verdict + decision) instead of recomputing
+    liveness / staleness / closed / next-action (R1), so the enriched
+    ``VSCode``/``Next Action`` columns cannot drift from cleanup, restart, audit,
+    or ``--explain``. WRITE-FREE: this path performs no ``sessions.json`` writes
+    (the PID refresh + ``last_active`` advance live in ``apply_assessments``).
+
     Args:
         sessions: Current sessions from JSON
         eligible_issues: Eligible issues not yet in sessions (repo_name, issue)
         workspace_base: Path to workspace directory (for soft-delete filtering)
-        active_set: Snapshot mapping session folder -> is_active. Built once
-            at command entry by ``build_active_session_set``.
+        assessments: Folder-path -> :class:`SessionAssessment` map built once per
+            run by ``build_assessments``. Session rows read this; the eligible
+            issues below have no assessment and keep using ``get_next_action``.
         repo_filter: Optional repo name filter
         cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
                                If provided, avoids API calls for staleness checks.
@@ -271,7 +291,7 @@ def display_status_table(
     - Status
     - Folder
     - Git (Clean/Dirty/Missing/No Git/Error)
-    - VSCode
+    - VSCode (enriched with the winning liveness rule)
     - Next Action
     """
     # Load soft-delete registry to filter out deleted sessions
@@ -286,33 +306,33 @@ def display_status_table(
 
     # Print session rows
     for session in sessions:
-        repo_full = session["repo"]
-
-        # Get cached issues for this repo (if available)
-        repo_cached_issues: dict[int, IssueData] | None = None
-        if cached_issues_by_repo:
-            repo_cached_issues = cached_issues_by_repo.get(repo_full)
-
-        # Check closed state and folder existence
         folder_path = Path(session["folder"])
 
         # Skip soft-deleted sessions
         if folder_path.name in to_be_deleted:
             continue
 
-        is_closed = is_issue_closed(session, cached_issues=repo_cached_issues)
-        is_running = active_set.get(session["folder"], False)
-        folder_missing = not folder_path.exists()
+        # Read the prebuilt assessment; never recompute liveness/staleness here.
+        assessment = assessments.get(session["folder"])
+        if assessment is None:
+            # No assessment was built for this session (e.g. status was invoked
+            # without one) - nothing to render.
+            continue
+
+        is_open = assessment.issue_state.is_open
+        is_running = assessment.verdict.active
+        folder_exists = assessment.signals.folder_exists
 
         # Skip closed issues with missing folder UNLESS a process still claims
-        # the slot (zombie state - surface it for diagnosis)
-        if is_closed and folder_missing and not is_running:
+        # the slot (zombie state - surface it for diagnosis).
+        if not is_open and not is_running and not folder_exists:
             logger.debug(
                 "Skipping closed issue #%d with missing folder",
                 session["issue_number"],
             )
             continue
 
+        repo_full = session["repo"]
         repo_short = repo_full.split("/")[-1] if "/" in repo_full else repo_full
 
         # Apply repo filter
@@ -323,45 +343,34 @@ def display_status_table(
         issue_num = f"#{session['issue_number']}"
         status = session["status"]
 
-        # Add "(Closed)" prefix for closed issues
-        if is_closed:
+        # Status column: (Closed) prefix for closed issues, else show the current
+        # GitHub status when the stored status is stale (status changed).
+        if not is_open:
             status = f"(Closed) {status}"
+        elif assessment.issue_state.is_stale:
+            status = f"-> {assessment.issue_state.stale_target or status}"
 
-        is_dirty = check_folder_dirty(folder_path) if folder_path.exists() else False
-        git_status = (
-            get_folder_git_status(folder_path) if folder_path.exists() else "Missing"
-        )
+        # Git column reads the status captured on the assessment at build time
+        # (the SAME snapshot that fed ``decide``) instead of re-running git here,
+        # so the table cannot drift from the decision and stays TOCTOU-free.
+        git_status = assessment.git_status
 
-        # Get current status for eligibility check and stale display
-        # Use cached status if available, fall back to session status
-        current_status: str | None = None
-        if repo_cached_issues is not None:
-            current_status, _ = get_issue_current_status(
-                session["issue_number"], cached_issues=repo_cached_issues
-            )
-        status_for_eligibility = current_status or session["status"]
-        is_eligible = is_status_eligible_for_session(status_for_eligibility)
+        decided_action = assessment.decision.action
 
-        # Compute is_stale: closed OR ineligible OR status changed
-        # Only check status_changed for open issues to avoid warning
-        if is_closed:
-            stale = True
-        else:
-            status_changed = is_session_stale(session, cached_issues=repo_cached_issues)
-            stale = not is_eligible or status_changed
-
-        # Zombie state: folder missing but process still running - surface for diagnosis
-        if folder_missing and is_running:
+        # VSCode column: enrich with the winning liveness rule.
+        if decided_action == SessionAction.INVESTIGATE_ZOMBIE:
             vscode_status = "Running (zombie)"
-            action = "-> Investigate zombie"
+        elif is_running:
+            vscode_status = f"Running ({assessment.verdict.rule.value})"
         else:
-            vscode_status = "Running" if is_running else "Closed"
-            action = get_next_action(stale, is_dirty, is_running)
+            vscode_status = f"Closed ({assessment.verdict.rule.value})"
 
-        # Show status change indicator (but not for closed issues which already have prefix)
-        # Show current (new) status when stale, not the stored (old) status
-        if stale and not is_closed:
-            status = f"-> {current_status or status}"
+        # Next Action column: derived from the decided action; SKIP surfaces its
+        # reason so the user sees why the session was held back.
+        if decided_action == SessionAction.SKIP:
+            next_action = f"!! {assessment.decision.reason}"
+        else:
+            next_action = ACTION_DISPLAY[decided_action]
 
         # Add row to table
         rows.append(
@@ -372,7 +381,7 @@ def display_status_table(
                 folder_name,
                 git_status,
                 vscode_status,
-                action,
+                next_action,
             ]
         )
 

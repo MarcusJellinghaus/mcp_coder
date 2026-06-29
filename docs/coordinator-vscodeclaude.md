@@ -57,6 +57,9 @@ mcp-coder vscodeclaude launch --repo mcp_coder
 # Check session status
 mcp-coder vscodeclaude status
 
+# Explain each session's detection signals and decision (read-only)
+mcp-coder vscodeclaude status --explain
+
 # Clean up stale sessions
 mcp-coder vscodeclaude launch --cleanup
 
@@ -79,6 +82,13 @@ mcp-coder --log-level debug vscodeclaude launch
 | Subcommand | Description |
 |------------|-------------|
 | `status` | Show current session status table |
+
+#### `status` Options
+
+| Option | Description |
+|--------|-------------|
+| `--repo NAME` | Filter to specific repository only |
+| `--explain` | Dump the full detection signals and decision per session (read-only; no writes) |
 
 ## How It Works
 

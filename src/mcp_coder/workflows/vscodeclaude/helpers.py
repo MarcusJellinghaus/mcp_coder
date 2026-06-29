@@ -89,6 +89,8 @@ def build_session(
         "vscode_pid_create_time": None,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "is_intervention": is_intervention,
+        "last_active": None,
+        "last_active_rule": None,
     }
 
 

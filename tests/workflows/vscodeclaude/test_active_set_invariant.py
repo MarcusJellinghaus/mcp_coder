@@ -1,10 +1,13 @@
-"""Invariant tests: is_session_active is called exactly N_sessions times.
+"""Invariant tests: the assessment is built once per command at entry.
 
-Verifies that both ``execute_coordinator_vscodeclaude`` (launch) and
-``execute_coordinator_vscodeclaude_status`` (status) build a single
-active-set snapshot at command entry — so each session is checked exactly
-once per command, regardless of how many downstream consumers
-(cleanup, restart, status table) need the result.
+Verifies the observe/apply split (Step 5b):
+- both ``execute_coordinator_vscodeclaude`` (launch) and
+  ``execute_coordinator_vscodeclaude_status`` (status) build the per-session
+  assessment exactly once at command entry via ``build_assessments`` (one
+  ``DetectionSnapshot`` per command), regardless of how many downstream
+  consumers (cleanup, restart, status table) read the result;
+- launch applies the assessment exactly once (``apply_assessments`` — the single
+  mutation point); status is WRITE-FREE and never applies.
 """
 
 import argparse
@@ -18,7 +21,17 @@ from mcp_coder.cli.commands.coordinator.commands import (
     execute_coordinator_vscodeclaude,
     execute_coordinator_vscodeclaude_status,
 )
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
+    DetectionSignals,
+    IssueState,
+    LivenessRule,
+    LivenessVerdict,
+    SessionAction,
+    SessionAssessment,
+    Transition,
+    VSCodeClaudeSession,
+)
 
 
 def _build_sessions(tmp_path: Path, count: int) -> list[VSCodeClaudeSession]:
@@ -35,6 +48,8 @@ def _build_sessions(tmp_path: Path, count: int) -> list[VSCodeClaudeSession]:
                 "status": "status-07:code-review",
                 "vscode_pid": 1000 + i,
                 "vscode_pid_create_time": None,
+                "last_active": None,
+                "last_active_rule": None,
                 "started_at": "2024-01-01T00:00:00Z",
                 "is_intervention": False,
             }
@@ -42,32 +57,66 @@ def _build_sessions(tmp_path: Path, count: int) -> list[VSCodeClaudeSession]:
     return sessions
 
 
+def _assessment(folder: str, *, active: bool = False) -> SessionAssessment:
+    """Build a minimal SessionAssessment for the active_set projection."""
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=DetectionSignals(
+            folder_exists=True,
+            title_match=active,
+            cmdline_match=False,
+            pid_alive=False,
+            found_pid=None,
+            age_seconds=0.0,
+            within_grace=False,
+            directory_empty=False,
+        ),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=SessionAction.SKIP, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
+
+
 def _patch_common(
     monkeypatch: pytest.MonkeyPatch,
     sessions: list[VSCodeClaudeSession],
     tmp_path: Path,
-) -> Mock:
-    """Patch shared dependencies and return the is_session_active counter mock."""
-    # Isolate sessions.json writes from update_session_pid side effects
+) -> tuple[Mock, Mock]:
+    """Patch shared dependencies; return (build_assessments, apply_assessments) mocks."""
+    # Isolate sessions.json writes
     monkeypatch.setattr(
         "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
         lambda: tmp_path / "sessions.json",
     )
+
+    # One assessment per session at command entry (the read-only build).
+    build_mock = Mock(
+        side_effect=lambda sess, cached=None: {
+            s["folder"]: _assessment(s["folder"]) for s in sess
+        }
+    )
     monkeypatch.setattr(
-        "mcp_coder.workflows.vscodeclaude.sessions.update_session_pid",
-        Mock(),
+        "mcp_coder.cli.commands.coordinator.commands.build_assessments",
+        build_mock,
     )
 
-    # Counter to verify is_session_active call count
-    call_counter = Mock(return_value=False)
+    # The single mutation point — patched so we can assert call counts without
+    # touching disk.
+    apply_mock = Mock()
     monkeypatch.setattr(
-        "mcp_coder.workflows.vscodeclaude.sessions.is_session_active",
-        call_counter,
+        "mcp_coder.cli.commands.coordinator.commands.apply_assessments",
+        apply_mock,
     )
-
-    # Fast-path build_active_session_set away from real VSCode detection;
-    # is_vscode_open_for_folder is only called when is_session_active=True,
-    # which our mock returns False, so no need to patch it.
 
     # Stub out load_sessions to return our fixture sessions
     monkeypatch.setattr(
@@ -94,18 +143,18 @@ def _patch_common(
         lambda repo_names, sessions=None: ({}, set()),
     )
 
-    return call_counter
+    return build_mock, apply_mock
 
 
-class TestActiveSetInvariant:
-    """is_session_active is called exactly once per session per command."""
+class TestBuildOnceInvariant:
+    """build_assessments runs exactly once per command (one snapshot per command)."""
 
-    def test_launch_calls_is_session_active_n_times(
+    def test_launch_builds_once_and_applies_once(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """Verify is_session_active is called exactly N_sessions times per launch."""
+        """Launch builds the assessment once and applies it once (mutation point)."""
         sessions = _build_sessions(tmp_path, count=3)
-        call_counter = _patch_common(monkeypatch, sessions, tmp_path)
+        build_mock, apply_mock = _patch_common(monkeypatch, sessions, tmp_path)
 
         # Stub launch-only collaborators
         monkeypatch.setattr(
@@ -132,14 +181,15 @@ class TestActiveSetInvariant:
         result = execute_coordinator_vscodeclaude(args)
 
         assert result == 0
-        assert call_counter.call_count == len(sessions)
+        assert build_mock.call_count == 1
+        apply_mock.assert_called_once()
 
-    def test_status_calls_is_session_active_n_times(
+    def test_status_builds_once_and_never_applies(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """Verify is_session_active is called exactly N_sessions times per status."""
+        """Status builds the assessment once and is write-free (no apply)."""
         sessions = _build_sessions(tmp_path, count=4)
-        call_counter = _patch_common(monkeypatch, sessions, tmp_path)
+        build_mock, apply_mock = _patch_common(monkeypatch, sessions, tmp_path)
 
         # Stub status-only collaborators (imported lazily inside the function)
         monkeypatch.setattr(
@@ -161,60 +211,8 @@ class TestActiveSetInvariant:
         result = execute_coordinator_vscodeclaude_status(args)
 
         assert result == 0
-        assert call_counter.call_count == len(sessions)
-        # Snapshot was threaded through to the display function
-        assert "active_set" in captured
-        assert set(captured["active_set"].keys()) == {s["folder"] for s in sessions}
-
-
-class TestStatusPidRefresh:
-    """Status now refreshes stale stored PIDs (parity with launch)."""
-
-    def test_status_refreshes_stale_stored_pid(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        """build_active_session_set updates stored PID when window detection finds a different one."""
-        from mcp_coder.workflows.vscodeclaude.sessions import build_active_session_set
-
-        # Sessions file isolation
-        sessions_file = tmp_path / "sessions.json"
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
-            lambda: sessions_file,
-        )
-
-        update_pid_mock = Mock()
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.update_session_pid",
-            update_pid_mock,
-        )
-
-        # Active in the snapshot
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_session_active",
-            lambda session: True,
-        )
-
-        # Window-title detection finds a NEW PID different from the stored one
-        new_pid = 9999
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.is_vscode_open_for_folder",
-            lambda folder: (True, new_pid),
-        )
-
-        folder = tmp_path / "session_a"
-        folder.mkdir()
-        session: VSCodeClaudeSession = {
-            "folder": str(folder),
-            "repo": "owner/repo",
-            "issue_number": 1,
-            "status": "status-07:code-review",
-            "vscode_pid": 1111,  # Stale
-            "vscode_pid_create_time": None,
-            "started_at": "2024-01-01T00:00:00Z",
-            "is_intervention": False,
-        }
-
-        build_active_session_set([session])
-
-        update_pid_mock.assert_called_once_with(str(folder), new_pid)
+        assert build_mock.call_count == 1
+        apply_mock.assert_not_called()
+        # The prebuilt assessments were threaded through to the display function
+        assert "assessments" in captured
+        assert set(captured["assessments"].keys()) == {s["folder"] for s in sessions}
