@@ -13,7 +13,7 @@ Branch: `999-restore-toolsearch-wait-bridge`.
 
 ## Tasks
 
-- [ ] Step 1 — Emit `--tools "ToolSearch"` ([steps/step_1.md](steps/step_1.md))
+- [x] Step 1 — Emit `--tools "ToolSearch"` ([steps/step_1.md](steps/step_1.md)) — red: 4 flag tests + mcp_config test asserted `--tools ''` (`'' != 'ToolSearch'`); green: flipped `CLAUDE_BUILTIN_TOOLS` to `"ToolSearch"`, all pass
 - [ ] Step 2 — Guard module: `find_fatal_mcp_servers`, dict types, drop retry machinery ([steps/step_2.md](steps/step_2.md))
 - [ ] Step 3 — Blocking path: single attempt, fatal-only guard ([steps/step_3.md](steps/step_3.md))
 - [ ] Step 4 — Streaming path: fatal-only guard, tolerate pending ([steps/step_4.md](steps/step_4.md))

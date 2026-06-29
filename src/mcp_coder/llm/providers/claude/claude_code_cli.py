@@ -40,9 +40,11 @@ logger = logging.getLogger(__name__)
 # Heartbeat interval for LLM subprocess calls (2 minutes)
 LLM_HEARTBEAT_INTERVAL_SECONDS = 120
 
-# Built-in tools override: empty string disables all built-in tools
-# Forces Claude to use only MCP-provided tools
-CLAUDE_BUILTIN_TOOLS = ""
+# Built-in tools override: keep "ToolSearch" as the MCP wait-bridge so the model
+# can wait for a still-pending MCP server instead of running blind, while
+# file/exec built-ins (Bash/Edit/Read/Write) stay disabled. MCP tools load
+# independently via --mcp-config.
+CLAUDE_BUILTIN_TOOLS = "ToolSearch"
 
 __all__ = [
     "CLAUDE_BUILTIN_TOOLS",
