@@ -350,8 +350,10 @@ def display_status_table(
         elif assessment.issue_state.is_stale:
             status = f"-> {assessment.issue_state.stale_target or status}"
 
-        # Git column is informational only and stays write-free.
-        git_status = get_folder_git_status(folder_path)
+        # Git column reads the status captured on the assessment at build time
+        # (the SAME snapshot that fed ``decide``) instead of re-running git here,
+        # so the table cannot drift from the decision and stays TOCTOU-free.
+        git_status = assessment.git_status
 
         decided_action = assessment.decision.action
 

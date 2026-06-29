@@ -109,6 +109,10 @@ class SessionAssessment:
     decision: Decision
     pid_needs_refresh: bool
     found_pid: int | None
+    # Git status string computed once at build time ("Clean"/"Dirty"/"Missing"/
+    # "No Git"/"Error"). Carried so status display reads the SAME snapshot that
+    # fed ``decide`` instead of re-running git (TOCTOU-free determinism).
+    git_status: str = ""
 
     def _flatten(self) -> dict[str, Any]:
         """Flatten signals + the four typed sub-results into a JSON-safe dict.

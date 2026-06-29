@@ -570,8 +570,10 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
 
         # Apply the assessment (PID refresh + last_active advance) in one atomic
         # write. This is the single mutation point of the pipeline; status never
-        # calls it (it is write-free).
-        apply_assessments(assessments, write_audit=True)
+        # calls it (it is write-free). ``sessions_list`` is the build-time set
+        # (captured before cleanup/restart removed any), so the audit trail still
+        # records the destructive deletes that cleanup persisted out of the store.
+        apply_assessments(assessments, sessions_list, write_audit=True)
 
         # Step 3: Check repo list (already loaded above)
         if not repo_names:

@@ -243,6 +243,7 @@ def assess_session(
         decision=decision,
         pid_needs_refresh=pid_needs_refresh,
         found_pid=signals.found_pid,
+        git_status=git_status,
     )
 
 
@@ -407,25 +408,36 @@ def render_explain(assessments: dict[str, SessionAssessment]) -> str:
 
 def apply_assessments(
     assessments: dict[str, SessionAssessment],
+    sessions: list[VSCodeClaudeSession],
     *,
     write_audit: bool,
 ) -> None:
     """Apply-only: refresh stale PIDs, advance ``last_active``, write the audit.
 
-    The single mutation point of the pipeline. Loads the session store once,
+    The single mutation point of the pipeline. Loads the session store once and
     applies each assessment's PID refresh and ``last_active``/``last_active_rule``
-    advance, then writes the store back in ONE atomic save (no double-write).
-    When ``write_audit`` is True, also appends ONE audit run-block (one record per
-    assessed session) — a run is one command invocation across all repos, so the
-    status path (which never calls apply) leaves no audit record. Read-only
-    consumers (status) must NOT call this.
+    advance over the LIVE post-cleanup store — only surviving sessions are mutated
+    (sessions deleted by cleanup/restart are correctly gone from the store), then
+    writes the store back in ONE atomic save (no double-write).
+
+    When ``write_audit`` is True, also appends ONE audit run-block. The audit is
+    sourced from ``assessments`` — the FULL set assessed at build time, threaded
+    with the original ``sessions`` for repo/issue/status context — NOT from the
+    reloaded store. This is deliberate: cleanup/restart persist their deletions
+    before apply runs, so sourcing the audit from the store would silently drop
+    exactly the destructive ``delete``/``remove_missing`` records the trail exists
+    to capture. A run is one command invocation across all repos, so the status
+    path (which never calls apply) leaves no audit record. Read-only consumers
+    (status) must NOT call this.
 
     Args:
         assessments: Folder -> assessment map from :func:`build_assessments`.
+        sessions: The original sessions list assessed at build time (BEFORE
+            cleanup/restart removed any). Supplies repo/issue/status for the audit
+            records so deleted sessions still appear in the trail.
         write_audit: When True, append one run-block to the audit trail.
     """
     store = load_sessions()
-    audit_records: list[dict[str, Any]] = []
     for session in store["sessions"]:
         assessment = assessments.get(session["folder"])
         if assessment is None:
@@ -441,10 +453,14 @@ def apply_assessments(
             )
         session["last_active"] = assessment.verdict.active
         session["last_active_rule"] = assessment.verdict.rule.value
-        if write_audit:
-            audit_records.append(assessment_to_record(assessment, session))
     save_sessions(store)
     if write_audit:
+        sessions_by_folder = {s["folder"]: s for s in sessions}
+        audit_records: list[dict[str, Any]] = [
+            assessment_to_record(assessment, sessions_by_folder[folder])
+            for folder, assessment in assessments.items()
+            if folder in sessions_by_folder
+        ]
         append_run(audit_records)
 
 

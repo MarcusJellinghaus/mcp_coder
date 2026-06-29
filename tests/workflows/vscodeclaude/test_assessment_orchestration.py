@@ -113,7 +113,7 @@ class TestApplyAssessments:
             prior_last_active=None,
         )
 
-        apply_assessments({"C:/work/a": assessment}, write_audit=False)
+        apply_assessments({"C:/work/a": assessment}, [session], write_audit=False)
 
         saved_store = mock_save.call_args[0][0]
         saved = saved_store["sessions"][0]
@@ -147,7 +147,7 @@ class TestApplyAssessments:
             prior_last_active=True,
         )
 
-        apply_assessments({"C:/work/a": assessment}, write_audit=False)
+        apply_assessments({"C:/work/a": assessment}, [session], write_audit=False)
 
         saved = mock_save.call_args[0][0]["sessions"][0]
         assert saved["vscode_pid"] == 100  # unchanged
@@ -163,7 +163,7 @@ class TestApplyAssessmentsAudit:
     @patch(_CREATE_TIME)
     @patch(_SAVE)
     @patch(_LOAD)
-    def test_apply_writes_one_record_per_session(
+    def test_apply_records_destructive_delete_removed_by_cleanup(
         self,
         mock_load: Mock,
         mock_save: Mock,
@@ -171,7 +171,16 @@ class TestApplyAssessmentsAudit:
         tmp_path: object,
         monkeypatch: object,
     ) -> None:
-        """write_audit=True appends one run-block with one record per session."""
+        """The audit captures a delete record even after cleanup removed it.
+
+        Regression for the #985 audit-drop bug: cleanup/restart run BEFORE apply
+        and persist their deletions, so by apply time ``load_sessions`` no longer
+        returns the deleted session (here #38). The audit must still record it,
+        because it is sourced from the build-time ``assessments`` + ``sessions``
+        list, NOT from the post-cleanup store. The store here returns only the
+        surviving session_a — realistically mirroring the cleanup-then-apply
+        order — while the full build-time list is threaded through.
+        """
         import json as _json
         from pathlib import Path as _Path
 
@@ -180,8 +189,9 @@ class TestApplyAssessmentsAudit:
 
         session_a = make_session_at("C:/work/a", 1)
         session_b = make_session_at("C:/work/b", 38)
+        # Post-cleanup store: session_b was DELETEd and saved out before apply.
         mock_load.return_value = {
-            "sessions": [session_a, session_b],
+            "sessions": [session_a],
             "last_updated": "",
         }
 
@@ -205,20 +215,28 @@ class TestApplyAssessmentsAudit:
             prior_last_active=None,
         )
 
+        # Full build-time set (both sessions) threaded through, even though the
+        # store only still holds the survivor.
         apply_assessments(
-            {"C:/work/a": active, "C:/work/b": deleting}, write_audit=True
+            {"C:/work/a": active, "C:/work/b": deleting},
+            [session_a, session_b],
+            write_audit=True,
         )
 
         data = _json.loads(audit_file.read_text(encoding="utf-8"))
         assert len(data["runs"]) == 1
         records = data["runs"][0]["records"]
+        # One record per assessed session, INCLUDING the cleanup-deleted #38.
         assert len(records) == 2
-        # The #38-shaped record is greppable as a one-glance post-mortem.
+        # The #38-shaped record is greppable as a one-glance post-mortem and
+        # survives into the trail despite the session being gone from the store.
         deletes = [r for r in records if r["decision"]["action"] == "delete"]
         assert len(deletes) == 1
         assert deletes[0]["verdict"]["rule"] == "no_match"
         assert deletes[0]["decision"]["destructive"] is True
         assert deletes[0]["issue_number"] == 38
+        # The survivor (still in the store) advances its last_active as before.
+        assert mock_save.call_args[0][0]["sessions"][0]["last_active"] is True
 
     @patch(_CREATE_TIME)
     @patch(_SAVE)
@@ -249,7 +267,7 @@ class TestApplyAssessmentsAudit:
             prior_last_active=None,
         )
 
-        apply_assessments({"C:/work/a": assessment}, write_audit=False)
+        apply_assessments({"C:/work/a": assessment}, [session], write_audit=False)
 
         assert not audit_file.exists()
 
@@ -285,8 +303,8 @@ class TestApplyAssessmentsAudit:
             prior_last_active=None,
         )
 
-        apply_assessments({"C:/work/b": deleting}, write_audit=True)
-        apply_assessments({"C:/work/b": deleting}, write_audit=True)
+        apply_assessments({"C:/work/b": deleting}, [session], write_audit=True)
+        apply_assessments({"C:/work/b": deleting}, [session], write_audit=True)
 
         data = _json.loads(audit_file.read_text(encoding="utf-8"))
         assert len(data["runs"]) == 2
