@@ -111,5 +111,5 @@ Add `--explain` (store_true) to vscodeclaude CLI; `render_explain` over already-
 
 ## Pull Request
 
-- [ ] Address PR review feedback
+- [x] Address PR review feedback
 - [ ] Write PR summary
