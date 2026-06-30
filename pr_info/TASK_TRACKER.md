@@ -31,4 +31,4 @@ Branch: `999-restore-toolsearch-wait-bridge`.
 ## Pull Request
 
 - [ ] PR summary
-- [ ] Code review
+- [x] Code review — 2 rounds via `/implementation_review_supervisor`; round 1 fixed 3 minors (stale comment, pending-scan ordering notes, dead test assertion, commit `7e001ba`), round 2 clean; vulture + lint-imports clean; log `implementation_review_log_1.md`
