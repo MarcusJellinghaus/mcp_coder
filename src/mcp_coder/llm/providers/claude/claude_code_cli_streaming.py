@@ -171,6 +171,8 @@ def ask_claude_code_cli_stream(
                         mcp_error_msg, unavailable_servers=fatal_servers
                     )
 
+                # Fatal servers already aborted above, so any remaining
+                # non-connected servers are pending.
                 pending_servers = find_unavailable_mcp_servers(msg)
                 if pending_servers:
                     logger.info(

@@ -289,7 +289,6 @@ class TestClaudeMcpColdStartIntegration:
         logs_dir = tmp_path / "logs"
 
         final_text = ""
-        raised_clean = False
         try:
             result = ask_claude_code_cli(
                 _stub_question(),
@@ -303,7 +302,9 @@ class TestClaudeMcpColdStartIntegration:
             final_text = result["text"]
         except McpServersUnavailableError:
             # Clean fatal guard abort (stub reached a terminal/failed status).
-            raised_clean = True
+            # This is an acceptable disposition; the run failed cleanly instead
+            # of hallucinating a sentinel-bearing answer.
+            pass
 
         log_path = _latest_stream_log(logs_dir)
         parsed = parse_stream_json_file(log_path)
@@ -328,7 +329,7 @@ class TestClaudeMcpColdStartIntegration:
         ]
         assert not stub_tool_results, "unexpected stub tool_result with no server"
 
-        # Run ended in a recognisably non-success state: either a clean guard
-        # abort, or no successful sentinel-bearing answer (covered above).
-        # Surface the disposition for debugging.
-        assert raised_clean or sentinel not in final_text
+        # No further assertion: the real guarantee (no hallucinated sentinel in
+        # the final text) is already enforced unconditionally above. A clean
+        # guard abort is an acceptable disposition but not required, so it is
+        # not asserted here.

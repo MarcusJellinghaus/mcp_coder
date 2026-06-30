@@ -224,7 +224,8 @@ def build_cli_command(
     output_format = "stream-json" if use_stream_json else "json"
     command = [claude_cmd, "-p", "", "--output-format", output_format]
 
-    # Disable all built-in tools, forcing use of MCP-provided tools only
+    # Keep only ToolSearch (the MCP wait-bridge); all other built-ins
+    # (Bash/Edit/Read/Write) stay disabled.
     command.extend(["--tools", CLAUDE_BUILTIN_TOOLS])
 
     # stream-json output requires additional flags for complete logging
@@ -558,6 +559,8 @@ def ask_claude_code_cli(
             log_llm_error(error=mcp_error, duration_ms=duration_ms)
             raise mcp_error
 
+        # Fatal servers already aborted above, so any remaining non-connected
+        # servers are pending.
         pending_servers = find_unavailable_mcp_servers(parsed["system_message"])
         if pending_servers:
             logger.info(
