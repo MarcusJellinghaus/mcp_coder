@@ -315,7 +315,7 @@ class TestPureFunctions:
             "--output-format",
             "stream-json",
             "--tools",
-            "",
+            "ToolSearch",
             "--verbose",
             "--input-format",
             "stream-json",
@@ -327,11 +327,19 @@ class TestPureFunctions:
         """Test command building with stream-json disabled."""
         cmd = build_cli_command(None, "claude", use_stream_json=False)
 
-        assert cmd == ["claude", "-p", "", "--output-format", "json", "--tools", ""]
+        assert cmd == [
+            "claude",
+            "-p",
+            "",
+            "--output-format",
+            "json",
+            "--tools",
+            "ToolSearch",
+        ]
         assert "--verbose" not in cmd  # verbose only needed for stream-json
 
     def test_build_cli_command_always_includes_tools_flag(self) -> None:
-        """Test that --tools "" is always present regardless of options."""
+        """Test that --tools "ToolSearch" is always present regardless of options."""
         variants = [
             build_cli_command(None, "claude"),
             build_cli_command("session-1", "claude"),
@@ -343,7 +351,13 @@ class TestPureFunctions:
         ]
         for cmd in variants:
             tools_idx = cmd.index("--tools")
-            assert cmd[tools_idx + 1] == ""
+            assert cmd[tools_idx + 1] == "ToolSearch"
+
+    def test_build_cli_command_tools_is_toolsearch(self) -> None:
+        """Test the value after --tools is exactly "ToolSearch" (MCP wait-bridge)."""
+        cmd = build_cli_command(None, "claude")
+        tools_idx = cmd.index("--tools")
+        assert cmd[tools_idx + 1] == "ToolSearch"
 
     def test_build_cli_command_with_session(self) -> None:
         """Test command building with session ID (uses stdin)."""

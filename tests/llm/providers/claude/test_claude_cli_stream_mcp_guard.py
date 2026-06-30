@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Tests for the Claude CLI MCP-availability guard and cold-start retry.
+"""Tests for the Claude CLI MCP-availability guard.
 
 Split from test_claude_cli_stream_parsing.py to keep file sizes manageable.
-Covers find_unavailable_mcp_servers, mcp_failure_is_retryable, the init-event
-capture regression (#998), and the bounded retry / guard behaviour in both the
-blocking and streaming code paths.
+Covers find_unavailable_mcp_servers, find_fatal_mcp_servers, the init-event
+capture regression (#998), and the guard behaviour in both the blocking and
+streaming code paths.
 """
 
 import json
@@ -16,12 +16,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import (
-    MCP_UNAVAILABLE_MAX_RETRIES,
     McpServersUnavailableError,
     StreamMessage,
     ask_claude_code_cli,
+    find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
-    mcp_failure_is_retryable,
     parse_stream_json_string,
 )
 from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
@@ -54,11 +53,11 @@ class TestFindUnavailableMcpServers:
     """Tests for the MCP server availability guard (find_unavailable_mcp_servers)."""
 
     def test_none_system_message_returns_empty(self) -> None:
-        assert find_unavailable_mcp_servers(None) == []
+        assert find_unavailable_mcp_servers(None) == {}
 
     def test_no_servers_configured_returns_empty(self) -> None:
         msg = cast(StreamMessage, {"type": "system", "subtype": "init", "tools": []})
-        assert find_unavailable_mcp_servers(msg) == []
+        assert find_unavailable_mcp_servers(msg) == {}
 
     def test_all_connected_returns_empty(self) -> None:
         msg = cast(
@@ -72,7 +71,7 @@ class TestFindUnavailableMcpServers:
                 ],
             },
         )
-        assert find_unavailable_mcp_servers(msg) == []
+        assert find_unavailable_mcp_servers(msg) == {}
 
     def test_failed_and_pending_are_reported(self) -> None:
         """Reproduces the #995 init: mcp-tools-py failed, mcp-workspace pending."""
@@ -87,10 +86,10 @@ class TestFindUnavailableMcpServers:
                 ],
             },
         )
-        assert find_unavailable_mcp_servers(msg) == [
-            ("mcp-tools-py", "failed"),
-            ("mcp-workspace", "pending"),
-        ]
+        assert find_unavailable_mcp_servers(msg) == {
+            "mcp-tools-py": "failed",
+            "mcp-workspace": "pending",
+        }
 
     def test_only_unavailable_servers_reported(self) -> None:
         msg = cast(
@@ -104,14 +103,14 @@ class TestFindUnavailableMcpServers:
                 ],
             },
         )
-        assert find_unavailable_mcp_servers(msg) == [("mcp-workspace", "failed")]
+        assert find_unavailable_mcp_servers(msg) == {"mcp-workspace": "failed"}
 
     def test_missing_status_treated_as_unavailable(self) -> None:
         msg = cast(
             StreamMessage,
             {"type": "system", "subtype": "init", "mcp_servers": [{"name": "x"}]},
         )
-        assert find_unavailable_mcp_servers(msg) == [("x", "unknown")]
+        assert find_unavailable_mcp_servers(msg) == {"x": "unknown"}
 
     def test_status_is_case_insensitive(self) -> None:
         msg = cast(
@@ -122,7 +121,71 @@ class TestFindUnavailableMcpServers:
                 "mcp_servers": [{"name": "mcp-workspace", "status": "Connected"}],
             },
         )
-        assert find_unavailable_mcp_servers(msg) == []
+        assert find_unavailable_mcp_servers(msg) == {}
+
+
+class TestFindFatalMcpServers:
+    """find_fatal_mcp_servers reports only terminal (non-pending) servers."""
+
+    def test_none_system_message_returns_empty(self) -> None:
+        assert find_fatal_mcp_servers(None) == {}
+
+    def test_pending_is_tolerated(self) -> None:
+        """A still-starting (pending) server self-heals via ToolSearch."""
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "mcp_servers": [
+                    {"name": "mcp-tools-py", "status": "pending"},
+                    {"name": "mcp-workspace", "status": "pending"},
+                ],
+            },
+        )
+        assert find_fatal_mcp_servers(msg) == {}
+
+    def test_all_connected_returns_empty(self) -> None:
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "mcp_servers": [{"name": "mcp-workspace", "status": "connected"}],
+            },
+        )
+        assert find_fatal_mcp_servers(msg) == {}
+
+    def test_failed_and_unknown_are_reported(self) -> None:
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "mcp_servers": [
+                    {"name": "mcp-tools-py", "status": "failed"},
+                    {"name": "mcp-workspace"},
+                ],
+            },
+        )
+        assert find_fatal_mcp_servers(msg) == {
+            "mcp-tools-py": "failed",
+            "mcp-workspace": "unknown",
+        }
+
+    def test_mixed_failed_and_pending_reports_only_failed(self) -> None:
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "mcp_servers": [
+                    {"name": "mcp-tools-py", "status": "failed"},
+                    {"name": "mcp-workspace", "status": "pending"},
+                ],
+            },
+        )
+        assert find_fatal_mcp_servers(msg) == {"mcp-tools-py": "failed"}
 
 
 class TestMcpServerGuardInAskClaude:
@@ -155,6 +218,7 @@ class TestMcpServerGuardInAskClaude:
     def test_raises_when_server_failed(
         self, mock_execute: MagicMock, mock_find: MagicMock
     ) -> None:
+        """A failed server (alongside pending) still aborts; message lists fatal."""
         mock_find.return_value = "claude"
         stream = self._stream_with_servers(
             [
@@ -170,8 +234,54 @@ class TestMcpServerGuardInAskClaude:
             with pytest.raises(McpServersUnavailableError) as exc_info:
                 ask_claude_code_cli("Test question", logs_dir=tmpdir)
 
+        # Only the fatal server is carried in the abort message; pending is
+        # tolerated (self-heals via ToolSearch) and need not appear.
         assert "mcp-tools-py=failed" in str(exc_info.value)
-        assert "mcp-workspace=pending" in str(exc_info.value)
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    def test_failed_aborts_single_attempt(
+        self, mock_execute: MagicMock, mock_find: MagicMock
+    ) -> None:
+        """A fatal (failed) server aborts in exactly one attempt — no retry."""
+        mock_find.return_value = "claude"
+        stream = self._stream_with_servers(
+            [{"name": "mcp-tools-py", "status": "failed"}]
+        )
+        mock_execute.return_value = CommandResult(
+            return_code=0, stdout=stream, stderr="", timed_out=False
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with pytest.raises(McpServersUnavailableError) as exc_info:
+                ask_claude_code_cli("Test question", logs_dir=tmpdir)
+
+        assert "mcp-tools-py=failed" in str(exc_info.value)
+        assert mock_execute.call_count == 1
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    def test_pending_only_succeeds_single_attempt(
+        self, mock_execute: MagicMock, mock_find: MagicMock
+    ) -> None:
+        """A pending-only init is tolerated: no raise, normal result, one call."""
+        mock_find.return_value = "claude"
+        stream = self._stream_with_servers(
+            [
+                {"name": "mcp-tools-py", "status": "pending"},
+                {"name": "mcp-workspace", "status": "pending"},
+            ]
+        )
+        mock_execute.return_value = CommandResult(
+            return_code=0, stdout=stream, stderr="", timed_out=False
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = ask_claude_code_cli("Test question", logs_dir=tmpdir)
+
+        assert result["session_id"] == "sess-mcp"
+        assert result["text"] == "done"
+        assert mock_execute.call_count == 1
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
@@ -256,8 +366,9 @@ class TestMcpServerGuardInStream:
             for event in ask_claude_code_cli_stream("test question"):
                 events.append(event)
 
+        # Only the fatal server is carried in the abort message; pending is
+        # tolerated (self-heals via ToolSearch) and need not appear.
         assert "mcp-tools-py=failed" in str(exc_info.value)
-        assert "mcp-workspace=pending" in str(exc_info.value)
         # Aborted before any assistant content was yielded.
         assert not [e for e in events if e.get("type") == "text_delta"]
 
@@ -331,10 +442,10 @@ class TestInitMessageCapture:
         assert sm is not None
         assert sm.get("subtype") == "init"
         # The guard now sees the init's pending servers (it would have missed them).
-        assert find_unavailable_mcp_servers(sm) == [
-            ("mcp-tools-py", "pending"),
-            ("mcp-workspace", "pending"),
-        ]
+        assert find_unavailable_mcp_servers(sm) == {
+            "mcp-tools-py": "pending",
+            "mcp-workspace": "pending",
+        }
 
     def test_first_system_kept_when_no_init(self) -> None:
         """With no init event, fall back to the first system message (not the last)."""
@@ -356,124 +467,8 @@ class TestInitMessageCapture:
         assert sm.get("marker") == "first"
 
 
-class TestMcpFailureIsRetryable:
-    """Classify which MCP-unavailable failures are worth retrying."""
-
-    def test_all_pending_is_retryable(self) -> None:
-        assert mcp_failure_is_retryable([("a", "pending"), ("b", "pending")]) is True
-
-    def test_any_failed_is_not_retryable(self) -> None:
-        assert mcp_failure_is_retryable([("a", "pending"), ("b", "failed")]) is False
-
-    def test_unknown_is_not_retryable(self) -> None:
-        assert mcp_failure_is_retryable([("a", "unknown")]) is False
-
-    def test_empty_is_not_retryable(self) -> None:
-        assert mcp_failure_is_retryable([]) is False
-
-
-class TestMcpRetryInAskClaude:
-    """ask_claude_code_cli retries transient 'pending' MCP startups (#998)."""
-
-    @staticmethod
-    def _stream(servers: list[dict[str, str]], text: str = "done") -> str:
-        # Trailing thinking_tokens mirrors real long sessions (the #998 shape).
-        init = json.dumps(
-            {
-                "type": "system",
-                "subtype": "init",
-                "session_id": "sess-r",
-                "tools": [],
-                "mcp_servers": servers,
-            }
-        )
-        think = json.dumps(
-            {"type": "system", "subtype": "thinking_tokens", "session_id": "sess-r"}
-        )
-        result = json.dumps(
-            {
-                "type": "result",
-                "subtype": "success",
-                "result": text,
-                "session_id": "sess-r",
-            }
-        )
-        return f"{init}\n{think}\n{result}"
-
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.time.sleep")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    def test_pending_then_connected_succeeds_after_retry(
-        self, mock_execute: MagicMock, mock_find: MagicMock, mock_sleep: MagicMock
-    ) -> None:
-        mock_find.return_value = "claude"
-        pending = CommandResult(
-            return_code=0,
-            stdout=self._stream([{"name": "mcp-workspace", "status": "pending"}]),
-            stderr="",
-            timed_out=False,
-        )
-        connected = CommandResult(
-            return_code=0,
-            stdout=self._stream([{"name": "mcp-workspace", "status": "connected"}]),
-            stderr="",
-            timed_out=False,
-        )
-        mock_execute.side_effect = [pending, connected]
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            result = ask_claude_code_cli("q", logs_dir=tmpdir)
-
-        assert result["session_id"] == "sess-r"
-        assert result["text"] == "done"
-        assert mock_execute.call_count == 2
-        mock_sleep.assert_called_once()
-
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.time.sleep")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    def test_pending_exhausts_retries_then_raises(
-        self, mock_execute: MagicMock, mock_find: MagicMock, mock_sleep: MagicMock
-    ) -> None:
-        mock_find.return_value = "claude"
-        mock_execute.return_value = CommandResult(
-            return_code=0,
-            stdout=self._stream([{"name": "mcp-workspace", "status": "pending"}]),
-            stderr="",
-            timed_out=False,
-        )
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with pytest.raises(McpServersUnavailableError):
-                ask_claude_code_cli("q", logs_dir=tmpdir)
-
-        # one initial attempt + MCP_UNAVAILABLE_MAX_RETRIES retries
-        assert mock_execute.call_count == MCP_UNAVAILABLE_MAX_RETRIES + 1
-
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.time.sleep")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    def test_failed_status_not_retried(
-        self, mock_execute: MagicMock, mock_find: MagicMock, mock_sleep: MagicMock
-    ) -> None:
-        mock_find.return_value = "claude"
-        mock_execute.return_value = CommandResult(
-            return_code=0,
-            stdout=self._stream([{"name": "mcp-tools-py", "status": "failed"}]),
-            stderr="",
-            timed_out=False,
-        )
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with pytest.raises(McpServersUnavailableError):
-                ask_claude_code_cli("q", logs_dir=tmpdir)
-
-        assert mock_execute.call_count == 1
-        mock_sleep.assert_not_called()
-
-
 class TestStreamMcpGuard:
-    """Streaming path aborts on init-pending even with trailing thinking_tokens (#998)."""
+    """Streaming path tolerates pending but still aborts on fatal (#998, #999)."""
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
@@ -485,13 +480,19 @@ class TestStreamMcpGuard:
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
     )
-    def test_stream_aborts_on_pending_init(
+    def test_stream_pending_init_proceeds(
         self,
         mock_stream_sub: MagicMock,
         mock_log_path: MagicMock,
         _mock_find: MagicMock,
         tmp_path: Path,
     ) -> None:
+        """Pending-only init self-heals via ToolSearch: proceed and yield content.
+
+        Matches the blocking path (D4): a still-starting server is tolerated,
+        even with a trailing thinking_tokens system event, so the stream
+        proceeds and the assistant text_delta reaches the consumer.
+        """
         mock_log_path.return_value = tmp_path / "stream.ndjson"
         init = json.dumps(
             {
@@ -500,6 +501,50 @@ class TestStreamMcpGuard:
                 "session_id": "s",
                 "tools": [],
                 "mcp_servers": [{"name": "mcp-workspace", "status": "pending"}],
+            }
+        )
+        think = json.dumps(
+            {"type": "system", "subtype": "thinking_tokens", "session_id": "s"}
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "real answer"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, think, assistant])
+
+        events = list(ask_claude_code_cli_stream("q"))
+
+        text_deltas = [e for e in events if e.get("type") == "text_delta"]
+        assert [e["text"] for e in text_deltas] == ["real answer"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_aborts_on_fatal_despite_thinking(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A failed server still aborts even when followed by thinking_tokens (#998)."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [{"name": "mcp-workspace", "status": "failed"}],
             }
         )
         think = json.dumps(
@@ -518,6 +563,6 @@ class TestStreamMcpGuard:
             for event in ask_claude_code_cli_stream("q"):
                 events.append(event)
 
-        assert "mcp-workspace=pending" in str(exc.value)
+        assert "mcp-workspace=failed" in str(exc.value)
         # Aborted before any assistant content was leaked to the consumer.
         assert not any(e.get("type") == "text_delta" for e in events)

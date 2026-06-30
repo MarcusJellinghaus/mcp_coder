@@ -23,13 +23,11 @@ from .claude_executable_finder import find_claude_executable
 # They are re-exported here so existing importers (and patch targets) keep
 # working from claude_code_cli unchanged.
 from .claude_mcp_guard import (
-    MCP_UNAVAILABLE_MAX_RETRIES,
-    MCP_UNAVAILABLE_RETRY_WAIT_SECONDS,
     McpServersUnavailableError,
     ParsedStreamResponse,
     StreamMessage,
+    find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
-    mcp_failure_is_retryable,
     parse_stream_json_file,
     parse_stream_json_line,
     parse_stream_json_string,
@@ -40,15 +38,15 @@ logger = logging.getLogger(__name__)
 # Heartbeat interval for LLM subprocess calls (2 minutes)
 LLM_HEARTBEAT_INTERVAL_SECONDS = 120
 
-# Built-in tools override: empty string disables all built-in tools
-# Forces Claude to use only MCP-provided tools
-CLAUDE_BUILTIN_TOOLS = ""
+# Built-in tools override: keep "ToolSearch" as the MCP wait-bridge so the model
+# can wait for a still-pending MCP server instead of running blind, while
+# file/exec built-ins (Bash/Edit/Read/Write) stay disabled. MCP tools load
+# independently via --mcp-config.
+CLAUDE_BUILTIN_TOOLS = "ToolSearch"
 
 __all__ = [
     "CLAUDE_BUILTIN_TOOLS",
     "LLM_HEARTBEAT_INTERVAL_SECONDS",
-    "MCP_UNAVAILABLE_MAX_RETRIES",
-    "MCP_UNAVAILABLE_RETRY_WAIT_SECONDS",
     "McpServersUnavailableError",
     "ParsedCliResponse",
     "ParsedStreamResponse",
@@ -57,9 +55,9 @@ __all__ = [
     "build_cli_command",
     "create_response_dict",
     "create_response_dict_from_stream",
+    "find_fatal_mcp_servers",
     "find_unavailable_mcp_servers",
     "format_stream_json_input",
-    "mcp_failure_is_retryable",
     "parse_cli_json_string",
     "parse_stream_json_file",
     "parse_stream_json_line",
@@ -226,7 +224,8 @@ def build_cli_command(
     output_format = "stream-json" if use_stream_json else "json"
     command = [claude_cmd, "-p", "", "--output-format", output_format]
 
-    # Disable all built-in tools, forcing use of MCP-provided tools only
+    # Keep only ToolSearch (the MCP wait-bridge); all other built-ins
+    # (Bash/Edit/Read/Write) stay disabled.
     command.extend(["--tools", CLAUDE_BUILTIN_TOOLS])
 
     # stream-json output requires additional flags for complete logging
@@ -490,95 +489,84 @@ def ask_claude_code_cli(
     stream_file_str = str(stream_file_path)
 
     try:
-        attempt = 0
-        while True:
-            attempt += 1
-            start_time = time.time()
-            result = execute_subprocess(
-                command,
-                options,
-                heartbeat_interval_seconds=LLM_HEARTBEAT_INTERVAL_SECONDS,
-                heartbeat_message="LLM call in progress",
+        start_time = time.time()
+        result = execute_subprocess(
+            command,
+            options,
+            heartbeat_interval_seconds=LLM_HEARTBEAT_INTERVAL_SECONDS,
+            heartbeat_message="LLM call in progress",
+        )
+
+        # Save stream output to file
+        if result.stdout:
+            try:
+                stream_file_path.write_text(result.stdout, encoding="utf-8")
+                logger.debug(f"Wrote {len(result.stdout)} bytes to {stream_file_path}")
+            except (OSError, IOError) as e:
+                logger.warning(f"Failed to write stream file: {e}")
+
+        # Parse stream output
+        parsed = parse_stream_json_string(result.stdout)
+
+        # Error handling
+        if result.timed_out:
+            logger.error(f"CLI timed out after {timeout}s")
+            duration_ms = int((time.time() - start_time) * 1000)
+            timeout_error: Exception = TimeoutExpired(command, timeout)
+            log_llm_error(error=timeout_error, duration_ms=duration_ms)
+            raise timeout_error
+
+        if result.return_code != 0:
+            logger.error(f"CLI failed with code {result.return_code}")
+            logger.error(f"Stream file for diagnosis: {stream_file_path}")
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            # Include stream file path in error for diagnosis
+            error_msg = (
+                f"CLI failed with code {result.return_code}. "
+                f"Stream log: {stream_file_path}"
             )
+            if result.stderr:
+                error_msg += f"\nStderr: {result.stderr[:500]}"
 
-            # Save stream output to file
-            if result.stdout:
-                try:
-                    stream_file_path.write_text(result.stdout, encoding="utf-8")
-                    logger.debug(
-                        f"Wrote {len(result.stdout)} bytes to {stream_file_path}"
-                    )
-                except (OSError, IOError) as e:
-                    logger.warning(f"Failed to write stream file: {e}")
+            called_process_error = CalledProcessError(
+                result.return_code,
+                command,
+                output=result.stdout,
+                stderr=f"{result.stderr}\nStream file: {stream_file_path}",
+            )
+            log_llm_error(error=called_process_error, duration_ms=duration_ms)
+            raise called_process_error
 
-            # Parse stream output
-            parsed = parse_stream_json_string(result.stdout)
+        # MCP availability guard (single attempt). Abort only on fatal
+        # (terminal, non-pending) servers so the model never runs blind on
+        # hallucinated tools. Pending servers self-heal within the session via
+        # the ToolSearch wait-bridge, so they are tolerated and only logged.
+        fatal_servers = find_fatal_mcp_servers(parsed["system_message"])
+        if fatal_servers:
+            detail = ", ".join(
+                f"{name}={status}" for name, status in fatal_servers.items()
+            )
+            mcp_error_msg = (
+                f"MCP servers not available: {detail}. The session started "
+                f"without its configured tools. Stream log: {stream_file_path}"
+            )
+            logger.error(mcp_error_msg)
+            duration_ms = int((time.time() - start_time) * 1000)
+            mcp_error: Exception = McpServersUnavailableError(
+                mcp_error_msg, unavailable_servers=fatal_servers
+            )
+            log_llm_error(error=mcp_error, duration_ms=duration_ms)
+            raise mcp_error
 
-            # Error handling
-            if result.timed_out:
-                logger.error(f"CLI timed out after {timeout}s")
-                duration_ms = int((time.time() - start_time) * 1000)
-                timeout_error: Exception = TimeoutExpired(command, timeout)
-                log_llm_error(error=timeout_error, duration_ms=duration_ms)
-                raise timeout_error
-
-            if result.return_code != 0:
-                logger.error(f"CLI failed with code {result.return_code}")
-                logger.error(f"Stream file for diagnosis: {stream_file_path}")
-                duration_ms = int((time.time() - start_time) * 1000)
-
-                # Include stream file path in error for diagnosis
-                error_msg = (
-                    f"CLI failed with code {result.return_code}. "
-                    f"Stream log: {stream_file_path}"
-                )
-                if result.stderr:
-                    error_msg += f"\nStderr: {result.stderr[:500]}"
-
-                called_process_error = CalledProcessError(
-                    result.return_code,
-                    command,
-                    output=result.stdout,
-                    stderr=f"{result.stderr}\nStream file: {stream_file_path}",
-                )
-                log_llm_error(error=called_process_error, duration_ms=duration_ms)
-                raise called_process_error
-
-            # MCP availability guard. A "pending" server is usually still
-            # cold-starting; retry a bounded number of times (a warm cache
-            # normally connects) before aborting so the model never runs blind.
-            unavailable_servers = find_unavailable_mcp_servers(parsed["system_message"])
-            if unavailable_servers:
-                detail = ", ".join(
-                    f"{name}={status}" for name, status in unavailable_servers
-                )
-                mcp_error_msg = (
-                    f"MCP servers not available: {detail}. The session started "
-                    f"without its configured tools. Stream log: {stream_file_path}"
-                )
-                if (
-                    mcp_failure_is_retryable(unavailable_servers)
-                    and attempt <= MCP_UNAVAILABLE_MAX_RETRIES
-                ):
-                    logger.warning(
-                        "%s Retrying (attempt %d/%d) after %.0fs.",
-                        mcp_error_msg,
-                        attempt + 1,
-                        MCP_UNAVAILABLE_MAX_RETRIES + 1,
-                        MCP_UNAVAILABLE_RETRY_WAIT_SECONDS,
-                    )
-                    time.sleep(MCP_UNAVAILABLE_RETRY_WAIT_SECONDS)
-                    continue
-                logger.error(mcp_error_msg)
-                duration_ms = int((time.time() - start_time) * 1000)
-                mcp_error: Exception = McpServersUnavailableError(
-                    mcp_error_msg, unavailable_servers=unavailable_servers
-                )
-                log_llm_error(error=mcp_error, duration_ms=duration_ms)
-                raise mcp_error
-
-            # Success — leave the retry loop.
-            break
+        # Fatal servers already aborted above, so any remaining non-connected
+        # servers are pending.
+        pending_servers = find_unavailable_mcp_servers(parsed["system_message"])
+        if pending_servers:
+            logger.info(
+                "MCP server(s) still starting; ToolSearch will wait: %s",
+                pending_servers,
+            )
 
         logger.debug(
             f"CLI success: {len(result.stdout)} bytes, session_id={parsed['session_id']}"

@@ -332,3 +332,7 @@ _.last_active_rule
 
 # test_session_restart_branch_integration.py - Unpacked but unused in test assertion
 _.user
+
+# llm/providers/claude/_mcp_stub_server.py - FastMCP stub tool invoked over the
+# MCP protocol by the cold-start integration test, never called directly in Python.
+_.reveal_sentinel

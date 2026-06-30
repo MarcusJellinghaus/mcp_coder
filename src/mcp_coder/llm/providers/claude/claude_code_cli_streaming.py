@@ -22,6 +22,7 @@ from .claude_code_cli_log_paths import get_stream_log_path
 from .claude_mcp_guard import (
     McpServersUnavailableError,
     StreamMessage,
+    find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
     parse_stream_json_line,
 )
@@ -150,13 +151,15 @@ def ask_claude_code_cli_stream(
             if not msg:
                 continue
             if msg.get("type") == "system":
-                # Fail fast: if configured MCP servers did not connect, the
-                # session has no tools and the model may hallucinate. Abort
-                # before yielding any assistant content instead of running blind.
-                unavailable_servers = find_unavailable_mcp_servers(msg)
-                if unavailable_servers:
+                # MCP availability guard (matches the blocking path). Abort only
+                # on fatal (terminal, non-pending) servers so the model never
+                # runs blind on hallucinated tools. Pending servers self-heal
+                # within the session via the ToolSearch wait-bridge, so they are
+                # tolerated and only logged.
+                fatal_servers = find_fatal_mcp_servers(msg)
+                if fatal_servers:
                     detail = ", ".join(
-                        f"{name}={status}" for name, status in unavailable_servers
+                        f"{name}={status}" for name, status in fatal_servers.items()
                     )
                     mcp_error_msg = (
                         f"MCP servers not available: {detail}. The session started "
@@ -164,12 +167,17 @@ def ask_claude_code_cli_stream(
                         f"runs blind. Stream log: {stream_file}"
                     )
                     logger.error(mcp_error_msg)
-                    # Intentional asymmetry vs the blocking path: this generator
-                    # fails fast on `pending`, skipping the bounded retry that
-                    # ask_claude_code_cli does, since a generator can't cheaply
-                    # restart the subprocess mid-iteration.
                     raise McpServersUnavailableError(
-                        mcp_error_msg, unavailable_servers=unavailable_servers
+                        mcp_error_msg, unavailable_servers=fatal_servers
+                    )
+
+                # Fatal servers already aborted above, so any remaining
+                # non-connected servers are pending.
+                pending_servers = find_unavailable_mcp_servers(msg)
+                if pending_servers:
+                    logger.info(
+                        "MCP server(s) still starting; ToolSearch will wait: %s",
+                        pending_servers,
                     )
             yield from _map_stream_message_to_event(msg)
 
