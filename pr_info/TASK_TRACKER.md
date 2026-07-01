@@ -45,9 +45,9 @@ Detail: [step_3.md](./steps/step_3.md) — `feat: show MCP tools exposed in icod
 ### Step 4: Workflow failure output names unavailable MCP servers
 Detail: [step_4.md](./steps/step_4.md) — `feat: surface McpServersUnavailableError in workflow failure output`
 
-- [ ] Implementation: add tests for `format_mcp_unavailable_message` + re-raise regression, then add formatter + typed-error import, `except McpServersUnavailableError: raise` in `task_processing.py`, route implement/create_plan/create_pr failure boundaries through the formatter
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add tests for `format_mcp_unavailable_message` + re-raise regression, then add formatter + typed-error import, `except McpServersUnavailableError: raise` in `task_processing.py`, route implement/create_plan/create_pr failure boundaries through the formatter
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
