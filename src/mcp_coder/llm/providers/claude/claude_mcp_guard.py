@@ -150,6 +150,45 @@ def find_fatal_mcp_servers(
     return _scan_mcp_servers(system_message, tolerate_pending=True)
 
 
+# Prefix identifying MCP tools in the init event's ``tools`` field. Built-in
+# tools (e.g. ``ToolSearch``, ``Bash``) do not carry this prefix.
+_MCP_TOOL_PREFIX = "mcp__"
+
+
+def find_exposed_mcp_tools(system_message: StreamMessage | None) -> list[str]:
+    """Return sorted, de-duplicated ``mcp__*`` tool names from the init event.
+
+    Reads the init event's ``tools`` field (the list of tools actually exposed
+    to the model) and keeps only MCP tools (names starting with ``mcp__``).
+    Built-in tools (e.g. ``ToolSearch``) are excluded. Returns ``[]`` when the
+    message is ``None``, has no ``tools`` field, or exposed no MCP tools — so a
+    healthy-but-toolless session is represented as an empty list, not an error.
+
+    Args:
+        system_message: The parsed ``system``/``init`` StreamMessage, or None.
+
+    Returns:
+        Sorted list of unique ``mcp__*`` tool names; empty when none exposed.
+    """
+    if system_message is None:
+        return []
+    # Really parsed JSON; stay defensive about shape: entries may be plain
+    # strings or dicts carrying a ``name`` field.
+    tools = system_message.get("tools") or []
+    names: set[str] = set()
+    for tool in tools:
+        if isinstance(tool, str):
+            name: str | None = tool
+        elif isinstance(tool, dict):
+            raw = tool.get("name")
+            name = raw if isinstance(raw, str) else None
+        else:
+            name = None
+        if name is not None and name.startswith(_MCP_TOOL_PREFIX):
+            names.add(name)
+    return sorted(names)
+
+
 def parse_stream_json_line(line: str) -> StreamMessage | None:
     """Parse a single line of stream-json output.
 

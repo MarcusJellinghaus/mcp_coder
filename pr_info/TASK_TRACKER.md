@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Tool-list reader in the MCP guard
 Detail: [step_1.md](./steps/step_1.md) — `feat: add find_exposed_mcp_tools reader to claude_mcp_guard`
 
-- [ ] Implementation: add `TestFindExposedMcpTools` tests, then pure `find_exposed_mcp_tools()` in `claude_mcp_guard.py` + re-export from `claude_code_cli.py` (`__all__` + import block)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `TestFindExposedMcpTools` tests, then pure `find_exposed_mcp_tools()` in `claude_mcp_guard.py` + re-export from `claude_code_cli.py` (`__all__` + import block)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `verify` surfaces tool status + count (exit-code-affecting)
 Detail: [step_2.md](./steps/step_2.md) — `feat: report MCP tools exposed to model in verify`

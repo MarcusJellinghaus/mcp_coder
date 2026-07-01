@@ -19,6 +19,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
     McpServersUnavailableError,
     StreamMessage,
     ask_claude_code_cli,
+    find_exposed_mcp_tools,
     find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
     parse_stream_json_string,
@@ -186,6 +187,79 @@ class TestFindFatalMcpServers:
             },
         )
         assert find_fatal_mcp_servers(msg) == {"mcp-tools-py": "failed"}
+
+
+class TestFindExposedMcpTools:
+    """find_exposed_mcp_tools reads the init event's ``tools`` field.
+
+    Fixtures mirror the verified real init-event shape: a connected server
+    publishes its ``mcp__*`` names into ``tools`` (non-zero count), while a
+    pending/cold-starting server exposes only ``ToolSearch`` (zero count).
+    """
+
+    def test_none_system_message_returns_empty(self) -> None:
+        assert find_exposed_mcp_tools(None) == []
+
+    def test_no_tools_key_returns_empty(self) -> None:
+        msg = cast(StreamMessage, {"type": "system", "subtype": "init"})
+        assert find_exposed_mcp_tools(msg) == []
+
+    def test_healthy_returns_sorted_mcp_names_only(self) -> None:
+        """Connected server: ``tools`` mixes builtin + mcp names (real shape)."""
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "tools": [
+                    "ToolSearch",
+                    "mcp__mcp-tools-py__run_pytest_check",
+                    "mcp__mcp-workspace__read_file",
+                ],
+            },
+        )
+        assert find_exposed_mcp_tools(msg) == [
+            "mcp__mcp-tools-py__run_pytest_check",
+            "mcp__mcp-workspace__read_file",
+        ]
+
+    def test_degraded_connected_but_no_tools_returns_empty(self) -> None:
+        """Pending/cold-start: only ToolSearch published → zero MCP tools."""
+        msg = cast(
+            StreamMessage,
+            {"type": "system", "subtype": "init", "tools": ["ToolSearch"]},
+        )
+        assert find_exposed_mcp_tools(msg) == []
+
+    def test_empty_tools_list_returns_empty(self) -> None:
+        msg = cast(StreamMessage, {"type": "system", "subtype": "init", "tools": []})
+        assert find_exposed_mcp_tools(msg) == []
+
+    def test_dict_shaped_entries_are_supported(self) -> None:
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "tools": [{"name": "mcp__x__y"}, {"name": "Bash"}],
+            },
+        )
+        assert find_exposed_mcp_tools(msg) == ["mcp__x__y"]
+
+    def test_duplicates_collapse_and_output_is_sorted(self) -> None:
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "tools": [
+                    "mcp__b__two",
+                    "mcp__a__one",
+                    "mcp__b__two",
+                ],
+            },
+        )
+        assert find_exposed_mcp_tools(msg) == ["mcp__a__one", "mcp__b__two"]
 
 
 class TestMcpServerGuardInAskClaude:
