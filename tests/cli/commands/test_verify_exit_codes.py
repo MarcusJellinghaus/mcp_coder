@@ -7,6 +7,11 @@ validating the exit code matrix across provider/mlflow scenarios.
 from typing import Any
 from unittest.mock import patch
 
+from mcp_coder.cli.commands.verify import (
+    STATUS_SYMBOLS,
+    _compute_exit_code,
+    _format_tools_exposed_section,
+)
 from mcp_coder.cli.main import main
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
@@ -285,3 +290,112 @@ class TestExitCodeMatrix:
             )
             == 0
         )
+
+
+class TestToolsExposedExitCode:
+    """Exit-code effect of the tools_exposed_ok signal (claude only)."""
+
+    def test_claude_active_tools_exposed_fail_exit_1(self) -> None:
+        """Exit 1 when tools_exposed_ok=False and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                tools_exposed_ok=False,
+            )
+            == 1
+        )
+
+    def test_claude_active_tools_exposed_none_no_effect(self) -> None:
+        """Exit 0 when tools_exposed_ok=None (neutral) and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                tools_exposed_ok=None,
+            )
+            == 0
+        )
+
+    def test_langchain_active_tools_exposed_fail_no_effect(self) -> None:
+        """Exit 0 when tools_exposed_ok=False but langchain is active."""
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _make_claude_result(),
+                _make_langchain_result(),
+                _make_mlflow_result(installed=False),
+                tools_exposed_ok=False,
+            )
+            == 0
+        )
+
+
+class TestFormatToolsExposedSection:
+    """Tests for the _format_tools_exposed_section helper."""
+
+    def test_connected_with_tools_ok(self) -> None:
+        """Connected servers exposing >=1 tool -> [OK], ok True, names shown."""
+        system_message = {
+            "mcp_servers": [
+                {"name": "mcp-tools-py", "status": "connected"},
+                {"name": "mcp-workspace", "status": "connected"},
+            ],
+            "tools": ["mcp__tools__a", "mcp__workspace__b", "ToolSearch"],
+        }
+        lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
+        text = "\n".join(lines)
+        assert ok is True
+        assert STATUS_SYMBOLS["success"] in text
+        assert "2" in text
+        assert "mcp-tools-py" in text
+        assert "mcp-workspace" in text
+        assert "alwaysLoad" not in text
+
+    def test_connected_zero_tools_fail_with_hint(self) -> None:
+        """Connected but 0 tools -> [ERR], ok False, alwaysLoad hint."""
+        system_message = {
+            "mcp_servers": [{"name": "mcp-tools-py", "status": "connected"}],
+            "tools": [],
+        }
+        lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
+        text = "\n".join(lines)
+        assert ok is False
+        assert STATUS_SYMBOLS["failure"] in text
+        assert "alwaysLoad" in text
+
+    def test_pending_server_warn(self) -> None:
+        """A pending server -> [WARN], ok None, no alwaysLoad hint."""
+        system_message = {
+            "mcp_servers": [{"name": "mcp-tools-py", "status": "pending"}],
+            "tools": [],
+        }
+        lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
+        text = "\n".join(lines)
+        assert ok is None
+        assert STATUS_SYMBOLS["warning"] in text
+        assert "alwaysLoad" not in text
+
+    def test_failed_server_fail_generic_hint(self) -> None:
+        """A failed (fatal) server -> [ERR], ok False, generic hint only."""
+        system_message = {
+            "mcp_servers": [{"name": "mcp-tools-py", "status": "failed"}],
+            "tools": [],
+        }
+        lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
+        text = "\n".join(lines)
+        assert ok is False
+        assert STATUS_SYMBOLS["failure"] in text
+        assert "alwaysLoad" not in text
+        assert "logs" in text
+
+    def test_none_system_message_warn(self) -> None:
+        """None (no init event) -> [WARN], ok None."""
+        lines, ok = _format_tools_exposed_section(None, STATUS_SYMBOLS)
+        text = "\n".join(lines)
+        assert ok is None
+        assert STATUS_SYMBOLS["warning"] in text

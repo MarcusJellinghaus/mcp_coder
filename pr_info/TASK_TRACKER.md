@@ -31,9 +31,9 @@ Detail: [step_1.md](./steps/step_1.md) — `feat: add find_exposed_mcp_tools rea
 ### Step 2: `verify` surfaces tool status + count (exit-code-affecting)
 Detail: [step_2.md](./steps/step_2.md) — `feat: report MCP tools exposed to model in verify`
 
-- [ ] Implementation: add tests for `_format_tools_exposed_section` + `tools_exposed_ok` branch, then edit `verify.py` (capture test-prompt response, print tools-exposed row, thread `tools_exposed_ok` into `_compute_exit_code`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add tests for `_format_tools_exposed_section` + `tools_exposed_ok` branch, then edit `verify.py` (capture test-prompt response, print tools-exposed row, thread `tools_exposed_ok` into `_compute_exit_code`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: icoder startup banner surfaces tool status + count
 Detail: [step_3.md](./steps/step_3.md) — `feat: show MCP tools exposed in icoder startup banner`

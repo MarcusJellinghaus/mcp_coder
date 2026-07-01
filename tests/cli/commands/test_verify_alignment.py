@@ -46,6 +46,10 @@ _NOTICE_PREFIXES = (
     "(uses Claude CLI",
     "Run with --debug",
     "pip install ",
+    # "MCP tools exposed to model" is a deliberately long label (26 chars) that
+    # overruns the default 22-col width, like the dynamic-width MCP CONFIG
+    # WARNINGS section; excluded from the default-width alignment invariant.
+    "MCP tools exposed to model",
 )
 
 
