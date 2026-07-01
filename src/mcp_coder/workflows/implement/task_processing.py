@@ -418,6 +418,11 @@ def process_single_task(
         Tuple of (success, reason) where:
         - success: True if task completed successfully
         - reason: 'completed' | 'no_tasks' | 'no_changes' | 'error' | 'timeout'
+
+    Raises:
+        McpServersUnavailableError: If the LLM call fails because one or more
+            required MCP servers are unavailable. Propagated unmasked so the
+            orchestrator can format a server-naming failure message.
     """
     # Cleanup stale commit message file from previous failed runs
     _cleanup_commit_message_file(project_dir)

@@ -189,19 +189,13 @@ def run_planning_prompts(
     # Load all three prompts
     logger.info("Loading prompt templates...")
     prompt_1 = _load_prompt_or_exit("Initial Analysis")
-    logger.debug(
-        f"Prompt 1 loaded: {len(prompt_1)} chars, preview: {prompt_1[:200]}..."
-    )
+    logger.debug(f"Prompt 1 loaded: {len(prompt_1)} chars")
 
     prompt_2 = _load_prompt_or_exit("Simplification Review")
-    logger.debug(
-        f"Prompt 2 loaded: {len(prompt_2)} chars, preview: {prompt_2[:200]}..."
-    )
+    logger.debug(f"Prompt 2 loaded: {len(prompt_2)} chars")
 
     prompt_3 = _load_prompt_or_exit("Implementation Plan Creation")
-    logger.debug(
-        f"Prompt 3 loaded: {len(prompt_3)} chars, preview: {prompt_3[:200]}..."
-    )
+    logger.debug(f"Prompt 3 loaded: {len(prompt_3)} chars")
 
     # Format initial prompt with issue data
     formatted_prompt_1 = format_initial_prompt(prompt_1, issue_data)
