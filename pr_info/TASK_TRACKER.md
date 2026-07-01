@@ -21,6 +21,35 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Tool-list reader in the MCP guard
+Detail: [step_1.md](./steps/step_1.md) — `feat: add find_exposed_mcp_tools reader to claude_mcp_guard`
+
+- [ ] Implementation: add `TestFindExposedMcpTools` tests, then pure `find_exposed_mcp_tools()` in `claude_mcp_guard.py` + re-export from `claude_code_cli.py` (`__all__` + import block)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `verify` surfaces tool status + count (exit-code-affecting)
+Detail: [step_2.md](./steps/step_2.md) — `feat: report MCP tools exposed to model in verify`
+
+- [ ] Implementation: add tests for `_format_tools_exposed_section` + `tools_exposed_ok` branch, then edit `verify.py` (capture test-prompt response, print tools-exposed row, thread `tools_exposed_ok` into `_compute_exit_code`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: icoder startup banner surfaces tool status + count
+Detail: [step_3.md](./steps/step_3.md) — `feat: show MCP tools exposed in icoder startup banner`
+
+- [ ] Implementation: add tests for `env_setup`/`runtime_banner`, then add `RuntimeInfo` fields + `_probe_exposed_mcp_tools`, `provider`/`mcp_config` params, wire `icoder.py`, render banner line, include fields in `emit_session_start`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Workflow failure output names unavailable MCP servers
+Detail: [step_4.md](./steps/step_4.md) — `feat: surface McpServersUnavailableError in workflow failure output`
+
+- [ ] Implementation: add tests for `format_mcp_unavailable_message` + re-raise regression, then add formatter + typed-error import, `except McpServersUnavailableError: raise` in `task_processing.py`, route implement/create_plan/create_pr failure boundaries through the formatter
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Review PR: verify all acceptance items (1–5) are met and steps are cohesive
+- [ ] Write PR summary
