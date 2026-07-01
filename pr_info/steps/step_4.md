@@ -35,13 +35,17 @@ The guard's own message already names servers, but it is lost where an inner
 broad `except Exception` collapses it to a generic reason. Fix the one place
 that happens and route the other workflows' boundaries through the formatter:
 
-- **implement / task_processing.py** — in `process_task_with_retry`, the LLM call
-  is wrapped by `except LLMTimeoutError` then a broad `except Exception ->
-  return False, "error"`. Add, **above** the broad handler:
+- **implement / task_processing.py** — in `process_single_task` (~line 394), the
+  LLM call is wrapped by `except LLMTimeoutError` then a broad `except Exception ->
+  return False, "error"` (~lines 501-505). Add, **above** that broad handler
+  (~line 501):
   ```python
   except McpServersUnavailableError:
       raise   # don't mask as a generic "error"; let the orchestrator format it
   ```
+  Note: the re-raise lives in `process_single_task`; `process_task_with_retry`
+  (~line 561) has no broad catch — it merely loops over `process_single_task`, so
+  the typed error propagates through it transitively.
 - **implement / core.py** — at the orchestrator safety-net `except Exception`
   that builds the `FailureCategory.GENERAL` failure, detect the typed error and
   use the formatter for the message:

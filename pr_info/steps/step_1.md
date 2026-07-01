@@ -51,6 +51,26 @@ return sorted(names)
 ## DATA
 - **Returns:** `list[str]` — sorted unique `mcp__*` tool names. Count = `len(...)`.
 
+## VERIFIED REAL INIT-EVENT SHAPE
+A live real-CLI verification (3 consecutive runs) confirmed the init-event shape
+this reader depends on:
+- A **connected** server DOES publish its `mcp__*` tool names into `init.tools`.
+  Real capture: `mcp_servers: [{"name": "mcp-stub", "status": "connected"}]` and
+  `init.tools: ['ToolSearch', 'mcp__mcp-stub__reveal_sentinel']`. The
+  `--tools ToolSearch` launch flag only gates native builtins (Bash/Edit/Read/
+  Write); MCP tools load via `--mcp-config` and are NOT deferred behind
+  ToolSearch when the server is connected. So a connected server yields a
+  non-zero count.
+- A **pending** (cold-starting) server has NOT yet published its tools, so
+  `init.tools` contains only `['ToolSearch']` and the count is legitimately 0 —
+  this is the tolerated cold-start case (handled elsewhere as WARN, never
+  exit 1).
+
+The unit-test fixtures for `find_exposed_mcp_tools()` should MIRROR this real
+shape rather than being purely synthetic: a connected fixture whose `tools`
+includes a `mcp__*` name → non-zero count; a pending fixture with only
+`ToolSearch` → zero count.
+
 ## TESTS (write first)
 `TestFindExposedMcpTools`, using the same `cast(StreamMessage, {...})` fixture
 style already in the file:
