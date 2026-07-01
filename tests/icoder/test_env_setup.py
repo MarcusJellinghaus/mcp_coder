@@ -11,6 +11,7 @@ import pytest
 from mcp_coder.icoder.env_setup import (
     RuntimeInfo,
     _get_package_version,
+    _probe_exposed_mcp_tools,
     setup_icoder_environment,
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
@@ -91,6 +92,24 @@ def _mock_externals(
             ClaudeMCPStatus(name="mcp-tools-py", status_text="Connected", ok=True),
             ClaudeMCPStatus(name="mcp-workspace", status_text="Connected", ok=True),
         ],
+    )
+    # Default probe response: connected init exposing 3 mcp__* tools. Prevents
+    # the claude-default tests from launching a real LLM subprocess.
+    monkeypatch.setattr(
+        "mcp_coder.llm.interface.prompt_llm",
+        lambda *_a, **_kw: {
+            "raw_response": {
+                "system": {
+                    "tools": [
+                        "mcp__srv__tool_a",
+                        "mcp__srv__tool_b",
+                        "mcp__srv__tool_c",
+                        "Bash",
+                    ],
+                    "mcp_servers": [{"name": "srv", "status": "connected"}],
+                }
+            }
+        },
     )
 
 
@@ -206,6 +225,55 @@ class TestSetupIcoderEnvironment:
         assert info.mcp_connection_status is None
 
 
+@pytest.mark.usefixtures("_clear_mcp_env", "_mock_externals")
+class TestProbeExposedMcpTools:
+    """Tests for the guarded MCP-tool probe wired into setup_icoder_environment."""
+
+    def test_langchain_provider_skips_probe(self, tmp_path: Path) -> None:
+        """provider != 'claude' leaves the two probe fields None (probe not run)."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        info = setup_icoder_environment(project_dir, provider="langchain")
+
+        assert info.mcp_tools_exposed is None
+        assert info.mcp_tools_status is None
+
+    def test_claude_probe_connected_counts_tools(self, tmp_path: Path) -> None:
+        """Claude probe with a connected init and 3 mcp__* tools → count/status."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        info = setup_icoder_environment(project_dir, provider="claude")
+
+        assert info.mcp_tools_exposed == 3
+        assert info.mcp_tools_status == "connected"
+
+    def test_probe_exception_yields_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A raising prompt_llm is swallowed → fields None, no exception propagates."""
+
+        def _raise(*_a: object, **_kw: object) -> object:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr("mcp_coder.llm.interface.prompt_llm", _raise)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        info = setup_icoder_environment(project_dir, provider="claude")
+
+        assert info.mcp_tools_exposed is None
+        assert info.mcp_tools_status is None
+
+    def test_probe_helper_langchain_returns_none_pair(self) -> None:
+        """Direct call: non-claude provider returns (None, None) without prompting."""
+        assert _probe_exposed_mcp_tools("langchain", None, {}, "/some/dir") == (
+            None,
+            None,
+        )
+
+
 class TestRuntimeInfoDefaults:
     """Tests for RuntimeInfo default field values."""
 
@@ -223,3 +291,19 @@ class TestRuntimeInfoDefaults:
             mcp_servers=[],
         )
         assert info.mcp_connection_status is None
+
+    def test_mcp_tools_fields_default_none(self) -> None:
+        """RuntimeInfo without the probe fields defaults them to None."""
+        info = RuntimeInfo(
+            mcp_coder_version="1.0",
+            mcp_coder_utils_version="1.0",
+            python_version="3.12.0",
+            claude_code_version="1.0",
+            tool_env_path="/fake",
+            project_venv_path="/fake",
+            project_dir="/fake",
+            env_vars={},
+            mcp_servers=[],
+        )
+        assert info.mcp_tools_exposed is None
+        assert info.mcp_tools_status is None

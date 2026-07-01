@@ -261,6 +261,8 @@ def emit_session_start(
             s.name: {"ok": s.ok, "status_text": s.status_text}
             for s in (runtime_info.mcp_connection_status or [])
         }
+        payload["mcp_tools_exposed"] = runtime_info.mcp_tools_exposed
+        payload["mcp_tools_status"] = runtime_info.mcp_tools_status
     if session_id is not None:
         payload["session_id"] = session_id
     return event_log.emit("session_start", **payload)

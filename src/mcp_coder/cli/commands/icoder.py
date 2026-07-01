@@ -59,26 +59,28 @@ def execute_icoder(args: argparse.Namespace) -> int:
         # Pre-flight terminal checks (fail fast before slow env setup)
         TuiChecker().run_all_checks()
 
-        # Set up iCoder environment (paths, env vars, MCP verification)
-        try:
-            runtime_info = setup_icoder_environment(project_dir)
-        except (FileNotFoundError, RuntimeError, PackageNotFoundError) as e:
-            logger.error("Environment setup failed: %s", e)
-            return 1
-
-        env_vars = runtime_info.env_vars
-
-        # Resolve LLM method
+        # Resolve LLM method + MCP config before env setup so the startup
+        # probe can report the tools actually exposed to the model.
         llm_method, _ = resolve_llm_method(getattr(args, "llm_method", None))
         provider = parse_llm_method_from_args(llm_method)
 
-        # Resolve MCP config
         mcp_config = resolve_mcp_config_path(
             args.mcp_config, project_dir=args.project_dir
         )
         settings_file = resolve_claude_settings_path(
             args.settings, project_dir=args.project_dir
         )
+
+        # Set up iCoder environment (paths, env vars, MCP verification)
+        try:
+            runtime_info = setup_icoder_environment(
+                project_dir, provider=provider, mcp_config=mcp_config
+            )
+        except (FileNotFoundError, RuntimeError, PackageNotFoundError) as e:
+            logger.error("Environment setup failed: %s", e)
+            return 1
+
+        env_vars = runtime_info.env_vars
 
         # Create MCPManager for persistent MCP connections (langchain only)
         mcp_manager: MCPManager | None = None

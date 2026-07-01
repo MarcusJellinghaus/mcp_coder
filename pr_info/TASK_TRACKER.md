@@ -38,9 +38,9 @@ Detail: [step_2.md](./steps/step_2.md) — `feat: report MCP tools exposed to mo
 ### Step 3: icoder startup banner surfaces tool status + count
 Detail: [step_3.md](./steps/step_3.md) — `feat: show MCP tools exposed in icoder startup banner`
 
-- [ ] Implementation: add tests for `env_setup`/`runtime_banner`, then add `RuntimeInfo` fields + `_probe_exposed_mcp_tools`, `provider`/`mcp_config` params, wire `icoder.py`, render banner line, include fields in `emit_session_start`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add tests for `env_setup`/`runtime_banner`, then add `RuntimeInfo` fields + `_probe_exposed_mcp_tools`, `provider`/`mcp_config` params, wire `icoder.py`, render banner line, include fields in `emit_session_start`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Workflow failure output names unavailable MCP servers
 Detail: [step_4.md](./steps/step_4.md) — `feat: surface McpServersUnavailableError in workflow failure output`
