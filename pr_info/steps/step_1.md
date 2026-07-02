@@ -70,10 +70,10 @@ def test_logs_dir_stable_after_close(tmp_path: Path) -> None:
 1. Write the two tests above (they fail — no `logs_dir` yet).
 2. Add the `logs_dir` property.
 3. Run and pass all three MCP checks:
-   - `mcp__tools-py__run_pylint_check`
-   - `mcp__tools-py__run_pytest_check` with
+   - `mcp__mcp-tools-py__run_pylint_check`
+   - `mcp__mcp-tools-py__run_pytest_check` with
      `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`
-   - `mcp__tools-py__run_mypy_check`
+   - `mcp__mcp-tools-py__run_mypy_check`
 4. Run `./tools/format_all.sh`, then commit tests + implementation together.
 
 ## Commit message

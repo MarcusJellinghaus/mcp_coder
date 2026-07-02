@@ -166,10 +166,10 @@ requires **no change** — it only asserts `/info` is registered after
 3. Move the `register_info` call in `icoder.py` into the `with` block and pass
    `event_log`.
 4. Run and pass all three MCP checks:
-   - `mcp__tools-py__run_pylint_check`
-   - `mcp__tools-py__run_pytest_check` with
+   - `mcp__mcp-tools-py__run_pylint_check`
+   - `mcp__mcp-tools-py__run_pytest_check` with
      `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`
-   - `mcp__tools-py__run_mypy_check`
+   - `mcp__mcp-tools-py__run_mypy_check`
 5. Run `./tools/format_all.sh`, then commit tests + implementation together.
 
 ## Commit message

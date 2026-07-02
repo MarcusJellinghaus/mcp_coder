@@ -24,3 +24,16 @@ Plan files: pr_info/steps/step_1.md, step_2.md, summary.md
 **Status**: committed (see commit agent) — plan file changed → loop to Round 2 for a fresh review.
 
 ---
+
+## Round 2 — 2026-07-02
+**Findings**: Fresh review after Round 1's approval note. Verdict: Ready, no changes needed. Re-verified all Round 1 facts against real code (logs_dir at event_log.py:93, _format_info/register_info signatures at info.py:42/120, insertion point between MCP_CODER_* and Other env vars, wiring move at icoder.py:139, exactly 12 test call sites, conftest event_log fixture reusable). Approval note in summary.md introduced no contradiction. One informational nit: step docs referenced check tools with a malformed id `mcp__tools-py__...` (missing the `mcp-` segment).
+
+**Decisions**: Accept the nit fix as a straightforward improvement (correct tool ids the implementer will run). No user escalation — no new design/requirements questions.
+
+**User decisions**: none.
+
+**Changes**: `pr_info/steps/step_1.md` (3 occurrences) and `pr_info/steps/step_2.md` (3 occurrences) — corrected `mcp__tools-py__run_{pylint,pytest,mypy}_check` → `mcp__mcp-tools-py__...`. Tool-id text only; no other content touched.
+
+**Status**: committed — plan files changed → loop to Round 3 for a fresh review.
+
+---
