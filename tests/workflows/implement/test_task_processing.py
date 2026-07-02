@@ -458,6 +458,53 @@ class TestCheckAndFixMypy:
 
         assert result is False
 
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
+    def test_check_and_fix_mypy_timeout_propagates(
+        self,
+        mock_mypy_check: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+    ) -> None:
+        """Fixes the pre-existing hole: a fix-up LLMTimeoutError must propagate.
+
+        Previously the broad handler swallowed it into a False result, hiding the
+        timeout from the caller. It must now reach the caller for categorization.
+        """
+        from mcp_coder.llm.interface import LLMTimeoutError
+
+        mock_mypy_check.return_value = "mypy error output"
+        mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
+        mock_prompt_llm.side_effect = LLMTimeoutError("timed out")
+
+        with pytest.raises(LLMTimeoutError):
+            check_and_fix_mypy(Path("/test/project"), 1, "claude")
+
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
+    def test_check_and_fix_mypy_mcp_unavailable_propagates(
+        self,
+        mock_mypy_check: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+    ) -> None:
+        """A fix-up McpServersUnavailableError must propagate, not become False."""
+        from mcp_coder.llm.providers.claude.claude_code_cli import (
+            McpServersUnavailableError,
+        )
+
+        mock_mypy_check.return_value = "mypy error output"
+        mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
+        mock_prompt_llm.side_effect = McpServersUnavailableError(
+            "MCP servers unavailable",
+            {"mcp-tools-py": "failed"},
+        )
+
+        with pytest.raises(McpServersUnavailableError):
+            check_and_fix_mypy(Path("/test/project"), 1, "claude")
+
 
 class TestProcessSingleTask:
     """Test process_single_task function."""
@@ -625,6 +672,32 @@ class TestProcessSingleTask:
 
         assert success is False
         assert reason == "timeout"
+
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_process_single_task_mcp_unavailable(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+    ) -> None:
+        """Test processing single task returns 'mcp_unavailable' on MCP failure."""
+        from mcp_coder.llm.providers.claude.claude_code_cli import (
+            McpServersUnavailableError,
+        )
+
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = McpServersUnavailableError(
+            "MCP servers unavailable",
+            {"mcp-tools-py": "failed"},
+        )
+
+        success, reason = process_single_task(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "mcp_unavailable"
 
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
@@ -1167,17 +1240,18 @@ class TestProcessTaskWithRetry:
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
-    def test_mcp_unavailable_error_reraises_not_swallowed(
+    def test_mcp_unavailable_categorized_as_reason(
         self,
         mock_get_next_task: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
     ) -> None:
-        """A McpServersUnavailableError must propagate, not become (False, 'error').
+        """A McpServersUnavailableError is categorized to the 'mcp_unavailable' reason.
 
-        The orchestrator needs the typed error to format a server-naming
-        failure message; the broad handler in process_single_task must not
-        mask it as a generic 'error' reason.
+        process_single_task no longer re-raises the typed error; it maps it to a
+        stable reason so the orchestrator can select the MCP_UNAVAILABLE
+        category/label. process_task_with_retry propagates the reason without
+        retrying (reason != 'no_changes').
         """
         from mcp_coder.llm.providers.claude.claude_code_cli import (
             McpServersUnavailableError,
@@ -1190,5 +1264,8 @@ class TestProcessTaskWithRetry:
             {"mcp-tools-py": "failed"},
         )
 
-        with pytest.raises(McpServersUnavailableError):
-            process_task_with_retry(Path("/test/project"), "claude")
+        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert success is False
+        assert reason == "mcp_unavailable"
+        assert mock_prompt_llm.call_count == 1

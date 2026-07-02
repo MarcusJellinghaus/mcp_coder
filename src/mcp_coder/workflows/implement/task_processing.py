@@ -31,6 +31,7 @@ from .constants import (
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
 )
+from .llm_failures import llm_failure_reason
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -254,6 +255,12 @@ def check_and_fix_mypy(
 
     Returns:
         True if mypy check passes (no type errors), False if errors remain after fix attempts.
+
+    Raises:
+        LLMTimeoutError: If the fix-up LLM call hits its inactivity timeout.
+        McpServersUnavailableError: If a required MCP server is unavailable
+            during the fix-up LLM call. Both propagate (are NOT swallowed to a
+            False result) so the caller can categorize them.
     """
     logger.info("Running mypy type checking...")
 
@@ -350,6 +357,12 @@ def check_and_fix_mypy(
                     f"Applied mypy fixes from LLM (attempt {mypy_attempt_counter})"
                 )
 
+            except (LLMTimeoutError, McpServersUnavailableError):
+                # Do NOT swallow the two typed LLM failures into a False result
+                # (the pre-existing mypy-fix timeout hole). Re-raise so the only
+                # live caller — the final-mypy call in core.py — can categorize
+                # them into llm_timeout / mcp_unavailable.
+                raise
             except (
                 Exception
             ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
@@ -378,6 +391,10 @@ def check_and_fix_mypy(
         logger.info("Could not resolve all mypy type errors")
         return False
 
+    except (LLMTimeoutError, McpServersUnavailableError):
+        # Let the two typed LLM failures propagate to the caller for
+        # categorization rather than collapsing them to a False result.
+        raise
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
@@ -419,11 +436,9 @@ def process_single_task(
         Tuple of (success, reason) where:
         - success: True if task completed successfully
         - reason: 'completed' | 'no_tasks' | 'no_changes' | 'error' | 'timeout'
-
-    Raises:
-        McpServersUnavailableError: If the LLM call fails because one or more
-            required MCP servers are unavailable. Propagated unmasked so the
-            orchestrator can format a server-naming failure message.
+          | 'mcp_unavailable'. The two LLM failures (inactivity timeout, MCP
+          servers unavailable) are categorized here into their reason strings so
+          the orchestrator can map them to a FailureCategory/label.
     """
     # Cleanup stale commit message file from previous failed runs
     _cleanup_commit_message_file(project_dir)
@@ -503,13 +518,14 @@ Please implement this task step by step."""
         ) as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning("Failed to store implement session: %s", store_err)
 
-    except LLMTimeoutError:
-        logger.error("LLM call timed out for task: %s", next_task)
-        return False, "timeout"
-    except McpServersUnavailableError:
-        # Don't mask as a generic "error"; let the orchestrator format a
-        # server-naming failure message from the typed error.
-        raise
+    except (LLMTimeoutError, McpServersUnavailableError) as e:
+        # Categorize the two typed LLM failures into stable workflow reasons
+        # ("timeout" / "mcp_unavailable") so the orchestrator can map them to a
+        # FailureCategory/label. Fallback keeps mypy happy; both branches of
+        # llm_failure_reason are non-None for these exception types.
+        reason = llm_failure_reason(e) or "error"
+        logger.error("LLM call failed (%s) for task: %s", reason, next_task)
+        return False, reason
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
@@ -595,7 +611,8 @@ def process_task_with_retry(
 
     Returns:
         Tuple of (success, reason) where reason may be:
-        - 'completed' | 'no_tasks' | 'error' | 'timeout' (from process_single_task)
+        - 'completed' | 'no_tasks' | 'error' | 'timeout' | 'mcp_unavailable'
+          (from process_single_task)
         - 'no_changes_after_retries' (exhausted all retry attempts)
     """
     for attempt in range(1, MAX_NO_CHANGE_RETRIES + 1):

@@ -57,9 +57,9 @@ See [step_4.md](./steps/step_4.md).
 
 See [step_5.md](./steps/step_5.md).
 
-- [ ] Implementation (tests + production code): categorize the two LLM exceptions in `process_single_task`; stop swallowing them in `check_and_fix_mypy`; add `mcp_unavailable` reason→category branch and wrap final-mypy call in `core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): categorize the two LLM exceptions in `process_single_task`; stop swallowing them in `check_and_fix_mypy`; add `mcp_unavailable` reason→category branch and wrap final-mypy call in `core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Categorize at CI sites — CI-analysis propagates, CI-fix absorbs
 
