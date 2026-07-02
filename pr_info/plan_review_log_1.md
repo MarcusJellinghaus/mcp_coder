@@ -37,3 +37,29 @@
 **Changes**: `pr_info/steps/step_1.md` — corrected tool references to `mcp__mcp-tools-py__run_pylint_check` / `run_pytest_check` / `run_mypy_check`, and replaced `./tools/format_all.sh` with `mcp__mcp-tools-py__run_format_code` (in Verification, Definition of done, and LLM prompt).
 
 **Status**: plan changed — committing; loop continues with round 3.
+
+## Round 3 — 2026-07-02 (confirmation pass)
+
+**Findings**: No issues found. Re-confirmed against current source:
+- All factual claims match the code (`_LABEL_MAP` has `api_base_url`, no `network_proxy`; `_format_section` uses `_LABEL_MAP.get(key, key)` over `result.items()`).
+- The `[ERR]` assertion is consistent with the `ok`-driven marker logic (`ok is False → [ERR]`; the two `ok=True` rows satisfy `[OK]`).
+- Tool references in `step_1.md` are all correct (`mcp__mcp-tools-py__*` / `run_format_code`); zero stale `mcp__tools-py__` / `./tools/` / `format_all.sh` matches remain.
+- KISS/planning alignment sound; pure data + test change, one TDD commit, no architectural risk.
+
+**Decisions**: none — nothing to act on.
+
+**User decisions**: none required.
+
+**Changes**: none.
+
+**Status**: no changes needed — loop terminates.
+
+## Final Status
+
+- **Rounds run**: 3 (round 1 & 2 each applied one polish edit; round 3 clean).
+- **Plan commits produced**: 2
+  - `0e9a277` — round 1: assert failed probe renders `[ERR]`
+  - `8dd4d4d` — round 2: fix step_1 tool references to match CLAUDE.md
+- **No blockers, no user escalations** — the issue was fully specified; all findings were straightforward NITs handled autonomously.
+- **Version-skew note (informational)**: manual `mcp-coder verify` acceptance must run against the project `.venv` (`mcp-workspace 0.1.13.dev8`), not the Jenkins tool env (`dev7`, which does not yet emit `network_proxy`). Unit tests are self-contained and unaffected.
+- **Verdict**: Plan is sound, minimally scoped as one TDD commit, and **ready for approval**.
