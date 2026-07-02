@@ -899,12 +899,51 @@ def test_collect_branch_status_all_failed() -> None:
 # Tests for helper functions
 
 
+def test_collect_ci_status_no_token_returns_unavailable() -> None:
+    """Missing GitHub token yields UNAVAILABLE without constructing a manager."""
+    project_dir = Path("/test/repo")
+
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value=None),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
+
+        assert status == CIStatus.UNAVAILABLE
+        assert details is None
+        # Early-return must precede any network/manager construction.
+        mock_ci_manager.assert_not_called()
+
+
+def test_collect_ci_status_with_token_passes_through() -> None:
+    """A present token allows the existing PASSED path to run."""
+    project_dir = Path("/test/repo")
+
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value="tok"),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_latest_ci_status.return_value = {
+            "run": {"id": 123, "conclusion": "success", "status": "completed"}
+        }
+
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
+
+        assert status == CIStatus.PASSED
+        assert details is None
+
+
 def test_collect_ci_status_with_truncation() -> None:
     """Test _collect_ci_status with log truncation."""
     project_dir = Path("/test/repo")
     long_logs = "\n".join([f"Log line {i}" for i in range(400)])
 
-    with patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager:
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value="tok"),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         # Return dict structure matching actual API with jobs data
@@ -938,7 +977,10 @@ def test_collect_ci_status_no_truncation() -> None:
     """Test _collect_ci_status without truncation."""
     project_dir = Path("/test/repo")
 
-    with patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager:
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value="tok"),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         # Return dict structure matching actual API - success case
@@ -956,7 +998,10 @@ def test_collect_ci_status_error_handling() -> None:
     """Test _collect_ci_status with API errors."""
     project_dir = Path("/test/repo")
 
-    with patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager:
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value="tok"),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         mock_instance.get_latest_ci_status.side_effect = Exception("API Error")

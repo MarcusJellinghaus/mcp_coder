@@ -10,7 +10,15 @@ def test_all_exports_defined() -> None:
     """__all__ has expected count."""
     from mcp_coder.mcp_workspace_github import __all__
 
-    assert len(__all__) == 24
+    assert len(__all__) == 25
+
+
+def test_get_github_token_importable() -> None:
+    """get_github_token is re-exported from the shim and callable."""
+    from mcp_coder.mcp_workspace_github import __all__, get_github_token
+
+    assert callable(get_github_token)
+    assert "get_github_token" in __all__
 
 
 def test_key_symbols_importable() -> None:

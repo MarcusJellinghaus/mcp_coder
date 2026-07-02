@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md).
 
 See [step_2.md](./steps/step_2.md).
 
-- [ ] Implementation: re-export `get_github_token` in the shim (bump `__all__` 24→25), add token early-return in `_collect_ci_status`, repair the three direct `_collect_ci_status` tests — with tests first (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: re-export `get_github_token` in the shim (bump `__all__` 24→25), add token early-return in `_collect_ci_status`, repair the three direct `_collect_ci_status` tests — with tests first (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: CLI integration — guard `--wait-for-pr`, gate `--ci-timeout` wait, consistent exit code `2`
 

@@ -24,7 +24,12 @@ from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
     needs_rebase,
 )
-from mcp_coder.mcp_workspace_github import CIResultsManager, IssueData, IssueManager
+from mcp_coder.mcp_workspace_github import (
+    CIResultsManager,
+    IssueData,
+    IssueManager,
+    get_github_token,
+)
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -394,6 +399,10 @@ def _collect_ci_status(
     logger = logging.getLogger(__name__)
 
     try:
+        if get_github_token() is None:
+            logger.info("GitHub token not configured — CI status unavailable")
+            return CIStatus.UNAVAILABLE, None
+
         ci_manager = CIResultsManager(project_dir)
         status_result = ci_manager.get_latest_ci_status(branch)
 
