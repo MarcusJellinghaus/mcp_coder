@@ -6,6 +6,11 @@ All symbols are re-exported from mcp_workspace.github_operations.
 
 from typing import List
 
+# Sourced from mcp_workspace.config (not github_operations): GitHub token resolver
+# (env var → config file → None). Re-exported here so callers obey the CLAUDE.md rule
+# against importing mcp_workspace.* directly.
+from mcp_workspace.config import get_github_token
+
 # Top-level package exports
 from mcp_workspace.github_operations import (
     BaseGitHubManager,
@@ -85,4 +90,6 @@ __all__: List[str] = [
     "load_cache_file",
     "save_cache_file",
     "log_stale_cache_entries",
+    # Token resolver (sourced from mcp_workspace.config)
+    "get_github_token",
 ]

@@ -14,6 +14,7 @@ import pytest
 from mcp_coder.checks.branch_status import (
     DEFAULT_LABEL,
     EMPTY_RECOMMENDATIONS,
+    GITHUB_TOKEN_HINT,
     BranchStatusReport,
     CIStatus,
     _build_ci_error_details,
@@ -605,6 +606,7 @@ def test_branch_status_constants() -> None:
     assert CIStatus.FAILED == "FAILED"
     assert CIStatus.NOT_CONFIGURED == "NOT_CONFIGURED"
     assert CIStatus.PENDING == "PENDING"
+    assert CIStatus.UNAVAILABLE == "UNAVAILABLE"
     assert DEFAULT_LABEL == "unknown"
     assert EMPTY_RECOMMENDATIONS == []
 
@@ -897,12 +899,51 @@ def test_collect_branch_status_all_failed() -> None:
 # Tests for helper functions
 
 
+def test_collect_ci_status_no_token_returns_unavailable() -> None:
+    """Missing GitHub token yields UNAVAILABLE without constructing a manager."""
+    project_dir = Path("/test/repo")
+
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value=None),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
+
+        assert status == CIStatus.UNAVAILABLE
+        assert details is None
+        # Early-return must precede any network/manager construction.
+        mock_ci_manager.assert_not_called()
+
+
+def test_collect_ci_status_with_token_passes_through() -> None:
+    """A present token allows the existing PASSED path to run."""
+    project_dir = Path("/test/repo")
+
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value="tok"),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
+        mock_instance = MagicMock()
+        mock_ci_manager.return_value = mock_instance
+        mock_instance.get_latest_ci_status.return_value = {
+            "run": {"id": 123, "conclusion": "success", "status": "completed"}
+        }
+
+        status, details = _collect_ci_status(project_dir, "main", max_lines=100)
+
+        assert status == CIStatus.PASSED
+        assert details is None
+
+
 def test_collect_ci_status_with_truncation() -> None:
     """Test _collect_ci_status with log truncation."""
     project_dir = Path("/test/repo")
     long_logs = "\n".join([f"Log line {i}" for i in range(400)])
 
-    with patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager:
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value="tok"),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         # Return dict structure matching actual API with jobs data
@@ -936,7 +977,10 @@ def test_collect_ci_status_no_truncation() -> None:
     """Test _collect_ci_status without truncation."""
     project_dir = Path("/test/repo")
 
-    with patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager:
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value="tok"),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         # Return dict structure matching actual API - success case
@@ -954,7 +998,10 @@ def test_collect_ci_status_error_handling() -> None:
     """Test _collect_ci_status with API errors."""
     project_dir = Path("/test/repo")
 
-    with patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager:
+    with (
+        patch("mcp_coder.checks.branch_status.get_github_token", return_value="tok"),
+        patch("mcp_coder.checks.branch_status.CIResultsManager") as mock_ci_manager,
+    ):
         mock_instance = MagicMock()
         mock_ci_manager.return_value = mock_instance
         mock_instance.get_latest_ci_status.side_effect = Exception("API Error")
@@ -1989,3 +2036,45 @@ def test_format_human_tasks_icon_parametrized(
     output = report.format_for_human()
     expected = f"Task Tracker: {expected_icon} {status.value} ({reason})"
     assert expected in output
+
+
+# --- CIStatus.UNAVAILABLE (missing GitHub token) tests ---
+
+
+def test_format_for_human_unavailable_status() -> None:
+    """UNAVAILABLE CI renders the lock icon and inline token hint on the CI line."""
+    report = _make_report(ci_status=CIStatus.UNAVAILABLE)
+
+    output = report.format_for_human()
+
+    assert f"CI Status: \U0001f512 UNAVAILABLE — {GITHUB_TOKEN_HINT}" in output
+
+
+def test_format_for_llm_unavailable_status() -> None:
+    """UNAVAILABLE CI appends the token hint to the LLM summary line."""
+    report = _make_report(ci_status=CIStatus.UNAVAILABLE)
+
+    output = report.format_for_llm()
+
+    # Summary line carries CI=UNAVAILABLE and the token hint appended to it.
+    summary_line = output.split("\n")[1]
+    assert "CI=UNAVAILABLE" in summary_line
+    assert f"({GITHUB_TOKEN_HINT})" in summary_line
+
+
+def test_recommendations_unavailable_includes_token_hint() -> None:
+    """UNAVAILABLE recommendation includes the token hint and excludes CI-config/merge."""
+    report_data = {
+        "ci_status": CIStatus.UNAVAILABLE,
+        "rebase_needed": False,
+        "tasks_status": TaskTrackerStatus.COMPLETE,
+        "tasks_reason": "All 5 tasks complete",
+        "tasks_is_blocking": False,
+    }
+
+    recs = _generate_recommendations(report_data)
+
+    assert f"Set a GitHub token ({GITHUB_TOKEN_HINT})" in recs
+    assert "Configure CI pipeline" not in recs
+    # Ready-to-merge must stay excluded even when tasks OK and no rebase.
+    assert "Ready to merge" not in recs

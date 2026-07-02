@@ -154,6 +154,7 @@ class TestHasRemoteTrackingBranch:
 class TestRemoteTrackingGuard:
     """Tests for the remote tracking branch guard in PR waiting."""
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -162,12 +163,15 @@ class TestRemoteTrackingGuard:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
+        mock_token: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """No upstream → exit code 2, error message."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_has_remote.return_value = False
+        # Token present → guard stays open; test exercises the remote-tracking guard.
+        mock_token.return_value = "ghp_dummy"
 
         args = _make_base_args(wait_for_pr=True)
         with caplog.at_level(logging.DEBUG):
@@ -178,6 +182,7 @@ class TestRemoteTrackingGuard:
             "no remote tracking branch" in r.message.lower() for r in caplog.records
         )
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -192,12 +197,14 @@ class TestRemoteTrackingGuard:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
+        mock_token: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Has upstream → proceeds to polling."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_has_remote.return_value = True
+        mock_token.return_value = "ghp_dummy"
         mock_time.monotonic.side_effect = [0, 0, 100]  # start, check, after poll
         mock_time.sleep = Mock()
 
@@ -227,6 +234,7 @@ class TestRemoteTrackingGuard:
 class TestPRPolling:
     """Tests for PR discovery polling behaviour."""
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -241,12 +249,14 @@ class TestPRPolling:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
+        mock_token: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """PR exists on first poll → proceeds, report has PR fields."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_has_remote.return_value = True
+        mock_token.return_value = "ghp_dummy"
         mock_time.monotonic.side_effect = [0, 0, 100]
         mock_time.sleep = Mock()
 
@@ -263,6 +273,7 @@ class TestPRPolling:
         assert result == 0
         assert any("PR #42 found" in r.message for r in caplog.records)
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -277,12 +288,14 @@ class TestPRPolling:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
+        mock_token: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """PR found on 2nd poll → correct behavior."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_has_remote.return_value = True
+        mock_token.return_value = "ghp_dummy"
         # monotonic: start, 1st-loop-check (before deadline), after-sleep-check (before deadline), 2nd-loop-check
         mock_time.monotonic.side_effect = [0, 0, 20, 20, 100]
         mock_time.sleep = Mock()
@@ -304,6 +317,7 @@ class TestPRPolling:
         mock_time.sleep.assert_called_once_with(20)
         assert any("PR #55 found" in r.message for r in caplog.records)
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -316,12 +330,14 @@ class TestPRPolling:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
+        mock_token: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """No PR within timeout → exit code 1, timeout message."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_has_remote.return_value = True
+        mock_token.return_value = "ghp_dummy"
         # monotonic: start=0, while-check=0, sleep-guard=700 (past deadline), while-check=700
         mock_time.monotonic.side_effect = [0, 0, 700, 700]
         mock_time.sleep = Mock()
@@ -336,6 +352,7 @@ class TestPRPolling:
         assert any("No PR found" in r.message for r in caplog.records)
         assert any("timeout" in r.message.lower() for r in caplog.records)
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -350,12 +367,14 @@ class TestPRPolling:
         mock_branch: Mock,
         mock_has_remote: Mock,
         mock_resolve: Mock,
+        mock_token: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Multiple PRs → uses first, logs warning."""
         mock_resolve.return_value = Path("/test/project")
         mock_branch.return_value = "feature/xyz"
         mock_has_remote.return_value = True
+        mock_token.return_value = "ghp_dummy"
         mock_time.monotonic.side_effect = [0, 0, 100]
         mock_time.sleep = Mock()
 
