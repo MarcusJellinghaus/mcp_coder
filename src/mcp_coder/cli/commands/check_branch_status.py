@@ -42,6 +42,19 @@ from ..utils import (
 logger = logging.getLogger(__name__)
 
 
+def _safe_print(text: str) -> None:
+    """Print text, falling back to ASCII for terminals that can't encode it.
+
+    Windows consoles may raise UnicodeEncodeError on emoji (e.g. the lock
+    glyph). The ascii-replace fallback keeps the message visible instead of
+    letting the error bubble up into a silent outer except.
+    """
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        print(text.encode("ascii", errors="replace").decode("ascii"))
+
+
 def _wait_for_ci_completion(
     ci_manager: CIResultsManager,
     branch: str,
@@ -158,7 +171,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             # Fail cleanly with the actionable hint instead of letting
             # PullRequestManager raise into the silent outer except.
             if get_github_token() is None:
-                print(f"CI Status: \U0001f512 UNAVAILABLE — {GITHUB_TOKEN_HINT}")
+                _safe_print(f"CI Status: \U0001f512 UNAVAILABLE — {GITHUB_TOKEN_HINT}")
                 return 2
 
             # Guard: check remote tracking branch
@@ -255,11 +268,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         output = (
             report.format_for_llm() if args.llm_truncate else report.format_for_human()
         )
-        try:
-            print(output)
-        except UnicodeEncodeError:
-            # Fallback for terminals that can't display Unicode
-            print(output.encode("ascii", errors="replace").decode("ascii"))
+        _safe_print(output)
 
         # CI pending hint
         if getattr(args, "ci_timeout", 0) == 0 and report.ci_status == CIStatus.PENDING:

@@ -549,6 +549,57 @@ class TestMissingTokenGuards:
         # Proactive guard fires before PullRequestManager is constructed.
         mock_pr_cls.assert_not_called()
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
+    @patch("mcp_coder.cli.commands.check_branch_status.PullRequestManager")
+    @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
+    def test_missing_token_wait_for_pr_hint_survives_unicode_error(
+        self,
+        mock_resolve: Mock,
+        mock_branch: Mock,
+        mock_has_remote: Mock,
+        mock_pr_cls: Mock,
+        mock_token: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Guard hint stays visible when the console can't encode the emoji."""
+        mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/test-branch"
+        mock_token.return_value = None
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            ci_timeout=0,
+            fix=0,
+            llm_truncate=False,
+            llm_method="claude",
+            mcp_config=None,
+            settings=None,
+            execution_dir=None,
+            wait_for_pr=True,
+            pr_timeout=0,
+        )
+
+        real_print = print
+
+        def fake_print(text: str = "") -> None:
+            # Simulate a Windows console that can't encode the lock emoji.
+            if "\U0001f512" in text:
+                raise UnicodeEncodeError("charmap", text, 0, 1, "boom")
+            real_print(text)
+
+        with patch(
+            "mcp_coder.cli.commands.check_branch_status.print", fake_print, create=True
+        ):
+            result = execute_check_branch_status(args)
+
+        assert result == 2
+        captured = capsys.readouterr()
+        # Hint survives via the ASCII fallback despite the encoding failure.
+        assert "GitHub token" in captured.out
+        mock_pr_cls.assert_not_called()
+
 
 # Note: CI waiting tests moved to test_check_branch_status_ci_waiting.py
 
