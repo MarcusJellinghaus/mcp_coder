@@ -49,3 +49,22 @@ Unify Claude blocking/streaming onto one streaming core (blocking = drain+assemb
 **Changes**: Edited `summary.md` (path + symbol name), `step_1.md` (symbol name ×4), `step_3.md` (path ×2, line number ×2). No design/scope change.
 
 **Status**: committed (plan changed → one final verification pass triggered)
+
+## Round 3 — 2026-07-02 (final verification)
+
+**Findings**: Targeted consistency pass — all five checks pass. No wrong-form paths/symbols/line-numbers remain; `LLM_INACTIVITY_TIMEOUT_SECONDS = 600` everywhere; no stray `PROMPT_3_TIMEOUT = 900`; no summary↔step contradictions. **Zero plan changes needed.**
+
+**Status**: no changes — loop terminates.
+
+---
+
+## Final Status
+
+**Plan is READY FOR APPROVAL.**
+
+- Rounds run: 3 (Round 1 design + mechanical fixes → Round 2 factual corrections → Round 3 clean verification).
+- Plan-review commits produced: `49052e2` (round-1 decisions), `1ae3fe5` (round-2 corrections) — plus this log.
+- Design decisions resolved with the issue owner:
+  - **Move to one streaming core**; `ResponseAssembler` extended to `.strip()` + fall back to the result-message `result` so `prompt --json` top-level `text` stays identical (AC3).
+  - **Two-category inactivity timeouts**, all constants documented with *why* comments: tool-using autonomous sites → new `LLM_INACTIVITY_TIMEOUT_SECONDS = 600` (silence budget, headroom for long MCP tool calls, below external CI cap); finalisation/task-tracker-prep 600; create-plan `PROMPT_3_TIMEOUT` 900→600; pure-LLM CI-analysis 300 / commit-msg 120 kept. `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` (3600 wall-clock) not relabeled; no overall wall-clock cap.
+- All 11 Decisions and all 9 acceptance criteria trace to specific steps. No open design questions.
