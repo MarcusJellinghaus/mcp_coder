@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md) for details.
 
-- [ ] Implementation: add `logs_dir` property to `EventLog` + tests in `test_event_log.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `logs_dir` property to `EventLog` + tests in `test_event_log.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Show the `Logs:` section in `/info`
 

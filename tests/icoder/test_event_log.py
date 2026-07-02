@@ -88,6 +88,20 @@ def test_current_path_matches_initial_file(tmp_path: Path) -> None:
         assert log.current_path == jsonl_files[0]
 
 
+def test_logs_dir_returns_directory(tmp_path: Path) -> None:
+    with EventLog(logs_dir=tmp_path) as log:
+        assert log.logs_dir == tmp_path
+        # current log file lives inside logs_dir
+        assert log.current_path.parent == log.logs_dir
+
+
+def test_logs_dir_stable_after_close(tmp_path: Path) -> None:
+    log = EventLog(logs_dir=tmp_path)
+    log.close()
+    assert log.logs_dir == tmp_path
+    assert log.current_path.parent == tmp_path
+
+
 def test_rotate_changes_current_path(tmp_path: Path) -> None:
     with EventLog(logs_dir=tmp_path) as log:
         original_path = log.current_path
