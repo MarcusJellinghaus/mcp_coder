@@ -31,5 +31,5 @@ Detail: [step_1.md](./steps/step_1.md)
 
 ## Pull Request
 
-- [ ] Review the full diff against the base branch
+- [x] Review the full diff against the base branch
 - [ ] Write PR summary and description
