@@ -1163,3 +1163,32 @@ class TestProcessTaskWithRetry:
         assert success is False
         assert reason == "timeout"
         assert mock_process.call_count == 2
+
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_mcp_unavailable_error_reraises_not_swallowed(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+    ) -> None:
+        """A McpServersUnavailableError must propagate, not become (False, 'error').
+
+        The orchestrator needs the typed error to format a server-naming
+        failure message; the broad handler in process_single_task must not
+        mask it as a generic 'error' reason.
+        """
+        from mcp_coder.llm.providers.claude.claude_code_cli import (
+            McpServersUnavailableError,
+        )
+
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = McpServersUnavailableError(
+            "MCP servers unavailable",
+            {"mcp-tools-py": "failed"},
+        )
+
+        with pytest.raises(McpServersUnavailableError):
+            process_task_with_retry(Path("/test/project"), "claude")

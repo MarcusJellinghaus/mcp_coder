@@ -7,6 +7,7 @@ validating the exit code matrix across provider/mlflow scenarios.
 from typing import Any
 from unittest.mock import patch
 
+from mcp_coder.cli.commands.verify import _compute_exit_code
 from mcp_coder.cli.main import main
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
@@ -282,6 +283,49 @@ class TestExitCodeMatrix:
                 mlflow_installed=True,
                 mlflow_enabled=True,
                 mlflow_healthy=True,
+            )
+            == 0
+        )
+
+
+class TestToolsExposedExitCode:
+    """Exit-code effect of the tools_exposed_ok signal (claude only)."""
+
+    def test_claude_active_tools_exposed_fail_exit_1(self) -> None:
+        """Exit 1 when tools_exposed_ok=False and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                tools_exposed_ok=False,
+            )
+            == 1
+        )
+
+    def test_claude_active_tools_exposed_none_no_effect(self) -> None:
+        """Exit 0 when tools_exposed_ok=None (neutral) and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                tools_exposed_ok=None,
+            )
+            == 0
+        )
+
+    def test_langchain_active_tools_exposed_fail_no_effect(self) -> None:
+        """Exit 0 when tools_exposed_ok=False but langchain is active."""
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _make_claude_result(),
+                _make_langchain_result(),
+                _make_mlflow_result(installed=False),
+                tools_exposed_ok=False,
             )
             == 0
         )

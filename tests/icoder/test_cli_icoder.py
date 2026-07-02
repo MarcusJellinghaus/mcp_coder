@@ -32,7 +32,9 @@ def test_execute_icoder_calls_env_setup(
 
     execute_icoder(args)
 
-    mock_setup.assert_called_once_with(tmp_path)
+    mock_setup.assert_called_once()
+    assert mock_setup.call_args.args == (tmp_path,)
+    assert set(mock_setup.call_args.kwargs) == {"provider", "mcp_config"}
 
 
 @patch("mcp_coder.icoder.ui.app.ICoderApp.run")
@@ -148,7 +150,7 @@ def test_execute_icoder_creates_registry_with_skills(
     monkeypatch.setattr(ICoderApp, "run", lambda self: None)
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.setup_icoder_environment",
-        lambda _: FAKE_RUNTIME_INFO,
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_llm_method",
@@ -202,7 +204,7 @@ def test_execute_icoder_passes_format_tools_to_app(
     monkeypatch.setattr(ICoderApp, "run", lambda self: None)
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.setup_icoder_environment",
-        lambda _: FAKE_RUNTIME_INFO,
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_llm_method",
@@ -280,7 +282,8 @@ def test_execute_icoder_tui_preflight_passes(
     result = execute_icoder(args)
 
     assert result == 0
-    mock_setup.assert_called_once_with(tmp_path)
+    mock_setup.assert_called_once()
+    assert mock_setup.call_args.args == (tmp_path,)
 
 
 # --- /info and /color registration tests ---
@@ -301,7 +304,7 @@ def _patch_all_icoder_deps(
     monkeypatch.setattr(ICoderApp, "run", lambda self: None)
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.setup_icoder_environment",
-        lambda _: FAKE_RUNTIME_INFO,
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_llm_method",
@@ -483,7 +486,7 @@ def test_continue_session_from_real_jsonl_passes_resume_log_path(
     monkeypatch.setattr(ICoderApp, "run", lambda self: None)
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.setup_icoder_environment",
-        lambda _: FAKE_RUNTIME_INFO,
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_llm_method",
@@ -534,7 +537,7 @@ def test_continue_session_no_prior_logs_logs_message_and_runs_fresh(
     monkeypatch.setattr(ICoderApp, "run", lambda self: None)
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.setup_icoder_environment",
-        lambda _: FAKE_RUNTIME_INFO,
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_llm_method",
@@ -607,7 +610,7 @@ def test_continue_session_with_prior_logs_invokes_picker(
     monkeypatch.setattr("mcp_coder.cli.commands.icoder.run_startup_picker", fake_picker)
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.setup_icoder_environment",
-        lambda _: FAKE_RUNTIME_INFO,
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_llm_method",
@@ -671,7 +674,7 @@ def test_continue_session_picker_escape_runs_fresh(
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.setup_icoder_environment",
-        lambda _: FAKE_RUNTIME_INFO,
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_llm_method",

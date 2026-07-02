@@ -15,13 +15,18 @@ import sys
 import textwrap
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ...llm.env import prepare_llm_environment
 from ...llm.interface import prompt_llm
 from ...llm.mlflow_logger import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
+from ...llm.providers.claude.claude_mcp_guard import (
+    find_exposed_mcp_tools,
+    find_fatal_mcp_servers,
+    find_unavailable_mcp_servers,
+)
 from ...mcp_workspace_git import verify_git
 from ...mcp_workspace_github import verify_github
 from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
@@ -529,6 +534,84 @@ def _run_mcp_edit_smoke_test(
         test_file.unlink(missing_ok=True)
 
 
+def _format_tools_exposed_section(
+    system_message: dict[str, Any] | None,
+    symbols: dict[str, str],
+) -> tuple[list[str], bool | None]:
+    """Build the "MCP tools exposed to model" row(s) + exit signal.
+
+    Reads the init event captured by the Claude provider and reports how many
+    ``mcp__*`` tools were actually exposed to the model, mirroring the runtime
+    guard's status classification.
+
+    Args:
+        system_message: The init ``system`` event (``raw_response["system"]``),
+            or None when no init event was captured.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+
+    Returns:
+        ``(lines, ok)`` where ``ok`` mirrors the runtime guard:
+          - ``True``  -> connected with >=1 tool exposed
+          - ``None``  -> a server is pending (WARN only; never fails the build)
+          - ``False`` -> a server is fatal (failed/unknown) OR
+            connected-but-0-tools
+    """
+    label = "MCP tools exposed to model"
+    if system_message is None:
+        return (
+            [
+                _format_row(
+                    label,
+                    symbols["warning"],
+                    "unavailable (no init event)",
+                    indent=2,
+                )
+            ],
+            None,
+        )
+    guard_msg = cast(Any, system_message)
+    fatal = find_fatal_mcp_servers(guard_msg)
+    unavailable = find_unavailable_mcp_servers(guard_msg)
+    pending = {k: v for k, v in unavailable.items() if k not in fatal}
+    tools = find_exposed_mcp_tools(guard_msg)
+    names = [
+        str(s["name"])
+        for s in system_message.get("mcp_servers") or []
+        if isinstance(s, dict) and s.get("name")
+    ]
+
+    marker: str
+    ok: bool | None
+    value: str
+    hint: str | None = None
+    if fatal:
+        marker, ok, value = symbols["failure"], False, f"{len(tools)} ({fatal})"
+        hint = "-> check the MCP server logs / .mcp.json config"
+    elif pending:
+        marker, ok, value = (
+            symbols["warning"],
+            None,
+            f"{len(tools)} (pending: {sorted(pending)})",
+        )
+    elif not tools:
+        marker, ok, value = symbols["failure"], False, "0 tools exposed"
+        hint = (
+            "-> server connected but exposed 0 tools; "
+            "check 'alwaysLoad' in .mcp.json"
+        )
+    else:
+        marker, ok, value = (
+            symbols["success"],
+            True,
+            f"{len(tools)} ({', '.join(names)})",
+        )
+
+    lines = [_format_row(label, marker, value, indent=2)]
+    if hint is not None:
+        lines.append(f"{' ' * _VALUE_COLUMN_INDENT}{hint}")
+    return lines, ok
+
+
 def _compute_exit_code(
     active_provider: str,
     claude_result: dict[str, Any],
@@ -540,6 +623,7 @@ def _compute_exit_code(
     claude_mcp_ok: bool | None = None,
     github_result: dict[str, Any] | None = None,
     git_result: dict[str, Any] | None = None,
+    tools_exposed_ok: bool | None = None,
 ) -> int:
     """Compute CLI exit code from verification results.
 
@@ -560,6 +644,9 @@ def _compute_exit_code(
             True=all ok, False=failure (exit 1 when claude active).
         github_result: GitHub verification result dict, or None.
         git_result: Git verification result dict, or None.
+        tools_exposed_ok: Claude tools-exposed status. None=neutral (no effect),
+            True=connected with tools, False=fatal/0-tools (exit 1 when claude
+            active).
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
@@ -597,6 +684,11 @@ def _compute_exit_code(
 
     # Claude MCP failures affect exit code when claude is active
     if active_provider == "claude" and claude_mcp_ok is False:
+        return 1
+
+    # Claude tools-exposed failure affects exit code when claude is active
+    # (fatal server or connected-but-0-tools). pending -> None (no effect).
+    if active_provider == "claude" and tools_exposed_ok is False:
         return 1
 
     # MLflow: only fail if enabled AND broken
@@ -951,8 +1043,9 @@ def execute_verify(args: argparse.Namespace) -> int:
     # 3c. Unified test prompt (both providers)
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     test_prompt_ok = True
+    tools_exposed_ok: bool | None = None
     try:
-        prompt_llm(
+        response = prompt_llm(
             "Reply with OK",
             provider=active_provider,
             timeout=30,
@@ -962,6 +1055,13 @@ def execute_verify(args: argparse.Namespace) -> int:
             env_vars=env_vars,
         )
         print(_format_row("Test prompt", symbols["success"], "responded OK", indent=2))
+        if active_provider == "claude":
+            raw_response = cast(dict[str, Any], response.get("raw_response", {}))
+            system_message = raw_response.get("system")
+            tools_lines, tools_exposed_ok = _format_tools_exposed_section(
+                system_message, symbols
+            )
+            print("\n".join(tools_lines))
     except Exception as exc:  # pylint: disable=broad-except
         test_prompt_ok = False
         # Only classify connection-related exceptions
@@ -1023,6 +1123,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         claude_mcp_ok=claude_mcp_ok,
         github_result=github_result,
         git_result=git_result,
+        tools_exposed_ok=tools_exposed_ok,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

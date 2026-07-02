@@ -14,6 +14,7 @@ from typing import Optional
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
@@ -31,6 +32,7 @@ from mcp_coder.workflow_utils.failure_handling import (
 )
 from mcp_coder.workflow_utils.failure_handling import (
     format_elapsed_time,
+    format_mcp_unavailable_message,
     get_diff_stat,
     handle_workflow_failure,
 )
@@ -187,19 +189,13 @@ def run_planning_prompts(
     # Load all three prompts
     logger.info("Loading prompt templates...")
     prompt_1 = _load_prompt_or_exit("Initial Analysis")
-    logger.debug(
-        f"Prompt 1 loaded: {len(prompt_1)} chars, preview: {prompt_1[:200]}..."
-    )
+    logger.debug(f"Prompt 1 loaded: {len(prompt_1)} chars")
 
     prompt_2 = _load_prompt_or_exit("Simplification Review")
-    logger.debug(
-        f"Prompt 2 loaded: {len(prompt_2)} chars, preview: {prompt_2[:200]}..."
-    )
+    logger.debug(f"Prompt 2 loaded: {len(prompt_2)} chars")
 
     prompt_3 = _load_prompt_or_exit("Implementation Plan Creation")
-    logger.debug(
-        f"Prompt 3 loaded: {len(prompt_3)} chars, preview: {prompt_3[:200]}..."
-    )
+    logger.debug(f"Prompt 3 loaded: {len(prompt_3)} chars")
 
     # Format initial prompt with issue data
     formatted_prompt_1 = format_initial_prompt(prompt_1, issue_data)
@@ -284,7 +280,11 @@ def run_planning_prompts(
             WorkflowFailure(
                 category=FailureCategory.GENERAL,
                 stage="Prompt 1",
-                message=str(e),
+                message=(
+                    format_mcp_unavailable_message(e)
+                    if isinstance(e, McpServersUnavailableError)
+                    else str(e)
+                ),
                 prompt_stage=1,
             ),
         )
@@ -353,7 +353,11 @@ def run_planning_prompts(
             WorkflowFailure(
                 category=FailureCategory.GENERAL,
                 stage="Prompt 2",
-                message=str(e),
+                message=(
+                    format_mcp_unavailable_message(e)
+                    if isinstance(e, McpServersUnavailableError)
+                    else str(e)
+                ),
                 prompt_stage=2,
             ),
         )
@@ -424,7 +428,11 @@ def run_planning_prompts(
             WorkflowFailure(
                 category=FailureCategory.GENERAL,
                 stage="Prompt 3",
-                message=str(e),
+                message=(
+                    format_mcp_unavailable_message(e)
+                    if isinstance(e, McpServersUnavailableError)
+                    else str(e)
+                ),
                 prompt_stage=3,
             ),
         )

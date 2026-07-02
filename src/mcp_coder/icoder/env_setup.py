@@ -14,6 +14,7 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, cast
 
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.providers.claude.claude_executable_finder import (
@@ -43,6 +44,8 @@ class RuntimeInfo:
     env_vars: dict[str, str]
     mcp_servers: list[MCPServerInfo]
     mcp_connection_status: list[ClaudeMCPStatus] | None = None
+    mcp_tools_exposed: int | None = None
+    mcp_tools_status: str | None = None
 
 
 def _get_package_version(name: str) -> str:
@@ -78,7 +81,61 @@ def _get_claude_code_version() -> str:
     return "unknown"
 
 
-def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
+def _probe_exposed_mcp_tools(
+    provider: str,
+    mcp_config: str | None,
+    env_vars: dict[str, str],
+    execution_dir: str,
+) -> tuple[str | None, int | None]:
+    """Return (status, count) via one short 'Reply with OK' prompt; (None, None) on any failure.
+
+    Claude-only: any other provider returns ``(None, None)`` without prompting.
+    Sends a single short prompt, reads the init ``system`` event, derives a
+    coarse status (``fatal`` > ``pending`` > ``connected``) and counts the
+    exposed ``mcp__*`` tools. The whole body is guarded — any failure returns
+    ``(None, None)`` and logs at debug — so this never blocks iCoder launch.
+
+    Returns:
+        ``(status, count)`` on success, else ``(None, None)``.
+    """
+    if provider != "claude":
+        return (None, None)
+    try:
+        from mcp_coder.llm.interface import prompt_llm
+        from mcp_coder.llm.providers.claude.claude_mcp_guard import (
+            find_exposed_mcp_tools,
+            find_fatal_mcp_servers,
+            find_unavailable_mcp_servers,
+        )
+
+        resp = prompt_llm(
+            "Reply with OK",
+            provider="claude",
+            timeout=30,
+            mcp_config=mcp_config,
+            env_vars=env_vars,
+            execution_dir=execution_dir,
+        )
+        raw_response = cast(dict[str, Any], resp.get("raw_response", {}))
+        system_message = cast(Any, raw_response.get("system"))
+        if find_fatal_mcp_servers(system_message):
+            status = "fatal"
+        elif find_unavailable_mcp_servers(system_message):
+            status = "pending"
+        else:
+            status = "connected"
+        count = len(find_exposed_mcp_tools(system_message))
+        return (status, count)
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.debug("MCP tool probe failed", exc_info=True)
+        return (None, None)
+
+
+def setup_icoder_environment(
+    project_dir: Path,
+    provider: str = "claude",
+    mcp_config: str | None = None,
+) -> RuntimeInfo:
     """Set up iCoder environment: compute paths, verify MCP servers, return RuntimeInfo.
 
     Pure function — does NOT mutate ``os.environ``.  Env vars are available to
@@ -116,6 +173,13 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
     )
     claude_code_version = _get_claude_code_version()
 
+    mcp_tools_status, mcp_tools_exposed = _probe_exposed_mcp_tools(
+        provider=provider,
+        mcp_config=mcp_config,
+        env_vars=effective,
+        execution_dir=str(project_dir),
+    )
+
     return RuntimeInfo(
         mcp_coder_version=mcp_coder_version,
         mcp_coder_utils_version=mcp_coder_utils_version,
@@ -127,4 +191,6 @@ def setup_icoder_environment(project_dir: Path) -> RuntimeInfo:
         env_vars=effective,
         mcp_servers=mcp_servers,
         mcp_connection_status=mcp_connection_status,
+        mcp_tools_exposed=mcp_tools_exposed,
+        mcp_tools_status=mcp_tools_status,
     )

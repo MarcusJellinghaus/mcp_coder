@@ -60,7 +60,7 @@ def patch_icoder_deps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(ICoderApp, "run", lambda self: None)
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.setup_icoder_environment",
-        lambda _: FAKE_RUNTIME_INFO,
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
     )
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_llm_method",

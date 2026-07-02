@@ -14,6 +14,7 @@ from typing import Optional, Tuple
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
     extract_issue_number_from_branch,
@@ -31,6 +32,7 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
+from mcp_coder.workflow_utils.failure_handling import format_mcp_unavailable_message
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -515,9 +517,14 @@ def run_create_pr_workflow(
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(f"Failed to generate PR summary: {e}")
             elapsed = time.time() - start_time
+            message = (
+                format_mcp_unavailable_message(e)
+                if isinstance(e, McpServersUnavailableError)
+                else str(e)
+            )
             _handle_create_pr_failure(
                 stage="summary_generation",
-                message=str(e),
+                message=message,
                 project_dir=project_dir,
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,

@@ -8,6 +8,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
@@ -34,6 +35,35 @@ class WorkflowFailure:
     stage: str
     message: str
     elapsed_time: float | None = None
+
+
+def format_mcp_unavailable_message(error: McpServersUnavailableError) -> str:
+    """Build a clear, server-naming failure message for the typed guard error.
+
+    The guard raises ``McpServersUnavailableError`` when a Claude session starts
+    without its configured MCP servers. This turns the carried
+    ``unavailable_servers`` mapping into a human-readable, deterministically
+    ordered message suitable for a workflow failure comment.
+
+    Args:
+        error: The typed guard error carrying ``unavailable_servers``.
+
+    Returns:
+        A message naming each unavailable server and its status, e.g.
+        ``"MCP servers unavailable: mcp-tools-py (failed), mcp-workspace
+        (unknown). ..."``. Falls back to ``"unknown"`` when no servers were
+        recorded.
+    """
+    servers = error.unavailable_servers or {}
+    named = (
+        ", ".join(f"{name} ({status})" for name, status in sorted(servers.items()))
+        or "unknown"
+    )
+    return (
+        f"MCP servers unavailable: {named}. The Claude session started without "
+        f"its configured tools and was aborted; check the MCP server logs and "
+        f".mcp.json."
+    )
 
 
 def get_diff_stat(project_dir: Path) -> str:

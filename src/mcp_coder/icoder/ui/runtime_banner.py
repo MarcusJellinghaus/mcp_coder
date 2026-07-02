@@ -95,6 +95,12 @@ def format_runtime_banner(data: Mapping[str, object]) -> list[str]:
         suffix = _connection_status_suffix(name, statuses)
         lines.append(f"{name} {version}  {suffix}".rstrip())
 
+    count = data.get("mcp_tools_exposed")
+    if count is not None:
+        status = data.get("mcp_tools_status") or ""
+        suffix = f" ({status})" if status else ""
+        lines.append(f"MCP tools:   {count} exposed{suffix}")
+
     tool_env = data.get("tool_env_path") or data.get("tool_env")
     if tool_env:
         lines.append(f"Tool env:    {tool_env}")
@@ -125,5 +131,7 @@ def format_runtime_info(info: RuntimeInfo) -> list[str]:
             "project_dir": info.project_dir,
             "mcp_servers": info.mcp_servers,
             "mcp_connection_status": info.mcp_connection_status,
+            "mcp_tools_exposed": info.mcp_tools_exposed,
+            "mcp_tools_status": info.mcp_tools_status,
         }
     )

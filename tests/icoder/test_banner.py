@@ -106,6 +106,28 @@ def test_mcp_servers_list_of_dicts_shape() -> None:
     assert "srv-a 9.0" in lines
 
 
+def test_mcp_tools_line_present_when_count_set() -> None:
+    """A ``MCP tools:`` line appears when ``mcp_tools_exposed`` is set."""
+    data: dict[str, object] = {
+        "mcp_coder_version": "1",
+        "mcp_tools_exposed": 37,
+        "mcp_tools_status": "connected",
+    }
+    lines = format_runtime_banner(data)
+    assert "MCP tools:   37 exposed (connected)" in lines
+
+
+def test_mcp_tools_line_absent_when_count_none() -> None:
+    """No ``MCP tools:`` line when ``mcp_tools_exposed`` is None/missing."""
+    data: dict[str, object] = {
+        "mcp_coder_version": "1",
+        "mcp_tools_exposed": None,
+        "mcp_tools_status": None,
+    }
+    lines = format_runtime_banner(data)
+    assert not any(line.startswith("MCP tools:") for line in lines)
+
+
 def test_status_present_but_server_missing_yields_no_suffix() -> None:
     """Status list without a matching entry leaves the line bare (no trailing space)."""
     data: dict[str, object] = {

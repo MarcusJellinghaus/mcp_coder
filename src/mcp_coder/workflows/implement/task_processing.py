@@ -12,6 +12,7 @@ from typing import Optional
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_tools_py import run_format_code
 from mcp_coder.mcp_workspace_git import commit_all_changes, get_full_status, git_push
@@ -417,6 +418,11 @@ def process_single_task(
         Tuple of (success, reason) where:
         - success: True if task completed successfully
         - reason: 'completed' | 'no_tasks' | 'no_changes' | 'error' | 'timeout'
+
+    Raises:
+        McpServersUnavailableError: If the LLM call fails because one or more
+            required MCP servers are unavailable. Propagated unmasked so the
+            orchestrator can format a server-naming failure message.
     """
     # Cleanup stale commit message file from previous failed runs
     _cleanup_commit_message_file(project_dir)
@@ -498,6 +504,10 @@ Please implement this task step by step."""
     except LLMTimeoutError:
         logger.error("LLM call timed out for task: %s", next_task)
         return False, "timeout"
+    except McpServersUnavailableError:
+        # Don't mask as a generic "error"; let the orchestrator format a
+        # server-naming failure message from the typed error.
+        raise
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type

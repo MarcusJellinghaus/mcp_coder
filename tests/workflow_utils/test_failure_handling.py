@@ -5,12 +5,41 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     format_elapsed_time,
+    format_mcp_unavailable_message,
     get_diff_stat,
     handle_workflow_failure,
 )
+
+
+class TestFormatMcpUnavailableMessage:
+    """Tests for format_mcp_unavailable_message."""
+
+    def test_names_servers_and_statuses_ordered(self) -> None:
+        error = McpServersUnavailableError(
+            "boom",
+            {"mcp-tools-py": "failed", "mcp-workspace": "unknown"},
+        )
+
+        message = format_mcp_unavailable_message(error)
+
+        # Both servers named with their statuses, deterministically ordered.
+        assert "mcp-tools-py (failed)" in message
+        assert "mcp-workspace (unknown)" in message
+        assert message.index("mcp-tools-py") < message.index("mcp-workspace")
+        assert message.startswith("MCP servers unavailable:")
+        assert ".mcp.json" in message
+
+    def test_empty_servers_says_unknown(self) -> None:
+        error = McpServersUnavailableError("boom")
+
+        message = format_mcp_unavailable_message(error)
+
+        assert "unknown" in message
+        assert message.startswith("MCP servers unavailable:")
 
 
 class TestFormatElapsedTime:

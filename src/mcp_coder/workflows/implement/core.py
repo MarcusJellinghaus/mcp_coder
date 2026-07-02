@@ -15,6 +15,7 @@ from typing import Any, Optional
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
@@ -34,6 +35,7 @@ from mcp_coder.workflow_utils.failure_handling import (
 )
 from mcp_coder.workflow_utils.failure_handling import (
     format_elapsed_time,
+    format_mcp_unavailable_message,
     get_diff_stat,
     handle_workflow_failure,
 )
@@ -536,6 +538,7 @@ def run_implement_workflow(
     completed_tasks = 0
     total_tasks = 0
     previous_sigterm_handler = None
+    caught_exception: BaseException | None = None
 
     def sigterm_handler(_signum: int, _frame: Any) -> None:
         nonlocal sigterm_received
@@ -836,7 +839,8 @@ def run_implement_workflow(
         return 0
     except SystemExit:
         raise
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        caught_exception = exc
         logger.error("Unexpected exception in workflow", exc_info=True)
         return 1
     finally:
@@ -851,11 +855,12 @@ def run_implement_workflow(
         if not reached_terminal_state:
             elapsed = time.time() - start_time
             stage = "SIGTERM received" if sigterm_received else "Unexpected exit"
-            message = (
-                "Workflow terminated by signal"
-                if sigterm_received
-                else "Workflow exited without reaching a terminal state"
-            )
+            if isinstance(caught_exception, McpServersUnavailableError):
+                message = format_mcp_unavailable_message(caught_exception)
+            elif sigterm_received:
+                message = "Workflow terminated by signal"
+            else:
+                message = "Workflow exited without reaching a terminal state"
             try:
                 _handle_workflow_failure(
                     WorkflowFailure(
