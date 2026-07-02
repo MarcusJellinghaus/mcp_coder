@@ -322,3 +322,37 @@ class TestAskTextStream404Hint:
         assert len(error_events) == 1
         assert "not found" in str(error_events[0]["message"]).lower()
         assert "base URL" not in str(error_events[0]["message"])
+
+    def test_non_openai_backend_404_keeps_default_wording(self) -> None:
+        """ollama + custom endpoint 404 → default wording, NOT base-URL hint."""
+        mock_model = MagicMock()
+        mock_model.stream.side_effect = Exception("Error code: 404 - Not Found")
+
+        with (
+            patch(
+                f"{_MOD_LC}._load_langchain_config",
+                return_value=_make_endpoint_config(backend="ollama"),
+            ),
+            patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
+            patch(f"{_MOD_LC}.store_langchain_history"),
+            patch(f"{_MOD_LC}._create_chat_model", return_value=mock_model),
+            patch(
+                _SUGGEST,
+                return_value="\n\nAvailable models:\n  - llama3",
+            ) as mock_suggest,
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain_stream
+
+            events: list[dict[str, object]] = []
+            with pytest.raises(ValueError) as exc_info:
+                for event in ask_langchain_stream("Hi"):
+                    events.append(event)
+
+        error_events = [e for e in events if e["type"] == "error"]
+        assert len(error_events) == 1
+        message = str(error_events[0]["message"])
+        assert "not found" in message.lower()
+        assert "base URL" not in message
+        assert "/chat/completions" not in message
+        assert "not found" in str(exc_info.value).lower()
+        mock_suggest.assert_called_once()
