@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Always-on endpoint-shape heuristic in `verify`
+
+See [step_1.md](./steps/step_1.md).
+
+- [ ] Implementation: add `_check_endpoint_shape` helper + wiring in `verification.py`, `_LABEL_MAP` entry in `verify.py`, config docs note, and unit + integration tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `--check-models` live-probe 404 messaging
+
+See [step_2.md](./steps/step_2.md).
+
+- [ ] Implementation: reword generic `except` branch of `_list_models_for_backend` for endpoint 404s + unit tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Shared prompt-path 404 hint helper
+
+See [step_3.md](./steps/step_3.md).
+
+- [ ] Implementation: add `_is_404_error` + `_format_404_hint` helpers, wire into `_ask_text`/`_ask_text_stream`, add provider + streaming tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify all steps implemented and checks pass
+- [ ] PR summary prepared
