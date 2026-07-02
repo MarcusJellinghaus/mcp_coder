@@ -404,6 +404,10 @@ class TestVerifyEndToEnd:
         output = capsys.readouterr().out
 
         assert "uses Claude CLI" in output
+        # No langchain configured -> readiness WARN row must be absent.
+        assert "Langchain backend" not in output
+        assert "configured but" not in output
+        assert "not a recognized" not in output
 
     @patch(f"{_LC_VERIFY}._check_package_installed", return_value=False)
     @patch(
@@ -501,7 +505,6 @@ class TestVerifyEndToEnd:
         assert "configured but" not in output
         assert "not a recognized" not in output
 
-    @patch(f"{_LC_VERIFY}._check_package_installed")
     @patch(
         f"{_LC_CONFIG}._load_langchain_config",
         return_value={"backend": "typo-backend"},
@@ -520,7 +523,6 @@ class TestVerifyEndToEnd:
         mock_prompt_llm: MagicMock,
         _mock_log_mlflow: MagicMock,
         _mock_lc_config: MagicMock,
-        _mock_pkg: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Claude active + unrecognized backend name -> [WARN] row, no install hint."""
