@@ -51,5 +51,5 @@ Detail: [step_4.md](./steps/step_4.md) — `feat: surface McpServersUnavailableE
 
 ## Pull Request
 
-- [ ] Review PR: verify all acceptance items (1–5) are met and steps are cohesive
+- [x] Review PR: verify all acceptance items (1–5) are met and steps are cohesive
 - [ ] Write PR summary
