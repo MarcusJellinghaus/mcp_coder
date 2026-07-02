@@ -51,8 +51,11 @@ renderer contract:
    for the message) in the LangChain provider package that de-duplicate the
    previously copy-pasted 404 block across `_ask_text` and `_ask_text_stream` —
    both the detection predicate and the hint text now live in one place each —
-   and add a base-URL hint for the custom endpoint case (while skipping the
-   wasted model-listing round-trip).
+   and add a base-URL hint for the **openai** custom-endpoint case (gated on
+   `backend == "openai"`, matching Step 1's shape check, while skipping the
+   wasted model-listing round-trip). Non-openai backends that share this path
+   (e.g. `ollama`) keep the default "model not found" + suggestions wording, so a
+   genuine model-not-found 404 is not mislabeled as a base-URL problem.
 
 ### Key design rules preserved from the issue
 
@@ -93,7 +96,7 @@ docs live under `pr_info/steps/`.
 | `src/mcp_coder/cli/commands/verify.py` | 1 | Add `_LABEL_MAP` entry `"endpoint_shape": "Endpoint"` |
 | `docs/configuration/config.md` | 1 | Minimal `endpoint` base-URL note (no `/chat/completions`) + OpenAI-compatible-relay example |
 | `src/mcp_coder/llm/providers/langchain/verification.py` | 2 | Reword 404 in `_list_models_for_backend` generic `except` as an endpoint/base-URL problem |
-| `src/mcp_coder/llm/providers/langchain/__init__.py` | 3 | Add `_is_404_error` (shared detection) + `_format_404_hint` (shared message); call both from `_ask_text` and `_ask_text_stream` (removes predicate + message duplication) |
+| `src/mcp_coder/llm/providers/langchain/__init__.py` | 3 | Add `_is_404_error` (shared detection) + `_format_404_hint` (shared message, base-URL hint gated on `backend == "openai"`); call both from `_ask_text` and `_ask_text_stream` (removes predicate + message duplication) |
 | `tests/llm/providers/langchain/test_langchain_verification.py` | 1, 2 | Unit tests for shape check + reworded 404 probe message |
 | `tests/llm/providers/langchain/test_langchain_provider.py` | 3 | 404-hint tests for `_ask_text` |
 | `tests/llm/providers/langchain/test_langchain_streaming.py` | 3 | 404-hint tests for `_ask_text_stream` |
@@ -104,7 +107,8 @@ docs live under `pr_info/steps/`.
   `endpoint` base-URL docs note in `config.md`.
 - **Step 2 — Part A2:** `--check-models` live-probe 404 messaging (pure reword).
 - **Step 3 — Part B:** shared prompt-path 404 detection (`_is_404_error`) + hint
-  (`_format_404_hint`) helpers.
+  (`_format_404_hint`) helpers; base-URL hint gated on `backend == "openai"` so
+  non-openai backends (e.g. ollama) keep the default model-not-found wording.
 
 Steps are independent and may be implemented in any order. Each step is
 test-first and self-contained: tests + implementation + all three checks

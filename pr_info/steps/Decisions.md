@@ -40,6 +40,24 @@ it), plus a short OpenAI-compatible-relay example block. Kept minimal. Added to
 Step 1's file list and description. Directly addresses the config mistake behind
 the reported 404.
 
+## F4 — Gate the base-URL 404 hint on the openai backend (step_3.md, summary.md)
+
+The `_format_404_hint` custom-endpoint branch fired on `endpoint` set +
+`api_version` unset only. Problem: `ollama` also routes through
+`_ask_text`/`_ask_text_stream`, normally has `endpoint` set / `api_version`
+unset, and returns genuine model-not-found 404s — so an Ollama 404 would get the
+OpenAI-specific "check your base URL … mcp-coder appends /chat/completions"
+wording, a regression from the current "Model X not found" + Ollama suggestions.
+
+Decision: also gate the base-URL hint branch on `config.get("backend") ==
+"openai"` (matching Step 1's shape check). It fires only when backend is openai
+AND endpoint is set AND api_version is unset. Any non-openai backend (e.g.
+ollama) falls through to the default `"Model {model!r} not found."` +
+`_get_model_suggestions(config)` (try/except…pass) unchanged. Updated step_3.md
+algorithm/pseudocode/docstring/tests (added a non-openai/ollama test asserting
+default wording + suggestions, no base-URL hint) and summary.md Step 3 row,
+design point 3, and step overview for consistency.
+
 ## Not changing
 
 - Steps 1 and 2 stay separate (do not merge).

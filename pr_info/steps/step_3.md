@@ -31,9 +31,10 @@ def _is_404_error(exc: Exception) -> bool:
 def _format_404_hint(config: dict[str, str | None]) -> str:
     """Build the user-facing hint for a 404 / model-not-found response.
 
-    For a custom OpenAI-compatible endpoint the likely cause is a wrong base
-    URL, so return a base-URL hint and skip the model-listing round-trip.
-    Otherwise fall back to 'model not found' plus best-effort suggestions.
+    For the openai backend with a custom endpoint the likely cause is a wrong
+    base URL, so return a base-URL hint and skip the model-listing round-trip.
+    Otherwise (non-openai backends such as ollama, or Azure with api_version)
+    fall back to 'model not found' plus best-effort suggestions.
     """
 ```
 
@@ -78,10 +79,11 @@ return "404" in low or "not_found" in low or "not found" in low
 
 ```
 model = config.get("model", "")
-if config.get("endpoint") and not config.get("api_version"):   # custom relay
+if (config.get("backend") == "openai"                          # openai relay only
+        and config.get("endpoint") and not config.get("api_version")):
     return (f"Model {model!r} not found. If using a custom server, check your "
             "base URL (e.g. …/v1); mcp-coder appends /chat/completions.")
-hint = f"Model {model!r} not found."                           # default / Azure
+hint = f"Model {model!r} not found."                           # default / Azure / ollama
 try:
     hint += _get_model_suggestions(config)
 except Exception:      # pylint: disable=broad-except
@@ -89,9 +91,18 @@ except Exception:      # pylint: disable=broad-except
 return hint
 ```
 
+The base-URL branch is gated on `backend == "openai"` (matching Step 1's shape
+check) **as well as** `endpoint` set and `api_version` unset. This is required
+because `ollama` also routes through `_ask_text`/`_ask_text_stream` and normally
+has `endpoint` set / `api_version` unset, but returns genuine model-not-found
+404s; without the backend gate an Ollama 404 would get the OpenAI-specific
+base-URL wording. For any non-openai backend (e.g. ollama), the function falls
+through to the default branch unchanged: `"Model {model!r} not found."` plus the
+best-effort `_get_model_suggestions(config)` (ollama model suggestions).
+
 The custom-endpoint branch never calls `_get_model_suggestions`, so the wasted
-`list_openai_models` round-trip is skipped. Azure (api_version set) falls through
-to the default branch.
+`list_openai_models` round-trip is skipped. Azure (api_version set), ollama, and
+all other backends fall through to the default branch.
 
 ## DATA
 
@@ -104,18 +115,26 @@ to the default branch.
 In `test_langchain_provider.py` (mirror the existing `_ask_text` error tests —
 mock `_load_langchain_config`, `_create_chat_model`, history load/store):
 
-- 404 from `invoke()` with `endpoint="https://h/v1"` set →
+- 404 from `invoke()` with `backend="openai"`, `endpoint="https://h/v1"` set →
   `ValueError` message contains "base URL" and "/chat/completions"; assert
   `list_openai_models` (patched) is **not** called.
-- 404 with `endpoint=None` → message contains "not found"; suggestions path is
-  taken (`_get_model_suggestions` / `list_openai_models` invoked).
+- 404 with `backend="openai"`, `endpoint=None` → message contains "not found";
+  suggestions path is taken (`_get_model_suggestions` / `list_openai_models`
+  invoked).
+- 404 with a **non-openai backend** (`backend="ollama"`, `endpoint` set,
+  `api_version=None`) → message contains "not found" and the base-URL wording is
+  **absent** ("base URL" not in message); the default suggestions path is taken
+  (`_get_model_suggestions` invoked). This guards against the Ollama regression:
+  a genuine model-not-found 404 must keep the default wording + suggestions, not
+  the OpenAI base-URL hint.
 
 In `test_langchain_streaming.py` (mirror existing `_ask_text_stream` tests):
 
-- 404 during `stream()` with a custom `endpoint` → an `{"type": "error"}` event
-  is yielded whose message contains "base URL", then `ValueError` is raised;
-  `list_openai_models` is **not** called.
-- 404 with `endpoint=None` → error event + `ValueError` with "not found".
+- 404 during `stream()` with `backend="openai"` and a custom `endpoint` → an
+  `{"type": "error"}` event is yielded whose message contains "base URL", then
+  `ValueError` is raised; `list_openai_models` is **not** called.
+- 404 with `backend="openai"`, `endpoint=None` → error event + `ValueError` with
+  "not found".
 
 Add a small direct unit test for `_is_404_error` (in either provider test file):
 `Exception("Error code: 404 ...")`, `Exception("model NOT_FOUND")`, and
@@ -133,9 +152,10 @@ live in one place each, guarding against future drift.
 > 1. Add tests: in
 >    `tests/llm/providers/langchain/test_langchain_provider.py` for `_ask_text`
 >    and in `tests/llm/providers/langchain/test_langchain_streaming.py` for
->    `_ask_text_stream`, covering the custom-endpoint 404 (base-URL hint, no
->    `list_openai_models` call) and the no-endpoint 404 (model-not-found +
->    suggestions), per step_3.md.
+>    `_ask_text_stream`, covering the openai custom-endpoint 404 (base-URL hint,
+>    no `list_openai_models` call), the openai no-endpoint 404 (model-not-found +
+>    suggestions), and a non-openai backend 404 (e.g. ollama with endpoint set →
+>    default model-not-found + suggestions, NOT the base-URL hint), per step_3.md.
 > 2. Add `_is_404_error(exc)` and `_format_404_hint(config)` to
 >    `src/mcp_coder/llm/providers/langchain/__init__.py` per the ALGORITHM.
 > 3. Replace the duplicated 404 blocks in `_ask_text` and `_ask_text_stream`

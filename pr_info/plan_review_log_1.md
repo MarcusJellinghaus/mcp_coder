@@ -29,5 +29,24 @@ Plan: 3 steps (Part A1 verify heuristic, Part A2 --check-models messaging, Part 
 - `step_3.md`: added `_is_404_error(exc)` detection helper replacing inline predicates at both call sites; added algorithm + test note.
 - `Decisions.md`: created; logs F1/F2/F3 decisions and not-changing items.
 
-**Status**: plan changed → will commit and run Round 2.
+**Status**: plan changed → committed (`2b5a6d6`) → run Round 2.
+
+## Round 2 — 2026-07-02
+**Findings** (from `/plan_review` on the revised plan):
+- Verified all three Round-1 corrections are correctly applied and internally consistent (F1 rationale, `_is_404_error` extraction, `config.md` edit); Step 3 matches source; `config.md` targets accurate.
+- Finding A (correctness/consistency): Step 3's `_format_404_hint` custom-endpoint branch fires on `endpoint set + api_version unset`, but the `ollama` backend also matches that → an Ollama 404 would get OpenAI-specific base-URL wording and lose Ollama model suggestions (a regression).
+- Minor (non-blocking): summary.md prose conflates "hint" with the `install_hint` key; planning-principles compliant. No changes required.
+
+**Decisions**:
+- Finding A → accept autonomously (gate the branch on `backend == "openai"`, matching Step 1's shape check; narrows firing, prevents regression, no scope/architecture change).
+- Minor notes → skip (no change required).
+
+**User decisions**: none (no design/scope question this round).
+
+**Changes** (via `/plan_update`):
+- `step_3.md`: gated `_format_404_hint` base-URL branch on `backend == "openai"`; updated pseudocode/docstring/tests (added ollama fall-through test) and LLM prompt.
+- `summary.md`: made design point 3, Step 3 row, and step-overview consistent with the openai gate + ollama fall-through.
+- `Decisions.md`: logged the openai-gate decision + Ollama-regression rationale.
+
+**Status**: plan changed → will commit and run Round 3.
 
