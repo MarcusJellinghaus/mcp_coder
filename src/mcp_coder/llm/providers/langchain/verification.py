@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 from typing import Any
+from urllib.parse import urlparse
 
 from . import _load_langchain_config
 from ._exceptions import LLMAuthError, LLMConnectionError
@@ -125,6 +126,50 @@ def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
     }
 
 
+def _check_endpoint_shape(
+    endpoint: str | None, api_version: str | None
+) -> dict[str, Any] | None:
+    """Pure string heuristic for a custom OpenAI base URL (no network).
+
+    Flags an endpoint that is provably wrong (contains ``/completions``),
+    malformed (missing scheme or host), or missing the conventional ``/v1``
+    suffix. WARN-level findings use ``ok=None`` with the guidance carried
+    inside ``value``; INFO and healthy findings use ``ok=True``.
+
+    Args:
+        endpoint: Custom base URL from config, or None.
+        api_version: Azure API version from config, or None. When set the
+            backend routes to AzureChatOpenAI, so this heuristic is skipped.
+
+    Returns:
+        A verify-style dict with ``ok`` (``None`` | ``True``) and ``value``
+        (str), or None when the check does not apply (api_version set →
+        Azure path, or no custom endpoint configured).
+    """
+    if api_version or not endpoint:
+        return None
+    if "/completions" in endpoint:
+        return {
+            "ok": None,
+            "value": (
+                f"{endpoint} — contains '/completions'; use the base URL only "
+                "e.g. https://host/v1 (mcp-coder appends /chat/completions)"
+            ),
+        }
+    parsed = urlparse(endpoint)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return {
+            "ok": None,
+            "value": f"{endpoint} — malformed URL; use e.g. https://host/v1",
+        }
+    if not endpoint.rstrip("/").endswith("/v1"):
+        return {
+            "ok": True,
+            "value": f"{endpoint} — most relays use .../v1",
+        }
+    return {"ok": True, "value": endpoint}
+
+
 def verify_langchain(
     check_models: bool = False,
     mcp_config_path: str | None = None,
@@ -209,6 +254,13 @@ def verify_langchain(
             "ok": False,
             "value": "no backend configured",
         }
+
+    # Endpoint-shape heuristic (openai custom base URL; advisory only, never
+    # contributes to overall_ok).
+    if backend == "openai":
+        shape = _check_endpoint_shape(config.get("endpoint"), config.get("api_version"))
+        if shape is not None:
+            result["endpoint_shape"] = shape
 
     # MCP adapter packages check (always run)
     mcp_pkg_results = _check_mcp_adapter_packages()

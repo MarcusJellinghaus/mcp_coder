@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.langchain.verification import (
+    _check_endpoint_shape,
     _check_mcp_adapter_packages,
     _check_package_installed,
     _mask_api_key,
@@ -91,6 +92,82 @@ class TestCheckPackageInstalled:
 
     def test_not_installed_package(self) -> None:
         assert _check_package_installed("nonexistent_package_xyz_123") is False
+
+
+class TestCheckEndpointShape:
+    """Tests for the pure _check_endpoint_shape string heuristic."""
+
+    def test_completions_in_path_warns(self) -> None:
+        result = _check_endpoint_shape("https://h/v1/completions", None)
+        assert result is not None
+        assert result["ok"] is None
+        assert "/completions" in result["value"]
+
+    def test_chat_completions_in_path_warns(self) -> None:
+        result = _check_endpoint_shape("https://h/v1/chat/completions", None)
+        assert result is not None
+        assert result["ok"] is None
+        assert "/completions" in result["value"]
+
+    def test_no_scheme_is_malformed(self) -> None:
+        result = _check_endpoint_shape("host/v1", None)
+        assert result is not None
+        assert result["ok"] is None
+        assert "malformed" in result["value"]
+
+    def test_no_host_is_malformed(self) -> None:
+        result = _check_endpoint_shape("https:///v1", None)
+        assert result is not None
+        assert result["ok"] is None
+        assert "malformed" in result["value"]
+
+    def test_valid_without_v1_is_info(self) -> None:
+        result = _check_endpoint_shape("https://h/openai", None)
+        assert result is not None
+        assert result["ok"] is True
+        assert "v1" in result["value"]
+
+    def test_healthy_v1_endpoint(self) -> None:
+        result = _check_endpoint_shape("https://h/v1", None)
+        assert result is not None
+        assert result["ok"] is True
+        assert result["value"] == "https://h/v1"
+
+    def test_healthy_v1_endpoint_trailing_slash(self) -> None:
+        result = _check_endpoint_shape("https://h/v1/", None)
+        assert result is not None
+        assert result["ok"] is True
+
+    def test_api_version_set_skips(self) -> None:
+        assert _check_endpoint_shape("https://h/v1", "2024-02-01") is None
+
+    def test_no_endpoint_skips(self) -> None:
+        assert _check_endpoint_shape(None, None) is None
+
+
+class TestVerifyLangchainEndpointShape:
+    """Tests for endpoint_shape wiring in verify_langchain()."""
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_endpoint_shape_row_does_not_change_overall_ok(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        """A bad endpoint shape appears as a row but does not flip overall_ok."""
+        mock_config.return_value = {
+            "provider": "langchain",
+            "backend": "openai",
+            "model": "gpt-4o",
+            "api_key": None,
+            "endpoint": "https://h/v1/completions",
+            "api_version": None,
+        }
+        mock_pkg.return_value = True
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert result["endpoint_shape"]["ok"] is None
+        # overall_ok is driven only by packages, unaffected by the shape finding.
+        assert result["overall_ok"] is True
 
 
 class TestVerifyLangchain:
