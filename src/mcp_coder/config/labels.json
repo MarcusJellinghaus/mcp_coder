@@ -211,6 +211,21 @@
       }
     },
     {
+      "internal_id": "mcp_unavailable",
+      "name": "status-06f-mcp:mcp-unavailable",
+      "color": "e99695",
+      "description": "MCP server(s) failed to connect during implementation",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔌",
+        "display_name": "MCP UNAVAILABLE",
+        "stage_short": "mcp-fail",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
       "internal_id": "no_changes_after_retries",
       "name": "status-06f-nochange:no-changes-after-retries",
       "color": "d93f0b",

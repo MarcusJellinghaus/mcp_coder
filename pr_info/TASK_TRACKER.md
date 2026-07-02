@@ -49,9 +49,9 @@ See [step_3.md](./steps/step_3.md).
 
 See [step_4.md](./steps/step_4.md).
 
-- [ ] Implementation (tests + production code): add `FailureCategory.MCP_UNAVAILABLE`, `mcp_unavailable` label in `labels.json`, new `llm_failures.py` with `llm_failure_reason` + `REASON_TO_CATEGORY`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): add `FailureCategory.MCP_UNAVAILABLE`, `mcp_unavailable` label in `labels.json`, new `llm_failures.py` with `llm_failure_reason` + `REASON_TO_CATEGORY`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Categorize timeout / MCP-unavailable at implement + mypy-fix
 
