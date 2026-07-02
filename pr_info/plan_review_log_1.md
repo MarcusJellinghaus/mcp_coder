@@ -46,3 +46,29 @@ Base branch: `main` (branch up to date, no rebase needed). Plan is fresh — no 
 - `summary.md`: tests-touched list + Step 3 description updated.
 
 **Status**: plan changed — commit pending, then re-review (loop).
+
+## Round 3 — 2026-07-02
+
+**Findings** (from `/plan_review` engineer, verifying round-2 fix + final consistency):
+- Round-2 test-repair addition CONFIRMED correct and complete: all 6 `test_check_branch_status_pr_waiting.py` wait tests and `test_execute_with_ci_timeout_waits_before_display` genuinely hit the new guards and lack a `get_github_token` patch; no affected test missed; `test_check_branch_status_auto_fixes.py` correctly excluded; patch target path resolves.
+- Full-plan consistency verified: `__all__` 24→25 correct; NO enum-exhaustiveness / parametrized `CIStatus` / `len(CIStatus)` tests exist (adding `UNAVAILABLE` breaks nothing); existing icon/recommendation tests for `NOT_CONFIGURED` untouched by the separate `UNAVAILABLE` branch; read-only/fix `execute` tests safe; detection stays proactive; summary.md matches step files.
+- CRITICAL: none. DESIGN-QUESTION: none.
+- IMPROVEMENT (cosmetic, non-blocking): Step 1's illustrative DATA line writes `CI=UNAVAILABLE (hint)` but the real `format_for_llm` appends the hint at the end of the full summary line; the prescribed test assertions (contains `CI=UNAVAILABLE`, contains hint) still pass. Doc-wording only.
+
+**Decisions**:
+- Cosmetic IMPROVEMENT — skip (supervisor): does not affect implementation or test outcomes; fixing it would trigger a needless extra review loop. Noted here instead.
+
+**User decisions**: none this round.
+
+**Changes**: none — zero plan files changed this round. Loop terminates.
+
+**Status**: no changes needed — plan is clean.
+
+## Final Status
+
+- **Rounds run:** 3.
+- **Commits produced:** 2 plan-update commits (`3315923`, `007c940`) + this log commit.
+- **Round 1:** accepted 2 straightforward fixes (smoke-count assertion, corrected test citations); escalated 2 scope questions — user chose consistent exit 2 across `--fix` (hoist the check) and a clean-fail guard on `--wait-for-pr` (print hint + exit 2 instead of silent exit).
+- **Round 2:** caught + fixed a test-repair gap (two sibling wait/ci-timeout test files needed `get_github_token` patched).
+- **Round 3:** verified the round-2 fix and did a full-plan consistency sweep (enum-exhaustiveness, icon/recommendation, parametrized tests) — clean. Only a cosmetic doc-wording nit remains, intentionally left.
+- **Verdict:** ✅ Plan is ready for approval. Core design was verified accurate against the real source throughout; each step is one commit and leaves pylint/pytest/mypy green; detection is proactive (`get_github_token()`), never string/type-matched.
