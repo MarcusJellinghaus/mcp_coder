@@ -103,7 +103,12 @@ Tests (all assert process **exit 0** — via `main()` returning 0 / no `SystemEx
 
 2. **`test_langchain_backend_no_warn_when_module_installed_claude_active`**
    backend `"anthropic"`, `_check_package_installed` → `True`.
-   Assert `"uses Claude CLI"` present and `"Langchain backend"` / `"[WARN]"` **absent**.
+   Assert the **specific** langchain row is absent (a global `"[WARN]"`-absent
+   assertion is unsafe — the redundancy note, MCP config warnings, and MCP
+   "health check skipped" rows also emit `"[WARN]"` on the claude-active path).
+   Assert `"uses Claude CLI"` present, and assert `"Langchain backend"` (the row
+   label) **and** the message fragments `"configured but"` / `"not a recognized"`
+   are **absent**. Do **not** assert `"[WARN]"` is absent globally.
 
 3. **`test_langchain_backend_warn_when_unrecognized_backend_claude_active`**
    backend `"typo-backend"` (not in `_BACKEND_PACKAGES`); `_check_package_installed`
@@ -111,16 +116,22 @@ Tests (all assert process **exit 0** — via `main()` returning 0 / no `SystemEx
    Assert `"uses Claude CLI"` present, `"[WARN]"` present, and
    `"not a recognized langchain backend"` present. No `-> pip install` hint line.
 
-Keep existing `test_claude_fallback_note_when_claude_active` unchanged (note shown, no warning) —
-it exercises the "not configured" path (its `_load_langchain_config` reads real/empty config →
-no backend). If that test's environment could surface a real configured backend, patch its
-`_load_langchain_config` to return `{"backend": None}` to keep it deterministic.
+Keep existing `test_claude_fallback_note_when_claude_active` behavior unchanged (note shown, no
+warning) — it exercises the "not configured" path. Because the new helper now calls the real
+`_load_langchain_config()` (reading the machine's real config) on every claude-active test, you
+**must** patch `_load_langchain_config` → `{"backend": None}` for
+`test_claude_fallback_note_when_claude_active` to keep it deterministic (otherwise a real
+configured backend on the developer's machine would surface a warning and break the assertion).
+The cleanest approach is a shared/autouse patch that also covers the other unpatched claude-active
+tests in the file — e.g. `test_output_contains_status_symbols`,
+`test_active_provider_shown_in_output`, and the claude cases in the exit-code matrix — so none of
+them can be perturbed by the machine's real langchain config.
 
 ## Checks to run before committing (MCP tools, must all pass)
-- `run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])`
+- `run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])`
 - `run_pylint_check`
 - `run_mypy_check`
-- Format via `./tools/format_all.sh` before staging.
+- Format via `mcp__mcp-tools-py__run_format_code` before staging.
 
 ## Commit
 Single commit containing the helper, the one-line wiring, and the three tests.
