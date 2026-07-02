@@ -48,5 +48,27 @@ Plan: 3 steps (Part A1 verify heuristic, Part A2 --check-models messaging, Part 
 - `summary.md`: made design point 3, Step 3 row, and step-overview consistent with the openai gate + ollama fall-through.
 - `Decisions.md`: logged the openai-gate decision + Ollama-regression rationale.
 
-**Status**: plan changed → will commit and run Round 3.
+**Status**: plan changed → committed (`f6ed348`) → run Round 3.
+
+## Round 3 — 2026-07-02
+**Findings** (from `/plan_review`, final pass):
+- Verdict: plan internally consistent and correct; approve with no required changes.
+- Confirmed the Round-2 `backend == "openai"` gate is consistent across step_3.md, summary.md, and Decisions.md and matches source; ollama fall-through test present in the `_ask_text` section.
+- Confirmed F1/F2/F3 corrections are consistently reflected; `overall_ok` composition, `_LABEL_MAP`, renderer contract, Step 1 insertion point, and `_list_models_for_backend` target all validated against source. No scope creep, no KB violations.
+- Minor (optional, non-blocking): streaming test list (`test_langchain_streaming.py`) omits an ollama fall-through bullet that the `_ask_text` list has; adequately covered via the shared helper — not a correctness gap.
+
+**Decisions**:
+- No changes accepted. Minor test-symmetry note → skip (adequate coverage; avoid an unnecessary extra round).
+
+**User decisions**: none.
+
+**Changes**: none — zero plan changes this round. Review loop terminates.
+
+**Status**: no changes needed.
+
+## Final Status
+- Rounds run: 3.
+- Commits produced: `2b5a6d6` (Round 1 corrections), `f6ed348` (Round 2 openai gate), plus this log.
+- User decisions: 1 (F1 — keep `verify` diagnostics-only; correct the false `--check-models` pass/fail rationale).
+- Outcome: **Plan is ready for approval.** 3 steps, one commit each, diagnostics/UX-only, no new dependencies, no functional LLM-path change. Internally consistent and validated against current source.
 
