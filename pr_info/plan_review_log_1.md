@@ -37,3 +37,34 @@ Plan files: pr_info/steps/step_1.md, step_2.md, summary.md
 **Status**: committed — plan files changed → loop to Round 3 for a fresh review.
 
 ---
+
+## Round 3 — 2026-07-03
+**Findings**: Fresh review after Round 2's tool-id fix. Verdict: Ready, no changes needed. Confirmed both doc edits (approval note + tool-id corrections) introduced no regression; no stale `mcp__tools-py__` remnants remain. Re-cross-checked the full plan against live source: event_log.py (`current_path`/`_logs_dir`, `_path` survives close), info.py (signatures + MCP_CODER_*/Other env-var boundaries), icoder.py (early register_info call + EventLog with-block wiring), test_info_command.py (exactly 12 call sites, mcp_manager variants at 150/168, all fixtures/helpers for the new test present), conftest.py (shared event_log fixture at line 104). No new findings, no user questions.
+
+**Decisions**: none — nothing to fix.
+
+**User decisions**: none.
+
+**Changes**: none. Zero plan files modified this round → loop terminates.
+
+**Status**: no changes needed.
+
+---
+
+## Final Status
+
+**Rounds run**: 3
+**Result**: Plan is READY for approval.
+
+- **Round 1**: Reviewed plan against real code — implementable and code-accurate. One design divergence (plan skips the issue's Decisions #2/#7 AppCore routing in favor of a single `event_log` parameter) escalated to the repo owner, who **approved keeping the KISS divergence**. Recorded the approval in `summary.md`.
+- **Round 2**: Fixed 6 malformed check-tool ids (`mcp__tools-py__...` → `mcp__mcp-tools-py__...`) in `step_1.md`/`step_2.md`.
+- **Round 3**: Fresh review — no regressions, no new findings, zero changes.
+
+**Commits produced on this branch**:
+- `193b2be` — docs(plan): record approval of KISS divergence and add review log for #764
+- `013856c` — docs(plan): fix malformed mcp-tools-py tool ids in step docs for #764
+- (plus the final commit for this log entry)
+
+**Requirements coverage**: All user-facing Decisions (#1, #3, #4, #5, #6, #8) covered; #2/#7 deliberately and explicitly superseded with owner approval. Step structure sound (Step 1 = `logs_dir` property + tests; Step 2 = signature/formatter/wiring + 12 test call-site updates + new test, as one green-keeping commit).
+
+**Recommendation**: Plan is ready for implementation. No open questions.
