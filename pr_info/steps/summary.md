@@ -34,21 +34,26 @@ exit code:
    importing `mcp_workspace.*` directly); note it sources from `mcp_workspace.config`,
    not `github_operations`.
 
-3. **Two detection sites, each minimal — by necessity, not duplication:**
+3. **Detection sites, each minimal — by necessity, not duplication:**
    - **`_collect_ci_status`** sets the state. Required because `collect_branch_status()`
      is also called by internal callers/tests that bypass the CLI.
-   - **`execute_check_branch_status`** only *gates the `--ci-timeout` wait* (one added
-     boolean condition) so a missing token degrades to the partial report instead of
-     raising exit `2` from the wait path.
+   - **`execute_check_branch_status`** gates the `--ci-timeout` wait (one added boolean
+     condition) so a missing token degrades to the partial report instead of raising exit
+     `2` from the wait path, and guards the `--wait-for-pr` path (which constructs
+     `PullRequestManager` and would otherwise raise into the silent outer `except`) so it
+     fails *cleanly* — prints the hint and returns `2` — instead of exiting silently.
 
 4. **Message lives in the report, not in a second stderr emission.** The actionable hint
    is rendered inline on the `CI Status:` line (human) and appended to the summary line
    (LLM). This satisfies "visible regardless of log routing" with no duplicate plumbing
    and no new dataclass field.
 
-5. **Exit code centralized.** The existing final return in `execute_check_branch_status`
-   gains one line: `UNAVAILABLE → 2`. The partial report is `print()`ed *before* the
-   return, so no information is lost. (Caller audit in the issue confirms exit `2` is safe.)
+5. **Exit code centralized and consistent across paths.** The `UNAVAILABLE → 2` check is
+   **hoisted to run before the `--fix` block** (right after the report is printed), so a
+   missing token returns `2` on the read-only, `--ci-timeout`, and `--fix` paths alike —
+   otherwise `--fix` would slip through, since `_run_auto_fixes` treats `UNAVAILABLE` as
+   "nothing to fix" and returns `0`. The partial report is `print()`ed *before* the return,
+   so no information is lost. (Caller audit in the issue confirms exit `2` is safe.)
 
 ## Files Created / Modified
 
@@ -59,17 +64,24 @@ exit code:
   `GITHUB_TOKEN_HINT` constant, icon-map entry (🔒), inline rendering in
   `format_for_human`/`format_for_llm`, a recommendation branch, and the proactive
   detection early-return in `_collect_ci_status`.
-- `src/mcp_coder/cli/commands/check_branch_status.py` — gate the `--ci-timeout` wait with
-  `get_github_token()`, and add the `UNAVAILABLE → return 2` exit-code line.
+- `src/mcp_coder/cli/commands/check_branch_status.py` — import `GITHUB_TOKEN_HINT`; add a
+  proactive `get_github_token()` guard on the `--wait-for-pr` path (print hint + `return 2`
+  before `PullRequestManager` construction); gate the `--ci-timeout` wait with
+  `get_github_token()`; and hoist the `UNAVAILABLE → return 2` exit-code check to before the
+  `--fix` block.
 
 ### Tests (created / modified)
 - `tests/checks/test_branch_status.py` — new `UNAVAILABLE` enum/value/icon, rendering, and
-  recommendation tests; existing tests that mock `CIResultsManager` get `get_github_token`
-  patched to return a token (so they keep their expected states).
+  recommendation tests; the three tests that call `_collect_ci_status` directly
+  (`test_collect_ci_status_with_truncation`, `test_collect_ci_status_no_truncation`,
+  `test_collect_ci_status_error_handling`) get `get_github_token` patched to a dummy token
+  so they keep their expected states.
 - `tests/test_mcp_workspace_github_smoke.py` — assert `get_github_token` is importable
-  from the shim.
-- `tests/cli/commands/test_check_branch_status.py` — missing-token path skips the CI wait,
-  prints the partial report with the hint, and returns exit `2`.
+  from the shim, and bump the `__all__` count assertion from 24 to 25.
+- `tests/cli/commands/test_check_branch_status.py` — missing-token cases: read-only skips
+  the CI wait and returns exit `2` with the hint; `--fix` + no token returns exit `2`
+  without running auto-fixes; `--wait-for-pr` + no token prints the hint and returns exit
+  `2` without constructing `PullRequestManager`.
 
 ### Plan docs (created)
 - `pr_info/steps/summary.md`, `pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`,
@@ -79,9 +91,12 @@ exit code:
 
 - **Step 1 — New state + presentation (data layer).** Enum value, constant, icon,
   human/LLM rendering, recommendation branch. Fully testable in isolation.
-- **Step 2 — Detection (shim + `_collect_ci_status`).** Re-export `get_github_token`;
-  early-return `UNAVAILABLE` when token missing; repair existing manager-mocking tests.
-- **Step 3 — CLI integration.** Gate the `--ci-timeout` wait; centralized exit code `2`.
+- **Step 2 — Detection (shim + `_collect_ci_status`).** Re-export `get_github_token` (bump
+  the shim `__all__` smoke count 24→25); early-return `UNAVAILABLE` when token missing;
+  repair the three direct `_collect_ci_status` tests.
+- **Step 3 — CLI integration.** Guard the `--wait-for-pr` path (clean fail + hint instead
+  of silent exit `2`); gate the `--ci-timeout` wait; hoist the `UNAVAILABLE → 2` exit code
+  above the `--fix` block so it is consistent on all paths.
 
 ## Quality Gates (run after every step)
 ```

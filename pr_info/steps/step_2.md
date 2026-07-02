@@ -68,17 +68,32 @@ def _collect_ci_status(...):
 ## TESTS (write first — TDD)
 1. **Shim smoke** (`tests/test_mcp_workspace_github_smoke.py`): assert
    `get_github_token` is importable from `mcp_coder.mcp_workspace_github` and is callable.
+   **Also bump the `__all__` count assertion** in `test_all_exports_defined`: adding
+   `"get_github_token"` grows `__all__` from 24 → 25, so change
+   `assert len(__all__) == 24` to `assert len(__all__) == 25`. (Verified: the shim's
+   `__all__` currently lists exactly 24 symbols.) This must land in Step 2 so its pytest
+   gate stays green.
 2. **Detection** (`tests/checks/test_branch_status.py`): patch
    `mcp_coder.checks.branch_status.get_github_token` to return `None` →
    `_collect_ci_status(...)` returns `(CIStatus.UNAVAILABLE, None)` **without**
    constructing a `CIResultsManager`. Patch it to return `"tok"` and assert existing
    PASSED/FAILED/NOT_CONFIGURED paths still work (with `CIResultsManager` mocked).
-3. **Existing-test repair (important):** any existing test that mocks `CIResultsManager`
-   and asserts a non-`UNAVAILABLE` status will now hit the early-return if no real token
-   is present in the environment. For each such test, patch
-   `mcp_coder.checks.branch_status.get_github_token` to return a dummy token (e.g. via a
-   shared fixture/autouse patch in the affected module/class). Confirmed affected
-   references include `tests/checks/test_branch_status.py` lines ~292 and ~964.
+3. **Existing-test repair (important):** the tests that call `_collect_ci_status`
+   **directly** and mock only `CIResultsManager` will now hit the token early-return and
+   return `UNAVAILABLE` on a token-less runner. For each, patch
+   `mcp_coder.checks.branch_status.get_github_token` to return a dummy token (e.g. `"tok"`)
+   so they keep their expected states. Confirmed affected tests in
+   `tests/checks/test_branch_status.py` (verified against the current file):
+   - `test_collect_ci_status_with_truncation` (~line 900; asserts `FAILED`).
+   - `test_collect_ci_status_no_truncation` (~line 935; asserts `PASSED`).
+   - `test_collect_ci_status_error_handling` (~line 953, assert at ~line 964; asserts
+     `NOT_CONFIGURED`).
+
+   **Not affected — do not touch:** `test_create_empty_report` (~line 286) does *not* call
+   `_collect_ci_status` (it calls `create_empty_report`), so the earlier citation of
+   line ~292 was a false positive and is dropped. Tests that patch `_collect_ci_status`
+   itself (e.g. the `collect_branch_status` tests) are also unaffected — they never reach
+   the early-return.
 
 ## COMMIT
 Single commit: shim re-export + detection + tests + existing-test repair, all checks green.
@@ -97,8 +112,10 @@ Run `./tools/format_all.sh` before committing.
 > `mcp_workspace.config` (with the cross-module comment) and add it to `__all__`.
 > (b) In `src/mcp_coder/checks/branch_status.py`, import `get_github_token` and add an
 > early `return CIStatus.UNAVAILABLE, None` at the top of the `try` in `_collect_ci_status`
-> when `get_github_token() is None`. Follow TDD: add the smoke + detection tests first.
-> Then sweep existing tests that mock `CIResultsManager` and patch
-> `mcp_coder.checks.branch_status.get_github_token` to return a dummy token so they keep
-> their expected states. Use only MCP tools per CLAUDE.md, run pylint/pytest/mypy, and
+> when `get_github_token() is None`. Follow TDD: add the smoke + detection tests first, and
+> bump `test_all_exports_defined`'s `assert len(__all__) == 24` to `== 25`. Then patch
+> `mcp_coder.checks.branch_status.get_github_token` to return a dummy token in the three
+> tests that call `_collect_ci_status` directly (`test_collect_ci_status_with_truncation`,
+> `test_collect_ci_status_no_truncation`, `test_collect_ci_status_error_handling`) so they
+> keep their expected states. Use only MCP tools per CLAUDE.md, run pylint/pytest/mypy, and
 > produce exactly one commit.
