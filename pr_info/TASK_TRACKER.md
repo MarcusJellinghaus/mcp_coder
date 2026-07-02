@@ -21,6 +21,15 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Log the WORKFLOW FAILED banner at ERROR
+
+Detail: [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: harden `test_logs_failure_banner` with an ERROR-level assertion, add `test_issue_manager_creation_failure_logs_error`, and swap the seven log calls (six banner lines + IssueManager-creation fallback) from `info`/`warning` to `error` in `handle_workflow_failure()`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Review the full diff against the base branch
+- [ ] Write PR summary and description
