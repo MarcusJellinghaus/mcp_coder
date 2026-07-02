@@ -637,6 +637,42 @@ def _prompt_source(configured: str | None, default_label: str) -> str:
     return configured if configured else f"({default_label})"
 
 
+def _print_langchain_readiness_warning(symbols: dict[str, str]) -> None:
+    """Warn (exit-neutral) when the configured langchain backend module is missing.
+
+    Runs regardless of active provider. Prints nothing when langchain is not
+    configured, or when a known backend's module is installed. Builds no result
+    dict — it only prints, so it can never affect the exit code.
+
+    Args:
+        symbols: Status-symbol map (e.g. ``STATUS_SYMBOLS``) supplying the
+            ``"warning"`` marker for the emitted row.
+    """
+    from ...llm.providers.langchain import _load_langchain_config
+    from ...llm.providers.langchain.verification import (
+        _BACKEND_PACKAGES,
+        _check_package_installed,
+    )
+
+    backend = _load_langchain_config().get("backend")
+    if not backend:
+        return  # not configured → note only
+    pkg = _BACKEND_PACKAGES.get(backend)
+    hint: str | None
+    if pkg is None:  # unrecognized backend name
+        msg = f"backend '{backend}' is not a recognized langchain backend"
+        hint = None
+    elif _check_package_installed(pkg):
+        return  # installed → emit nothing new
+    else:  # known backend, module missing
+        display = pkg.replace("_", "-")
+        msg = f"backend '{backend}' configured but {display} not installed"
+        hint = f"pip install {display} (needed for --llm-method langchain)"
+    print(_format_row("Langchain backend", symbols["warning"], msg, indent=2))
+    if hint:
+        print(f"{' ' * _VALUE_COLUMN_INDENT}-> {hint}")
+
+
 def execute_verify(args: argparse.Namespace) -> int:
     """Execute verify command: orchestrate domain checks and format output.
 
@@ -778,6 +814,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         print(_format_section("LLM PROVIDER DETAILS", langchain_result, symbols))
     else:
         print("  (uses Claude CLI — see Basic Verification above)")
+        _print_langchain_readiness_warning(symbols)
 
     # 3a. MCP server health checks (provider-aware ordering)
     mcp_result: dict[str, Any] | None = None

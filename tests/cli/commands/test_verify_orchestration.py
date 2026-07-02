@@ -57,15 +57,6 @@ def _claude_ok() -> dict[str, Any]:
     }
 
 
-def _claude_fail() -> dict[str, Any]:
-    return {
-        "cli_found": {"ok": False, "value": "NO"},
-        "cli_works": {"ok": False, "value": "NO"},
-        "api_integration": {"ok": False, "value": "FAILED", "error": "not found"},
-        "overall_ok": False,
-    }
-
-
 def _langchain_ok() -> dict[str, Any]:
     return {
         "backend": {"ok": True, "value": "openai"},
