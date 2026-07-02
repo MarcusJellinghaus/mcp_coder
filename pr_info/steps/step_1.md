@@ -45,6 +45,18 @@ No signatures change. Edits are log-level swaps only.
 - Keep the existing text assertions and the `INFO` capture level.
 - Add a level assertion on the banner record.
 
+**Test — new test for the `IssueManager`-creation fallback (ERROR level):**
+- The `IssueManager` creation fallback changes from `logger.warning` to
+  `logger.error` because that branch aborts the handler via an early `return`.
+  There is currently NO test exercising that failure path, so the level change
+  would ship unverified. Add an explicit test for it.
+- In `tests/workflow_utils/test_failure_handling.py`, add a test (e.g.
+  `test_issue_manager_creation_failure_logs_error`) that patches
+  `IssueManager(project_dir)` to raise, invokes `handle_workflow_failure(...)`,
+  and asserts the corresponding log record is at `ERROR`. Find the record whose
+  message contains `"Failed to create IssueManager"` and assert
+  `record.levelno == logging.ERROR`.
+
 ## HOW
 
 - Imports: add `import logging` to the test module. No new imports in the source file
@@ -62,6 +74,16 @@ banner = next(
 assert banner.levelno == logging.ERROR
 ```
 
+New test for the `IssueManager`-creation fallback (patch `IssueManager` to raise,
+then assert the fallback record is logged at `ERROR`):
+
+```
+record = next(
+    r for r in caplog.records if "Failed to create IssueManager" in r.getMessage()
+)
+assert record.levelno == logging.ERROR
+```
+
 Source: mechanical replacement — swap the log method name on the seven lines listed
 above; message strings and `%s` args are untouched.
 
@@ -75,11 +97,11 @@ above; message strings and `%s` args are untouched.
 
 ## Verification / checks (must pass before commit)
 
-- `mcp__tools-py__run_pylint_check`
-- `mcp__tools-py__run_mypy_check`
-- `mcp__tools-py__run_pytest_check` with
-  `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`
-- `./tools/format_all.sh` before committing.
+- `mcp__mcp-tools-py__run_pylint_check`
+- `mcp__mcp-tools-py__run_mypy_check`
+- `mcp__mcp-tools-py__run_pytest_check` with (per CLAUDE.md, `-n auto` for parallel execution)
+  `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"]`
+- `mcp__mcp-tools-py__run_format_code` before committing.
 
 ## Commit
 
