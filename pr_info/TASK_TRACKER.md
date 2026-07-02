@@ -65,9 +65,9 @@ See [step_5.md](./steps/step_5.md).
 
 See [step_6.md](./steps/step_6.md).
 
-- [ ] Implementation (tests + production code): make `_run_ci_analysis` re-raise the two LLM exceptions; wrap `check_and_fix_ci` in `core.py` to categorize them; keep `_run_ci_fix` absorbing them (intent comment only)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): make `_run_ci_analysis` re-raise the two LLM exceptions; wrap `check_and_fix_ci` in `core.py` to categorize them; keep `_run_ci_fix` absorbing them (intent comment only)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

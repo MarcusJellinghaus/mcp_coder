@@ -829,14 +829,38 @@ def run_implement_workflow(
         logger.info("Checking CI pipeline status...")
         current_branch = get_current_branch_name(project_dir)
         if current_branch:
-            ci_success = check_and_fix_ci(
-                project_dir=project_dir,
-                branch=current_branch,
-                provider=provider,
-                mcp_config=mcp_config,
-                settings_file=settings_file,
-                execution_dir=execution_dir,
-            )
+            # CI-analysis no longer swallows the two typed LLM failures; a
+            # fix-phase timeout/MCP-unavailable is still absorbed into the
+            # 4-attempt loop (Decision 10). Only an analysis-phase abort reaches
+            # here — categorize it into llm_timeout / mcp_unavailable.
+            try:
+                ci_success = check_and_fix_ci(
+                    project_dir=project_dir,
+                    branch=current_branch,
+                    provider=provider,
+                    mcp_config=mcp_config,
+                    settings_file=settings_file,
+                    execution_dir=execution_dir,
+                )
+            except (LLMTimeoutError, McpServersUnavailableError) as exc:
+                # Fallback keeps mypy happy; the reason is non-None for both types.
+                reason = llm_failure_reason(exc) or "error"
+                _handle_workflow_failure(
+                    WorkflowFailure(
+                        category=REASON_TO_CATEGORY[reason],
+                        stage="CI pipeline analysis",
+                        message="LLM failure during CI failure analysis",
+                        tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
+                        build_url=build_url,
+                        elapsed_time=time.time() - start_time,
+                    ),
+                    project_dir,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                )
+                reached_terminal_state = True
+                return 1
             if not ci_success:
                 logger.error("CI check failed after maximum fix attempts")
                 _handle_workflow_failure(

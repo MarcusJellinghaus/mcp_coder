@@ -13,7 +13,8 @@ from typing import Any, Optional
 from mcp_coder.checks.branch_status import get_failed_jobs_summary
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_latest_commit_sha
 from mcp_coder.mcp_workspace_github import (
@@ -84,7 +85,13 @@ def _run_ci_analysis(
         branch_name: Optional git branch name for session logging
 
     Returns:
-        Problem description string, or None on failure
+        Problem description string, or None on soft failure
+
+    Raises:
+        LLMTimeoutError: If the analysis LLM call hits its inactivity timeout.
+        McpServersUnavailableError: If a required MCP server is unavailable
+            during the analysis LLM call. Both propagate (are NOT swallowed to a
+            None result) so check_and_fix_ci's caller can categorize them.
     """
     other_jobs = failed_summary["other_failed_jobs"]
     other_jobs_str = ", ".join(other_jobs) if other_jobs else "none"
@@ -120,6 +127,12 @@ def _run_ci_analysis(
             branch_name=branch_name,
         )
         analysis_response = llm_response["text"]
+    except (LLMTimeoutError, McpServersUnavailableError):
+        # Stop swallowing the two typed LLM failures: re-raise so they propagate
+        # out of check_and_fix_ci and get categorized (llm_timeout /
+        # mcp_unavailable) at the wrapping call site in core.py. This is the
+        # terminal, analysis-phase abort (Decision 9).
+        raise
     except Exception as e:
         logger.warning(f"LLM analysis failed: {e}")
         return None
@@ -195,6 +208,12 @@ def _run_ci_fix(
         )
         fix_response = llm_response["text"]
     except Exception as e:
+        # Decision 10: the fix phase intentionally ABSORBS every failure —
+        # including LLMTimeoutError / McpServersUnavailableError — into a single
+        # failed attempt (return False). The fix loop retries up to
+        # CI_MAX_FIX_ATTEMPTS times, so a fix-phase timeout/MCP-unavailable never
+        # aborts the workflow; on exhaustion it becomes ci_fix_needed, not
+        # llm_timeout / mcp_unavailable.
         logger.warning(f"LLM fix failed: {e}")
         return False
 
@@ -462,6 +481,15 @@ def check_and_fix_ci(
     Returns:
         True if CI passes or on API errors (exit 0 scenarios)
         False if max fix attempts exhausted (exit 1 scenario)
+
+    Raises:
+        LLMTimeoutError: If the analysis-phase LLM call hits its inactivity
+            timeout. Propagated from _run_ci_analysis for categorization by the
+            caller (core.py) into llm_timeout.
+        McpServersUnavailableError: If a required MCP server is unavailable
+            during the analysis-phase LLM call. Propagated for categorization
+            into mcp_unavailable. Fix-phase occurrences are absorbed (Decision
+            10) and never reach here.
     """
     logger.info("Starting CI check and fix process...")
 
