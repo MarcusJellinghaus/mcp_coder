@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `EventLog.logs_dir` property
+
+See [step_1.md](./steps/step_1.md) for details.
+
+- [ ] Implementation: add `logs_dir` property to `EventLog` + tests in `test_event_log.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Show the `Logs:` section in `/info`
+
+See [step_2.md](./steps/step_2.md) for details. Depends on Step 1.
+
+- [ ] Implementation: `event_log` param on `register_info`/`_format_info` + `Logs:` section, `icoder.py` wiring, `/info` test updates
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Address PR review feedback
+- [ ] Write PR summary
