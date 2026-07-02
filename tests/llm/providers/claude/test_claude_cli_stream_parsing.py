@@ -10,10 +10,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import (
-    ParsedStreamResponse,
     StreamMessage,
     ask_claude_code_cli,
-    create_response_dict_from_stream,
     parse_stream_json_file,
     parse_stream_json_line,
     parse_stream_json_string,
@@ -162,36 +160,6 @@ class TestGetStreamLogPath:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = get_stream_log_path(cwd=tmpdir)
             assert tmpdir in str(path)
-
-
-class TestCreateResponseDictFromStream:
-    """Tests for create_response_dict_from_stream."""
-
-    def test_creates_valid_response(self) -> None:
-        """Test creating response dict from parsed stream."""
-        parsed = ParsedStreamResponse(
-            text="Hello",
-            session_id="abc-123",
-            messages=[],
-            result_message=cast(
-                StreamMessage,
-                {
-                    "type": "result",
-                    "duration_ms": 1000,
-                    "total_cost_usd": 0.05,
-                },
-            ),
-            system_message=cast(StreamMessage, {"type": "system"}),
-        )
-
-        result = create_response_dict_from_stream(parsed, "/path/to/file.ndjson")
-
-        assert result["text"] == "Hello"
-        assert result["session_id"] == "abc-123"
-        assert result["provider"] == "claude"
-        assert result["raw_response"]["stream_file"] == "/path/to/file.ndjson"
-        assert result["raw_response"]["duration_ms"] == 1000
-        assert result["raw_response"]["total_cost_usd"] == 0.05
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -415,26 +383,22 @@ class TestMapResultMessageIncludesResult:
 
 
 class TestStreamFileWriting:
-    """Tests for stream file writing functionality."""
+    """Tests for stream file writing (delegated to the streaming core)."""
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     def test_stream_output_written_to_file(
         self,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
         make_stream_json_output: StreamJsonFactory,
     ) -> None:
         """Test that stream output is written to log file."""
         mock_find.return_value = "claude"
-        stream_content = make_stream_json_output("Test", "sess-123")
-        mock_result = CommandResult(
-            return_code=0,
-            stdout=stream_content,
-            stderr="",
-            timed_out=False,
-        )
-        mock_execute.return_value = mock_result
+        lines = make_stream_json_output("Test", "sess-123").split("\n")
+        mock_stream.return_value = _make_mock_stream(lines)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = ask_claude_code_cli("Test question", logs_dir=tmpdir)
@@ -449,26 +413,22 @@ class TestStreamFileWriting:
             content = stream_file_path.read_text(encoding="utf-8")
             assert "sess-123" in content
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     def test_stream_file_preserved_on_error(
         self,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
     ) -> None:
         """Test that stream file is preserved even when CLI fails."""
         mock_find.return_value = "claude"
         # Partial stream output before failure
-        partial_content = json.dumps(
+        partial_line = json.dumps(
             {"type": "system", "session_id": "partial-sess", "model": "claude"}
         )
-        mock_result = CommandResult(
-            return_code=1,
-            stdout=partial_content,
-            stderr="Auth failed",
-            timed_out=False,
-        )
-        mock_execute.return_value = mock_result
+        mock_stream.return_value = _make_mock_stream([partial_line], return_code=1)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(CalledProcessError) as exc_info:

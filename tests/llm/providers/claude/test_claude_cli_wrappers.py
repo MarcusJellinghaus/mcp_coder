@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Tests for Claude CLI IO wrappers and logging functionality."""
+"""Tests for Claude CLI IO wrappers and logging functionality.
+
+``ask_claude_code_cli`` is now a drain-wrapper over the streaming core, so these
+tests drive the real streaming function with its subprocess internals mocked.
+"""
 
 import json
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -18,16 +23,54 @@ from mcp_coder.utils.subprocess_runner import (
 from .conftest import StreamJsonFactory
 
 
+class _MockStreamResult:
+    """Mimics StreamResult for testing: iterable with a .result property."""
+
+    def __init__(
+        self,
+        lines: list[str],
+        return_code: int = 0,
+        timed_out: bool = False,
+    ) -> None:
+        self._lines = lines
+        self._result = CommandResult(
+            return_code=return_code,
+            stdout="",
+            stderr="",
+            timed_out=timed_out,
+        )
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._lines)
+
+    @property
+    def result(self) -> CommandResult:
+        return self._result
+
+
+def _make_stream_gen(
+    lines: list[str],
+    return_code: int = 0,
+    timed_out: bool = False,
+) -> _MockStreamResult:
+    """Create a mock StreamResult mimicking stream_subprocess output."""
+    return _MockStreamResult(lines, return_code=return_code, timed_out=timed_out)
+
+
 class TestIOWrappers:
     """Tests for I/O wrapper integration."""
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_code_cli_returns_typed_dict(
         self,
         mock_get_path: MagicMock,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
         make_stream_json_output: StreamJsonFactory,
     ) -> None:
@@ -35,13 +78,9 @@ class TestIOWrappers:
         mock_find.return_value = "claude"
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
-            mock_result = CommandResult(
-                return_code=0,
-                stdout=make_stream_json_output("Test response", "test-123"),
-                stderr="",
-                timed_out=False,
+            mock_stream.return_value = _make_stream_gen(
+                make_stream_json_output("Test response", "test-123").split("\n")
             )
-            mock_execute.return_value = mock_result
 
             result = ask_claude_code_cli("Test question")
 
@@ -59,13 +98,17 @@ class TestIOWrappers:
             assert result["text"] == "Test response"
             assert result["session_id"] == "test-123"
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_code_cli_with_session_integration(
         self,
         mock_get_path: MagicMock,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
         make_stream_json_output: StreamJsonFactory,
     ) -> None:
@@ -73,18 +116,14 @@ class TestIOWrappers:
         mock_find.return_value = "claude"
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
-            mock_result = CommandResult(
-                return_code=0,
-                stdout=make_stream_json_output("Continued", "existing"),
-                stderr="",
-                timed_out=False,
+            mock_stream.return_value = _make_stream_gen(
+                make_stream_json_output("Continued", "existing").split("\n")
             )
-            mock_execute.return_value = mock_result
 
             result = ask_claude_code_cli("Follow up", session_id="existing")
 
             # Verify --resume flag was used
-            call_args = mock_execute.call_args
+            call_args = mock_stream.call_args
             command = call_args[0][0]
             assert "--resume" in command
             assert "existing" in command
@@ -99,15 +138,19 @@ class TestIOWrappers:
 class TestCliLogging:
     """Tests for logging functionality in CLI method."""
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_request")
     def test_cli_logs_request(
         self,
         mock_log_request: MagicMock,
         mock_get_path: MagicMock,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
         make_stream_json_output: StreamJsonFactory,
     ) -> None:
@@ -115,13 +158,9 @@ class TestCliLogging:
         mock_find.return_value = "claude"
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
-            mock_result = CommandResult(
-                return_code=0,
-                stdout=make_stream_json_output(),
-                stderr="",
-                timed_out=False,
+            mock_stream.return_value = _make_stream_gen(
+                make_stream_json_output().split("\n")
             )
-            mock_execute.return_value = mock_result
 
             ask_claude_code_cli("Test question", session_id="abc-123", timeout=60)
 
@@ -134,15 +173,19 @@ class TestCliLogging:
             assert call_kwargs["timeout"] == 60
             assert "command" in call_kwargs
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_response")
     def test_cli_logs_response(
         self,
         mock_log_response: MagicMock,
         mock_get_path: MagicMock,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
         make_stream_json_output: StreamJsonFactory,
     ) -> None:
@@ -150,13 +193,9 @@ class TestCliLogging:
         mock_find.return_value = "claude"
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
-            mock_result = CommandResult(
-                return_code=0,
-                stdout=make_stream_json_output(),
-                stderr="",
-                timed_out=False,
+            mock_stream.return_value = _make_stream_gen(
+                make_stream_json_output().split("\n")
             )
-            mock_execute.return_value = mock_result
 
             ask_claude_code_cli("Test question")
 
@@ -169,29 +208,28 @@ class TestCliLogging:
             # Should also include cost from stream
             assert call_kwargs["cost_usd"] == 0.05
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_error")
     def test_cli_logs_error_on_timeout(
         self,
         mock_log_error: MagicMock,
         mock_get_path: MagicMock,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
     ) -> None:
         """Test that timeout errors are logged with duration."""
         mock_find.return_value = "claude"
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
-            mock_result = CommandResult(
-                return_code=1,
-                stdout="",
-                stderr="",
-                timed_out=True,
-                execution_error="Timed out",
+            mock_stream.return_value = _make_stream_gen(
+                [], return_code=1, timed_out=True
             )
-            mock_execute.return_value = mock_result
 
             with pytest.raises(TimeoutExpired):
                 ask_claude_code_cli("Test question", timeout=30)
@@ -203,28 +241,26 @@ class TestCliLogging:
             assert "duration_ms" in call_kwargs
             assert isinstance(call_kwargs["duration_ms"], int)
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     @patch("mcp_coder.llm.providers.claude.claude_code_cli.log_llm_error")
     def test_cli_logs_error_on_failure(
         self,
         mock_log_error: MagicMock,
         mock_get_path: MagicMock,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
     ) -> None:
         """Test that command failures are logged."""
         mock_find.return_value = "claude"
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
-            mock_result = CommandResult(
-                return_code=1,
-                stdout="",
-                stderr="Command failed",
-                timed_out=False,
-            )
-            mock_execute.return_value = mock_result
+            mock_stream.return_value = _make_stream_gen([], return_code=1)
 
             with pytest.raises(CalledProcessError):
                 ask_claude_code_cli("Test question")

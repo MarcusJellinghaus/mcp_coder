@@ -12,12 +12,36 @@ This module validates that:
 """
 
 import argparse
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.cli.main import create_parser
+from mcp_coder.utils.subprocess_runner import CommandResult
+
+
+class _StreamMock:
+    """Mimics stream_subprocess output: iterable NDJSON lines + a .result."""
+
+    def __init__(
+        self, stdout: str, return_code: int = 0, timed_out: bool = False
+    ) -> None:
+        self._lines = stdout.split("\n") if stdout else []
+        self._result = CommandResult(
+            return_code=return_code,
+            stdout="",
+            stderr="",
+            timed_out=timed_out,
+        )
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._lines)
+
+    @property
+    def result(self) -> CommandResult:
+        return self._result
 
 
 @pytest.mark.integration
@@ -205,7 +229,7 @@ class TestSubprocessCwdParameter:
     the actual subprocess execution, ensuring execution_dir is used as cwd.
     """
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     def test_prompt_command_passes_execution_dir_to_subprocess(
         self,
@@ -225,16 +249,10 @@ class TestSubprocessCwdParameter:
 
         # Create proper subprocess result mock with all required attributes
         # The CLI uses stream-json format (NDJSON) by default
-        mock_result = MagicMock()
-        mock_result.return_code = 0
-        # Mock stream-json format: NDJSON with result message
-        mock_result.stdout = (
+        mock_execute_subprocess.return_value = _StreamMock(
             '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Claude response"}]}}\n'
             '{"type": "result", "session_id": "test-session-123", "result": "Claude response"}'
         )
-        mock_result.stderr = ""
-        mock_result.timed_out = False
-        mock_execute_subprocess.return_value = mock_result
 
         # Execute
         import argparse
@@ -262,7 +280,7 @@ class TestSubprocessCwdParameter:
         options = call_args[1]
         assert options.cwd == str(execution_dir)
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     def test_prompt_command_none_execution_dir_uses_none_as_cwd(
         self,
@@ -278,16 +296,10 @@ class TestSubprocessCwdParameter:
 
         # Create proper subprocess result mock with all required attributes
         # The CLI uses stream-json format (NDJSON) by default
-        mock_result = MagicMock()
-        mock_result.return_code = 0
-        # Mock stream-json format: NDJSON with result message
-        mock_result.stdout = (
+        mock_execute_subprocess.return_value = _StreamMock(
             '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Claude response"}]}}\n'
             '{"type": "result", "session_id": "test-session-456", "result": "Claude response"}'
         )
-        mock_result.stderr = ""
-        mock_result.timed_out = False
-        mock_execute_subprocess.return_value = mock_result
 
         # Execute with execution_dir=None (default)
         import argparse
@@ -366,7 +378,7 @@ class TestSubprocessCwdParameter:
             project_dir, "claude", None, None, execution_dir
         )
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     @patch("mcp_coder.workflows.create_plan.validate_output_files")
     @patch("mcp_coder.workflows.create_plan.commit_all_changes")
     @patch("mcp_coder.workflows.create_plan.git_push")
@@ -421,16 +433,10 @@ class TestSubprocessCwdParameter:
 
         # Mock subprocess to return valid responses
         # The CLI uses stream-json format (NDJSON) by default
-        mock_result = MagicMock()
-        mock_result.return_code = 0
-        # Mock stream-json format: NDJSON with result message
-        mock_result.stdout = (
+        mock_execute_subprocess.return_value = _StreamMock(
             '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Plan generated"}]}}\n'
             '{"type": "result", "session_id": "plan-session-789", "result": "Plan generated"}'
         )
-        mock_result.stderr = ""
-        mock_result.timed_out = False
-        mock_execute_subprocess.return_value = mock_result
 
         # Execute
         result = run_create_plan_workflow(
@@ -449,7 +455,7 @@ class TestSubprocessCwdParameter:
         options = first_call_args[1]
         assert options.cwd == str(execution_dir)
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
@@ -477,16 +483,10 @@ class TestSubprocessCwdParameter:
 
         # Create proper subprocess result mock with all required attributes
         # The CLI uses stream-json format (NDJSON) by default
-        mock_result = MagicMock()
-        mock_result.return_code = 0
-        # Mock stream-json format: NDJSON with result message
-        mock_result.stdout = (
+        mock_execute_subprocess.return_value = _StreamMock(
             '{"type": "assistant", "message": {"content": [{"type": "text", "text": "feat: add new feature"}]}}\n'
             '{"type": "result", "session_id": null, "result": "feat: add new feature"}'
         )
-        mock_result.stderr = ""
-        mock_result.timed_out = False
-        mock_execute_subprocess.return_value = mock_result
         mock_commit_files.return_value = {
             "success": True,
             "commit_hash": "abc123",
@@ -515,7 +515,7 @@ class TestSubprocessCwdParameter:
         options = call_args[1]
         assert options.cwd == str(execution_dir)
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     def test_llm_interface_passes_execution_dir_to_provider(
         self,
         mock_execute_subprocess: MagicMock,
@@ -531,16 +531,10 @@ class TestSubprocessCwdParameter:
 
         # Create proper subprocess result mock with all required attributes
         # The CLI uses stream-json format (NDJSON) by default
-        mock_result = MagicMock()
-        mock_result.return_code = 0
-        # Mock stream-json format: NDJSON with result message
-        mock_result.stdout = (
+        mock_execute_subprocess.return_value = _StreamMock(
             '{"type": "assistant", "message": {"content": [{"type": "text", "text": "LLM response"}]}}\n'
             '{"type": "result", "session_id": "llm-session-abc", "result": "LLM response"}'
         )
-        mock_result.stderr = ""
-        mock_result.timed_out = False
-        mock_execute_subprocess.return_value = mock_result
 
         # Execute
         result = prompt_llm(
@@ -559,7 +553,7 @@ class TestSubprocessCwdParameter:
         options = call_args[1]
         assert options.cwd == str(execution_dir)
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     def test_execution_dir_separate_from_project_dir_in_subprocess(
         self,
         mock_execute_subprocess: MagicMock,
@@ -577,16 +571,10 @@ class TestSubprocessCwdParameter:
 
         # Create proper subprocess result mock with all required attributes
         # The CLI uses stream-json format (NDJSON) by default
-        mock_result = MagicMock()
-        mock_result.return_code = 0
-        # Mock stream-json format: NDJSON with result message
-        mock_result.stdout = (
+        mock_execute_subprocess.return_value = _StreamMock(
             '{"type": "assistant", "message": {"content": [{"type": "text", "text": "LLM response"}]}}\n'
             '{"type": "result", "session_id": "sep-session-xyz", "result": "LLM response"}'
         )
-        mock_result.stderr = ""
-        mock_result.timed_out = False
-        mock_execute_subprocess.return_value = mock_result
 
         # Execute with execution_dir only (project_dir is not a parameter of prompt_llm;
         # it is passed via env_vars by callers that need it)

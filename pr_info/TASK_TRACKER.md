@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md).
 
 See [step_2.md](./steps/step_2.md).
 
-- [ ] Implementation (tests + production code): rewrite `ask_claude_code_cli` over `ask_claude_code_cli_stream` + `ResponseAssembler`; delete `create_response_dict_from_stream`, heartbeat constant, dead MCP guard/parse/file-write; migrate tests; update `docs/architecture/architecture.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): rewrite `ask_claude_code_cli` over `ask_claude_code_cli_stream` + `ResponseAssembler`; delete `create_response_dict_from_stream`, heartbeat constant, dead MCP guard/parse/file-write; migrate tests; update `docs/architecture/architecture.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Timeout sweep — inactivity budgets for every blocking caller
 
