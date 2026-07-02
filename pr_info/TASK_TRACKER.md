@@ -41,9 +41,9 @@ See [step_2.md](./steps/step_2.md).
 
 See [step_3.md](./steps/step_3.md).
 
-- [ ] Implementation: add `_is_404_error` + `_format_404_hint` helpers, wire into `_ask_text`/`_ask_text_stream`, add provider + streaming tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `_is_404_error` + `_format_404_hint` helpers, wire into `_ask_text`/`_ask_text_stream`, add provider + streaming tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

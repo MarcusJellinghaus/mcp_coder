@@ -349,6 +349,138 @@ class TestAskTextModelNotFound:
             with pytest.raises(RuntimeError, match="network timeout"):
                 ask_langchain("question")
 
+    def _make_endpoint_config(
+        self,
+        backend: str = "openai",
+        endpoint: str | None = "https://h/v1",
+        api_version: str | None = None,
+    ) -> dict[str, str | None]:
+        return {
+            "provider": "langchain",
+            "backend": backend,
+            "model": "bad-model",
+            "api_key": None,
+            "endpoint": endpoint,
+            "api_version": api_version,
+        }
+
+    def test_openai_custom_endpoint_404_gives_base_url_hint(self) -> None:
+        """openai + custom endpoint 404 → base-URL hint, no model listing."""
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = Exception("Error code: 404 - Not Found")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain._load_langchain_config",
+                return_value=self._make_endpoint_config(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.load_langchain_history",
+                return_value=[],
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=mock_model,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._models.list_openai_models"
+            ) as mock_list,
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(ValueError) as exc_info:
+                ask_langchain("question")
+        message = str(exc_info.value)
+        assert "base URL" in message
+        assert "/chat/completions" in message
+        mock_list.assert_not_called()
+
+    def test_openai_no_endpoint_404_takes_suggestions_path(self) -> None:
+        """openai + endpoint=None 404 → model-not-found + suggestions."""
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = Exception("Error code: 404 - Not Found")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain._load_langchain_config",
+                return_value=self._make_endpoint_config(endpoint=None),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.load_langchain_history",
+                return_value=[],
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=mock_model,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._get_model_suggestions",
+                return_value="\n\nAvailable models:\n  - gpt-4o",
+            ) as mock_suggest,
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(ValueError) as exc_info:
+                ask_langchain("question")
+        message = str(exc_info.value)
+        assert "not found" in message.lower()
+        assert "base URL" not in message
+        assert "gpt-4o" in message
+        mock_suggest.assert_called_once()
+
+    def test_non_openai_backend_404_keeps_default_wording(self) -> None:
+        """ollama + custom endpoint 404 → default wording, NOT base-URL hint."""
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = Exception("Error code: 404 - Not Found")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain._load_langchain_config",
+                return_value=self._make_endpoint_config(backend="ollama"),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.load_langchain_history",
+                return_value=[],
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=mock_model,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._get_model_suggestions",
+                return_value="\n\nAvailable models:\n  - llama3",
+            ) as mock_suggest,
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            with pytest.raises(ValueError) as exc_info:
+                ask_langchain("question")
+        message = str(exc_info.value)
+        assert "not found" in message.lower()
+        assert "base URL" not in message
+        mock_suggest.assert_called_once()
+
+
+class TestIs404Error:
+    """Direct unit tests for the shared _is_404_error detection predicate."""
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "Error code: 404 ...",
+            "model NOT_FOUND",
+            "not found",
+        ],
+    )
+    def test_detects_404_variants(self, message: str) -> None:
+        """404-style messages are detected as True."""
+        from mcp_coder.llm.providers.langchain import _is_404_error
+
+        assert _is_404_error(Exception(message)) is True
+
+    def test_non_404_returns_false(self) -> None:
+        """A non-404 exception is not detected."""
+        from mcp_coder.llm.providers.langchain import _is_404_error
+
+        assert _is_404_error(Exception("boom")) is False
+
 
 class TestCreateChatModel:
     """Tests for _create_chat_model() dispatcher."""

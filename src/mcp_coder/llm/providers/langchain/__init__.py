@@ -329,15 +329,8 @@ def _ask_text(
         ai_msg = chat_model.invoke(lc_messages)
     except Exception as exc:
         _handle_provider_error(exc, backend)
-        exc_lower = str(exc).lower()
-        if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
-            model = config.get("model", "")
-            hint = f"Model {model!r} not found."
-            try:
-                hint += _get_model_suggestions(config)
-            except Exception:  # pylint: disable=broad-except
-                pass
-            raise ValueError(hint) from exc
+        if _is_404_error(exc):
+            raise ValueError(_format_404_hint(config)) from exc
         raise
 
     text = ai_msg.content if isinstance(ai_msg.content, str) else str(ai_msg.content)
@@ -403,6 +396,54 @@ def _get_model_suggestions(config: dict[str, str | None]) -> str:
     if models:
         return "\n\nAvailable models:\n" + "\n".join(f"  - {m}" for m in models)
     return ""
+
+
+def _is_404_error(exc: Exception) -> bool:
+    """Return True when an exception looks like a 404 / model-not-found.
+
+    Single source of truth for the detection predicate, shared by _ask_text
+    and _ask_text_stream (previously copy-pasted inline in both).
+
+    Args:
+        exc: The exception raised by the chat model call.
+
+    Returns:
+        True if the exception message looks like a 404 / model-not-found.
+    """
+    low = str(exc).lower()
+    return "404" in low or "not_found" in low or "not found" in low
+
+
+def _format_404_hint(config: dict[str, str | None]) -> str:
+    """Build the user-facing hint for a 404 / model-not-found response.
+
+    For the openai backend with a custom endpoint the likely cause is a wrong
+    base URL, so return a base-URL hint and skip the model-listing round-trip.
+    Otherwise (non-openai backends such as ollama, or Azure with api_version)
+    fall back to 'model not found' plus best-effort suggestions.
+
+    Args:
+        config: LangChain configuration dict.
+
+    Returns:
+        The user-facing hint message for a 404 / model-not-found response.
+    """
+    model = config.get("model", "")
+    if (
+        config.get("backend") == "openai"
+        and config.get("endpoint")
+        and not config.get("api_version")
+    ):
+        return (
+            f"Model {model!r} not found. If using a custom server, check your "
+            "base URL (e.g. …/v1); mcp-coder appends /chat/completions."
+        )
+    hint = f"Model {model!r} not found."
+    try:
+        hint += _get_model_suggestions(config)
+    except Exception:  # pylint: disable=broad-except
+        pass
+    return hint
 
 
 def _ask_agent(
@@ -715,14 +756,8 @@ def _ask_text_stream(
     except Exception as exc:
         _handle_provider_error(exc, backend)
         # Handle 404/model-not-found errors (mirrors _ask_text() path)
-        exc_lower = str(exc).lower()
-        if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
-            model = config.get("model", "")
-            hint = f"Model {model!r} not found."
-            try:
-                hint += _get_model_suggestions(config)
-            except Exception:  # pylint: disable=broad-except
-                pass
+        if _is_404_error(exc):
+            hint = _format_404_hint(config)
             yield {"type": "error", "message": hint}
             raise ValueError(hint) from exc
         yield {"type": "error", "message": str(exc)}
