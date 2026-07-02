@@ -15,9 +15,19 @@ with a base-URL hint, while skipping the wasted `list_openai_models` round-trip.
 
 ## WHAT
 
-New helper in `__init__.py` (place near `_get_model_suggestions`):
+Two new helpers in `__init__.py` (place near `_get_model_suggestions`). Both the
+404 **detection predicate** and the hint **message** must live in one place each,
+so the two call sites cannot drift.
 
 ```python
+def _is_404_error(exc: Exception) -> bool:
+    """Return True when an exception looks like a 404 / model-not-found.
+
+    Single source of truth for the detection predicate, shared by _ask_text
+    and _ask_text_stream (previously copy-pasted inline in both).
+    """
+
+
 def _format_404_hint(config: dict[str, str | None]) -> str:
     """Build the user-facing hint for a 404 / model-not-found response.
 
@@ -29,13 +39,16 @@ def _format_404_hint(config: dict[str, str | None]) -> str:
 
 ## HOW (integration)
 
-Replace the duplicated 404 blocks.
+Replace the duplicated 404 blocks. The inline
+`"404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower`
+predicate is removed from both call sites and replaced by a single
+`_is_404_error(exc)` call, so the detection lives in one place alongside the
+message.
 
 `_ask_text` — inside `except Exception as exc:`, after `_handle_provider_error`:
 
 ```python
-exc_lower = str(exc).lower()
-if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
+if _is_404_error(exc):
     raise ValueError(_format_404_hint(config)) from exc
 raise
 ```
@@ -44,8 +57,7 @@ raise
 `TimeoutError` re-raise and `_handle_provider_error`):
 
 ```python
-exc_lower = str(exc).lower()
-if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
+if _is_404_error(exc):
     hint = _format_404_hint(config)
     yield {"type": "error", "message": hint}
     raise ValueError(hint) from exc
@@ -53,7 +65,16 @@ yield {"type": "error", "message": str(exc)}
 raise
 ```
 
-## ALGORITHM (core logic of `_format_404_hint`)
+## ALGORITHM (core logic)
+
+`_is_404_error` (the shared detection predicate):
+
+```
+low = str(exc).lower()
+return "404" in low or "not_found" in low or "not found" in low
+```
+
+`_format_404_hint`:
 
 ```
 model = config.get("model", "")
@@ -96,8 +117,13 @@ In `test_langchain_streaming.py` (mirror existing `_ask_text_stream` tests):
   `list_openai_models` is **not** called.
 - 404 with `endpoint=None` → error event + `ValueError` with "not found".
 
-Both files should confirm the two paths share `_format_404_hint` (identical
-wording), guarding against future drift.
+Add a small direct unit test for `_is_404_error` (in either provider test file):
+`Exception("Error code: 404 ...")`, `Exception("model NOT_FOUND")`, and
+`Exception("not found")` → `True`; a non-404 `Exception("boom")` → `False`.
+
+Both files should confirm the two paths share `_is_404_error` (detection) **and**
+`_format_404_hint` (identical wording) — both the predicate and the message now
+live in one place each, guarding against future drift.
 
 ## LLM PROMPT
 
@@ -110,11 +136,12 @@ wording), guarding against future drift.
 >    `_ask_text_stream`, covering the custom-endpoint 404 (base-URL hint, no
 >    `list_openai_models` call) and the no-endpoint 404 (model-not-found +
 >    suggestions), per step_3.md.
-> 2. Add `_format_404_hint(config)` to
+> 2. Add `_is_404_error(exc)` and `_format_404_hint(config)` to
 >    `src/mcp_coder/llm/providers/langchain/__init__.py` per the ALGORITHM.
 > 3. Replace the duplicated 404 blocks in `_ask_text` and `_ask_text_stream`
->    with calls to `_format_404_hint`, preserving the stream path's
->    `yield {"type": "error", ...}` then `raise ValueError(...)` shape.
+>    with calls to `_is_404_error` (detection) and `_format_404_hint` (message),
+>    removing the inline predicate from both sites and preserving the stream
+>    path's `yield {"type": "error", ...}` then `raise ValueError(...)` shape.
 >
 > Use MCP file tools only. After editing, run `run_pylint_check`,
 > `run_pytest_check` (fast `-n auto` + `not …integration` exclusions), and

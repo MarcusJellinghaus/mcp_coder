@@ -38,16 +38,21 @@ renderer contract:
    LangChain verification module. Zero network cost. It emits a verify-style row
    that the existing `_format_section` renderer already knows how to display.
    **It never contributes to `overall_ok`**, so it can never change the CLI exit
-   code — hard pass/fail stays with the opt-in `--check-models` network probe.
+   code — it is advisory-only, like the `--check-models` probe below.
 
 2. **A wording improvement** in the existing `--check-models` probe path
    (`_list_models_for_backend`) so a live 404 reads as an endpoint/base-URL
-   problem, distinct from auth and connection failures.
+   problem, distinct from auth and connection failures. This is a **pure
+   reword**: the `--check-models` result is stored under `available_models` and
+   is **excluded from `overall_ok` and the exit code** (it only displays a
+   "models" row). Step 2 does **not** change any pass/fail behavior.
 
-3. **A shared 404-hint helper** (`_format_404_hint`) in the LangChain provider
-   package that de-duplicates the previously copy-pasted 404 block across
-   `_ask_text` and `_ask_text_stream`, and adds a base-URL hint for the custom
-   endpoint case (while skipping the wasted model-listing round-trip).
+3. **Shared 404 helpers** (`_is_404_error` for detection, `_format_404_hint`
+   for the message) in the LangChain provider package that de-duplicate the
+   previously copy-pasted 404 block across `_ask_text` and `_ask_text_stream` —
+   both the detection predicate and the hint text now live in one place each —
+   and add a base-URL hint for the custom endpoint case (while skipping the
+   wasted model-listing round-trip).
 
 ### Key design rules preserved from the issue
 
@@ -60,7 +65,13 @@ renderer contract:
   routes to `AzureChatOpenAI` with a bare `azure_endpoint`, so the base-URL
   heuristic would misfire.
 - **The no-network heuristic never controls the exit code** (`overall_ok`
-  untouched); only the opt-in `--check-models` probe can fail `verify`.
+  untouched). `overall_ok` is built only from backend, `backend_package.ok`,
+  `mcp_adapters.ok`, `langgraph.ok` (plus the ollama daemon/tools checks). The
+  `--check-models` probe is **also** advisory-only (stored under
+  `available_models`, excluded from `overall_ok`). What actually fails `verify`
+  on a bad endpoint is the separate unified "Reply with OK" test prompt run in
+  `execute_verify`: if it throws, `test_prompt_ok=False` → exit code 1. Neither
+  Step 1 nor Step 2 touches that pass/fail path.
 
 ### Renderer contract (already in `cli/commands/verify.py`, unchanged)
 
@@ -80,17 +91,20 @@ docs live under `pr_info/steps/`.
 |------|------|--------|
 | `src/mcp_coder/llm/providers/langchain/verification.py` | 1 | Add `_check_endpoint_shape`; wire into `verify_langchain` (openai only, excluded from `overall_ok`) |
 | `src/mcp_coder/cli/commands/verify.py` | 1 | Add `_LABEL_MAP` entry `"endpoint_shape": "Endpoint"` |
+| `docs/configuration/config.md` | 1 | Minimal `endpoint` base-URL note (no `/chat/completions`) + OpenAI-compatible-relay example |
 | `src/mcp_coder/llm/providers/langchain/verification.py` | 2 | Reword 404 in `_list_models_for_backend` generic `except` as an endpoint/base-URL problem |
-| `src/mcp_coder/llm/providers/langchain/__init__.py` | 3 | Add `_format_404_hint`; call from `_ask_text` and `_ask_text_stream` (removes duplication) |
+| `src/mcp_coder/llm/providers/langchain/__init__.py` | 3 | Add `_is_404_error` (shared detection) + `_format_404_hint` (shared message); call both from `_ask_text` and `_ask_text_stream` (removes predicate + message duplication) |
 | `tests/llm/providers/langchain/test_langchain_verification.py` | 1, 2 | Unit tests for shape check + reworded 404 probe message |
 | `tests/llm/providers/langchain/test_langchain_provider.py` | 3 | 404-hint tests for `_ask_text` |
 | `tests/llm/providers/langchain/test_langchain_streaming.py` | 3 | 404-hint tests for `_ask_text_stream` |
 
 ## Step overview (one commit each)
 
-- **Step 1 — Part A1:** always-on endpoint-shape heuristic in `verify`.
-- **Step 2 — Part A2:** `--check-models` live-probe 404 messaging.
-- **Step 3 — Part B:** shared prompt-path 404 hint helper.
+- **Step 1 — Part A1:** always-on endpoint-shape heuristic in `verify` + minimal
+  `endpoint` base-URL docs note in `config.md`.
+- **Step 2 — Part A2:** `--check-models` live-probe 404 messaging (pure reword).
+- **Step 3 — Part B:** shared prompt-path 404 detection (`_is_404_error`) + hint
+  (`_format_404_hint`) helpers.
 
 Steps are independent and may be implemented in any order. Each step is
 test-first and self-contained: tests + implementation + all three checks

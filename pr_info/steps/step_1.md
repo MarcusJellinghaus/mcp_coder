@@ -10,6 +10,8 @@ or missing the conventional `/v1` suffix. It **must not** affect `overall_ok`.
 - `src/mcp_coder/llm/providers/langchain/verification.py` — new helper + wiring.
 - `src/mcp_coder/cli/commands/verify.py` — one `_LABEL_MAP` entry.
 - `tests/llm/providers/langchain/test_langchain_verification.py` — unit tests.
+- `docs/configuration/config.md` — minimal `endpoint` base-URL note + example
+  (directly addresses the config mistake that caused the reported 404).
 
 ## WHAT
 
@@ -49,6 +51,26 @@ In `cli/commands/verify.py`, add to `_LABEL_MAP` (LangChain section, near
 ```python
 "endpoint_shape": "Endpoint",
 ```
+
+## DOCS
+
+In `docs/configuration/config.md`, near the existing `endpoint` row (~line 287)
+and the OpenAI example (~lines 290-299), add a **minimal** note + one example:
+
+- A one-line warning that `endpoint` must be the **base URL only** (e.g.
+  `https://your-host/v1`) with **no** `/chat/completions` — mcp-coder appends
+  that itself; a full request path produces the doubled-path 404 from the issue.
+- A short OpenAI-compatible-relay example block, e.g.:
+
+  ```toml
+  [llm.langchain]
+  backend  = "openai"
+  model    = "llama3"
+  endpoint = "https://your-host/v1"   # base URL only — NO /chat/completions
+  api_key  = "..."                    # or OPENAI_API_KEY env var
+  ```
+
+Keep it minimal: the note plus this one example block. No behavior change.
 
 ## ALGORITHM (core logic)
 
@@ -115,6 +137,8 @@ is unchanged by the shape finding (i.e. still driven only by packages).
 >    `overall_ok` expression.
 > 4. Add `"endpoint_shape": "Endpoint"` to `_LABEL_MAP` in
 >    `src/mcp_coder/cli/commands/verify.py`.
+> 5. Add the minimal `endpoint` base-URL note + OpenAI-compatible-relay example
+>    to `docs/configuration/config.md` per the DOCS section.
 >
 > Use MCP file tools only. After editing, run `run_pylint_check`,
 > `run_pytest_check` (with the fast `-n auto` + `not …integration` exclusions

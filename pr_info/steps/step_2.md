@@ -6,6 +6,13 @@ the **opt-in** live `/models` probe (`mcp-coder verify --check-models`) so a 404
 "unknown" error. Auth and connection cases are already distinguished by the two
 `except` clauses above; this adds the missing "path/endpoint" case.
 
+This is a **pure reword**. The `--check-models` result is stored under
+`available_models`, which is **excluded from `overall_ok` and
+`_compute_exit_code`** — it only displays a "models" row and never affects
+verify's exit code. What actually fails `verify` on a bad endpoint is the
+separate unified "Reply with OK" test prompt in `execute_verify`, which this
+step does **not** touch. Step 2 changes only the 404 message text.
+
 ## WHERE
 
 - `src/mcp_coder/llm/providers/langchain/verification.py` — function
