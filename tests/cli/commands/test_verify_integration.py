@@ -17,6 +17,7 @@ from mcp_coder.mcp_workspace_git import verify_git as real_verify_git
 from mcp_coder.utils.subprocess_runner import execute_command
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
+_LC_CONFIG = "mcp_coder.llm.providers.langchain"
 _VERIFY = "mcp_coder.cli.commands.verify"
 
 # ---------------------------------------------------------------------------
@@ -140,6 +141,21 @@ class TestVerifyEndToEnd:
                 "token_configured": {"ok": True, "value": "configured"},
                 "overall_ok": True,
             },
+        ):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_langchain_config(self) -> Any:
+        """Default: no langchain backend configured.
+
+        The claude-active readiness check calls the real
+        ``_load_langchain_config()``; patch it here so the developer's real
+        machine config cannot perturb these tests. Individual tests override
+        this with a specific backend via their own decorator patch.
+        """
+        with patch(
+            f"{_LC_CONFIG}._load_langchain_config",
+            return_value={"backend": None},
         ):
             yield
 
@@ -389,6 +405,146 @@ class TestVerifyEndToEnd:
 
         assert "uses Claude CLI" in output
 
+    @patch(f"{_LC_VERIFY}._check_package_installed", return_value=False)
+    @patch(
+        f"{_LC_CONFIG}._load_langchain_config",
+        return_value={"backend": "anthropic"},
+    )
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    @patch("sys.argv", ["mcp-coder", "verify"])
+    def test_langchain_backend_warn_when_module_missing_claude_active(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        _mock_lc_config: MagicMock,
+        _mock_pkg: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Claude active + configured backend module missing -> [WARN] row, exit 0."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _make_claude_result(ok=True)
+        mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
+
+        exit_code = main()
+        output = capsys.readouterr().out
+
+        assert exit_code == 0
+        assert "uses Claude CLI" in output
+        assert "[WARN]" in output
+        assert (
+            "backend 'anthropic' configured but langchain-anthropic not installed"
+            in output
+        )
+        assert (
+            "-> pip install langchain-anthropic (needed for --llm-method langchain)"
+            in output
+        )
+
+    @patch(f"{_LC_VERIFY}._check_package_installed", return_value=True)
+    @patch(
+        f"{_LC_CONFIG}._load_langchain_config",
+        return_value={"backend": "anthropic"},
+    )
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    @patch("sys.argv", ["mcp-coder", "verify"])
+    def test_langchain_backend_no_warn_when_module_installed_claude_active(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        _mock_lc_config: MagicMock,
+        _mock_pkg: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Claude active + configured backend module installed -> no langchain row."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _make_claude_result(ok=True)
+        mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
+
+        exit_code = main()
+        output = capsys.readouterr().out
+
+        assert exit_code == 0
+        assert "uses Claude CLI" in output
+        # The specific langchain readiness row must be absent (a global [WARN]
+        # check is unsafe: other rows legitimately emit [WARN] on this path).
+        assert "Langchain backend" not in output
+        assert "configured but" not in output
+        assert "not a recognized" not in output
+
+    @patch(f"{_LC_VERIFY}._check_package_installed")
+    @patch(
+        f"{_LC_CONFIG}._load_langchain_config",
+        return_value={"backend": "typo-backend"},
+    )
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    @patch("sys.argv", ["mcp-coder", "verify"])
+    def test_langchain_backend_warn_when_unrecognized_backend_claude_active(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        _mock_lc_config: MagicMock,
+        _mock_pkg: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Claude active + unrecognized backend name -> [WARN] row, no install hint."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _make_claude_result(ok=True)
+        mock_mlflow.return_value = _make_mlflow_result(installed=False)
+        mock_prompt_llm.return_value = {
+            "version": "1.0",
+            "timestamp": "2026-01-01T00:00:00",
+            "text": "OK",
+            "session_id": None,
+            "provider": "claude",
+            "raw_response": {},
+        }
+
+        exit_code = main()
+        output = capsys.readouterr().out
+
+        assert exit_code == 0
+        assert "uses Claude CLI" in output
+        assert "[WARN]" in output
+        assert "not a recognized langchain backend" in output
+        assert "-> pip install" not in output
+
 
 # ---------------------------------------------------------------------------
 # Exit code matrix tests
@@ -434,6 +590,10 @@ class TestExitCodeMatrix:
             patch(
                 f"{_VERIFY}.resolve_llm_method",
                 return_value=provider,
+            ),
+            patch(
+                f"{_LC_CONFIG}._load_langchain_config",
+                return_value={"backend": None},
             ),
             patch(
                 f"{_VERIFY}.verify_claude",
