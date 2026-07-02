@@ -469,11 +469,19 @@ def ask_claude_code_cli(
     if last_error is not None:
         rc = last_error.get("return_code")
         return_code = rc if isinstance(rc, int) else 1
+        # Preserve the streaming error event's message (carries stderr[:500] and
+        # detail) so log_llm_error and callers keep the diagnostic context.
+        error_message = last_error.get("message")
+        stderr_detail = (
+            f"CLI failed with code {return_code}. Stream file: {stream_file}"
+        )
+        if isinstance(error_message, str) and error_message:
+            stderr_detail = f"{error_message} Stream file: {stream_file}"
         called_process_error = CalledProcessError(
             return_code,
             cmd_label,
             output="",
-            stderr=f"CLI failed with code {return_code}. Stream file: {stream_file}",
+            stderr=stderr_detail,
         )
         log_llm_error(error=called_process_error, duration_ms=duration_ms)
         raise called_process_error

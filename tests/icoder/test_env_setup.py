@@ -95,11 +95,22 @@ def _mock_externals(
     )
     # Default probe response: connected init exposing 3 mcp__* tools. Prevents
     # the claude-default tests from launching a real LLM subprocess.
-    monkeypatch.setattr(
-        "mcp_coder.llm.interface.prompt_llm",
-        lambda *_a, **_kw: {
-            "raw_response": {
-                "system": {
+    #
+    # Build the response through the REAL ResponseAssembler fed a `system`
+    # event, rather than hand-faking the {"raw_response": {"system": ...}}
+    # shape. This exercises the actual assembler wiring that the blocking path
+    # depends on, so a regression that dropped raw_response["system"] would make
+    # the probe see 0 tools and fail test_claude_probe_connected_counts_tools.
+    from mcp_coder.llm.types import ResponseAssembler
+
+    def _fake_prompt_llm(*_a: object, **_kw: object) -> dict[str, object]:
+        assembler = ResponseAssembler(provider="claude")
+        assembler.add(
+            {
+                "type": "system",
+                "data": {
+                    "type": "system",
+                    "subtype": "init",
                     "tools": [
                         "mcp__srv__tool_a",
                         "mcp__srv__tool_b",
@@ -107,10 +118,14 @@ def _mock_externals(
                         "Bash",
                     ],
                     "mcp_servers": [{"name": "srv", "status": "connected"}],
-                }
+                },
             }
-        },
-    )
+        )
+        assembler.add({"type": "text_delta", "text": "OK"})
+        assembler.add({"type": "done", "session_id": "s1", "usage": {}})
+        return dict(assembler.result())
+
+    monkeypatch.setattr("mcp_coder.llm.interface.prompt_llm", _fake_prompt_llm)
 
 
 @pytest.mark.usefixtures("_clear_mcp_env", "_mock_externals")

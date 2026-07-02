@@ -90,6 +90,9 @@ StreamEvent = dict[str, object]
   usage stats and the final result text
 - {"type": "raw_line", "line": "..."} — raw NDJSON line passthrough (json-raw mode)
 - {"type": "stream_file", "path": "..."} — announces the NDJSON stream log path
+- {"type": "system", "data": {...}} — the Claude CLI init/system message dict
+  (carries ``mcp_servers``/``tools``); surfaced so blocking consumers can read
+  ``raw_response["system"]``
 """
 
 
@@ -106,13 +109,19 @@ class ResponseAssembler:
         self._tool_trace: list[StreamEvent] = []
         self._error: str | None = None
         self._stream_file: str | None = None
+        self._system: object | None = None
         self._saw_assistant_text: bool = False
         self._result_text: str | None = None
 
     def add(self, event: StreamEvent) -> None:
         """Process a single stream event, accumulating text and metadata."""
-        self._raw_events.append(event)
         event_type = event.get("type")
+        # `raw_line` events duplicate the parsed events and are already persisted
+        # separately in `stream_file`; keep them out of the assembled `events`
+        # list to avoid ~2x payload. Live consumers still receive them from the
+        # generator directly.
+        if event_type != "raw_line":
+            self._raw_events.append(event)
         if event_type == "text_delta":
             self._saw_assistant_text = True
             text = event.get("text", "")
@@ -132,6 +141,11 @@ class ResponseAssembler:
             path = event.get("path")
             if isinstance(path, str):
                 self._stream_file = path
+        elif event_type == "system":
+            # The Claude init message payload; kept so the blocking path can
+            # repopulate raw_response["system"] (parity with main), which the
+            # MCP-guard consumers (env_setup, verify) read.
+            self._system = event.get("data")
         elif event_type in ("tool_use_start", "tool_result"):
             self._tool_trace.append(event)
         elif event_type == "error":
@@ -153,6 +167,8 @@ class ResponseAssembler:
         raw_response: dict[str, object] = {"events": list(self._raw_events)}
         if self._stream_file is not None:
             raw_response["stream_file"] = self._stream_file
+        if self._system is not None:
+            raw_response["system"] = self._system
         if self._usage:
             raw_response["usage"] = self._usage
         if self._tool_trace:

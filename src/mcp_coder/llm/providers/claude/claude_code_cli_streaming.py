@@ -102,7 +102,8 @@ def ask_claude_code_cli_stream(
     to override matching keys in cwd-discovered Claude settings for the session.
 
     Yields:
-        StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error, raw_line
+        StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error,
+        raw_line, system (the init message payload)
 
     Raises:
         ValueError: If the question is empty/whitespace or timeout is not positive.
@@ -148,6 +149,7 @@ def ask_claude_code_cli_stream(
             "Cannot open stream log %s; continuing without file logging", stream_file
         )
         log_fh = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+    saw_system_init = False
     with log_fh as log:
         for line in stream:
             log.write(line + "\n")
@@ -157,6 +159,14 @@ def ask_claude_code_cli_stream(
             if not msg:
                 continue
             if msg.get("type") == "system":
+                # Surface the init/system message to the assembler so the
+                # blocking path can repopulate raw_response["system"] (parity
+                # with main). Keep only the init event: later `system` heartbeats
+                # (e.g. thinking_tokens) carry no mcp_servers/tools and must not
+                # overwrite it, matching _parse_stream_lines. (#998, #1004)
+                if msg.get("subtype") == "init" or not saw_system_init:
+                    saw_system_init = True
+                    yield {"type": "system", "data": dict(msg)}
                 # MCP availability guard (matches the blocking path). Abort only
                 # on fatal (terminal, non-pending) servers so the model never
                 # runs blind on hallucinated tools. Pending servers self-heal
