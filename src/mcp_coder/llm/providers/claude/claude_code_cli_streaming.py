@@ -73,6 +73,9 @@ def _map_stream_message_to_event(msg: StreamMessage) -> Iterator[StreamEvent]:
             "session_id": msg.get("session_id"),
             "usage": msg.get("usage", {}),
             "cost_usd": msg.get("total_cost_usd"),
+            # Carry the final result text so the assembler can reproduce the
+            # blocking-path fallback (used only when no assistant text is seen).
+            "result": msg.get("result"),
         }
 
 
@@ -126,6 +129,9 @@ def ask_claude_code_cli_stream(
         settings_file=settings_file,
     )
     stream_file = get_stream_log_path(logs_dir, cwd, branch_name)
+    # Announce the stream log path up front so consumers (e.g. the drain-wrapper)
+    # can capture it before any subprocess output arrives.
+    yield {"type": "stream_file", "path": str(stream_file)}
     input_data = format_stream_json_input(question)
     options = CommandOptions(
         input_data=input_data,
@@ -185,6 +191,8 @@ def ask_claude_code_cli_stream(
     if cmd_result.timed_out:
         yield {
             "type": "error",
+            "reason": "inactivity_timeout",
+            "timeout": timeout,
             "message": (
                 f"LLM inactivity timeout (claude): no output for {timeout}s. "
                 "Process terminated. You can retry, or use --timeout to increase the limit."
@@ -194,4 +202,9 @@ def ask_claude_code_cli_stream(
         error_msg = f"CLI failed with code {cmd_result.return_code}"
         if cmd_result.stderr:
             error_msg += f": {cmd_result.stderr[:500]}"
-        yield {"type": "error", "message": error_msg}
+        yield {
+            "type": "error",
+            "reason": "nonzero_exit",
+            "return_code": cmd_result.return_code,
+            "message": error_msg,
+        }

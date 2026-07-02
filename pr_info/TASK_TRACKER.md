@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md).
 
-- [ ] Implementation (tests + production code): `ResponseAssembler` captures `stream_file` into `raw_response`, adds text parity (strip + result-field fallback); `ask_claude_code_cli_stream` emits a first `stream_file` event and tags timeout/nonzero-exit error events with a `reason` discriminator
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `ResponseAssembler` captures `stream_file` into `raw_response`, adds text parity (strip + result-field fallback); `ask_claude_code_cli_stream` emits a first `stream_file` event and tags timeout/nonzero-exit error events with a `reason` discriminator
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Rewrite `ask_claude_code_cli` as the retry-free drain-wrapper
 

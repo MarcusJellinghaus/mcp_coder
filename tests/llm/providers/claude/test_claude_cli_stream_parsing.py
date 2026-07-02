@@ -311,6 +311,109 @@ class TestStreamErrorEventIncludesStderr:
         assert len(stderr_part) == 500
 
 
+class TestStreamFirstEventAndErrorReasons:
+    """Tests for the stream_file first-event and error `reason` discriminator."""
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_first_event_is_stream_file(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """The first yielded event announces the stream log path."""
+        stream_file = tmp_path / "stream.ndjson"
+        mock_log_path.return_value = stream_file
+        mock_stream_sub.return_value = _make_mock_stream([])
+
+        events = list(ask_claude_code_cli_stream("test question"))
+        assert events[0]["type"] == "stream_file"
+        assert events[0]["path"] == str(stream_file)
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_timeout_error_event_has_inactivity_reason(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """On inactivity timeout, the error event carries reason inactivity_timeout."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mock_stream_sub.return_value = _make_mock_stream([], timed_out=True)
+
+        events = list(ask_claude_code_cli_stream("test question", timeout=30))
+        error_events = [e for e in events if e.get("type") == "error"]
+        assert len(error_events) == 1
+        assert error_events[0]["reason"] == "inactivity_timeout"
+        assert error_events[0]["timeout"] == 30
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_nonzero_exit_error_event_has_reason(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """On nonzero exit, the error event carries reason nonzero_exit."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mock_stream_sub.return_value = _make_mock_stream([], return_code=2)
+
+        events = list(ask_claude_code_cli_stream("test question"))
+        error_events = [e for e in events if e.get("type") == "error"]
+        assert len(error_events) == 1
+        assert error_events[0]["reason"] == "nonzero_exit"
+        assert error_events[0]["return_code"] == 2
+
+
+class TestMapResultMessageIncludesResult:
+    """The done event carries the result-message `result` value for text parity."""
+
+    def test_done_event_includes_result_field(self) -> None:
+        """A result message's `result` field surfaces on the done event."""
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "result",
+                "session_id": "s1",
+                "result": "the final answer",
+            },
+        )
+        events = list(_map_stream_message_to_event(msg))
+        done_events = [e for e in events if e["type"] == "done"]
+        assert len(done_events) == 1
+        assert done_events[0]["result"] == "the final answer"
+
+
 class TestStreamFileWriting:
     """Tests for stream file writing functionality."""
 

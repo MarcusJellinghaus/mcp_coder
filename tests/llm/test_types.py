@@ -280,6 +280,63 @@ class TestResponseAssemblerToolTrace:
         assert len(tool_trace) == 2
 
 
+# --- ResponseAssembler stream_file tests ---
+
+
+def test_response_assembler_stream_file_captured() -> None:
+    """A stream_file event puts its path into raw_response[stream_file]."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "stream_file", "path": "/logs/session_1.ndjson"})
+    assembler.add({"type": "text_delta", "text": "Hi"})
+    result = assembler.result()
+    assert result["raw_response"]["stream_file"] == "/logs/session_1.ndjson"
+
+
+def test_response_assembler_stream_file_absent() -> None:
+    """Without a stream_file event, the stream_file key is absent."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "Hi"})
+    result = assembler.result()
+    assert "stream_file" not in result["raw_response"]
+
+
+# --- ResponseAssembler text parity (AC3) tests ---
+
+
+def test_response_assembler_text_stripped() -> None:
+    """Assembled text is .strip()-ed to match _parse_stream_lines output."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "  Hello world\n"})
+    result = assembler.result()
+    assert result["text"] == "Hello world"
+
+
+def test_response_assembler_result_fallback_when_no_assistant_text() -> None:
+    """When no text_delta is seen, text falls back to the stripped result value."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "done", "session_id": "s1", "result": "  final answer  "})
+    result = assembler.result()
+    assert result["text"] == "final answer"
+
+
+def test_response_assembler_result_ignored_when_assistant_text_present() -> None:
+    """When assistant text was seen, the result value is not used for text."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "streamed text"})
+    assembler.add({"type": "done", "session_id": "s1", "result": "result field"})
+    result = assembler.result()
+    assert result["text"] == "streamed text"
+
+
+def test_response_assembler_empty_assistant_text_suppresses_fallback() -> None:
+    """An empty text_delta still counts as assistant text; no result fallback."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": ""})
+    assembler.add({"type": "done", "session_id": "s1", "result": "result field"})
+    result = assembler.result()
+    assert result["text"] == ""
+
+
 # --- ResponseAssembler.has_error tests ---
 
 
