@@ -259,6 +259,7 @@ _LABEL_MAP: dict[str, str] = {
     "tracking_data": "Tracking data",
     # GitHub section
     "api_base_url": "API base URL",
+    "network_proxy": "Network / proxy",
     "token_configured": "Token configured",
     "authenticated_user": "Authenticated user",
     "repo_url": "Repo URL",

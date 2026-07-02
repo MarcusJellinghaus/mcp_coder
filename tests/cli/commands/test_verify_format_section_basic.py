@@ -192,6 +192,7 @@ class TestGitHubLabelMappings:
 
     _GITHUB_KEYS = (
         "api_base_url",
+        "network_proxy",
         "token_configured",
         "authenticated_user",
         "repo_url",
@@ -214,7 +215,7 @@ class TestGitHubLabelMappings:
         return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 
     def test_all_github_keys_in_label_map(self) -> None:
-        """All 9 GitHub check keys exist in _LABEL_MAP."""
+        """All GitHub check keys exist in _LABEL_MAP."""
         from mcp_coder.cli.commands.verify import _LABEL_MAP
 
         for key in self._GITHUB_KEYS:
@@ -225,12 +226,19 @@ class TestGitHubLabelMappings:
         result: dict[str, Any] = {
             "token_configured": {"ok": True, "value": "YES"},
             "repo_accessible": {"ok": True, "value": "owner/repo"},
+            "network_proxy": {
+                "ok": False,
+                "value": "api=api.x.ghe.com:443 tcp=timeout proxy_env=HTTPS_PROXY pac=present",
+            },
             "overall_ok": True,
         }
         output = _format_section("GITHUB", result, self._symbols())
         assert "Token configured" in output
         assert "Repo accessible" in output
+        assert "Network / proxy" in output  # labeled row present
+        assert "network_proxy" not in output  # raw key does not leak
         assert "[OK]" in output
+        assert "[ERR]" in output  # failed probe renders [ERR] (ok=False)
 
     def test_format_section_github_error_entry(self) -> None:
         """Entry with ok=False renders [ERR] symbol."""
