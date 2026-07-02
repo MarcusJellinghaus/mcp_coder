@@ -41,9 +41,9 @@ See [step_2.md](./steps/step_2.md).
 
 See [step_3.md](./steps/step_3.md).
 
-- [ ] Implementation: import `get_github_token`/`GITHUB_TOKEN_HINT`, guard `--wait-for-pr` path, gate the CI-wait block, hoist `UNAVAILABLE → return 2` above `--fix`, repair existing wait/PR + CI-timeout tests — with tests first (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: import `get_github_token`/`GITHUB_TOKEN_HINT`, guard `--wait-for-pr` path, gate the CI-wait block, hoist `UNAVAILABLE → return 2` above `--fix`, repair existing wait/PR + CI-timeout tests — with tests first (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -17,6 +17,7 @@ from mcp_coder.mcp_workspace_git import (
 )
 
 from ...checks.branch_status import (
+    GITHUB_TOKEN_HINT,
     BranchStatusReport,
     CIStatus,
     collect_branch_status,
@@ -25,6 +26,7 @@ from ...mcp_workspace_github import (
     CIResultsManager,
     CIStatusData,
     PullRequestManager,
+    get_github_token,
 )
 from ...utils.log_utils import OUTPUT
 from ...workflows.implement.ci_operations import check_and_fix_ci
@@ -152,6 +154,13 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             return 2
 
         if getattr(args, "wait_for_pr", False):
+            # Proactive guard: --wait-for-pr cannot check CI without a token.
+            # Fail cleanly with the actionable hint instead of letting
+            # PullRequestManager raise into the silent outer except.
+            if get_github_token() is None:
+                print(f"CI Status: \U0001f512 UNAVAILABLE — {GITHUB_TOKEN_HINT}")
+                return 2
+
             # Guard: check remote tracking branch
             if not has_remote_tracking_branch(project_dir):
                 logger.log(
@@ -205,8 +214,10 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 )
                 return 1
 
-        # NEW: Wait for CI completion if timeout specified
-        if args.ci_timeout > 0:
+        # NEW: Wait for CI completion if timeout specified.
+        # Skip the wait when no GitHub token is present — CIResultsManager would
+        # raise, and the missing-token case degrades to the partial report below.
+        if args.ci_timeout > 0 and get_github_token() is not None:
             logger.debug(f"CI timeout specified: {args.ci_timeout}s")
             try:
                 ci_manager = CIResultsManager(project_dir)
@@ -253,6 +264,12 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         # CI pending hint
         if getattr(args, "ci_timeout", 0) == 0 and report.ci_status == CIStatus.PENDING:
             logger.log(OUTPUT, "CI pending. Use --ci-timeout to wait for completion.")
+
+        # Missing token — CI truth is unknown; nothing to fix. Hoisted above the
+        # --fix block so exit code 2 is consistent on the read-only, --ci-timeout
+        # and --fix paths alike (the partial report is already printed above).
+        if report.ci_status == CIStatus.UNAVAILABLE:
+            return 2
 
         # Run auto-fixes if requested
         if args.fix > 0:

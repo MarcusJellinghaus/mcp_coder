@@ -369,6 +369,187 @@ class TestExecuteCheckBranchStatus:
         mock_collect.assert_called_once_with(project_dir)
 
 
+@pytest.mark.skipif(
+    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
+    reason="check_branch_status module not yet implemented",
+)
+class TestMissingTokenGuards:
+    """Tests for missing-GitHub-token handling (CIStatus.UNAVAILABLE).
+
+    A missing token makes CI truth unknown; the command must degrade
+    gracefully (print the partial report + actionable hint) and return exit
+    code 2 consistently on the read-only, --ci-timeout, --fix and
+    --wait-for-pr paths.
+    """
+
+    def _unavailable_report(self) -> BranchStatusReport:
+        """Create a BranchStatusReport in the UNAVAILABLE (no-token) state."""
+        return BranchStatusReport(
+            branch_name="feature/test-branch",
+            base_branch="main",
+            ci_status=CIStatus.UNAVAILABLE,
+            ci_details=None,
+            rebase_needed=False,
+            rebase_reason="Branch is up to date with main",
+            tasks_status=TaskTrackerStatus.COMPLETE,
+            tasks_reason="All tasks complete",
+            tasks_is_blocking=False,
+            current_github_label="status-implementation",
+            recommendations=["Set a GitHub token"],
+        )
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
+    def test_missing_token_read_only_returns_2_with_hint(
+        self,
+        mock_collect: Mock,
+        mock_resolve: Mock,
+        mock_branch: Mock,
+        mock_token: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No token, read-only → prints partial report + hint, returns 2."""
+        mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/test-branch"
+        mock_collect.return_value = self._unavailable_report()
+        mock_token.return_value = None
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            ci_timeout=0,
+            fix=0,
+            llm_truncate=False,
+            llm_method="claude",
+            mcp_config=None,
+            execution_dir=None,
+        )
+
+        result = execute_check_branch_status(args)
+
+        assert result == 2
+        captured = capsys.readouterr()
+        assert "UNAVAILABLE" in captured.out
+        assert "GitHub token" in captured.out
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
+    @patch("mcp_coder.cli.commands.check_branch_status._wait_for_ci_completion")
+    @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
+    def test_missing_token_ci_timeout_skips_wait_returns_2(
+        self,
+        mock_collect: Mock,
+        mock_resolve: Mock,
+        mock_branch: Mock,
+        mock_ci_manager: Mock,
+        mock_wait: Mock,
+        mock_token: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No token + --ci-timeout → CI wait is skipped, still returns 2."""
+        mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/test-branch"
+        mock_collect.return_value = self._unavailable_report()
+        mock_token.return_value = None
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            ci_timeout=180,
+            fix=0,
+            llm_truncate=False,
+            llm_method="claude",
+            mcp_config=None,
+            execution_dir=None,
+        )
+
+        result = execute_check_branch_status(args)
+
+        assert result == 2
+        # The CI-wait path must be skipped entirely (no raise, no wait).
+        mock_wait.assert_not_called()
+        mock_ci_manager.assert_not_called()
+        captured = capsys.readouterr()
+        assert "UNAVAILABLE" in captured.out
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
+    @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
+    def test_missing_token_with_fix_returns_2_without_autofix(
+        self,
+        mock_collect: Mock,
+        mock_resolve: Mock,
+        mock_branch: Mock,
+        mock_run_fixes: Mock,
+        mock_token: Mock,
+    ) -> None:
+        """No token + --fix → exit 2 before auto-fixes run (Q1 hoist)."""
+        mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/test-branch"
+        mock_collect.return_value = self._unavailable_report()
+        mock_token.return_value = None
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            ci_timeout=0,
+            fix=1,
+            llm_truncate=False,
+            llm_method="claude",
+            mcp_config=None,
+            settings=None,
+            execution_dir=None,
+        )
+
+        result = execute_check_branch_status(args)
+
+        assert result == 2
+        mock_run_fixes.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
+    @patch("mcp_coder.cli.commands.check_branch_status.PullRequestManager")
+    @patch("mcp_coder.cli.commands.check_branch_status.has_remote_tracking_branch")
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
+    def test_missing_token_wait_for_pr_returns_2_with_hint(
+        self,
+        mock_resolve: Mock,
+        mock_branch: Mock,
+        mock_has_remote: Mock,
+        mock_pr_cls: Mock,
+        mock_token: Mock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No token + --wait-for-pr → hint + exit 2, no PullRequestManager (Q2)."""
+        mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/test-branch"
+        mock_token.return_value = None
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            ci_timeout=0,
+            fix=0,
+            llm_truncate=False,
+            llm_method="claude",
+            mcp_config=None,
+            settings=None,
+            execution_dir=None,
+            wait_for_pr=True,
+            pr_timeout=0,
+        )
+
+        result = execute_check_branch_status(args)
+
+        assert result == 2
+        captured = capsys.readouterr()
+        assert "GitHub token" in captured.out
+        # Proactive guard fires before PullRequestManager is constructed.
+        mock_pr_cls.assert_not_called()
+
+
 # Note: CI waiting tests moved to test_check_branch_status_ci_waiting.py
 
 

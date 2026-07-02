@@ -168,6 +168,7 @@ class TestCIWaitingLogic:
         with pytest.raises(RuntimeError, match="API error during CI polling"):
             _wait_for_ci_completion(mock_manager, "branch", 30, True)
 
+    @patch("mcp_coder.cli.commands.check_branch_status.get_github_token")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.CIResultsManager")
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
@@ -180,6 +181,7 @@ class TestCIWaitingLogic:
         mock_branch: Mock,
         mock_ci_manager: Mock,
         mock_resolve: Mock,
+        mock_token: Mock,
     ) -> None:
         """Test execute_check_branch_status calls wait before display."""
         from mcp_coder.cli.commands.check_branch_status import (
@@ -189,6 +191,8 @@ class TestCIWaitingLogic:
         project_dir = Path("/test/project")
         mock_resolve.return_value = project_dir
         mock_branch.return_value = "feature-branch"
+        # Token present → CI-wait gate stays open so the wait actually runs.
+        mock_token.return_value = "ghp_dummy"
         mock_wait.return_value = (
             {"run": {"status": "completed", "conclusion": "success"}},
             True,
