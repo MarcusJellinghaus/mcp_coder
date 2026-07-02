@@ -63,6 +63,10 @@ If future `/info` additions need broad `AppCore` state, switching
 `register_info` to take `app_core` is a localized, mechanical refactor — cheaper
 to do when actually needed (YAGNI).
 
+This divergence was **explicitly approved by the repo owner during plan review
+(2026-07-02)**: Decisions #2 and #7 are superseded and must **not** be reverted
+to the `AppCore` route.
+
 ## Folders / modules / files created or modified
 
 ### Created
