@@ -21,3 +21,19 @@
 **Changes**: `pr_info/steps/step_1.md` — added `assert "[ERR]" in output` to the `test_format_section_renders_github_labels` extension (item 3) and mirrored it in the LLM prompt section for consistency.
 
 **Status**: plan changed — committing; loop continues with a fresh review round.
+
+## Round 2 — 2026-07-02
+
+**Findings** (from `/plan_review` engineer):
+- Re-validated all factual claims against current source — all still hold. The newly added `assert "[ERR]" in output` is consistent: sample `network_proxy` has `ok=False` → `_format_section` renders `[ERR]`, while the two `ok=True` rows still produce `[OK]`.
+- [NIT] `step_1.md` "Verification" and "Definition of done" referenced `mcp__tools-py__run_*` (missing the `mcp-` prefix) and `./tools/format_all.sh`, which do not match `.claude/CLAUDE.md`.
+- No blockers; plan otherwise ready for approval.
+
+**Decisions**:
+- Accept the tool-reference NIT — wrong tool names would misdirect the implementing LLM. Applied via plan edit.
+
+**User decisions**: none required.
+
+**Changes**: `pr_info/steps/step_1.md` — corrected tool references to `mcp__mcp-tools-py__run_pylint_check` / `run_pytest_check` / `run_mypy_check`, and replaced `./tools/format_all.sh` with `mcp__mcp-tools-py__run_format_code` (in Verification, Definition of done, and LLM prompt).
+
+**Status**: plan changed — committing; loop continues with round 3.

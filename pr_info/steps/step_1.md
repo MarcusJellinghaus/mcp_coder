@@ -99,9 +99,9 @@ for key, entry in result.items():
 ## Verification (all must pass)
 
 ```
-mcp__tools-py__run_pylint_check
-mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
-mcp__tools-py__run_mypy_check
+mcp__mcp-tools-py__run_pylint_check
+mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
+mcp__mcp-tools-py__run_mypy_check
 ```
 
 ## Definition of done
@@ -110,7 +110,7 @@ mcp__tools-py__run_mypy_check
   key visible.
 - `network_proxy` is in `_GITHUB_KEYS` and `test_all_github_keys_in_label_map`
   passes.
-- pylint / pytest / mypy all pass; run `./tools/format_all.sh` before committing.
+- pylint / pytest / mypy all pass; run `mcp__mcp-tools-py__run_format_code` before committing.
 
 ## LLM prompt
 
@@ -133,7 +133,7 @@ mcp__tools-py__run_mypy_check
 >    `"api_base_url"` entry.
 > 4. Run pylint, pytest (with the fast `-m "not ..."` exclusions and `-n auto`),
 >    and mypy. Fix anything that fails.
-> 5. Run `./tools/format_all.sh` and commit as one commit.
+> 5. Run `mcp__mcp-tools-py__run_format_code` and commit as one commit.
 >
 > Do not add severity-aware markers, do not expand the value across multiple
 > lines, and do not bump any dependency — all out of scope per the summary.
