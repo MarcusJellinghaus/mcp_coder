@@ -11,13 +11,19 @@ timeout and add a distinct `mcp_unavailable` failure category.
 - One streaming core; **blocking = drain + assemble**; the drain-wrapper is **retry-free**
   (post-#999 the blocking path is already single-attempt).
 - Unified `raw_response` is the assembler's **`events`** shape, extended with **`stream_file`**.
-  `llm_response["text"]` and `store_session(...)` keep working unchanged.
+  `llm_response["text"]` and `store_session(...)` keep working unchanged. Top-level `text` stays
+  **byte-identical** (AC3): the assembler `.strip()`s the concatenated `text_delta` text and falls
+  back to the result message's `result` value when no assistant text was seen (parity with
+  `parse_stream_json_lines`).
 - `prompt --json`'s nested `raw_response` shifts `messages`→`events`; top-level
   `text`/`session_id` unchanged (accepted — Decision 11).
 - **Every** blocking caller uses a documented per-site **inactivity** timeout below the CI
-  step cap; the three unattended sites use a new `LLM_INACTIVITY_TIMEOUT_SECONDS`; no caller
-  keeps 3600s wall-clock; **no** overall wall-clock cap; `LLM_IMPLEMENTATION_TIMEOUT_SECONDS`
-  is not relabeled.
+  step cap. Two categories: the three **tool-using** sites (implement, mypy-fix, CI-fix) use a new
+  `LLM_INACTIVITY_TIMEOUT_SECONDS = 600` (headroom for silent MCP tool calls); the **pure-LLM**
+  sites (CI-analysis `300`, commit-msg `120`) stay lower. All other callers
+  (create-plan, create-pr `300`, finalisation `600`, task-tracker-prep `600`) are re-documented as
+  inactivity budgets; `create_plan` `PROMPT_3_TIMEOUT` drops 900 → 600. No caller keeps 3600s
+  wall-clock; **no** overall wall-clock cap; `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` is not relabeled.
 - Inactivity: the drain-wrapper distinguishes the timeout error-event from a generic error via
   a **structured discriminator** (`reason`), re-raises `TimeoutExpired` → reused
   `interface.py` `LLMTimeoutError` mapping → `"timeout"` → `llm_timeout` label. No in-workflow
@@ -42,10 +48,13 @@ timeout and add a distinct `mcp_unavailable` failure category.
 
 2. **Timeout model flips from wall-clock to inactivity for blocking callers.** Because the core
    is now `stream_subprocess(inactivity_timeout_seconds=timeout)`, each caller's `timeout`
-   becomes an *inactivity* budget. This is made conscious per site (new
-   `LLM_INACTIVITY_TIMEOUT_SECONDS ≈ 300` for unattended sites; existing numbers re-documented
-   elsewhere). Eliminates the #1011 SIGKILL race where a 3600s wall-clock lost to a ~10-min
-   external watchdog.
+   becomes an *inactivity* budget (max seconds with no stdout line from `claude`, NOT wall-clock).
+   This is made conscious per site and split into two categories: tool-using autonomous sites
+   (implement, mypy-fix, CI-fix) use a new `LLM_INACTIVITY_TIMEOUT_SECONDS = 600` — 600s (not ~300)
+   because a silent MCP tool call (e.g. a multi-minute `run_pytest`) can go >300s without stdout;
+   pure-LLM sites (CI-analysis `300`, commit-msg `120`) stay lower since an LLM emits a token
+   quickly. Existing numbers are re-documented elsewhere. Eliminates the #1011 SIGKILL race where a
+   3600s wall-clock lost to a ~10-min external watchdog.
 
 3. **Unified response contract = `events` shape.** `ResponseAssembler` is the single producer of
    `LLMResponseDict` for both paths, extended to carry `stream_file`. `prompt --json` and the
@@ -78,7 +87,10 @@ timeout and add a distinct `mcp_unavailable` failure category.
 - `src/mcp_coder/workflows/implement/core.py` — map `mcp_unavailable` reason; wrap final-mypy and
   `check_and_fix_ci` for categorization.
 - `src/mcp_coder/config/labels.json` — add `mcp_unavailable` label.
-- `src/mcp_coder/workflows/create_plan/core.py`, `.../create_pr/core.py` — timeout doc comments.
+- `src/mcp_coder/workflows/create_plan/core.py` — timeout doc comments; `PROMPT_3_TIMEOUT` 900 → 600.
+- `src/mcp_coder/workflows/create_pr/core.py` — timeout doc comment (`timeout=300`).
+- `src/mcp_coder/utils/workflow_utils/commit_operations.py` — `LLM_COMMIT_TIMEOUT_SECONDS = 120`
+  doc comment (inactivity budget).
 - `docs/architecture/architecture.md` — describe the single streaming core.
 
 **Created — production**
@@ -97,9 +109,9 @@ timeout and add a distinct `mcp_unavailable` failure category.
 
 ## Steps (one commit each)
 
-1. **step_1** — Streaming core additions: assembler `stream_file` + `reason` discriminator + `stream_file` event.
+1. **step_1** — Streaming core additions: assembler `stream_file` + text parity (strip + result-field fallback) + `reason` discriminator + `stream_file` event.
 2. **step_2** — Rewrite `ask_claude_code_cli` as the retry-free drain-wrapper (+ docs, + `prompt --json` shape).
-3. **step_3** — Timeout sweep: `LLM_INACTIVITY_TIMEOUT_SECONDS`, repoint callers, per-site doc comments.
+3. **step_3** — Timeout sweep: `LLM_INACTIVITY_TIMEOUT_SECONDS = 600` (tool-using) + pure-LLM sites, repoint callers, per-site doc comments.
 4. **step_4** — `MCP_UNAVAILABLE` category + `mcp_unavailable` label + `llm_failure_reason` helper.
 5. **step_5** — Categorize timeout/MCP-unavailable at implement + mypy-fix sites (fixes the mypy hole).
 6. **step_6** — Categorize at CI sites: CI-analysis propagates, CI-fix absorbs.

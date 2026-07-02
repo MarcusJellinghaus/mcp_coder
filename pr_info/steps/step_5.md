@@ -23,8 +23,12 @@ four autonomous sites and fix the pre-existing mypy-fix timeout hole. Depends on
   (replaces/augments the current `except LLMTimeoutError → "timeout"`).
 - `check_and_fix_mypy`: narrow its inner/outer `except Exception` so the two LLM exceptions are
   re-raised (`except (LLMTimeoutError, McpServersUnavailableError): raise` before the generic
-  catch). Its step-7 call inside `process_single_task` is covered by that function's new handler;
-  the final-mypy call in `core.py` gets its own `try/except → _handle_workflow_failure(...); return 1`.
+  catch). **Note on the step-7 call inside `process_single_task`:** it sits **outside** the new
+  `try/except` around the LLM call, so it is NOT covered by that handler. This is effectively moot —
+  `RUN_MYPY_AFTER_EACH_TASK = False` (constants.py) disables that path, so it is dead and
+  out-of-scope; do not wrap it. (If that flag ever flips to `True`, the step-7 call would need its
+  own wrapping.) The only live `check_and_fix_mypy` call to categorize is the **final-mypy** call in
+  `core.py`, which gets its own `try/except → _handle_workflow_failure(...); return 1`.
 - Map reason→category in `core.py` via `REASON_TO_CATEGORY` (or an explicit `if reason ==
   "mcp_unavailable"` block matching the `timeout` block).
 
@@ -59,7 +63,9 @@ except (LLMTimeoutError, McpServersUnavailableError) as e:
 > `llm_failure_reason` / `REASON_TO_CATEGORY` from Step 4, categorize `LLMTimeoutError` and
 > `McpServersUnavailableError` at the implement site (`process_single_task` returns
 > `"timeout"`/`"mcp_unavailable"`) and the mypy-fix site (stop swallowing the two exceptions in
-> `check_and_fix_mypy`; handle them at both its call sites — inside `process_single_task` and the
-> final-mypy call in `core.py`). Add the `mcp_unavailable` reason→category branch in the `core.py`
+> `check_and_fix_mypy`; categorize them at its only live call site — the final-mypy call in
+> `core.py`. The step-7 call inside `process_single_task` is outside the LLM try/except and dead via
+> `RUN_MYPY_AFTER_EACH_TASK = False`, so leave it unwrapped). Add the `mcp_unavailable`
+> reason→category branch in the `core.py`
 > task loop mirroring `timeout`. Write tests first, including one proving the previously-swallowed
 > mypy-fix timeout now reaches `llm_timeout`. pylint/pytest(`-n auto`)/mypy green, one commit.

@@ -31,6 +31,9 @@ REASON_TO_CATEGORY: dict[str, FailureCategory]  # {"timeout": LLM_TIMEOUT,
 - `labels.json`: mirror the existing `llm_timeout` entry — `internal_id: "mcp_unavailable"`,
   `failure: true`, `category: "human_action"`, a distinct `name`/emoji, and a `vscodeclaude` block.
   `FailureCategory` maps 1:1 to label IDs, so the enum value must equal the `internal_id`.
+- After adding the `llm_failures.py` `workflows` → `llm.providers.claude` import, run
+  `mcp__mcp-tools-py__run_lint_imports_check` to confirm no import-linter contract (e.g.
+  `mcp_coder_utils_isolation` / the layer contracts) is tripped.
 
 ## ALGORITHM
 ```

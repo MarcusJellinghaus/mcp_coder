@@ -23,13 +23,27 @@ Removed: `create_response_dict_from_stream`, `LLM_HEARTBEAT_INTERVAL_SECONDS`, t
 `parse_stream_json_string` usage, `execute_subprocess` usage, the write-once file dump. Update
 `__all__` accordingly.
 
+**Deletion caution — do NOT remove symbols still imported by other modules.** Only the following are
+truly removable: `create_response_dict_from_stream`, `LLM_HEARTBEAT_INTERVAL_SECONDS`, and the
+internal `execute_subprocess`/parse/file-write usage. **Keep** (still imported elsewhere, or kept as
+patch targets per this module's existing comment):
+- `McpServersUnavailableError` — imported by the new `llm_failures.py` (Step 4).
+- `parse_stream_json_*`, `find_*_mcp_servers`, `ParsedStreamResponse`, `StreamMessage` — kept as
+  patch targets / re-export importers per the module's existing comment.
+When trimming `__all__` and imports, verify each removed name is unreferenced project-wide first
+(`find_references`); leave the above in place.
+
 ## HOW
-- Import and call `ask_claude_code_cli_stream` (lazy import to avoid a cycle if needed) and
-  `ResponseAssembler`.
+- Import and call `ask_claude_code_cli_stream` **via a lazy (function-local) import** to avoid the
+  `claude_code_cli` ↔ `claude_code_cli_streaming` circular import; import `ResponseAssembler` normally.
 - Keep `log_llm_request` / `log_llm_response` / `log_llm_error` calls (side-effect parity).
 - Keep raising `TimeoutExpired` and `CalledProcessError`; keep letting `McpServersUnavailableError`
   propagate — `interface.py`'s existing `except TimeoutExpired → LLMTimeoutError` map is reused
   unchanged. MLflow wrapping stays at the `prompt_llm` level (untouched).
+- The real argv is built **inside** `ask_claude_code_cli_stream` and is not exposed to this wrapper.
+  Pass a stable placeholder `["claude", "-p"]` as the `cmd` for both `TimeoutExpired` and
+  `CalledProcessError` so the pseudocode has no undefined variable; the stream file path (carried in
+  the error's `stderr`) is what actually identifies the run.
 - The incremental per-line NDJSON flush now comes from the streaming core (no extra work).
 
 ## ALGORITHM
@@ -45,10 +59,13 @@ try:
         elif t == "error":     last_error = ev
 except McpServersUnavailableError as e:
     log_llm_error(e, duration_ms); raise
+CMD_LABEL = ["claude", "-p"]   # stable placeholder: the real argv is built inside
+                               # ask_claude_code_cli_stream and is NOT exposed here.
 if last_error and last_error.get("reason") == "inactivity_timeout":
-    err = TimeoutExpired(command_or_cmd, timeout); log_llm_error(err, ...); raise err
+    err = TimeoutExpired(CMD_LABEL, timeout); log_llm_error(err, ...); raise err
 if last_error:  # nonzero_exit
-    err = CalledProcessError(rc, cmd, output="", stderr=f"...Stream file: {stream_file}")
+    rc = last_error.get("return_code")
+    err = CalledProcessError(rc, CMD_LABEL, output="", stderr=f"...Stream file: {stream_file}")
     log_llm_error(err, ...); raise err
 log_llm_response(duration_ms, session_id=result["session_id"],
                  cost_usd=done.get("cost_usd") if done else None,
