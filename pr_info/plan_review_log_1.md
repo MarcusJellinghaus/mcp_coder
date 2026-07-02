@@ -31,3 +31,21 @@ Unify Claude blocking/streaming onto one streaming core (blocking = drain+assemb
 **Changes**: Edited `summary.md`, `step_1.md`, `step_2.md`, `step_3.md`, `step_4.md`, `step_5.md` (step_6 untouched). Text-parity added to Step 1; two-category timeout sweep + full caller enumeration + commented constants in Step 3; drain-wrapper pseudocode made self-consistent (`CMD_LABEL` placeholder) + lazy-import + re-export caution in Step 2; import-linter check note in Step 4; corrected mypy-coverage wording in Step 5.
 
 **Status**: committed (plan changed → re-review triggered)
+
+## Round 2 — 2026-07-02
+
+**Findings** (verification re-review of the round-1 edits):
+- All five round-1 decisions confirmed correctly and consistently reflected (assembler text-parity, two-category timeouts w/ `LLM_INACTIVITY_TIMEOUT_SECONDS = 600`, drain-wrapper pseudocode, Step 4 import-linter note, Step 5 mypy wording). No stray `900`/`~300`; no value-mismatch between summary and steps.
+- All 11 Decisions + all 9 ACs trace to specific steps. **No design questions, no escalations.**
+- Three factual accuracy fixes needed:
+  - (B1) Wrong path `src/mcp_coder/utils/workflow_utils/commit_operations.py` → real path `src/mcp_coder/workflow_utils/commit_operations.py` (non-existent `utils/` segment).
+  - (B2) Stale-comment line `constants.py:36` → `:37`.
+  - (B3) Non-existent symbol `parse_stream_json_lines` → real private helper `_parse_stream_lines` (`claude_mcp_guard.py`).
+
+**Decisions**: All three accepted as straightforward fixes (B1 is a real misdirection; B2/B3 cosmetic accuracy). Applied.
+
+**User decisions**: none needed this round.
+
+**Changes**: Edited `summary.md` (path + symbol name), `step_1.md` (symbol name ×4), `step_3.md` (path ×2, line number ×2). No design/scope change.
+
+**Status**: committed (plan changed → one final verification pass triggered)

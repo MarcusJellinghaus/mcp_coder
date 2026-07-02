@@ -3,7 +3,7 @@
 **Reference:** See [summary.md](./summary.md) (Architectural changes 3 & 4). This step makes the
 streaming core carry the pieces the drain-wrapper (Step 2) needs: a `stream_file` value on the
 assembled response, a machine-readable discriminator on the timeout error-event, and **byte-identical
-top-level `text`** (AC3) so the assembler matches today's blocking `parse_stream_json_lines` output.
+top-level `text`** (AC3) so the assembler matches today's blocking `_parse_stream_lines` output.
 Purely additive — no execution-path change yet.
 
 ## WHERE
@@ -18,10 +18,10 @@ Purely additive — no execution-path change yet.
 - `ResponseAssembler.result(self) -> LLMResponseDict` — include `raw_response["stream_file"]`
   when captured.
 - `ResponseAssembler` — **text parity** (AC3): the assembled top-level `text` must be
-  byte-identical to today's blocking `parse_stream_json_lines` output. Two behaviors to add:
+  byte-identical to today's blocking `_parse_stream_lines` output. Two behaviors to add:
   (a) `.strip()` the concatenated `text_delta` text; and (b) when **no** `text_delta` /
   assistant-text event was seen, fall back to the final result message's `result` value
-  (`parse_stream_json_lines` only uses the result field when there were zero assistant text blocks).
+  (`_parse_stream_lines` only uses the result field when there were zero assistant text blocks).
 - `ask_claude_code_cli_stream(...)` — yield one new event **before** iterating the subprocess,
   and tag the two terminal error events with a structured `reason`.
 
@@ -72,7 +72,7 @@ def result(self):
 - Assembler: feeding a `stream_file` event puts `stream_file` into `raw_response`; absent event →
   key absent; existing text/usage/error behavior unchanged.
 - Assembler **text parity** (AC3): assembled `text` is `.strip()`-ed (leading/trailing whitespace
-  removed to match `parse_stream_json_lines`); and when no `text_delta`/assistant-text event is fed
+  removed to match `_parse_stream_lines`); and when no `text_delta`/assistant-text event is fed
   but a result message carries a `result` value, `text` falls back to that stripped `result`.
 - Stream: first yielded event is `stream_file`; on inactivity the error event has
   `reason == "inactivity_timeout"`; on nonzero exit `reason == "nonzero_exit"`. Update any existing

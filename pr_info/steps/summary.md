@@ -14,7 +14,7 @@ timeout and add a distinct `mcp_unavailable` failure category.
   `llm_response["text"]` and `store_session(...)` keep working unchanged. Top-level `text` stays
   **byte-identical** (AC3): the assembler `.strip()`s the concatenated `text_delta` text and falls
   back to the result message's `result` value when no assistant text was seen (parity with
-  `parse_stream_json_lines`).
+  `_parse_stream_lines`).
 - `prompt --json`'s nested `raw_response` shifts `messages`→`events`; top-level
   `text`/`session_id` unchanged (accepted — Decision 11).
 - **Every** blocking caller uses a documented per-site **inactivity** timeout below the CI
@@ -89,7 +89,7 @@ timeout and add a distinct `mcp_unavailable` failure category.
 - `src/mcp_coder/config/labels.json` — add `mcp_unavailable` label.
 - `src/mcp_coder/workflows/create_plan/core.py` — timeout doc comments; `PROMPT_3_TIMEOUT` 900 → 600.
 - `src/mcp_coder/workflows/create_pr/core.py` — timeout doc comment (`timeout=300`).
-- `src/mcp_coder/utils/workflow_utils/commit_operations.py` — `LLM_COMMIT_TIMEOUT_SECONDS = 120`
+- `src/mcp_coder/workflow_utils/commit_operations.py` — `LLM_COMMIT_TIMEOUT_SECONDS = 120`
   doc comment (inactivity budget).
 - `docs/architecture/architecture.md` — describe the single streaming core.
 

@@ -18,7 +18,7 @@ the external watchdog SIGKILLs it.
 
 ## WHERE
 - `src/mcp_coder/workflows/implement/constants.py` — add `LLM_INACTIVITY_TIMEOUT_SECONDS = 600`
-  (commented); remove the stale `# Note: CI fix uses ... 3600s` comment at `constants.py:36`; handle
+  (commented); remove the stale `# Note: CI fix uses ... 3600s` comment at `constants.py:37`; handle
   now-unused `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` (do **not** relabel/mutate — 3600 wall-clock must
   not leak into the streaming sites). Keep `LLM_CI_ANALYSIS_TIMEOUT_SECONDS = 300`,
   `LLM_FINALISATION_TIMEOUT_SECONDS = 600`, `LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS = 600` —
@@ -38,7 +38,7 @@ the external watchdog SIGKILLs it.
 - `src/mcp_coder/workflows/implement/core.py` (finalisation `LLM_FINALISATION_TIMEOUT_SECONDS = 600`
   + task-tracker-prep `LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS = 600`) — doc comments noting the
   numbers are now inactivity budgets below the CI step cap.
-- `src/mcp_coder/utils/workflow_utils/commit_operations.py` — commit-msg
+- `src/mcp_coder/workflow_utils/commit_operations.py` — commit-msg
   `LLM_COMMIT_TIMEOUT_SECONDS = 120` (`commit_operations.py:19`): keep 120 (pure-LLM), re-document as
   an inactivity budget. (This site was missing from the plan.)
 - Tests: `tests/workflows/implement/test_constants.py`, plus any test asserting the timeout value
@@ -99,8 +99,8 @@ _None — configuration + comment changes only._
 > to it. Re-document every other blocking caller as an inactivity budget: create-plan `core.py` (both
 > `timeout=600` calls; lower `PROMPT_3_TIMEOUT` 900 → 600), create-pr `core.py` (`timeout=300`),
 > finalisation/task-tracker-prep (`600`), CI-analysis (`300`, pure-LLM), and commit-msg
-> `LLM_COMMIT_TIMEOUT_SECONDS = 120` in `utils/workflow_utils/commit_operations.py` (pure-LLM).
-> Remove the stale CI comment at `constants.py:36`. Do NOT relabel/mutate
+> `LLM_COMMIT_TIMEOUT_SECONDS = 120` in `workflow_utils/commit_operations.py` (pure-LLM).
+> Remove the stale CI comment at `constants.py:37`. Do NOT relabel/mutate
 > `LLM_IMPLEMENTATION_TIMEOUT_SECONDS` (3600 wall-clock) — delete it if unused or vulture-whitelist
 > it, and remove its now-unused imports in `task_processing.py` and `ci_operations.py`. Add no
 > wall-clock cap. Update the affected timeout tests first (TDD) and drop stale heartbeat wall-clock
