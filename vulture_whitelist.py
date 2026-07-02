@@ -177,6 +177,9 @@ _._mock_github
 # test_verify_*.py - Autouse fixture to mock resolve_mcp_config_path
 _._mock_resolve_mcp
 
+# test_verify_integration.py - Autouse fixture defaulting langchain backend to None
+_._mock_langchain_config
+
 # cli/commands/conftest.py - Autouse fixture to mock resolve_claude_settings_path
 _._mock_resolve_claude_settings_path
 
