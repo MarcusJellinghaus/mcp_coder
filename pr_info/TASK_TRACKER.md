@@ -21,6 +21,15 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Langchain backend readiness warning on the claude-active path
+
+See [step_1.md](./steps/step_1.md) for full detail.
+
+- [ ] Implementation: add `_print_langchain_readiness_warning` helper + wire into `else` branch of the `active_provider == "langchain"` gate in `verify.py`; add 3 integration tests (+ deterministic `_load_langchain_config` patching) in `test_verify_integration.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Review PR (address review feedback)
+- [ ] PR summary prepared
