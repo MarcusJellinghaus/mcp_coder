@@ -31,5 +31,5 @@ See [step_1.md](./steps/step_1.md) for full detail.
 
 ## Pull Request
 
-- [ ] Review PR (address review feedback)
+- [x] Review PR (address review feedback)
 - [ ] PR summary prepared
