@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md).
 
-- [ ] Implementation: add `CIStatus.UNAVAILABLE`, `GITHUB_TOKEN_HINT` constant, 🔒 icon-map entry, inline hint in `format_for_human`/`format_for_llm`, and `UNAVAILABLE` recommendation branch — with tests first (TDD)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `CIStatus.UNAVAILABLE`, `GITHUB_TOKEN_HINT` constant, 🔒 icon-map entry, inline hint in `format_for_human`/`format_for_llm`, and `UNAVAILABLE` recommendation branch — with tests first (TDD)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Detection — shim re-export + `_collect_ci_status` early-return
 

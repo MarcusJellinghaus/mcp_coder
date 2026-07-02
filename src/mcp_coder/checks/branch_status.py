@@ -41,11 +41,15 @@ class CIStatus(str, Enum):
     FAILED = "FAILED"
     NOT_CONFIGURED = "NOT_CONFIGURED"
     PENDING = "PENDING"
+    UNAVAILABLE = "UNAVAILABLE"  # auth/token missing — CI truth unknown
 
 
 # Default Values
 DEFAULT_LABEL = "unknown"
 EMPTY_RECOMMENDATIONS: List[str] = []
+
+# Actionable hint shown when the GitHub token is missing (CI is UNAVAILABLE).
+GITHUB_TOKEN_HINT = "no GitHub token; set GITHUB_TOKEN or add to config.toml"
 
 
 @dataclass(frozen=True)
@@ -79,6 +83,7 @@ class BranchStatusReport:
             CIStatus.FAILED: "❌",
             CIStatus.PENDING: "⏳",
             CIStatus.NOT_CONFIGURED: "⚙️",
+            CIStatus.UNAVAILABLE: "\U0001f512",  # 🔒
         }
         ci_icon = ci_icon_map.get(self.ci_status, "❓")
 
@@ -113,7 +118,10 @@ class BranchStatusReport:
                 lines.append("PR: \u274c No PR found")
             lines.append("")
 
-        lines.append(f"CI Status: {ci_icon} {self.ci_status.value}")
+        ci_line = f"CI Status: {ci_icon} {self.ci_status.value}"
+        if self.ci_status == CIStatus.UNAVAILABLE:
+            ci_line += f" — {GITHUB_TOKEN_HINT}"
+        lines.append(ci_line)
 
         # Add CI details if they exist
         if self.ci_details:
@@ -162,6 +170,8 @@ class BranchStatusReport:
             f"Branch Status: CI={self.ci_status.value}, Rebase={rebase_status}, "
             f"Tasks={self.tasks_status.value} ({self.tasks_reason})"
         )
+        if self.ci_status == CIStatus.UNAVAILABLE:
+            status_summary += f" ({GITHUB_TOKEN_HINT})"
         if self.pr_found is True:
             status_summary += f", PR=#{self.pr_number}"
         elif self.pr_found is False:
@@ -575,6 +585,8 @@ def _generate_recommendations(report_data: Dict[str, Any]) -> List[str]:
         recommendations.append("Wait for CI to complete")
     elif ci_status == CIStatus.NOT_CONFIGURED:
         recommendations.append("Configure CI pipeline")
+    elif ci_status == CIStatus.UNAVAILABLE:
+        recommendations.append(f"Set a GitHub token ({GITHUB_TOKEN_HINT})")
 
     if tasks_status == TaskTrackerStatus.INCOMPLETE:
         recommendations.append(f"Complete remaining tasks ({tasks_reason})")

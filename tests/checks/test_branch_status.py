@@ -14,6 +14,7 @@ import pytest
 from mcp_coder.checks.branch_status import (
     DEFAULT_LABEL,
     EMPTY_RECOMMENDATIONS,
+    GITHUB_TOKEN_HINT,
     BranchStatusReport,
     CIStatus,
     _build_ci_error_details,
@@ -605,6 +606,7 @@ def test_branch_status_constants() -> None:
     assert CIStatus.FAILED == "FAILED"
     assert CIStatus.NOT_CONFIGURED == "NOT_CONFIGURED"
     assert CIStatus.PENDING == "PENDING"
+    assert CIStatus.UNAVAILABLE == "UNAVAILABLE"
     assert DEFAULT_LABEL == "unknown"
     assert EMPTY_RECOMMENDATIONS == []
 
@@ -1989,3 +1991,45 @@ def test_format_human_tasks_icon_parametrized(
     output = report.format_for_human()
     expected = f"Task Tracker: {expected_icon} {status.value} ({reason})"
     assert expected in output
+
+
+# --- CIStatus.UNAVAILABLE (missing GitHub token) tests ---
+
+
+def test_format_for_human_unavailable_status() -> None:
+    """UNAVAILABLE CI renders the lock icon and inline token hint on the CI line."""
+    report = _make_report(ci_status=CIStatus.UNAVAILABLE)
+
+    output = report.format_for_human()
+
+    assert f"CI Status: \U0001f512 UNAVAILABLE — {GITHUB_TOKEN_HINT}" in output
+
+
+def test_format_for_llm_unavailable_status() -> None:
+    """UNAVAILABLE CI appends the token hint to the LLM summary line."""
+    report = _make_report(ci_status=CIStatus.UNAVAILABLE)
+
+    output = report.format_for_llm()
+
+    # Summary line carries CI=UNAVAILABLE and the token hint appended to it.
+    summary_line = output.split("\n")[1]
+    assert "CI=UNAVAILABLE" in summary_line
+    assert f"({GITHUB_TOKEN_HINT})" in summary_line
+
+
+def test_recommendations_unavailable_includes_token_hint() -> None:
+    """UNAVAILABLE recommendation includes the token hint and excludes CI-config/merge."""
+    report_data = {
+        "ci_status": CIStatus.UNAVAILABLE,
+        "rebase_needed": False,
+        "tasks_status": TaskTrackerStatus.COMPLETE,
+        "tasks_reason": "All 5 tasks complete",
+        "tasks_is_blocking": False,
+    }
+
+    recs = _generate_recommendations(report_data)
+
+    assert f"Set a GitHub token ({GITHUB_TOKEN_HINT})" in recs
+    assert "Configure CI pipeline" not in recs
+    # Ready-to-merge must stay excluded even when tasks OK and no rebase.
+    assert "Ready to merge" not in recs
