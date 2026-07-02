@@ -1016,7 +1016,7 @@ Please implement this task step by step."""
         mock_prompt_llm.assert_called_once_with(
             expected_prompt,
             provider="claude",
-            timeout=3600,
+            timeout=600,
             env_vars=ANY,
             execution_dir=ANY,
             mcp_config=None,

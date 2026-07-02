@@ -41,9 +41,9 @@ See [step_2.md](./steps/step_2.md).
 
 See [step_3.md](./steps/step_3.md).
 
-- [ ] Implementation (tests + production code): add `LLM_INACTIVITY_TIMEOUT_SECONDS = 600`, repoint the three tool-using sites, re-document all other blocking callers as inactivity budgets, lower `PROMPT_3_TIMEOUT` 900→600, retire `LLM_IMPLEMENTATION_TIMEOUT_SECONDS`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): add `LLM_INACTIVITY_TIMEOUT_SECONDS = 600`, repoint the three tool-using sites, re-document all other blocking callers as inactivity budgets, lower `PROMPT_3_TIMEOUT` 900→600, retire `LLM_IMPLEMENTATION_TIMEOUT_SECONDS`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `MCP_UNAVAILABLE` category + `mcp_unavailable` label + shared helper
 

@@ -16,7 +16,10 @@ from ..llm.providers.claude.errors import ClaudeAPIError
 from ..utils.git_utils import get_branch_name_for_logging
 
 # Constants
-LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes for commit message generation
+# Inactivity/silence budget (max seconds with no stdout line from `claude`), NOT wall-clock.
+# Commit-message generation is a pure-LLM call (no MCP tools), so 120s is safe: an LLM emits a
+# token quickly. Kept below the external CI step cap.
+LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes of silence for commit message generation
 
 logger = logging.getLogger(__name__)
 

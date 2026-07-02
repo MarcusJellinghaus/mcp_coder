@@ -227,6 +227,7 @@ def prepare_task_tracker(
         llm_response = prompt_llm(
             prompt_template,
             provider=provider,
+            # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
@@ -418,6 +419,7 @@ def run_finalisation(
     llm_response = prompt_llm(
         finalisation_prompt,
         provider=provider,
+        # Inactivity budget (was wall-clock), kept below the CI step cap.
         timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
         env_vars=env_vars,
         execution_dir=str(execution_dir) if execution_dir else None,

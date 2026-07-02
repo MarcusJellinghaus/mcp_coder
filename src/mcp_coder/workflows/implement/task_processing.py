@@ -26,7 +26,7 @@ from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 from .constants import (
     COMMIT_MESSAGE_FILE,
-    LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+    LLM_INACTIVITY_TIMEOUT_SECONDS,
     MAX_NO_CHANGE_RETRIES,
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
@@ -315,7 +315,8 @@ def check_and_fix_mypy(
                 llm_response = prompt_llm(
                     mypy_prompt,
                     provider=provider,
-                    timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+                    # Tool-using site (mypy-fix): inactivity budget, not wall-clock.
+                    timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
                     env_vars=env_vars,
                     execution_dir=(
                         str(execution_dir) if execution_dir else str(project_dir)
@@ -472,7 +473,8 @@ Please implement this task step by step."""
         llm_response = prompt_llm(
             full_prompt,
             provider=provider,
-            timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+            # Tool-using site (implement task): inactivity budget, not wall-clock.
+            timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
             env_vars=env_vars,
             execution_dir=cwd,
             mcp_config=mcp_config,

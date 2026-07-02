@@ -30,7 +30,7 @@ from .constants import (
     CI_NEW_RUN_POLL_INTERVAL_SECONDS,
     CI_POLL_INTERVAL_SECONDS,
     LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
-    LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+    LLM_INACTIVITY_TIMEOUT_SECONDS,
     PR_INFO_DIR,
 )
 from .task_processing import (
@@ -111,6 +111,7 @@ def _run_ci_analysis(
         llm_response = prompt_llm(
             analysis_prompt,
             provider=config.provider,
+            # Pure-LLM site (CI-analysis, no MCP tools): 300s inactivity budget.
             timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
             execution_dir=config.cwd,
@@ -184,7 +185,8 @@ def _run_ci_fix(
         llm_response = prompt_llm(
             fix_prompt,
             provider=config.provider,
-            timeout=LLM_IMPLEMENTATION_TIMEOUT_SECONDS,
+            # Tool-using site (CI-fix): inactivity budget, not wall-clock.
+            timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
             execution_dir=config.cwd,
             mcp_config=config.mcp_config,
