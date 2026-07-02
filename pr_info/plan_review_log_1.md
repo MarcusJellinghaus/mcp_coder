@@ -28,3 +28,21 @@ Base branch: `main` (branch up to date, no rebase needed). Plan is fresh — no 
 - `summary.md`: updated detection sites, exit-code consistency, files/tests touched, and step descriptions.
 
 **Status**: plan changed — commit pending, then re-review (loop).
+
+## Round 2 — 2026-07-02
+
+**Findings** (from `/plan_review` engineer, focused on round-1 revisions):
+- All four round-1 revisions verified CORRECT against the real code (smoke count 24→25, the three `_collect_ci_status` test citations, hoisted `UNAVAILABLE → 2` above `--fix`, `--wait-for-pr` proactive guard). Guard ordering, import ordering, ready-to-merge gate, `format_for_llm` hint placement all confirmed sound.
+- CRITICAL C1: Step 3's new guards (`--wait-for-pr` return-2 + `--ci-timeout` gate) break EXISTING tests in two sibling files the plan never named — `test_check_branch_status_pr_waiting.py` and `test_check_branch_status_ci_waiting.py` — which call `execute_check_branch_status` on the wait/PR paths without patching `get_github_token`. On a token-less runner they'd now return 2 / skip the wait and fail. Same class of miss as round-1 Step 2.
+- DESIGN D1 (minor, non-blocking): `--fix N` now reaches the `UNAVAILABLE` path; behavior is already locked by tests asserting auto-fix not called. No change.
+
+**Decisions**:
+- C1 — accept (supervisor, straightforward test-repair scope, no user decision needed): name both sibling files in Step 3 and patch `get_github_token` to a dummy token in the affected wait/PR/ci-timeout tests.
+
+**User decisions**: none this round.
+
+**Changes** (via `/plan_update` engineer):
+- `step_3.md`: WHERE + TESTS sections now name `test_check_branch_status_pr_waiting.py` (6 tests, incl. `test_wait_for_pr_no_remote_tracking`) and `test_check_branch_status_ci_waiting.py` (`test_execute_with_ci_timeout_waits_before_display`) as REQUIRED repair targets; patch `mcp_coder.cli.commands.check_branch_status.get_github_token` to a dummy token. `test_check_branch_status_auto_fixes.py` explicitly out of scope.
+- `summary.md`: tests-touched list + Step 3 description updated.
+
+**Status**: plan changed — commit pending, then re-review (loop).

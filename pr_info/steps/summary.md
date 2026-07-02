@@ -82,6 +82,18 @@ exit code:
   the CI wait and returns exit `2` with the hint; `--fix` + no token returns exit `2`
   without running auto-fixes; `--wait-for-pr` + no token prints the hint and returns exit
   `2` without constructing `PullRequestManager`.
+- `tests/cli/commands/test_check_branch_status_pr_waiting.py` — REPAIR: the new
+  `--wait-for-pr` token guard would fail the existing wait/PR tests on a token-less runner;
+  patch `mcp_coder.cli.commands.check_branch_status.get_github_token` to a dummy token in
+  the `wait_for_pr=True` tests (`test_wait_for_pr_no_remote_tracking`,
+  `test_wait_for_pr_with_remote_tracking`, `test_wait_for_pr_found_immediately`,
+  `test_wait_for_pr_found_after_retries`, `test_wait_for_pr_timeout`,
+  `test_wait_for_pr_multiple_prs_warning`) so the guard stays open — mirrors Step 2's
+  `_collect_ci_status` fix.
+- `tests/cli/commands/test_check_branch_status_ci_waiting.py` — REPAIR: the CI-wait gate
+  would skip the wait on a token-less runner; patch the same shim symbol to a dummy token
+  in `test_execute_with_ci_timeout_waits_before_display` so the wait still runs. (The
+  `_wait_for_ci_completion` unit tests call the helper directly and need no change.)
 
 ### Plan docs (created)
 - `pr_info/steps/summary.md`, `pr_info/steps/step_1.md`, `pr_info/steps/step_2.md`,
@@ -96,7 +108,9 @@ exit code:
   repair the three direct `_collect_ci_status` tests.
 - **Step 3 — CLI integration.** Guard the `--wait-for-pr` path (clean fail + hint instead
   of silent exit `2`); gate the `--ci-timeout` wait; hoist the `UNAVAILABLE → 2` exit code
-  above the `--fix` block so it is consistent on all paths.
+  above the `--fix` block so it is consistent on all paths. Repair the existing wait/PR and
+  CI-timeout tests in `test_check_branch_status_pr_waiting.py` and
+  `test_check_branch_status_ci_waiting.py` by patching the token open (mirrors Step 2).
 
 ## Quality Gates (run after every step)
 ```

@@ -8,7 +8,12 @@
 ## WHERE
 - Source: `src/mcp_coder/cli/commands/check_branch_status.py`
   (function `execute_check_branch_status`)
-- Tests:  `tests/cli/commands/test_check_branch_status.py`
+- Tests:  `tests/cli/commands/test_check_branch_status.py` (new missing-token cases)
+- Tests (REPAIR — existing wait/PR/CI-timeout paths, see "TESTS → Existing-test repair"):
+  - `tests/cli/commands/test_check_branch_status_pr_waiting.py`
+  - `tests/cli/commands/test_check_branch_status_ci_waiting.py`
+  - (`test_check_branch_status_auto_fixes.py` is NOT affected — it calls `_run_auto_fixes`
+    directly, bypassing the guards. Do not touch it.)
 
 ## WHAT
 
@@ -151,7 +156,45 @@ Add to `tests/cli/commands/test_check_branch_status.py` (patch
    constructed (patch it and assert not called) — proving the proactive guard fires before
    the silent outer except.
 5. Token present: existing tests unchanged (patch `get_github_token` to return a token in
-   any test that exercises the wait / `--wait-for-pr` path so the guards stay open).
+   any test that exercises the wait / `--wait-for-pr` path so the guards stay open —
+   see "Existing-test repair" below).
+
+### Existing-test repair (REQUIRED — mirrors Step 2's `_collect_ci_status` fix)
+The two new guards run inside `execute_check_branch_status`:
+- the `--wait-for-pr` guard `if get_github_token() is None: return 2` (before the
+  remote-tracking guard and before `PullRequestManager` is constructed);
+- the CI-wait gate `if args.ci_timeout > 0 and get_github_token() is not None:`.
+
+Existing tests in the two sibling files exercise these exact paths but do NOT patch
+`get_github_token`. On a token-less runner they now hit the guard (return `2` /
+skip the wait) and fail. Just as Step 2 patched
+`mcp_coder.checks.branch_status.get_github_token` to a dummy token in the three direct
+`_collect_ci_status` tests, patch
+**`mcp_coder.cli.commands.check_branch_status.get_github_token`** to return a dummy
+token (e.g. `return_value="ghp_dummy"`) in each of these tests so they keep their
+expected states once the guards land:
+
+- `tests/cli/commands/test_check_branch_status_pr_waiting.py` — patch the token open in
+  every test that calls `execute_check_branch_status` with `wait_for_pr=True`:
+  - `TestRemoteTrackingGuard::test_wait_for_pr_no_remote_tracking` (expects exit `2` +
+    "no remote tracking branch" log — must reach the remote-tracking guard, not the new
+    token guard),
+  - `TestRemoteTrackingGuard::test_wait_for_pr_with_remote_tracking` (exit `0`,
+    `find_pull_request_by_head` called once),
+  - `TestPRPolling::test_wait_for_pr_found_immediately`,
+  - `TestPRPolling::test_wait_for_pr_found_after_retries`,
+  - `TestPRPolling::test_wait_for_pr_timeout`,
+  - `TestPRPolling::test_wait_for_pr_multiple_prs_warning`.
+- `tests/cli/commands/test_check_branch_status_ci_waiting.py` — patch the token open in:
+  - `TestCIWaitingLogic::test_execute_with_ci_timeout_waits_before_display` (sets
+    `ci_timeout=180`, asserts the wait ran once — the CI-wait gate must stay open).
+  - (The `_wait_for_ci_completion` unit tests call that helper directly and never touch
+    the guards, so they need no change.)
+
+Add the patch via `@patch("mcp_coder.cli.commands.check_branch_status.get_github_token")`
+(or a `with patch(...)` block) returning a dummy token — the same approach round 1 used
+for Step 2's `_collect_ci_status` tests. Detection stays proactive
+(`get_github_token()`); no exception/string matching.
 
 ## COMMIT
 Single commit: `--wait-for-pr` guard + CI-wait gate + hoisted exit code + tests, all checks
@@ -178,6 +221,10 @@ Run `./tools/format_all.sh` before committing.
 > `FAILED → 1 / else 0` logic as-is). Follow TDD: add the tests in Step 3 first (patching
 > `mcp_coder.cli.commands.check_branch_status.get_github_token`), including the `--fix` +
 > no-token → exit 2 and `--wait-for-pr` + no-token → hint + exit 2 cases; then implement;
-> ensure existing wait-path tests patch the token open. Detection stays proactive
+> ensure existing wait-path tests patch the token open (repair the wait/PR tests in
+> `test_check_branch_status_pr_waiting.py` and the CI-timeout test in
+> `test_check_branch_status_ci_waiting.py` by patching
+> `mcp_coder.cli.commands.check_branch_status.get_github_token` to a dummy token — see
+> "Existing-test repair"). Detection stays proactive
 > (`get_github_token()`), never exception/string matching. Use only MCP tools per
 > CLAUDE.md, run pylint/pytest/mypy, and produce exactly one commit.
