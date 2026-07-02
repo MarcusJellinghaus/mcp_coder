@@ -56,6 +56,7 @@ No new functions or signatures. Data-only changes:
    assert "Network / proxy" in output      # labeled row present
    assert "network_proxy" not in output    # raw key does not leak
    assert "[OK]" in output
+   assert "[ERR]" in output          # failed probe renders [ERR] (ok=False), per issue rationale
    ```
 
 4. **Source.** Add one entry to `_LABEL_MAP` in the GitHub section, immediately
@@ -122,8 +123,10 @@ mcp__tools-py__run_mypy_check
 >    tuple (after `"api_base_url"`); make the `test_all_github_keys_in_label_map`
 >    docstring count-agnostic ("All GitHub check keys exist in _LABEL_MAP.");
 >    and extend the existing `test_format_section_renders_github_labels` with a
->    `network_proxy` entry plus assertions that `"Network / proxy"` appears and
->    `"network_proxy"` does not. Do NOT add a new test method.
+>    `network_proxy` entry plus assertions that `"Network / proxy"` appears,
+>    `"network_proxy"` does not, `"[OK]"` is present, and `"[ERR]"` is present
+>    (the failed `ok=False` probe renders `[ERR]`, per the issue rationale). Do
+>    NOT add a new test method.
 > 2. Run pytest and confirm the key-set test fails (label map entry missing).
 > 3. In `src/mcp_coder/cli/commands/verify.py`, add
 >    `"network_proxy": "Network / proxy",` to `_LABEL_MAP` immediately after the
