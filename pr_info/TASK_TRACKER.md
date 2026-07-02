@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md).
 
 See [step_2.md](./steps/step_2.md).
 
-- [ ] Implementation: reword generic `except` branch of `_list_models_for_backend` for endpoint 404s + unit tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: reword generic `except` branch of `_list_models_for_backend` for endpoint 404s + unit tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Shared prompt-path 404 hint helper
 

@@ -619,3 +619,43 @@ class TestListModelsForBackendErrors:
         result = _list_models_for_backend("openai", "sk-test", None)
         assert result["ok"] is True
         assert "error_type" not in result
+
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
+    def test_404_with_endpoint_returns_error_type_endpoint(
+        self, mock_list: MagicMock
+    ) -> None:
+        from mcp_coder.llm.providers.langchain.verification import (
+            _list_models_for_backend,
+        )
+
+        mock_list.side_effect = Exception("Error code: 404 - {'detail': 'Not Found'}")
+        result = _list_models_for_backend("openai", None, "https://h/v1/completions")
+        assert result["ok"] is False
+        assert result["error_type"] == "endpoint"
+        assert "base URL" in result["error"]
+        assert "/chat/completions" in result["error"]
+
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
+    def test_404_without_endpoint_stays_unknown(self, mock_list: MagicMock) -> None:
+        from mcp_coder.llm.providers.langchain.verification import (
+            _list_models_for_backend,
+        )
+
+        mock_list.side_effect = Exception("Error code: 404 - {'detail': 'Not Found'}")
+        result = _list_models_for_backend("openai", None, None)
+        assert result["ok"] is False
+        assert result["error_type"] == "unknown"
+        assert "base URL" not in result["error"]
+
+    @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
+    def test_non_404_error_with_endpoint_stays_unknown(
+        self, mock_list: MagicMock
+    ) -> None:
+        from mcp_coder.llm.providers.langchain.verification import (
+            _list_models_for_backend,
+        )
+
+        mock_list.side_effect = Exception("boom")
+        result = _list_models_for_backend("openai", None, "https://h/v1/completions")
+        assert result["ok"] is False
+        assert result["error_type"] == "unknown"

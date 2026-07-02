@@ -333,7 +333,19 @@ def _list_models_for_backend(
     except LLMAuthError as exc:
         return {"ok": False, "value": [], "error": str(exc), "error_type": "auth"}
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        return {"ok": False, "value": [], "error": str(exc), "error_type": "unknown"}
+        msg = str(exc)
+        low = msg.lower()
+        if endpoint and ("404" in low or "not found" in low or "not_found" in low):
+            return {
+                "ok": False,
+                "value": [],
+                "error": (
+                    f"{msg} — endpoint/base-URL likely wrong; use the base URL "
+                    "e.g. …/v1 (mcp-coder appends /chat/completions)"
+                ),
+                "error_type": "endpoint",
+            }
+        return {"ok": False, "value": [], "error": msg, "error_type": "unknown"}
 
 
 # ---------------------------------------------------------------------------
