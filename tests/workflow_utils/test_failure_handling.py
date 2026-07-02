@@ -1,5 +1,6 @@
 """Tests for shared workflow failure handling utilities."""
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -122,6 +123,42 @@ class TestHandleWorkflowFailure:
         assert "pr_creating_failed" in caplog.text
         assert "prerequisites" in caplog.text
         assert "Something went wrong" in caplog.text
+
+        banner = next(r for r in caplog.records if "WORKFLOW FAILED" in r.getMessage())
+        assert banner.levelno == logging.ERROR
+
+    @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
+    @patch("mcp_coder.workflow_utils.failure_handling.get_current_branch_name")
+    @patch("mcp_coder.workflow_utils.failure_handling.extract_issue_number_from_branch")
+    def test_issue_manager_creation_failure_logs_error(
+        self,
+        _mock_extract: MagicMock,
+        _mock_branch: MagicMock,
+        mock_issue_mgr_cls: MagicMock,
+        failure: WorkflowFailure,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """IssueManager creation failure aborts the handler and logs at ERROR."""
+        _mock_branch.return_value = None
+        mock_issue_mgr_cls.side_effect = RuntimeError("cannot create manager")
+
+        with caplog.at_level(
+            "WARNING", logger="mcp_coder.workflow_utils.failure_handling"
+        ):
+            handle_workflow_failure(
+                failure=failure,
+                comment_body="Test comment",
+                project_dir=Path("/fake"),
+                from_label_id="pr_creating",
+                update_issue_labels=True,
+            )
+
+        record = next(
+            r
+            for r in caplog.records
+            if "Failed to create IssueManager" in r.getMessage()
+        )
+        assert record.levelno == logging.ERROR
 
     @patch("mcp_coder.workflow_utils.failure_handling.update_workflow_label")
     @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")

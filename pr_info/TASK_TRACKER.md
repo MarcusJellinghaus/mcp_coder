@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: harden `test_logs_failure_banner` with an ERROR-level assertion, add `test_issue_manager_creation_failure_logs_error`, and swap the seven log calls (six banner lines + IssueManager-creation fallback) from `info`/`warning` to `error` in `handle_workflow_failure()`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: harden `test_logs_failure_banner` with an ERROR-level assertion, add `test_issue_manager_creation_failure_logs_error`, and swap the seven log calls (six banner lines + IssueManager-creation fallback) from `info`/`warning` to `error` in `handle_workflow_failure()`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
