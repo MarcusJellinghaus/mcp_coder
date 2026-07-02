@@ -21,6 +21,15 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `network_proxy` label mapping + test coverage
+
+See [step_1.md](./steps/step_1.md) for full detail.
+
+- [ ] Implementation (tests + production code): add `network_proxy` to `_GITHUB_KEYS`, make `test_all_github_keys_in_label_map` count-agnostic, extend `test_format_section_renders_github_labels`, and add the `network_proxy` entry to `_LABEL_MAP`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Address PR review feedback
+- [ ] Write PR summary
