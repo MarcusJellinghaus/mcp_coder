@@ -136,7 +136,6 @@ def execute_icoder(args: argparse.Namespace) -> int:
         registry = create_default_registry()
         skills = load_skills(project_dir)
         register_skill_commands(registry, skills, provider)
-        register_info(registry, runtime_info, mcp_manager=mcp_manager)
 
         # Create core components
         from ...icoder.core.event_log import EventLog
@@ -181,6 +180,9 @@ def execute_icoder(args: argparse.Namespace) -> int:
                             initial_color,
                             error,
                         )
+                register_info(
+                    registry, runtime_info, event_log, mcp_manager=mcp_manager
+                )
                 register_color(registry, app_core)
                 register_display(registry, app_core)
                 format_tools = not getattr(args, "no_format_tools", False)

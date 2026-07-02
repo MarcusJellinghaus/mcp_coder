@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md) for details.
 
 See [step_2.md](./steps/step_2.md) for details. Depends on Step 1.
 
-- [ ] Implementation: `event_log` param on `register_info`/`_format_info` + `Logs:` section, `icoder.py` wiring, `/info` test updates
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `event_log` param on `register_info`/`_format_info` + `Logs:` section, `icoder.py` wiring, `/info` test updates
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
