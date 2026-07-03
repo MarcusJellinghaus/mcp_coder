@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import queue
 import threading
 import time
@@ -26,6 +25,8 @@ from mcp_coder.llm.storage.session_storage import (
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEvent
 from mcp_coder.utils.user_config import get_config_values
 
+from ._errors_404 import _format_404_hint
+from ._errors_404 import _is_404_error as _is_404_error  # re-exported for tests
 from ._exceptions import (
     ANTHROPIC_AUTH_ERRORS,
     CONNECTION_ERRORS,
@@ -329,15 +330,8 @@ def _ask_text(
         ai_msg = chat_model.invoke(lc_messages)
     except Exception as exc:
         _handle_provider_error(exc, backend)
-        exc_lower = str(exc).lower()
-        if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
-            model = config.get("model", "")
-            hint = f"Model {model!r} not found."
-            try:
-                hint += _get_model_suggestions(config)
-            except Exception:  # pylint: disable=broad-except
-                pass
-            raise ValueError(hint) from exc
+        if _is_404_error(exc):
+            raise ValueError(_format_404_hint(config)) from exc
         raise
 
     text = ai_msg.content if isinstance(ai_msg.content, str) else str(ai_msg.content)
@@ -368,41 +362,6 @@ def _ask_text(
         provider="langchain",
         raw_response=raw,
     )
-
-
-def _get_model_suggestions(config: dict[str, str | None]) -> str:
-    """Try to list available models for the configured backend.
-
-    Args:
-        config: LangChain configuration dict with backend and api_key.
-
-    Returns:
-        Formatted string of available models, or empty string if none found.
-    """
-    backend = config.get("backend")
-    api_key = config.get("api_key")
-    endpoint = config.get("endpoint")
-
-    from ._models import (
-        list_anthropic_models,
-        list_gemini_models,
-        list_ollama_models,
-        list_openai_models,
-    )
-
-    models: list[str] = []
-    if backend == "openai":
-        models = list_openai_models(os.getenv("OPENAI_API_KEY") or api_key, endpoint)
-    elif backend == "gemini":
-        models = list_gemini_models(os.getenv("GEMINI_API_KEY") or api_key)
-    elif backend == "anthropic":
-        models = list_anthropic_models(os.getenv("ANTHROPIC_API_KEY") or api_key)
-    elif backend == "ollama":
-        models = list_ollama_models(os.getenv("OLLAMA_API_KEY") or api_key, endpoint)
-
-    if models:
-        return "\n\nAvailable models:\n" + "\n".join(f"  - {m}" for m in models)
-    return ""
 
 
 def _ask_agent(
@@ -715,14 +674,8 @@ def _ask_text_stream(
     except Exception as exc:
         _handle_provider_error(exc, backend)
         # Handle 404/model-not-found errors (mirrors _ask_text() path)
-        exc_lower = str(exc).lower()
-        if "404" in exc_lower or "not_found" in exc_lower or "not found" in exc_lower:
-            model = config.get("model", "")
-            hint = f"Model {model!r} not found."
-            try:
-                hint += _get_model_suggestions(config)
-            except Exception:  # pylint: disable=broad-except
-                pass
+        if _is_404_error(exc):
+            hint = _format_404_hint(config)
             yield {"type": "error", "message": hint}
             raise ValueError(hint) from exc
         yield {"type": "error", "message": str(exc)}

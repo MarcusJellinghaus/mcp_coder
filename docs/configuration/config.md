@@ -287,6 +287,10 @@ extras (smaller footprints if you only need one backend).
 | `endpoint` | string | Custom base URL for OpenAI; `azure_endpoint` for Azure; ignored by Gemini | No |
 | `api_version` | string | Azure API version (e.g. `"2024-02-01"`). When set, uses `AzureChatOpenAI` | No |
 
+> ⚠️ `endpoint` must be the **base URL only** (e.g. `https://your-host/v1`) with
+> **no** `/chat/completions` — mcp-coder appends that itself. A full request path
+> produces a doubled path and a `404 - {'detail': 'Not Found'}`.
+
 **Example — OpenAI GPT-4o:**
 ```toml
 [llm]
@@ -296,6 +300,15 @@ provider = "langchain"
 backend  = "openai"
 model    = "gpt-4o"
 api_key  = "sk-..."       # or set OPENAI_API_KEY env var
+```
+
+**Example — OpenAI-compatible relay:**
+```toml
+[llm.langchain]
+backend  = "openai"
+model    = "llama3"
+endpoint = "https://your-host/v1"   # base URL only — NO /chat/completions
+api_key  = "..."                    # or OPENAI_API_KEY env var
 ```
 
 **Example — Google Gemini:**

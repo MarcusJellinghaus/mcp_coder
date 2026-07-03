@@ -247,6 +247,7 @@ _LABEL_MAP: dict[str, str] = {
     "api_key": "API key",
     "langchain_core": "LangChain core",
     "backend_package": "Backend package",
+    "endpoint_shape": "Endpoint",
     "available_models": "Available models",
     # MCP adapter section
     "mcp_adapters": "MCP adapters",
