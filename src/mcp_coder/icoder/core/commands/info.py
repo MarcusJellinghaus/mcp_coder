@@ -16,6 +16,7 @@ from mcp_coder.utils.mcp_verification import parse_claude_mcp_list
 
 if TYPE_CHECKING:
     from mcp_coder.icoder.core.command_registry import CommandRegistry
+    from mcp_coder.icoder.core.event_log import EventLog
     from mcp_coder.icoder.env_setup import RuntimeInfo
     from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager
 
@@ -43,6 +44,7 @@ def _redact_env_vars(env: dict[str, str]) -> dict[str, str]:
 def _format_info(
     runtime_info: RuntimeInfo,
     mcp_manager: MCPManager | None,
+    event_log: EventLog,
 ) -> str:
     """Build the /info output string.
 
@@ -104,6 +106,12 @@ def _format_info(
     else:
         lines.append("  (none)")
 
+    # Logs
+    lines.append("")
+    lines.append("Logs:")
+    lines.append(f"  Current: {event_log.current_path}")
+    lines.append(f"  Directory: {event_log.logs_dir}")
+
     # Other env vars (redacted)
     other_vars = {
         k: v for k, v in sorted(os.environ.items()) if not k.startswith("MCP_CODER_")
@@ -120,6 +128,7 @@ def _format_info(
 def register_info(
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
     mcp_manager: MCPManager | None = None,
 ) -> None:
     """Register the /info command. Captures dependencies via closure."""
@@ -127,5 +136,7 @@ def register_info(
     @registry.register("/info", "Show runtime diagnostics")
     def handle_info(args: list[str]) -> Response:  # noqa: ARG001
         return Response(
-            actions=(OutputText(text=_format_info(runtime_info, mcp_manager)),)
+            actions=(
+                OutputText(text=_format_info(runtime_info, mcp_manager, event_log)),
+            )
         )

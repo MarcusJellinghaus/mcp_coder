@@ -127,6 +127,11 @@ class EventLog:
         return entry
 
     @property
+    def logs_dir(self) -> Path:
+        """Directory that holds this session's log files."""
+        return self._logs_dir
+
+    @property
     def current_path(self) -> Path:
         """Path of the active JSONL file."""
         return self._path

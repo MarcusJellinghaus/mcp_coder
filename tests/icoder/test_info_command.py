@@ -12,6 +12,7 @@ from mcp_coder.icoder.core.commands.info import (
     _redact_env_vars,
     register_info,
 )
+from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.core.types import OutputText, Response
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager, MCPServerStatus
@@ -84,9 +85,9 @@ def test_redact_env_vars_empty() -> None:
 
 
 def test_info_command_registered(
-    registry: CommandRegistry, runtime_info: RuntimeInfo
+    registry: CommandRegistry, runtime_info: RuntimeInfo, event_log: EventLog
 ) -> None:
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     assert registry.has_command("/info")
 
 
@@ -95,8 +96,9 @@ def test_info_shows_versions(
     _mock_claude: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/info")
     text = _info_text(result)
     assert "mcp-coder version: 0.1.0" in text
@@ -108,8 +110,9 @@ def test_info_shows_python(
     _mock_claude: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/info")
     text = _info_text(result)
     assert "Python:" in text
@@ -123,8 +126,9 @@ def test_info_shows_environments(
     _mock_claude: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/info")
     text = _info_text(result)
     assert "Tool env:" in text
@@ -140,6 +144,7 @@ def test_info_shows_mcp_status(
     _mock_claude: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
     mock_manager = _make_mock_mcp_manager(
         [
@@ -147,7 +152,7 @@ def test_info_shows_mcp_status(
             MCPServerStatus(name="mcp-workspace", tool_count=8, connected=False),
         ]
     )
-    register_info(registry, runtime_info, mcp_manager=mock_manager)
+    register_info(registry, runtime_info, event_log, mcp_manager=mock_manager)
     result = registry.dispatch("/info")
     text = _info_text(result)
     assert "MCP servers (langchain):" in text
@@ -164,8 +169,9 @@ def test_info_without_mcp_manager(
     _mock_claude: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
-    register_info(registry, runtime_info, mcp_manager=None)
+    register_info(registry, runtime_info, event_log, mcp_manager=None)
     result = registry.dispatch("/info")
     assert "MCP servers (langchain):" not in _info_text(result)
 
@@ -180,8 +186,9 @@ def test_info_shows_mcp_coder_env_vars(
     _mock_claude: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/info")
     text = _info_text(result)
     assert "MCP_CODER_* env vars:" in text
@@ -196,17 +203,20 @@ def test_info_redacts_secrets_in_env(
     _mock_claude: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/info")
     text = _info_text(result)
     assert "GITHUB_TOKEN=***" in text
     assert "ghp_secret123" not in text
 
 
-def test_info_in_help(registry: CommandRegistry, runtime_info: RuntimeInfo) -> None:
+def test_info_in_help(
+    registry: CommandRegistry, runtime_info: RuntimeInfo, event_log: EventLog
+) -> None:
     register_help(registry)
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/help")
     assert "/info" in _info_text(result)
 
@@ -218,10 +228,31 @@ def test_info_claude_mcp_list_unavailable(
     _mock_parse: object,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/info")
     assert "MCP servers (claude):" not in _info_text(result)
+
+
+@patch(
+    "mcp_coder.icoder.core.commands.info.find_claude_executable",
+    return_value=None,
+)
+def test_info_shows_logs_section(
+    _mock_claude: object,
+    registry: CommandRegistry,
+    runtime_info: RuntimeInfo,
+    event_log: EventLog,
+) -> None:
+    register_info(registry, runtime_info, event_log)
+    result = registry.dispatch("/info")
+    text = _info_text(result)
+    assert "Logs:" in text
+    assert f"Current: {event_log.current_path}" in text
+    assert f"Directory: {event_log.logs_dir}" in text
+    assert text.index("MCP_CODER_* env vars:") < text.index("Logs:")
+    assert text.index("Logs:") < text.index("Other env vars")
 
 
 # ── helpers ─────────────────────────────────────────────────────────
@@ -254,6 +285,7 @@ def test_info_shows_prompt_paths(
     mock_load: MagicMock,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
     from mcp_coder.utils.pyproject_config import PromptsConfig
 
@@ -266,7 +298,7 @@ def test_info_shows_prompt_paths(
             claude_system_prompt_mode="replace",
         ),
     )
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/info")
     text = _info_text(result)
     assert "Prompts:" in text
@@ -282,6 +314,7 @@ def test_info_shows_shipped_defaults(
     mock_load: MagicMock,
     registry: CommandRegistry,
     runtime_info: RuntimeInfo,
+    event_log: EventLog,
 ) -> None:
     from mcp_coder.utils.pyproject_config import PromptsConfig
 
@@ -294,7 +327,7 @@ def test_info_shows_shipped_defaults(
             claude_system_prompt_mode="append",
         ),
     )
-    register_info(registry, runtime_info)
+    register_info(registry, runtime_info, event_log)
     result = registry.dispatch("/info")
     text = _info_text(result)
     assert "(shipped default)" in text
