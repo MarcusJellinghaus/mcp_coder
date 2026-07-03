@@ -57,9 +57,9 @@ See [step_4.md](./steps/step_4.md).
 
 See [step_5.md](./steps/step_5.md).
 
-- [ ] Implementation: rewrite `create_startup_script` (build spec + write launcher), delete `_escape_batch_title`, port/trim tests across `test_workspace_startup_script.py`, `test_workspace_startup_script_github.py`, `test_startup_script_mcp_coder_path.py`, `test_workspace.py`, add `skip_github_install` round-trip test
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rewrite `create_startup_script` (build spec + write launcher), delete `_escape_batch_title`, port/trim tests across `test_workspace_startup_script.py`, `test_workspace_startup_script_github.py`, `test_startup_script_mcp_coder_path.py`, `test_workspace.py`, add `skip_github_install` round-trip test
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Retire orchestration templates + docs
 

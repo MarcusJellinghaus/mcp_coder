@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
+from mcp_coder.workflows.vscodeclaude.types import read_session_spec
 from mcp_coder.workflows.vscodeclaude.workspace import (
     create_startup_script,
     create_status_file,
@@ -260,9 +261,10 @@ class TestWorkspaceSetup:
 
         assert script_path.suffix == ".bat"
         assert script_path.exists()
-        content = script_path.read_text(encoding="utf-8")
-        assert "claude" in content
-        assert "/implementation_review_supervisor" in content
+        # The command now lives in the written session spec, not the launcher.
+        spec = read_session_spec(tmp_path)
+        assert spec.commands == ["/implementation_review_supervisor"]
+        assert spec.is_intervention is False
 
     def test_create_startup_script_intervention(
         self,
@@ -270,13 +272,13 @@ class TestWorkspaceSetup:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """Intervention mode uses plain claude command."""
+        """Intervention mode is recorded on the spec, not the launcher text."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
-        script_path = create_startup_script(
+        create_startup_script(
             folder_path=tmp_path,
             issue_number=123,
             issue_title="Test issue",
@@ -286,9 +288,9 @@ class TestWorkspaceSetup:
             is_intervention=True,
         )
 
-        content = script_path.read_text(encoding="utf-8")
-        assert "INTERVENTION" in content
-        assert "/implementation_review_supervisor" not in content
+        # The intervention warning is rendered at runtime by session_setup; the
+        # workspace layer only records the flag on the spec.
+        assert read_session_spec(tmp_path).is_intervention is True
 
     def test_create_vscode_task(self, tmp_path: Path) -> None:
         """Creates tasks.json with two tasks that run on folderOpen."""
