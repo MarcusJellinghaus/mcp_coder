@@ -36,6 +36,12 @@ if __name__ == "__main__":
   on `Exception` print traceback, `input("Session failed (Enter to close)...")`,
   `sys.exit(0)` (already prompted — avoid launcher double-prompt). Success path
   returns normally (exit 0, no prompt).
+- **Intervention warning.** No separate print is needed on `orchestrate`'s
+  intervention branch: `run_session` already prints `render_banner(spec)`, which
+  (Step 2) appends the `!! INTERVENTION MODE ...` warning for intervention specs.
+  So the warning is emitted in the UTF-8-forced terminal before the bare
+  `claude` launch — restoring parity with the old `INTERVENTION_SCRIPT_*`
+  templates.
 
 ## ALGORITHM
 ```
@@ -64,7 +70,9 @@ run_session(cwd):
 - others -> `None`. `main` may `SystemExit(0)`.
 
 ## TESTS (write first; patch `session_setup.subprocess.run`)
-- Intervention: single bare-`claude` call, no `mcp-coder prompt`.
+- Intervention: single bare-`claude` call, no `mcp-coder prompt`; the printed
+  banner includes the `!! INTERVENTION MODE` warning (assert on captured stdout),
+  and a non-intervention flow's banner does not.
 - 0 commands: only the `install.py` call, no `claude`/`prompt`.
 - 1 command: `install.py` then one interactive `claude` with `"<cmd> <issue>"`.
 - Multi (3 cmds): order = install → first prompt (session-id, captured) → middle

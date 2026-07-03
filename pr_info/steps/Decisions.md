@@ -20,9 +20,12 @@ path added in Step 3.
 `tests/workflows/vscodeclaude/test_workspace.py` added to the Step 5 port list.
 `test_create_startup_script_windows` (asserts script content contains `claude` /
 `/implementation_review_supervisor`) and `test_create_startup_script_intervention`
-(asserts `INTERVENTION` in content) break under the thin launcher — that content
-now lives in the spec JSON / is rendered at runtime by `session_setup.py`.
-Re-pointed to spec assertions (`commands`, `is_intervention`).
+(asserts `INTERVENTION` in content) break under the thin launcher — the launcher
+no longer contains that text. The command lives in the spec JSON; the
+intervention warning is rendered at runtime by `session_setup.render_banner`.
+Both workspace-level tests re-pointed to spec assertions (`commands`,
+`is_intervention`); the printed intervention warning is covered by the
+`render_banner` test (Step 2) and the intervention-flow test (Step 3).
 
 ## Step 5 — end-to-end round-trip test
 
@@ -61,6 +64,36 @@ escaping is unnecessary; truncation was cosmetic and is not reproduced.
 Both `create_startup_script` call sites are in `session_launch.py` (~lines 195
 and 450); `session_restart.py` has no direct call. Corrected the
 "Unchanged (verified)" note (signature unchanged either way).
+
+## Round 2 — restore in-terminal intervention warning (Finding 1)
+
+Behavior parity: the in-terminal intervention WARNING
+(`!! INTERVENTION MODE - Automation may be running elsewhere` / `!! Investigate
+manually. No automated analysis will run.`) must be **restored**. Today the
+generated startup script prints it right before launching bare `claude`; under
+the refactor it is rendered at runtime by `session_setup.py`.
+
+Placement decision: `render_banner` (Step 2) appends the warning for
+intervention specs, reusing a template constant `INTERVENTION_WARNING` (Step 4,
+kept in Step 6) rather than hardcoding inline — mirroring how the plan reuses
+`BANNER_TEMPLATE`. Since `run_session` prints `render_banner(spec)` before
+`orchestrate`, the warning shows in the UTF-8-forced terminal before the bare
+`claude` launch; no separate print on `orchestrate`'s intervention branch.
+The coordinator-console banner and the status-file `Mode: INTERVENTION` line are
+out of scope and unchanged.
+
+## Round 2 — intervention render test (Finding 3)
+
+The `render_banner` test (Step 2) and the intervention-flow test (Step 3) assert
+that an intervention spec's rendered/printed banner **contains** the
+`!! INTERVENTION MODE` warning, and a normal spec's does **not**.
+
+## Round 2 — commands validation now unconditional (Finding 2, note-only)
+
+In the rewritten `create_startup_script`, `commands` list/`str` validation
+(raise `ValueError`) runs unconditionally before the intervention branch — a
+minor intentional fail-fast change from today, where it only ran on the
+non-intervention path. Note-only; kept.
 
 ## Informational (no change)
 

@@ -55,7 +55,10 @@ re-absorbed.
 install.py argv` (append `--skip-overrides` iff set). Default overrides-ON.
 
 **Banner rendered in Python** with forced UTF-8 stdout (replaces `chcp 65001`);
-reuses the existing `BANNER_TEMPLATE` string.
+reuses the existing `BANNER_TEMPLATE` string. For intervention specs
+`render_banner` also emits the restored `!! INTERVENTION MODE ...` warning
+(reusing a kept `INTERVENTION_WARNING` template constant) before bare `claude`
+launches — behavior parity with the old `INTERVENTION_SCRIPT_*` templates.
 
 **Error visibility on both layers.** `main` wraps `run_session`; on any expected
 failure it prints the traceback, prompts the user, then **exits 0** (it already
@@ -80,7 +83,7 @@ launcher backstop catches.
 
 | Shape | Behaviour |
 |-------|-----------|
-| intervention | bare `claude --mcp-config <f> --strict-mcp-config` |
+| intervention | print `!! INTERVENTION MODE` warning, then bare `claude --mcp-config <f> --strict-mcp-config` |
 | 0 commands | venv provisioning only |
 | 1 command | interactive `claude --mcp-config <f> --strict-mcp-config "<cmd> <issue>"` |
 | multi | step 1 automated (`mcp-coder prompt ... --output-format session-id`) → middle steps `--session-id` (non-fatal) → last interactive `claude --resume <id> "<cmd>"` |
@@ -102,8 +105,9 @@ steps; middle steps continue on error.
 - `src/mcp_coder/workflows/vscodeclaude/types.py` — add `SessionSpec` + spec
   read/write helpers.
 - `src/mcp_coder/workflows/vscodeclaude/templates.py` — add `LAUNCHER_WINDOWS` /
-  `LAUNCHER_POSIX`, extend `GITIGNORE_ENTRY`, delete the 12 orchestration
-  constants.
+  `LAUNCHER_POSIX` / `INTERVENTION_WARNING`, extend `GITIGNORE_ENTRY`, delete the
+  12 orchestration constants (the intervention warning text survives in
+  `INTERVENTION_WARNING`).
 - `src/mcp_coder/workflows/vscodeclaude/workspace.py` — rewrite
   `create_startup_script` (write spec + launcher); drop `_escape_batch_title`.
 - `tests/workflows/vscodeclaude/test_templates.py` — launcher tests; drop

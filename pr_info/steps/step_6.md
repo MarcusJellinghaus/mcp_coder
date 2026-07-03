@@ -20,10 +20,16 @@ Delete these now-unused constants from `templates.py`:
 - `STARTUP_SCRIPT_WINDOWS`, `STARTUP_SCRIPT_POSIX`
 - `INTERVENTION_SCRIPT_WINDOWS`, `INTERVENTION_SCRIPT_POSIX`
 
-Keep: `LAUNCHER_WINDOWS`, `LAUNCHER_POSIX`, `WORKSPACE_FILE_TEMPLATE`,
+Keep: `LAUNCHER_WINDOWS`, `LAUNCHER_POSIX`, `INTERVENTION_WARNING` (Step 4 —
+still consumed by `render_banner`), `WORKSPACE_FILE_TEMPLATE`,
 `TASKS_JSON_TEMPLATE`, `STATUS_FILE_TEMPLATE`, `BANNER_TEMPLATE`,
 `INTERVENTION_LINE`, `GITIGNORE_ENTRY`. Optionally trim the module docstring's
 two-environment narrative to match the new model.
+
+**Note:** deleting `INTERVENTION_SCRIPT_WINDOWS`/`INTERVENTION_SCRIPT_POSIX` does
+**not** drop the terminal intervention warning — its text now lives in the
+surviving `INTERVENTION_WARNING` constant and is printed at runtime by
+`session_setup.render_banner`.
 
 ## HOW
 - Grep for each deleted name to confirm no remaining import in `src/`

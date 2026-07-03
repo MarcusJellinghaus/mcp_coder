@@ -29,6 +29,27 @@
 
 **Changes:** step_2 (env rationale + banner-title note), step_3 (middle-step warning parity + UTF-8-before-banner test + install.py VIRTUAL_ENV env test), step_5 (`test_workspace.py` port + e2e `skip_github_install` round-trip test), step_6 (`ci.yml` drift-guard comment update), summary.md (call-site wording), Decisions.md (created).
 
+**Status:** committed — 1fb56b4
+
+---
+
+## Round 2 — 2026-07-03
+
+**Findings** (from `/plan_review` engineer; Round-1 fixes verified correctly integrated):
+1. [improvement/parity] Intervention terminal WARNING banner is dropped, and step_5/Decisions.md rationale falsely claims it's "rendered at runtime by session_setup.py" — no step rendered it.
+2. [nit] `commands` validation moved from conditional (non-intervention only) to unconditional — minor unflagged fail-fast behavior delta.
+3. [nit] `render_banner` test list lacks an intervention-case assertion (subsumed by #1).
+
+**Overall assessment:** Fundamentally sound; no structural rework. Approve conditional on resolving #1.
+
+**Decisions:** Escalated #1 (parity + feature-scope). #2/#3 folded into #1 fix.
+
+**User decisions:**
+- Explained intervention mode (manual no-automation debug session forced open on a bot-busy issue via `--intervene --issue N`; warns human in-terminal that automation may run concurrently). Clarified two warning surfaces: coordinator-console banner + status-file `Mode: INTERVENTION` are NOT dropped by the refactor; only the in-terminal startup-script banner is.
+- **Decision: RESTORE the in-terminal intervention warning** (behavior parity, cheap, collision-safety cue in the working terminal). Render at runtime via `session_setup.render_banner`, reusing a kept `INTERVENTION_WARNING` template constant.
+
+**Changes:** step_2 (`render_banner` appends `INTERVENTION_WARNING` for intervention specs + test), step_3 (`run_session` prints it before bare claude + flow test asserts warning present/absent), step_4 (add `INTERVENTION_WARNING` constant, additive), step_5 (correct intervention rationale + Finding-2 unconditional-validation note), step_6 (keep `INTERVENTION_WARNING`, note deletion doesn't drop warning), summary.md (banner/flow-shapes/templates bullets), Decisions.md (corrected wording + 3 Round-2 entries).
+
 **Status:** committed (see commit agent)
 
 ---

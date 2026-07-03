@@ -32,6 +32,10 @@ building. Delete `_escape_batch_title` (banner escaping now happens in Python).
   list/str validation (raise `ValueError`), the POSIX `mcp_config`-exists check
   (`FileNotFoundError`), `get_mcp_coder_install_path` fallback + `RuntimeError`,
   and `_resolve_install_script`.
+- **Note (minor, intentional):** the `commands` validation now runs
+  **unconditionally** — before any intervention branching — since the single new
+  body builds the spec the same way for every mode. This is a small fail-fast
+  change from today, where the validation only ran on the non-intervention path.
 - `session_folder_path` param is now unused (CWD is the runtime source of truth);
   keep it for signature stability with `# pylint: disable=unused-argument`.
 - POSIX: `chmod(0o755)` on the `.sh` as today.
@@ -86,10 +90,12 @@ Port / trim (write/adjust before implementing):
     assert `read_session_spec(folder).commands` (or the `build_claude_argv` /
     `build_step_argv` output) contains that command, not the launcher text.
   - `test_create_startup_script_intervention` asserts `"INTERVENTION" in content`
-    — the intervention banner is rendered at runtime by `session_setup.py`, not
-    baked into the launcher. Re-point to the spec's `is_intervention` flag
-    (and/or move the banner-text assertion to the `render_banner` test in
-    Step 2/3).
+    — but the thin launcher no longer contains the intervention text. That text
+    is now rendered at runtime by `session_setup.render_banner` (via the
+    `INTERVENTION_WARNING` constant). Re-point this workspace-level test to assert
+    the written spec's `is_intervention` flag; the printed-warning coverage lives
+    in the `render_banner` test (Step 2, and the intervention-flow test in
+    Step 3).
 - New: spec round-trips through `create_startup_script` for intervention, 0/1/
   multi-command statuses, on Windows and POSIX.
 - **New end-to-end `skip_github_install` round-trip** (real on-disk path,
