@@ -416,11 +416,35 @@ INTERVENTION_WARNING = """
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 """
 
+# Thin launcher for Windows (.bat).
+#
+# The startup script collapses to a one-line launcher that bootstraps into
+# Python; all orchestration lives in `session_setup.py`. The only placeholder
+# is the coordinator's install path (used to locate its venv Python). `%CD%`
+# is the session/project directory — the single source of truth passed as the
+# module argument. `|| pause` keeps the window open if the interpreter itself
+# cannot start (session_setup's own `main` handles expected failures + exits 0).
+LAUNCHER_WINDOWS = (
+    "@echo off\n"
+    '"{mcp_coder_install_path}\\.venv\\Scripts\\python.exe" '
+    '-m mcp_coder.workflows.vscodeclaude.session_setup "%CD%" || pause\n'
+)
+
+# Thin launcher for POSIX (.sh). See LAUNCHER_WINDOWS for the rationale; `$PWD`
+# is the session directory and `read -r -p` is the POSIX equivalent of `pause`.
+LAUNCHER_POSIX = (
+    "#!/usr/bin/env bash\n"
+    '"{mcp_coder_install_path}/.venv/bin/python" '
+    '-m mcp_coder.workflows.vscodeclaude.session_setup "$PWD" '
+    '|| read -r -p "Session failed (Enter to close)..."\n'
+)
+
 # Gitignore entry
 GITIGNORE_ENTRY = """
 # VSCodeClaude session files (auto-generated)
 .vscodeclaude_status.txt
 .vscodeclaude_analysis.json
+.vscodeclaude_session.json
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh
 """

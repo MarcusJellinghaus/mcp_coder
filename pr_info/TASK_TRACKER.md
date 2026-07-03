@@ -49,9 +49,9 @@ See [step_3.md](./steps/step_3.md).
 
 See [step_4.md](./steps/step_4.md).
 
-- [ ] Implementation: add `LAUNCHER_WINDOWS`/`LAUNCHER_POSIX` and extend `GITIGNORE_ENTRY` in `templates.py`, with launcher tests in `test_templates.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `LAUNCHER_WINDOWS`/`LAUNCHER_POSIX` and extend `GITIGNORE_ENTRY` in `templates.py`, with launcher tests in `test_templates.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Rewrite `create_startup_script` to write spec + launcher
 
