@@ -11,6 +11,7 @@ writes the thin launcher. Both call sites (`session_launch.py`,
 - `tests/workflows/vscodeclaude/test_workspace_startup_script.py` (trim)
 - `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py` (port)
 - `tests/workflows/vscodeclaude/test_startup_script_mcp_coder_path.py` (rewrite)
+- `tests/workflows/vscodeclaude/test_workspace.py` (port two content-asserting tests)
 
 ## WHAT
 Keep the existing signature:
@@ -77,8 +78,26 @@ Port / trim (write/adjust before implementing):
   and `test_startup_script_mcp_coder_path.py`. Replace their intent with a spec
   assertion (e.g. `read_session_spec(folder).commands` matches config,
   `is_intervention` set) where still meaningful.
+- **Port `test_workspace.py`** (two tests assert on generated *script content*
+  and break under the thin launcher):
+  - `test_create_startup_script_windows` asserts `"claude" in content` and
+    `"/implementation_review_supervisor" in content` — that command now lives in
+    the spec JSON, not the `.bat`. Re-point these to the written session-spec:
+    assert `read_session_spec(folder).commands` (or the `build_claude_argv` /
+    `build_step_argv` output) contains that command, not the launcher text.
+  - `test_create_startup_script_intervention` asserts `"INTERVENTION" in content`
+    — the intervention banner is rendered at runtime by `session_setup.py`, not
+    baked into the launcher. Re-point to the spec's `is_intervention` flag
+    (and/or move the banner-text assertion to the `render_banner` test in
+    Step 2/3).
 - New: spec round-trips through `create_startup_script` for intervention, 0/1/
   multi-command statuses, on Windows and POSIX.
+- **New end-to-end `skip_github_install` round-trip** (real on-disk path,
+  `workspace.py → .vscodeclaude_session.json → session_setup → install.py argv`):
+  ONE test chaining `create_startup_script(..., skip_github_install=True)` writes
+  the spec → `read_session_spec(folder)` → `build_install_argv(spec, folder)`
+  **includes** `--skip-overrides`; and the default (overrides-ON) case **omits**
+  it. Complements the piece-wise github delegation tests above.
 
 ## LLM PROMPT
 > Implement Step 5 from `pr_info/steps/step_5.md` (context in
@@ -90,6 +109,9 @@ Port / trim (write/adjust before implementing):
 > unused). Port the two github delegation tests to assert on the spec +
 > `build_install_argv`, delete the now-obsolete shell-string tests in
 > `test_workspace_startup_script.py` and `test_startup_script_mcp_coder_path.py`,
+> port the two content-asserting tests in `test_workspace.py`
+> (`test_create_startup_script_windows`, `test_create_startup_script_intervention`)
+> to spec assertions, add the end-to-end `skip_github_install` round-trip test,
 > and keep the filename/mode/error-path tests. Do NOT edit `session_launch.py` or
 > `session_restart.py`. Use MCP workspace tools. Run pylint, pytest (`-n auto` +
 > standard exclusions), mypy; fix all. One commit.

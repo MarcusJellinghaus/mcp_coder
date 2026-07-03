@@ -8,6 +8,7 @@ reference them). Remove both, and refresh the docs.
 - `src/mcp_coder/workflows/vscodeclaude/templates.py` (delete constants)
 - `tests/workflows/vscodeclaude/test_templates.py` (delete their tests)
 - `docs/coordinator-vscodeclaude.md` (Generated-Files table)
+- `.github/workflows/ci.yml` (drift-guard comment only, ~lines 132–166)
 
 ## WHAT
 Delete these now-unused constants from `templates.py`:
@@ -32,6 +33,12 @@ two-environment narrative to match the new model.
 - Docs: add `.vscodeclaude_session.json` to the "Generated Files" table and
   update the startup-script row to describe the thin launcher + Python
   `session_setup`.
+- `.github/workflows/ci.yml`: the `vscodeclaude-template-install` job
+  (~lines 132–166) documents itself (in a comment) as exercising
+  `templates.py:VENV_SECTION_POSIX` and a `_build_github_install_section_posix`
+  helper that this step deletes. Update that comment to point at the new source
+  of truth (`session_setup.build_install_argv`). **Comment-only** — the job body
+  runs `tools/install.py` directly and does not break.
 
 ## ALGORITHM
 None (deletion + doc edit).
@@ -51,6 +58,9 @@ None.
 > `src/mcp_coder/workflows/vscodeclaude/templates.py` and remove the tests in
 > `tests/workflows/vscodeclaude/test_templates.py` that reference them (keep the
 > launcher tests). Update `docs/coordinator-vscodeclaude.md` Generated-Files
-> table to mention `.vscodeclaude_session.json` and the thin launcher. Verify no
-> `src/` code still imports the removed names. Use MCP workspace tools. Run
-> pylint, pytest (`-n auto` + standard exclusions), mypy; fix all. One commit.
+> table to mention `.vscodeclaude_session.json` and the thin launcher, and update
+> the `vscodeclaude-template-install` drift-guard comment in
+> `.github/workflows/ci.yml` (~lines 132–166) to point at
+> `session_setup.build_install_argv` (comment-only). Verify no `src/` code still
+> imports the removed names. Use MCP workspace tools. Run pylint, pytest
+> (`-n auto` + standard exclusions), mypy; fix all. One commit.

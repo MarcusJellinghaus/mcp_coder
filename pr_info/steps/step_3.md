@@ -27,6 +27,9 @@ if __name__ == "__main__":
 - First step: `capture_output=True, text=True`; parse `stdout.strip()` as the
   session id; raise `RuntimeError` if empty.
 - Middle steps: run **without** `check` (non-fatal — continue on non-zero).
+  On a non-zero return, emit a warning (`log`/`print`
+  `WARNING: Step N encountered an error. Continuing...`) so the old-template
+  parity is preserved — do **not** silently swallow the failure.
 - Provisioning + interactive/intervention `claude`: inherit stdio (no capture);
   provisioning uses `check=True`. All calls pass `env=env, cwd=str(cwd)`.
 - `main` forces UTF-8 stdout first, then wraps `run_session` in try/except:
@@ -44,8 +47,9 @@ orchestrate(spec, cwd, env):
     if len(cmds) == 1:
         run(build_claude_argv(spec, prompt=f"{cmds[0]} {spec.issue_number}")); return
     sid = run_first_step(spec, cmds[0], env, cwd)          # step 1 capture
-    for cmd in cmds[1:-1]:
-        run(build_step_argv(spec, cmd, session_id=sid, issue_number=None))  # non-fatal
+    for i, cmd in enumerate(cmds[1:-1], start=2):
+        r = run(build_step_argv(spec, cmd, session_id=sid, issue_number=None))  # non-fatal
+        if r.returncode != 0: warn(f"Step {i} encountered an error. Continuing...")
     run(build_claude_argv(spec, prompt=cmds[-1], session_id=sid))           # last
 
 run_session(cwd):
@@ -69,11 +73,20 @@ run_session(cwd):
 - Session-id capture: stub first-step stdout `"abc123\n"` => id `"abc123"`;
   empty stdout raises.
 - Middle-step non-fatal: middle `run` returns non-zero → flow still reaches the
-  last `claude` call.
+  last `claude` call **and** a warning is emitted (assert the
+  `Step N encountered an error. Continuing...` warning fires; capture log/stdout
+  or patch the `warn`/`log` symbol).
 - `main` graceful exit: `read_session_spec` raises → `SystemExit` code 0 and
   `input` was called once (patch `builtins.input`).
 - Every non-capture call receives `env=` containing the four MCP vars and
   `cwd=str(cwd)`.
+- `install.py` env: the env passed to the `install.py` subprocess carries
+  `VIRTUAL_ENV` equal to the project `.venv` path (`cwd/.venv`) — confirms the
+  shared-env / Option-B invariant end-to-end.
+- UTF-8 before banner: `main` forces UTF-8 stdout **before** the banner prints —
+  assert `_force_utf8_stdout` (or `sys.stdout.reconfigure(encoding="utf-8")`) is
+  invoked before the banner `print` (guards the emoji-on-cp1252
+  `UnicodeEncodeError`).
 
 ## LLM PROMPT
 > Implement Step 3 from `pr_info/steps/step_3.md` (context in

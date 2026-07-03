@@ -32,7 +32,19 @@ def render_banner(spec: SessionSpec) -> str
   PATH-lookup gotcha. `claude` stays the literal `"claude"` (global npm CLI in
   inherited PATH).
 - `render_banner` reuses `BANNER_TEMPLATE` from `.templates` (import inside the
-  function to avoid a heavy top-level import).
+  function to avoid a heavy top-level import). The old 58-char title truncation
+  and shell-escaping (`_escape_batch_title` / POSIX quoting) are **intentionally
+  dropped**: the banner is now printed by Python (no shell), so escaping is
+  unnecessary; truncation was cosmetic and is not reproduced.
+- **Shared env for `install.py` (Option B).** The one `build_subprocess_env`
+  dict is reused for **every** subprocess, including the Step-3 `install.py`
+  call. This is safe because `install.py` forwards env untouched; its
+  `uv pip install` commands are immune (pinned via `--python <abs venv python>`),
+  and the only env-sensitive command (`uv sync`, our `--use-sync` path) targets
+  `<cwd>/.venv`. Setting `VIRTUAL_ENV=<cwd>/.venv` (rather than leaking the
+  coordinator venv's `VIRTUAL_ENV`) makes `uv sync` match and avoids uv's
+  "VIRTUAL_ENV does not match" warning. **Invariant to preserve:**
+  `VIRTUAL_ENV == <cwd>/.venv == target`.
 
 ## ALGORITHM
 ```

@@ -114,11 +114,18 @@ steps; middle steps continue on error.
   delegation tests to the spec field + `build_install_argv`.
 - `tests/workflows/vscodeclaude/test_startup_script_mcp_coder_path.py` —
   rewrite/delete (asserted removed shell content).
+- `tests/workflows/vscodeclaude/test_workspace.py` — port the two
+  content-asserting tests (`test_create_startup_script_windows`,
+  `test_create_startup_script_intervention`) to spec assertions.
 - `docs/coordinator-vscodeclaude.md` — Generated-Files table (+ session json).
+- `.github/workflows/ci.yml` — update the `vscodeclaude-template-install`
+  drift-guard comment to point at `session_setup.build_install_argv`
+  (comment-only).
 
 **Unchanged (verified)**
-- `session_launch.py` / `session_restart.py` — both call `create_startup_script`
-  with the same signature; no call-site edits.
+- `session_launch.py` — both `create_startup_script` call sites (~lines 195 and
+  450) live here; `session_restart.py` has no direct call. Signature is unchanged
+  either way, so no call-site edits.
 - `__init__.py` — `session_setup` is invoked via `python -m`, not exported.
 
 ## Step overview (one commit each, TDD)
