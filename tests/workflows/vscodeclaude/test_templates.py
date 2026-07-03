@@ -5,8 +5,24 @@ from mcp_coder.workflows.vscodeclaude.templates import (
     AUTOMATED_SECTION_WINDOWS,
     INTERACTIVE_ONLY_SECTION_WINDOWS,
     INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
+    INTERVENTION_WARNING,
     VENV_SECTION_WINDOWS,
 )
+
+
+def test_intervention_warning_text() -> None:
+    """INTERVENTION_WARNING holds the verbatim ``!! INTERVENTION MODE`` block.
+
+    Step 2 makes ``render_banner`` its first consumer: the warning is printed
+    by Python (no shell), so it carries no ``{}`` placeholder and reproduces
+    the two key lines from the retired INTERVENTION_SCRIPT_* templates.
+    """
+    assert (
+        "INTERVENTION MODE - Automation may be running elsewhere"
+        in INTERVENTION_WARNING
+    )
+    assert "No automated analysis will run." in INTERVENTION_WARNING
+    assert "{" not in INTERVENTION_WARNING
 
 
 def test_venv_section_delegates_to_install_script() -> None:

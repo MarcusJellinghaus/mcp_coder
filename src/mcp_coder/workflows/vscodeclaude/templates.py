@@ -406,6 +406,16 @@ URL:    {issue_url}
 INTERVENTION_LINE = """Mode:    ⚠️ INTERVENTION
 """
 
+# Intervention warning banner (printed by Python before a bare `claude` launch).
+# Verbatim text lifted from the retired INTERVENTION_SCRIPT_* shell templates;
+# no `{}` placeholders because it is emitted as-is (no shell, no formatting).
+INTERVENTION_WARNING = """
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! INTERVENTION MODE - Automation may be running elsewhere
+!! Investigate manually. No automated analysis will run.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+"""
+
 # Gitignore entry
 GITIGNORE_ENTRY = """
 # VSCodeClaude session files (auto-generated)

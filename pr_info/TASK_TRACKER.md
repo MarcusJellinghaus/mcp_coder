@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md).
 
 See [step_2.md](./steps/step_2.md).
 
-- [ ] Implementation: create `session_setup.py` pure helpers (env dict, venv-bin, exe/python resolvers, argv builders, `render_banner`), add `INTERVENTION_WARNING` to `templates.py`, with tests in `test_session_setup_env.py` + `test_templates.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `session_setup.py` pure helpers (env dict, venv-bin, exe/python resolvers, argv builders, `render_banner`), add `INTERVENTION_WARNING` to `templates.py`, with tests in `test_session_setup_env.py` + `test_templates.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `session_setup.py` orchestration + `main`
 
