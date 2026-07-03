@@ -41,9 +41,9 @@ See [step_2.md](./steps/step_2.md).
 
 See [step_3.md](./steps/step_3.md).
 
-- [ ] Implementation: add `orchestrate`, `run_first_step`, `run_session`, `_force_utf8_stdout`, `main`, `__main__` guard, with flow tests in `test_session_setup_flow.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `orchestrate`, `run_first_step`, `run_session`, `_force_utf8_stdout`, `main`, `__main__` guard, with flow tests in `test_session_setup_flow.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Thin launcher templates + gitignore entry (additive)
 
