@@ -65,9 +65,9 @@ See [step_5.md](./steps/step_5.md).
 
 See [step_6.md](./steps/step_6.md).
 
-- [ ] Implementation: delete the 14 retired orchestration constants from `templates.py`, remove their tests, update `docs/coordinator-vscodeclaude.md` Generated-Files table and the `ci.yml` drift-guard comment
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: delete the 14 retired orchestration constants from `templates.py`, remove their tests, update `docs/coordinator-vscodeclaude.md` Generated-Files table and the `ci.yml` drift-guard comment
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -139,7 +139,8 @@ Each session creates:
 | File | Purpose |
 |------|---------|
 | `<repo>_<issue>.code-workspace` | VS Code workspace file |
-| `.vscodeclaude_start.bat/.sh` | Startup script |
+| `.vscodeclaude_start.bat/.sh` | Thin launcher — bootstraps into `python -m mcp_coder.workflows.vscodeclaude.session_setup` (gitignored) |
+| `.vscodeclaude_session.json` | Typed session spec consumed by `session_setup` at launch (gitignored) |
 | `.vscode/tasks.json` | Auto-run task on folder open |
 | `.vscodeclaude_status.txt` | Session status (gitignored) |
 
