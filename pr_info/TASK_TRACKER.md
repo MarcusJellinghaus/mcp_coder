@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md).
 
-- [ ] Implementation: `SessionSpec` dataclass + `SESSION_SPEC_FILENAME` + `write_session_spec`/`read_session_spec` in `types.py`, with round-trip tests in `test_session_spec.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `SessionSpec` dataclass + `SESSION_SPEC_FILENAME` + `write_session_spec`/`read_session_spec` in `types.py`, with round-trip tests in `test_session_spec.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `session_setup.py` pure helpers (env, argv, banner)
 

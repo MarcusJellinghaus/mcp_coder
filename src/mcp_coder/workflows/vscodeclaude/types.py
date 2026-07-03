@@ -1,7 +1,9 @@
 """Type definitions and constants for vscodeclaude feature."""
 
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Any, TypedDict
 
 
@@ -220,3 +222,59 @@ DEFAULT_MAX_SESSIONS: int = 3
 
 # Default timeout for mcp-coder prompt calls in startup scripts (seconds)
 DEFAULT_PROMPT_TIMEOUT: int = 300  # 5 minutes
+
+
+@dataclass(frozen=True)
+class SessionSpec:
+    """Typed launch-time/run-time contract for a vscodeclaude session.
+
+    Written by ``workspace.create_startup_script`` at launch time and consumed
+    by ``session_setup`` at run time. Ephemeral and gitignored: regenerated on
+    every restart, so it carries no version field.
+    """
+
+    issue_number: int
+    title: str
+    repo: str
+    status: str
+    issue_url: str
+    emoji: str
+    commands: list[str]
+    timeout: int
+    mcp_config: str  # e.g. ".mcp.json" / ".mcp.linux.json"
+    install_script_path: str  # resolved tools/install.py
+    mcp_coder_install_path: str  # coordinator install dir (holds .venv)
+    skip_github_install: bool
+    is_intervention: bool
+
+
+# Filename for the per-session spec JSON written at launch time.
+SESSION_SPEC_FILENAME: str = ".vscodeclaude_session.json"
+
+
+def write_session_spec(folder: Path, spec: SessionSpec) -> Path:
+    """Serialize ``spec`` to ``<folder>/.vscodeclaude_session.json``.
+
+    Args:
+        folder: Session folder to write the spec into.
+        spec: The session spec to persist.
+
+    Returns:
+        The path to the written JSON file.
+    """
+    path = folder / SESSION_SPEC_FILENAME
+    path.write_text(json.dumps(asdict(spec), indent=2), encoding="utf-8")
+    return path
+
+
+def read_session_spec(folder: Path) -> SessionSpec:
+    """Load the session spec from ``<folder>/.vscodeclaude_session.json``.
+
+    Args:
+        folder: Session folder holding the spec JSON.
+
+    Returns:
+        The deserialized ``SessionSpec``.
+    """
+    data = json.loads((folder / SESSION_SPEC_FILENAME).read_text(encoding="utf-8"))
+    return SessionSpec(**data)
