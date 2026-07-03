@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import (
@@ -57,6 +57,7 @@ from .constants import (
     FailureCategory,
     WorkflowFailure,
 )
+from .llm_failures import REASON_TO_CATEGORY, llm_failure_reason
 from .prerequisites import (
     check_git_clean,
     check_main_branch,
@@ -227,6 +228,7 @@ def prepare_task_tracker(
         llm_response = prompt_llm(
             prompt_template,
             provider=provider,
+            # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
@@ -418,6 +420,7 @@ def run_finalisation(
     llm_response = prompt_llm(
         finalisation_prompt,
         provider=provider,
+        # Inactivity budget (was wall-clock), kept below the CI step cap.
         timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
         env_vars=env_vars,
         execution_dir=str(execution_dir) if execution_dir else None,
@@ -634,6 +637,24 @@ def run_implement_workflow(
                     )
                     reached_terminal_state = True
                     return 1
+                if reason == "mcp_unavailable":
+                    # A required MCP server was unavailable during task processing
+                    _handle_workflow_failure(
+                        WorkflowFailure(
+                            category=REASON_TO_CATEGORY["mcp_unavailable"],
+                            stage="Task implementation",
+                            message="MCP servers unavailable during task processing",
+                            tasks_completed=completed_tasks,
+                            tasks_total=total_tasks,
+                            build_url=build_url,
+                            elapsed_time=time.time() - start_time,
+                        ),
+                        project_dir,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
+                    )
+                    reached_terminal_state = True
+                    return 1
                 if reason == "no_changes_after_retries":
                     # Task produced no changes after all retry attempts
                     _handle_workflow_failure(
@@ -689,16 +710,40 @@ def run_implement_workflow(
             logger.info("Running final mypy check after all tasks...")
             env_vars = prepare_llm_environment(project_dir)
 
-            # Use step number 0 for final mypy check conversation
-            if not check_and_fix_mypy(
-                project_dir,
-                0,
-                provider,
-                env_vars,
-                mcp_config,
-                settings_file,
-                execution_dir=execution_dir,
-            ):
+            # Use step number 0 for final mypy check conversation.
+            # check_and_fix_mypy no longer swallows the two typed LLM failures;
+            # categorize them here (the only live call site) into
+            # llm_timeout / mcp_unavailable.
+            try:
+                mypy_clean = check_and_fix_mypy(
+                    project_dir,
+                    0,
+                    provider,
+                    env_vars,
+                    mcp_config,
+                    settings_file,
+                    execution_dir=execution_dir,
+                )
+            except (LLMTimeoutError, McpServersUnavailableError) as exc:
+                # Fallback keeps mypy happy; the reason is non-None for both types.
+                reason = llm_failure_reason(exc) or "error"
+                _handle_workflow_failure(
+                    WorkflowFailure(
+                        category=REASON_TO_CATEGORY[reason],
+                        stage="Final mypy check",
+                        message="LLM failure during final mypy check",
+                        tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
+                        build_url=build_url,
+                        elapsed_time=time.time() - start_time,
+                    ),
+                    project_dir,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                )
+                reached_terminal_state = True
+                return 1
+            if not mypy_clean:
                 logger.warning(
                     "Final mypy check found unresolved issues - continuing anyway"
                 )
@@ -784,14 +829,38 @@ def run_implement_workflow(
         logger.info("Checking CI pipeline status...")
         current_branch = get_current_branch_name(project_dir)
         if current_branch:
-            ci_success = check_and_fix_ci(
-                project_dir=project_dir,
-                branch=current_branch,
-                provider=provider,
-                mcp_config=mcp_config,
-                settings_file=settings_file,
-                execution_dir=execution_dir,
-            )
+            # CI-analysis no longer swallows the two typed LLM failures; a
+            # fix-phase timeout/MCP-unavailable is still absorbed into the
+            # 4-attempt loop (Decision 10). Only an analysis-phase abort reaches
+            # here — categorize it into llm_timeout / mcp_unavailable.
+            try:
+                ci_success = check_and_fix_ci(
+                    project_dir=project_dir,
+                    branch=current_branch,
+                    provider=provider,
+                    mcp_config=mcp_config,
+                    settings_file=settings_file,
+                    execution_dir=execution_dir,
+                )
+            except (LLMTimeoutError, McpServersUnavailableError) as exc:
+                # Fallback keeps mypy happy; the reason is non-None for both types.
+                reason = llm_failure_reason(exc) or "error"
+                _handle_workflow_failure(
+                    WorkflowFailure(
+                        category=REASON_TO_CATEGORY[reason],
+                        stage="CI pipeline analysis",
+                        message="LLM failure during CI failure analysis",
+                        tasks_completed=completed_tasks,
+                        tasks_total=total_tasks,
+                        build_url=build_url,
+                        elapsed_time=time.time() - start_time,
+                    ),
+                    project_dir,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                )
+                reached_terminal_state = True
+                return 1
             if not ci_success:
                 logger.error("CI check failed after maximum fix attempts")
                 _handle_workflow_failure(

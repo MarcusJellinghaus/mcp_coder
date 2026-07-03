@@ -306,7 +306,7 @@ class TestLabelsJsonVscodeclaudeMetadata:
             if label["category"] == "human_action"
         ]
 
-        assert len(human_action_labels) == 13
+        assert len(human_action_labels) == 14
 
         base_fields = {"emoji", "display_name", "stage_short"}
 

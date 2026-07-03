@@ -287,22 +287,22 @@ class TestMcpServerGuardInAskClaude:
         )
         return f"{system_msg}\n{result_msg}"
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     def test_raises_when_server_failed(
-        self, mock_execute: MagicMock, mock_find: MagicMock
+        self, mock_stream: MagicMock, mock_find: MagicMock
     ) -> None:
         """A failed server (alongside pending) still aborts; message lists fatal."""
         mock_find.return_value = "claude"
-        stream = self._stream_with_servers(
+        lines = self._stream_with_servers(
             [
                 {"name": "mcp-tools-py", "status": "failed"},
                 {"name": "mcp-workspace", "status": "pending"},
             ]
-        )
-        mock_execute.return_value = CommandResult(
-            return_code=0, stdout=stream, stderr="", timed_out=False
-        )
+        ).split("\n")
+        mock_stream.return_value = _make_mock_stream(lines)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(McpServersUnavailableError) as exc_info:
@@ -312,63 +312,63 @@ class TestMcpServerGuardInAskClaude:
         # tolerated (self-heals via ToolSearch) and need not appear.
         assert "mcp-tools-py=failed" in str(exc_info.value)
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     def test_failed_aborts_single_attempt(
-        self, mock_execute: MagicMock, mock_find: MagicMock
+        self, mock_stream: MagicMock, mock_find: MagicMock
     ) -> None:
         """A fatal (failed) server aborts in exactly one attempt — no retry."""
         mock_find.return_value = "claude"
-        stream = self._stream_with_servers(
+        lines = self._stream_with_servers(
             [{"name": "mcp-tools-py", "status": "failed"}]
-        )
-        mock_execute.return_value = CommandResult(
-            return_code=0, stdout=stream, stderr="", timed_out=False
-        )
+        ).split("\n")
+        mock_stream.return_value = _make_mock_stream(lines)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with pytest.raises(McpServersUnavailableError) as exc_info:
                 ask_claude_code_cli("Test question", logs_dir=tmpdir)
 
         assert "mcp-tools-py=failed" in str(exc_info.value)
-        assert mock_execute.call_count == 1
+        assert mock_stream.call_count == 1
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     def test_pending_only_succeeds_single_attempt(
-        self, mock_execute: MagicMock, mock_find: MagicMock
+        self, mock_stream: MagicMock, mock_find: MagicMock
     ) -> None:
         """A pending-only init is tolerated: no raise, normal result, one call."""
         mock_find.return_value = "claude"
-        stream = self._stream_with_servers(
+        lines = self._stream_with_servers(
             [
                 {"name": "mcp-tools-py", "status": "pending"},
                 {"name": "mcp-workspace", "status": "pending"},
             ]
-        )
-        mock_execute.return_value = CommandResult(
-            return_code=0, stdout=stream, stderr="", timed_out=False
-        )
+        ).split("\n")
+        mock_stream.return_value = _make_mock_stream(lines)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = ask_claude_code_cli("Test question", logs_dir=tmpdir)
 
         assert result["session_id"] == "sess-mcp"
         assert result["text"] == "done"
-        assert mock_execute.call_count == 1
+        assert mock_stream.call_count == 1
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     def test_succeeds_when_all_connected(
-        self, mock_execute: MagicMock, mock_find: MagicMock
+        self, mock_stream: MagicMock, mock_find: MagicMock
     ) -> None:
         mock_find.return_value = "claude"
-        stream = self._stream_with_servers(
+        lines = self._stream_with_servers(
             [{"name": "mcp-workspace", "status": "connected"}]
-        )
-        mock_execute.return_value = CommandResult(
-            return_code=0, stdout=stream, stderr="", timed_out=False
-        )
+        ).split("\n")
+        mock_stream.return_value = _make_mock_stream(lines)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = ask_claude_code_cli("Test question", logs_dir=tmpdir)

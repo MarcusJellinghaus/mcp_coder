@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Unit tests for MCP config parameter handling in claude_code_cli module."""
 
-import json
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import (
     ask_claude_code_cli,
@@ -15,6 +13,26 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
 from mcp_coder.utils.subprocess_runner import CommandResult
 
 from .conftest import StreamJsonFactory
+
+
+class _MockStreamResult:
+    """Mimics StreamResult for testing: iterable with a .result property."""
+
+    def __init__(self, lines: list[str]) -> None:
+        self._lines = lines
+        self._result = CommandResult(
+            return_code=0,
+            stdout="",
+            stderr="",
+            timed_out=False,
+        )
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._lines)
+
+    @property
+    def result(self) -> CommandResult:
+        return self._result
 
 
 class TestClaudeMcpConfig:
@@ -83,13 +101,17 @@ class TestClaudeMcpConfig:
         assert "-p" in cmd
         assert "--output-format" in cmd
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_code_cli_passes_mcp_config(
         self,
         mock_get_path: MagicMock,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
         make_stream_json_output: StreamJsonFactory,
     ) -> None:
@@ -97,19 +119,15 @@ class TestClaudeMcpConfig:
         mock_find.return_value = "claude"
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
-            mock_result = CommandResult(
-                return_code=0,
-                stdout=make_stream_json_output("Test response", "test-123"),
-                stderr="",
-                timed_out=False,
+            mock_stream.return_value = _MockStreamResult(
+                make_stream_json_output("Test response", "test-123").split("\n")
             )
-            mock_execute.return_value = mock_result
 
             # Call ask_claude_code_cli with mcp_config parameter
             result = ask_claude_code_cli("Test question", mcp_config=".mcp.linux.json")
 
-            # Verify the command passed to execute_subprocess contains mcp_config flags
-            call_args = mock_execute.call_args
+            # Verify the command passed to stream_subprocess contains mcp_config flags
+            call_args = mock_stream.call_args
             command = call_args[0][0]
 
             assert "--mcp-config" in command
@@ -120,13 +138,17 @@ class TestClaudeMcpConfig:
             assert result["text"] == "Test response"
             assert result["session_id"] == "test-123"
 
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess")
-    @patch("mcp_coder.llm.providers.claude.claude_code_cli.get_stream_log_path")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
+    )
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path"
+    )
     def test_ask_claude_code_cli_with_session_and_mcp_config(
         self,
         mock_get_path: MagicMock,
-        mock_execute: MagicMock,
+        mock_stream: MagicMock,
         mock_find: MagicMock,
         make_stream_json_output: StreamJsonFactory,
     ) -> None:
@@ -134,13 +156,9 @@ class TestClaudeMcpConfig:
         mock_find.return_value = "claude"
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_get_path.return_value = Path(tmpdir) / "test.ndjson"
-            mock_result = CommandResult(
-                return_code=0,
-                stdout=make_stream_json_output("Continued", "existing"),
-                stderr="",
-                timed_out=False,
+            mock_stream.return_value = _MockStreamResult(
+                make_stream_json_output("Continued", "existing").split("\n")
             )
-            mock_execute.return_value = mock_result
 
             # Call with both session_id and mcp_config
             result = ask_claude_code_cli(
@@ -148,7 +166,7 @@ class TestClaudeMcpConfig:
             )
 
             # Verify command contains both session and mcp_config flags
-            call_args = mock_execute.call_args
+            call_args = mock_stream.call_args
             command = call_args[0][0]
 
             assert "--resume" in command

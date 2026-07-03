@@ -165,6 +165,7 @@ ERROR_STATUS_IDS = [
     "implementing_failed",
     "ci_fix_needed",
     "llm_timeout",
+    "mcp_unavailable",
     "pr_creating_failed",
     "task_tracker_prep_failed",
     "no_changes_after_retries",

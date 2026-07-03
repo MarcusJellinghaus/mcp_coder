@@ -9,14 +9,15 @@ from typing import Any, TypedDict
 
 from ....utils.subprocess_runner import (
     CalledProcessError,
-    CommandOptions,
-    CommandResult,
     TimeoutExpired,
-    execute_subprocess,
 )
 from ...logging_utils import log_llm_error, log_llm_request, log_llm_response
-from ...types import LLM_RESPONSE_VERSION, LLMResponseDict
-from .claude_code_cli_log_paths import get_stream_log_path, sanitize_branch_identifier
+from ...types import (
+    LLM_RESPONSE_VERSION,
+    LLMResponseDict,
+    ResponseAssembler,
+    StreamEvent,
+)
 from .claude_executable_finder import find_claude_executable
 
 # Stream-json parsing and the MCP-availability guard live in claude_mcp_guard.
@@ -36,9 +37,6 @@ from .claude_mcp_guard import (
 
 logger = logging.getLogger(__name__)
 
-# Heartbeat interval for LLM subprocess calls (2 minutes)
-LLM_HEARTBEAT_INTERVAL_SECONDS = 120
-
 # Built-in tools override: keep "ToolSearch" as the MCP wait-bridge so the model
 # can wait for a still-pending MCP server instead of running blind, while
 # file/exec built-ins (Bash/Edit/Read/Write) stay disabled. MCP tools load
@@ -47,7 +45,6 @@ CLAUDE_BUILTIN_TOOLS = "ToolSearch"
 
 __all__ = [
     "CLAUDE_BUILTIN_TOOLS",
-    "LLM_HEARTBEAT_INTERVAL_SECONDS",
     "McpServersUnavailableError",
     "ParsedCliResponse",
     "ParsedStreamResponse",
@@ -55,7 +52,6 @@ __all__ = [
     "ask_claude_code_cli",
     "build_cli_command",
     "create_response_dict",
-    "create_response_dict_from_stream",
     "find_exposed_mcp_tools",
     "find_fatal_mcp_servers",
     "find_unavailable_mcp_servers",
@@ -297,48 +293,6 @@ def create_response_dict(
     }
 
 
-def create_response_dict_from_stream(
-    parsed: ParsedStreamResponse,
-    stream_file: str | None = None,
-) -> LLMResponseDict:
-    """Create LLMResponseDict from parsed stream response.
-
-    Args:
-        parsed: Parsed stream response
-        stream_file: Path to the stream log file (for reference)
-
-    Returns:
-        Complete LLMResponseDict
-    """
-    # Build raw_response from stream data
-    raw_response: dict[str, Any] = {
-        "messages": parsed["messages"],
-        "stream_file": stream_file,
-    }
-
-    # Add result info if available
-    if parsed["result_message"]:
-        result_msg = parsed["result_message"]
-        raw_response["result"] = result_msg.get("result", "")
-        raw_response["is_error"] = result_msg.get("is_error", False)
-        raw_response["duration_ms"] = result_msg.get("duration_ms")
-        raw_response["total_cost_usd"] = result_msg.get("total_cost_usd")
-        raw_response["usage"] = result_msg.get("usage")
-
-    # Add system info if available
-    if parsed["system_message"]:
-        raw_response["system"] = parsed["system_message"]
-
-    return {
-        "version": LLM_RESPONSE_VERSION,
-        "timestamp": datetime.now().isoformat(),
-        "text": parsed["text"],
-        "session_id": parsed["session_id"],
-        "provider": "claude",
-        "raw_response": raw_response,
-    }
-
-
 def _find_claude_executable() -> str:
     """Find Claude Code CLI executable, checking both PATH and common install locations.
 
@@ -405,20 +359,24 @@ def ask_claude_code_cli(
         system_prompt_replace: Optional system prompt to replace via --system-prompt.
             Mutually exclusive with append_system_prompt.
 
+    This is a thin drain-wrapper over :func:`ask_claude_code_cli_stream`: it
+    consumes the streaming generator to completion, assembles the result via
+    :class:`ResponseAssembler`, translates the streaming error events back into
+    exceptions, and runs the ``log_llm_*`` side-effects. The ``timeout`` is an
+    *inactivity* budget (max seconds with no stdout line from ``claude``), not a
+    wall-clock cap, since the streaming core watches for inactivity.
+
     Returns:
         LLMResponseDict with complete response data including session_id.
-        The raw_response includes:
-        - messages: List of all stream messages
+        The raw_response is the assembler's ``events`` shape:
+        - events: List of every StreamEvent seen during the run
         - stream_file: Path to the NDJSON log file
-        - result: Final result text
-        - duration_ms: Execution duration
-        - total_cost_usd: API cost
-        - usage: Token usage statistics
+        - usage: Token usage statistics (when present)
 
     Raises:
-        ValueError: If input validation fails or JSON parsing fails
-        TimeoutExpired: If command times out
-        CalledProcessError: If command fails (includes stream_file path)
+        ValueError: If input validation fails
+        TimeoutExpired: On inactivity timeout (reason ``inactivity_timeout``)
+        CalledProcessError: If the CLI exits non-zero (includes stream_file path)
         McpServersUnavailableError: If a configured MCP server did not connect
 
     Examples:
@@ -438,25 +396,17 @@ def ask_claude_code_cli(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    # Find executable
-    claude_cmd = _find_claude_executable()
-
-    # Build command with stream-json output format
-    command = build_cli_command(
-        session_id,
-        claude_cmd,
-        mcp_config,
-        use_stream_json=True,
-        append_system_prompt=append_system_prompt,
-        system_prompt_replace=system_prompt_replace,
-        settings_file=settings_file,
+    # Lazy (function-local) import to avoid the claude_code_cli <->
+    # claude_code_cli_streaming circular import: the streaming module imports
+    # helpers from this module at load time.
+    from .claude_code_cli_streaming import (  # pylint: disable=cyclic-import
+        ask_claude_code_cli_stream,
     )
 
-    # Generate stream log file path
-    stream_file_path = get_stream_log_path(logs_dir, cwd, branch_name)
-    logger.debug(f"Stream log file: {stream_file_path}")
-
-    # Log request
+    # The real argv is built inside ask_claude_code_cli_stream and is not
+    # exposed here; log a stable placeholder. The stream file path (captured
+    # below) is what actually identifies the run.
+    cmd_label = ["claude", "-p"]
     log_llm_request(
         provider="claude",
         session_id=session_id,
@@ -464,148 +414,95 @@ def ask_claude_code_cli(
         timeout=timeout,
         env_vars=env_vars or {},
         cwd=cwd or "",
-        command=command,
+        command=cmd_label,
         mcp_config=mcp_config,
     )
 
-    # Execute command with stdin input (I/O)
-    # cwd parameter controls where Claude subprocess runs
-    # This affects .mcp.json discovery and relative path resolution
-    #
-    # When using stream-json input format, the prompt must be formatted as JSON
-    # to enable --replay-user-messages which echoes the prompt in the output
-    input_data = format_stream_json_input(question)
-    logger.debug(
-        f"Executing CLI command with stdin (prompt_len={len(question)}, "
-        f"input_format=stream-json, session_id={session_id}, cwd={cwd})"
-    )
-    options = CommandOptions(
-        timeout_seconds=timeout,
-        input_data=input_data,  # Pass JSON-formatted question via stdin
-        env=env_vars,
-        cwd=cwd,  # Set working directory for Claude subprocess execution
-        env_remove=["CLAUDECODE"],  # Allow nested Claude CLI invocations
-    )
+    start_time = time.time()
+    assembler = ResponseAssembler("claude")
+    last_error: StreamEvent | None = None
+    done: StreamEvent | None = None
+    stream_file: str | None = None
 
-    parsed: ParsedStreamResponse | None = None
-    stream_file_str = str(stream_file_path)
-
+    # Drain the streaming core to completion. McpServersUnavailableError is
+    # raised mid-iteration by the generator and is allowed to propagate.
     try:
-        start_time = time.time()
-        result = execute_subprocess(
-            command,
-            options,
-            heartbeat_interval_seconds=LLM_HEARTBEAT_INTERVAL_SECONDS,
-            heartbeat_message="LLM call in progress",
-        )
-
-        # Save stream output to file
-        if result.stdout:
-            try:
-                stream_file_path.write_text(result.stdout, encoding="utf-8")
-                logger.debug(f"Wrote {len(result.stdout)} bytes to {stream_file_path}")
-            except (OSError, IOError) as e:
-                logger.warning(f"Failed to write stream file: {e}")
-
-        # Parse stream output
-        parsed = parse_stream_json_string(result.stdout)
-
-        # Error handling
-        if result.timed_out:
-            logger.error(f"CLI timed out after {timeout}s")
-            duration_ms = int((time.time() - start_time) * 1000)
-            timeout_error: Exception = TimeoutExpired(command, timeout)
-            log_llm_error(error=timeout_error, duration_ms=duration_ms)
-            raise timeout_error
-
-        if result.return_code != 0:
-            logger.error(f"CLI failed with code {result.return_code}")
-            logger.error(f"Stream file for diagnosis: {stream_file_path}")
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            # Include stream file path in error for diagnosis
-            error_msg = (
-                f"CLI failed with code {result.return_code}. "
-                f"Stream log: {stream_file_path}"
-            )
-            if result.stderr:
-                error_msg += f"\nStderr: {result.stderr[:500]}"
-
-            called_process_error = CalledProcessError(
-                result.return_code,
-                command,
-                output=result.stdout,
-                stderr=f"{result.stderr}\nStream file: {stream_file_path}",
-            )
-            log_llm_error(error=called_process_error, duration_ms=duration_ms)
-            raise called_process_error
-
-        # MCP availability guard (single attempt). Abort only on fatal
-        # (terminal, non-pending) servers so the model never runs blind on
-        # hallucinated tools. Pending servers self-heal within the session via
-        # the ToolSearch wait-bridge, so they are tolerated and only logged.
-        fatal_servers = find_fatal_mcp_servers(parsed["system_message"])
-        if fatal_servers:
-            detail = ", ".join(
-                f"{name}={status}" for name, status in fatal_servers.items()
-            )
-            mcp_error_msg = (
-                f"MCP servers not available: {detail}. The session started "
-                f"without its configured tools. Stream log: {stream_file_path}"
-            )
-            logger.error(mcp_error_msg)
-            duration_ms = int((time.time() - start_time) * 1000)
-            mcp_error: Exception = McpServersUnavailableError(
-                mcp_error_msg, unavailable_servers=fatal_servers
-            )
-            log_llm_error(error=mcp_error, duration_ms=duration_ms)
-            raise mcp_error
-
-        # Fatal servers already aborted above, so any remaining non-connected
-        # servers are pending.
-        pending_servers = find_unavailable_mcp_servers(parsed["system_message"])
-        if pending_servers:
-            logger.info(
-                "MCP server(s) still starting; ToolSearch will wait: %s",
-                pending_servers,
-            )
-
-        logger.debug(
-            f"CLI success: {len(result.stdout)} bytes, session_id={parsed['session_id']}"
-        )
-
-        # Log response
+        for event in ask_claude_code_cli_stream(
+            question,
+            session_id=session_id,
+            timeout=timeout,
+            env_vars=env_vars,
+            cwd=cwd,
+            mcp_config=mcp_config,
+            settings_file=settings_file,
+            logs_dir=logs_dir,
+            branch_name=branch_name,
+            append_system_prompt=append_system_prompt,
+            system_prompt_replace=system_prompt_replace,
+        ):
+            assembler.add(event)
+            event_type = event.get("type")
+            if event_type == "stream_file":
+                path = event.get("path")
+                if isinstance(path, str):
+                    stream_file = path
+            elif event_type == "done":
+                done = event
+            elif event_type == "error":
+                last_error = event
+    except McpServersUnavailableError as mcp_error:
         duration_ms = int((time.time() - start_time) * 1000)
+        log_llm_error(error=mcp_error, duration_ms=duration_ms)
+        raise
 
-        # Extract cost info from result message
-        cost_usd = None
-        usage = None
-        if parsed["result_message"]:
-            cost_usd = parsed["result_message"].get("total_cost_usd")
-            usage = parsed["result_message"].get("usage")
+    duration_ms = int((time.time() - start_time) * 1000)
 
-        log_llm_response(
-            duration_ms=duration_ms,
-            session_id=parsed["session_id"],
-            cost_usd=cost_usd,
-            usage=usage,
+    # Inactivity timeout: distinguished from a generic failure by the structured
+    # `reason` discriminator on the error event. Re-raise TimeoutExpired so the
+    # existing interface.py -> LLMTimeoutError bridge still applies.
+    if last_error is not None and last_error.get("reason") == "inactivity_timeout":
+        timeout_error: Exception = TimeoutExpired(cmd_label, timeout)
+        log_llm_error(error=timeout_error, duration_ms=duration_ms)
+        raise timeout_error
+
+    # Any other error event is a non-zero CLI exit.
+    if last_error is not None:
+        rc = last_error.get("return_code")
+        return_code = rc if isinstance(rc, int) else 1
+        # Preserve the streaming error event's message (carries stderr[:500] and
+        # detail) so log_llm_error and callers keep the diagnostic context.
+        error_message = last_error.get("message")
+        stderr_detail = (
+            f"CLI failed with code {return_code}. Stream file: {stream_file}"
         )
+        if isinstance(error_message, str) and error_message:
+            stderr_detail = f"{error_message} Stream file: {stream_file}"
+        called_process_error = CalledProcessError(
+            return_code,
+            cmd_label,
+            output="",
+            stderr=stderr_detail,
+        )
+        log_llm_error(error=called_process_error, duration_ms=duration_ms)
+        raise called_process_error
 
-        # Create response dict from stream data
-        return create_response_dict_from_stream(parsed, stream_file_str)
+    result = assembler.result()
 
-    except (TimeoutExpired, CalledProcessError, McpServersUnavailableError):
-        # Already logged above - re-raise without logging again
-        raise
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        # Log any other unexpected errors (e.g., ValueError from JSON parsing)
-        duration_ms = int((time.time() - start_time) * 1000)
-        log_llm_error(error=e, duration_ms=duration_ms)
+    # Extract cost/usage from the done event for the response log.
+    cost_usd: float | None = None
+    usage: dict[str, Any] | None = None
+    if done is not None:
+        cost_value = done.get("cost_usd")
+        if isinstance(cost_value, (int, float)) and not isinstance(cost_value, bool):
+            cost_usd = float(cost_value)
+        usage_value = done.get("usage")
+        if isinstance(usage_value, dict):
+            usage = usage_value
 
-        # Try to save whatever output we have
-        if parsed is None:
-            logger.error(f"Stream file for diagnosis: {stream_file_path}")
-
-        raise
+    log_llm_response(
+        duration_ms=duration_ms,
+        session_id=result["session_id"],
+        cost_usd=cost_usd,
+        usage=usage,
+    )
+    return result

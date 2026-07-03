@@ -177,7 +177,21 @@ mcp-coder implement --project-dir /path/to/project
   - `resolver.py` - LLM method parsing and session resolution (tests: `llm/session/test_resolver.py`)
 - **Providers**: `llm/providers/` - Provider implementations (claude, copilot, langchain)
   - `claude/` - Claude Code CLI integration (tests: `llm/providers/claude/test_*.py`)
-    - `claude_code_cli.py` - Claude Code CLI integration with stream-json session logging
+    - `claude_code_cli_streaming.py` - The single streaming core: `ask_claude_code_cli_stream()`
+      drives `stream_subprocess` with an **inactivity** watchdog and yields `StreamEvent`s
+      (`stream_file`, `text_delta`, tool events, `done`, and `error` events tagged with a
+      machine-readable `reason` discriminator)
+    - `claude_code_cli.py` - Command building + the blocking entrypoint `ask_claude_code_cli()`,
+      now a thin **drain-wrapper** over the streaming core: it consumes the generator to
+      completion, assembles the result via `ResponseAssembler` (`raw_response` is the `events`
+      shape, carrying `stream_file`), translates the `error` events back into `TimeoutExpired`
+      (on `reason == "inactivity_timeout"`) / `CalledProcessError`, lets
+      `McpServersUnavailableError` propagate, and runs the `log_llm_*` side-effects
+      - **Design Decision**: Unified blocking + streaming onto one streaming core (issue #1004)
+        - **Rationale**: A single execution path removes the duplicated MCP guard, stream parser,
+          and write-once NDJSON dump; the blocking `timeout` becomes an inactivity budget
+        - **Benefits**: One place to fix the MCP guard, per-line NDJSON flush for free, no
+          wall-clock/watchdog SIGKILL race
     - `logging_utils.py` - Logging utilities for LLM requests/responses/errors (tests: `test_logging_utils.py`)
       - **Design Decision**: Added structured logging for LLM operations (Nov 2025)
         - **Rationale**: Centralized logging functions for request, response, and error tracking in Claude provider integrations

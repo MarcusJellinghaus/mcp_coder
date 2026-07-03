@@ -280,6 +280,137 @@ class TestResponseAssemblerToolTrace:
         assert len(tool_trace) == 2
 
 
+# --- ResponseAssembler stream_file tests ---
+
+
+def test_response_assembler_stream_file_captured() -> None:
+    """A stream_file event puts its path into raw_response[stream_file]."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "stream_file", "path": "/logs/session_1.ndjson"})
+    assembler.add({"type": "text_delta", "text": "Hi"})
+    result = assembler.result()
+    assert result["raw_response"]["stream_file"] == "/logs/session_1.ndjson"
+
+
+def test_response_assembler_stream_file_absent() -> None:
+    """Without a stream_file event, the stream_file key is absent."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "Hi"})
+    result = assembler.result()
+    assert "stream_file" not in result["raw_response"]
+
+
+# --- ResponseAssembler system-event tests (raw_response["system"] parity) ---
+
+
+def test_response_assembler_system_event_captured() -> None:
+    """A system event's ``data`` payload lands in raw_response["system"].
+
+    The MCP-guard consumers (env_setup._probe_exposed_mcp_tools, verify) read
+    ``raw_response["system"]`` and pass it to find_*_mcp_servers /
+    find_exposed_mcp_tools, so the raw init message dict must survive verbatim.
+    """
+    init_msg = {
+        "type": "system",
+        "subtype": "init",
+        "tools": ["mcp__srv__tool_a", "Bash"],
+        "mcp_servers": [{"name": "srv", "status": "connected"}],
+    }
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "system", "data": init_msg})
+    assembler.add({"type": "text_delta", "text": "OK"})
+    result = assembler.result()
+    assert result["raw_response"]["system"] == init_msg
+
+
+def test_response_assembler_system_absent() -> None:
+    """Without a system event, the system key is absent from raw_response."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "Hi"})
+    result = assembler.result()
+    assert "system" not in result["raw_response"]
+
+
+def test_response_assembler_system_feeds_mcp_guard() -> None:
+    """The captured system payload works with the real MCP-guard helpers."""
+    from mcp_coder.llm.providers.claude.claude_mcp_guard import (
+        find_exposed_mcp_tools,
+        find_fatal_mcp_servers,
+    )
+
+    init_msg = {
+        "type": "system",
+        "subtype": "init",
+        "tools": ["mcp__srv__a", "mcp__srv__b", "ToolSearch"],
+        "mcp_servers": [{"name": "srv", "status": "connected"}],
+    }
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "system", "data": init_msg})
+    system = assembler.result()["raw_response"]["system"]
+    assert find_fatal_mcp_servers(system) == {}  # type: ignore[arg-type]
+    assert find_exposed_mcp_tools(system) == [  # type: ignore[arg-type]
+        "mcp__srv__a",
+        "mcp__srv__b",
+    ]
+
+
+# --- ResponseAssembler raw_line de-duplication (Fix 2) ---
+
+
+def test_response_assembler_raw_line_excluded_from_events() -> None:
+    """raw_line events are not persisted into raw_response["events"].
+
+    The raw NDJSON already lives in stream_file; keeping it out of events avoids
+    ~2x payload. Live consumers still receive raw_line from the generator.
+    """
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "raw_line", "line": '{"type":"system"}'})
+    assembler.add({"type": "text_delta", "text": "Hi"})
+    assembler.add({"type": "raw_line", "line": '{"type":"result"}'})
+    result = assembler.result()
+    events = result["raw_response"]["events"]
+    assert isinstance(events, list)
+    assert all(e.get("type") != "raw_line" for e in events)
+    assert any(e.get("type") == "text_delta" for e in events)
+
+
+# --- ResponseAssembler text parity (AC3) tests ---
+
+
+def test_response_assembler_text_stripped() -> None:
+    """Assembled text is .strip()-ed to match _parse_stream_lines output."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "  Hello world\n"})
+    result = assembler.result()
+    assert result["text"] == "Hello world"
+
+
+def test_response_assembler_result_fallback_when_no_assistant_text() -> None:
+    """When no text_delta is seen, text falls back to the stripped result value."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "done", "session_id": "s1", "result": "  final answer  "})
+    result = assembler.result()
+    assert result["text"] == "final answer"
+
+
+def test_response_assembler_result_ignored_when_assistant_text_present() -> None:
+    """When assistant text was seen, the result value is not used for text."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": "streamed text"})
+    assembler.add({"type": "done", "session_id": "s1", "result": "result field"})
+    result = assembler.result()
+    assert result["text"] == "streamed text"
+
+
+def test_response_assembler_empty_assistant_text_suppresses_fallback() -> None:
+    """An empty text_delta still counts as assistant text; no result fallback."""
+    assembler = ResponseAssembler(provider="claude")
+    assembler.add({"type": "text_delta", "text": ""})
+    assembler.add({"type": "done", "session_id": "s1", "result": "result field"})
+    result = assembler.result()
+    assert result["text"] == ""
+
+
 # --- ResponseAssembler.has_error tests ---
 
 

@@ -73,6 +73,9 @@ def _map_stream_message_to_event(msg: StreamMessage) -> Iterator[StreamEvent]:
             "session_id": msg.get("session_id"),
             "usage": msg.get("usage", {}),
             "cost_usd": msg.get("total_cost_usd"),
+            # Carry the final result text so the assembler can reproduce the
+            # blocking-path fallback (used only when no assistant text is seen).
+            "result": msg.get("result"),
         }
 
 
@@ -99,7 +102,8 @@ def ask_claude_code_cli_stream(
     to override matching keys in cwd-discovered Claude settings for the session.
 
     Yields:
-        StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error, raw_line
+        StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error,
+        raw_line, system (the init message payload)
 
     Raises:
         ValueError: If the question is empty/whitespace or timeout is not positive.
@@ -126,6 +130,9 @@ def ask_claude_code_cli_stream(
         settings_file=settings_file,
     )
     stream_file = get_stream_log_path(logs_dir, cwd, branch_name)
+    # Announce the stream log path up front so consumers (e.g. the drain-wrapper)
+    # can capture it before any subprocess output arrives.
+    yield {"type": "stream_file", "path": str(stream_file)}
     input_data = format_stream_json_input(question)
     options = CommandOptions(
         input_data=input_data,
@@ -142,6 +149,7 @@ def ask_claude_code_cli_stream(
             "Cannot open stream log %s; continuing without file logging", stream_file
         )
         log_fh = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+    saw_system_init = False
     with log_fh as log:
         for line in stream:
             log.write(line + "\n")
@@ -151,6 +159,14 @@ def ask_claude_code_cli_stream(
             if not msg:
                 continue
             if msg.get("type") == "system":
+                # Surface the init/system message to the assembler so the
+                # blocking path can repopulate raw_response["system"] (parity
+                # with main). Keep only the init event: later `system` heartbeats
+                # (e.g. thinking_tokens) carry no mcp_servers/tools and must not
+                # overwrite it, matching _parse_stream_lines. (#998, #1004)
+                if msg.get("subtype") == "init" or not saw_system_init:
+                    saw_system_init = True
+                    yield {"type": "system", "data": dict(msg)}
                 # MCP availability guard (matches the blocking path). Abort only
                 # on fatal (terminal, non-pending) servers so the model never
                 # runs blind on hallucinated tools. Pending servers self-heal
@@ -185,6 +201,8 @@ def ask_claude_code_cli_stream(
     if cmd_result.timed_out:
         yield {
             "type": "error",
+            "reason": "inactivity_timeout",
+            "timeout": timeout,
             "message": (
                 f"LLM inactivity timeout (claude): no output for {timeout}s. "
                 "Process terminated. You can retry, or use --timeout to increase the limit."
@@ -194,4 +212,9 @@ def ask_claude_code_cli_stream(
         error_msg = f"CLI failed with code {cmd_result.return_code}"
         if cmd_result.stderr:
             error_msg += f": {cmd_result.stderr[:500]}"
-        yield {"type": "error", "message": error_msg}
+        yield {
+            "type": "error",
+            "reason": "nonzero_exit",
+            "return_code": cmd_result.return_code,
+            "message": error_msg,
+        }

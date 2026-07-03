@@ -49,10 +49,11 @@ from .prerequisites import (
 # Setup logger
 logger = logging.getLogger(__name__)
 
-# Timeout for Implementation Plan Creation prompt (15 minutes)
-# This prompt requires more time than the standard 600s timeout used by other prompts
-# because it generates detailed multi-file implementation plans with pseudocode and algorithms.
-PROMPT_3_TIMEOUT = 900  # 15 minutes
+# Inactivity budget (was wall-clock), kept below the CI step cap. This is the max
+# seconds with no stdout line from `claude`, NOT total runtime; lowered 900 -> 600 for
+# uniformity with the other create-plan prompts now that the blocking path drains the
+# streaming core with an inactivity watchdog.
+PROMPT_3_TIMEOUT = 600  # 10 minutes of silence
 
 
 def _format_failure_comment(
@@ -213,6 +214,7 @@ def run_planning_prompts(
             formatted_prompt_1,
             provider=provider,
             session_id=None,
+            # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=600,
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,
@@ -299,6 +301,7 @@ def run_planning_prompts(
             prompt_2,
             provider=provider,
             session_id=session_id,
+            # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=600,
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,

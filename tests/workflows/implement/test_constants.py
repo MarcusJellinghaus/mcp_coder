@@ -4,7 +4,25 @@ import dataclasses
 
 import pytest
 
-from mcp_coder.workflows.implement.constants import FailureCategory, WorkflowFailure
+from mcp_coder.workflows.implement.constants import (
+    LLM_INACTIVITY_TIMEOUT_SECONDS,
+    FailureCategory,
+    WorkflowFailure,
+)
+
+
+class TestTimeoutConstants:
+    """Tests for the LLM inactivity timeout constants."""
+
+    def test_inactivity_timeout_value(self) -> None:
+        """The tool-using sites use a 600s inactivity (silence) budget.
+
+        This is NOT a wall-clock cap: it is the max seconds allowed with no
+        stdout line from `claude`, giving headroom for a long *silent* MCP
+        tool call (e.g. a multi-minute run_pytest) at the tool-using
+        autonomous sites (implement, mypy-fix, CI-fix).
+        """
+        assert LLM_INACTIVITY_TIMEOUT_SECONDS == 600
 
 
 class TestFailureCategory:
@@ -21,6 +39,7 @@ class TestFailureCategory:
         assert (
             FailureCategory.NO_CHANGES_AFTER_RETRIES.value == "no_changes_after_retries"
         )
+        assert FailureCategory.MCP_UNAVAILABLE.value == "mcp_unavailable"
 
 
 class TestWorkflowFailure:

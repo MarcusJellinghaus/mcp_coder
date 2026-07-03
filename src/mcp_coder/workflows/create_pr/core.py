@@ -285,6 +285,7 @@ def generate_pr_summary(
         llm_response = prompt_llm(
             full_prompt,
             provider=provider,
+            # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=300,
             env_vars=env_vars,
             execution_dir=str(execution_dir) if execution_dir else None,

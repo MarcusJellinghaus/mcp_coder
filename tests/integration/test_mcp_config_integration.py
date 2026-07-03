@@ -10,7 +10,7 @@ Tests are expected to FAIL until Step 4 (CLI argument implementation) is complet
 """
 
 import argparse
-import json
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
@@ -21,6 +21,28 @@ from mcp_coder.cli.commands.implement import execute_implement
 from mcp_coder.cli.commands.prompt import execute_prompt
 from mcp_coder.cli.main import create_parser, main
 from mcp_coder.utils.subprocess_runner import CommandResult
+
+
+class _StreamMock:
+    """Mimics stream_subprocess output: iterable NDJSON lines + a .result."""
+
+    def __init__(
+        self, stdout: str, return_code: int = 0, timed_out: bool = False
+    ) -> None:
+        self._lines = stdout.split("\n") if stdout else []
+        self._result = CommandResult(
+            return_code=return_code,
+            stdout="",
+            stderr="",
+            timed_out=timed_out,
+        )
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._lines)
+
+    @property
+    def result(self) -> CommandResult:
+        return self._result
 
 
 class TestMcpConfigIntegration:
@@ -41,24 +63,22 @@ class TestMcpConfigIntegration:
         return str(config_file)
 
     @pytest.fixture
-    def mock_subprocess_success(self) -> CommandResult:
-        """Mock successful subprocess execution.
+    def mock_subprocess_success(self) -> _StreamMock:
+        """Mock successful streaming subprocess execution.
 
         Returns:
-            CommandResult: Mocked subprocess result with successful response
+            _StreamMock: Iterable stream-json (NDJSON) lines with a result message.
         """
-        mock_result = CommandResult(
-            return_code=0,
-            stdout=json.dumps({"result": "Test response", "session_id": "test-123"}),
-            stderr="",
-            timed_out=False,
+        return _StreamMock(
+            '{"type": "assistant", "message": {"content": '
+            '[{"type": "text", "text": "Test response"}]}}\n'
+            '{"type": "result", "session_id": "test-123", "result": "Test response"}'
         )
-        return mock_result
 
     def test_implement_with_mcp_config_argument(
         self,
         temp_mcp_config: str,
-        mock_subprocess_success: CommandResult,
+        mock_subprocess_success: _StreamMock,
         tmp_path: Path,
     ) -> None:
         """Verify implement command accepts and uses --mcp-config.
@@ -114,7 +134,7 @@ class TestMcpConfigIntegration:
             # 3. LLM provider receiving and using mcp_config
 
     def test_prompt_with_mcp_config_argument(
-        self, temp_mcp_config: str, mock_subprocess_success: CommandResult
+        self, temp_mcp_config: str, mock_subprocess_success: _StreamMock
     ) -> None:
         """Verify prompt command (simplest) accepts and uses --mcp-config.
 
@@ -129,10 +149,10 @@ class TestMcpConfigIntegration:
         """
         with (
             patch(
-                "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
+                "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess"
             ) as mock_execute,
             patch(
-                "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
+                "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
             ) as mock_find,
         ):
             # Setup mocks
@@ -175,7 +195,7 @@ class TestMcpConfigIntegration:
             # NOTE: This test will FAIL until Step 4 implements CLI argument
 
     def test_mcp_config_not_required(
-        self, mock_subprocess_success: CommandResult, tmp_path: Path
+        self, mock_subprocess_success: _StreamMock, tmp_path: Path
     ) -> None:
         """Verify commands work without explicit --mcp-config (backward compatibility).
 
@@ -192,10 +212,10 @@ class TestMcpConfigIntegration:
 
             with (
                 patch(
-                    "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
+                    "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess"
                 ) as mock_execute,
                 patch(
-                    "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
+                    "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
                 ) as mock_find,
             ):
                 # Setup mocks
@@ -237,7 +257,7 @@ class TestMcpConfigIntegration:
             os.chdir(original_cwd)
 
     def test_mcp_config_with_relative_path(
-        self, tmp_path: Path, mock_subprocess_success: CommandResult
+        self, tmp_path: Path, mock_subprocess_success: _StreamMock
     ) -> None:
         """Verify relative paths work for --mcp-config.
 
@@ -258,10 +278,10 @@ class TestMcpConfigIntegration:
 
             with (
                 patch(
-                    "mcp_coder.llm.providers.claude.claude_code_cli.execute_subprocess"
+                    "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess"
                 ) as mock_execute,
                 patch(
-                    "mcp_coder.llm.providers.claude.claude_code_cli._find_claude_executable"
+                    "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable"
                 ) as mock_find,
             ):
                 # Setup mocks
