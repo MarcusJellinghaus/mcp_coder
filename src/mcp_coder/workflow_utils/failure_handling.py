@@ -124,12 +124,12 @@ def handle_workflow_failure(
             name extraction when *None*.
     """
     # 1. Log failure banner
-    logger.info("=" * 60)
-    logger.info("WORKFLOW FAILED")
-    logger.info("Category: %s", failure.category)
-    logger.info("Stage: %s", failure.stage)
-    logger.info("Error: %s", failure.message)
-    logger.info("=" * 60)
+    logger.error("=" * 60)
+    logger.error("WORKFLOW FAILED")
+    logger.error("Category: %s", failure.category)
+    logger.error("Stage: %s", failure.stage)
+    logger.error("Error: %s", failure.message)
+    logger.error("=" * 60)
 
     # 2. Resolve issue number
     resolved_issue_number = issue_number
@@ -149,7 +149,7 @@ def handle_workflow_failure(
         try:
             issue_manager = IssueManager(project_dir)
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning("Failed to create IssueManager: %s", exc)
+            logger.error("Failed to create IssueManager: %s", exc)
             return
 
         # 4. Set failure label (non-blocking)
