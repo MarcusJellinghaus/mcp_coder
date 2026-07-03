@@ -65,6 +65,22 @@
 
 **Changes:** step_2 (introduce `INTERVENTION_WARNING` in templates.py + test; WHERE now includes templates.py/test_templates.py), step_4 (remove the constant; keeps launcher constants; note it's now in Step 2), step_6 (Keep-list annotation Step 4→Step 2), summary.md (step overview), Decisions.md (placement note + ordering-defect decision entry).
 
+**Status:** committed — 435066f
+
+---
+
+## Round 4 — 2026-07-03
+
+**Findings** (from `/plan_review` engineer):
+- Round-3 ordering fix verified fully consistent across step_2/step_4/step_6/summary.md/Decisions.md — no contradictory reference remains. All 6 steps confirmed independently-green commits.
+1. [nit, mechanical] summary.md prose said "delete the 12 orchestration constants" — actual is 14 (Step 6 enumerates 14; glob collapsed two `INTERACTIVE_*` families).
+
+**Overall assessment:** Ready for approval — only a cosmetic count nit.
+
+**Decisions:** Fixed the count nit autonomously (12 → 14) for doc accuracy.
+
+**Changes:** summary.md (orchestration-constant count 12 → 14).
+
 **Status:** committed (see commit agent)
 
 ---

@@ -106,7 +106,7 @@ steps; middle steps continue on error.
   read/write helpers.
 - `src/mcp_coder/workflows/vscodeclaude/templates.py` — add `LAUNCHER_WINDOWS` /
   `LAUNCHER_POSIX` / `INTERVENTION_WARNING`, extend `GITIGNORE_ENTRY`, delete the
-  12 orchestration constants (the intervention warning text survives in
+  14 orchestration constants (the intervention warning text survives in
   `INTERVENTION_WARNING`).
 - `src/mcp_coder/workflows/vscodeclaude/workspace.py` — rewrite
   `create_startup_script` (write spec + launcher); drop `_escape_batch_title`.
