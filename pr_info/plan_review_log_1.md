@@ -81,6 +81,27 @@
 
 **Changes:** summary.md (orchestration-constant count 12 → 14).
 
-**Status:** committed (see commit agent)
+**Status:** committed — 7ee2434
 
 ---
+
+## Round 5 — 2026-07-03 (final confirmation)
+
+**Findings:** None. Verified against source: 14 orchestration constants match Step 6's deletion list; all "keep" constants exist; `INTERVENTION_WARNING` placement consistent (Step 2 first consumer); Step 5 pivot targets (`_escape_batch_title`, `session_folder_path`) present in `workspace.py`. All settled items coherent and not re-litigated.
+
+**Overall assessment:** Ready for approval/implementation.
+
+**Changes:** None — zero plan changes this round → review loop terminates.
+
+**Status:** no changes needed.
+
+---
+
+## Final Status
+
+- **Rounds run:** 5 (Rounds 1–4 produced plan changes; Round 5 clean → loop terminated).
+- **Commits produced:** `1fb56b4` (R1), `4d011ad` (R2), `435066f` (R3), `7ee2434` (R4) + this log commit.
+- **Blockers found & resolved:** 2 mechanical blockers (R1: `test_workspace.py` omitted from Step 5 test list; R3: `INTERVENTION_WARNING` consumed before created). Both fixed.
+- **Design decisions escalated to user:** (1) install.py env → **Option B** (single shared env, `VIRTUAL_ENV=<cwd>/.venv`; verified safe for both uv & pip); (2) intervention in-terminal warning → **restore** for parity.
+- **Verdict:** Plan is internally consistent, each step is an independently-green commit (additive → pivot → delete), and it faithfully honors the issue's constraints. **Ready for approval.**
+
