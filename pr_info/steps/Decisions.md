@@ -74,9 +74,10 @@ generated startup script prints it right before launching bare `claude`; under
 the refactor it is rendered at runtime by `session_setup.py`.
 
 Placement decision: `render_banner` (Step 2) appends the warning for
-intervention specs, reusing a template constant `INTERVENTION_WARNING` (Step 4,
-kept in Step 6) rather than hardcoding inline — mirroring how the plan reuses
-`BANNER_TEMPLATE`. Since `run_session` prints `render_banner(spec)` before
+intervention specs, reusing a template constant `INTERVENTION_WARNING`
+(introduced in **Step 2**, its first consumer; kept in Step 6) rather than
+hardcoding inline — mirroring how the plan reuses `BANNER_TEMPLATE`. Since
+`run_session` prints `render_banner(spec)` before
 `orchestrate`, the warning shows in the UTF-8-forced terminal before the bare
 `claude` launch; no separate print on `orchestrate`'s intervention branch.
 The coordinator-console banner and the status-file `Mode: INTERVENTION` line are
@@ -94,6 +95,24 @@ In the rewritten `create_startup_script`, `commands` list/`str` validation
 (raise `ValueError`) runs unconditionally before the intervention branch — a
 minor intentional fail-fast change from today, where it only ran on the
 non-intervention path. Note-only; kept.
+
+## Round 2 — `INTERVENTION_WARNING` step placement fix (one-green-commit-per-step)
+
+Ordering defect found after Round 2: `INTERVENTION_WARNING` was slated for
+Step 4 but is **consumed earlier** — Step 2's `render_banner` appends it (with a
+test asserting the `!! INTERVENTION MODE` text) and Step 3's `run_session`
+prints it (flow test). With steps committed 1→6 and each an independently green
+commit (pylint/pytest/mypy), Steps 2 and 3 would fail because the constant does
+not exist in `templates.py` until Step 4. (`BANNER_TEMPLATE` already exists
+today, so only `INTERVENTION_WARNING` was the problem.)
+
+Fix (option a): introduce `INTERVENTION_WARNING` in `templates.py` in **Step 2**
+(its first consumer), keeping it in `templates.py` so all template strings live
+in one module; add the verbatim-text test in `test_templates.py` in Step 2.
+Step 4 no longer adds it (still adds `LAUNCHER_WINDOWS` / `LAUNCHER_POSIX`,
+which aren't consumed until Step 5). Step 6 still keeps it. Cross-references in
+`summary.md`, `step_2.md`, and `step_4.md` updated. Ordering stays
+additive→pivot→delete.
 
 ## Informational (no change)
 

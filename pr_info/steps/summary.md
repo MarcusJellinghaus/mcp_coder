@@ -135,7 +135,8 @@ steps; middle steps continue on error.
 ## Step overview (one commit each, TDD)
 
 1. `SessionSpec` dataclass + `read_session_spec` / `write_session_spec` helpers.
-2. `session_setup.py` pure helpers: env dict, venv-bin, argv builders, banner.
+2. `session_setup.py` pure helpers: env dict, venv-bin, argv builders, banner
+   (+ `INTERVENTION_WARNING` constant in `templates.py`, its first consumer).
 3. `session_setup.py` orchestration + `main` (subprocess, session-id, flows).
 4. `templates.py`: add launcher constants + gitignore entry (additive).
 5. `workspace.py`: rewrite `create_startup_script`; port/trim workspace tests.

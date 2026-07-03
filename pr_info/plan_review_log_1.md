@@ -50,6 +50,21 @@
 
 **Changes:** step_2 (`render_banner` appends `INTERVENTION_WARNING` for intervention specs + test), step_3 (`run_session` prints it before bare claude + flow test asserts warning present/absent), step_4 (add `INTERVENTION_WARNING` constant, additive), step_5 (correct intervention rationale + Finding-2 unconditional-validation note), step_6 (keep `INTERVENTION_WARNING`, note deletion doesn't drop warning), summary.md (banner/flow-shapes/templates bullets), Decisions.md (corrected wording + 3 Round-2 entries).
 
+**Status:** committed — 4d011ad
+
+---
+
+## Round 3 — 2026-07-03
+
+**Findings** (from `/plan_review` engineer; all prior fixes verified integrated):
+1. [BLOCKER, mechanical] Step-ordering defect introduced by Round 2: `INTERVENTION_WARNING` constant added in Step 4 but consumed by `render_banner` (Step 2) + `run_session` (Step 3) → Steps 2/3 would land red (ImportError), violating one-green-commit-per-step.
+
+**Overall assessment:** Substantively complete and consistent; only the ordering defect blocks readiness. Purely mechanical, no human decision.
+
+**Decisions:** Accepted and applied autonomously (option a): move `INTERVENTION_WARNING` to Step 2, its first consumer (kept in `templates.py`).
+
+**Changes:** step_2 (introduce `INTERVENTION_WARNING` in templates.py + test; WHERE now includes templates.py/test_templates.py), step_4 (remove the constant; keeps launcher constants; note it's now in Step 2), step_6 (Keep-list annotation Step 4→Step 2), summary.md (step overview), Decisions.md (placement note + ordering-defect decision entry).
+
 **Status:** committed (see commit agent)
 
 ---

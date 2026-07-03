@@ -6,7 +6,9 @@ directly unit-testable without mocking.
 
 ## WHERE
 - `src/mcp_coder/workflows/vscodeclaude/session_setup.py` (new)
+- `src/mcp_coder/workflows/vscodeclaude/templates.py` (add `INTERVENTION_WARNING`)
 - `tests/workflows/vscodeclaude/test_session_setup_env.py` (new)
+- `tests/workflows/vscodeclaude/test_templates.py` (add `INTERVENTION_WARNING` text test)
 
 ## WHAT
 ```python
@@ -36,12 +38,17 @@ def render_banner(spec: SessionSpec) -> str
   and shell-escaping (`_escape_batch_title` / POSIX quoting) are **intentionally
   dropped**: the banner is now printed by Python (no shell), so escaping is
   unnecessary; truncation was cosmetic and is not reproduced.
-- **Intervention warning restored.** When `spec.is_intervention` is true,
-  `render_banner` also appends the `INTERVENTION_WARNING` block (the
-  `!! INTERVENTION MODE ...` banner) from `.templates`, so the warning is shown
-  in the UTF-8-forced terminal before bare `claude` launches — restoring parity
-  with the old `INTERVENTION_SCRIPT_*` templates. The warning **string** stays a
-  template constant (reused, not inlined), exactly like `BANNER_TEMPLATE`.
+- **Intervention warning restored.** Introduce the `INTERVENTION_WARNING`
+  template constant in `templates.py` here — Step 2 is its **first consumer**,
+  so it must exist before `render_banner` (Step 2) or `run_session` (Step 3) can
+  use it. Text is the verbatim 5-line `!! INTERVENTION MODE ...` block lifted
+  from today's `INTERVENTION_SCRIPT_*` templates. When `spec.is_intervention` is
+  true, `render_banner` appends the `INTERVENTION_WARNING` block from
+  `.templates`, so the warning is shown in the UTF-8-forced terminal before bare
+  `claude` launches — restoring parity with the old `INTERVENTION_SCRIPT_*`
+  templates. The warning **string** stays a template constant in `templates.py`
+  (reused, not inlined), exactly like `BANNER_TEMPLATE`, so all template strings
+  live in one module.
 - **Shared env for `install.py` (Option B).** The one `build_subprocess_env`
   dict is reused for **every** subprocess, including the Step-3 `install.py`
   call. This is safe because `install.py` forwards env untouched; its
@@ -101,6 +108,10 @@ build_claude_argv:
 - `render_banner`: contains emoji, issue number, title, repo, status, url. For
   an **intervention** spec the output **also** contains the `!! INTERVENTION
   MODE` warning text; for a **normal** spec it does **not**.
+- `INTERVENTION_WARNING` (in `templates.py`): holds the verbatim 5-line
+  `!! INTERVENTION MODE ...` warning text (contains `INTERVENTION MODE -
+  Automation may be running elsewhere` and `No automated analysis will run.`;
+  no `{` placeholder). Add to `test_templates.py`.
 
 ## LLM PROMPT
 > Implement Step 2 from `pr_info/steps/step_2.md` (context in
@@ -108,8 +119,12 @@ build_claude_argv:
 > `src/mcp_coder/workflows/vscodeclaude/session_setup.py` with the pure helpers
 > listed (env dict, `_venv_bin_dir`, absolute exe/python resolvers, the three
 > argv builders, `render_banner` — which appends the `INTERVENTION_WARNING`
-> constant for intervention specs). No `subprocess` and no `main` in this step.
+> constant for intervention specs). Add the `INTERVENTION_WARNING` constant to
+> `templates.py` here (its first consumer) with the verbatim 5-line warning text.
+> No `subprocess` and no `main` in this step.
 > Write `tests/workflows/vscodeclaude/test_session_setup_env.py` first,
-> parametrizing win/posix for the path-sensitive cases. Use MCP workspace tools.
+> parametrizing win/posix for the path-sensitive cases; add an
+> `INTERVENTION_WARNING` text assertion to `test_templates.py`. Use MCP workspace
+> tools.
 > After each edit run pylint, pytest (`-n auto` with the standard integration
 > exclusions), and mypy; fix everything. One commit.
