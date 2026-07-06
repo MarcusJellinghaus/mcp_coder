@@ -1,5 +1,6 @@
 """Shared test fixtures for CLI commands tests."""
 
+import argparse
 from contextlib import contextmanager
 from typing import Any, Dict, Generator
 from unittest.mock import MagicMock, patch
@@ -263,3 +264,131 @@ def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
             "resolve_mcp_config_path": resolve_mcp_mock,
             "find_claude_executable": find_claude_mock,
         }
+
+
+# Patch target for lazily-imported langchain verification functions
+_LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
+_VERIFY = "mcp_coder.cli.commands.verify"
+
+
+def _make_args(**kwargs: Any) -> argparse.Namespace:
+    """Create a Namespace with defaults for execute_verify."""
+    defaults: dict[str, Any] = {
+        "check_models": False,
+        "mcp_config": None,
+        "settings": None,
+        "llm_method": None,
+        "project_dir": None,
+    }
+    defaults.update(kwargs)
+    return argparse.Namespace(**defaults)
+
+
+def _minimal_llm_response() -> dict[str, Any]:
+    """Return a minimal LLMResponseDict-shaped dict for mocking prompt_llm."""
+    return {
+        "version": "1.0",
+        "timestamp": "2026-01-01T00:00:00",
+        "text": "OK",
+        "session_id": None,
+        "provider": "claude",
+        "raw_response": {},
+    }
+
+
+def _claude_ok() -> dict[str, Any]:
+    return {
+        "cli_found": {"ok": True, "value": "YES"},
+        "cli_works": {"ok": True, "value": "YES"},
+        "api_integration": {"ok": True, "value": "OK", "error": None},
+        "overall_ok": True,
+    }
+
+
+def _langchain_ok() -> dict[str, Any]:
+    return {
+        "backend": {"ok": True, "value": "openai"},
+        "model": {"ok": True, "value": "gpt-4"},
+        "api_key": {"ok": True, "value": "sk-ab...7x2f", "source": "env var"},
+        "langchain_core": {"ok": True, "value": "installed"},
+        "backend_package": {"ok": True, "value": "langchain-openai installed"},
+        "overall_ok": True,
+    }
+
+
+def _langchain_fail() -> dict[str, Any]:
+    return {
+        "backend": {"ok": True, "value": "openai"},
+        "model": {"ok": True, "value": "gpt-4"},
+        "api_key": {"ok": False, "value": None, "source": None},
+        "langchain_core": {"ok": True, "value": "installed"},
+        "backend_package": {"ok": False, "value": "langchain-openai not installed"},
+        "overall_ok": False,
+    }
+
+
+def _mlflow_ok() -> dict[str, Any]:
+    return {
+        "installed": {"ok": True, "value": "version 2.10.0"},
+        "enabled": {"ok": True, "value": "(config.toml)"},
+        "tracking_uri": {"ok": True, "value": "http://localhost:5000"},
+        "connection": {"ok": True, "value": "tracking server reachable"},
+        "experiment": {"ok": True, "value": '"default" (exists)'},
+        "artifact_location": {"ok": True, "value": "not configured (using default)"},
+        "overall_ok": True,
+    }
+
+
+def _mlflow_not_installed() -> dict[str, Any]:
+    return {
+        "installed": {"ok": False, "value": "not installed"},
+        "overall_ok": True,
+    }
+
+
+def _mlflow_enabled_broken() -> dict[str, Any]:
+    return {
+        "installed": {"ok": True, "value": "version 2.10.0"},
+        "enabled": {"ok": True, "value": "(config.toml)"},
+        "tracking_uri": {"ok": False, "value": "http://bad:5000", "error": "invalid"},
+        "connection": {"ok": False, "value": "unreachable: connection refused"},
+        "experiment": {"ok": False, "value": '"default" (could not check)'},
+        "artifact_location": {"ok": True, "value": "not configured (using default)"},
+        "overall_ok": False,
+    }
+
+
+def _github_ok_default() -> dict[str, Any]:
+    """Neutral GitHub result for tests that don't care about GitHub."""
+    return {"overall_ok": True}
+
+
+def _mcp_servers_ok() -> dict[str, Any]:
+    """Return an MCP server health check result with overall_ok=True."""
+    return {
+        "servers": {
+            "mcp-tools-py": {
+                "ok": True,
+                "value": "3 tools",
+                "tool_names": [
+                    ("read_file", "Read file contents"),
+                    ("save_file", "Write content to a file"),
+                    ("edit_file", "Edit a file"),
+                ],
+            }
+        },
+        "overall_ok": True,
+    }
+
+
+def _mcp_servers_fail() -> dict[str, Any]:
+    """Return an MCP server health check result with overall_ok=False."""
+    return {
+        "servers": {
+            "mcp-tools-py": {
+                "ok": False,
+                "value": "connection refused",
+            }
+        },
+        "overall_ok": False,
+    }

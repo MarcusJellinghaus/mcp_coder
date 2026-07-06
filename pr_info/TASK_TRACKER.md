@@ -23,6 +23,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] [Step 1 — Extract `verify_exit_code.py`](./steps/step_1.md)
 - [x] [Step 2 — Extract `verify_formatting.py`](./steps/step_2.md)
-- [ ] [Step 3 — Split `test_verify_orchestration.py` by test class](./steps/step_3.md)
+- [x] [Step 3 — Split `test_verify_orchestration.py` by test class](./steps/step_3.md)
 
 ## Pull Request

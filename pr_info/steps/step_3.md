@@ -91,9 +91,9 @@ confirming the same set of tests passes, just distributed across three files.
 
 ## Done when
 
-- [ ] Shared helpers live in `conftest.py`; each split file imports them from there.
-- [ ] Three files, each < 750 lines; no class duplicated or dropped.
-- [ ] `test_verify_orchestration.py` removed from `.large-files-allowlist`;
+- [x] Shared helpers live in `conftest.py`; each split file imports them from there.
+- [x] Three files, each < 750 lines; no class duplicated or dropped.
+- [x] `test_verify_orchestration.py` removed from `.large-files-allowlist`;
       `check_file_size` passes (and no stale entry remains for it).
-- [ ] pytest collection count unchanged; format + lint-imports + pytest + pylint +
+- [x] pytest collection count unchanged; format + lint-imports + pytest + pylint +
       mypy pass; `tach check` passes.
