@@ -339,3 +339,8 @@ _.user
 # llm/providers/claude/_mcp_stub_server.py - FastMCP stub tool invoked over the
 # MCP protocol by the cold-start integration test, never called directly in Python.
 _.reveal_sentinel
+
+# workflows/vscodeclaude/workspace.py - create_startup_script parameter retained
+# for signature stability (see pr_info/steps/Decisions.md); no longer used in the
+# body since the thin launcher no longer bakes the session folder path.
+_.session_folder_path

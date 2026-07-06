@@ -481,3 +481,5 @@ forbidden_modules =
 ignore_imports =
     mcp_coder.utils.mcp_verification -> subprocess
     tests.utils.test_mcp_verification -> subprocess
+    mcp_coder.workflows.vscodeclaude.session_setup -> subprocess
+    tests.workflows.vscodeclaude.test_session_setup_flow -> subprocess
