@@ -137,8 +137,16 @@ class TestExitCodeMatrix:
         mlflow_installed: bool,
         mlflow_enabled: bool = False,
         mlflow_healthy: bool = True,
+        mcp_config_path: str | None = None,
     ) -> int:
-        """Run main() with mocked domain functions and return exit code."""
+        """Run main() with mocked domain functions and return exit code.
+
+        ``mcp_config_path`` overrides ``resolve_mcp_config_path`` (default None
+        skips the MCP CONFIG block). When it points at a real ``.mcp.json``,
+        ``_validate_mcp_config`` is left un-mocked so the real parse runs — the
+        hard-fail short-circuit then keeps the un-mocked ``parse_claude_mcp_list``
+        / ``verify_mcp_servers`` from being reached, so the case stays fast.
+        """
         with (
             patch("sys.argv", ["mcp-coder", "verify"]),
             patch(
@@ -148,7 +156,7 @@ class TestExitCodeMatrix:
             patch(f"{_VERIFY}.log_to_mlflow", create=True),
             patch(
                 f"{_VERIFY}.resolve_mcp_config_path",
-                return_value=None,
+                return_value=mcp_config_path,
             ),
             patch(
                 f"{_VERIFY}.resolve_llm_method",
@@ -287,6 +295,26 @@ class TestExitCodeMatrix:
             == 0
         )
 
+    def test_malformed_mcp_config_exit_1(self, tmp_path: Any) -> None:
+        """Malformed .mcp.json -> real _validate_mcp_config -> exit 1 (full wiring).
+
+        Exercises the end-to-end path: resolve_mcp_config_path points at a real
+        malformed file, the un-mocked _validate_mcp_config returns False,
+        mcp_config_ok threads into _compute_exit_code, and the CLI returns 1.
+        """
+        mcp_json = tmp_path / ".mcp.json"
+        mcp_json.write_text("{not json", encoding="utf-8")
+        assert (
+            self._run_verify(
+                provider=("claude", "default"),
+                claude_ok=True,
+                langchain_ok=None,
+                mlflow_installed=False,
+                mcp_config_path=str(mcp_json),
+            )
+            == 1
+        )
+
 
 class TestToolsExposedExitCode:
     """Exit-code effect of the tools_exposed_ok signal (claude only)."""
@@ -326,6 +354,66 @@ class TestToolsExposedExitCode:
                 _make_langchain_result(),
                 _make_mlflow_result(installed=False),
                 tools_exposed_ok=False,
+            )
+            == 0
+        )
+
+
+class TestMcpConfigExitCode:
+    """Exit-code effect of the mcp_config_ok signal (provider-independent)."""
+
+    def test_claude_active_mcp_config_fail_exit_1(self) -> None:
+        """Exit 1 when mcp_config_ok=False and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                mcp_config_ok=False,
+            )
+            == 1
+        )
+
+    def test_langchain_active_mcp_config_fail_exit_1(self) -> None:
+        """Exit 1 when mcp_config_ok=False and langchain is active.
+
+        Malformed .mcp.json breaks all providers, so the failure is
+        provider-independent.
+        """
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _make_claude_result(),
+                _make_langchain_result(),
+                _make_mlflow_result(installed=False),
+                mcp_config_ok=False,
+            )
+            == 1
+        )
+
+    def test_mcp_config_none_no_effect(self) -> None:
+        """Exit 0 when mcp_config_ok=None (neutral / not checked)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                mcp_config_ok=None,
+            )
+            == 0
+        )
+
+    def test_mcp_config_true_no_effect(self) -> None:
+        """Exit 0 when mcp_config_ok=True (well-formed / empty)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                mcp_config_ok=True,
             )
             == 0
         )

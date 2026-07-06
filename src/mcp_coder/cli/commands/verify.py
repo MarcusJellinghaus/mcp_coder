@@ -121,29 +121,46 @@ class _DropUnexpandedWarnings(logging.Filter):
         return "unexpanded variable" not in record.getMessage()
 
 
-def _collect_mcp_warnings(mcp_json_path: str | None) -> list[tuple[str, str]]:
-    """Parse ``.mcp.json`` for unresolved ``${...}`` placeholders in env values.
+def _validate_mcp_config(
+    mcp_json_path: str,
+) -> tuple[bool | None, str, list[tuple[str, str]]]:
+    """Validate ``.mcp.json`` and collect ``${...}`` placeholder findings in one parse.
 
     Args:
-        mcp_json_path: Path to ``.mcp.json`` (or None).
+        mcp_json_path: Path to ``.mcp.json``.
 
     Returns:
-        List of ``(label, value)`` pairs where ``label`` has the form
-        ``"<server> / <env_var>"`` and ``value`` is the unresolved template.
-        Empty if there are no findings or the file is missing/invalid.
+        ``(ok, message, warnings)`` where:
+          - ``ok=True``  -> well-formed, non-empty ``mcpServers``.
+          - ``ok=None``  -> WARN: parseable but ``mcpServers`` is empty (``{}``).
+          - ``ok=False`` -> hard fail: unparseable JSON, top-level JSON not an
+            object, or ``mcpServers`` missing / not an object.
+          - ``message``  -> human-readable status for the validity row.
+          - ``warnings`` -> list of ``(f"{server} / {env_var}", value)`` pairs
+            for unresolved ``${...}`` templates (always ``[]`` on hard fail).
     """
-    if mcp_json_path is None:
-        return []
     try:
         data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return []
-    findings: list[tuple[str, str]] = []
-    for server_name, server in data.get("mcpServers", {}).items():
-        for env_var, value in server.get("env", {}).items():
-            if isinstance(value, str) and re.search(r"\$\{[^}]+\}", value):
-                findings.append((f"{server_name} / {env_var}", value))
-    return findings
+    except (OSError, json.JSONDecodeError) as exc:
+        return (False, f"invalid JSON ({exc})", [])
+    # A valid JSON document whose top level is NOT an object (e.g. [], "foo",
+    # 42) would make data.get(...) raise AttributeError, which is not caught
+    # above and would crash execute_verify. Hard-fail here before calling .get.
+    if not isinstance(data, dict):
+        return (False, "mcpServers missing or not an object", [])
+    servers = data.get("mcpServers")
+    if not isinstance(servers, dict):
+        return (False, "mcpServers missing or not an object", [])
+    warnings: list[tuple[str, str]] = [
+        (f"{name} / {var}", val)
+        for name, srv in servers.items()
+        if isinstance(srv, dict)
+        for var, val in srv.get("env", {}).items()
+        if isinstance(val, str) and re.search(r"\$\{[^}]+\}", val)
+    ]
+    if not servers:
+        return (None, "config present but no servers defined", warnings)
+    return (True, "well-formed", warnings)
 
 
 def _print_environment_section() -> None:
@@ -625,6 +642,7 @@ def _compute_exit_code(
     github_result: dict[str, Any] | None = None,
     git_result: dict[str, Any] | None = None,
     tools_exposed_ok: bool | None = None,
+    mcp_config_ok: bool | None = None,
 ) -> int:
     """Compute CLI exit code from verification results.
 
@@ -648,12 +666,19 @@ def _compute_exit_code(
         tools_exposed_ok: Claude tools-exposed status. None=neutral (no effect),
             True=connected with tools, False=fatal/0-tools (exit 1 when claude
             active).
+        mcp_config_ok: `.mcp.json` validity. None=not checked / neutral (no
+            effect), True=well-formed or empty (no effect), False=malformed
+            (exit 1, provider-independent).
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
     """
     # Config error (invalid TOML) always means exit 1
     if config_has_error:
+        return 1
+
+    # Malformed .mcp.json is provider-independent hard failure (exit 1).
+    if mcp_config_ok is False:
         return 1
 
     # Test prompt failure always means exit 1
@@ -917,7 +942,25 @@ def execute_verify(args: argparse.Namespace) -> int:
     # placeholders like ${MCP_CODER_VENV_PATH} resolve in the subprocess.
     env_vars = prepare_llm_environment(project_dir)
 
+    # 2b. Validate .mcp.json itself (single parse; reused by 3a-bis warnings).
+    # The validity row prints FIRST as the earliest, clearest upstream signal.
+    # A hard-fail (mcp_config_ok is False) short-circuits the downstream MCP
+    # health/smoke/prompt checks below so they don't emit confusing indirect
+    # errors on top of a malformed config.
+    mcp_config_ok: bool | None = None
+    mcp_warnings: list[tuple[str, str]] = []
     if mcp_config_resolved:
+        _ok, _msg, mcp_warnings = _validate_mcp_config(mcp_config_resolved)
+        marker = {
+            True: symbols["success"],
+            None: symbols["warning"],
+            False: symbols["failure"],
+        }[_ok]
+        print(_pad("MCP CONFIG"))
+        print(_format_row(".mcp.json", marker, _msg, indent=2))
+        mcp_config_ok = _ok is not False
+
+    if mcp_config_resolved and mcp_config_ok is not False:
         # Run Claude MCP list
         claude_exe = find_claude_executable(return_none_if_not_found=True)
         claude_mcp = parse_claude_mcp_list(env_vars, claude_executable=claude_exe)
@@ -1011,7 +1054,7 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 3a-bis. MCP config warnings (unresolved ${...} placeholders)
     if mcp_config_resolved:
-        warnings = _collect_mcp_warnings(mcp_config_resolved)
+        warnings = mcp_warnings
         if warnings:
             print(_pad("MCP CONFIG WARNINGS"))
             section_label_width = max(
@@ -1029,7 +1072,7 @@ def execute_verify(args: argparse.Namespace) -> int:
                 )
 
     # 3b. MCP edit smoke test (informational only)
-    if mcp_config_resolved:
+    if mcp_config_resolved and mcp_config_ok is not False:
         smoke_line = _run_mcp_edit_smoke_test(
             project_dir,
             active_provider,
@@ -1042,53 +1085,59 @@ def execute_verify(args: argparse.Namespace) -> int:
         print(smoke_line)
 
     # 3c. Unified test prompt (both providers)
+    # Skipped on a malformed .mcp.json (mcp_config_ok is False): the MCP CONFIG
+    # validity row above is the single upstream diagnostic, so the prompt (which
+    # would fail indirectly) is short-circuited.
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     test_prompt_ok = True
     tools_exposed_ok: bool | None = None
-    try:
-        response = prompt_llm(
-            "Reply with OK",
-            provider=active_provider,
-            timeout=30,
-            mcp_config=mcp_config_resolved,
-            settings_file=settings_file,
-            execution_dir=str(project_dir),
-            env_vars=env_vars,
-        )
-        print(_format_row("Test prompt", symbols["success"], "responded OK", indent=2))
-        if active_provider == "claude":
-            raw_response = cast(dict[str, Any], response.get("raw_response", {}))
-            system_message = raw_response.get("system")
-            tools_lines, tools_exposed_ok = _format_tools_exposed_section(
-                system_message, symbols
+    if mcp_config_ok is not False:
+        try:
+            response = prompt_llm(
+                "Reply with OK",
+                provider=active_provider,
+                timeout=30,
+                mcp_config=mcp_config_resolved,
+                settings_file=settings_file,
+                execution_dir=str(project_dir),
+                env_vars=env_vars,
             )
-            print("\n".join(tools_lines))
-    except Exception as exc:  # pylint: disable=broad-except
-        test_prompt_ok = False
-        # Only classify connection-related exceptions
-        if isinstance(exc, (OSError, ConnectionError)):
-            try:
-                from ...llm.providers.langchain._exceptions import (
-                    classify_connection_error,
-                    format_diagnostics,
+            print(
+                _format_row("Test prompt", symbols["success"], "responded OK", indent=2)
+            )
+            if active_provider == "claude":
+                raw_response = cast(dict[str, Any], response.get("raw_response", {}))
+                system_message = raw_response.get("system")
+                tools_lines, tools_exposed_ok = _format_tools_exposed_section(
+                    system_message, symbols
                 )
+                print("\n".join(tools_lines))
+        except Exception as exc:  # pylint: disable=broad-except
+            test_prompt_ok = False
+            # Only classify connection-related exceptions
+            if isinstance(exc, (OSError, ConnectionError)):
+                try:
+                    from ...llm.providers.langchain._exceptions import (
+                        classify_connection_error,
+                        format_diagnostics,
+                    )
 
-                category = classify_connection_error(exc)
-                logger.debug("Connection diagnostics:\n%s", format_diagnostics(exc))
-            except ImportError:
-                category = "Connection error"
-        else:
-            category = f"{type(exc).__name__}: {exc}"
-        print(
-            _format_row(
-                "Test prompt",
-                symbols["failure"],
-                f"FAILED ({category})",
-                indent=2,
+                    category = classify_connection_error(exc)
+                    logger.debug("Connection diagnostics:\n%s", format_diagnostics(exc))
+                except ImportError:
+                    category = "Connection error"
+            else:
+                category = f"{type(exc).__name__}: {exc}"
+            print(
+                _format_row(
+                    "Test prompt",
+                    symbols["failure"],
+                    f"FAILED ({category})",
+                    indent=2,
+                )
             )
-        )
-        logger.debug("Test prompt failure details: %s", exc, exc_info=True)
-        print("  Run with --debug for detailed diagnostics.")
+            logger.debug("Test prompt failure details: %s", exc, exc_info=True)
+            print("  Run with --debug for detailed diagnostics.")
 
     # 4. MLflow verification (now with since= to confirm logging)
     mlflow_result = verify_mlflow(since=timestamp)
@@ -1125,6 +1174,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         github_result=github_result,
         git_result=git_result,
         tools_exposed_ok=tools_exposed_ok,
+        mcp_config_ok=mcp_config_ok,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

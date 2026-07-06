@@ -235,6 +235,20 @@ class TestProviderAwareMcpSections:
     """Integration tests for provider-aware MCP section ordering."""
 
     @pytest.fixture(autouse=True)
+    def _mock_validate_mcp(self) -> Any:
+        """Treat any resolved (fake) .mcp.json as well-formed.
+
+        These ordering tests point ``resolve_mcp_config_path`` at a fake path;
+        mocking the validator keeps the hard-fail short-circuit from skipping
+        the downstream MCP sections whose ordering is under test.
+        """
+        with patch(
+            f"{_VERIFY}._validate_mcp_config",
+            return_value=(True, "well-formed", []),
+        ):
+            yield
+
+    @pytest.fixture(autouse=True)
     def _mock_verify_github(self) -> Any:
         with patch(
             f"{_VERIFY}.verify_github",

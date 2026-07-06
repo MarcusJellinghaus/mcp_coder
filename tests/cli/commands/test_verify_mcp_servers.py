@@ -68,6 +68,19 @@ def _mcp_ok() -> dict[str, Any]:
 class TestMcpServersInVerify:
     """Tests for MCP server health check integration in execute_verify."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_validate_mcp(self) -> Any:
+        """Treat any resolved (fake) .mcp.json as well-formed.
+
+        Keeps the hard-fail short-circuit from skipping the downstream MCP
+        health checks these tests exercise. Harmless when no config resolves.
+        """
+        with patch(
+            f"{_VERIFY}._validate_mcp_config",
+            return_value=(True, "well-formed", []),
+        ):
+            yield
+
     @patch(f"{_VERIFY}.parse_claude_mcp_list")
     @patch(f"{_VERIFY}.prepare_llm_environment", return_value={"K": "V"})
     @patch(f"{_VERIFY}.log_to_mlflow", create=True)

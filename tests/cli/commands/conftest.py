@@ -167,10 +167,12 @@ def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
     """Patch the additional execute_verify mock surface for alignment smoke tests.
 
     Composes with the autouse ``_mock_verify_config`` and ``_mock_verify_github``
-    fixtures (does NOT re-patch them). Mocks ``_collect_mcp_warnings`` to ``[]``
-    so the dynamic-width MCP CONFIG WARNINGS section is excluded from output;
-    that per-section invariant is asserted in step_4.md tests. Exists in
-    conftest so the alignment smoke test can drive ``execute_verify`` once.
+    fixtures (does NOT re-patch them). Mocks ``_validate_mcp_config`` to
+    ``(True, "well-formed", [])`` so the MCP CONFIG validity row renders as a
+    plain ``[OK]`` and the dynamic-width MCP CONFIG WARNINGS section (fed by the
+    returned ``warnings`` list) is excluded from output; that per-section
+    invariant is asserted in step_4.md tests. Exists in conftest so the
+    alignment smoke test can drive ``execute_verify`` once.
     """
     _verify = "mcp_coder.cli.commands.verify"
     _lc_verify = "mcp_coder.llm.providers.langchain.verification"
@@ -236,8 +238,9 @@ def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
             f"{_verify}._run_mcp_edit_smoke_test", return_value=smoke_row
         ) as smoke_mock,
         patch(
-            f"{_verify}._collect_mcp_warnings", return_value=[]
-        ) as collect_warnings_mock,
+            f"{_verify}._validate_mcp_config",
+            return_value=(True, "well-formed", []),
+        ) as validate_mcp_config_mock,
         patch(f"{_verify}.log_to_mlflow", create=True) as log_mlflow_mock,
         patch(
             f"{_verify}.resolve_mcp_config_path", return_value="/fake/.mcp.json"
@@ -255,7 +258,7 @@ def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
             "parse_claude_mcp_list": parse_mcp_mock,
             "prompt_llm": prompt_mock,
             "_run_mcp_edit_smoke_test": smoke_mock,
-            "_collect_mcp_warnings": collect_warnings_mock,
+            "_validate_mcp_config": validate_mcp_config_mock,
             "log_to_mlflow": log_mlflow_mock,
             "resolve_mcp_config_path": resolve_mcp_mock,
             "find_claude_executable": find_claude_mock,
