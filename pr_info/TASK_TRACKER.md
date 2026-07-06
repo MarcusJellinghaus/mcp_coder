@@ -21,6 +21,55 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move the `failure_reporting` group (src + tests)
+
+See [step_1.md](./steps/step_1.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move the `rebase` group (src + tests)
+
+See [step_2.md](./steps/step_2.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Move the `task_tracker_prep` group (src + tests)
+
+See [step_3.md](./steps/step_3.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Move the `finalisation` group (src + tests)
+
+See [step_4.md](./steps/step_4.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Redistribute orchestrator tests; relocate the misplaced `resolve_project_dir` test
+
+See [step_5.md](./steps/step_5.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Deallowlist + final verification
+
+See [step_6.md](./steps/step_6.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review completed
+- [ ] PR summary written
