@@ -365,12 +365,14 @@ def run_setup_commands(
 
 
 def update_gitignore(folder_path: Path) -> None:
-    """Append vscodeclaude entries to .gitignore.
+    """Append missing vscodeclaude entries to .gitignore.
 
     Args:
         folder_path: Working folder path
 
-    Idempotent: won't duplicate entries.
+    Idempotent: appends only the pattern lines from ``GITIGNORE_ENTRY`` that
+    are not already present, so upgrading an older gitignore block picks up
+    newly added entries without duplicating existing ones.
     """
     from .templates import GITIGNORE_ENTRY
 
@@ -381,13 +383,28 @@ def update_gitignore(folder_path: Path) -> None:
     if gitignore_path.exists():
         existing_content = gitignore_path.read_text(encoding="utf-8")
 
-    # Check if already present
-    if ".vscodeclaude_status.txt" in existing_content:
+    existing_lines = {line.strip() for line in existing_content.splitlines()}
+
+    # Pattern lines missing from the current gitignore (skip blanks/comments).
+    missing = [
+        line
+        for line in GITIGNORE_ENTRY.splitlines()
+        if line.strip()
+        and not line.lstrip().startswith("#")
+        and line.strip() not in existing_lines
+    ]
+    if not missing:
         return
 
-    # Append entry
+    # Fresh repo (no marker yet): write the full block for a clean comment
+    # header. Otherwise append just the missing pattern lines.
+    if ".vscodeclaude_status.txt" in existing_lines:
+        addition = "\n".join(missing) + "\n"
+    else:
+        addition = GITIGNORE_ENTRY
+
     with gitignore_path.open("a", encoding="utf-8") as f:
-        f.write(GITIGNORE_ENTRY)
+        f.write(addition)
 
 
 def create_workspace_file(

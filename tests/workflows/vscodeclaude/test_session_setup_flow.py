@@ -60,10 +60,12 @@ class _FakeRun:
         self,
         *,
         stdout: str = "sid-abc\n",
+        stderr: str = "",
         returncodes: dict[int, int] | None = None,
     ) -> None:
         self.calls: list[tuple[list[str], dict[str, Any]]] = []
         self._stdout = stdout
+        self._stderr = stderr
         self._returncodes = returncodes or {}
 
     def __call__(
@@ -75,7 +77,7 @@ class _FakeRun:
             argv,
             self._returncodes.get(index, 0),
             stdout=self._stdout,
-            stderr="",
+            stderr=self._stderr,
         )
 
     def argvs(self) -> list[list[str]]:
@@ -203,6 +205,26 @@ class TestSessionIdCapture:
             session_setup.run_first_step(
                 _make_spec(), "mcp-coder implement", {}, Path("/proj")
             )
+
+    def test_empty_session_id_surfaces_stderr(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Empty session id surfaces the captured stderr and returncode."""
+        fake = _FakeRun(
+            stdout="",
+            stderr="boom: mcp-coder blew up\n",
+            returncodes={0: 2},
+        )
+        _patch_run(monkeypatch, fake)
+        with pytest.raises(RuntimeError) as excinfo:
+            session_setup.run_first_step(
+                _make_spec(), "mcp-coder implement", {}, Path("/proj")
+            )
+        # Real cause is visible in the exception message ...
+        assert "boom: mcp-coder blew up" in str(excinfo.value)
+        assert "returncode=2" in str(excinfo.value)
+        # ... and echoed to stderr for the operator.
+        assert "boom: mcp-coder blew up" in capsys.readouterr().err
 
 
 class TestMiddleStepNonFatal:

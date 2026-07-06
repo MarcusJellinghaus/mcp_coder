@@ -273,7 +273,13 @@ def run_first_step(
     )
     session_id = result.stdout.strip()
     if not session_id:
-        raise RuntimeError("First step returned an empty session id.")
+        stderr = (result.stderr or "").strip()
+        if stderr:
+            print(stderr, file=sys.stderr)
+        raise RuntimeError(
+            "First step returned an empty session id "
+            f"(returncode={result.returncode}). stderr: {stderr[-2000:] or '<empty>'}"
+        )
     return session_id
 
 

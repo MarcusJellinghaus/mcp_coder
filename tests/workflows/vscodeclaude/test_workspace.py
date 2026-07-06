@@ -198,6 +198,42 @@ class TestWorkspaceSetup:
         content = gitignore.read_text(encoding="utf-8")
         assert content.count(".vscodeclaude_status.txt") == 1
 
+    def test_update_gitignore_appends_missing_entry_on_upgrade(
+        self, tmp_path: Path
+    ) -> None:
+        """An older block missing the new entry gets that line appended."""
+        gitignore = tmp_path / ".gitignore"
+        # Simulate a previously-committed block WITHOUT the newer session file.
+        gitignore.write_text(
+            "*.pyc\n"
+            "# VSCodeClaude session files (auto-generated)\n"
+            ".vscodeclaude_status.txt\n"
+            ".vscodeclaude_analysis.json\n"
+            ".vscodeclaude_start.bat\n"
+            ".vscodeclaude_start.sh\n",
+            encoding="utf-8",
+        )
+
+        update_gitignore(tmp_path)
+
+        content = gitignore.read_text(encoding="utf-8")
+        # New entry now present, exactly once, without re-adding old ones.
+        assert content.count(".vscodeclaude_session.json") == 1
+        assert content.count(".vscodeclaude_status.txt") == 1
+        assert "*.pyc" in content
+
+    def test_update_gitignore_up_to_date_unchanged(self, tmp_path: Path) -> None:
+        """A fully up-to-date .gitignore is left byte-for-byte unchanged."""
+        update_gitignore(tmp_path)
+        gitignore = tmp_path / ".gitignore"
+        before = gitignore.read_text(encoding="utf-8")
+
+        update_gitignore(tmp_path)
+
+        after = gitignore.read_text(encoding="utf-8")
+        assert after == before
+        assert after.count(".vscodeclaude_session.json") == 1
+
     def test_create_workspace_file(
         self, tmp_path: Path, mock_vscodeclaude_config: None
     ) -> None:
