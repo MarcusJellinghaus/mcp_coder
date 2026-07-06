@@ -2,6 +2,8 @@
 
 Guidelines for refactoring code safely, whether splitting large files or restructuring architecture.
 
+**File-size threshold: 750 lines** — the canonical hard limit, enforced in CI (`.github/workflows/ci.yml`). The MCP `check_file_size` tool historically defaults to 600; treat that as an informal early-warning and 750 as the hard limit.
+
 ## Why This Matters
 
 Large files (>750 lines) and poor code organization:
@@ -83,6 +85,8 @@ src/mcp_coder/utils/string_helpers.py
 tests/utils/test_string_helpers.py
 ```
 
+Split **source and its tests together in one PR**, per module. **Rename misnamed tests to parallel names** while you split (`core.py` tested by `test_main.py`; `agent.py` by `test_langchain_agent_streaming.py`). When one module's tests dwarf its source, see [Splitting Large Files](#splitting-large-files).
+
 ### Step 4: Verify
 
 After all moves, verify the refactoring:
@@ -109,7 +113,7 @@ mcp-coder check file-size --max-lines 750
 mcp__mcp-workspace__check_file_size
 ```
 
-Verifies all tracked Python files are under the line threshold. If split files were previously in `.large-files-allowlist`, remove those entries. Stale entries are reported automatically.
+Verifies all tracked Python files are under the line threshold. If split files were previously in `.large-files-allowlist`, remove those entries — a split isn't complete until the file is under 750 **and** off the allowlist. Stale entries are reported automatically.
 
 #### Import Linter
 
@@ -151,19 +155,54 @@ mcp__mcp-tools-py__run_mypy_check
 
 ## Common Patterns
 
-### Splitting a Large File
-
-1. Identify logical groupings (by responsibility, by domain)
-2. Create new files for each group
-3. Move functions one group at a time
-4. Delete the original file — update all consumers to use new locations directly
-
 ### Architectural Restructuring
 
 1. Update `.importlinter` and `tach.toml` with new module boundaries
 2. Move code to match new structure
 3. Fix any import violations
 4. Update architecture documentation
+
+## Splitting Large Files
+
+Technique for getting oversized files under the 750-line limit, plus the issue-lifecycle rules for running the effort ([Workflow](#workflow-issue-lifecycle), below).
+
+**Tracking:** live inventory of oversized files — issue #353. Find command / CLI — #75. First worked example — #257.
+
+### Find the files (mind the allowlist)
+
+`mcp__mcp-workspace__check_file_size` and the default `mcp-coder check file-size` **hide files listed in `.large-files-allowlist`** — so the biggest offenders (already allowlisted) are invisible in the normal output. To see the true full picture, bypass the allowlist by pointing it at a nonexistent path:
+
+```bash
+mcp-coder check file-size --max-lines 750 --allowlist-file .no-such-allowlist
+```
+
+Build your inventory from this full list, not the filtered one — otherwise the largest files get systematically overlooked (they were allowlisted precisely because they're huge).
+
+### Split a large file
+
+1. Identify logical groupings (by responsibility, by domain)
+2. Create new files for each group
+3. Move functions one group at a time
+4. Delete the original file — update all consumers to use new locations directly
+
+### When tests are much larger than the source
+
+The `foo.py ↔ test_foo.py` rule mirrors **structure, not file count** — one source module maps to one test *namespace* that may hold several files.
+
+- **Default: split the tests** by concern into that namespace, **mirroring the source**: a *package* → a test directory (`tests/workflows/create_plan/test_*.py`); a *single module* → prefixed sibling files (`test_core.py` + `test_core_safety_net.py`). Don't restructure source just to satisfy a filename.
+- **Exception: refactor the source** — only if decomposing it is a design win you'd want *even without the line limit* (a monolith with inlined responsibilities, not a thin coordinator). Then it's a `refactor`, not a mechanical split — see [Workflow](#workflow-issue-lifecycle).
+
+### Test-only splits (orphan tests)
+
+Some test files exceed the limit while their source file is fine. Split these on their own — no source move; break the test file into parallel-named pieces by concern and delete the original.
+
+### Workflow (issue lifecycle)
+
+How to run splitting issues (distinct from the code technique above):
+
+- **Definition of done / closure gating:** close a split issue only once the file is under **750** lines **and** its `.large-files-allowlist` entry is removed. Closing while still allowlisted is a silent regression — e.g. #310 was closed but stayed 949 lines & allowlisted, now refiled as #1025.
+- **No recycling:** if a split file grows back over the limit, open a **new** issue — do not reopen the closed one.
+- **Source-refactor exception:** when [tests dwarf the source](#when-tests-are-much-larger-than-the-source) and decomposing it is warranted, it's a `refactor`, not a mechanical split. The LLM **proposes** it and a **human confirms** before the split is paused; then re-scope the issue up front, or open a separate issue and mark the split `blocked` if found mid-split.
 
 ## Checklist
 
