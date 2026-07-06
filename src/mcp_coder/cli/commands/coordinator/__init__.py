@@ -13,17 +13,15 @@ from .command_templates import (
     PRIORITY_ORDER,
     TEST_COMMAND_TEMPLATES,
 )
-
-# Import from commands module (CLI entry points)
 from .commands import (
     execute_coordinator_run,
     execute_coordinator_test,
-    execute_coordinator_vscodeclaude,
-    execute_coordinator_vscodeclaude_status,
     format_job_output,
 )
-
-# Import from core module
+from .commands_vscodeclaude import (
+    execute_coordinator_vscodeclaude,
+    execute_coordinator_vscodeclaude_status,
+)
 from .core import (
     _filter_eligible_issues,
     dispatch_workflow,
@@ -33,8 +31,6 @@ from .core import (
     load_repo_config,
     validate_repo_config,
 )
-
-# Import from workflow_constants module
 from .workflow_constants import WORKFLOW_MAPPING
 
 __all__ = [

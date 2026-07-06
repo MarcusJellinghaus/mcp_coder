@@ -13,7 +13,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.cli.commands.coordinator.commands import (
+from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
     execute_coordinator_vscodeclaude_status,
 )
 from mcp_coder.cli.main import create_parser
@@ -144,23 +144,23 @@ class TestExplainIsWriteFree:
         assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_sessions",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_sessions",
             lambda: {"sessions": sessions, "last_updated": ""},
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_config",
             lambda: {"coordinator": {"repos": {"myrepo": {}}}},
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_vscodeclaude_config",
             lambda: {"workspace_base": str(tmp_path), "max_sessions": 3},
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude._build_cached_issues_by_repo",
             lambda repo_names, sessions=None: ({}, set()),
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.build_assessments",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.build_assessments",
             lambda sess, cached=None: assessments,
         )
 
@@ -175,7 +175,8 @@ class TestExplainIsWriteFree:
             "mcp_coder.workflows.vscodeclaude.audit.append_run", append_mock
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.apply_assessments", apply_mock
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.apply_assessments",
+            apply_mock,
         )
 
         # The status table / branch-check path must be skipped entirely.
@@ -204,23 +205,23 @@ class TestExplainIsWriteFree:
     ) -> None:
         """Without --explain the normal status table path runs (unchanged)."""
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_sessions",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_sessions",
             lambda: {"sessions": [], "last_updated": ""},
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_config",
             lambda: {"coordinator": {"repos": {}}},
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_vscodeclaude_config",
             lambda: {"workspace_base": str(tmp_path), "max_sessions": 3},
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude._build_cached_issues_by_repo",
             lambda repo_names, sessions=None: ({}, set()),
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.build_assessments",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.build_assessments",
             lambda sess, cached=None: {},
         )
 

@@ -17,7 +17,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.cli.commands.coordinator.commands import (
+from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
     execute_coordinator_vscodeclaude,
     execute_coordinator_vscodeclaude_status,
 )
@@ -106,7 +106,7 @@ def _patch_common(
         }
     )
     monkeypatch.setattr(
-        "mcp_coder.cli.commands.coordinator.commands.build_assessments",
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.build_assessments",
         build_mock,
     )
 
@@ -114,32 +114,32 @@ def _patch_common(
     # touching disk.
     apply_mock = Mock()
     monkeypatch.setattr(
-        "mcp_coder.cli.commands.coordinator.commands.apply_assessments",
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.apply_assessments",
         apply_mock,
     )
 
     # Stub out load_sessions to return our fixture sessions
     monkeypatch.setattr(
-        "mcp_coder.cli.commands.coordinator.commands.load_sessions",
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_sessions",
         lambda: {"sessions": sessions, "last_updated": ""},
     )
 
     # Skip auto-config creation
     monkeypatch.setattr(
-        "mcp_coder.cli.commands.coordinator.commands.create_default_config",
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.create_default_config",
         lambda: False,
     )
     monkeypatch.setattr(
-        "mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config",
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_vscodeclaude_config",
         lambda: {"workspace_base": str(tmp_path), "max_sessions": 10},
     )
     monkeypatch.setattr(
-        "mcp_coder.cli.commands.coordinator.commands.load_config",
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_config",
         lambda: {"coordinator": {"repos": {"myrepo": {}}}},
     )
     # Avoid cache builds that hit GitHub
     monkeypatch.setattr(
-        "mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo",
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude._build_cached_issues_by_repo",
         lambda repo_names, sessions=None: ({}, set()),
     )
 
@@ -158,15 +158,15 @@ class TestBuildOnceInvariant:
 
         # Stub launch-only collaborators
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.cleanup_stale_sessions",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.cleanup_stale_sessions",
             Mock(),
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.restart_closed_sessions",
             Mock(return_value=[]),
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.process_eligible_issues",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.process_eligible_issues",
             Mock(return_value=[]),
         )
 
