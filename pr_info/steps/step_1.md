@@ -16,6 +16,7 @@ Move the three markdown-parsing helpers out of `prompt_manager.py` into a new
 - **Modified:** `src/mcp_coder/prompt_manager.py` (helpers removed, import added)
 - **Modified:** `tests/test_prompt_manager.py` (3 classes removed)
 - **Modified:** `.large-files-allowlist` (remove `src/mcp_coder/prompt_manager.py`)
+- **Modified:** `tach.toml` (declare `mcp_coder.prompt_parsing`; add it to `prompt_manager`'s `depends_on`)
 
 ## WHAT — symbols to move (signatures unchanged, do not edit bodies)
 Source helpers → `prompt_parsing.py`:
@@ -47,6 +48,20 @@ Test classes → `tests/test_prompt_parsing.py`:
   delete those two named imports. Do **not** rely on `run_format_code` for this — it
   runs black + isort only, neither of which removes unused imports. `Dict`/`Any`/`List`
   remain in use by the public functions; leave them.
+- **Edit `tach.toml`** (mandatory — otherwise `tach check` fails). `tach.toml` declares a
+  `[[modules]]` entry for every top-level module; an undeclared `prompt_parsing.py` folds
+  into the root `mcp_coder` module, so once `prompt_manager` imports it tach sees
+  `prompt_manager → mcp_coder` (root) while the root already depends on `prompt_manager` →
+  **circular dependency** (`forbid_circular_dependencies = true`) → `tach check` FAILS.
+  Two edits:
+  1. Add a new `[[modules]]` entry for `mcp_coder.prompt_parsing` with `layer = "domain"`
+     and `depends_on = []` (it is pure — only `re`/`typing`, no internal deps).
+  2. Add `{ path = "mcp_coder.prompt_parsing" }` to `mcp_coder.prompt_manager`'s
+     `depends_on` list (currently `mcp_coder.utils`, `mcp_coder.config`,
+     `mcp_coder.constants`).
+  `tach check` only passes once this entry exists. (Unlike `.importlinter`, whose
+  sub-layer line names both new modules and is added once in Step 2, tach declares each
+  module individually — so `prompt_parsing` is declared here, `prompt_sources` in Step 2.)
 
 ## ALGORITHM — move procedure (no new logic)
 ```
@@ -54,8 +69,9 @@ for each of the 3 parsing functions:  move_symbol(prompt_manager.py -> prompt_pa
 for each of the 3 parsing test classes: move_symbol(test_prompt_manager.py -> test_prompt_parsing.py, dry_run) ; review ; execute
 run_ruff_fix (F401)                   # remove now-unused imports (`re`, `Union`) — NOT run_format_code
 edit .large-files-allowlist           # delete the src/mcp_coder/prompt_manager.py line
+edit tach.toml                        # add [[modules]] mcp_coder.prompt_parsing (domain, depends_on=[]); add it to prompt_manager.depends_on
 compact-diff                          # assert ONLY imports + file headers changed
-run full check suite                  # regression gate — existing tests must pass
+run full check suite                  # regression gate — existing tests must pass (incl. tach check)
 ```
 (Multiple symbols may be passed in one `move_symbol` call via `symbol_names`.)
 
@@ -90,7 +106,11 @@ Step 2, once both modules exist.
 > `tests/test_prompt_parsing.py`. Do not edit any function/class body. Verify
 > `prompt_parsing.py` carries `import re` and `from typing import Any, Dict, List, Union`,
 > and that `prompt_manager.py` now imports the three helpers from `.prompt_parsing`. Then
-> remove the `src/mcp_coder/prompt_manager.py` line from `.large-files-allowlist`. Do NOT
+> remove the `src/mcp_coder/prompt_manager.py` line from `.large-files-allowlist`. Also
+> edit `tach.toml`: add a `[[modules]]` entry for `mcp_coder.prompt_parsing`
+> (`layer = "domain"`, `depends_on = []`) and add `{ path = "mcp_coder.prompt_parsing" }`
+> to `mcp_coder.prompt_manager`'s `depends_on` — required or `tach check` fails on a
+> root-module circular dependency. Do NOT
 > edit `.importlinter` in this step (deferred to Step 2). Use MCP tools exclusively.
 > Remove the now-unused `re` and `Union` imports from `prompt_manager.py` with
 > `run_ruff_fix` (F401) — not `run_format_code`, which does not remove unused imports.

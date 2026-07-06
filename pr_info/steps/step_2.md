@@ -15,6 +15,7 @@ a new `prompt_sources.py`, and move their four mirror test classes into a new
 - **Modified:** `src/mcp_coder/prompt_manager.py` (helpers removed, import added)
 - **Modified:** `tests/test_prompt_manager.py` (4 classes removed — leaves the 4 public-API classes)
 - **Modified:** `.importlinter` (add sub-layer beneath `prompt_manager` — both new modules now exist)
+- **Modified:** `tach.toml` (declare `mcp_coder.prompt_sources`; add it to `prompt_manager`'s `depends_on`)
 
 ## WHAT — symbols to move (signatures unchanged, do not edit bodies)
 Source helpers → `prompt_sources.py` (move all four together so their internal calls
@@ -64,6 +65,19 @@ Test classes → `tests/test_prompt_sources.py`:
   import each other, and `prompt_manager` imports both — that would break the contract.
   The `|` between the two new modules is correct: they are independent siblings (no
   cross-calls). `run_lint_imports_check` must PASS after this edit.
+- **Edit `tach.toml`** (mandatory — otherwise `tach check` fails). As in Step 1, an
+  undeclared `prompt_sources.py` folds into the root `mcp_coder` module; once
+  `prompt_manager` imports it, tach sees `prompt_manager → mcp_coder` (root) while the
+  root already depends on `prompt_manager` → **circular dependency**
+  (`forbid_circular_dependencies = true`) → `tach check` FAILS. Two edits:
+  1. Add a new `[[modules]]` entry for `mcp_coder.prompt_sources` with `layer = "domain"`
+     and `depends_on = [{ path = "mcp_coder.utils" }]` (it imports `find_data_file` from
+     `.utils.data_files`).
+  2. Add `{ path = "mcp_coder.prompt_sources" }` to `mcp_coder.prompt_manager`'s
+     `depends_on` list (which already gained `mcp_coder.prompt_parsing` in Step 1).
+  Note the sequencing asymmetry: tach declares each module individually, so
+  `prompt_sources` is added here (in its own step), whereas the `.importlinter` sub-layer
+  line names both modules at once and is therefore added only in this step.
 
 ## ALGORITHM — move procedure (no new logic)
 ```
@@ -71,8 +85,9 @@ move_symbol(prompt_manager.py -> prompt_sources.py, [4 helpers], dry_run) ; revi
 for each of the 4 source test classes: move_symbol(test_prompt_manager.py -> test_prompt_sources.py, dry_run) ; review ; execute
 run_ruff_fix (F401)                   # remove now-unused imports (`Optional`, `Path`, `find_data_file`) — NOT run_format_code
 edit .importlinter                    # add sub-layer: prompt_sources | prompt_parsing beneath prompt_manager
+edit tach.toml                        # add [[modules]] mcp_coder.prompt_sources (domain, depends_on=[utils]); add it to prompt_manager.depends_on
 compact-diff                          # assert ONLY imports + file headers changed (+ .importlinter sub-layer line)
-run full check suite                  # regression gate — existing tests must pass
+run full check suite                  # regression gate — existing tests must pass (incl. tach check)
 ```
 
 ## DATA — no data structures change
@@ -109,7 +124,12 @@ existing test suite is the acceptance gate proving behavior is unchanged.
 > is left with exactly the four public-API test classes. Then edit `.importlinter`: add
 > the sub-layer `mcp_coder.prompt_sources | mcp_coder.prompt_parsing` directly beneath the
 > `mcp_coder.llm | mcp_coder.prompt_manager` line (do NOT append the new modules to that
-> line with `|`). Use MCP tools exclusively. Remove the now-unused `Optional`, `Path`, and
+> line with `|`). Also edit `tach.toml`: add a `[[modules]]` entry for
+> `mcp_coder.prompt_sources` (`layer = "domain"`,
+> `depends_on = [{ path = "mcp_coder.utils" }]`) and add
+> `{ path = "mcp_coder.prompt_sources" }` to `mcp_coder.prompt_manager`'s `depends_on` —
+> required or `tach check` fails on a root-module circular dependency. Use MCP tools
+> exclusively. Remove the now-unused `Optional`, `Path`, and
 > `find_data_file` imports from `prompt_manager.py` with `run_ruff_fix` (F401) — not
 > `run_format_code`, which does not remove unused imports; keep `glob` and `os` (still used
 > by `validate_prompt_directory`). Then confirm `compact-diff` shows only import/file-header

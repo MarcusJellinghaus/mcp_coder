@@ -87,6 +87,9 @@ Test class distribution (fixed by the issue — 4 / 4 / 3):
 - `.large-files-allowlist` — `src/mcp_coder/prompt_manager.py` entry removed (Step 1)
 - `.importlinter` — add sub-layer `mcp_coder.prompt_sources | mcp_coder.prompt_parsing`
   beneath `prompt_manager` (Step 2)
+- `tach.toml` — declare each new module (`mcp_coder.prompt_parsing` in Step 1,
+  `mcp_coder.prompt_sources` in Step 2) as a `domain` `[[modules]]` entry and add each to
+  `mcp_coder.prompt_manager`'s `depends_on`
 
 **Deleted** — none (no stubs, no re-exports; per the refactoring guide's "clean deletion").
 
@@ -124,7 +127,15 @@ mirror tests alongside the source and re-runs the full suite as the acceptance g
    (`mcp_coder.prompt_sources | mcp_coder.prompt_parsing`) present after Step 2;
    `run_pytest_check` (`-n auto` with the unit-test exclusion markers),
    `run_pylint_check`, `run_mypy_check` — all must pass.
-5. `tach check` via Bash (no MCP equivalent).
+5. `tach check` via Bash (no MCP equivalent). Both new modules must be declared in
+   `tach.toml` (`prompt_parsing` in Step 1, `prompt_sources` in Step 2) as `domain`
+   `[[modules]]`, with `prompt_manager` depending on each — otherwise the undeclared
+   module folds into the root `mcp_coder`, and `prompt_manager → mcp_coder` combined with
+   the root's existing dependency on `prompt_manager` forms a circular dependency that
+   fails `tach check`. Sequencing asymmetry vs `.importlinter`: tach declares each module
+   individually, so `tach.toml` is updated per-step (one module each), whereas the
+   `.importlinter` sub-layer line names both modules and is therefore added once, in
+   Step 2.
 
 ### Constraints preserved
 - Public API and all external import paths unchanged.
