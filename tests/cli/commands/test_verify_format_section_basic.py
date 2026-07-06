@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.cli.commands.verify import (
+from mcp_coder.cli.commands.verify_formatting import (
     _VALUE_COLUMN_INDENT,
     _format_row,
     _format_section,
@@ -216,7 +216,7 @@ class TestGitHubLabelMappings:
 
     def test_all_github_keys_in_label_map(self) -> None:
         """All GitHub check keys exist in _LABEL_MAP."""
-        from mcp_coder.cli.commands.verify import _LABEL_MAP
+        from mcp_coder.cli.commands.verify_formatting import _LABEL_MAP
 
         for key in self._GITHUB_KEYS:
             assert key in _LABEL_MAP, f"Missing key: {key}"
@@ -279,7 +279,7 @@ class TestGitLabelMappings:
         return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 
     def test_all_git_keys_in_label_map(self) -> None:
-        from mcp_coder.cli.commands.verify import _LABEL_MAP
+        from mcp_coder.cli.commands.verify_formatting import _LABEL_MAP
 
         for key in self._GIT_KEYS:
             assert key in _LABEL_MAP, f"Missing key: {key}"

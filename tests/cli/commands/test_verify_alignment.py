@@ -27,12 +27,14 @@ from typing import Any
 import pytest
 
 from mcp_coder.cli.commands.verify import (
-    _format_claude_mcp_section,
-    _format_mcp_section,
-    _format_section,
     _print_environment_section,
     _print_project_section,
     execute_verify,
+)
+from mcp_coder.cli.commands.verify_formatting import (
+    _format_claude_mcp_section,
+    _format_mcp_section,
+    _format_section,
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 

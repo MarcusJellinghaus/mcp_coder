@@ -7,7 +7,7 @@ validating the exit code matrix across provider/mlflow scenarios.
 from typing import Any
 from unittest.mock import patch
 
-from mcp_coder.cli.commands.verify import _compute_exit_code
+from mcp_coder.cli.commands.verify_exit_code import _compute_exit_code
 from mcp_coder.cli.main import main
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"

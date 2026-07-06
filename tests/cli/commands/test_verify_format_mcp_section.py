@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from mcp_coder.cli.commands.verify import (
+from mcp_coder.cli.commands.verify_formatting import (
     _format_claude_mcp_section,
     _format_mcp_section,
 )

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from mcp_coder.cli.commands.verify import _compute_exit_code
+from mcp_coder.cli.commands.verify_exit_code import _compute_exit_code
 
 
 def _claude_ok() -> dict[str, Any]:

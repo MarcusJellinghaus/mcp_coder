@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import _LABEL_MAP, execute_verify
+from mcp_coder.cli.commands.verify import execute_verify
+from mcp_coder.cli.commands.verify_formatting import _LABEL_MAP
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 
