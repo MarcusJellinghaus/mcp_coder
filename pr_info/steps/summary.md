@@ -76,6 +76,7 @@ modules, no new dependencies, no public API surface.
 | `tests/cli/commands/test_verify_exit_codes.py` | **modify** — `mcp_config_ok` exit-code cases (Step 1) |
 | `tests/cli/commands/test_verify_orchestration.py` | **modify** — replace `TestMcpConfigWarnings` `_collect_mcp_warnings` tests with `_validate_mcp_config` tests + validity-row/ordering tests (Step 2) |
 | `tests/cli/commands/conftest.py` | **modify** — re-point the `_collect_mcp_warnings` mock to `_validate_mcp_config` (Step 2) |
+| `tests/cli/commands/test_verify_alignment.py` | **check (low priority)** — its Layer-2 smoke test (`TestExecuteVerifyAlignmentSmoke`) drives `execute_verify` via `_make_verify_mocks`, so the new always-on `MCP CONFIG` row now renders in captured output; alignment still passes (the `.mcp.json` row aligns at the standard value column), but the stale `_collect_mcp_warnings` reference in its module docstring should be checked/updated (Step 2) |
 
 No folders or modules are created or removed.
 

@@ -69,7 +69,15 @@ def _validate_mcp_config(
   (tools-exposed / edit smoke / test prompt) on `mcp_config_ok is not False`, e.g. change
   those conditions to `if mcp_config_resolved and mcp_config_ok is not False:`. The
   validity-row block itself stays gated only on `if mcp_config_resolved:` so the diagnostic
-  always prints.
+  always prints. Two structural precisions against the real `verify.py`:
+  1. The **test-prompt block (section 3c)** is currently a bare `try:` NOT gated on
+     `if mcp_config_resolved:` at all — so short-circuiting it requires introducing a **new**
+     guard there, not editing an existing condition.
+  2. Between 3a and 3a-bis there is a "compute `claude_mcp_ok` for exit code" block
+     (`if active_provider == "claude" and mcp_config_resolved:`). When 3a is skipped on
+     hard-fail, `claude_mcp` stays `None` so this sets `claude_mcp_ok = False`. Leave this
+     as-is: `mcp_config_ok is False` already forces exit 1, so the extra `False` is harmless
+     and invisible in output — do not try to "fix" it.
 - In the `3a-bis` section, replace `warnings = _collect_mcp_warnings(mcp_config_resolved)`
   with `warnings = mcp_warnings` (keep the rest of that block — the dynamic `label_width`
   and rendering — unchanged).
@@ -138,6 +146,13 @@ End-to-end exit-code test (full-CLI wiring):
   that exercises the full wiring: a real malformed `.mcp.json` → `_validate_mcp_config`
   returns `False` → `mcp_config_ok` threaded into `_compute_exit_code` → CLI returns
   **exit 1**.
+- Note: that harness's `_run_verify` helper hardcodes `resolve_mcp_config_path → None` (so
+  the MCP CONFIG block is normally skipped) and does not mock `parse_claude_mcp_list` /
+  `verify_mcp_servers`. The new malformed case must extend `_run_verify` with an
+  `mcp_config_path` override that points `resolve_mcp_config_path` at a real malformed temp
+  `.mcp.json`, and must leave `_validate_mcp_config` **un-mocked** so the real parse runs.
+  This stays fast/non-flaky precisely because the hard-fail short-circuit skips the
+  un-mocked `parse_claude_mcp_list` / `verify_mcp_servers` downstream.
 
 `conftest.py`: change the mock from `_collect_mcp_warnings -> []` to
 `_validate_mcp_config -> (True, "well-formed", [])`, and update the yielded dict key.
