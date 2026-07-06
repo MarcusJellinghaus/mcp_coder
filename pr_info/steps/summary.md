@@ -64,9 +64,11 @@ verify_exit_code  ──> (stdlib only)  reaches back into verify.py for nothing
   contract inside `cli.commands`. The two new modules are pure leaves with a
   single, one-directional edge each — no cycle, no contract update needed
   (confirmed against current `.importlinter`).
-- **Constant-move caveat.** `move_symbol` relocates functions/classes but **not**
-  module-level constants. Step 2 moves the constants manually and repoints their
-  importers by hand. `_VALUE_COLUMN_INDENT` is computed at import time from
+- **Constant-move caveat.** `move_symbol` advertises moving top-level functions,
+  classes, **or variables**, so it may or may not relocate the module-level constants.
+  Step 2 runs `move_symbol` with `dry_run=True` first to observe the actual behavior and
+  only moves the constants manually (repointing importers by hand) if the dry-run leaves
+  them behind. Either way, `_VALUE_COLUMN_INDENT` is computed at import time from
   `_format_row_prefix(...)`, so in the new file it must sit **after** that function.
 - **Test structure already mirrors source.** ~11 companion test files
   (`test_verify_exit_codes*`, `test_verify_install_hints`, `test_verify_format_*`,
@@ -115,7 +117,7 @@ test's imports of `_format_mcp_section` and the in-function `_LABEL_WIDTH` /
 ```
 mcp__mcp-tools-py__run_format_code
 mcp__mcp-tools-py__run_lint_imports_check
-mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
+mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])
 mcp__mcp-tools-py__run_pylint_check
 mcp__mcp-tools-py__run_mypy_check
 mcp__mcp-workspace__check_file_size(max_lines=750)

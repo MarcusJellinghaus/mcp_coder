@@ -29,9 +29,14 @@ entry in this step**.
 `_format_section`, `_format_mcp_section`, `_format_claude_mcp_section`,
 `_format_tools_exposed_section`
 
-**Constants (`move_symbol` will NOT move these — move by hand):**
+**Constants (move manually only if the `move_symbol` dry-run leaves them behind — see HOW/ALGORITHM):**
 `STATUS_SYMBOLS`, `_MARKER_SLOT_WIDTH`, `_LABEL_WIDTH`, `_KEY_REGEX`,
 `_VALUE_COLUMN_INDENT`, `_LABEL_MAP`, `_BRANCH_PROTECTION_CHILDREN`
+
+> `move_symbol` claims to move top-level functions, classes, **or variables**, so it
+> may relocate these constants for you. Do **not** assume either way — the dry-run in
+> the ALGORITHM below is the source of truth. Only perform the manual constant move if
+> the dry-run shows they were left in `verify.py`.
 
 ## HOW (integration)
 
@@ -82,12 +87,18 @@ does not import them.)
 ## ALGORITHM (execution)
 
 ```
-1. move_symbol(verify.py, [<8 functions>], verify_formatting.py, dry_run=True) -> review
-   # move_symbol repoints function importers and may add `from .verify import <consts>`
-   # into verify_formatting (a temporary back-edge to clean up in step 3-5 below).
+1. move_symbol(verify.py, [<8 functions>], verify_formatting.py, dry_run=True) -> review.
+   # OBSERVE two things in the dry-run:
+   #  (a) Whether the 7 module-level constants were relocated to verify_formatting or
+   #      left behind in verify.py. This decides whether step 3 (manual move) is needed.
+   #  (b) Whether move_symbol added a `from .verify import <consts>` back-edge into
+   #      verify_formatting (a temporary back-edge to clean up in steps 3-5 below).
 2. move_symbol(... dry_run=False)
-3. Manually cut the 7 constant definitions from verify.py; paste into
-   verify_formatting.py in the REQUIRED ORDER above.
+3. ONLY IF the dry-run showed the constants stayed in verify.py: manually cut the 7
+   constant definitions from verify.py and paste them into verify_formatting.py in the
+   REQUIRED ORDER above. If the dry-run already relocated them, skip the cut/paste but
+   still verify they landed in the REQUIRED ORDER (fix ordering if not) — in particular
+   `_VALUE_COLUMN_INDENT` MUST follow `_format_row_prefix`.
 4. Delete any auto-added `from .verify import <constants>` line in verify_formatting.py.
 5. Reconcile imports: every remaining `from ...commands.verify import <X>` where X is
    one of the 7 constants -> repoint to `...commands.verify_formatting`
@@ -96,6 +107,12 @@ does not import them.)
 7. Remove `src/mcp_coder/cli/commands/verify.py` from .large-files-allowlist.
 8. Run all checks + git-tool compact-diff + check_file_size(max_lines=750).
 ```
+
+> **Do not run quality checks mid-sequence.** The steps above pass through
+> intermediate broken states — split imports, a temporary `verify_formatting -> verify`
+> back-edge from `move_symbol`, and un-repointed straggler importers — that will **not**
+> import cleanly. Run format / lint-imports / pytest / pylint / mypy / tach only once the
+> **entire** ALGORITHM sequence is complete. This remains a single step / single commit.
 
 ## DATA (unchanged contracts)
 
