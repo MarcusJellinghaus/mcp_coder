@@ -14,6 +14,7 @@ a new `prompt_sources.py`, and move their four mirror test classes into a new
 - **New:** `tests/test_prompt_sources.py`
 - **Modified:** `src/mcp_coder/prompt_manager.py` (helpers removed, import added)
 - **Modified:** `tests/test_prompt_manager.py` (4 classes removed — leaves the 4 public-API classes)
+- **Modified:** `.importlinter` (add sub-layer beneath `prompt_manager` — both new modules now exist)
 
 ## WHAT — symbols to move (signatures unchanged, do not edit bodies)
 Source helpers → `prompt_sources.py` (move all four together so their internal calls
@@ -44,16 +45,33 @@ Test classes → `tests/test_prompt_sources.py`:
   fully encapsulated in `prompt_sources`).
 - The 4 test classes import the **public API**, not `prompt_sources`. Verify the API
   import plus `os`/`tempfile`/`Path`/`patch`/`pytest` landed in `test_prompt_sources.py`.
-- Run `mcp__mcp-tools-py__run_format_code` to sweep imports left unused in
-  `prompt_manager.py` after these helpers leave (e.g. `glob`, `os`, `Path`, `Optional`,
-  `find_data_file`). Let the formatter decide; do not hand-prune.
+- Remove imports left unused in `prompt_manager.py` after these helpers leave — namely
+  `Optional`, `Path`, and `find_data_file`. Use `mcp__mcp-tools-py__run_ruff_fix`
+  selecting **F401** (unused-import), or explicitly delete those three named imports. Do
+  **not** rely on `run_format_code` — it runs black + isort only, neither of which
+  removes unused imports. Note: `glob` and `os` **remain in use** by the public
+  `validate_prompt_directory` (`glob.glob`, `os.path.*`) — do **not** delete them.
+- **Edit `.importlinter`** (now that both new modules exist): insert a new sub-layer line
+  **directly beneath** `mcp_coder.llm | mcp_coder.prompt_manager` in the
+  `layered_architecture` contract, so the block reads:
+  ```
+  mcp_coder.llm | mcp_coder.prompt_manager
+  mcp_coder.prompt_sources | mcp_coder.prompt_parsing
+  mcp_coder.prompts
+  ```
+  This constrains both new modules beneath `prompt_manager` (which imports them). Do
+  **not** append them to the `prompt_manager` line with `|`: same-line siblings may not
+  import each other, and `prompt_manager` imports both — that would break the contract.
+  The `|` between the two new modules is correct: they are independent siblings (no
+  cross-calls). `run_lint_imports_check` must PASS after this edit.
 
 ## ALGORITHM — move procedure (no new logic)
 ```
 move_symbol(prompt_manager.py -> prompt_sources.py, [4 helpers], dry_run) ; review ; execute
 for each of the 4 source test classes: move_symbol(test_prompt_manager.py -> test_prompt_sources.py, dry_run) ; review ; execute
-run_format_code                       # sweep now-unused imports in prompt_manager.py
-compact-diff                          # assert ONLY imports + file headers changed
+run_ruff_fix (F401)                   # remove now-unused imports (`Optional`, `Path`, `find_data_file`) — NOT run_format_code
+edit .importlinter                    # add sub-layer: prompt_sources | prompt_parsing beneath prompt_manager
+compact-diff                          # assert ONLY imports + file headers changed (+ .importlinter sub-layer line)
 run full check suite                  # regression gate — existing tests must pass
 ```
 
@@ -68,9 +86,12 @@ existing test suite is the acceptance gate proving behavior is unchanged.
   `TestGetPromptWithSubstitutions`).
 - `mcp__mcp-workspace__check_file_size` — all touched files under 750 (stays off the
   allowlist from Step 1).
-- `run_lint_imports_check` (same layer — no sub-layer contract expected),
-  `run_pytest_check` (`-n auto`, unit-exclusion markers), `run_pylint_check`,
-  `run_mypy_check` pass; `tach check` (Bash) passes.
+- `.importlinter` contains the new sub-layer
+  `mcp_coder.prompt_sources | mcp_coder.prompt_parsing` directly beneath the
+  `mcp_coder.llm | mcp_coder.prompt_manager` line.
+- `run_lint_imports_check` — must PASS with the new sub-layer present (both new modules
+  constrained beneath `prompt_manager`); `run_pytest_check` (`-n auto`, unit-exclusion
+  markers), `run_pylint_check`, `run_mypy_check` pass; `tach check` (Bash) passes.
 
 ## LLM prompt for this step
 > Implement **Step 2** of `pr_info/steps/summary.md` (Issue #1031), following
@@ -85,8 +106,15 @@ existing test suite is the acceptance gate proving behavior is unchanged.
 > `from pathlib import Path`, `from typing import Optional`, and
 > `from .utils.data_files import find_data_file`; that `prompt_manager.py` now imports only
 > `_is_file_path, _load_content` from `.prompt_sources`; and that `test_prompt_manager.py`
-> is left with exactly the four public-API test classes. Use MCP tools exclusively. Run
-> `run_format_code`, then confirm `compact-diff` shows only import/file-header changes, and
-> that `check_file_size`, `run_lint_imports_check`, `run_pytest_check` (`-n auto` with the
+> is left with exactly the four public-API test classes. Then edit `.importlinter`: add
+> the sub-layer `mcp_coder.prompt_sources | mcp_coder.prompt_parsing` directly beneath the
+> `mcp_coder.llm | mcp_coder.prompt_manager` line (do NOT append the new modules to that
+> line with `|`). Use MCP tools exclusively. Remove the now-unused `Optional`, `Path`, and
+> `find_data_file` imports from `prompt_manager.py` with `run_ruff_fix` (F401) — not
+> `run_format_code`, which does not remove unused imports; keep `glob` and `os` (still used
+> by `validate_prompt_directory`). Then confirm `compact-diff` shows only import/file-header
+> changes plus the `.importlinter` sub-layer line, and
+> that `check_file_size`, `run_lint_imports_check` (PASS with the new sub-layer),
+> `run_pytest_check` (`-n auto` with the
 > unit-exclusion markers), `run_pylint_check`, and `run_mypy_check` all pass. Produce
 > exactly one commit.

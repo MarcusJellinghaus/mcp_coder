@@ -18,13 +18,32 @@ The design change is a **cohesion split**, not a behavior or API change:
   public functions (`get_prompt`, `get_prompt_with_substitutions`,
   `validate_prompt_markdown`, `validate_prompt_directory`) stay put, so **all external
   import paths are unchanged** — no consumer is affected.
-- Two cohesive groups of private helpers move into siblings **in the same layer**:
+- Two cohesive groups of private helpers move into **sibling modules** (siblings of each
+  other, in a new sub-layer beneath `prompt_manager` — see the import-linter note below):
   - `prompt_sources.py` — path resolution + content loading (filesystem / package I/O).
   - `prompt_parsing.py` — pure markdown-string parsing (no I/O).
 - The two helper groups are **independent siblings** (verified in code: no cross-calls
-  between them). Both are consumed only by `prompt_manager.py`. Because they sit in the
-  **same architecture layer**, **no import-linter sub-layer is needed** and
-  `prompt_manager` is not named in any import-linter contract.
+  between them). Both are consumed only by `prompt_manager.py`. `prompt_manager` **is**
+  an explicit layer in the import-linter contract (`.importlinter` line 39:
+  `mcp_coder.llm | mcp_coder.prompt_manager`, sitting above `mcp_coder.prompts` and
+  `mcp_coder.utils`). The two new modules are **not yet** named in any contract, so they
+  would float unconstrained. **APPROVED decision (Round 1):** add a NEW sub-layer
+  BENEATH `prompt_manager` so both new modules are layer-enforced. Intended final layer
+  block:
+  ```
+  mcp_coder.llm | mcp_coder.prompt_manager
+  mcp_coder.prompt_sources | mcp_coder.prompt_parsing
+  mcp_coder.prompts
+  ```
+  Rationale: `prompt_manager` imports both new modules (top-down dependency), so they
+  must sit in a **lower** layer — they cannot be appended to line 39 with `|`, because
+  same-line siblings may not import each other (that would break the contract). The two
+  new modules are independent siblings of **each other** (no cross-calls), which matches
+  the `|` on their new line. This `.importlinter` edit names BOTH new modules, so it can
+  only be applied once both exist → it lands in **Step 2** (after `prompt_sources.py` is
+  created). In Step 1, `prompt_parsing.py` exists but stays unlisted/floating
+  temporarily — that is expected and fine. `run_lint_imports_check` must still PASS with
+  the new sub-layer present.
 - After the move, `prompt_manager.py` imports **2** names from `prompt_sources`
   (`_load_content`, `_is_file_path`) and **3** from `prompt_parsing`
   (`_extract_headers`, `_extract_code_block_after_header`, `_find_duplicates`).
@@ -62,9 +81,12 @@ Test class distribution (fixed by the issue — 4 / 4 / 3):
 - `pr_info/steps/summary.md`, `step_1.md`, `step_2.md` — these planning docs
 
 **Modified**
-- `src/mcp_coder/prompt_manager.py` — helpers removed; imports added; unused imports swept
+- `src/mcp_coder/prompt_manager.py` — helpers removed; imports added; imports left unused
+  by the move removed via `run_ruff_fix` (F401)
 - `tests/test_prompt_manager.py` — drained test classes removed
 - `.large-files-allowlist` — `src/mcp_coder/prompt_manager.py` entry removed (Step 1)
+- `.importlinter` — add sub-layer `mcp_coder.prompt_sources | mcp_coder.prompt_parsing`
+  beneath `prompt_manager` (Step 2)
 
 **Deleted** — none (no stubs, no re-exports; per the refactoring guide's "clean deletion").
 
@@ -91,12 +113,15 @@ mirror tests alongside the source and re-runs the full suite as the acceptance g
 
 ### Verification (run after every step — MCP tools)
 
-1. `mcp__mcp-tools-py__run_format_code` — sweeps imports left unused by the move.
+1. `mcp__mcp-tools-py__run_ruff_fix` selecting **F401** — removes imports left unused by
+   the move (`run_format_code` runs black + isort only; neither removes unused imports).
+   An explicit manual removal of the named imports is an acceptable alternative.
 2. `git-tool compact-diff` — must show **only** import changes + new/deleted file
    headers. Any logic in the compact diff means something was modified during the move.
 3. `mcp__mcp-workspace__check_file_size` — `prompt_manager.py` under 750 **and** off the
    allowlist.
-4. `mcp__mcp-tools-py__run_lint_imports_check` (same-layer, no sub-layer expected),
+4. `mcp__mcp-tools-py__run_lint_imports_check` — must PASS with the new sub-layer
+   (`mcp_coder.prompt_sources | mcp_coder.prompt_parsing`) present after Step 2;
    `run_pytest_check` (`-n auto` with the unit-test exclusion markers),
    `run_pylint_check`, `run_mypy_check` — all must pass.
 5. `tach check` via Bash (no MCP equivalent).
@@ -104,6 +129,8 @@ mirror tests alongside the source and re-runs the full suite as the acceptance g
 ### Constraints preserved
 - Public API and all external import paths unchanged.
 - Only private `_`-helpers move; whole functions relocate, only imports change.
-- Same architecture layer → no import-linter sub-layer; module names
-  (`prompt_sources.py`, `prompt_parsing.py`) don't collide with existing files.
+- `prompt_manager` is a named import-linter layer (`.importlinter`); a new sub-layer
+  `mcp_coder.prompt_sources | mcp_coder.prompt_parsing` is added beneath it in Step 2 so
+  the new modules are layer-enforced. Module names (`prompt_sources.py`,
+  `prompt_parsing.py`) don't collide with existing files.
 - Test class distribution fixed at 4 / 4 / 3; new test files import the public API.
