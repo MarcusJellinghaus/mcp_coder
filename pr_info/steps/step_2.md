@@ -26,6 +26,13 @@ Test classes → `test_rebase.py`: `TestGetRebaseTargetBranch`,
   needed imports to `rebase.py` and a `from .rebase import _attempt_rebase_and_push`
   to `core.py` (called inside `run_implement_workflow`).
 - Not in `__all__`; no `__init__.py` change.
+- **Confirm the import-rewrite form in the dry-run (critical).** Ensure
+  `move_symbol(..., dry_run=True)` adds a **direct** import to `core.py`
+  (`from .rebase import _attempt_rebase_and_push`, leaving bare call sites) so
+  `core._attempt_rebase_and_push` / `core._get_rebase_target_branch` stay
+  patchable module attributes; **STOP and revisit** if qualified references
+  (`from . import rebase` + `rebase._attempt_rebase_and_push(...)`) appear
+  instead (retained orchestrator UNIT tests patch these).
 - **`patch()` retargeting (manual):** in the moved tests, change
   `patch("mcp_coder.workflows.implement.core.<name>")` →
   `...implement.rebase.<name>` for names now resolved in `rebase.py`

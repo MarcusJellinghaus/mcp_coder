@@ -34,6 +34,13 @@ Test class → `test_finalisation.py`: `TestRunFinalisation`.
   `get_prompt_with_substitutions`, `prepare_llm_environment`, constants, etc. —
   move_symbol carries these imports into `finalisation.py`.
 - `run_finalisation` is **not** in `__all__`; no `__init__.py` change.
+- **Confirm the import-rewrite form in the dry-run (critical).** Ensure
+  `move_symbol(..., dry_run=True)` adds a **direct** import to `core.py`
+  (`from .finalisation import run_finalisation`, leaving bare call sites) so
+  `core.run_finalisation` stays a patchable module attribute; **STOP and revisit**
+  if qualified references (`from . import finalisation` +
+  `finalisation.run_finalisation(...)`) appear instead (retained orchestrator UNIT
+  tests patch this).
 - **`patch()` retargeting (manual):** in `TestRunFinalisation`, change
   `patch("mcp_coder.workflows.implement.core.<name>")` →
   `...implement.finalisation.<name>` for its patched dependencies

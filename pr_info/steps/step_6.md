@@ -62,7 +62,10 @@ unchanged.
   (or `["claude_cli_integration"]`) once, so
   `tests/integration/test_execution_dir_integration.py` (which patches
   `core.<moved-name>` targets, skipped by the fast-unit gate) is confirmed green
-  end-to-end.
+  end-to-end. This integration run is **supplementary** and may **skip** when
+  Claude CLI is unavailable (green-because-skipped); the primary guard that the
+  `core.<moved-name>` patch targets still resolve is the fast-gate orchestrator
+  UNIT tests, which patch the same attributes.
 - Whole-PR purity: `mcp-coder git-tool compact-diff` shows only import changes,
   `patch()` target-path changes, the duplicated `_make_llm_response` helper, and
   new/deleted file headers — no logic changes anywhere.

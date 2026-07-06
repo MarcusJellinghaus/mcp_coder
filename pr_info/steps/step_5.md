@@ -18,7 +18,10 @@ Into `test_core_workflow.py` (second orchestrator test file):
 Into `test_utils.py` (mirror of `mcp_coder.workflows.utils`):
 `TestResolveProjectDir`.
 
-`test_core.py` keeps only: `_make_llm_response` + `TestRunImplementWorkflow`.
+`test_core.py` keeps only: `TestRunImplementWorkflow`. The `_make_llm_response`
+helper is **removed** — after this redistribution `TestRunImplementWorkflow` is
+the only remaining class and it never references the helper (its prior users
+`TestRunFinalisation` and `TestIntegration` left in Steps 4 and 5).
 
 ## HOW
 
@@ -35,7 +38,9 @@ Into `test_utils.py` (mirror of `mcp_coder.workflows.utils`):
   Does **not** need `_make_llm_response`.
 - In `test_core.py`, **remove** the now-unused
   `from mcp_coder.workflows.utils import resolve_project_dir` import (ruff will
-  flag it). Keep `_make_llm_response` (still used by `TestRunImplementWorkflow`).
+  flag it). Also **remove** the `_make_llm_response` helper (and its now-unused
+  `Dict[str, Any]` import): `TestRunImplementWorkflow` is the only class left and
+  never calls it, so it is dead code here.
 - Target directories already exist (`tests/workflows/` has `__init__.py`); no new
   `__init__.py` needed.
 
@@ -45,7 +50,8 @@ Into `test_utils.py` (mirror of `mcp_coder.workflows.utils`):
 1. Cut the 5 orchestrator classes from test_core.py into test_core_workflow.py.
 2. Add its docstring + imports; duplicate _make_llm_response helper.
 3. Cut TestResolveProjectDir into tests/workflows/test_utils.py with its imports.
-4. Remove the unused resolve_project_dir import from test_core.py (ruff).
+4. Remove the unused resolve_project_dir import AND the dead _make_llm_response
+   helper (+ its Dict[str, Any] import) from test_core.py (ruff).
 5. Run all checks incl. check_file_size — confirm test_core.py < 750.
 6. Verify compact-diff purity (only headers + import lines differ).
 ```
@@ -74,7 +80,9 @@ files remain in the allowlist until Step 6.
 > `tests/workflows/test_utils.py` (importing `resolve_project_dir` from
 > `mcp_coder.workflows.utils`). Do **not** change any `patch()` targets — the
 > orchestrator classes still test code in `implement.core`. Remove the now-unused
-> `resolve_project_dir` import from `test_core.py`. Run `run_format_code`,
+> `resolve_project_dir` import from `test_core.py`, and also remove the dead
+> `_make_llm_response` helper (and its `Dict[str, Any]` import) — the sole
+> remaining class `TestRunImplementWorkflow` never uses it. Run `run_format_code`,
 > `run_ruff_fix`, `run_ruff_check`, `run_lint_imports_check`, `run_pytest_check`
 > (fast unit markers), `run_pylint_check`, `run_mypy_check`, and `check_file_size`
 > (max 750, confirm `test_core.py` is now under 750) — all green — and verify

@@ -97,7 +97,10 @@ explicitly after the move:
 `run_pytest_check(markers=["execution_dir"])` (or `["claude_cli_integration"]`).
 It must still pass — i.e. `mcp_coder.workflows.implement.core.prepare_task_tracker`
 remains a patchable module attribute (the direct-import form confirmed in the
-dry-run above).
+dry-run above). This integration run is **supplementary** and may **skip** when
+Claude CLI is unavailable (green-because-skipped); the primary guard that
+`core.<moved-name>` patch targets still resolve is the fast-gate orchestrator UNIT
+tests, which patch the same attributes.
 
 ## LLM prompt
 

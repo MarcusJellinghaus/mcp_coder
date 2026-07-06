@@ -123,9 +123,10 @@ that also trims the orchestrator test mass.
 
 ## `_make_llm_response` helper — which files get a copy
 
-Used by orchestrator, task-tracker, finalisation, and integration tests. Duplicate
+Used by task-tracker, finalisation, and integration tests. Duplicate
 the 8-line helper into: `test_task_tracker_prep.py`, `test_finalisation.py`,
-`test_core.py` (keep existing), `test_core_workflow.py`. NOT needed in
+`test_core_workflow.py`. NOT needed in `test_core.py` (its sole remaining class
+`TestRunImplementWorkflow` never uses it — the helper is removed in Step 5),
 `test_failure_reporting.py`, `test_rebase.py`, `test_utils.py`.
 
 ## Commit / step plan (one PR, 6 commits — one commit per step)

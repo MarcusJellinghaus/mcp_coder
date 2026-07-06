@@ -37,6 +37,13 @@ Test classes (from `test_core.py`) → `test_failure_reporting.py`:
   to `core.py`. `_format_failure_comment` is called only by
   `_handle_workflow_failure`, so it travels with it.
 - These helpers are **not** in `__all__`; no `__init__.py` change.
+- **Confirm the import-rewrite form in the dry-run (critical).** Ensure
+  `move_symbol(..., dry_run=True)` adds a **direct** import to `core.py`
+  (`from .failure_reporting import _handle_workflow_failure`, leaving bare call
+  sites) so `core._handle_workflow_failure` / `core._format_failure_comment` stay
+  patchable module attributes; **STOP and revisit** if qualified references
+  (`from . import failure_reporting` + `failure_reporting._handle_workflow_failure(...)`)
+  appear instead (retained orchestrator UNIT tests patch these).
 - **`patch()` retargeting (manual):** in the moved test classes, change every
   `patch("mcp_coder.workflows.implement.core.<name>")` to
   `patch("mcp_coder.workflows.implement.failure_reporting.<name>")` — affected
