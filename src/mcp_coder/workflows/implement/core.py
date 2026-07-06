@@ -19,7 +19,6 @@ from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailable
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
-    extract_issue_number_from_branch,
     get_current_branch_name,
     get_full_status,
     rebase_onto_branch,
@@ -30,15 +29,7 @@ from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
-from mcp_coder.workflow_utils.failure_handling import (
-    WorkflowFailure as SharedWorkflowFailure,
-)
-from mcp_coder.workflow_utils.failure_handling import (
-    format_elapsed_time,
-    format_mcp_unavailable_message,
-    get_diff_stat,
-    handle_workflow_failure,
-)
+from mcp_coder.workflow_utils.failure_handling import format_mcp_unavailable_message
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -57,6 +48,7 @@ from .constants import (
     FailureCategory,
     WorkflowFailure,
 )
+from .failure_reporting import _handle_workflow_failure
 from .llm_failures import REASON_TO_CATEGORY, llm_failure_reason
 from .prerequisites import (
     check_git_clean,
@@ -74,60 +66,6 @@ from .task_processing import (
 
 # Setup logger
 logger = logging.getLogger(__name__)
-
-
-def _format_failure_comment(failure: WorkflowFailure, diff_stat: str) -> str:
-    """Format a GitHub comment for a workflow failure.
-
-    Args:
-        failure: The workflow failure details
-        diff_stat: Git diff stat string for uncommitted changes
-
-    Returns:
-        Formatted GitHub comment string.
-    """
-    lines = [
-        "## Implementation Failed",
-        f"**Category:** {failure.category.name.replace('_', ' ').title()}",
-        f"**Stage:** {failure.stage}",
-        f"**Error:** {failure.message}",
-    ]
-    if failure.tasks_total > 0:
-        lines.append(
-            f"**Progress:** {failure.tasks_completed}/{failure.tasks_total} tasks completed"
-        )
-    if failure.elapsed_time is not None:
-        lines.append(f"**Elapsed:** {format_elapsed_time(failure.elapsed_time)}")
-    if failure.build_url:
-        lines.append(f"**Build:** {failure.build_url}")
-    lines.append("")
-    lines.append("### Uncommitted Changes")
-    lines.append(f"```\n{diff_stat or 'No uncommitted changes'}\n```")
-    return "\n".join(lines)
-
-
-def _handle_workflow_failure(
-    failure: WorkflowFailure,
-    project_dir: Path,
-    update_issue_labels: bool = False,
-    post_issue_comments: bool = False,
-) -> None:
-    """Handle workflow failure: set label, post comment, log banner."""
-    diff_stat = get_diff_stat(project_dir)
-    comment_body = _format_failure_comment(failure, diff_stat)
-    handle_workflow_failure(
-        failure=SharedWorkflowFailure(
-            category=failure.category.value,
-            stage=failure.stage,
-            message=failure.message,
-            elapsed_time=failure.elapsed_time,
-        ),
-        comment_body=comment_body,
-        project_dir=project_dir,
-        from_label_id="implementing",
-        update_issue_labels=update_issue_labels,
-        post_issue_comments=post_issue_comments,
-    )
 
 
 def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
