@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
+from mcp_coder.workflows.vscodeclaude.types import read_session_spec
 from mcp_coder.workflows.vscodeclaude.workspace import (
     create_startup_script,
     create_status_file,
@@ -197,6 +198,42 @@ class TestWorkspaceSetup:
         content = gitignore.read_text(encoding="utf-8")
         assert content.count(".vscodeclaude_status.txt") == 1
 
+    def test_update_gitignore_appends_missing_entry_on_upgrade(
+        self, tmp_path: Path
+    ) -> None:
+        """An older block missing the new entry gets that line appended."""
+        gitignore = tmp_path / ".gitignore"
+        # Simulate a previously-committed block WITHOUT the newer session file.
+        gitignore.write_text(
+            "*.pyc\n"
+            "# VSCodeClaude session files (auto-generated)\n"
+            ".vscodeclaude_status.txt\n"
+            ".vscodeclaude_analysis.json\n"
+            ".vscodeclaude_start.bat\n"
+            ".vscodeclaude_start.sh\n",
+            encoding="utf-8",
+        )
+
+        update_gitignore(tmp_path)
+
+        content = gitignore.read_text(encoding="utf-8")
+        # New entry now present, exactly once, without re-adding old ones.
+        assert content.count(".vscodeclaude_session.json") == 1
+        assert content.count(".vscodeclaude_status.txt") == 1
+        assert "*.pyc" in content
+
+    def test_update_gitignore_up_to_date_unchanged(self, tmp_path: Path) -> None:
+        """A fully up-to-date .gitignore is left byte-for-byte unchanged."""
+        update_gitignore(tmp_path)
+        gitignore = tmp_path / ".gitignore"
+        before = gitignore.read_text(encoding="utf-8")
+
+        update_gitignore(tmp_path)
+
+        after = gitignore.read_text(encoding="utf-8")
+        assert after == before
+        assert after.count(".vscodeclaude_session.json") == 1
+
     def test_create_workspace_file(
         self, tmp_path: Path, mock_vscodeclaude_config: None
     ) -> None:
@@ -260,9 +297,10 @@ class TestWorkspaceSetup:
 
         assert script_path.suffix == ".bat"
         assert script_path.exists()
-        content = script_path.read_text(encoding="utf-8")
-        assert "claude" in content
-        assert "/implementation_review_supervisor" in content
+        # The command now lives in the written session spec, not the launcher.
+        spec = read_session_spec(tmp_path)
+        assert spec.commands == ["/implementation_review_supervisor"]
+        assert spec.is_intervention is False
 
     def test_create_startup_script_intervention(
         self,
@@ -270,13 +308,13 @@ class TestWorkspaceSetup:
         monkeypatch: pytest.MonkeyPatch,
         mock_vscodeclaude_config: None,
     ) -> None:
-        """Intervention mode uses plain claude command."""
+        """Intervention mode is recorded on the spec, not the launcher text."""
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.platform.system",
             lambda: "Windows",
         )
 
-        script_path = create_startup_script(
+        create_startup_script(
             folder_path=tmp_path,
             issue_number=123,
             issue_title="Test issue",
@@ -286,9 +324,9 @@ class TestWorkspaceSetup:
             is_intervention=True,
         )
 
-        content = script_path.read_text(encoding="utf-8")
-        assert "INTERVENTION" in content
-        assert "/implementation_review_supervisor" not in content
+        # The intervention warning is rendered at runtime by session_setup; the
+        # workspace layer only records the flag on the spec.
+        assert read_session_spec(tmp_path).is_intervention is True
 
     def test_create_vscode_task(self, tmp_path: Path) -> None:
         """Creates tasks.json with two tasks that run on folderOpen."""

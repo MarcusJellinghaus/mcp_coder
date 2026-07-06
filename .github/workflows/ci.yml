@@ -129,12 +129,14 @@ jobs:
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
 
-  # Exercises the install sequence emitted by the POSIX vscodeclaude template
-  # (src/mcp_coder/workflows/vscodeclaude/templates.py:VENV_SECTION_POSIX +
-  # workspace.py:_build_github_install_section_posix). Calls the shared renderer
-  # directly so a break in the user-facing template surfaces here. Independent
-  # of `test` because it uses an activated project venv (not --system) and pulls
-  # siblings at HEAD via [tool.mcp-coder.install-from-github] — see #969.
+  # Exercises the install sequence that vscodeclaude sessions run at launch.
+  # The argv is built by
+  # src/mcp_coder/workflows/vscodeclaude/session_setup.py:build_install_argv
+  # (session_setup shells out to tools/install.py; see #695). This job mirrors
+  # that argv against the source-tree tools/install.py so a break in the
+  # installer contract surfaces here. Independent of `test` because it uses an
+  # activated project venv (not --system) and pulls siblings at HEAD via
+  # [tool.mcp-coder.install-from-github] — see #969.
   vscodeclaude-template-install:
     runs-on: ubuntu-latest
     steps:
@@ -155,13 +157,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Mirror what the vscodeclaude POSIX template emits:
+          # Mirror the argv session_setup.build_install_argv produces:
           #   python <install-prefix>/share/mcp-coder/install.py "$PWD" \
           #     --source local --local-path "$PWD" --extras dev --use-sync \
           #     --refresh
           #
           # CI runs the script directly from the source tree (tools/install.py)
-          # so we don't need to install mcp-coder first. The template runs
+          # so we don't need to install mcp-coder first. A launched session runs
           # the wheel-deployed copy of the same file.
           python tools/install.py . \
             --source local \

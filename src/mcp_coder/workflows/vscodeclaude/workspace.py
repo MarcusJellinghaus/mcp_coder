@@ -22,7 +22,7 @@ from ...utils.subprocess_runner import (
 )
 from .config import get_vscodeclaude_config, sanitize_folder_name
 from .helpers import load_to_be_deleted
-from .types import DEFAULT_PROMPT_TIMEOUT
+from .types import DEFAULT_PROMPT_TIMEOUT, SessionSpec, write_session_spec
 
 logger = logging.getLogger(__name__)
 
@@ -365,12 +365,14 @@ def run_setup_commands(
 
 
 def update_gitignore(folder_path: Path) -> None:
-    """Append vscodeclaude entries to .gitignore.
+    """Append missing vscodeclaude entries to .gitignore.
 
     Args:
         folder_path: Working folder path
 
-    Idempotent: won't duplicate entries.
+    Idempotent: appends only the pattern lines from ``GITIGNORE_ENTRY`` that
+    are not already present, so upgrading an older gitignore block picks up
+    newly added entries without duplicating existing ones.
     """
     from .templates import GITIGNORE_ENTRY
 
@@ -381,13 +383,28 @@ def update_gitignore(folder_path: Path) -> None:
     if gitignore_path.exists():
         existing_content = gitignore_path.read_text(encoding="utf-8")
 
-    # Check if already present
-    if ".vscodeclaude_status.txt" in existing_content:
+    existing_lines = {line.strip() for line in existing_content.splitlines()}
+
+    # Pattern lines missing from the current gitignore (skip blanks/comments).
+    missing = [
+        line
+        for line in GITIGNORE_ENTRY.splitlines()
+        if line.strip()
+        and not line.lstrip().startswith("#")
+        and line.strip() not in existing_lines
+    ]
+    if not missing:
         return
 
-    # Append entry
+    # Fresh repo (no marker yet): write the full block for a clean comment
+    # header. Otherwise append just the missing pattern lines.
+    if ".vscodeclaude_status.txt" in existing_lines:
+        addition = "\n".join(missing) + "\n"
+    else:
+        addition = GITIGNORE_ENTRY
+
     with gitignore_path.open("a", encoding="utf-8") as f:
-        f.write(GITIGNORE_ENTRY)
+        f.write(addition)
 
 
 def create_workspace_file(
@@ -432,21 +449,6 @@ def create_workspace_file(
     workspace_file.write_text(content, encoding="utf-8")
 
     return workspace_file
-
-
-def _escape_batch_title(text: str) -> str:
-    """Escape special characters in text for Windows batch echo commands.
-
-    Prevents shell injection when issue titles contain characters like >
-    that cmd.exe would otherwise interpret as redirection operators.
-    Order matters: ^ must be escaped first to avoid double-escaping.
-
-    Returns:
-        Text with special batch characters escaped.
-    """
-    for char in ("^", "&", "|", "<", ">"):
-        text = text.replace(char, f"^{char}")
-    return text
 
 
 def _resolve_install_script(install_path: Path) -> Path:
@@ -494,65 +496,47 @@ def create_startup_script(
     is_intervention: bool,
     timeout: int = DEFAULT_PROMPT_TIMEOUT,
     mcp_coder_install_path: Path | None = None,
-    session_folder_path: Path | None = None,
+    session_folder_path: Path | None = None,  # pylint: disable=unused-argument
     skip_github_install: bool = False,
 ) -> Path:
-    """Create platform-specific startup script.
+    """Serialize a session spec and write the thin launcher.
+
+    The startup script no longer bakes shell orchestration. It resolves the
+    session config, writes a typed ``SessionSpec`` to
+    ``<folder>/.vscodeclaude_session.json``, and emits a one-line launcher
+    (``.bat``/``.sh``) that bootstraps into ``session_setup`` at run time.
+    All flow branching (intervention, 0/1/multi command) now lives in the
+    spec and is consumed by ``session_setup``, so the launcher is
+    byte-identical for every session apart from the coordinator's Python path.
 
     Args:
-        folder_path: Working folder path
+        folder_path: Working folder path (spec + launcher are written here)
         issue_number: GitHub issue number
         issue_title: Issue title for banner
         status: Status label
         repo_name: Repo short name
         issue_url: GitHub issue URL
-        is_intervention: If True, use intervention mode (no automation)
+        is_intervention: If True, mark the spec for intervention mode
         timeout: Timeout for mcp-coder prompt calls (default: 300 seconds)
         mcp_coder_install_path: Path to mcp-coder installation directory
-            (for finding the executable, separate from session folder)
-        session_folder_path: Path to session folder for MCP environment variables
-            (overrides folder_path if provided, used for MCP_CODER_PROJECT_DIR)
-        skip_github_install: If True, skip reading [tool.mcp-coder.install-from-github]
-            from pyproject.toml. Default False (auto-detect).
+            (for locating install.py and the coordinator venv Python)
+        session_folder_path: Unused. Retained for signature stability; the
+            CWD is the runtime source of truth for the session directory.
+        skip_github_install: If True, thread ``--skip-overrides`` into the
+            install.py argv at run time. Default False (auto-detect).
 
     Returns:
-        Path to created script (.bat or .sh)
+        Path to created launcher script (.bat or .sh)
 
     Raises:
-        FileNotFoundError: If the platform-specific MCP config file is absent,
-            or if ``tools/install.py`` cannot be located under
+        FileNotFoundError: If the platform-specific MCP config file is absent
+            (POSIX only), or if ``tools/install.py`` cannot be located under
             ``mcp_coder_install_path``.
         RuntimeError: If ``mcp_coder_install_path`` is not provided and cannot
             be auto-discovered from the running mcp-coder install.
         ValueError: If commands config is not a list of strings.
-
-    Execution strategy depends on the number of commands in the config:
-    - Single command: interactive-only via ``claude "{cmd} {issue_number}"``.
-      No timeout, no session ID capture, no step labels.
-    - Multiple commands: first command automated via ``mcp-coder prompt``,
-      middle commands via ``mcp-coder prompt --session-id``,
-      last command interactive via ``claude --resume``.
-      Step labels are shown for each command.
-    - No commands: bare script with venv setup only.
-
-    The ``timeout`` parameter is only used for multi-command flows.
     """
-    from .templates import (
-        AUTOMATED_RESUME_SECTION_POSIX,
-        AUTOMATED_RESUME_SECTION_WINDOWS,
-        AUTOMATED_SECTION_POSIX,
-        AUTOMATED_SECTION_WINDOWS,
-        INTERACTIVE_ONLY_SECTION_POSIX,
-        INTERACTIVE_ONLY_SECTION_WINDOWS,
-        INTERACTIVE_RESUME_WITH_COMMAND_POSIX,
-        INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS,
-        INTERVENTION_SCRIPT_POSIX,
-        INTERVENTION_SCRIPT_WINDOWS,
-        STARTUP_SCRIPT_POSIX,
-        STARTUP_SCRIPT_WINDOWS,
-        VENV_SECTION_POSIX,
-        VENV_SECTION_WINDOWS,
-    )
+    from .templates import LAUNCHER_POSIX, LAUNCHER_WINDOWS
 
     is_windows = platform.system() == "Windows"
     mcp_config_filename = _MCP_CONFIG_FILES.get(platform.system(), ".mcp.json")
@@ -562,229 +546,66 @@ def create_startup_script(
     commands = config.get("commands", []) if config else []
     emoji = config["emoji"] if config else "📋"
 
+    # Validate commands config (fail-fast; runs for every mode now).
+    if commands and (
+        not isinstance(commands, list) or not all(isinstance(c, str) for c in commands)
+    ):
+        raise ValueError(
+            f"Invalid commands config for status '{status}': "
+            f"expected list of strings, got {commands!r}"
+        )
+
+    # POSIX requires the platform-specific MCP config file to exist in the repo.
+    if not is_windows and not (folder_path / mcp_config_filename).exists():
+        raise FileNotFoundError(
+            f"{mcp_config_filename} not found in {folder_path}. "
+            f"This file is required for Claude Code integration on "
+            f"{platform.system()}."
+        )
+
+    if mcp_coder_install_path is None:
+        mcp_coder_install_path = get_mcp_coder_install_path()
+    if mcp_coder_install_path is None:
+        raise RuntimeError(
+            "mcp-coder install path could not be determined. "
+            "Pass mcp_coder_install_path explicitly."
+        )
+
+    install_script_path = _resolve_install_script(mcp_coder_install_path)
+
+    # Serialize the typed spec that session_setup consumes at run time.
+    spec = SessionSpec(
+        issue_number=issue_number,
+        title=issue_title,
+        repo=repo_name,
+        status=status,
+        issue_url=issue_url,
+        emoji=emoji,
+        commands=list(commands),
+        timeout=timeout,
+        mcp_config=mcp_config_filename,
+        install_script_path=str(install_script_path),
+        mcp_coder_install_path=str(mcp_coder_install_path),
+        skip_github_install=skip_github_install,
+        is_intervention=is_intervention,
+    )
+    write_session_spec(folder_path, spec)
+
+    # Write the thin launcher (byte-identical apart from the venv Python path).
     if is_windows:
-        # Escape first so expansion from escaping is counted in the truncation
-        title_display = _escape_batch_title(issue_title)
-        title_display = title_display[:58].rstrip("^")
-
-        # Get mcp_coder_install_path if not provided
-        if mcp_coder_install_path is None:
-            mcp_coder_install_path = get_mcp_coder_install_path()
-        if mcp_coder_install_path is None:
-            raise RuntimeError(
-                "mcp-coder install path could not be determined. "
-                "Pass mcp_coder_install_path explicitly."
-            )
-
-        # Use session_folder_path if provided, otherwise use folder_path
-        session_path = session_folder_path or folder_path
-
-        # Format VENV section. The generated script calls tools/install.py
-        # to provision the project venv (single source of truth). GitHub
-        # overrides happen inside that script; honor skip_github_install by
-        # appending `--skip-overrides` to its argv.
-        install_script_path = _resolve_install_script(mcp_coder_install_path)
-        venv_section = VENV_SECTION_WINDOWS.format(
-            mcp_coder_install_path=str(mcp_coder_install_path),
-            session_folder_path=str(session_path),
-            install_script_path=str(install_script_path),
-            install_env_extra_flags=" --skip-overrides" if skip_github_install else "",
-        )
-
-        if is_intervention:
-            # Intervention mode - plain claude, no automation
-            script_content = INTERVENTION_SCRIPT_WINDOWS.format(
-                emoji=emoji,
-                issue_number=issue_number,
-                title=title_display,
-                repo=repo_name,
-                status=status,
-                issue_url=issue_url,
-                venv_section=venv_section,
-                mcp_config=mcp_config_filename,
-            )
-        else:
-            # Validate commands config
-            if commands and (
-                not isinstance(commands, list)
-                or not all(isinstance(c, str) for c in commands)
-            ):
-                raise ValueError(
-                    f"Invalid commands config for status '{status}': "
-                    f"expected list of strings, got {commands!r}"
-                )
-
-            # Build command sections based on commands list
-            if len(commands) == 1:
-                # Single command: interactive only, no step labels
-                command_sections = INTERACTIVE_ONLY_SECTION_WINDOWS.format(
-                    command=commands[0],
-                    issue_number=issue_number,
-                    mcp_config=mcp_config_filename,
-                )
-            elif len(commands) > 1:
-                sections = []
-                for i, cmd in enumerate(commands):
-                    step_number = i + 1
-                    is_last = i == len(commands) - 1
-                    if i == 0:
-                        sections.append(
-                            AUTOMATED_SECTION_WINDOWS.format(
-                                command=cmd,
-                                issue_number=issue_number,
-                                timeout=timeout,
-                                step_number=step_number,
-                                mcp_config=mcp_config_filename,
-                            )
-                        )
-                    elif not is_last:
-                        sections.append(
-                            AUTOMATED_RESUME_SECTION_WINDOWS.format(
-                                command=cmd,
-                                timeout=timeout,
-                                step_number=step_number,
-                                mcp_config=mcp_config_filename,
-                            )
-                        )
-                    if is_last:
-                        sections.append(
-                            INTERACTIVE_RESUME_WITH_COMMAND_WINDOWS.format(
-                                command=cmd,
-                                step_number=step_number,
-                                mcp_config=mcp_config_filename,
-                            )
-                        )
-                command_sections = "\n".join(sections)
-            else:
-                command_sections = ""
-
-            script_content = STARTUP_SCRIPT_WINDOWS.format(
-                emoji=emoji,
-                issue_number=issue_number,
-                title=title_display,
-                repo=repo_name,
-                status=status,
-                issue_url=issue_url,
-                venv_section=venv_section,
-                command_sections=command_sections,
-            )
-
-        script_path = folder_path / ".vscodeclaude_start.bat"
-
-        # Write script
-        script_path.write_text(script_content, encoding="utf-8")
-
-        return script_path
+        script_name, template = ".vscodeclaude_start.bat", LAUNCHER_WINDOWS
     else:
-        mcp_config_path = folder_path / mcp_config_filename
-        if not mcp_config_path.exists():
-            raise FileNotFoundError(
-                f"{mcp_config_filename} not found in {folder_path}. "
-                f"This file is required for Claude Code integration on "
-                f"{platform.system()}."
-            )
+        script_name, template = ".vscodeclaude_start.sh", LAUNCHER_POSIX
 
-        if mcp_coder_install_path is None:
-            mcp_coder_install_path = get_mcp_coder_install_path()
-        if mcp_coder_install_path is None:
-            raise RuntimeError(
-                "mcp-coder install path could not be determined. "
-                "Pass mcp_coder_install_path explicitly."
-            )
-
-        session_path = session_folder_path or folder_path
-
-        install_script_path = _resolve_install_script(mcp_coder_install_path)
-        venv_section = VENV_SECTION_POSIX.format(
-            mcp_coder_install_path=str(mcp_coder_install_path),
-            session_folder_path=str(session_path),
-            install_script_path=str(install_script_path),
-            install_env_extra_flags=" --skip-overrides" if skip_github_install else "",
-        )
-
-        title_display = (
-            issue_title[:58] if len(issue_title) > 58 else issue_title
-        ).replace("'", r"'\''")
-
-        if is_intervention:
-            script_content = INTERVENTION_SCRIPT_POSIX.format(
-                emoji=emoji,
-                issue_number=issue_number,
-                title=title_display,
-                repo=repo_name,
-                status=status,
-                issue_url=issue_url,
-                venv_section=venv_section,
-                mcp_config=mcp_config_filename,
-            )
-        else:
-            if commands and (
-                not isinstance(commands, list)
-                or not all(isinstance(c, str) for c in commands)
-            ):
-                raise ValueError(
-                    f"Invalid commands config for status '{status}': "
-                    f"expected list of strings, got {commands!r}"
-                )
-
-            if len(commands) == 1:
-                command_sections = INTERACTIVE_ONLY_SECTION_POSIX.format(
-                    command=commands[0],
-                    issue_number=issue_number,
-                    mcp_config=mcp_config_filename,
-                )
-            elif len(commands) > 1:
-                sections = []
-                for i, cmd in enumerate(commands):
-                    step_number = i + 1
-                    is_last = i == len(commands) - 1
-                    if i == 0:
-                        sections.append(
-                            AUTOMATED_SECTION_POSIX.format(
-                                command=cmd,
-                                issue_number=issue_number,
-                                timeout=timeout,
-                                step_number=step_number,
-                                mcp_config=mcp_config_filename,
-                            )
-                        )
-                    elif not is_last:
-                        sections.append(
-                            AUTOMATED_RESUME_SECTION_POSIX.format(
-                                command=cmd,
-                                timeout=timeout,
-                                step_number=step_number,
-                                mcp_config=mcp_config_filename,
-                            )
-                        )
-                    if is_last:
-                        sections.append(
-                            INTERACTIVE_RESUME_WITH_COMMAND_POSIX.format(
-                                command=cmd,
-                                step_number=step_number,
-                                mcp_config=mcp_config_filename,
-                            )
-                        )
-                command_sections = "\n".join(sections)
-            else:
-                command_sections = ""
-
-            script_content = STARTUP_SCRIPT_POSIX.format(
-                emoji=emoji,
-                issue_number=issue_number,
-                title=title_display,
-                repo=repo_name,
-                status=status,
-                issue_url=issue_url,
-                venv_section=venv_section,
-                command_sections=command_sections,
-            )
-
-        script_path = folder_path / ".vscodeclaude_start.sh"
-        script_path.write_text(script_content, encoding="utf-8")
+    script_path = folder_path / script_name
+    script_path.write_text(
+        template.format(mcp_coder_install_path=str(mcp_coder_install_path)),
+        encoding="utf-8",
+    )
+    if not is_windows:
         script_path.chmod(0o755)
 
-        return script_path
+    return script_path
 
 
 def create_vscode_task(folder_path: Path, script_path: Path) -> None:
