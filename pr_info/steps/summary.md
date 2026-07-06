@@ -108,7 +108,7 @@ Also: remove `"verify_mlflow"` from `mlflow_logger.py`'s `__all__`.
 
 **Unchanged (verified)**
 - `tests/test_module_exports.py` — imports via top-level `mcp_coder` namespace; no edit once `__init__.py` is repointed.
-- `tests/cli/commands/test_verify*.py` — the ~130 `@patch("mcp_coder.cli.commands.verify.verify_mlflow")` targets stay valid (because `verify.py` still imports the name) and must **NOT** be edited. Only `tests/llm/test_mlflow_verify.py` is retargeted.
+- `tests/cli/commands/test_verify_command.py` — the 3 `@patch("mcp_coder.cli.commands.verify.verify_mlflow")` targets stay valid (because `verify.py` still imports the name) and must **NOT** be edited. Only `tests/llm/test_mlflow_verify.py` is retargeted.
 
 ## Why a single step / single commit
 

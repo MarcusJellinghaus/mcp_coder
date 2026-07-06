@@ -75,7 +75,7 @@ def verify_mlflow(since: datetime | None = None) -> dict[str, Any]: ...
    `_probe_mlflow_connection`) whose names now resolve in `mlflow_verify`'s namespace.
    The dotted-prefix match is safe: the `from ... import verify_mlflow` line uses
    `mlflow_logger import` (space, not dot) and is repointed separately by `move_symbol`.
-   Leave `tests/cli/commands/test_verify*.py` untouched: its ~130
+   Leave `tests/cli/commands/test_verify_command.py` untouched: its 3
    `@patch("mcp_coder.cli.commands.verify.verify_mlflow")` targets remain valid because
    `verify.py` still imports the name.
 
@@ -142,7 +142,7 @@ Do exactly this, in order, using MCP tools only:
 5. In tests/llm/test_mlflow_verify.py do ONE edit_file(replace_all=True):
    "mcp_coder.llm.mlflow_logger." -> "mcp_coder.llm.mlflow_verify." (fixes the 51
    @patch targets). Confirm the `from ... import verify_mlflow` line points to
-   mlflow_verify. Do NOT touch tests/cli/commands/test_verify*.py: its ~130
+   mlflow_verify. Do NOT touch tests/cli/commands/test_verify_command.py: its 3
    @patch("mcp_coder.cli.commands.verify.verify_mlflow") targets stay valid
    (verify.py still imports the name).
 6. Remove the `src/mcp_coder/llm/mlflow_logger.py` line from .large-files-allowlist.
