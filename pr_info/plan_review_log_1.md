@@ -43,3 +43,28 @@ confirmation.
 - Files changed: `pr_info/steps/summary.md`, `pr_info/steps/step_2.md`, `pr_info/steps/step_3.md` (step_1.md unchanged — shared-flags only).
 
 **Status**: plan changed → committing; a fresh review round follows.
+
+---
+
+## Round 2 — 2026-07-06
+**Findings** (fresh `/plan_review` of the revised plan):
+- All three Round-1 changes confirmed landed correctly and consistently:
+  1. Catalog constants in dependency-free `command_catalog.py`; `help.py` + both parsers import from it; no leftover "constants live in help.py" text; `set_status` precedent argument gone; module named consistently; in summary's Files-created.
+  2. Step 3 anti-drift test explicitly skips `help=SUPPRESS` leaves with corrected rationale (verified against CPython argparse source: `_ChoicesPseudoAction.dest = name`, suppressed leaf appears as `"==SUPPRESS=="`).
+  3. Step 2 enumerates all four `test_help.py` rewrites — matches the four NamedTuple-referencing tests actually in the file.
+- Cross-checks: all 19 canonical descriptions + `*(changed)*` markers match current source; `COMMAND_CATEGORIES` totals 19; Step 1 `--llm-method` guard lists the correct 8 parsers.
+- Two nits, no action required: latent edge case if a future leaf lacks `help=` (caught by existing assertion); `str | None` return type is fine given the SUPPRESS/`help=`-present invariant.
+
+**Decisions**: nits skipped (no action). No design/requirements questions.
+**User decisions**: none this round.
+**Changes**: none — plan is clean.
+**Status**: no changes needed → loop terminates.
+
+---
+
+## Final Status
+- **Rounds run:** 2.
+- **Round 1:** one design escalation (2 settled-Decision overrides) + F1 blocker + F2/F4 — all resolved. User approved the simpler shared-dict design and the dependency-free `command_catalog.py`. Plan updated and committed (`1e5a985`).
+- **Round 2:** zero plan changes; revisions verified clean and consistent with the current code.
+- **Commits produced:** `1e5a985` (plan updates + this log).
+- **Verdict:** Plan is internally consistent, matches the current codebase, preserves all issue #90 requirements, and is **ready for approval / implementation**. Nothing implemented yet (TASK_TRACKER empty) — this was plan review only.
