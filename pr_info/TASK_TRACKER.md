@@ -21,6 +21,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Extract `mlflow_verify.py` (pure move, one commit)
+
+- [ ] Implementation: move the 5 verify functions to new `mlflow_verify.py`, fix imports on both sides, retarget test `@patch` strings, drop the `mlflow_logger.py` allowlist line
+- [ ] Quality checks: pylint, pytest, mypy (plus format, ruff, lint-imports, vulture, tach, file-size, compact-diff) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Address PR review feedback
+- [ ] Final summary
