@@ -11,7 +11,7 @@ import pytest
 
 from mcp_coder.config import MLflowConfig
 from mcp_coder.llm.mlflow_db_utils import TrackingStats
-from mcp_coder.llm.mlflow_logger import verify_mlflow
+from mcp_coder.llm.mlflow_verify import verify_mlflow
 
 
 class TestVerifyMlflowNotInstalled:
@@ -20,7 +20,7 @@ class TestVerifyMlflowNotInstalled:
     def test_mlflow_not_installed(self) -> None:
         """When MLflow not importable, return informational result."""
         with patch(
-            "mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=False
+            "mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=False
         ):
             result = verify_mlflow()
         assert result["installed"]["ok"] is False
@@ -31,8 +31,8 @@ class TestVerifyMlflowNotInstalled:
 class TestVerifyMlflowDisabled:
     """Tests when MLflow is installed but disabled."""
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_mlflow_installed_but_disabled(
         self, _mock_avail: MagicMock, mock_config: MagicMock
     ) -> None:
@@ -47,9 +47,9 @@ class TestVerifyMlflowDisabled:
 class TestVerifyMlflowSqlite:
     """Tests for SQLite tracking URI checks."""
 
-    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_sqlite_valid(
         self,
         _mock_avail: MagicMock,
@@ -73,8 +73,8 @@ class TestVerifyMlflowSqlite:
         assert result["tracking_uri"]["ok"] is True
         assert "file exists" in result["tracking_uri"]["value"]
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_sqlite_missing_db(
         self,
         _mock_avail: MagicMock,
@@ -96,8 +96,8 @@ class TestVerifyMlflowSqlite:
 class TestVerifyMlflowInvalidUri:
     """Tests for invalid URI validation."""
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_invalid_uri(
         self, _mock_avail: MagicMock, mock_config: MagicMock
     ) -> None:
@@ -116,9 +116,9 @@ class TestVerifyMlflowInvalidUri:
 class TestVerifyMlflowHttp:
     """Tests for HTTP tracking URI checks."""
 
-    @patch("mcp_coder.llm.mlflow_logger._probe_mlflow_connection")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify._probe_mlflow_connection")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_http_reachable(
         self,
         _mock_avail: MagicMock,
@@ -140,9 +140,9 @@ class TestVerifyMlflowHttp:
         assert result["experiment"]["ok"] is True
         assert result["overall_ok"] is True
 
-    @patch("mcp_coder.llm.mlflow_logger._probe_mlflow_connection")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify._probe_mlflow_connection")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_mlflow_enabled_http_unreachable(
         self,
         _mock_avail: MagicMock,
@@ -166,8 +166,8 @@ class TestVerifyMlflowHttp:
 class TestVerifyMlflowFileUri:
     """Tests for file:// URI checks."""
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_file_uri_exists(
         self,
         _mock_avail: MagicMock,
@@ -183,8 +183,8 @@ class TestVerifyMlflowFileUri:
         assert result["tracking_uri"]["ok"] is True
         assert "exists" in result["tracking_uri"]["value"]
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_file_uri_not_exists(
         self,
         _mock_avail: MagicMock,
@@ -203,9 +203,9 @@ class TestVerifyMlflowFileUri:
 class TestVerifyMlflowExperiment:
     """Tests for experiment existence checks via HTTP probe."""
 
-    @patch("mcp_coder.llm.mlflow_logger._probe_mlflow_connection")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify._probe_mlflow_connection")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_experiment_exists(
         self,
         _mock_avail: MagicMock,
@@ -225,9 +225,9 @@ class TestVerifyMlflowExperiment:
         assert result["experiment"]["ok"] is True
         assert '"my-experiment" (exists)' in result["experiment"]["value"]
 
-    @patch("mcp_coder.llm.mlflow_logger._probe_mlflow_connection")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify._probe_mlflow_connection")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_experiment_not_found(
         self,
         _mock_avail: MagicMock,
@@ -251,8 +251,8 @@ class TestVerifyMlflowExperiment:
 class TestVerifyMlflowArtifactLocation:
     """Tests for artifact location checks."""
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_artifact_location_writable(
         self,
         _mock_avail: MagicMock,
@@ -269,8 +269,8 @@ class TestVerifyMlflowArtifactLocation:
         assert result["artifact_location"]["ok"] is True
         assert "writable" in result["artifact_location"]["value"]
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_artifact_location_not_exists(
         self,
         _mock_avail: MagicMock,
@@ -286,8 +286,8 @@ class TestVerifyMlflowArtifactLocation:
         assert result["artifact_location"]["ok"] is False
         assert "NOT found" in result["artifact_location"]["value"]
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_artifact_location_not_configured(
         self,
         _mock_avail: MagicMock,
@@ -308,8 +308,8 @@ class TestVerifyMlflowArtifactLocation:
 class TestVerifyMlflowTrackingData:
     """Tests for the tracking_data result key."""
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_tracking_data_skipped_when_disabled(
         self, _mock_avail: MagicMock, mock_config: MagicMock
     ) -> None:
@@ -319,9 +319,9 @@ class TestVerifyMlflowTrackingData:
         assert result["tracking_data"]["ok"] is None
         assert "skipped" in result["tracking_data"]["value"]
 
-    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_tracking_data_sqlite_no_since(
         self,
         _mock_avail: MagicMock,
@@ -347,9 +347,9 @@ class TestVerifyMlflowTrackingData:
         assert "42 runs" in result["tracking_data"]["value"]
         assert "prompt" not in result["tracking_data"]["value"]
 
-    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_tracking_data_sqlite_prompt_logged(
         self,
         _mock_avail: MagicMock,
@@ -376,9 +376,9 @@ class TestVerifyMlflowTrackingData:
         assert "test prompt logged" in result["tracking_data"]["value"]
         assert result["overall_ok"] is True
 
-    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_tracking_data_sqlite_prompt_not_logged(
         self,
         _mock_avail: MagicMock,
@@ -405,9 +405,9 @@ class TestVerifyMlflowTrackingData:
         assert "test prompt NOT logged" in result["tracking_data"]["value"]
         assert result["overall_ok"] is False
 
-    @patch("mcp_coder.llm.mlflow_logger._probe_mlflow_connection")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify._probe_mlflow_connection")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_tracking_data_not_present_for_http(
         self,
         _mock_avail: MagicMock,
@@ -427,9 +427,9 @@ class TestVerifyMlflowTrackingData:
         result = verify_mlflow()
         assert "tracking_data" not in result
 
-    @patch("mcp_coder.llm.mlflow_logger.query_sqlite_tracking")
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.query_sqlite_tracking")
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_tracking_data_sqlite_query_error(
         self,
         _mock_avail: MagicMock,
@@ -452,8 +452,8 @@ class TestVerifyMlflowTrackingData:
         assert "database is locked" in result["tracking_data"]["value"]
         assert result["overall_ok"] is False
 
-    @patch("mcp_coder.llm.mlflow_logger.load_mlflow_config")
-    @patch("mcp_coder.llm.mlflow_logger.is_mlflow_available", return_value=True)
+    @patch("mcp_coder.llm.mlflow_verify.load_mlflow_config")
+    @patch("mcp_coder.llm.mlflow_verify.is_mlflow_available", return_value=True)
     def test_tracking_data_not_present_when_db_missing(
         self,
         _mock_avail: MagicMock,

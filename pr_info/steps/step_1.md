@@ -101,14 +101,14 @@ code only; return values, signatures, and semantics are identical.
 
 ## Definition of done for this step (single commit)
 
-- [ ] `mlflow_verify.py` holds the 5 functions with correct imports; ruff/mypy clean.
-- [ ] `mlflow_logger.py` < 750 lines, dead imports gone, `verify_mlflow` off its `__all__`.
-- [ ] `verify_mlflow` still importable as `from mcp_coder import verify_mlflow`.
-- [ ] All 51 `@patch` strings + the import in `test_mlflow_verify.py` point to `mlflow_verify`.
-- [ ] `.large-files-allowlist` no longer lists `mlflow_logger.py`.
-- [ ] `compact-diff` shows only import + file-header changes.
-- [ ] format, ruff, lint-imports, vulture, pytest, pylint, mypy, tach all pass.
-- [ ] Exactly one commit: move + imports + tests + allowlist, all green.
+- [x] `mlflow_verify.py` holds the 5 functions with correct imports; ruff/mypy clean.
+- [x] `mlflow_logger.py` < 750 lines, dead imports gone, `verify_mlflow` off its `__all__`.
+- [x] `verify_mlflow` still importable as `from mcp_coder import verify_mlflow`.
+- [x] All 51 `@patch` strings + the import in `test_mlflow_verify.py` point to `mlflow_verify`.
+- [x] `.large-files-allowlist` no longer lists `mlflow_logger.py`.
+- [x] `compact-diff` shows only import + file-header changes.
+- [x] format, ruff, lint-imports, vulture, pytest, pylint, mypy pass; tach unavailable in this env (import-linter covers the same import contracts and passed).
+- [x] Exactly one commit: move + imports + tests + allowlist, all green.
 
 ## LLM Prompt
 

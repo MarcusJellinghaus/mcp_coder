@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Extract `mlflow_verify.py` (pure move, one commit)
 
-- [ ] Implementation: move the 5 verify functions to new `mlflow_verify.py`, fix imports on both sides, retarget test `@patch` strings, drop the `mlflow_logger.py` allowlist line
-- [ ] Quality checks: pylint, pytest, mypy (plus format, ruff, lint-imports, vulture, tach, file-size, compact-diff) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move the 5 verify functions to new `mlflow_verify.py`, fix imports on both sides, retarget test `@patch` strings, drop the `mlflow_logger.py` allowlist line
+- [x] Quality checks: pylint, pytest, mypy (plus format, ruff, lint-imports, vulture, tach, file-size, compact-diff) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
