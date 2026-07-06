@@ -177,6 +177,9 @@ _._mock_github
 # test_verify_*.py - Autouse fixture to mock resolve_mcp_config_path
 _._mock_resolve_mcp
 
+# test_verify_*.py - Autouse fixture treating resolved .mcp.json as well-formed
+_._mock_validate_mcp
+
 # test_verify_integration.py - Autouse fixture defaulting langchain backend to None
 _._mock_langchain_config
 
