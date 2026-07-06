@@ -64,10 +64,47 @@ so repointing is a whole-file blanket replace with no per-`@patch` judgement.
    rewrote those. **`test_commands.py` and `test_integration.py` get no repoint**
    (they patch Jenkins deps that stay in `commands.py`).
 
+   **Scope note (expected, not a mistake):** in `test_vscodeclaude_cli.py` the
+   whole-file `replace_all` also repoints **pre-existing**
+   `…coordinator.commands.` patch strings that were already in the file before
+   Step 1 (e.g. in `TestCommandHandlers`), not only the two classes Step 1 moved
+   in. This is correct — those tests exercise the moved VSCodeClaude functions, so
+   their patch targets must follow the functions into the new module. Do not be
+   surprised that the diff touches more than the two relocated classes.
+
+## GATE — verify the `move_symbol` dry-run before applying
+
+This is the single point where a "move-don't-change" refactor can silently go red.
+Run `move_symbol(dry_run=True)` for the 5 symbols and **confirm all of the
+following from the dry-run output BEFORE running the real move**. Do not apply until
+every item checks out:
+
+- **(a) Every `from …coordinator.commands import …` that references a moved
+  function is rewritten to `…commands_vscodeclaude`** — including **in-function**
+  imports inside test methods (e.g. `def test_…(self): from
+  mcp_coder.cli.commands.coordinator.commands import process_eligible_issues`), not
+  just module-top imports. Scan the dry-run diff for any surviving
+  `…coordinator.commands import` line that pulls a moved name.
+- **(b) The new `commands_vscodeclaude.py` imports EVERY dependency the moved
+  functions use** — including symbols **shared** with the Jenkins family that also
+  remain in `commands.py`: e.g. `IssueManager`, `IssueBranchManager`,
+  `load_repo_config`, `create_default_config`, `get_config_file_path`,
+  `load_config`, `RepoIdentifier`, `get_cache_refresh_minutes`, `OUTPUT`,
+  `log_command_startup`. `move_symbol` may only copy imports it deems
+  "exclusively" used by the moved code, so a **shared** dependency can be left
+  behind. If any dependency the moved functions reference is missing from the new
+  module, the Step 2 repointed `@patch("…commands_vscodeclaude.<dep>")` strings
+  will raise **`AttributeError`** at collection/patch time. Cross-check the moved
+  function bodies against the new module's import block and add any missing import
+  by hand before proceeding.
+
+Only after both (a) and (b) pass do you run the real move.
+
 ## ALGORITHM
 
 ```
-1. move_symbol(dry_run=True) for the 5 symbols -> preview
+1. move_symbol(dry_run=True); verify GATE (a) imports repointed incl. in-function,
+   (b) new module imports every dep incl. shared ones -> else AttributeError
 2. move_symbol(...) execute       # creates commands_vscodeclaude.py, rewrites imports
 3. set __all__ in commands.py (3 Jenkins) and commands_vscodeclaude.py (2 public)
 4. split __init__.py into two import blocks; keep package __all__ unchanged

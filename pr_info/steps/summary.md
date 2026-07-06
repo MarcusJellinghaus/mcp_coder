@@ -57,8 +57,14 @@ new/deleted file headers).
 1. **Reorganize tests first, move source second.** By relocating the two
    VSCodeClaude test classes into `test_vscodeclaude_cli.py` **before** touching
    the source (Step 1), every remaining `…coordinator.commands.<dep>` string ends
-   up in a file that references **only moved symbols**. The Step 2 repointing then
-   collapses to a **whole-file blanket find-replace** in exactly three files —
+   up in a file whose tests all exercise a **moved** function. The patch target
+   follows the *function under test* into its new module namespace, so it must be
+   repointed regardless of whether the patched symbol is unique to the moved family
+   or **shared** with the Jenkins side (several deps — `load_config`,
+   `create_default_config`, `get_config_file_path`, `IssueManager`,
+   `IssueBranchManager`, `load_repo_config` — survive in `commands.py` too). The
+   Step 2 repointing then collapses to a **whole-file blanket find-replace** in
+   exactly three files —
    `mcp_coder.cli.commands.coordinator.commands.` →
    `mcp_coder.cli.commands.coordinator.commands_vscodeclaude.` — with **no
    per-`@patch` judgement** and no risk of touching a Jenkins patch that must stay.

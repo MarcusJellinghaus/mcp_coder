@@ -17,7 +17,13 @@ replace. **No `src/` file is touched in this step.** Patch strings stay pointing
 ## WHAT — symbols to relocate (move verbatim, do not edit their bodies)
 
 1. `class TestSkipGithubInstallWiring` (currently `test_commands.py:268`)
-2. `class TestAtCapacityDiagnosticLog` (currently `test_commands.py:393`)
+2. `class TestAtCapacityDiagnosticLog` (currently `test_commands.py:393`) — three
+   methods, all move with the class: `test_at_capacity_log_includes_folder_basenames`,
+   `test_below_capacity_message_unchanged`, and
+   `test_process_eligible_issues_at_capacity_log_is_debug`. The third imports
+   `process_eligible_issues` **directly from
+   `mcp_coder.workflows.vscodeclaude.session_launch`** and patches **nothing** on
+   `coordinator.commands`, so it relocates cleanly and needs **no** Step 2 repoint.
 3. `def _assessment_stub(active: bool) -> SimpleNamespace` (currently
    `test_commands.py:27`) — module-level helper used **only** by
    `TestAtCapacityDiagnosticLog`; move it too (no duplication, nothing stale left).
