@@ -7,7 +7,6 @@
 docs/cli-reference.md
 docs/configuration/config.md
 docs/processes-prompts/development-process.md
-src/mcp_coder/cli/parsers.py
 tools/safe_delete_folder.py
 src/mcp_coder/llm/mlflow_logger.py
 src/mcp_coder/prompt_manager.py

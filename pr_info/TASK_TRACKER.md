@@ -23,6 +23,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
-- [ ] [Step 1: Remove parsers.py from .large-files-allowlist](./steps/step_1.md)
+- [x] [Step 1: Remove parsers.py from .large-files-allowlist](./steps/step_1.md)
 
 ## Pull Request
