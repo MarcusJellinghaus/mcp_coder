@@ -24,10 +24,10 @@ comment, and blank line exactly as-is.
 
 No functions or signatures change. This is a text-file edit.
 
-Use `mcp__workspace__edit_file`:
-- `old_string`: the `parsers.py` line together with enough surrounding lines to be
-  unique (e.g. the preceding and following allowlist entries).
-- `new_string`: the same block **without** the `parsers.py` line.
+Use `mcp__mcp-workspace__edit_file`. The line `src/mcp_coder/cli/parsers.py` is
+already unique in `.large-files-allowlist`, so a single-line edit is sufficient:
+- `old_string`: `src/mcp_coder/cli/parsers.py`
+- `new_string`: empty (removing that line).
 
 ## HOW (integration points)
 
