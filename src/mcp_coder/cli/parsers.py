@@ -11,6 +11,7 @@ import argparse
 import sys
 from typing import Any, NoReturn
 
+from .command_catalog import COMMAND_DESCRIPTIONS
 from .shared_args import (
     add_execution_dir_arg,
     add_llm_method_arg,
@@ -56,7 +57,7 @@ def add_prompt_parser(subparsers: Any) -> None:
     """Add the prompt command parser."""
     prompt_parser = subparsers.add_parser(
         "prompt",
-        help="Execute prompt via Claude API with configurable debug output",
+        help=COMMAND_DESCRIPTIONS["prompt"],
         formatter_class=WideHelpFormatter,
     )
     prompt_parser.add_argument("prompt", help="The prompt to send to Claude")
@@ -122,7 +123,7 @@ def add_commit_parsers(subparsers: Any) -> None:
     # commit auto command
     auto_parser = commit_subparsers.add_parser(
         "auto",
-        help="Auto-generate commit message using LLM",
+        help=COMMAND_DESCRIPTIONS["commit auto"],
         formatter_class=WideHelpFormatter,
     )
     auto_parser.add_argument(
@@ -144,7 +145,7 @@ def add_implement_parser(subparsers: Any) -> None:
     """Add the implement command parser."""
     implement_parser = subparsers.add_parser(
         "implement",
-        help="Execute implementation workflow from task tracker",
+        help=COMMAND_DESCRIPTIONS["implement"],
         formatter_class=WideHelpFormatter,
     )
     add_project_dir_arg(implement_parser)
@@ -170,7 +171,8 @@ def add_create_plan_parser(subparsers: Any) -> None:
     """Add the create-plan command parser."""
     create_plan_parser = subparsers.add_parser(
         "create-plan",
-        help="Generate implementation plan for a GitHub issue (sets failure labels and posts comments on error)",
+        help=COMMAND_DESCRIPTIONS["create-plan"],
+        epilog="Sets failure labels and posts comments on error.",
         formatter_class=WideHelpFormatter,
     )
     create_plan_parser.add_argument(
@@ -199,7 +201,7 @@ def add_create_pr_parser(subparsers: Any) -> None:
     """Add the create-pr command parser."""
     create_pr_parser = subparsers.add_parser(
         "create-pr",
-        help="Create pull request with AI-generated summary",
+        help=COMMAND_DESCRIPTIONS["create-pr"],
         formatter_class=WideHelpFormatter,
     )
     add_project_dir_arg(create_pr_parser)
@@ -225,7 +227,7 @@ def add_coordinator_parsers(subparsers: Any) -> None:
     """Add coordinator command parser (direct command, no subcommands)."""
     coordinator_parser = subparsers.add_parser(
         "coordinator",
-        help="Monitor and dispatch workflows for GitHub issues",
+        help=COMMAND_DESCRIPTIONS["coordinator"],
         formatter_class=WideHelpFormatter,
     )
 
@@ -321,7 +323,7 @@ def add_check_parsers(subparsers: Any) -> None:
     # check branch-status command
     branch_status_parser = check_subparsers.add_parser(
         "branch-status",
-        help="Check branch readiness status and optionally apply fixes",
+        help=COMMAND_DESCRIPTIONS["check branch-status"],
         formatter_class=WideHelpFormatter,
     )
     add_project_dir_arg(branch_status_parser)
@@ -366,7 +368,7 @@ def add_check_parsers(subparsers: Any) -> None:
     # check file-size command
     file_size_parser = check_subparsers.add_parser(
         "file-size",
-        help="Check file sizes against maximum line count",
+        help=COMMAND_DESCRIPTIONS["check file-size"],
         formatter_class=WideHelpFormatter,
     )
     file_size_parser.add_argument(
@@ -393,7 +395,7 @@ def add_verify_parser(subparsers: Any) -> None:
     """Add the verify command parser."""
     verify_parser = subparsers.add_parser(
         "verify",
-        help="Verify CLI installation, LLM provider, and MLflow configuration",
+        help=COMMAND_DESCRIPTIONS["verify"],
         formatter_class=WideHelpFormatter,
     )
     verify_parser.add_argument(
@@ -427,7 +429,7 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
     # vscodeclaude launch
     launch_parser = vscodeclaude_subparsers.add_parser(
         "launch",
-        help="Launch VSCode/Claude sessions for issues needing review",
+        help=COMMAND_DESCRIPTIONS["vscodeclaude launch"],
         formatter_class=WideHelpFormatter,
     )
     launch_parser.add_argument(
@@ -467,7 +469,7 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
     # vscodeclaude status
     status_parser = vscodeclaude_subparsers.add_parser(
         "status",
-        help="Show current VSCodeClaude sessions",
+        help=COMMAND_DESCRIPTIONS["vscodeclaude status"],
     )
     status_parser.add_argument(
         "--repo",
@@ -486,7 +488,7 @@ def add_init_parser(subparsers: Any) -> None:
     """Add the init command parser."""
     init_parser = subparsers.add_parser(
         "init",
-        help="Initialize project: create config and deploy Claude skills",
+        help=COMMAND_DESCRIPTIONS["init"],
         formatter_class=WideHelpFormatter,
     )
     init_parser.add_argument(
@@ -503,7 +505,7 @@ def add_icoder_parser(subparsers: Any) -> None:
     """Add the icoder command parser."""
     icoder_parser = subparsers.add_parser(
         "icoder",
-        help="Launch interactive TUI for conversational coding",
+        help=COMMAND_DESCRIPTIONS["icoder"],
         formatter_class=WideHelpFormatter,
     )
     add_llm_method_arg(icoder_parser)

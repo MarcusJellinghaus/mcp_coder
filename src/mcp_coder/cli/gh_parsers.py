@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .command_catalog import COMMAND_DESCRIPTIONS
 from .parsers import WideHelpFormatter
 from .shared_args import add_project_dir_arg
 
@@ -23,7 +24,7 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
     # gh-tool get-base-branch command
     get_base_branch_parser = gh_tool_subparsers.add_parser(
         "get-base-branch",
-        help="Detect base branch for current feature branch",
+        help=COMMAND_DESCRIPTIONS["gh-tool get-base-branch"],
         formatter_class=WideHelpFormatter,
         epilog="""Exit codes:
   0  Success - base branch printed to stdout
@@ -35,7 +36,7 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
     # gh-tool define-labels (moved from top-level)
     define_labels_parser = gh_tool_subparsers.add_parser(
         "define-labels",
-        help="Sync workflow label definitions to a GitHub repository",
+        help=COMMAND_DESCRIPTIONS["gh-tool define-labels"],
         description="Sync workflow label definitions to a GitHub repository.",
         epilog="""Operations (always):
   - Validate labels config (default label, promotable targets)
@@ -100,7 +101,7 @@ Config resolution:
     # gh-tool issue-stats (moved from coordinator)
     issue_stats_parser = gh_tool_subparsers.add_parser(
         "issue-stats",
-        help="Display issue statistics by workflow status",
+        help=COMMAND_DESCRIPTIONS["gh-tool issue-stats"],
         formatter_class=WideHelpFormatter,
     )
     issue_stats_parser.add_argument(
@@ -125,7 +126,7 @@ Config resolution:
     # gh-tool checkout-issue-branch command
     checkout_branch_parser = gh_tool_subparsers.add_parser(
         "checkout-issue-branch",
-        help="Checkout or create a branch linked to a GitHub issue",
+        help=COMMAND_DESCRIPTIONS["gh-tool checkout-issue-branch"],
         formatter_class=WideHelpFormatter,
         epilog="""Exit codes:
   0  Success - branch checked out
@@ -142,7 +143,7 @@ Config resolution:
 
     set_status_parser = gh_tool_subparsers.add_parser(
         "set-status",
-        help="Update GitHub issue workflow status label",
+        help=COMMAND_DESCRIPTIONS["gh-tool set-status"],
         formatter_class=WideHelpFormatter,
         epilog=build_set_status_epilog(),
     )
@@ -184,7 +185,7 @@ def add_git_tool_parsers(subparsers: Any) -> None:
     # git-tool compact-diff command
     compact_diff_parser = git_tool_subparsers.add_parser(
         "compact-diff",
-        help="Generate compact diff suppressing moved-code blocks",
+        help=COMMAND_DESCRIPTIONS["git-tool compact-diff"],
         formatter_class=WideHelpFormatter,
         epilog="""Exit codes:
   0  Success - compact diff printed to stdout

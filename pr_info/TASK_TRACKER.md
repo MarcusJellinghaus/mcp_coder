@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Single-source command descriptions ([step_2.md](./steps/step_2.md))
 
-- [ ] Implementation: create dependency-free `cli/command_catalog.py` (`COMMAND_DESCRIPTIONS` + `COMMAND_CATEGORIES`); render `help.py` from them, delete `Command`/`Category` NamedTuples + `Category.description`; point leaf `help=` at the catalog; add `gh-tool checkout-issue-branch`; move `create-plan` detail to epilog. Rewrite `tests/cli/commands/test_help.py` first (TDD). `main.py` untouched.
-- [ ] Quality checks: pylint, pytest (`-n auto` + fast markers), mypy, tach/lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create dependency-free `cli/command_catalog.py` (`COMMAND_DESCRIPTIONS` + `COMMAND_CATEGORIES`); render `help.py` from them, delete `Command`/`Category` NamedTuples + `Category.description`; point leaf `help=` at the catalog; add `gh-tool checkout-issue-branch`; move `create-plan` detail to epilog. Rewrite `tests/cli/commands/test_help.py` first (TDD). `main.py` untouched.
+- [x] Quality checks: pylint, pytest (`-n auto` + fast markers), mypy, tach/lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Anti-drift test lock ([step_3.md](./steps/step_3.md))
 
