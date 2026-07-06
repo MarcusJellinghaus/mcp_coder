@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md).
 
-- [ ] Implementation: add `TestMcpConfigExitCode` tests (TDD) + `mcp_config_ok` param and guard in `_compute_exit_code`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `TestMcpConfigExitCode` tests (TDD) + `mcp_config_ok` param and guard in `_compute_exit_code`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Add `_validate_mcp_config`, render the validity row, delete `_collect_mcp_warnings`
 

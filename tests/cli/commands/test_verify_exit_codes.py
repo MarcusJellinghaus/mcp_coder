@@ -329,3 +329,63 @@ class TestToolsExposedExitCode:
             )
             == 0
         )
+
+
+class TestMcpConfigExitCode:
+    """Exit-code effect of the mcp_config_ok signal (provider-independent)."""
+
+    def test_claude_active_mcp_config_fail_exit_1(self) -> None:
+        """Exit 1 when mcp_config_ok=False and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                mcp_config_ok=False,
+            )
+            == 1
+        )
+
+    def test_langchain_active_mcp_config_fail_exit_1(self) -> None:
+        """Exit 1 when mcp_config_ok=False and langchain is active.
+
+        Malformed .mcp.json breaks all providers, so the failure is
+        provider-independent.
+        """
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _make_claude_result(),
+                _make_langchain_result(),
+                _make_mlflow_result(installed=False),
+                mcp_config_ok=False,
+            )
+            == 1
+        )
+
+    def test_mcp_config_none_no_effect(self) -> None:
+        """Exit 0 when mcp_config_ok=None (neutral / not checked)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                mcp_config_ok=None,
+            )
+            == 0
+        )
+
+    def test_mcp_config_true_no_effect(self) -> None:
+        """Exit 0 when mcp_config_ok=True (well-formed / empty)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                mcp_config_ok=True,
+            )
+            == 0
+        )

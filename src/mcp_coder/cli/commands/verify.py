@@ -625,6 +625,7 @@ def _compute_exit_code(
     github_result: dict[str, Any] | None = None,
     git_result: dict[str, Any] | None = None,
     tools_exposed_ok: bool | None = None,
+    mcp_config_ok: bool | None = None,
 ) -> int:
     """Compute CLI exit code from verification results.
 
@@ -648,12 +649,19 @@ def _compute_exit_code(
         tools_exposed_ok: Claude tools-exposed status. None=neutral (no effect),
             True=connected with tools, False=fatal/0-tools (exit 1 when claude
             active).
+        mcp_config_ok: `.mcp.json` validity. None=not checked / neutral (no
+            effect), True=well-formed or empty (no effect), False=malformed
+            (exit 1, provider-independent).
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
     """
     # Config error (invalid TOML) always means exit 1
     if config_has_error:
+        return 1
+
+    # Malformed .mcp.json is provider-independent hard failure (exit 1).
+    if mcp_config_ok is False:
         return 1
 
     # Test prompt failure always means exit 1
