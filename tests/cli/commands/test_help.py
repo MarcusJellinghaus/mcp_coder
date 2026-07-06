@@ -1,9 +1,10 @@
 """Tests for help command functionality."""
 
-from mcp_coder.cli.commands.help import (
+from mcp_coder.cli.command_catalog import (
     COMMAND_CATEGORIES,
-    get_help_text,
+    COMMAND_DESCRIPTIONS,
 )
+from mcp_coder.cli.commands.help import get_help_text
 
 # --- Unified help output tests ---
 
@@ -36,7 +37,7 @@ def test_command_categories_contains_all_commands() -> None:
     """Test COMMAND_CATEGORIES has 4 categories with all expected commands."""
     assert len(COMMAND_CATEGORIES) == 4
 
-    all_command_names = [cmd.name for cat in COMMAND_CATEGORIES for cmd in cat.commands]
+    all_command_names = [name for _, names in COMMAND_CATEGORIES for name in names]
 
     expected_commands = [
         "init",
@@ -45,23 +46,41 @@ def test_command_categories_contains_all_commands() -> None:
         "implement",
         "create-pr",
         "coordinator",
+        "icoder",
         "vscodeclaude launch",
         "vscodeclaude status",
         "prompt",
         "commit auto",
-        "gh-tool set-status",
         "check branch-status",
         "check file-size",
+        "gh-tool checkout-issue-branch",
+        "gh-tool set-status",
+        "gh-tool get-base-branch",
         "gh-tool define-labels",
         "gh-tool issue-stats",
-        "gh-tool get-base-branch",
         "git-tool compact-diff",
     ]
+    assert len(all_command_names) == 19
     for cmd in expected_commands:
         assert cmd in all_command_names, f"Missing command: {cmd}"
 
     # "help" should NOT be in the command list
     assert "help" not in all_command_names
+
+    # TOOLS order matches the settled list.
+    tools_names = next(names for title, names in COMMAND_CATEGORIES if title == "TOOLS")
+    assert tools_names == [
+        "prompt",
+        "commit auto",
+        "check branch-status",
+        "check file-size",
+        "gh-tool checkout-issue-branch",
+        "gh-tool set-status",
+        "gh-tool get-base-branch",
+        "gh-tool define-labels",
+        "gh-tool issue-stats",
+        "git-tool compact-diff",
+    ]
 
 
 def test_help_text_has_all_category_headers() -> None:
@@ -74,30 +93,21 @@ def test_help_text_has_all_category_headers() -> None:
 
 
 def test_help_text_has_all_commands() -> None:
-    """Test help output contains every command name."""
+    """Test help output contains every command name and its description."""
     output = get_help_text()
-    for cat in COMMAND_CATEGORIES:
-        for cmd in cat.commands:
-            assert cmd.name in output, f"Missing command in output: {cmd.name}"
-
-
-def test_help_text_no_category_descriptions() -> None:
-    """Test help output does NOT contain category description strings."""
-    output = get_help_text()
-    for cat in COMMAND_CATEGORIES:
-        assert (
-            cat.description not in output
-        ), f"Category description should not appear: {cat.description}"
+    for name, description in COMMAND_DESCRIPTIONS.items():
+        assert name in output, f"Missing command in output: {name}"
+        assert description in output, f"Missing description in output: {description}"
 
 
 def test_help_text_command_column_alignment() -> None:
     """Test all command description columns start at the same position."""
     output = get_help_text()
-    max_width = max(len(cmd.name) for cat in COMMAND_CATEGORIES for cmd in cat.commands)
+    all_command_names = [name for _, names in COMMAND_CATEGORIES for name in names]
+    max_width = max(len(name) for name in all_command_names)
     expected_col = 2 + max_width + 2  # "  " + padded name + "  "
 
     # Find command lines (indented with 2 spaces, contain a known command name)
-    all_command_names = {cmd.name for cat in COMMAND_CATEGORIES for cmd in cat.commands}
     command_lines = [
         line
         for line in output.split("\n")

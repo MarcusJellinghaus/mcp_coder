@@ -11,7 +11,14 @@ import argparse
 import sys
 from typing import Any, NoReturn
 
-from ..llm.types import SUPPORTED_PROVIDERS
+from .command_catalog import COMMAND_DESCRIPTIONS
+from .shared_args import (
+    add_execution_dir_arg,
+    add_llm_method_arg,
+    add_mcp_config_arg,
+    add_project_dir_arg,
+    add_settings_arg,
+)
 
 
 class HelpHintArgumentParser(argparse.ArgumentParser):
@@ -50,16 +57,11 @@ def add_prompt_parser(subparsers: Any) -> None:
     """Add the prompt command parser."""
     prompt_parser = subparsers.add_parser(
         "prompt",
-        help="Execute prompt via Claude API with configurable debug output",
+        help=COMMAND_DESCRIPTIONS["prompt"],
         formatter_class=WideHelpFormatter,
     )
     prompt_parser.add_argument("prompt", help="The prompt to send to Claude")
-    prompt_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
+    add_project_dir_arg(prompt_parser)
     prompt_parser.add_argument(
         "--store-response",
         action="store_true",
@@ -93,13 +95,7 @@ def add_prompt_parser(subparsers: Any) -> None:
         metavar="SECONDS",
         help="API request timeout in seconds (default: 60)",
     )
-    prompt_parser.add_argument(
-        "--llm-method",
-        choices=sorted(SUPPORTED_PROVIDERS),
-        default=None,
-        metavar="METHOD",
-        help="LLM method override. If omitted, uses config default_provider or claude",
-    )
+    add_llm_method_arg(prompt_parser)
     prompt_parser.add_argument(
         "--output-format",
         choices=["rendered", "text", "json", "session-id", "ndjson", "json-raw"],
@@ -107,31 +103,14 @@ def add_prompt_parser(subparsers: Any) -> None:
         metavar="FORMAT",
         help="Output format: rendered (default, human-friendly streaming), text (plain streaming), ndjson (streaming NDJSON events), json-raw (streaming raw events), json (blocking, complete response), session-id (blocking, only session_id)",
     )
-    prompt_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    prompt_parser.add_argument(
-        "--settings",
-        type=str,
-        default=None,
-        help="Path to Claude Code settings file (.claude/settings.local.json). "
-        "Auto-detected from <project_dir>/.claude/ if omitted. "
-        "Overrides Claude's cwd-based settings discovery.",
-    )
+    add_mcp_config_arg(prompt_parser)
+    add_settings_arg(prompt_parser)
     prompt_parser.add_argument(
         "--add-system-prompts",
         action="store_true",
         help="Inject system and project prompts into the LLM request",
     )
-    prompt_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
-    )
+    add_execution_dir_arg(prompt_parser)
 
 
 def add_commit_parsers(subparsers: Any) -> None:
@@ -144,7 +123,7 @@ def add_commit_parsers(subparsers: Any) -> None:
     # commit auto command
     auto_parser = commit_subparsers.add_parser(
         "auto",
-        help="Auto-generate commit message using LLM",
+        help=COMMAND_DESCRIPTIONS["commit auto"],
         formatter_class=WideHelpFormatter,
     )
     auto_parser.add_argument(
@@ -152,24 +131,9 @@ def add_commit_parsers(subparsers: Any) -> None:
         action="store_true",
         help="Show generated message and ask for confirmation before committing",
     )
-    auto_parser.add_argument(
-        "--llm-method",
-        choices=sorted(SUPPORTED_PROVIDERS),
-        default=None,
-        help="LLM method override. If omitted, uses config default_provider or claude",
-    )
-    auto_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    auto_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
-    )
+    add_llm_method_arg(auto_parser)
+    add_project_dir_arg(auto_parser)
+    add_execution_dir_arg(auto_parser)
     auto_parser.add_argument(
         "--push",
         action="store_true",
@@ -181,41 +145,14 @@ def add_implement_parser(subparsers: Any) -> None:
     """Add the implement command parser."""
     implement_parser = subparsers.add_parser(
         "implement",
-        help="Execute implementation workflow from task tracker",
+        help=COMMAND_DESCRIPTIONS["implement"],
         formatter_class=WideHelpFormatter,
     )
-    implement_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    implement_parser.add_argument(
-        "--llm-method",
-        choices=sorted(SUPPORTED_PROVIDERS),
-        default=None,
-        help="LLM method override. If omitted, uses config default_provider or claude",
-    )
-    implement_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    implement_parser.add_argument(
-        "--settings",
-        type=str,
-        default=None,
-        help="Path to Claude Code settings file (.claude/settings.local.json). "
-        "Auto-detected from <project_dir>/.claude/ if omitted. "
-        "Overrides Claude's cwd-based settings discovery.",
-    )
-    implement_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
-    )
+    add_project_dir_arg(implement_parser)
+    add_llm_method_arg(implement_parser)
+    add_mcp_config_arg(implement_parser)
+    add_settings_arg(implement_parser)
+    add_execution_dir_arg(implement_parser)
     implement_parser.add_argument(
         "--update-issue-labels",
         action=argparse.BooleanOptionalAction,
@@ -234,44 +171,18 @@ def add_create_plan_parser(subparsers: Any) -> None:
     """Add the create-plan command parser."""
     create_plan_parser = subparsers.add_parser(
         "create-plan",
-        help="Generate implementation plan for a GitHub issue (sets failure labels and posts comments on error)",
+        help=COMMAND_DESCRIPTIONS["create-plan"],
+        epilog="Sets failure labels and posts comments on error.",
         formatter_class=WideHelpFormatter,
     )
     create_plan_parser.add_argument(
         "issue_number", type=int, help="GitHub issue number to create plan for"
     )
-    create_plan_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    create_plan_parser.add_argument(
-        "--llm-method",
-        choices=sorted(SUPPORTED_PROVIDERS),
-        default=None,
-        help="LLM method override. If omitted, uses config default_provider or claude",
-    )
-    create_plan_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    create_plan_parser.add_argument(
-        "--settings",
-        type=str,
-        default=None,
-        help="Path to Claude Code settings file (.claude/settings.local.json). "
-        "Auto-detected from <project_dir>/.claude/ if omitted. "
-        "Overrides Claude's cwd-based settings discovery.",
-    )
-    create_plan_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
-    )
+    add_project_dir_arg(create_plan_parser)
+    add_llm_method_arg(create_plan_parser)
+    add_mcp_config_arg(create_plan_parser)
+    add_settings_arg(create_plan_parser)
+    add_execution_dir_arg(create_plan_parser)
     create_plan_parser.add_argument(
         "--update-issue-labels",
         action=argparse.BooleanOptionalAction,
@@ -290,41 +201,14 @@ def add_create_pr_parser(subparsers: Any) -> None:
     """Add the create-pr command parser."""
     create_pr_parser = subparsers.add_parser(
         "create-pr",
-        help="Create pull request with AI-generated summary",
+        help=COMMAND_DESCRIPTIONS["create-pr"],
         formatter_class=WideHelpFormatter,
     )
-    create_pr_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    create_pr_parser.add_argument(
-        "--llm-method",
-        choices=sorted(SUPPORTED_PROVIDERS),
-        default=None,
-        help="LLM method override. If omitted, uses config default_provider or claude",
-    )
-    create_pr_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    create_pr_parser.add_argument(
-        "--settings",
-        type=str,
-        default=None,
-        help="Path to Claude Code settings file (.claude/settings.local.json). "
-        "Auto-detected from <project_dir>/.claude/ if omitted. "
-        "Overrides Claude's cwd-based settings discovery.",
-    )
-    create_pr_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
-    )
+    add_project_dir_arg(create_pr_parser)
+    add_llm_method_arg(create_pr_parser)
+    add_mcp_config_arg(create_pr_parser)
+    add_settings_arg(create_pr_parser)
+    add_execution_dir_arg(create_pr_parser)
     create_pr_parser.add_argument(
         "--update-issue-labels",
         action=argparse.BooleanOptionalAction,
@@ -343,7 +227,7 @@ def add_coordinator_parsers(subparsers: Any) -> None:
     """Add coordinator command parser (direct command, no subcommands)."""
     coordinator_parser = subparsers.add_parser(
         "coordinator",
-        help="Monitor and dispatch workflows for GitHub issues",
+        help=COMMAND_DESCRIPTIONS["coordinator"],
         formatter_class=WideHelpFormatter,
     )
 
@@ -439,15 +323,10 @@ def add_check_parsers(subparsers: Any) -> None:
     # check branch-status command
     branch_status_parser = check_subparsers.add_parser(
         "branch-status",
-        help="Check branch readiness status and optionally apply fixes",
+        help=COMMAND_DESCRIPTIONS["check branch-status"],
         formatter_class=WideHelpFormatter,
     )
-    branch_status_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
+    add_project_dir_arg(branch_status_parser)
     branch_status_parser.add_argument(
         "--ci-timeout",
         type=_validate_ci_timeout,
@@ -469,32 +348,10 @@ def add_check_parsers(subparsers: Any) -> None:
         action="store_true",
         help="Truncate output for LLM consumption",
     )
-    branch_status_parser.add_argument(
-        "--llm-method",
-        choices=sorted(SUPPORTED_PROVIDERS),
-        default=None,
-        help="LLM method override. If omitted, uses config default_provider or claude",
-    )
-    branch_status_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    branch_status_parser.add_argument(
-        "--settings",
-        type=str,
-        default=None,
-        help="Path to Claude Code settings file (.claude/settings.local.json). "
-        "Auto-detected from <project_dir>/.claude/ if omitted. "
-        "Overrides Claude's cwd-based settings discovery.",
-    )
-    branch_status_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
-    )
+    add_llm_method_arg(branch_status_parser)
+    add_mcp_config_arg(branch_status_parser)
+    add_settings_arg(branch_status_parser)
+    add_execution_dir_arg(branch_status_parser)
     branch_status_parser.add_argument(
         "--wait-for-pr",
         action="store_true",
@@ -511,7 +368,7 @@ def add_check_parsers(subparsers: Any) -> None:
     # check file-size command
     file_size_parser = check_subparsers.add_parser(
         "file-size",
-        help="Check file sizes against maximum line count",
+        help=COMMAND_DESCRIPTIONS["check file-size"],
         formatter_class=WideHelpFormatter,
     )
     file_size_parser.add_argument(
@@ -531,19 +388,14 @@ def add_check_parsers(subparsers: Any) -> None:
         action="store_true",
         help="Output violating paths for piping to allowlist",
     )
-    file_size_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
+    add_project_dir_arg(file_size_parser)
 
 
 def add_verify_parser(subparsers: Any) -> None:
     """Add the verify command parser."""
     verify_parser = subparsers.add_parser(
         "verify",
-        help="Verify CLI installation, LLM provider, and MLflow configuration",
+        help=COMMAND_DESCRIPTIONS["verify"],
         formatter_class=WideHelpFormatter,
     )
     verify_parser.add_argument(
@@ -551,33 +403,10 @@ def add_verify_parser(subparsers: Any) -> None:
         action="store_true",
         help="List available models for the configured LangChain backend (requires network)",
     )
-    verify_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    verify_parser.add_argument(
-        "--llm-method",
-        choices=sorted(SUPPORTED_PROVIDERS),
-        default=None,
-        metavar="METHOD",
-        help="LLM method override. If omitted, uses config default_provider or claude",
-    )
-    verify_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to .mcp.json for MCP agent smoke test",
-    )
-    verify_parser.add_argument(
-        "--settings",
-        type=str,
-        default=None,
-        help="Path to Claude Code settings file (.claude/settings.local.json). "
-        "Auto-detected from <project_dir>/.claude/ if omitted. "
-        "Overrides Claude's cwd-based settings discovery.",
-    )
+    add_project_dir_arg(verify_parser)
+    add_llm_method_arg(verify_parser)
+    add_mcp_config_arg(verify_parser, help="Path to .mcp.json for MCP agent smoke test")
+    add_settings_arg(verify_parser)
     verify_parser.add_argument(
         "--list-mcp-tools",
         action="store_true",
@@ -600,7 +429,7 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
     # vscodeclaude launch
     launch_parser = vscodeclaude_subparsers.add_parser(
         "launch",
-        help="Launch VSCode/Claude sessions for issues needing review",
+        help=COMMAND_DESCRIPTIONS["vscodeclaude launch"],
         formatter_class=WideHelpFormatter,
     )
     launch_parser.add_argument(
@@ -640,7 +469,7 @@ def add_vscodeclaude_parsers(subparsers: Any) -> None:
     # vscodeclaude status
     status_parser = vscodeclaude_subparsers.add_parser(
         "status",
-        help="Show current VSCodeClaude sessions",
+        help=COMMAND_DESCRIPTIONS["vscodeclaude status"],
     )
     status_parser.add_argument(
         "--repo",
@@ -659,7 +488,7 @@ def add_init_parser(subparsers: Any) -> None:
     """Add the init command parser."""
     init_parser = subparsers.add_parser(
         "init",
-        help="Initialize project: create config and deploy Claude skills",
+        help=COMMAND_DESCRIPTIONS["init"],
         formatter_class=WideHelpFormatter,
     )
     init_parser.add_argument(
@@ -667,11 +496,8 @@ def add_init_parser(subparsers: Any) -> None:
         action="store_true",
         help="Deploy skills only, skip config creation",
     )
-    init_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Target project directory (default: current directory)",
+    add_project_dir_arg(
+        init_parser, help="Target project directory (default: current directory)"
     )
 
 
@@ -679,42 +505,14 @@ def add_icoder_parser(subparsers: Any) -> None:
     """Add the icoder command parser."""
     icoder_parser = subparsers.add_parser(
         "icoder",
-        help="Launch interactive TUI for conversational coding",
+        help=COMMAND_DESCRIPTIONS["icoder"],
         formatter_class=WideHelpFormatter,
     )
-    icoder_parser.add_argument(
-        "--llm-method",
-        choices=sorted(SUPPORTED_PROVIDERS),
-        default=None,
-        metavar="METHOD",
-        help="LLM method override. If omitted, uses config default_provider or claude",
-    )
-    icoder_parser.add_argument(
-        "--mcp-config",
-        type=str,
-        default=None,
-        help="Path to MCP configuration file (e.g., .mcp.linux.json)",
-    )
-    icoder_parser.add_argument(
-        "--settings",
-        type=str,
-        default=None,
-        help="Path to Claude Code settings file (.claude/settings.local.json). "
-        "Auto-detected from <project_dir>/.claude/ if omitted. "
-        "Overrides Claude's cwd-based settings discovery.",
-    )
-    icoder_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
-    icoder_parser.add_argument(
-        "--execution-dir",
-        type=str,
-        default=None,
-        help="Execution directory: where Claude subprocess runs (config discovery). Default: current directory",
-    )
+    add_llm_method_arg(icoder_parser)
+    add_mcp_config_arg(icoder_parser)
+    add_settings_arg(icoder_parser)
+    add_project_dir_arg(icoder_parser)
+    add_execution_dir_arg(icoder_parser)
     icoder_parser.add_argument(
         "--timeout",
         type=int,
