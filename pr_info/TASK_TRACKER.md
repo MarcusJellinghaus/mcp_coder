@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md).
 
 See [step_2.md](./steps/step_2.md).
 
-- [ ] Implementation: add `_validate_mcp_config`, wire `MCP CONFIG` row + downstream short-circuit into `execute_verify`, delete `_collect_mcp_warnings`, update tests/conftest
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `_validate_mcp_config`, wire `MCP CONFIG` row + downstream short-circuit into `execute_verify`, delete `_collect_mcp_warnings`, update tests/conftest
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

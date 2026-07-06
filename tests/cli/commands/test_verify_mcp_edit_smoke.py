@@ -80,6 +80,20 @@ def _mcp_ok() -> dict[str, Any]:
 class TestMcpEditSmokeTest:
     """Tests for _run_mcp_edit_smoke_test function."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_validate_mcp(self) -> Any:
+        """Treat any resolved (fake) .mcp.json as well-formed.
+
+        The ``execute_verify`` tests here point ``resolve_mcp_config_path`` at a
+        fake path; mocking the validator keeps the hard-fail short-circuit from
+        skipping the smoke test. Harmless for the direct-call tests.
+        """
+        with patch(
+            f"{_VERIFY}._validate_mcp_config",
+            return_value=(True, "well-formed", []),
+        ):
+            yield
+
     def _symbols(self) -> dict[str, str]:
         return {"success": "[OK]", "failure": "[FAIL]", "warning": "[WARN]"}
 

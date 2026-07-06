@@ -10,8 +10,10 @@ captured tabular row.
 
 The dynamic-width MCP CONFIG WARNINGS invariant lives in
 ``test_verify_orchestration.py`` (per ``step_4.md``); these tests use
-the default ``_LABEL_WIDTH`` and Layer 2 mocks ``_collect_mcp_warnings``
-to ``[]`` so the section is excluded from the captured output.
+the default ``_LABEL_WIDTH`` and Layer 2 mocks ``_validate_mcp_config``
+to ``(True, "well-formed", [])`` so the always-on MCP CONFIG validity row
+renders (aligned at the standard value column) while the placeholder
+WARNINGS section is excluded from the captured output.
 """
 
 from __future__ import annotations
