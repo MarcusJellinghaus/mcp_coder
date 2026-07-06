@@ -33,7 +33,8 @@ def _validate_mcp_config(
     Returns (ok, message, warnings):
       ok=True  -> well-formed, non-empty mcpServers
       ok=None  -> WARN: parseable but mcpServers is empty ({})
-      ok=False -> hard fail: unparseable JSON, or mcpServers missing/not an object
+      ok=False -> hard fail: unparseable JSON, top-level JSON not an object,
+                  or mcpServers missing/not an object
       message  -> human-readable status for the validity row
       warnings -> list of (f"{server} / {env_var}", unresolved_value) pairs
                   (always [] on hard fail)
@@ -58,6 +59,17 @@ def _validate_mcp_config(
         print(_format_row(".mcp.json", marker, _msg, indent=2))
         mcp_config_ok = _ok is not False
 ```
+- **Short-circuit downstream MCP checks on hard-fail (USER DECISION).** The `MCP CONFIG`
+  validity row is printed **first** (above). When the config is malformed
+  (`mcp_config_ok is False`), that row is the single clear upstream diagnostic, and the
+  remaining MCP health/smoke/prompt checks (`claude mcp list`, LangChain MCP health,
+  tools-exposed, edit smoke test, test prompt) must be **skipped** — they would otherwise
+  emit confusing indirect downstream errors. Implement by guarding the existing
+  `if mcp_config_resolved:` health-check block **and** the related downstream MCP blocks
+  (tools-exposed / edit smoke / test prompt) on `mcp_config_ok is not False`, e.g. change
+  those conditions to `if mcp_config_resolved and mcp_config_ok is not False:`. The
+  validity-row block itself stays gated only on `if mcp_config_resolved:` so the diagnostic
+  always prints.
 - In the `3a-bis` section, replace `warnings = _collect_mcp_warnings(mcp_config_resolved)`
   with `warnings = mcp_warnings` (keep the rest of that block — the dynamic `label_width`
   and rendering — unchanged).
@@ -69,6 +81,10 @@ def _validate_mcp_config(
 ```
 try: data = json.loads(read_text(path))
 except (OSError, JSONDecodeError) as e: return (False, f"invalid JSON ({e})", [])
+# Guard: valid JSON whose top level is NOT an object (e.g. [], "foo", 42) would make
+# data.get(...) raise AttributeError, which is NOT caught above -> would crash
+# execute_verify. Hard-fail here BEFORE calling .get.
+if not isinstance(data, dict): return (False, "mcpServers missing or not an object", [])
 servers = data.get("mcpServers")
 if not isinstance(servers, dict): return (False, "mcpServers missing or not an object", [])
 warnings = [(f"{name} / {var}", val)
@@ -93,6 +109,9 @@ Rewrite `TestMcpConfigWarnings` unit tests to target `_validate_mcp_config`:
 - unparseable (`"{not json"`) → `ok is False`, `warnings == []` (**silent swallow fixed** —
   this replaces the old `test_invalid_json_returns_empty`).
 - `mcpServers` missing / not an object (e.g. `{"mcpServers": []}`) → `ok is False`.
+- valid JSON whose top level is **not an object** (e.g. `"[]"` or `"42"`) → `ok is False`
+  (guards against the `data.get` `AttributeError` crash — add alongside the
+  `{"mcpServers": []}` case).
 - placeholder present → `ok is True` and `warnings == [("srv / VAR", "${...}")]`
   (preserves the `${...}` behaviour); multiple-servers-multiple-vars case preserved.
 - Remove `test_none_path_returns_empty` / `test_missing_file_returns_empty` for the deleted
@@ -105,11 +124,31 @@ Orchestration/rendered tests (`execute_verify`):
   index).
 - Malformed config → `.mcp.json` `[ERR]` row surfaced (not swallowed).
 - Empty `{}` → `.mcp.json` `[WARN]` row, exit 0.
+- **Downstream short-circuit:** malformed config → the `.mcp.json` `[ERR]` row is printed
+  **and** the downstream MCP sections (`MCP SERVERS` health check, tools-exposed, edit
+  smoke test, test prompt) are **skipped** (assert those section headers / rows are absent
+  from the rendered output).
 - Keep the existing `MCP CONFIG WARNINGS` rendered + dynamic-width tests passing (they now
   flow through `_validate_mcp_config`).
 
+End-to-end exit-code test (full-CLI wiring):
+- Beyond the isolated `_compute_exit_code(mcp_config_ok=False)` unit test (Step 1) and the
+  row-rendering assertions above, add **one** integration/CLI-level case in the
+  `TestExitCodeMatrix` full-CLI harness in `tests/cli/commands/test_verify_exit_codes.py`
+  that exercises the full wiring: a real malformed `.mcp.json` → `_validate_mcp_config`
+  returns `False` → `mcp_config_ok` threaded into `_compute_exit_code` → CLI returns
+  **exit 1**.
+
 `conftest.py`: change the mock from `_collect_mcp_warnings -> []` to
 `_validate_mcp_config -> (True, "well-formed", [])`, and update the yielded dict key.
+
+**Alignment / snapshot test impact (budget for this).** The new always-on `MCP CONFIG`
+validity row means `execute_verify` emits a brand-new section during the existing
+alignment/rendering smoke tests (the conftest `_make_verify_mocks` harness mocks
+`resolve_mcp_config_path` to a fake path, so the section now always renders). Re-pointing
+the conftest mock to `_validate_mcp_config -> (True, "well-formed", [])` may require
+updating existing alignment / output-snapshot assertions to account for the new section.
+Step 2 must budget for updating those.
 
 ## Commit
 One commit: helper + wiring + deletion + all test updates, all checks green.
@@ -120,17 +159,23 @@ One commit: helper + wiring + deletion + all test updates, all checks green.
 > Use TDD. First update tests: in `tests/cli/commands/test_verify_orchestration.py` rewrite
 > `TestMcpConfigWarnings` to test the new `_validate_mcp_config(path) ->
 > (ok, message, warnings)` helper (valid, empty `{}` → WARN, unparseable → hard fail with
-> `warnings==[]`, `mcpServers` not an object → hard fail, `${...}` placeholder preserved),
-> add orchestration tests asserting the `MCP CONFIG` `.mcp.json` row renders and appears
-> before the `MCP SERVERS` section (OK/ERR/WARN cases), and keep the existing rendered
-> `MCP CONFIG WARNINGS` / dynamic-width tests green; in `tests/cli/commands/conftest.py`
-> re-point the `_collect_mcp_warnings` mock to `_validate_mcp_config` returning
+> `warnings==[]`, `mcpServers` not an object → hard fail, top-level JSON not an object
+> (`"[]"`/`"42"`) → hard fail, `${...}` placeholder preserved), add orchestration tests
+> asserting the `MCP CONFIG` `.mcp.json` row renders and appears before the `MCP SERVERS`
+> section (OK/ERR/WARN cases) and that a malformed config **skips** the downstream MCP
+> sections, add the full-CLI `TestExitCodeMatrix` case (malformed `.mcp.json` → exit 1) in
+> `tests/cli/commands/test_verify_exit_codes.py`, and keep the existing rendered
+> `MCP CONFIG WARNINGS` / dynamic-width tests green (updating any alignment/snapshot
+> assertions for the new section); in `tests/cli/commands/conftest.py` re-point the
+> `_collect_mcp_warnings` mock to `_validate_mcp_config` returning
 > `(True, "well-formed", [])`. Then in `src/mcp_coder/cli/commands/verify.py` add
-> `_validate_mcp_config`, add the `MCP CONFIG` validity-row block in `execute_verify`
-> before the MCP health-check block, feed its `warnings` into the existing placeholder
-> section (replacing the `_collect_mcp_warnings` call), pass `mcp_config_ok=mcp_config_ok`
-> into `_compute_exit_code`, and delete `_collect_mcp_warnings`. Use MCP filesystem tools
-> only. After editing, run `mcp__tools-py__run_pylint_check`,
-> `mcp__tools-py__run_pytest_check` (with
+> `_validate_mcp_config` (guarding `if not isinstance(data, dict)` before `data.get` to
+> avoid an `AttributeError` crash), add the `MCP CONFIG` validity-row block in
+> `execute_verify` before the MCP health-check block, guard the downstream MCP blocks on
+> `mcp_config_ok is not False` so a malformed config short-circuits them, feed its
+> `warnings` into the existing placeholder section (replacing the `_collect_mcp_warnings`
+> call), pass `mcp_config_ok=mcp_config_ok` into `_compute_exit_code`, and delete
+> `_collect_mcp_warnings`. Use MCP filesystem tools only. After editing, run `mcp__mcp-tools-py__run_pylint_check`,
+> `mcp__mcp-tools-py__run_pytest_check` (with
 > `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`),
-> and `mcp__tools-py__run_mypy_check`; fix everything until all pass. Produce exactly one commit.
+> and `mcp__mcp-tools-py__run_mypy_check`; fix everything until all pass. Produce exactly one commit.

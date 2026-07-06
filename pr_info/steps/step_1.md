@@ -75,7 +75,7 @@ One commit: signature + guard + docstring + the three exit-code tests, all check
 > `mcp_config_ok: bool | None = None` parameter to `_compute_exit_code` in
 > `src/mcp_coder/cli/commands/verify.py`, wire a `if mcp_config_ok is False: return 1`
 > guard next to the `config_has_error` check, and document the parameter. Use MCP
-> filesystem tools only. After editing, run `mcp__tools-py__run_pylint_check`,
-> `mcp__tools-py__run_pytest_check` (with
+> filesystem tools only. After editing, run `mcp__mcp-tools-py__run_pylint_check`,
+> `mcp__mcp-tools-py__run_pytest_check` (with
 > `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`),
-> and `mcp__tools-py__run_mypy_check`; fix everything until all pass. Produce exactly one commit.
+> and `mcp__mcp-tools-py__run_mypy_check`; fix everything until all pass. Produce exactly one commit.
