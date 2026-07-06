@@ -76,9 +76,9 @@ suite stays green.
 
 ## Done when
 
-- [ ] `verify_exit_code.py` created with the two functions + `from typing import Any`.
-- [ ] `verify.py` imports them back; no other change to `verify.py`.
-- [ ] All four importer test files reference `verify_exit_code`.
-- [ ] `compact-diff` shows only import / new-file churn.
-- [ ] format + lint-imports + pytest + pylint + mypy pass; `tach check` passes.
-- [ ] `verify.py` stays on `.large-files-allowlist` (unchanged this step).
+- [x] `verify_exit_code.py` created with the two functions + `from typing import Any`.
+- [x] `verify.py` imports them back; no other change to `verify.py`.
+- [x] All four importer test files reference `verify_exit_code`.
+- [x] `compact-diff` shows only import / new-file churn.
+- [x] format + lint-imports + pytest + pylint + mypy pass; `tach check` passes.
+- [x] `verify.py` stays on `.large-files-allowlist` (unchanged this step).
