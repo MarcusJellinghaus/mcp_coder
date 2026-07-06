@@ -11,15 +11,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.verify import (
+    _print_environment_section,
+    _print_project_section,
+    _prompt_source,
+    execute_verify,
+)
+from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_WIDTH,
     _MARKER_SLOT_WIDTH,
     _VALUE_COLUMN_INDENT,
     _format_row,
     _looks_like_key,
-    _print_environment_section,
-    _print_project_section,
-    _prompt_source,
-    execute_verify,
 )
 from mcp_coder.cli.main import main
 from mcp_coder.utils.pyproject_config import PromptsConfig

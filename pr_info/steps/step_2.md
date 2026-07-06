@@ -128,9 +128,11 @@ functions/constants; confirm the suite stays green after repointing imports.
 
 ## Done when
 
-- [ ] `verify_formatting.py` created with functions + constants in the required order.
-- [ ] `verify.py` imports the needed subset back; no `verify_formatting -> verify` edge.
-- [ ] All function + constant importers repoint correctly (no `ImportError`, mypy clean).
-- [ ] `verify.py` removed from `.large-files-allowlist`; `check_file_size` passes.
-- [ ] `compact-diff` shows only import / new-file churn.
-- [ ] format + lint-imports + pytest + pylint + mypy pass; `tach check` passes.
+- [x] `verify_formatting.py` created with functions + constants in the required order.
+- [x] `verify.py` imports the needed subset back; no `verify_formatting -> verify` edge.
+- [x] All function + constant importers repoint correctly (no `ImportError`, mypy clean).
+- [x] `verify.py` removed from `.large-files-allowlist`; `check_file_size` passes.
+- [x] `compact-diff` shows only import / new-file churn.
+- [x] format + lint-imports + pytest + pylint + mypy pass; `tach check` passes (tach
+      unavailable in this environment; import-linter's 19 contracts all KEPT cover the
+      leaf/no-cycle boundary, and the design requires no contract change).

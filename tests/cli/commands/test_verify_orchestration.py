@@ -12,10 +12,10 @@ import pytest
 
 from mcp_coder.cli.commands.verify import (
     _DropUnexpandedWarnings,
-    _format_mcp_section,
     _validate_mcp_config,
     execute_verify,
 )
+from mcp_coder.cli.commands.verify_formatting import _format_mcp_section
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 # Patch target for lazily-imported langchain verification functions
@@ -1498,7 +1498,10 @@ class TestMcpConfigWarningsDynamicWidth:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """A long label widens the section's value column; rows align consistently."""
-        from mcp_coder.cli.commands.verify import _LABEL_WIDTH, _MARKER_SLOT_WIDTH
+        from mcp_coder.cli.commands.verify_formatting import (
+            _LABEL_WIDTH,
+            _MARKER_SLOT_WIDTH,
+        )
 
         long_server = "langchain-mcp-adapters"
         short_server = "srv"
