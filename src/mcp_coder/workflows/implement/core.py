@@ -21,13 +21,11 @@ from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
     get_current_branch_name,
     get_full_status,
-    rebase_onto_branch,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.prompt_manager import get_prompt, get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.pyproject_config import get_implement_config
-from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.failure_handling import format_mcp_unavailable_message
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
@@ -56,6 +54,7 @@ from .prerequisites import (
     check_prerequisites,
     has_implementation_tasks,
 )
+from .rebase import _attempt_rebase_and_push
 from .task_processing import (
     check_and_fix_mypy,
     commit_changes,
@@ -66,49 +65,6 @@ from .task_processing import (
 
 # Setup logger
 logger = logging.getLogger(__name__)
-
-
-def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
-    """Determine the target branch for rebasing the current feature branch.
-
-    Uses shared detect_base_branch() function for detection.
-
-    Args:
-        project_dir: Path to the project directory
-
-    Returns:
-        Branch name to rebase onto, or None if detection fails
-    """
-    return detect_base_branch(project_dir)  # Now returns None directly on failure
-
-
-def _attempt_rebase_and_push(project_dir: Path) -> bool:
-    """Attempt to rebase onto parent branch and push. Never fails workflow.
-
-    Args:
-        project_dir: Path to the project directory
-
-    Returns:
-        True if rebase and push succeeded.
-        False if rebase skipped, failed, or no target detected.
-    """
-    target = _get_rebase_target_branch(project_dir)
-    if target:
-        logger.info("Rebasing onto origin/%s...", target)
-        if rebase_onto_branch(project_dir, target):
-            # Push rebased branch with force_with_lease
-            if push_changes(project_dir, force_with_lease=True):
-                return True
-            else:
-                logger.warning(
-                    "Rebase succeeded but push failed - "
-                    "manual push with --force-with-lease may be required"
-                )
-                return False
-        return False
-    else:
-        logger.debug("Could not detect parent branch for rebase")
-        return False
 
 
 def prepare_task_tracker(
