@@ -58,8 +58,13 @@ stays in-package (it imports from `.constants`/`.prerequisites`; moving it to
 
 `implement/__init__.py` keeps `__all__` unchanged. `move_symbol` repoints the
 `log_progress_summary` / `prepare_task_tracker` re-exports to `task_tracker_prep`
-automatically and updates the only external consumer
+automatically and updates the main external consumer
 (`cli/commands/implement.py` imports `run_implement_workflow`, which stays put).
+Note this is **not** the only external reference: the integration test
+`tests/integration/test_execution_dir_integration.py` (~line 333) patches
+`core.<moved-name>` targets (e.g. `@patch("mcp_coder.workflows.implement.core.prepare_task_tracker")`).
+It is marked `claude_cli_integration` / `execution_dir` and is skipped by the
+fast-unit pytest gate, so Step 3 verifies it explicitly against the moved names.
 
 ### Correctness cleanup (bundled)
 
@@ -128,7 +133,8 @@ the 8-line helper into: `test_task_tracker_prep.py`, `test_finalisation.py`,
 1. Move `failure_reporting` group (src + tests).
 2. Move `rebase` group (src + tests).
 3. Move `task_tracker_prep` group (src + tests) — auto-repoints `__init__.py`.
-4. Move `finalisation` group (src + tests) — after this `core.py` < 750.
+   After this `core.py` is already < 750 (949 − ~54 − ~43 − ~198 ≈ 654).
+4. Move `finalisation` group (src + tests) — further reduces `core.py` to ~500.
 5. Redistribute orchestrator tests into `test_core_workflow.py`; move
    `TestResolveProjectDir` to `tests/workflows/test_utils.py` — after this
    `test_core.py` < 750.

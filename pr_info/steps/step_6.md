@@ -40,7 +40,9 @@ comment header.
 2. Diff-check __init__.py re-exports + __all__ against the original API.
 3. Run check_file_size(max 750) → no offenders, no stale allowlist entries.
 4. Run the full quality gate (format/ruff/lint-imports/pytest/pylint/mypy).
-5. Run compact-diff over the whole PR → only imports/patch-paths/helper/headers.
+5. Run integration marker (execution_dir / claude_cli_integration) → confirm
+   test_execution_dir_integration.py passes with the moved patch targets.
+6. Run compact-diff over the whole PR → only imports/patch-paths/helper/headers.
 ```
 
 ## DATA
@@ -56,6 +58,11 @@ unchanged.
 - Full gate: `run_format_code`, `run_ruff_fix`, `run_ruff_check`,
   `run_lint_imports_check`, `run_pytest_check` (fast unit markers),
   `run_pylint_check`, `run_mypy_check`.
+- **Integration patch-target run:** `run_pytest_check(markers=["execution_dir"])`
+  (or `["claude_cli_integration"]`) once, so
+  `tests/integration/test_execution_dir_integration.py` (which patches
+  `core.<moved-name>` targets, skipped by the fast-unit gate) is confirmed green
+  end-to-end.
 - Whole-PR purity: `mcp-coder git-tool compact-diff` shows only import changes,
   `patch()` target-path changes, the duplicated `_make_llm_response` helper, and
   new/deleted file headers — no logic changes anywhere.

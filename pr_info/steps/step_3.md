@@ -35,6 +35,18 @@ Test classes → `test_task_tracker_prep.py`: `TestPrepareTaskTracker`,
   Keep `__all__` unchanged. `core.py` calls `prepare_task_tracker` inside
   `run_implement_workflow`, so move_symbol adds a
   `from .task_tracker_prep import prepare_task_tracker` import to `core.py`.
+- **Confirm the import-rewrite form in the dry-run (critical).** The
+  "keep orchestrator patch targets unchanged" strategy relies on `move_symbol`
+  adding a **direct** import to `core.py`
+  (`from .task_tracker_prep import prepare_task_tracker`, leaving bare call
+  sites) so that `core.prepare_task_tracker` remains a patchable module
+  attribute. When running `move_symbol(..., dry_run=True)`, inspect the
+  rewritten `core.py` import form and confirm it is this direct form. If it
+  instead emits **qualified** references (`task_tracker_prep.prepare_task_tracker(...)`
+  via `from . import task_tracker_prep`), then `core.prepare_task_tracker`
+  disappears and every `patch("...core.<moved-name>")` breaks — **STOP and
+  revisit the patch-retarget policy for the orchestrator tests before
+  executing.**
 - Module name is `task_tracker_prep` (NOT `task_tracker`) to avoid colliding with
   `workflow_utils/task_tracker.py`. Stays in-package (imports `.constants`,
   `.prerequisites`) — do not move to `workflow_utils`.
@@ -54,12 +66,15 @@ Test classes → `test_task_tracker_prep.py`: `TestPrepareTaskTracker`,
 
 ```
 1. move_symbol(core.py, [prepare_task_tracker, log_progress_summary],
-               task_tracker_prep.py, dry_run=True) → verify __init__ repoint → execute.
+               task_tracker_prep.py, dry_run=True) → verify __init__ repoint
+               AND confirm core.py gets a DIRECT import (bare call sites) → execute.
 2. Cut the 3 test classes into test_task_tracker_prep.py.
 3. Add docstring + imports; duplicate _make_llm_response helper.
 4. Retarget patch("...core.X") → patch("...task_tracker_prep.X") in moved tests.
 5. Confirm __init__.__all__ unchanged; ruff-clean unused imports.
 6. Run all checks; verify compact-diff purity.
+7. Run integration test that patches core.prepare_task_tracker (see Checks) to
+   confirm the module attribute is still patchable.
 ```
 
 ## DATA
@@ -73,6 +88,16 @@ standard mock LLM response dict.
 
 Standard gate. Additionally confirm `implement/__init__.py` `__all__` is byte
 -identical to before and re-exports resolve from `task_tracker_prep`.
+
+**Integration patch-target check.**
+`tests/integration/test_execution_dir_integration.py` (~line 333) patches
+`@patch("mcp_coder.workflows.implement.core.prepare_task_tracker")` (plus other
+`core.<name>` targets). It is skipped by the fast-unit gate, so run it once
+explicitly after the move:
+`run_pytest_check(markers=["execution_dir"])` (or `["claude_cli_integration"]`).
+It must still pass — i.e. `mcp_coder.workflows.implement.core.prepare_task_tracker`
+remains a patchable module attribute (the direct-import form confirmed in the
+dry-run above).
 
 ## LLM prompt
 

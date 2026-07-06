@@ -1,7 +1,8 @@
 # Step 4 — Move the `finalisation` group (src + tests)
 
 > Read `pr_info/steps/summary.md` first. **Pure move** — no logic changes.
-> After this step `core.py` is under 750 lines.
+> `core.py` is already under 750 after Step 3 (~654); this step further reduces
+> it to ~500.
 
 ## WHERE
 
@@ -62,7 +63,8 @@ No data changes. `run_finalisation` → `bool` (succeeded/skipped vs error).
 ## Checks (one commit)
 
 Standard gate **plus** `mcp__mcp-workspace__check_file_size(max_lines=750)` —
-`core.py` must now report under 750. (It stays in `.large-files-allowlist` until
+`core.py` (already under 750 since Step 3) must report under 750, now ~500. (It
+stays in `.large-files-allowlist` until
 Step 6; allowlist is a maximum, so this is fine.)
 
 ## LLM prompt
