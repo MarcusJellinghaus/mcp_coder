@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: DRY shared CLI flags ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation: create `cli/shared_args.py` with five per-flag helpers + canonical wording; write `tests/cli/test_shared_args.py` first (TDD); wire `parsers.py` / `gh_parsers.py` per the table (init / issue-stats / define-labels / verify overrides, `metavar="METHOD"` everywhere). `main.py` untouched.
-- [ ] Quality checks: pylint, pytest (`-n auto` + fast markers), mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `cli/shared_args.py` with five per-flag helpers + canonical wording; write `tests/cli/test_shared_args.py` first (TDD); wire `parsers.py` / `gh_parsers.py` per the table (init / issue-stats / define-labels / verify overrides, `metavar="METHOD"` everywhere). `main.py` untouched.
+- [x] Quality checks: pylint, pytest (`-n auto` + fast markers), mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Single-source command descriptions ([step_2.md](./steps/step_2.md))
 

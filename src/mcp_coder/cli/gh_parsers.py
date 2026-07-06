@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from .parsers import WideHelpFormatter
+from .shared_args import add_project_dir_arg
 
 
 def add_gh_tool_parsers(subparsers: Any) -> None:
@@ -29,12 +30,7 @@ def add_gh_tool_parsers(subparsers: Any) -> None:
   1  Could not detect base branch
   2  Error (not a git repo, API failure)""",
     )
-    get_base_branch_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
+    add_project_dir_arg(get_base_branch_parser)
 
     # gh-tool define-labels (moved from top-level)
     define_labels_parser = gh_tool_subparsers.add_parser(
@@ -65,11 +61,8 @@ Config resolution:
   3. Bundled package defaults""",
         formatter_class=WideHelpFormatter,
     )
-    define_labels_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory. Default: current directory",
+    add_project_dir_arg(
+        define_labels_parser, help="Project directory. Default: current directory"
     )
     define_labels_parser.add_argument(
         "--dry-run",
@@ -123,10 +116,10 @@ Config resolution:
         default=False,
         help="Show individual issue details with links",
     )
-    issue_stats_parser.add_argument(
-        "--project-dir",
-        metavar="PATH",
+    add_project_dir_arg(
+        issue_stats_parser,
         help="Project directory. Default: current directory",
+        metavar="PATH",
     )
 
     # gh-tool checkout-issue-branch command
@@ -142,12 +135,7 @@ Config resolution:
     checkout_branch_parser.add_argument(
         "issue_number", type=int, help="GitHub issue number"
     )
-    checkout_branch_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives. Default: current directory",
-    )
+    add_project_dir_arg(checkout_branch_parser)
 
     # gh-tool set-status command
     from .commands.set_status import build_set_status_epilog
@@ -170,12 +158,7 @@ Config resolution:
         default=None,
         help="Issue number (default: auto-detect from branch name)",
     )
-    set_status_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
+    add_project_dir_arg(set_status_parser)
     set_status_parser.add_argument(
         "--force",
         action="store_true",
@@ -214,12 +197,7 @@ def add_git_tool_parsers(subparsers: Any) -> None:
         default=None,
         help="Base branch to diff against (default: auto-detected)",
     )
-    compact_diff_parser.add_argument(
-        "--project-dir",
-        type=str,
-        default=None,
-        help="Project directory: where source code lives (git operations, file modifications). Default: current directory",
-    )
+    add_project_dir_arg(compact_diff_parser)
     compact_diff_parser.add_argument(
         "--exclude",
         action="append",
