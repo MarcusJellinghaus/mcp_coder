@@ -263,13 +263,13 @@ class TestCommandHandlers:
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Status command prints message when no sessions."""
-        from mcp_coder.cli.commands.coordinator.commands import (
+        from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
             execute_coordinator_vscodeclaude_status,
         )
 
         # Mock load_sessions to return empty
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_sessions",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_sessions",
             lambda: {"sessions": [], "last_updated": "2024-01-01T00:00:00Z"},
         )
         # Mock build_eligible_issues to return empty list (no eligible issues)
@@ -280,13 +280,13 @@ class TestCommandHandlers:
 
         # Mock load_config to return empty repos
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_config",
             lambda: {"coordinator": {"repos": {}}},
         )
 
         # Mock load_vscodeclaude_config for workspace_base
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_vscodeclaude_config",
             lambda: {"workspace_base": "/tmp/test", "max_sessions": 3},
         )
 
@@ -308,17 +308,17 @@ class TestCommandHandlers:
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Intervention mode requires --issue."""
-        from mcp_coder.cli.commands.coordinator.commands import (
+        from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
             execute_coordinator_vscodeclaude,
         )
 
         # Mock create_default_config to not create config
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.create_default_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.create_default_config",
             lambda: False,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_vscodeclaude_config",
             lambda: {"workspace_base": "/tmp", "max_sessions": 3},
         )
 
@@ -340,17 +340,17 @@ class TestCommandHandlers:
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Creates config file on first run."""
-        from mcp_coder.cli.commands.coordinator.commands import (
+        from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
             execute_coordinator_vscodeclaude,
         )
 
         # Mock create_default_config to indicate config was created
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.create_default_config",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.create_default_config",
             lambda: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.cli.commands.coordinator.commands.get_config_file_path",
+            "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.get_config_file_path",
             lambda: Path("/fake/config.toml"),
         )
 
@@ -377,15 +377,27 @@ def _assessment_stub(active: bool) -> SimpleNamespace:
 class TestSkipGithubInstallWiring:
     """Tests for --no-install-from-github flag wiring through commands."""
 
-    @patch("mcp_coder.cli.commands.coordinator.commands.process_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.cleanup_stale_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.process_eligible_issues"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.restart_closed_sessions"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.cleanup_stale_sessions"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude._build_cached_issues_by_repo"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_config")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_vscodeclaude_config"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_repo_config")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.create_default_config"
+    )
     def test_execute_coordinator_vscodeclaude_passes_skip_github_install(
         self,
         mock_create_config: MagicMock,
@@ -425,7 +437,7 @@ class TestSkipGithubInstallWiring:
             no_install_from_github=True,
         )
 
-        from mcp_coder.cli.commands.coordinator.commands import (
+        from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
             execute_coordinator_vscodeclaude,
         )
 
@@ -435,11 +447,17 @@ class TestSkipGithubInstallWiring:
         call_kwargs = mock_process.call_args[1]
         assert call_kwargs["skip_github_install"] is True
 
-    @patch("mcp_coder.cli.commands.coordinator.commands.prepare_and_launch_session")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_vscodeclaude_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
-    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.prepare_and_launch_session"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_repo_vscodeclaude_config"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.IssueBranchManager"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_repo_config")
     def test_handle_intervention_mode_passes_skip_github_install(
         self,
         mock_load_repo: MagicMock,
@@ -488,7 +506,7 @@ class TestSkipGithubInstallWiring:
             "max_sessions": 3,
         }
 
-        from mcp_coder.cli.commands.coordinator.commands import (
+        from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
             _handle_intervention_mode,
         )
 
@@ -502,17 +520,29 @@ class TestSkipGithubInstallWiring:
 class TestAtCapacityDiagnosticLog:
     """Tests for the at-capacity diagnostic log line in execute_coordinator_vscodeclaude."""
 
-    @patch("mcp_coder.cli.commands.coordinator.commands.apply_assessments")
-    @patch("mcp_coder.cli.commands.coordinator.commands.process_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.cleanup_stale_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.build_assessments")
-    @patch("mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.apply_assessments")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.process_eligible_issues"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.restart_closed_sessions"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.cleanup_stale_sessions"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.build_assessments")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude._build_cached_issues_by_repo"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_config")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_vscodeclaude_config"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_repo_config")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.create_default_config"
+    )
     def test_at_capacity_log_includes_folder_basenames(
         self,
         mock_create_config: MagicMock,
@@ -560,7 +590,7 @@ class TestAtCapacityDiagnosticLog:
             no_install_from_github=False,
         )
 
-        from mcp_coder.cli.commands.coordinator.commands import (
+        from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
             execute_coordinator_vscodeclaude,
         )
 
@@ -571,17 +601,29 @@ class TestAtCapacityDiagnosticLog:
         assert "repo_111" in caplog.text
         assert "repo_222" in caplog.text
 
-    @patch("mcp_coder.cli.commands.coordinator.commands.apply_assessments")
-    @patch("mcp_coder.cli.commands.coordinator.commands.process_eligible_issues")
-    @patch("mcp_coder.cli.commands.coordinator.commands.restart_closed_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.cleanup_stale_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.build_assessments")
-    @patch("mcp_coder.cli.commands.coordinator.commands._build_cached_issues_by_repo")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_sessions")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_vscodeclaude_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
-    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.apply_assessments")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.process_eligible_issues"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.restart_closed_sessions"
+    )
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.cleanup_stale_sessions"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.build_assessments")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude._build_cached_issues_by_repo"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_sessions")
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_config")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_vscodeclaude_config"
+    )
+    @patch("mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_repo_config")
+    @patch(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.create_default_config"
+    )
     def test_below_capacity_message_unchanged(
         self,
         mock_create_config: MagicMock,
@@ -625,7 +667,7 @@ class TestAtCapacityDiagnosticLog:
             no_install_from_github=False,
         )
 
-        from mcp_coder.cli.commands.coordinator.commands import (
+        from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
             execute_coordinator_vscodeclaude,
         )
 

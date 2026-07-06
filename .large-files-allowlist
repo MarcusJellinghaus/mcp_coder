@@ -7,7 +7,6 @@
 docs/cli-reference.md
 docs/configuration/config.md
 docs/processes-prompts/development-process.md
-src/mcp_coder/cli/commands/coordinator/commands.py
 src/mcp_coder/cli/commands/verify.py
 src/mcp_coder/cli/parsers.py
 tools/safe_delete_folder.py

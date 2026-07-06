@@ -33,9 +33,9 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `move_symbol` (dry-run + verify GATE, then execute) the 5 VSCodeClaude functions to new `commands_vscodeclaude.py`; set `__all__` in both modules; split `__init__.py` into two import blocks; remove `commands.py` from `.large-files-allowlist`; blanket `replace_all` patch-string repoint in the 3 vscodeclaude-only test files
-- [ ] Quality checks: run_format_code, run_pylint_check, run_pytest_check, run_mypy_check, run_lint_imports_check, run_vulture_check, check_file_size, tach check, compact-diff (imports + headers only) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `move_symbol` (dry-run + verify GATE, then execute) the 5 VSCodeClaude functions to new `commands_vscodeclaude.py`; set `__all__` in both modules; split `__init__.py` into two import blocks; remove `commands.py` from `.large-files-allowlist`; blanket `replace_all` patch-string repoint in the 3 vscodeclaude-only test files
+- [x] Quality checks: run_format_code, run_pylint_check, run_pytest_check, run_mypy_check, run_lint_imports_check, run_vulture_check, check_file_size, tach check, compact-diff (imports + headers only) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
