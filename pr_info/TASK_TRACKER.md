@@ -71,5 +71,5 @@ See [step_6.md](./steps/step_6.md).
 
 ## Pull Request
 
-- [ ] Review full diff across all steps for consistency and completeness
+- [x] Review full diff across all steps for consistency and completeness
 - [ ] Write PR summary describing the launcher + `session_setup` refactor (issue #695)
