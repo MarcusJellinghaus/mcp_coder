@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Add `mcp_config_ok` exit-code plumbing
+
+See [step_1.md](./steps/step_1.md).
+
+- [ ] Implementation: add `TestMcpConfigExitCode` tests (TDD) + `mcp_config_ok` param and guard in `_compute_exit_code`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Add `_validate_mcp_config`, render the validity row, delete `_collect_mcp_warnings`
+
+See [step_2.md](./steps/step_2.md).
+
+- [ ] Implementation: add `_validate_mcp_config`, wire `MCP CONFIG` row + downstream short-circuit into `execute_verify`, delete `_collect_mcp_warnings`, update tests/conftest
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Address PR review feedback
+- [ ] Write PR summary
