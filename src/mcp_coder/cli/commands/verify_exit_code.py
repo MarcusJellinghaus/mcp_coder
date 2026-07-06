@@ -1,3 +1,5 @@
+"""Compute the CLI exit code from provider and verification results."""
+
 from typing import Any
 
 
