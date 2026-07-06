@@ -7,8 +7,9 @@
 ## Objective
 
 Remove the second source of truth for command descriptions. Introduce a
-`COMMAND_DESCRIPTIONS` dict + centralized ordered `COMMAND_CATEGORIES` map in
-`cli/commands/help.py`; render the overview from them; point every leaf
+`COMMAND_DESCRIPTIONS` dict + centralized ordered `COMMAND_CATEGORIES` map in a
+new dependency-free module `cli/command_catalog.py`; render the overview in
+`cli/commands/help.py` from them; point every leaf
 subparser's `help=` at `COMMAND_DESCRIPTIONS`; apply the settled canonical
 wording; add the missing `gh-tool checkout-issue-branch`; move `create-plan`'s
 failure-label detail into its `--help` epilog; delete the dead
@@ -16,12 +17,16 @@ failure-label detail into its `--help` epilog; delete the dead
 
 ## WHERE
 
+- **Create** `src/mcp_coder/cli/command_catalog.py` (dependency-free)
 - **Modify** `src/mcp_coder/cli/commands/help.py`
 - **Modify** `src/mcp_coder/cli/parsers.py`
 - **Modify** `src/mcp_coder/cli/gh_parsers.py`
 - **Modify** `tests/cli/commands/test_help.py` (rewrite obsolete tests)
 
-## WHAT — new shape in `help.py`
+## WHAT — new shape
+
+**`command_catalog.py`** (new, dependency-free — imports only stdlib/typing,
+nothing from `mcp_coder.cli`):
 
 ```python
 COMMAND_DESCRIPTIONS: dict[str, str] = {
@@ -59,12 +64,19 @@ COMMAND_CATEGORIES: list[tuple[str, list[str]]] = [
       "gh-tool get-base-branch", "gh-tool define-labels",
       "gh-tool issue-stats", "git-tool compact-diff"]),
 ]
+```
 
-def get_help_text() -> str: ...  # stays no-arg
+**`help.py`** imports both constants from `command_catalog.py` and keeps the
+rendering logic (it still owns `get_help_text()`):
+
+```python
+from ..command_catalog import COMMAND_CATEGORIES, COMMAND_DESCRIPTIONS
+
+def get_help_text() -> str: ...  # stays no-arg, renders from the catalog
 ```
 
 Delete the `Command` and `Category` NamedTuple classes and all
-`Category.description` data.
+`Category.description` data from `help.py`.
 
 ## HOW — integration
 
@@ -74,8 +86,9 @@ Delete the `Command` and `Category` NamedTuple classes and all
    `OPTIONS` section (`--version`, `--log-level LEVEL`), category headers, column
    alignment, and footer (tests assert these).
 2. `parsers.py` / `gh_parsers.py`: add
-   `from .commands.help import COMMAND_DESCRIPTIONS`
-   (mirrors the existing `from .commands.set_status import ...` import) and change
+   `from .command_catalog import COMMAND_DESCRIPTIONS`
+   (a plain module-level import — safe because `command_catalog.py` is
+   dependency-free, so there is no coupling to the `commands` package) and change
    each **leaf** subparser's `help=` to `COMMAND_DESCRIPTIONS["<display-name>"]`.
    Use the full display name as the key (e.g. `"vscodeclaude launch"`,
    `"gh-tool set-status"`, `"commit auto"`).
@@ -101,39 +114,58 @@ return "\n".join(lines)
 
 ## DATA
 
-`get_help_text() -> str`. `COMMAND_DESCRIPTIONS: dict[str, str]`,
-`COMMAND_CATEGORIES: list[tuple[str, list[str]]]`. No import cycle: `help.py`
-imports only `__version__`; parsers import `COMMAND_DESCRIPTIONS` from `help.py`.
+`get_help_text() -> str` (in `help.py`). `COMMAND_DESCRIPTIONS: dict[str, str]`
+and `COMMAND_CATEGORIES: list[tuple[str, list[str]]]` are both defined in the new
+`command_catalog.py`. No import cycle: `command_catalog.py` imports nothing from
+`mcp_coder.cli`; `help.py` and the parsers both import the constants from it.
 
 ## TDD — rewrite `tests/cli/commands/test_help.py`
 
-Keep passing (adjust to new structure where they read data): version header,
-`OPTIONS` section, category headers, usage line, footer, no-github-url, header.
-Rewrite for the new shape:
-- `test_command_categories_contains_all_commands`: assert 4 categories, all 19
-  display names present (including `gh-tool checkout-issue-branch`), `"help"`
-  absent, and TOOLS order matches the settled list.
+Import the catalog constants from `mcp_coder.cli.command_catalog` and
+`get_help_text` from `mcp_coder.cli.commands.help`.
+
+Keep passing unchanged (they read only `get_help_text()` output, never the
+deleted NamedTuples): `test_help_text_has_version_header`,
+`test_help_text_has_options_section`, `test_help_text_has_all_category_headers`,
+`test_help_text_has_usage_line`, `test_help_text_has_footer`,
+`test_help_text_no_github_url`, `test_help_text_has_header`.
+
+**Mandatory rewrites** — these FOUR currently-existing tests reference the
+deleted `Category`/`Command` NamedTuples (`cat.commands`, `cmd.name`,
+`cat.description`) and MUST be rewritten to read the new
+`COMMAND_CATEGORIES` (`list[tuple[str, list[str]]]`) and `COMMAND_DESCRIPTIONS`:
+- `test_command_categories_contains_all_commands`: iterate the new tuple shape
+  (`for title, names in COMMAND_CATEGORIES: for name in names`) instead of
+  `cmd.name`; assert 4 categories, all 19 display names present (including
+  `gh-tool checkout-issue-branch`), `"help"` absent, and TOOLS order matches the
+  settled list.
 - `test_help_text_has_all_commands`: iterate `COMMAND_DESCRIPTIONS`; each name +
   its description appear in `get_help_text()`.
-- Remove/replace `test_help_text_no_category_descriptions` (field deleted).
-- Column-alignment test: recompute `width` from the new structure.
+- `test_help_text_no_category_descriptions`: the `Category.description` field is
+  deleted, so remove this test — there are no per-category description strings
+  left to assert against.
+- `test_help_text_command_column_alignment`: recompute `width` /
+  `all_command_names` from the new `COMMAND_CATEGORIES` tuple shape and
+  `COMMAND_DESCRIPTIONS` keys instead of `cmd.name`.
 
 ## Checks
 
 Run and pass `run_pylint_check`, `run_pytest_check` (`-n auto` + fast-exclusion
 markers), `run_mypy_check`. Also run `run_lint_imports_check` / `run_tach_check`
-to confirm the `parsers → commands.help` import is allowed (fallback per summary
-if tach objects). Then verify `create_parser()` in `main.py` is untouched.
+to confirm the `parsers → command_catalog` and `commands.help → command_catalog`
+imports are allowed. Then verify `create_parser()` in `main.py` is untouched.
 
 ## LLM prompt for this step
 
 > Implement **Step 2** of `pr_info/steps/summary.md` (see
-> `pr_info/steps/step_2.md`). Using MCP workspace tools: in
-> `src/mcp_coder/cli/commands/help.py` add `COMMAND_DESCRIPTIONS` and the
-> centralized ordered `COMMAND_CATEGORIES` map exactly as specified, delete the
-> `Command`/`Category` NamedTuples and `Category.description`, and render
-> `get_help_text()` (no-arg) from them. Point every leaf subparser's `help=` in
-> `parsers.py` / `gh_parsers.py` at `COMMAND_DESCRIPTIONS[...]`, applying the
+> `pr_info/steps/step_2.md`). Using MCP workspace tools: create the new
+> dependency-free module `src/mcp_coder/cli/command_catalog.py` holding
+> `COMMAND_DESCRIPTIONS` and the centralized ordered `COMMAND_CATEGORIES` map
+> exactly as specified. In `src/mcp_coder/cli/commands/help.py` import both from
+> the catalog, delete the `Command`/`Category` NamedTuples and
+> `Category.description`, and render `get_help_text()` (no-arg) from them. Point
+> every leaf subparser's `help=` in `parsers.py` / `gh_parsers.py` at
+> `COMMAND_DESCRIPTIONS[...]` (imported from `command_catalog.py`), applying the
 > settled canonical wording, adding `gh-tool checkout-issue-branch`, and moving
 > `create-plan`'s failure-label detail into its `--help` epilog. Follow TDD by
 > rewriting `tests/cli/commands/test_help.py` for the new shape first. Do not

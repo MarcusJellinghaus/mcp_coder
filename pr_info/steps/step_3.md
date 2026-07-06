@@ -24,11 +24,11 @@ This permanently prevents omissions like the previously-missing
 Test-only imports (no cycle, allowed in tests):
 ```python
 from mcp_coder.cli.main import create_parser
-from mcp_coder.cli.commands.help import (
+from mcp_coder.cli.command_catalog import (
     COMMAND_CATEGORIES,
     COMMAND_DESCRIPTIONS,
-    get_help_text,
 )
+from mcp_coder.cli.commands.help import get_help_text
 ```
 
 ## WHAT — helper + tests
@@ -56,9 +56,15 @@ Tests (each a plain function):
 
 Uses public `parser.prog` for display names; reads subparser structure via
 argparse attributes (acceptable in **test** code — the "no internals in the
-renderer" rule from the issue does not apply here). Suppressed subparsers
-(`help=SUPPRESS`) are naturally absent from `_choices_actions`, so `help` is
-excluded for free.
+renderer" rule from the issue does not apply here).
+
+**Suppression must be filtered explicitly — it is NOT free.** A subparser added
+with `help=argparse.SUPPRESS` is *not* absent from the parser: it still appears
+in `action.choices` (key `"help"`) and in `action._choices_actions` with its
+help text set to `argparse.SUPPRESS` (the literal `"==SUPPRESS=="`). So the walk
+would otherwise collect the suppressed `help` command and break the anti-drift
+assertions. `collect_leaves` therefore must skip any entry whose captured help is
+`argparse.SUPPRESS` (equivalently, skip the known suppressed `help` command).
 
 ```
 def collect_leaves(parser):
@@ -67,11 +73,14 @@ def collect_leaves(parser):
         if isinstance(action, argparse._SubParsersAction):
             help_by_name = {ca.dest: ca.help for ca in action._choices_actions}
             for name, sub in action.choices.items():
+                help_text = help_by_name.get(name)
+                if help_text == argparse.SUPPRESS:  # suppressed leaf -> skip
+                    continue
                 if _has_subparsers(sub):          # group -> recurse
                     out.update(collect_leaves(sub))
                 else:                              # leaf
                     display = sub.prog[len("mcp-coder "):]
-                    out[display] = help_by_name.get(name)
+                    out[display] = help_text
     return out
 # _has_subparsers(p) = any(isinstance(a, _SubParsersAction) for a in p._actions)
 ```

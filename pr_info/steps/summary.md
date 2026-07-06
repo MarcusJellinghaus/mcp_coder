@@ -29,7 +29,7 @@ issue itself establishes: after the settled wording edits, **every leaf's
 kept in sync by capture, we use **one shared string**:
 
 - A single `COMMAND_DESCRIPTIONS: dict[str, str]` (display-name → canonical
-  wording) lives in `cli/commands/help.py`.
+  wording) lives in the dependency-free module `cli/command_catalog.py`.
 - Each subparser passes `help=COMMAND_DESCRIPTIONS["<name>"]` — same object, so
   drift is structurally impossible (identical guarantee to register-time
   capture).
@@ -65,14 +65,16 @@ the **anti-drift test**, which may freely import both `create_parser` and
 
 ### Dependency direction note
 
-`parsers.py` / `gh_parsers.py` will import `COMMAND_DESCRIPTIONS` from
-`cli/commands/help.py`. This mirrors the **existing** pattern
-`gh_parsers.py → cli.commands.set_status.build_set_status_epilog`, so it
-introduces no new architectural oddity. `help.py` imports only `__version__`, so
-there is no cycle. `.importlinter` only constrains cross-top-package imports
-(`cli` vs `workflows` …), so an intra-`cli` import is unaffected; `tach` will be
-verified during implementation. (Fallback if tach objects: move the two catalog
-constants to a dependency-free `cli/command_catalog.py` imported by both.)
+The two catalog constants (`COMMAND_DESCRIPTIONS`, `COMMAND_CATEGORIES`) live in
+a **dependency-free** module `cli/command_catalog.py` that imports nothing from
+within `mcp_coder.cli` (only stdlib/typing). `parsers.py` / `gh_parsers.py`
+import `COMMAND_DESCRIPTIONS` from `cli/command_catalog.py`, and
+`cli/commands/help.py` imports both constants from there to render the overview.
+Because the catalog is dependency-free there is **no coupling to the heavy
+`commands` package** and no import cycle, so a module-level import in the parsers
+is safe. `.importlinter` only constrains cross-top-package imports (`cli` vs
+`workflows` …), so an intra-`cli` import is unaffected; `tach` will be verified
+during implementation.
 
 ## Settled command descriptions (canonical `help=` == overview text)
 
@@ -133,17 +135,21 @@ constants to a dependency-free `cli/command_catalog.py` imported by both.)
 
 **Created**
 - `src/mcp_coder/cli/shared_args.py` — five per-flag helpers (Step 1)
+- `src/mcp_coder/cli/command_catalog.py` — dependency-free `COMMAND_DESCRIPTIONS`
+  + centralized ordered `COMMAND_CATEGORIES` catalog (Step 2)
 - `tests/cli/test_shared_args.py` — helper + wiring assertions (Step 1)
 - `tests/cli/test_help_anti_drift.py` — anti-drift lock (Step 3)
 - `pr_info/steps/summary.md`, `step_1.md`, `step_2.md`, `step_3.md`
 
 **Modified**
 - `src/mcp_coder/cli/parsers.py` — flags via helpers (Step 1); leaf `help=` →
-  `COMMAND_DESCRIPTIONS`, canonical wording, create-plan epilog (Step 2)
+  `COMMAND_DESCRIPTIONS` (imported from `command_catalog.py`), canonical wording,
+  create-plan epilog (Step 2)
 - `src/mcp_coder/cli/gh_parsers.py` — same (Steps 1 & 2)
-- `src/mcp_coder/cli/commands/help.py` — `COMMAND_DESCRIPTIONS` + centralized
-  `COMMAND_CATEGORIES` map, render from them, drop `Category`/`Command`
-  NamedTuples + `Category.description` (Step 2)
+- `src/mcp_coder/cli/commands/help.py` — import `COMMAND_DESCRIPTIONS` +
+  `COMMAND_CATEGORIES` from `command_catalog.py`, render from them (owns the
+  rendering logic + `get_help_text()`), drop `Category`/`Command` NamedTuples +
+  `Category.description` (Step 2)
 - `tests/cli/commands/test_help.py` — rewritten for new shape (Step 2)
 
 **Explicitly NOT modified**
@@ -153,8 +159,9 @@ constants to a dependency-free `cli/command_catalog.py` imported by both.)
 ## Step overview
 
 1. **Step 1** — DRY shared flags: new `cli/shared_args.py` + wire all parsers.
-2. **Step 2** — Single-source descriptions: catalog constants in `help.py`,
-   render from them, point leaf `help=` at the dict, wording edits + epilog.
+2. **Step 2** — Single-source descriptions: catalog constants in new
+   dependency-free `command_catalog.py`, render `help.py` from them, point leaf
+   `help=` at the dict, wording edits + epilog.
 3. **Step 3** — Anti-drift test locking parity + full-coverage.
 
 Each step = exactly one commit (tests + implementation + `pylint`/`pytest`/`mypy`
