@@ -50,10 +50,20 @@ def verify_mlflow(since: datetime | None = None) -> dict[str, Any]: ...
    `query_sqlite_tracking(...)`), matching how the code reads today. Do **not** convert to
    qualified `mlflow_logger.<name>()` calls.
 
-2. **`mlflow_logger.py` cleanup:** after the move, let `run_ruff_fix` drop the now-unused
-   imports (`sqlite3`, `PackageNotFoundError`, `pkg_version`, `validate_tracking_uri`,
-   `TrackingStats`, `query_sqlite_tracking`). Manually remove `"verify_mlflow"` from its
-   `__all__`. Keep `os`, `datetime`, `load_mlflow_config` — the class still uses them.
+   After adding this manual import block, run `run_format_code` (isort) and confirm there are
+   no duplicate or unused import lines — `move_symbol` may auto-inject
+   `from .mlflow_logger import is_mlflow_available`, which this manual block also adds. Remove
+   any duplicate so the import appears exactly once.
+
+2. **`mlflow_logger.py` cleanup:** after the move, **manually remove via `edit_file`** the
+   six now-unused imports — `sqlite3`, `PackageNotFoundError`, `version as pkg_version`,
+   `validate_tracking_uri`, `TrackingStats`, `query_sqlite_tracking` — each used ONLY by the
+   moved functions, so deletion is precise. Do **not** rely on `run_ruff_fix` (F401): this
+   repo has `[tool.ruff.lint] select = ["D", "DOC"]` (F401 off) and disables pylint `W0611`,
+   so no gate catches leftover dead imports — they would ship silently. Run `run_format_code`
+   afterward. (`run_ruff_fix` may run as a harmless extra but is NOT the removal mechanism.)
+   Manually remove `"verify_mlflow"` from its `__all__`. Keep `os`, `datetime`,
+   `load_mlflow_config`, `Any` — the class still uses them.
 
 3. **`__init__.py`:** `move_symbol` repoints `from .llm.mlflow_verify import verify_mlflow`.
    Confirm `verify_mlflow` is still listed in `__all__` (public API stays stable).
@@ -65,14 +75,19 @@ def verify_mlflow(since: datetime | None = None) -> dict[str, Any]: ...
    `_probe_mlflow_connection`) whose names now resolve in `mlflow_verify`'s namespace.
    The dotted-prefix match is safe: the `from ... import verify_mlflow` line uses
    `mlflow_logger import` (space, not dot) and is repointed separately by `move_symbol`.
+   Leave `tests/cli/commands/test_verify*.py` untouched: its ~130
+   `@patch("mcp_coder.cli.commands.verify.verify_mlflow")` targets remain valid because
+   `verify.py` still imports the name.
 
 ## ALGORITHM — execution order
 
 ```
 1. move_symbol(dry_run=True) the 5 functions  -> preview; confirm consumers repointed
 2. move_symbol(execute)                        -> creates mlflow_verify.py, repoints __init__/verify.py
-3. add the import block to mlflow_verify.py; remove "verify_mlflow" from mlflow_logger.__all__
-4. run_ruff_fix                                -> auto-remove dead imports in mlflow_logger.py
+3. add the import block to mlflow_verify.py (run_format_code/isort, dedupe any auto-injected
+   is_mlflow_available import); remove "verify_mlflow" from mlflow_logger.__all__
+4. edit_file -> manually remove the 6 dead imports in mlflow_logger.py (F401 NOT enabled here,
+   so ruff/pylint won't catch them); then run_format_code
 5. edit_file(replace_all) the test @patch strings; confirm test import line repointed
 6. delete the mlflow_logger.py line in .large-files-allowlist
 7. verify gates (compact-diff, file-size, format/ruff/lint-imports/vulture, pytest/pylint/mypy, tach)
@@ -111,17 +126,25 @@ Do exactly this, in order, using MCP tools only:
    _format_tracking_data, verify_mlflow. Review the preview, then execute it.
 2. Add to mlflow_verify.py the import block listed under "HOW" in step_1.md,
    including `from .mlflow_logger import is_mlflow_available`. Keep the moved
-   functions calling names bare (no `mlflow_logger.` qualification).
+   functions calling names bare (no `mlflow_logger.` qualification). Then run
+   run_format_code (isort) and dedupe: move_symbol may have auto-injected the
+   is_mlflow_available import, so ensure it appears exactly once (no duplicate/
+   unused import lines).
 3. Remove "verify_mlflow" from mlflow_logger.py's __all__. Confirm
    src/mcp_coder/__init__.py re-exports verify_mlflow from mlflow_verify and
    still lists it in __all__.
-4. Run mcp__mcp-tools-py__run_ruff_fix to drop the now-unused imports in
-   mlflow_logger.py (sqlite3, PackageNotFoundError, pkg_version,
-   validate_tracking_uri, TrackingStats, query_sqlite_tracking).
+4. MANUALLY remove (via edit_file) the now-unused imports in mlflow_logger.py:
+   sqlite3, PackageNotFoundError, version as pkg_version, validate_tracking_uri,
+   TrackingStats, query_sqlite_tracking. Do NOT rely on run_ruff_fix — F401 is not
+   enabled in this repo (ruff select = ["D","DOC"]) and pylint W0611 is disabled,
+   so a leftover dead import would ship silently. Keep os, datetime,
+   load_mlflow_config, Any (still used by the class). Then run run_format_code.
 5. In tests/llm/test_mlflow_verify.py do ONE edit_file(replace_all=True):
    "mcp_coder.llm.mlflow_logger." -> "mcp_coder.llm.mlflow_verify." (fixes the 51
    @patch targets). Confirm the `from ... import verify_mlflow` line points to
-   mlflow_verify.
+   mlflow_verify. Do NOT touch tests/cli/commands/test_verify*.py: its ~130
+   @patch("mcp_coder.cli.commands.verify.verify_mlflow") targets stay valid
+   (verify.py still imports the name).
 6. Remove the `src/mcp_coder/llm/mlflow_logger.py` line from .large-files-allowlist.
 7. Verify everything: mcp__mcp-workspace__check_file_size (mlflow_logger.py must be
    < 750 and off the allowlist), run_format_code, run_ruff_check,

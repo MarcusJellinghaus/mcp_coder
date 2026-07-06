@@ -79,10 +79,17 @@ the new namespace (see below).
 | `is_mlflow_available` | (defined here) | **add** `from .mlflow_logger import is_mlflow_available` |
 | `Any` (from `typing`) | keep | **add** |
 
-> Unused-import removal on the `mlflow_logger.py` side is delegated to
-> `run_ruff_fix` (F401) rather than a hand-curated list — safer, since ruff keeps
-> anything still referenced (e.g. `load_mlflow_config`). Adding imports to the
-> **new** file is manual.
+> Unused-import removal on the `mlflow_logger.py` side is done **manually via
+> `edit_file`** — the six imports above (`sqlite3`, `PackageNotFoundError`,
+> `version as pkg_version`, `validate_tracking_uri`, `TrackingStats`,
+> `query_sqlite_tracking`) are each used ONLY by the moved functions, so deletion
+> is precise. This cannot be delegated to `run_ruff_fix` (F401): this repo's
+> `pyproject.toml` sets `[tool.ruff.lint] select = ["D", "DOC"]` (F401 not enabled)
+> and `[tool.pylint.messages_control]` disables `W0611`, so no gate would catch a
+> leftover dead import — it would ship silently. Run `run_format_code` afterward.
+> (`run_ruff_fix` may still be run as a harmless extra, but it is NOT the removal
+> mechanism.) Keep `os`, `datetime`, `load_mlflow_config`, `Any` — the class still
+> uses them. Adding imports to the **new** file is manual.
 
 Also: remove `"verify_mlflow"` from `mlflow_logger.py`'s `__all__`.
 
@@ -101,6 +108,7 @@ Also: remove `"verify_mlflow"` from `mlflow_logger.py`'s `__all__`.
 
 **Unchanged (verified)**
 - `tests/test_module_exports.py` — imports via top-level `mcp_coder` namespace; no edit once `__init__.py` is repointed.
+- `tests/cli/commands/test_verify*.py` — the ~130 `@patch("mcp_coder.cli.commands.verify.verify_mlflow")` targets stay valid (because `verify.py` still imports the name) and must **NOT** be edited. Only `tests/llm/test_mlflow_verify.py` is retargeted.
 
 ## Why a single step / single commit
 
