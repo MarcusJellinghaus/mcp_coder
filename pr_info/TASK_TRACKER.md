@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Anti-drift test lock ([step_3.md](./steps/step_3.md))
 
-- [ ] Implementation: create `tests/cli/test_help_anti_drift.py` with `collect_leaves()` walking `create_parser()` tree and the five parity assertions (leaves ⊆ descriptions with matching `help=`, keys == leaf set, every leaf rendered, group/suppressed excluded, every description categorized).
-- [ ] Quality checks: pylint, pytest (`-n auto` + fast markers), mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `tests/cli/test_help_anti_drift.py` with `collect_leaves()` walking `create_parser()` tree and the five parity assertions (leaves ⊆ descriptions with matching `help=`, keys == leaf set, every leaf rendered, group/suppressed excluded, every description categorized).
+- [x] Quality checks: pylint, pytest (`-n auto` + fast markers), mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
