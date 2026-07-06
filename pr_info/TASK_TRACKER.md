@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: move `_assessment_stub`, `TestSkipGithubInstallWiring`, and `TestAtCapacityDiagnosticLog` verbatim from `test_commands.py` to `test_vscodeclaude_cli.py`; reconcile imports (add `SimpleNamespace`, `MagicMock`, `patch`, `VSCodeClaudeConfig` to target; remove now-unused `SimpleNamespace`, `VSCodeClaudeConfig` from source). No `src/` changes.
-- [ ] Quality checks: run_format_code, run_pylint_check, run_pytest_check, run_mypy_check, run_vulture_check — fix all issues (same test count as before)
-- [ ] Commit message prepared
+- [x] Implementation: move `_assessment_stub`, `TestSkipGithubInstallWiring`, and `TestAtCapacityDiagnosticLog` verbatim from `test_commands.py` to `test_vscodeclaude_cli.py`; reconcile imports (add `SimpleNamespace`, `MagicMock`, `patch`, `VSCodeClaudeConfig` to target; remove now-unused `SimpleNamespace`, `VSCodeClaudeConfig` from source). No `src/` changes.
+- [x] Quality checks: run_format_code, run_pylint_check, run_pytest_check, run_mypy_check, run_vulture_check — fix all issues (same test count as before)
+- [x] Commit message prepared
 
 ### Step 2: Move the VSCodeClaude source family + repoint patch strings
 
