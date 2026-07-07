@@ -8,7 +8,6 @@ docs/cli-reference.md
 docs/configuration/config.md
 docs/processes-prompts/development-process.md
 tools/safe_delete_folder.py
-src/mcp_coder/llm/mlflow_logger.py
 src/mcp_coder/prompt_manager.py
 src/mcp_coder/workflows/vscodeclaude/workspace.py
 tests/cli/commands/coordinator/test_core.py

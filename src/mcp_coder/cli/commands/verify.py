@@ -19,7 +19,7 @@ from mcp_coder.cli.commands import verify_exit_code
 
 from ...llm.env import prepare_llm_environment
 from ...llm.interface import prompt_llm
-from ...llm.mlflow_logger import verify_mlflow
+from ...llm.mlflow_verify import verify_mlflow
 from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
 from ...mcp_workspace_git import verify_git

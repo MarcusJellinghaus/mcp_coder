@@ -14,7 +14,7 @@ Example:
 
 from .checks.branch_status import collect_branch_status
 from .llm.interface import prompt_llm
-from .llm.mlflow_logger import verify_mlflow
+from .llm.mlflow_verify import verify_mlflow
 from .llm.providers.claude.claude_cli_verification import verify_claude
 from .llm.providers.claude.claude_executable_finder import (
     find_claude_executable,
