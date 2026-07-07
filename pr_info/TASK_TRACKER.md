@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md) for full detail.
 
-- [ ] Implementation: move the 3 parsing helpers (`_extract_headers`, `_extract_code_block_after_header`, `_find_duplicates`) to new `src/mcp_coder/prompt_parsing.py` and the 3 test classes (`TestGetPromptMissingHeader`, `TestGetPromptDuplicateHeaders`, `TestHeaderLevelMatching`) to new `tests/test_prompt_parsing.py` via `move_symbol` (dry-run first); fix imports (`run_ruff_fix` F401 to drop `re`/`Union`); remove `prompt_manager.py` from `.large-files-allowlist`; edit `tach.toml` (declare `mcp_coder.prompt_parsing`, add to `prompt_manager` `depends_on`)
-- [ ] Quality checks: pylint, pytest, mypy — plus `run_lint_imports_check`, `check_file_size`, `compact-diff`, and `tach check` — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move the 3 parsing helpers (`_extract_headers`, `_extract_code_block_after_header`, `_find_duplicates`) to new `src/mcp_coder/prompt_parsing.py` and the 3 test classes (`TestGetPromptMissingHeader`, `TestGetPromptDuplicateHeaders`, `TestHeaderLevelMatching`) to new `tests/test_prompt_parsing.py` via `move_symbol` (dry-run first); fix imports (`run_ruff_fix` F401 to drop `re`/`Union`); remove `prompt_manager.py` from `.large-files-allowlist`; edit `tach.toml` (declare `mcp_coder.prompt_parsing`, add to `prompt_manager` `depends_on`)
+- [x] Quality checks: pylint, pytest, mypy — plus `run_lint_imports_check`, `check_file_size`, `compact-diff`, and `tach check` — fix all issues (Note: `tach` is not installed in this environment and no Bash is available, so `tach check` could not be executed; `tach.toml` was updated per spec — `mcp_coder.prompt_parsing` declared as a `domain` module with `depends_on = []` and added to `prompt_manager`'s `depends_on`)
+- [x] Commit message prepared
 
 ### Step 2: Extract `prompt_sources.py` + mirror tests
 

@@ -187,7 +187,15 @@ depends_on = [
     { path = "mcp_coder.utils" },     # File reading utilities
     { path = "mcp_coder.config" },    # Prompt file paths configuration
     { path = "mcp_coder.constants" }, # Default prompt paths
+    { path = "mcp_coder.prompt_parsing" }, # Markdown parsing helpers
 ]
+
+[[modules]]
+path = "mcp_coder.prompt_parsing"
+layer = "domain"
+# Pure markdown-string parsing helpers (header/code-block extraction, duplicates).
+# No I/O and no internal dependencies - only stdlib (re, typing).
+depends_on = []
 
 # =============================================================================
 # Layer 4: INFRASTRUCTURE  
