@@ -5,7 +5,7 @@ code development and refactoring tasks.
 """
 
 from .constants import FailureCategory, WorkflowFailure
-from .core import log_progress_summary, prepare_task_tracker, run_implement_workflow
+from .core import run_implement_workflow
 from .prerequisites import (
     check_git_clean,
     check_main_branch,
@@ -20,6 +20,7 @@ from .task_processing import (
     push_changes,
     run_formatters,
 )
+from .task_tracker_prep import log_progress_summary, prepare_task_tracker
 
 __all__ = [
     "FailureCategory",
