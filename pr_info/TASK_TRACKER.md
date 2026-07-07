@@ -39,5 +39,5 @@ See [step_2.md](./steps/step_2.md) for full detail.
 
 ## Pull Request
 
-- [ ] Review full PR diff for correctness and adherence to the "Move, Don't Change" constraint (only imports + file headers changed)
+- [x] Review full PR diff for correctness and adherence to the "Move, Don't Change" constraint (only imports + file headers changed)
 - [ ] Write PR summary
