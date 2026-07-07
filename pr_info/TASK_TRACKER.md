@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Extract `prompt_parsing.py` + mirror tests + remove allowlist entry
+
+See [step_1.md](./steps/step_1.md) for full detail.
+
+- [ ] Implementation: move the 3 parsing helpers (`_extract_headers`, `_extract_code_block_after_header`, `_find_duplicates`) to new `src/mcp_coder/prompt_parsing.py` and the 3 test classes (`TestGetPromptMissingHeader`, `TestGetPromptDuplicateHeaders`, `TestHeaderLevelMatching`) to new `tests/test_prompt_parsing.py` via `move_symbol` (dry-run first); fix imports (`run_ruff_fix` F401 to drop `re`/`Union`); remove `prompt_manager.py` from `.large-files-allowlist`; edit `tach.toml` (declare `mcp_coder.prompt_parsing`, add to `prompt_manager` `depends_on`)
+- [ ] Quality checks: pylint, pytest, mypy — plus `run_lint_imports_check`, `check_file_size`, `compact-diff`, and `tach check` — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Extract `prompt_sources.py` + mirror tests
+
+See [step_2.md](./steps/step_2.md) for full detail.
+
+- [ ] Implementation: move the 4 source/loading helpers (`_is_package_relative_path`, `_resolve_package_path`, `_load_content`, `_is_file_path`) to new `src/mcp_coder/prompt_sources.py` and the 4 test classes (`TestGetPromptFromFile`, `TestGetPromptWildcard`, `TestInputAutoDetection`, `TestPackageIntegration`) to new `tests/test_prompt_sources.py` via `move_symbol` (dry-run first); fix imports (`run_ruff_fix` F401 to drop `Optional`/`Path`/`find_data_file`, keep `glob`/`os`); edit `.importlinter` (add sub-layer `mcp_coder.prompt_sources | mcp_coder.prompt_parsing`); edit `tach.toml` (declare `mcp_coder.prompt_sources`, add to `prompt_manager` `depends_on`)
+- [ ] Quality checks: pylint, pytest, mypy — plus `run_lint_imports_check`, `check_file_size`, `compact-diff`, and `tach check` — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Review full PR diff for correctness and adherence to the "Move, Don't Change" constraint (only imports + file headers changed)
+- [ ] Write PR summary
