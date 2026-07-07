@@ -1,3 +1,9 @@
+"""Resolve and load prompt sources.
+
+Provides helpers for locating prompt content, including package-relative
+path detection and data-file lookup.
+"""
+
 import glob
 import os
 from pathlib import Path
