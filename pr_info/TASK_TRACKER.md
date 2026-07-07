@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md) for full detail.
 
 See [step_2.md](./steps/step_2.md) for full detail.
 
-- [ ] Implementation: move the 4 source/loading helpers (`_is_package_relative_path`, `_resolve_package_path`, `_load_content`, `_is_file_path`) to new `src/mcp_coder/prompt_sources.py` and the 4 test classes (`TestGetPromptFromFile`, `TestGetPromptWildcard`, `TestInputAutoDetection`, `TestPackageIntegration`) to new `tests/test_prompt_sources.py` via `move_symbol` (dry-run first); fix imports (`run_ruff_fix` F401 to drop `Optional`/`Path`/`find_data_file`, keep `glob`/`os`); edit `.importlinter` (add sub-layer `mcp_coder.prompt_sources | mcp_coder.prompt_parsing`); edit `tach.toml` (declare `mcp_coder.prompt_sources`, add to `prompt_manager` `depends_on`)
-- [ ] Quality checks: pylint, pytest, mypy — plus `run_lint_imports_check`, `check_file_size`, `compact-diff`, and `tach check` — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move the 4 source/loading helpers (`_is_package_relative_path`, `_resolve_package_path`, `_load_content`, `_is_file_path`) to new `src/mcp_coder/prompt_sources.py` and the 4 test classes (`TestGetPromptFromFile`, `TestGetPromptWildcard`, `TestInputAutoDetection`, `TestPackageIntegration`) to new `tests/test_prompt_sources.py` via `move_symbol` (dry-run first); fix imports (`run_ruff_fix` F401 to drop `Optional`/`Path`/`find_data_file`, keep `glob`/`os`); edit `.importlinter` (add sub-layer `mcp_coder.prompt_sources | mcp_coder.prompt_parsing`); edit `tach.toml` (declare `mcp_coder.prompt_sources`, add to `prompt_manager` `depends_on`)
+- [x] Quality checks: pylint, pytest, mypy — plus `run_lint_imports_check`, `check_file_size`, `compact-diff`, and `tach check` — fix all issues (Note: `run_lint_imports_check` PASSED with new sub-layer, mypy clean, 38 prompt tests pass, `check_file_size` passes with `prompt_manager.py` under 750; pylint shows only pre-existing `langchain_core`/`langgraph` optional-dependency E0401 errors unrelated to these files; `compact-diff` confirms only import changes + relocated functions. `tach` is not installed and no Bash is available, so `tach check` could not be executed; `tach.toml` was updated per spec — `mcp_coder.prompt_sources` declared as a `domain` module with `depends_on = [mcp_coder.utils]` and added to `prompt_manager`'s `depends_on`)
+- [x] Commit message prepared
 
 ## Pull Request
 
