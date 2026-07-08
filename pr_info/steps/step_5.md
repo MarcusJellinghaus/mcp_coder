@@ -43,6 +43,6 @@ No data-structure changes. Test-class relocation only.
 
 `run_format_code`, `run_ruff_fix(select=["F401"])`, `run_lint_imports_check`,
 `run_vulture_check`,
-`run_pytest_check(extra_args=["-n","auto","-m","not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])`,
+`run_pytest_check(extra_args=["-n","auto","-m","not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])`,
 `run_pylint_check`, `run_mypy_check`. Confirm via `compact-diff` that only
 imports + new/deleted file headers appear.

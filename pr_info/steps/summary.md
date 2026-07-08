@@ -113,6 +113,12 @@ The project's default ruff config only enables docstring rules and
 explicit `select=["F401"]` override is the deterministic lever. This removes the
 only step that would otherwise need per-file human judgment.
 
+Note the `ruff_fix(select=["F401"])` pruning of the *original*
+`test_status_display.py` is expected to churn across steps 1–7 as classes leave
+and the file keeps shrinking — it is **not** a one-shot cleanup finished in
+Step 1. Each step re-runs F401 on the files it touches (original + newly
+extracted), so imports left unused by that step's removal are pruned then.
+
 ## TDD note (test-only refactor)
 
 Classic red-green TDD does not apply — there is no production code to drive out;
@@ -136,6 +142,11 @@ After each step, run the relevant subset of:
 `run_format_code`, `run_lint_imports_check`, `run_vulture_check`,
 `run_pytest_check` (with `-n auto` and the unit-test marker exclusions),
 `run_pylint_check`, `run_mypy_check`.
+
+Vulture warnings for this file (e.g. unused attribute `return_value`,
+`repo_url`) are pre-existing and simply travel with the moved class bodies; for
+this mechanical test-only move they are informational and **not** a blocking
+gate — do not treat them as a step failure.
 
 The final step additionally runs `mcp__mcp-workspace__check_file_size` and
 `mcp-coder git-tool compact-diff` to prove the mechanical-move guarantee and the
