@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code): move `_build_assessment` and `mock_status_checks` into `conftest.py`; update `test_status_display.py` to import `_build_assessment`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): move `_build_assessment` and `mock_status_checks` into `conftest.py`; update `test_status_display.py` to import `_build_assessment`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Extract `TestStatusAssessmentConsumer`
 

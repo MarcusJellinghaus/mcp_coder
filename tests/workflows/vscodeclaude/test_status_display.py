@@ -8,7 +8,6 @@ from unittest.mock import Mock
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
-from mcp_coder.workflows.vscodeclaude.assessment import IssueFacts, assess_session
 from mcp_coder.workflows.vscodeclaude.status import (
     check_folder_dirty,
     display_status_table,
@@ -18,103 +17,10 @@ from mcp_coder.workflows.vscodeclaude.status import (
     is_session_stale,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
-    DetectionSignals,
     SessionAction,
-    SessionAssessment,
     VSCodeClaudeSession,
 )
-
-
-def _build_assessment(
-    session: VSCodeClaudeSession,
-    *,
-    is_closed: bool = False,
-    is_running: bool = False,
-    is_dirty: bool = False,
-    is_stale: bool = False,
-    is_ineligible: bool = False,
-    stale_target: str | None = None,
-) -> SessionAssessment:
-    """Build the :class:`SessionAssessment` a status row renders.
-
-    The status table now reads the assessment instead of recomputing liveness /
-    staleness / git status, so tests inject one built from the same pure layer
-    functions production uses (``assess_session``). Folder existence is detected
-    from disk so missing-folder cases need no extra flag.
-    """
-    folder_exists = Path(session["folder"]).exists()
-    if not folder_exists:
-        git_status = "Missing"
-    elif is_dirty:
-        git_status = "Dirty"
-    else:
-        git_status = "Clean"
-    signals = DetectionSignals(
-        folder_exists=folder_exists,
-        title_match=is_running,
-        cmdline_match=False,
-        pid_alive=False,
-        found_pid=None,
-        age_seconds=0.0,
-        within_grace=False,
-        directory_empty=not folder_exists,
-    )
-    issue_facts = IssueFacts(
-        is_closed=is_closed,
-        is_stale=is_stale,
-        is_blocked=False,
-        is_unassigned=False,
-        is_ineligible=is_ineligible,
-        stale_target=stale_target,
-    )
-    return assess_session(
-        folder=session["folder"],
-        signals=signals,
-        issue_facts=issue_facts,
-        git_status=git_status,
-        directory_empty=not folder_exists,
-        prior_last_active=None,
-    )
-
-
-@pytest.fixture
-def mock_status_checks() -> Any:
-    """Factory fixture returning a per-session assessment-map builder.
-
-    The status table is now an assessment consumer: each session row renders its
-    prebuilt :class:`SessionAssessment` rather than recomputing liveness /
-    staleness / dirtiness. This fixture captures the desired state flags and
-    returns a builder that, given the session, produces the ``assessments``
-    argument for ``display_status_table``.
-
-    Usage:
-        def test_something(mock_status_checks):
-            make_assessments = mock_status_checks(
-                is_closed=False, is_running=False, is_dirty=False, is_stale=True
-            )
-            # ... pass assessments=make_assessments(session)
-    """
-
-    def _mock(
-        is_closed: bool = False,
-        is_running: bool = False,
-        is_dirty: bool = False,
-        is_stale: bool = True,
-    ) -> Any:
-        def _build(session: VSCodeClaudeSession) -> dict[str, SessionAssessment]:
-            return {
-                session["folder"]: _build_assessment(
-                    session,
-                    is_closed=is_closed,
-                    is_running=is_running,
-                    is_dirty=is_dirty,
-                    is_stale=is_stale,
-                )
-            }
-
-        return _build
-
-    return _mock
+from tests.workflows.vscodeclaude.conftest import _build_assessment
 
 
 class TestStatusDisplay:
