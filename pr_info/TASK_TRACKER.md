@@ -49,9 +49,9 @@ Detail: [step_3.md](./steps/step_3.md)
 
 Detail: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code): create `test_status_display_delete_actions.py` with the three delete-action classes; remove them from original
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): create `test_status_display_delete_actions.py` with the three delete-action classes; remove them from original
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Extract `TestDisplayStatusTableBranchIndicators`
 
