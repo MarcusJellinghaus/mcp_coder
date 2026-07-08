@@ -57,9 +57,9 @@ Detail: [step_4.md](./steps/step_4.md)
 
 Detail: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation (tests + production code): create `test_status_display_branch_indicators.py`; remove class from original
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): create `test_status_display_branch_indicators.py`; remove class from original
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Extract `TestZombieSessionDisplay`
 
