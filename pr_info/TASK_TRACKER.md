@@ -73,9 +73,9 @@ Detail: [step_6.md](./steps/step_6.md)
 
 Detail: [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code): create `test_status_display_scenario.py`; remove class from original; remove `test_status_display.py` entry from `.large-files-allowlist`; verify `check_file_size` and `compact-diff`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): create `test_status_display_scenario.py`; remove class from original; remove `test_status_display.py` entry from `.large-files-allowlist`; verify `check_file_size` and `compact-diff`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
