@@ -79,5 +79,5 @@ Detail: [step_7.md](./steps/step_7.md)
 
 ## Pull Request
 
-- [ ] Review full branch diff via `compact-diff` — confirm only import changes and new/deleted file headers appear
+- [x] Review full branch diff via `compact-diff` — confirm only import changes and new/deleted file headers appear
 - [ ] Write PR summary
