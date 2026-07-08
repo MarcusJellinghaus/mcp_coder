@@ -65,9 +65,9 @@ Detail: [step_5.md](./steps/step_5.md)
 
 Detail: [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code): create `test_status_display_zombie.py`; remove class from original
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): create `test_status_display_zombie.py`; remove class from original
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Extract `TestScenarioACrossModule`, drop allowlist entry, final verify
 
