@@ -21,6 +21,63 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move shared helpers into `conftest.py`
+
+Detail: [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code): move `_build_assessment` and `mock_status_checks` into `conftest.py`; update `test_status_display.py` to import `_build_assessment`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Extract `TestStatusAssessmentConsumer`
+
+Detail: [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code): create `test_status_display_assessment_consumer.py`; remove class from original
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Extract `TestClosedIssuePrefixDisplay`
+
+Detail: [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code): create `test_status_display_closed_prefix.py`; remove class from original
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Extract the delete-action classes
+
+Detail: [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (tests + production code): create `test_status_display_delete_actions.py` with the three delete-action classes; remove them from original
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Extract `TestDisplayStatusTableBranchIndicators`
+
+Detail: [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation (tests + production code): create `test_status_display_branch_indicators.py`; remove class from original
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Extract `TestZombieSessionDisplay`
+
+Detail: [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation (tests + production code): create `test_status_display_zombie.py`; remove class from original
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Extract `TestScenarioACrossModule`, drop allowlist entry, final verify
+
+Detail: [step_7.md](./steps/step_7.md)
+
+- [ ] Implementation (tests + production code): create `test_status_display_scenario.py`; remove class from original; remove `test_status_display.py` entry from `.large-files-allowlist`; verify `check_file_size` and `compact-diff`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Review full branch diff via `compact-diff` — confirm only import changes and new/deleted file headers appear
+- [ ] Write PR summary
