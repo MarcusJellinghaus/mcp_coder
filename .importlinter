@@ -37,6 +37,7 @@ layers =
     mcp_coder.services | mcp_coder.checks
     mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.prompt_manager
+    mcp_coder.prompt_sources | mcp_coder.prompt_parsing
     mcp_coder.prompts
     mcp_coder.utils
     mcp_coder.mcp_tools_py | mcp_coder.mcp_workspace_git | mcp_coder.mcp_workspace_github

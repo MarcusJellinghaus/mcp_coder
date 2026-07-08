@@ -187,6 +187,24 @@ depends_on = [
     { path = "mcp_coder.utils" },     # File reading utilities
     { path = "mcp_coder.config" },    # Prompt file paths configuration
     { path = "mcp_coder.constants" }, # Default prompt paths
+    { path = "mcp_coder.prompt_parsing" }, # Markdown parsing helpers
+    { path = "mcp_coder.prompt_sources" }, # Path resolution + content loading
+]
+
+[[modules]]
+path = "mcp_coder.prompt_parsing"
+layer = "domain"
+# Pure markdown-string parsing helpers (header/code-block extraction, duplicates).
+# No I/O and no internal dependencies - only stdlib (re, typing).
+depends_on = []
+
+[[modules]]
+path = "mcp_coder.prompt_sources"
+layer = "domain"
+# Path resolution + content loading helpers (filesystem / package I/O).
+# Reads prompt files from disk and package data.
+depends_on = [
+    { path = "mcp_coder.utils" }, # find_data_file for package-relative paths
 ]
 
 # =============================================================================
