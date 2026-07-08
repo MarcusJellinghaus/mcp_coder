@@ -31,3 +31,31 @@ Base branch: `main` (branch rebased clean prior to review).
 - `Decisions.md` — created, logging the three approved decisions.
 
 **Status**: committed (see commit agent).
+
+## Round 2 — 2026-07-08
+
+**Findings** (from `/plan_review` engineer, re-verified against live code):
+- `[straightforward-fix]` (optional) Steps 2/6: the mandated `_build_assessment` import may be F401-pruned if that file uses the helper only via the `mock_status_checks` fixture. Reviewer notes: "none required" — self-healing via the already-documented copy-verbatim-then-prune strategy.
+- `[straightforward-fix]` (no change) Step 1 correctly instructs ADDing `assess_session` (conftest currently imports `assess_issue_state`). Instruction already right.
+- No `[design/requirements-question]` items. No new architectural / dependency / config concerns.
+
+**Round-1 changes confirmed present**: (a) F401-churn note in summary + Decisions.md ✅; (b) vulture non-gate note ✅; (c) all 7 steps carry the canonical 10-marker exclusion string ✅. Step 4 grouping remains a recorded decision, not re-opened.
+
+**Decisions**:
+- Both optional observations → skip (no change). Already covered by the Round-1 generic F401 note; per-step notes would be redundant. Reviewer flagged both as non-blocking / self-healing.
+
+**User decisions**: none required.
+
+**Changes**: none — zero plan changes this round.
+
+**Status**: no changes needed → review loop terminates.
+
+---
+
+## Final Status
+
+- **Rounds run**: 2.
+- **Round 1**: 3 straightforward clarifications applied (F401-churn note, vulture non-gate note, pytest marker alignment across all 7 steps) + `Decisions.md` created. Committed `6b7599e`.
+- **Round 2**: zero changes — plan verified sound against live code; loop terminated.
+- **Escalations to user**: none. The one design question (Step 4 three-class grouping) was an already-recorded decision in the issue, so it was not re-litigated.
+- **Verdict**: **Plan is sound and ready for approval.** Class/line mappings match live code, helper relocation ordering is correct (add-to-conftest atomic with removal), and Step 7 correctly gates the `.large-files-allowlist` removal to the same commit the kept file drops under 750.
