@@ -53,4 +53,4 @@ The base branch must be a single line. Multiple lines will cause an error during
 - Discussed implementation approach (concise)
 - `## Constraints & Rationale` — non-obvious gotchas and the "why" behind decisions. Skip if none identified.
 - `## Decisions` table — decided topics so `/issue_analyse` won't re-ask. Skip if none yet.
-- **Links to related issues** — preserve the epic, design doc, dependencies, and curated siblings when rewriting; add them if missing and the issue isn't standalone.
+- **`## Dependencies / references`** — preserve the links to the epic, design doc, dependencies, and curated siblings when rewriting; add the section if missing and the issue isn't standalone.
