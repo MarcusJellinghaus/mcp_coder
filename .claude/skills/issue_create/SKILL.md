@@ -17,6 +17,8 @@ Based on our prior discussion, create a GitHub issue.
 3. Include relevant details from our discussion in the body
 4. Use markdown formatting for better readability
 
+**Link related issues.** If the issue belongs to an epic or design doc, or has dependencies, list them near the top and in a `## Dependencies / references` section — the epic, design doc, dependencies, and any curated sibling issues worth reading. Add a short "read these first" note when they're essential. Omit for standalone issues.
+
 **Optional: Base Branch**
 If the feature should be based on a branch other than the default (main/master), include:
 

@@ -15,7 +15,7 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 **Setup:**
 
 1. Resolve the issue number from `$ARGUMENTS`, the branch name, or `.vscodeclaude_status.txt`. If none found, ask the user.
-2. Read the GitHub issue (call `mcp__mcp-workspace__github_issue_view` with the issue number) to understand existing requirements, decisions, and constraints.
+2. Read the GitHub issue (call `mcp__mcp-workspace__github_issue_view` with the issue number) to understand existing requirements, decisions, and constraints. **Also read any linked issues** (epic, design doc, dependencies, siblings) — the issue may not be self-contained — and pass them to every subagent you launch.
 3. Read the knowledge base files:
    - `.claude/knowledge_base/software_engineering_principles.md`
    - `.claude/knowledge_base/planning_principles.md`

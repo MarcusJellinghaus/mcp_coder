@@ -205,6 +205,7 @@ Three-prompt sequence for generating implementation plans from GitHub issues.
 ```
 ## Discuss implementation steps
 Please take a look at the existing solution, its files and its architecture documentation.
+If the task links an epic, design doc, dependencies, or sibling issues, read those first — it may not be self-contained.
 Do you understand the task below?
 What are the implementation steps?
 Do not yet modify any code!
