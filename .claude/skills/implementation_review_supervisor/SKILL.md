@@ -22,7 +22,7 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 
 **Setup:**
 
-1. Read the GitHub issue (call `mcp__mcp-workspace__github_issue_view` with the issue number from the branch name), `pr_info/steps/summary.md`, and `pr_info/steps/Decisions.md` (if it exists) to understand requirements and design decisions.
+1. Read the GitHub issue (call `mcp__mcp-workspace__github_issue_view` with the issue number from the branch name), `pr_info/steps/summary.md`, and `pr_info/steps/Decisions.md` (if it exists) to understand requirements and design decisions. **Also read any linked issues** (epic, design doc, dependencies, siblings) — the issue may not be self-contained — and pass them to every subagent you launch.
 2. Read the knowledge base files:
    - `.claude/knowledge_base/software_engineering_principles.md`
    - `.claude/knowledge_base/python.md`

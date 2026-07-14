@@ -25,6 +25,8 @@ Wait one second using `mcp__mcp-tools-py__sleep` with `seconds: 1`
 
 Fetch the issue using `mcp__mcp-workspace__github_issue_view`.
 
+**Read linked issues first.** If the issue points to an epic, design doc, dependencies, or sibling issues, read those before analysing — it may not be self-contained, and any "read first" note is mandatory.
+
 ## Instructions
 
 Analyze the issue:
