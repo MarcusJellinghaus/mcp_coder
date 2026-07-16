@@ -112,6 +112,31 @@ def test_execute_icoder_passes_env_vars_to_llm_service(
     assert kwargs["env_vars"] == FAKE_RUNTIME_INFO.env_vars
 
 
+@patch("mcp_coder.icoder.ui.app.ICoderApp.run")
+@patch(
+    "mcp_coder.icoder.services.llm_service.RealLLMService.__init__",
+    return_value=None,
+)
+@patch("mcp_coder.cli.commands.icoder.setup_icoder_environment")
+def test_execute_icoder_passes_enforce_skill_tools_false(
+    mock_setup: MagicMock,
+    mock_llm_init: MagicMock,
+    _mock_run: MagicMock,
+    tmp_path: Path,
+) -> None:
+    """RealLLMService is constructed with enforce_skill_tools=False (explicit seam)."""
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    mock_setup.return_value = FAKE_RUNTIME_INFO
+    (tmp_path / "logs").mkdir()
+    args = make_icoder_args(tmp_path)
+
+    execute_icoder(args)
+
+    _, kwargs = mock_llm_init.call_args
+    assert kwargs["enforce_skill_tools"] is False
+
+
 def test_execute_icoder_creates_registry_with_skills(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

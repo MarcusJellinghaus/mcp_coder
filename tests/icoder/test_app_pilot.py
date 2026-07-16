@@ -359,7 +359,9 @@ class ErrorAfterChunksLLMService:
         self._chunks = chunks
         self._error_msg = error_msg
 
-    def stream(self, question: str) -> Iterator[StreamEvent]:
+    def stream(
+        self, question: str, allowed_tools: tuple[str, ...] | None = None
+    ) -> Iterator[StreamEvent]:
         """Yield chunks then raise RuntimeError."""
         yield from self._chunks
         raise RuntimeError(self._error_msg)
@@ -755,7 +757,9 @@ async def test_tool_result_renders_plain_text_by_default(
 class SlowLLMService:
     """LLM service that yields events with delays to simulate streaming."""
 
-    def stream(self, question: str) -> Iterator[StreamEvent]:
+    def stream(
+        self, question: str, allowed_tools: tuple[str, ...] | None = None
+    ) -> Iterator[StreamEvent]:
         import time
 
         for i in range(20):
@@ -820,7 +824,9 @@ async def test_session_preserved_after_cancel(
         def __init__(self) -> None:
             self._session_id: str | None = "test-session-123"
 
-        def stream(self, question: str) -> Iterator[StreamEvent]:
+        def stream(
+            self, question: str, allowed_tools: tuple[str, ...] | None = None
+        ) -> Iterator[StreamEvent]:
             import time
 
             for i in range(20):
@@ -1307,3 +1313,47 @@ async def test_resumed_divider_is_not_a_unit(
             i for i, ln in enumerate(output.rendered_lines) if "Resumed" in ln
         )
         assert output.unit_at_line(divider_line) is None
+
+
+# --- Step 5: allowed_tools threading + permission_warning render ---
+
+
+async def test_ui_worker_threads_allowed_tools_to_service(
+    event_log: EventLog,
+) -> None:
+    """Submitting a skill command threads allowed_tools to the LLM service.
+
+    A command yielding ``SendToLLM(text="", allowed_tools=(...))`` must reach
+    ``FakeLLMService.last_allowed_tools`` via the UI worker.
+    """
+    from mcp_coder.icoder.core.types import Command, Response, SendToLLM
+
+    fake = FakeLLMService(responses=[[{"type": "done"}]])
+    app = ICoderApp(AppCore(llm_service=fake, event_log=event_log))
+    app._core.registry.add_command(
+        Command(
+            name="/tooled",
+            description="tooled skill",
+            handler=lambda args: Response(
+                actions=(SendToLLM(text="", allowed_tools=("mcp__srv__a",)),)
+            ),
+        )
+    )
+    async with app.run_test() as pilot:
+        await _submit_and_wait(app, pilot, text="/tooled")
+        assert fake.last_allowed_tools == ("mcp__srv__a",)
+
+
+async def test_permission_warning_event_renders_message_text(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """A permission_warning stream event renders its message in the output log."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app._handle_stream_event(
+            {"type": "permission_warning", "message": "dropped mcp__srv__*"}
+        )
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        assert "dropped mcp__srv__*" in output.recorded_lines

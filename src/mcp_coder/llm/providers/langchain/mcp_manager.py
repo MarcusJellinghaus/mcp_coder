@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -17,6 +18,44 @@ from mcp_coder.llm.providers.langchain.agent import (  # noqa: PLC2701
 )
 
 logger = logging.getLogger(__name__)
+
+
+def filter_tools_by_declaration(
+    tools: list[Any],
+    canonical_name_of: Callable[[Any], str | None],
+    declared: tuple[str, ...] | list[str],
+) -> tuple[list[Any], list[str]]:
+    """Narrow ``tools`` to the exact MCP tokens in ``declared``.
+
+    Returns ``(filtered_tools, warnings)``. ``declared`` is assumed
+    truthy/non-empty (the caller treats a falsy declaration as "no
+    narrowing"). Fail-closed: an empty allow-set yields an empty tool list;
+    un-parseable tokens are dropped (never widen the set) and produce a
+    warning.
+
+    Args:
+        tools: Live tool objects to narrow. Never mutated.
+        canonical_name_of: Maps a tool to its ``mcp__server__tool`` token,
+            or ``None`` when unknown.
+        declared: Declared allow-list tokens from a skill's ``SKILL.md``.
+
+    Returns:
+        A tuple of the kept tools (a new list) and human-readable warning
+        strings (empty when all tokens are exact or non-MCP).
+    """
+    allow: set[str] = set()
+    warnings: list[str] = []
+    for token in declared:
+        if token.startswith("mcp__") and "*" not in token and "(" not in token:
+            allow.add(token)  # exact mcp__server__tool
+        elif token.startswith("mcp__") or token.startswith("@"):
+            warnings.append(
+                f"Skill tool declaration '{token}' is not supported yet "
+                f"and was ignored; the skill runs with a reduced tool set."
+            )
+        # else: non-MCP / Bash-style / bare -> ignored, no warning
+    filtered = [t for t in tools if canonical_name_of(t) in allow]
+    return filtered, warnings
 
 
 @dataclass(frozen=True)
@@ -55,6 +94,24 @@ class MCPManager:
             name="mcp-manager-loop",
         )
         self._thread.start()
+
+    def canonical_name(self, tool: Any) -> str | None:
+        """Return the stamped ``mcp__server__tool`` identity, or None if absent.
+
+        Reads the ``mcp_canonical_name`` key stamped onto each tool's
+        ``metadata`` during discovery. Pure and cache-safe: never triggers
+        re-discovery and never mutates the tool.
+
+        Args:
+            tool: A LangChain tool object produced by discovery.
+
+        Returns:
+            The canonical ``mcp__server__tool`` token, or ``None`` when the
+            metadata or key is missing or the stamped value is not a string.
+        """
+        meta = getattr(tool, "metadata", None) or {}
+        value = meta.get("mcp_canonical_name")
+        return value if isinstance(value, str) else None
 
     def tools(self) -> list[Any]:
         """Return cached LangChain tools. Connects lazily on first call.
@@ -104,6 +161,10 @@ class MCPManager:
                         connection=connection,
                         server_name=server_name,
                     )
+                    lc_tool.metadata = {
+                        **(lc_tool.metadata or {}),
+                        "mcp_canonical_name": f"mcp__{server_name}__{tool.name}",
+                    }
                     all_tools.append(lc_tool)
                     count += 1
             tool_counts[server_name] = count

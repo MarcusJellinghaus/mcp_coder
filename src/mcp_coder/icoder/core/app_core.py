@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Iterator, Literal
 
@@ -99,7 +100,7 @@ class AppCore:
                     self._reset_session()
                     resolved.append(action)
                 elif isinstance(action, SendToLLM):
-                    resolved.append(SendToLLM(text=action.text or text))
+                    resolved.append(replace(action, text=action.text or text))
                 else:
                     resolved.append(action)
             return Response(actions=tuple(resolved))
@@ -123,12 +124,20 @@ class AppCore:
             session_id=self._llm_service.session_id,
         )
 
-    def stream_llm(self, text: str) -> Iterator[StreamEvent]:
+    def stream_llm(
+        self, text: str, allowed_tools: tuple[str, ...] | None = None
+    ) -> Iterator[StreamEvent]:
         """Stream LLM response and auto-store for session continuation.
 
         Called by the UI layer when dispatching a ``SendToLLM`` action.
         Emits events for each stream phase. After streaming completes,
         stores the response so ``--continue-session`` can find it.
+
+        Args:
+            text: User input to send to the LLM.
+            allowed_tools: Declared MCP tool tokens for this turn (from a
+                skill's ``SendToLLM.allowed_tools``), forwarded to the
+                service for host-side enforcement, or ``None``.
 
         Yields:
             StreamEvent dicts for UI to render.
@@ -136,7 +145,7 @@ class AppCore:
         assembler = ResponseAssembler(self._llm_service.provider)
         self._event_log.emit("llm_request_start", text=text)
 
-        for event in self._llm_service.stream(text):
+        for event in self._llm_service.stream(text, allowed_tools):
             assembler.add(event)
             if event.get("type") != "raw_line":
                 self._event_log.emit("stream_event", **event)

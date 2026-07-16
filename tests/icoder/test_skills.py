@@ -208,6 +208,35 @@ def test_register_skill_commands_langchain_substitutes_arguments() -> None:
     assert resp.actions == (SendToLLM(text="Fix bug 123 now"),)
 
 
+def test_register_skill_commands_langchain_populates_allowed_tools() -> None:
+    """Langchain handler threads a non-empty allowed_tools into SendToLLM."""
+    registry = CommandRegistry()
+    skill = ClaudeSkill(
+        name="my_skill",
+        description="Skill",
+        prompt_template="Do $ARGUMENTS",
+        allowed_tools=["mcp__srv__a"],
+    )
+    register_skill_commands(registry, [skill], "langchain")
+    resp = registry.dispatch("/my_skill x")
+    assert resp is not None
+    action = resp.actions[0]
+    assert isinstance(action, SendToLLM)
+    assert action.allowed_tools == ("mcp__srv__a",)
+
+
+def test_register_skill_commands_langchain_empty_allowed_tools_is_none() -> None:
+    """Empty allowed_tools declaration → SendToLLM.allowed_tools is None."""
+    registry = CommandRegistry()
+    skill = _make_skill()  # allowed_tools defaults to []
+    register_skill_commands(registry, [skill], "langchain")
+    resp = registry.dispatch("/my_skill x")
+    assert resp is not None
+    action = resp.actions[0]
+    assert isinstance(action, SendToLLM)
+    assert action.allowed_tools is None
+
+
 def test_register_skill_commands_langchain_empty_arguments() -> None:
     """Empty args: $ARGUMENTS replaced with empty string, whitespace stripped."""
     registry = CommandRegistry()

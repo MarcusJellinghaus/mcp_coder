@@ -74,6 +74,9 @@ def _patch_client_and_convert(
 
     def _convert(*_args: Any, **_kwargs: Any) -> MagicMock:
         t = MagicMock(name=f"lc_tool_{len(lc_tools_created)}")
+        # Start with real metadata so discovery-time canonical-name stamping
+        # (dict unpacking) works against the mock tool.
+        t.metadata = None
         lc_tools_created.append(t)
         return t
 
@@ -158,6 +161,107 @@ class TestMCPManagerTools:
             try:
                 result = manager.tools()
                 assert result == []
+            finally:
+                manager.close()
+
+
+class TestMCPManagerCanonicalName:
+    """Tests for MCPManager.canonical_name() accessor."""
+
+    def test_returns_stamped_value(self) -> None:
+        """Returns the stamped mcp__server__tool token for a stub tool."""
+        manager = MCPManager({})
+        try:
+            tool = SimpleNamespace(metadata={"mcp_canonical_name": "mcp__srv__foo"})
+            assert manager.canonical_name(tool) == "mcp__srv__foo"
+        finally:
+            manager.close()
+
+    def test_returns_none_when_metadata_attr_missing(self) -> None:
+        """No metadata attribute at all -> None."""
+        manager = MCPManager({})
+        try:
+            tool = SimpleNamespace()
+            assert manager.canonical_name(tool) is None
+        finally:
+            manager.close()
+
+    def test_returns_none_when_metadata_none(self) -> None:
+        """metadata is None -> None."""
+        manager = MCPManager({})
+        try:
+            tool = SimpleNamespace(metadata=None)
+            assert manager.canonical_name(tool) is None
+        finally:
+            manager.close()
+
+    def test_returns_none_when_key_missing(self) -> None:
+        """metadata present but missing the canonical-name key -> None."""
+        manager = MCPManager({})
+        try:
+            tool = SimpleNamespace(metadata={"other": "value"})
+            assert manager.canonical_name(tool) is None
+        finally:
+            manager.close()
+
+    def test_returns_none_when_value_not_str(self) -> None:
+        """Non-string stamped value -> None (defensive)."""
+        manager = MCPManager({})
+        try:
+            tool = SimpleNamespace(metadata={"mcp_canonical_name": 123})
+            assert manager.canonical_name(tool) is None
+        finally:
+            manager.close()
+
+    def test_discovery_stamps_canonical_name(self) -> None:
+        """After discovery, every tool carries an mcp__server__tool name."""
+        tool1 = _make_mock_tool("read_file")
+        mock_client = _build_mock_client({"workspace": [tool1]})
+        client_patch = patch(
+            "langchain_mcp_adapters.client.MultiServerMCPClient",
+            return_value=mock_client,
+        )
+
+        def _convert(*_args: Any, **_kwargs: Any) -> SimpleNamespace:
+            return SimpleNamespace(metadata=None)
+
+        convert_patch = patch(
+            "langchain_mcp_adapters.tools.convert_mcp_tool_to_langchain_tool",
+            side_effect=_convert,
+        )
+
+        with client_patch, convert_patch:
+            manager = MCPManager({"workspace": {"transport": "stdio"}})
+            try:
+                tools = manager.tools()
+                assert len(tools) == 1
+                assert manager.canonical_name(tools[0]) == "mcp__workspace__read_file"
+            finally:
+                manager.close()
+
+    def test_discovery_preserves_existing_metadata(self) -> None:
+        """Stamping merges into (does not clobber) existing metadata."""
+        tool1 = _make_mock_tool("read_file")
+        mock_client = _build_mock_client({"workspace": [tool1]})
+        client_patch = patch(
+            "langchain_mcp_adapters.client.MultiServerMCPClient",
+            return_value=mock_client,
+        )
+
+        def _convert(*_args: Any, **_kwargs: Any) -> SimpleNamespace:
+            return SimpleNamespace(metadata={"existing": "kept"})
+
+        convert_patch = patch(
+            "langchain_mcp_adapters.tools.convert_mcp_tool_to_langchain_tool",
+            side_effect=_convert,
+        )
+
+        with client_patch, convert_patch:
+            manager = MCPManager({"workspace": {"transport": "stdio"}})
+            try:
+                tools = manager.tools()
+                assert tools[0].metadata["existing"] == "kept"
+                assert manager.canonical_name(tools[0]) == "mcp__workspace__read_file"
             finally:
                 manager.close()
 
