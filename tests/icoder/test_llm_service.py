@@ -360,6 +360,168 @@ def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
     assert second[0]["text"] == "fake response"
 
 
+class _FakeMCPManager:
+    """Minimal MCP manager stand-in: tools are their own canonical names."""
+
+    def __init__(self, tool_names: list[str]) -> None:
+        self._tools = list(tool_names)
+
+    def tools(self) -> list[str]:
+        return self._tools
+
+    def canonical_name(self, tool: str) -> str | None:
+        return tool
+
+
+def _capture_tools_stream(
+    monkeypatch: pytest.MonkeyPatch, captured: dict[str, object]
+) -> None:
+    """Monkeypatch prompt_llm_stream to record kwargs['tools']."""
+    fake_events: list[StreamEvent] = [{"type": "done"}]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        captured.update(kwargs)
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+
+
+def test_enforce_subset_declaration_narrows_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """enforce=True + subset declaration -> only declared tool passed; excluded absent."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__keep", "mcp__srv__drop"])
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        enforce_skill_tools=True,
+    )
+    list(service.stream("hello", allowed_tools=("mcp__srv__keep",)))
+    assert captured["tools"] == ["mcp__srv__keep"]
+    assert "mcp__srv__drop" not in captured["tools"]
+
+
+def test_enforce_all_non_mcp_declaration_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """enforce=True + all-non-MCP declaration -> zero tools (fail-closed)."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__keep", "mcp__srv__drop"])
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        enforce_skill_tools=True,
+    )
+    list(service.stream("hello", allowed_tools=("Bash", "Read")))
+    assert captured["tools"] == []
+
+
+def test_enforce_without_allowed_tools_passes_full_list(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """enforce=True + no allowed_tools -> full tool list (no narrowing)."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        enforce_skill_tools=True,
+    )
+    list(service.stream("hello"))
+    assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
+
+
+def test_enforce_disabled_passes_full_list_despite_declaration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """enforce=False + declaration present -> full list (no narrowing)."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        enforce_skill_tools=False,
+    )
+    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
+    assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
+
+
+def test_enforce_wildcard_token_yields_warning_and_restricts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """enforce=True + wildcard token -> permission_warning yielded; tools restricted."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        enforce_skill_tools=True,
+    )
+    events = list(service.stream("hello", allowed_tools=("mcp__srv__a", "mcp__srv__*")))
+    warnings = [e for e in events if e["type"] == "permission_warning"]
+    assert len(warnings) == 1
+    assert isinstance(warnings[0]["message"], str)
+    # Restricted to the exact-matched tool, not the full list.
+    assert captured["tools"] == ["mcp__srv__a"]
+
+
+def test_enforce_does_not_mutate_manager_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After enforced stream, manager.tools() still returns the full list."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        enforce_skill_tools=True,
+    )
+    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
+    assert manager.tools() == ["mcp__srv__a", "mcp__srv__b"]
+
+
+def test_fake_service_records_last_allowed_tools() -> None:
+    """FakeLLMService(enforce_skill_tools=True) records allowed_tools; never filters."""
+    service = FakeLLMService(enforce_skill_tools=True)
+    list(service.stream("q", allowed_tools=("x",)))
+    assert service.last_allowed_tools == ("x",)
+
+
+def test_fake_service_last_allowed_tools_initially_none() -> None:
+    """FakeLLMService.last_allowed_tools defaults to None before any stream."""
+    service = FakeLLMService()
+    assert service.last_allowed_tools is None
+
+
+def test_fake_service_stream_ignores_allowed_tools_content() -> None:
+    """FakeLLMService.stream still yields canned responses regardless of allowed_tools."""
+    responses: list[list[StreamEvent]] = [
+        [{"type": "text_delta", "text": "first"}, {"type": "done"}],
+    ]
+    service = FakeLLMService(responses=responses)
+    events = list(service.stream("q", allowed_tools=("mcp__srv__a",)))
+    assert events[0]["text"] == "first"
+    assert service.last_allowed_tools == ("mcp__srv__a",)
+
+
+def test_services_satisfy_protocol_after_widening() -> None:
+    """Both implementations still satisfy LLMService protocol after stream widening."""
+    assert isinstance(FakeLLMService(enforce_skill_tools=True), LLMService)
+    assert isinstance(
+        RealLLMService(provider="claude", enforce_skill_tools=True), LLMService
+    )
+
+
 @pytest.mark.claude_cli_integration
 def test_real_llm_service_stream_smoke() -> None:
     """Smoke test: RealLLMService.stream() works end-to-end with the live Claude CLI."""

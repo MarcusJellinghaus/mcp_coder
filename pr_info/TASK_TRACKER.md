@@ -49,9 +49,9 @@ Detail: [step_3.md](./steps/step_3.md)
 
 Detail: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: widen `stream()` on Protocol/`RealLLMService`/`FakeLLMService`; `enforce_skill_tools` ctor arg; filtering + `permission_warning` yield; tests in `test_llm_service.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: widen `stream()` on Protocol/`RealLLMService`/`FakeLLMService`; `enforce_skill_tools` ctor arg; filtering + `permission_warning` yield; tests in `test_llm_service.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: End-to-end threading — `AppCore`, `ui/app.py`, CLI wiring
 
