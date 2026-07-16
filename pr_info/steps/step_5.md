@@ -43,8 +43,11 @@ in the TUI, and wire the enforcement flag from the CLI. This closes the remainin
    ```
    `_stream_llm(self, text: str, allowed_tools: tuple[str, ...] | None = None)` →
    `for event in self._core.stream_llm(text, allowed_tools):`
-4. **`ui/app.py` — render guard** at the top of `_handle_stream_event`
-   (before `self._renderer.render(event)`, which would drop the unknown type):
+4. **`ui/app.py` — render guard** at the top of `_handle_stream_event`.
+   Insert it **before** the existing `output = self.query_one(OutputLog)` /
+   `action = self._renderer.render(event)` lines (currently ~line 409-410):
+   `render()` returns `None` for an unknown event type and the method bails
+   right after, so the guard must run before `render()` is consulted:
    ```python
    if event.get("type") == "permission_warning":
        self.query_one(OutputLog).append_text(
@@ -70,6 +73,11 @@ _(none — plumbing + one render branch)_
   (field survives across the reconstruction).
 - `test_app_core`: `stream_llm(text, ("mcp__srv__a",))` with a `FakeLLMService` →
   `fake.last_allowed_tools == ("mcp__srv__a",)` (forwarded through the core).
+- `test_app_core`: a `FakeLLMService` yielding a synthetic
+  `{"type": "permission_warning", "message": …}` StreamEvent passes cleanly through
+  `stream_llm` → `ResponseAssembler.add(event)` tolerates the unknown type (no error)
+  **and** the event is forwarded to the event log via `emit("stream_event", **event)`
+  (closes the "warning reaches the event log" AC end-to-end).
 - `test_app_pilot`: submitting input whose command yields `SendToLLM(..., allowed_tools=…)`
   reaches `FakeLLMService.last_allowed_tools` (UI worker threads it).
 - `test_app_pilot`: a canned `permission_warning` event renders its message text in the
