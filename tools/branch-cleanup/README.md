@@ -13,6 +13,14 @@ Run from the root of any clone of the repo:
 ./tools/branch-cleanup/prune-branches.ps1 -Main master   # different base branch
 ```
 
+Or double-click / call the `.bat` launcher, which forwards the same flags
+and picks whichever PowerShell is installed:
+
+```bat
+tools\branch-cleanup\prune-branches.bat
+tools\branch-cleanup\prune-branches.bat -Delete
+```
+
 ## How it classifies
 
 - **Protected:** the current branch and `main` are never touched.
