@@ -188,9 +188,11 @@ class ICoderApp(App[None]):
                 case SendToLLM():
                     output.write("")
                     self.query_one(BusyIndicator).show_busy("Querying LLM...")
-                    llm_input = action.text
+                    llm_input, allowed = action.text, action.allowed_tools
                     self.run_worker(
-                        lambda llm_input=llm_input: self._stream_llm(llm_input),
+                        lambda llm_input=llm_input, allowed=allowed: self._stream_llm(
+                            llm_input, allowed
+                        ),
                         thread=True,
                     )
                 case ResetSession():
@@ -278,18 +280,22 @@ class ICoderApp(App[None]):
             "content_detail_opened", unit_id=unit.id, kind=unit.kind
         )
 
-    def _stream_llm(self, text: str) -> None:
+    def _stream_llm(
+        self, text: str, allowed_tools: tuple[str, ...] | None = None
+    ) -> None:
         """Worker target: stream LLM response in background thread.
 
         Uses call_from_thread() to post updates to the UI event loop.
 
         Args:
             text: User input to send to LLM.
+            allowed_tools: Declared MCP tool tokens for this turn, forwarded
+                to the core for host-side enforcement, or ``None``.
         """
         self._cancel_event.clear()
         _error_handled = False
         try:
-            for event in self._core.stream_llm(text):
+            for event in self._core.stream_llm(text, allowed_tools):
                 if self._cancel_event.is_set():
                     break
                 self.call_from_thread(self._handle_stream_event, event)
@@ -406,6 +412,11 @@ class ICoderApp(App[None]):
             replay_mode: When True, skip token-display updates (used during
                 JSONL log replay where token usage should not change).
         """
+        if event.get("type") == "permission_warning":
+            self.query_one(OutputLog).append_text(
+                str(event.get("message", "")), style=STYLE_CANCELLED
+            )
+            return
         output = self.query_one(OutputLog)
         action = self._renderer.render(event)
         if action is None:

@@ -151,6 +151,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
             timeout=args.timeout,
             mcp_manager=mcp_manager,
             project_dir=str(project_dir),
+            enforce_skill_tools=False,
         )
 
         from ...icoder.core.app_core import AppCore

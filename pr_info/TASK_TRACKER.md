@@ -57,9 +57,9 @@ Detail: [step_4.md](./steps/step_4.md)
 
 Detail: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: preserve field in `handle_input` (`replace`); `stream_llm` forwards; UI worker threads field; `permission_warning` render guard; CLI passes `enforce_skill_tools=False`; tests in `test_app_core.py`, `test_app_pilot.py`, `test_cli_icoder.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: preserve field in `handle_input` (`replace`); `stream_llm` forwards; UI worker threads field; `permission_warning` render guard; CLI passes `enforce_skill_tools=False`; tests in `test_app_core.py`, `test_app_pilot.py`, `test_cli_icoder.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
