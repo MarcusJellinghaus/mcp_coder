@@ -95,6 +95,24 @@ class MCPManager:
         )
         self._thread.start()
 
+    def canonical_name(self, tool: Any) -> str | None:
+        """Return the stamped ``mcp__server__tool`` identity, or None if absent.
+
+        Reads the ``mcp_canonical_name`` key stamped onto each tool's
+        ``metadata`` during discovery. Pure and cache-safe: never triggers
+        re-discovery and never mutates the tool.
+
+        Args:
+            tool: A LangChain tool object produced by discovery.
+
+        Returns:
+            The canonical ``mcp__server__tool`` token, or ``None`` when the
+            metadata or key is missing or the stamped value is not a string.
+        """
+        meta = getattr(tool, "metadata", None) or {}
+        value = meta.get("mcp_canonical_name")
+        return value if isinstance(value, str) else None
+
     def tools(self) -> list[Any]:
         """Return cached LangChain tools. Connects lazily on first call.
 
@@ -143,6 +161,10 @@ class MCPManager:
                         connection=connection,
                         server_name=server_name,
                     )
+                    lc_tool.metadata = {
+                        **(lc_tool.metadata or {}),
+                        "mcp_canonical_name": f"mcp__{server_name}__{tool.name}",
+                    }
                     all_tools.append(lc_tool)
                     count += 1
             tool_counts[server_name] = count

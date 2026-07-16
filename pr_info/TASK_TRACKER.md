@@ -33,9 +33,9 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `canonical_name()` accessor + `mcp__{server}__{tool}` stamp in `_connect_and_discover`; tests in `tests/llm/test_mcp_manager.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `canonical_name()` accessor + `mcp__{server}__{tool}` stamp in `_connect_and_discover`; tests in `tests/llm/test_mcp_manager.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `SendToLLM.allowed_tools` field + skill handler populates it
 
