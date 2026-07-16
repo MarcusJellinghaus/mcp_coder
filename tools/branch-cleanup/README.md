@@ -8,9 +8,10 @@ GitHub squash-merges, which `git branch --merged` cannot detect on its own).
 Run from the root of a clone (operates on the current directory)...
 
 ```powershell
-./tools/branch-cleanup/prune-branches.ps1          # dry run: classify only
-./tools/branch-cleanup/prune-branches.ps1 -Delete  # delete the merged branches
-./tools/branch-cleanup/prune-branches.ps1 -Main master   # different base branch
+./tools/branch-cleanup/prune-branches.ps1                 # dry run: classify only
+./tools/branch-cleanup/prune-branches.ps1 -Delete         # delete the merged branches
+./tools/branch-cleanup/prune-branches.ps1 -Delete -Force  # also delete "needs review" branches
+./tools/branch-cleanup/prune-branches.ps1 -Main master    # different base branch
 ```
 
 ...or run it from anywhere and point it at a clone with `-Path`:
@@ -34,10 +35,16 @@ tools\branch-cleanup\prune-branches.bat -Delete
 - **Merged / obsolete:** the branch tip is reachable from `main`
   (`git branch --merged`) **or** GitHub reports a merged PR for it.
   The PR check is what catches squash-merges.
+- **Needs review:** a squash-merge is matched by branch *name*, so a new local
+  branch that reuses a merged branch's name would look merged. If such a
+  branch's tip commit is **newer** than the PR merge time, it is flagged and
+  **kept** — deleted only with `-Force`. This protects unpushed work on a
+  reused branch name.
 - **Active:** everything else — kept.
 
 Deletion uses `git branch -D` because squash-merged branches are not
 "merged" from git's point of view (their commits never land in `main`).
+Deleted refs remain recoverable via `git reflog` for ~30 days.
 
 ## Requirements
 
