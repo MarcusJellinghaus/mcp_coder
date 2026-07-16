@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `tests/llm/test_skill_tool_filter.py` (new) + module-level `filter_tools_by_declaration` in `mcp_manager.py` (TDD, not wired to any caller)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `tests/llm/test_skill_tool_filter.py` (new) + module-level `filter_tools_by_declaration` in `mcp_manager.py` (TDD, not wired to any caller)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `MCPManager` canonical-name stamping + accessor
 
