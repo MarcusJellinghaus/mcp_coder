@@ -5,12 +5,19 @@ GitHub squash-merges, which `git branch --merged` cannot detect on its own).
 
 ## Usage
 
-Run from the root of any clone of the repo:
+Run from the root of a clone (operates on the current directory)...
 
 ```powershell
 ./tools/branch-cleanup/prune-branches.ps1          # dry run: classify only
 ./tools/branch-cleanup/prune-branches.ps1 -Delete  # delete the merged branches
 ./tools/branch-cleanup/prune-branches.ps1 -Main master   # different base branch
+```
+
+...or run it from anywhere and point it at a clone with `-Path`:
+
+```powershell
+./tools/branch-cleanup/prune-branches.ps1 -Path C:\code\other-clone
+./tools/branch-cleanup/prune-branches.ps1 -Path C:\code\other-clone -Delete
 ```
 
 Or double-click / call the `.bat` launcher, which forwards the same flags

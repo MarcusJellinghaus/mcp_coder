@@ -15,17 +15,28 @@
 .PARAMETER Main
   Name of the main/base branch. Defaults to 'main'.
 
+.PARAMETER Path
+  Path to the repo to operate on. Defaults to the current directory.
+
 .EXAMPLE
-  ./tools/branch-cleanup/prune-branches.ps1            # dry run: just show the classification
+  ./tools/branch-cleanup/prune-branches.ps1            # dry run in the current repo
   ./tools/branch-cleanup/prune-branches.ps1 -Delete    # delete the merged branches
+  ./tools/branch-cleanup/prune-branches.ps1 -Path C:\code\other-clone   # target another clone
 #>
 [CmdletBinding()]
 param(
     [switch]$Delete,
-    [string]$Main = 'main'
+    [string]$Main = 'main',
+    [string]$Path = '.'
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not (Test-Path (Join-Path $Path '.git'))) {
+    throw "Not a git repository: $Path"
+}
+Push-Location $Path
+try {
 
 # Refresh remote state and prune stale remote-tracking refs.
 Write-Host "Fetching + pruning remotes..." -ForegroundColor Cyan
@@ -88,3 +99,8 @@ foreach ($m in $merged) {
     git branch -D $m.Branch
 }
 Write-Host "Deleted $($merged.Count) branch(es)." -ForegroundColor Green
+
+}
+finally {
+    Pop-Location
+}
