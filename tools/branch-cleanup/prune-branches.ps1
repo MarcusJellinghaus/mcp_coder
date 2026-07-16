@@ -16,8 +16,8 @@
   Name of the main/base branch. Defaults to 'main'.
 
 .EXAMPLE
-  ./scripts/prune-branches.ps1            # dry run: just show the classification
-  ./scripts/prune-branches.ps1 -Delete    # delete the merged branches
+  ./tools/branch-cleanup/prune-branches.ps1            # dry run: just show the classification
+  ./tools/branch-cleanup/prune-branches.ps1 -Delete    # delete the merged branches
 #>
 [CmdletBinding()]
 param(
@@ -41,6 +41,12 @@ if (-not $hasGh) {
 $mergedByGit = @(git branch --merged $Main --format '%(refname:short)') |
     Where-Object { $_ -and $_ -ne $Main }
 
+# Head-branch names of merged PRs, fetched in one call (catches squash-merges).
+$mergedPrHeads = @()
+if ($hasGh) {
+    $mergedPrHeads = @(gh pr list --state merged --limit 500 --json headRefName --jq '.[].headRefName')
+}
+
 $branches = @(git branch --format '%(refname:short)') |
     Where-Object { $_ -and $_ -ne $Main -and $_ -ne $current }
 
@@ -52,10 +58,8 @@ foreach ($b in $branches) {
     if ($mergedByGit -contains $b) {
         $reason = 'merged into main'
     }
-    elseif ($hasGh) {
-        # Ask GitHub whether a merged PR exists for this branch (squash-merge case).
-        $pr = gh pr list --head $b --state merged --json number,title --limit 1 2>$null | ConvertFrom-Json
-        if ($pr) { $reason = "PR #$($pr[0].number) merged" }
+    elseif ($mergedPrHeads -contains $b) {
+        $reason = 'merged via PR (squash)'
     }
 
     if ($reason) { $merged.Add([pscustomobject]@{ Branch = $b; Reason = $reason }) }
