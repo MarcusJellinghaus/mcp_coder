@@ -51,6 +51,17 @@ def test_action_value_equality() -> None:
     assert OpenPicker() == OpenPicker()
 
 
+def test_send_to_llm_allowed_tools_defaults_none() -> None:
+    """SendToLLM.allowed_tools defaults to None (no declaration)."""
+    assert SendToLLM(text="x").allowed_tools is None
+
+
+def test_send_to_llm_allowed_tools_round_trip() -> None:
+    """SendToLLM stores the provided allowed_tools tuple verbatim."""
+    action = SendToLLM(text="x", allowed_tools=("mcp__srv__a",))
+    assert action.allowed_tools == ("mcp__srv__a",)
+
+
 def test_command_creation() -> None:
     cmd = Command(
         name="/help", description="Show help", handler=lambda args: Response()

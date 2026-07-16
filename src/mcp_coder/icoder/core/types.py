@@ -37,6 +37,7 @@ class SendToLLM:
     """Forward ``text`` to the LLM for streaming."""
 
     text: str
+    allowed_tools: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)

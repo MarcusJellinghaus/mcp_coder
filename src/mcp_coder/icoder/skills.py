@@ -160,7 +160,14 @@ def _make_langchain_handler(skill: ClaudeSkill) -> Callable[[list[str]], Respons
     def handler(args: list[str]) -> Response:
         arguments = " ".join(args)
         expanded = skill.prompt_template.replace("$ARGUMENTS", arguments).strip()
-        return Response(actions=(SendToLLM(text=expanded),))
+        return Response(
+            actions=(
+                SendToLLM(
+                    text=expanded,
+                    allowed_tools=tuple(skill.allowed_tools) or None,
+                ),
+            )
+        )
 
     return handler
 

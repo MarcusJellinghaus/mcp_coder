@@ -41,9 +41,9 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: add `allowed_tools` field to `SendToLLM` (`types.py`) + populate in `_make_langchain_handler` (`skills.py`); tests in `test_types.py`, `test_skills.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `allowed_tools` field to `SendToLLM` (`types.py`) + populate in `_make_langchain_handler` (`skills.py`); tests in `test_types.py`, `test_skills.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Service layer — enforcement toggle, `stream(allowed_tools=…)`, filtering + warning
 
