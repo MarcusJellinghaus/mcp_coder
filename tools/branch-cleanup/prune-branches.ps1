@@ -55,7 +55,7 @@ $mergedByGit = @(git branch --merged $Main --format '%(refname:short)') |
 # Head-branch names of merged PRs, fetched in one call (catches squash-merges).
 $mergedPrHeads = @()
 if ($hasGh) {
-    $mergedPrHeads = @(gh pr list --state merged --limit 500 --json headRefName --jq '.[].headRefName')
+    $mergedPrHeads = @(gh pr list --state merged --limit 1000 --json headRefName --jq '.[].headRefName')
 }
 
 $branches = @(git branch --format '%(refname:short)') |

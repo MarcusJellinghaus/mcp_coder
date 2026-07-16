@@ -41,7 +41,14 @@ Deletion uses `git branch -D` because squash-merged branches are not
 
 ## Requirements
 
-- PowerShell (`pwsh` or Windows PowerShell 5.1).
-- [`gh`](https://cli.github.com/) installed and authenticated (`gh auth status`).
-  Without it the script still runs but warns and can only detect true
-  fast-forward / merge-commit branches, missing squash-merges.
+- **git** and **PowerShell** (`pwsh` or Windows PowerShell 5.1).
+- **[`gh`](https://cli.github.com/) installed and authenticated** (`gh auth status`).
+  Effectively **required** if you squash-merge: a squash collapses the branch
+  into one new commit on `main`, so the branch's own commits never land there
+  and `git branch --merged` cannot see it. The `gh` merged-PR lookup is the
+  only path that detects squash-merged branches — without it the tool warns
+  and detects almost nothing on a squash workflow.
+
+The `gh` lookup covers the 1000 most recently merged PRs. If a merged branch
+is older than that, it is classified **active** and kept (never wrongly
+deleted) — clean those few up by hand.
