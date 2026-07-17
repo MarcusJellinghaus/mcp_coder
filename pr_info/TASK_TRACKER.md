@@ -33,9 +33,9 @@ Detail: [step_1.md](./steps/step_1.md) — AC3 (primary), AC6 (boundary doc), AC
 
 Detail: [step_2.md](./steps/step_2.md) — AC4
 
-- [ ] Implementation: append `test_input_submitted_constructed_only_in_input_area` to `test_self_invocation_guard.py`; add marker comment at the `InputSubmitted` post site in `input_area.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: append `test_input_submitted_constructed_only_in_input_area` to `test_self_invocation_guard.py`; add marker comment at the `InputSubmitted` post site in `input_area.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Behavioural dispatch boundary — human in, model out
 
