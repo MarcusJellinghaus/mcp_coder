@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md) — AC3 (primary), AC6 (boundary doc), AC7
 
-- [ ] Implementation: create `tests/icoder/test_self_invocation_guard.py` (`_call_sites` helper + `test_exactly_one_dispatch_call_site`); replace module docstring with boundary note and add marker comment above the `registry.dispatch(text)` call in `app_core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `tests/icoder/test_self_invocation_guard.py` (`_call_sites` helper + `test_exactly_one_dispatch_call_site`); replace module docstring with boundary note and add marker comment above the `registry.dispatch(text)` call in `app_core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `InputSubmitted` post-site invariant
 

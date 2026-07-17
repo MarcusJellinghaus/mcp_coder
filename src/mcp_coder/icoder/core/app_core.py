@@ -1,4 +1,13 @@
-"""AppCore — Central input router for iCoder. No Textual dependency."""
+"""AppCore — central input router for iCoder. No Textual dependency.
+
+Security boundary (issue #1040, design #1037 §3): this module holds the
+ONLY production ``registry.dispatch`` call site (in ``handle_input``). Model
+output flows through a separate, one-directional render path
+(``stream_llm`` -> ``ICoderApp._handle_stream_event`` -> ``OutputLog``) that
+never re-parses text as a command, so a model-emitted ``/skill`` can never
+route into a skill's tool context. Any future model-driven command feature
+must consciously preserve this gate. Full threat model: I5.6 / #1056.
+"""
 
 from __future__ import annotations
 
@@ -88,6 +97,10 @@ class AppCore:
 
         self._event_log.emit("input_received", text=text)
 
+        # SECURITY BOUNDARY (#1040): the ONLY production dispatch call site.
+        # Reached only via on_input_area_input_submitted (human Enter keypress).
+        # Model/stream output must never be routed here. A second call site
+        # breaks tests/icoder/test_self_invocation_guard.py by design.
         response = self._registry.dispatch(text)
         if response is not None:
             self._event_log.emit("command_matched", command=text.split()[0].lower())
