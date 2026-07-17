@@ -41,9 +41,9 @@ Detail: [step_2.md](./steps/step_2.md) — AC4
 
 Detail: [step_3.md](./steps/step_3.md) — AC1, AC2, AC3 (supporting)
 
-- [ ] Implementation: add `test_user_typed_skill_dispatches_and_invokes` to `test_app_core.py`; add `test_model_stream_slash_text_never_dispatches` to `test_app_pilot.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `test_user_typed_skill_dispatches_and_invokes` to `test_app_core.py`; add `test_model_stream_slash_text_never_dispatches` to `test_app_pilot.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `user-invocable: false` absent from registry + flag doc-note
 

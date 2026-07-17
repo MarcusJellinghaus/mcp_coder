@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterator
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from textual.pilot import Pilot
@@ -188,6 +189,32 @@ async def test_streaming_single_chunk_no_newline(
         output = app.query_one(OutputLog)
         assert output.recorded_lines.count("hello") == 1
         assert app._text_buffer == ""
+
+
+async def test_model_stream_slash_text_never_dispatches(
+    icoder_app: ICoderApp,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Model /skill-shaped text driven through the render path renders as
+    plain text and never reaches registry.dispatch.
+
+    Drives ICoderApp._handle_stream_event directly — the same entry ui/replay.py
+    uses — so no human input is involved. The registry spy is a supporting
+    check (the render path never references the registry); the load-bearing
+    guarantee is the single-call-site test in test_self_invocation_guard.py.
+    """
+    app = icoder_app
+    async with app.run_test() as pilot:
+        spy = MagicMock(wraps=app._core.registry.dispatch)
+        monkeypatch.setattr(app._core.registry, "dispatch", spy)
+
+        app._handle_stream_event({"type": "text_delta", "text": "/issue_update 5"})
+        app._handle_stream_event({"type": "done"})
+        await pilot.pause()
+
+        spy.assert_not_called()
+        output = app.query_one(OutputLog)
+        assert output.recorded_lines.count("/issue_update 5") == 1
 
 
 async def test_streaming_multi_chunk_no_newlines(
