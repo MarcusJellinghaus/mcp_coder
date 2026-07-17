@@ -49,9 +49,9 @@ Detail: [step_3.md](./steps/step_3.md) — AC1, AC2, AC3 (supporting)
 
 Detail: [step_4.md](./steps/step_4.md) — AC5, AC6 (flag doc-note)
 
-- [ ] Implementation: add `test_user_invocable_false_skill_absent_from_registry` to `test_skills.py`; add field doc-note above `disable_model_invocation` in `skills.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `test_user_invocable_false_skill_absent_from_registry` to `test_skills.py`; add field doc-note above `disable_model_invocation` in `skills.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

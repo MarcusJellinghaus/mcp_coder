@@ -113,6 +113,24 @@ def test_load_skills_filters_user_invocable_false(tmp_path: Path) -> None:
     assert len(skills) == 0
 
 
+def test_user_invocable_false_skill_absent_from_registry(tmp_path: Path) -> None:
+    """A user-invocable: false skill is never registered as a command.
+
+    load_skills drops it, so register_skill_commands never sees it and the
+    registry has no matching command (observable outcome, not just loader list).
+    """
+    _create_skill(
+        tmp_path,
+        "hidden",
+        'description: "Hidden"\nuser-invocable: false\n',
+        "body",
+    )
+    registry = CommandRegistry()
+    skills = load_skills(tmp_path)
+    register_skill_commands(registry, skills, "langchain")
+    assert registry.has_command("/hidden") is False
+
+
 @pytest.mark.parametrize("scenario", ["empty_dir", "no_skill_md", "malformed_file"])
 def test_load_skills_skip_cases(tmp_path: Path, scenario: str) -> None:
     """load_skills handles edge cases: empty dir, missing SKILL.md, malformed files."""
