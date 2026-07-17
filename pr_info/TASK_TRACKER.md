@@ -55,5 +55,5 @@ Detail: [step_4.md](./steps/step_4.md) — AC5, AC6 (flag doc-note)
 
 ## Pull Request
 
-- [ ] PR review: address review feedback
+- [x] PR review: address review feedback
 - [ ] PR summary prepared
