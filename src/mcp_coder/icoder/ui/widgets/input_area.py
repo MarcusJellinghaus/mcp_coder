@@ -207,6 +207,11 @@ class InputArea(TextArea):
                     return
                 self._replace_via_keyboard("", backslash_loc, cursor_loc)
             text = self.text.strip()
+            # SECURITY BOUNDARY (#1040): the ONLY place InputSubmitted is
+            # posted — a human Enter keypress. This is what reaches
+            # AppCore.handle_input -> registry.dispatch. Model/stream output
+            # must never post this message. Locked by
+            # tests/icoder/test_self_invocation_guard.py.
             if text:
                 self.post_message(self.InputSubmitted(text))
                 self.clear()

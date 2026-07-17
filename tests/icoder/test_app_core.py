@@ -544,6 +544,22 @@ def test_set_prompt_color_invalid_preserves_current(app_core: AppCore) -> None:
     assert app_core.prompt_color == "#ef4444"
 
 
+def test_user_typed_skill_dispatches_and_invokes(app_core: AppCore) -> None:
+    """A user-typed /skill routed via handle_input dispatches and invokes it."""
+    from mcp_coder.icoder.skills import ClaudeSkill, register_skill_commands
+
+    skill = ClaudeSkill(
+        name="issue_update",
+        description="Update an issue",
+        prompt_template="Update issue $ARGUMENTS",
+    )
+    register_skill_commands(app_core.registry, [skill], "langchain")
+
+    response = app_core.handle_input("/issue_update 5")
+
+    assert response.actions == (SendToLLM(text="Update issue 5"),)
+
+
 def test_handle_input_returns_send_to_llm_with_override(app_core: AppCore) -> None:
     """A command's SendToLLM(text=...) override is preserved through dispatch."""
     from mcp_coder.icoder.core.types import Command, Response

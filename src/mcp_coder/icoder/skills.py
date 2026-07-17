@@ -23,6 +23,13 @@ class ClaudeSkill:
     description: str  # frontmatter 'description'
     prompt_template: str  # markdown body
     argument_hint: str | None = None  # frontmatter 'argument-hint'
+    # Parsed for Claude-format fidelity but intentionally UNREAD at runtime
+    # (#1040). In the langchain/TUI path every slash command is user-initiated
+    # (model output never reaches handle_input/dispatch — see AppCore module
+    # docstring), so the flag's invariant "the LLM may not invoke this skill"
+    # holds structurally for all commands. Do NOT add a runtime reader that
+    # skips command registration: that would wrongly hide human-invocable
+    # skills. Coupled to I1.1/M2, where skill frames can override `never`.
     disable_model_invocation: bool = False
     user_invocable: bool = True
     allowed_tools: list[str] = field(default_factory=list)
