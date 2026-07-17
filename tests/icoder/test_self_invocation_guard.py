@@ -1,6 +1,12 @@
 """Structural regression tests locking in the no-self-invocation boundary.
 
 See pr_info/steps/summary.md and issue #1040 (I1.2).
+
+Scope caveat: these source-search guards match direct call syntax only
+(``.dispatch(``, ``InputSubmitted(``). A second dispatch reached via an alias,
+``getattr``, or a line-split call would evade them; that indirection is out of
+scope. The realistic threat (routing the stream path straight into
+``registry.dispatch``) is a direct call and is caught.
 """
 
 from __future__ import annotations
