@@ -7,6 +7,7 @@ boundary is pinned by the ``permissions_leaf_isolation`` import-linter contract.
 
 from __future__ import annotations
 
+from mcp_coder.icoder.permissions.matcher import parse_matcher
 from mcp_coder.icoder.permissions.model import (
     WILDCARD,
     ArgPredicate,
@@ -39,4 +40,5 @@ __all__ = [
     "Rule",
     "Source",
     "Specificity",
+    "parse_matcher",
 ]

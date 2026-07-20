@@ -33,9 +33,9 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: write `tests/icoder/test_permissions_matcher.py` (TDD), then create `permissions/matcher.py` and export `parse_matcher` from `__init__.py`
-- [ ] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write `tests/icoder/test_permissions_matcher.py` (TDD), then create `permissions/matcher.py` and export `parse_matcher` from `__init__.py`
+- [x] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Resolver — config precedence + default + config-path degrade
 
