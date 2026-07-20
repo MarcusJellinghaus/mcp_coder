@@ -55,5 +55,5 @@ Detail: [step_4.md](./steps/step_4.md)
 
 ## Pull Request
 
-- [ ] Review PR against issue #1041 acceptance criteria and summary.md
+- [x] Review PR against issue #1041 acceptance criteria and summary.md
 - [ ] Write PR summary description
