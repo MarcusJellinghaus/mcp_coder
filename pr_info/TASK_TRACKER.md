@@ -49,9 +49,9 @@ Detail: [step_3.md](./steps/step_3.md)
 
 Detail: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: extend `tests/icoder/test_permissions_resolver.py` (TDD, frame models A/B/C), then add `_resolve_frame` and wire the frame-first branch into `resolve()`
-- [ ] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: extend `tests/icoder/test_permissions_resolver.py` (TDD, frame models A/B/C), then add `_resolve_frame` and wire the frame-first branch into `resolve()`
+- [x] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
