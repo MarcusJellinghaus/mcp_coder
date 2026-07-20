@@ -24,6 +24,7 @@ from mcp_coder.icoder.permissions.model import (
     Source,
     Specificity,
 )
+from mcp_coder.icoder.permissions.resolver import resolve
 
 __all__ = [
     "WILDCARD",
@@ -41,4 +42,5 @@ __all__ = [
     "Source",
     "Specificity",
     "parse_matcher",
+    "resolve",
 ]

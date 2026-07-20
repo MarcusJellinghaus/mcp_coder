@@ -41,9 +41,9 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: write `tests/icoder/test_permissions_resolver.py` (TDD, `frame=None`), then create `permissions/resolver.py` (`resolve` + `_resolve_config`), export `resolve`, and whitelist unread params in `vulture_whitelist.py`
-- [ ] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write `tests/icoder/test_permissions_resolver.py` (TDD, `frame=None`), then create `permissions/resolver.py` (`resolve` + `_resolve_config`), export `resolve`, and whitelist unread params in `vulture_whitelist.py`
+- [x] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Resolver — frame semantics + degrade interaction + lifted_never
 

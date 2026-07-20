@@ -347,3 +347,10 @@ _.reveal_sentinel
 # for signature stability (see pr_info/steps/Decisions.md); no longer used in the
 # body since the thin launcher no longer bakes the session folder path.
 _.session_folder_path
+
+# icoder/permissions/resolver.py - resolve() keeps `args` in its fixed
+# cross-issue signature (decision #9) though M2 never reads it; arg-predicate
+# evaluation is deferred to I5.4. The name is used elsewhere in the tree so
+# vulture stays green project-wide; this entry documents the intent and keeps
+# it green if that changes.
+_.args
