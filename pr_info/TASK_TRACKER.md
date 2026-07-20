@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: write `tests/icoder/test_permissions_model.py` (TDD), then create `permissions/__init__.py`, `permissions/model.py`, and add the `permissions_leaf_isolation` contract to `.importlinter`
-- [ ] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write `tests/icoder/test_permissions_model.py` (TDD), then create `permissions/__init__.py`, `permissions/model.py`, and add the `permissions_leaf_isolation` contract to `.importlinter`
+- [x] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Matcher engine (parse + rank + match)
 
