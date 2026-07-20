@@ -67,3 +67,29 @@ Committed round 1 as `d304b75` (pushed). Fresh review engineer ran `/plan_review
 **Changes applied** (via `/plan_update`): #2 — scoped Step 1's hashability test to genuinely-hashable value types (`Policy`, `Matcher`, `Rule`, `Decision`, `Source` members); explicitly excluded `PermissionConfig` (dict-valued `groups`/`scenarios` -> `hash()` raises); corrected the "Frozen, hashable dataclasses" blanket wording; logged as R2-H1 in `Decisions.md`. Files changed: `step_1.md`, `Decisions.md`.
 
 **Status**: plan changed this round -> committing, then looping to Round 3.
+
+---
+
+## Round 3 — 2026-07-20
+
+Committed round 2 as `0204a8e` (pushed). Fresh review engineer ran `/plan_review` again.
+
+**Findings**:
+- Verified R2-H1 (hashability scoping) is technically correct, complete, and internally consistent — DATA and TESTS in `step_1.md` agree; no other step or `summary.md` implies `PermissionConfig` is hashable; the asserted-hashable value types all carry only hashable fields.
+- Holistic pass: AC coverage complete (every row maps to a test, incl. all frame models A/B/C, both degrade rows/F4, degrade×sandbox, `>1`-arg reject, truthful `after-approval`, structural fields, leaf import-linter row); `matched_rule` biconditional locked; Q3 threaded correctly; codebase grounding accurate; step granularity sound (one commit each, linear 1->2->3->4, TDD).
+- One non-actionable note: vulture param-vs-attribute whitelist syntax is an implementation-time verification already settled under S5/decision #9 — not re-raised.
+
+**Decisions**: no findings to act on.
+
+**User decisions**: none.
+
+**Changes**: none — zero plan changes this round. Review loop closes.
+
+---
+
+## Final Status
+
+- **Rounds run**: 3 (Round 1 applied 9 findings + created `Decisions.md`; Round 2 applied 1 finding (hashability scoping); Round 3 zero changes — clean pass).
+- **Commits produced**: `d304b75` (round 1), `0204a8e` (round 2), plus this log commit. All pushed to `1041-i2-1-permission-model-resolver`.
+- **User escalations**: none — every finding was resolved by settled decisions in #1037/#1041 or was a test/doc improvement within the settled design; none affected scope or architecture.
+- **Outcome**: Plan for #1041 (I2.1 — Permission model + resolver) is **ready for approval**. 4 TDD steps, one commit each; full acceptance-criteria coverage; aligned with the uniform-specificity precedence, F4 degrade ordering, frame-elevates-only-declared, fail-closed, and `source`/`matched_rule`/`lifted_never` contracts. No dependency or config changes required.
