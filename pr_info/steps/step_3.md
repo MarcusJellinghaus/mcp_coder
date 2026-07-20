@@ -8,7 +8,8 @@ Step 4.
 - Create `src/mcp_coder/icoder/permissions/resolver.py`
 - Create `tests/icoder/test_permissions_resolver.py`
 - Extend `__init__.py` with `resolve`.
-- Modify `vulture_whitelist.py` (whitelist the unread `args` param).
+- Modify `vulture_whitelist.py` (whitelist the unread `args` param; also `frame` if
+  vulture flags it at this step — see HOW/S5).
 
 ## WHAT (resolver.py — imports matcher + model)
 
@@ -31,6 +32,12 @@ def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision: ...
   though this step reads neither. Suppress the unused-arg finding with a
   `# pylint: disable=unused-argument` on `resolve` and add `args` to
   `vulture_whitelist.py` (decision #9 — do NOT drop the parameter).
+- **The `None -> ALWAYS` default mapping lives here (resolver), not in `model.py`** (S2):
+  `PermissionConfig.default_policy` stays `None` when unset; the resolver maps
+  `None -> Policy.ALWAYS` (§8.4) at the fallback (see ALGORITHM).
+- **Vulture at the Step-3 commit (S5):** `frame` is also unread in this step (Step 4
+  consumes it). The Step-3 commit must leave `run_vulture_check` green — verify `frame`
+  is not flagged; if it is, add `frame` to `vulture_whitelist.py` alongside `args`.
 - In this step, `resolve(...)` simply delegates to `_resolve_config(tool_name, config)`
   (Step 4 inserts the frame branch above it).
 - `matched_rule` uses the provenance hook: report `rule.matcher.origin` if set, else the
@@ -80,15 +87,18 @@ Key precedence (max over the tuple): specificity (primary, lexicographic) -> pol
   `matched_rule` is that origin rule.
 
 ## CHECKS
-Four checks (pylint, pytest with marker exclusions, mypy strict, lint-imports) green.
-Confirm `run_vulture_check` no longer flags `args` after the whitelist entry.
+Four checks (pylint, pytest, mypy strict, lint-imports) green, using the canonical
+fast-unit `run_pytest_check` marker exclusions from `.claude/CLAUDE.md` (see Step 1 CHECKS
+for the full `-m` string, with `-n auto`). Confirm `run_vulture_check` is green — no flag
+for `args` (whitelisted) and none for the unread `frame` (whitelist it too if flagged).
 
 ## LLM PROMPT
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_3.md`. Following TDD, first
 > write `tests/icoder/test_permissions_resolver.py` for every case in TESTS (all with
 > `frame=None`), then implement `src/mcp_coder/icoder/permissions/resolver.py` per
 > WHAT/HOW/ALGORITHM: `resolve` delegates to `_resolve_config`; keep the `args`/`frame`
-> params (suppress the unused-arg lint and add `args` to `vulture_whitelist.py`).
-> Import only from `.matcher` and `.model`. Use MCP tools only. Run pylint, pytest
-> (unit-test marker exclusions), mypy(strict), lint-imports, and vulture; fix until
-> green. Commit as one change.
+> params (suppress the unused-arg lint and add `args` — and `frame` if vulture flags it —
+> to `vulture_whitelist.py`); the `None -> ALWAYS` default mapping lives in the resolver,
+> not the model. Import only from `.matcher` and `.model`. Use MCP tools only. Run pylint,
+> pytest (canonical fast-unit marker exclusions from `.claude/CLAUDE.md`), mypy(strict),
+> lint-imports, and vulture; fix until green. Commit as one change.

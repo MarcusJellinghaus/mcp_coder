@@ -6,8 +6,9 @@ green. Depends on Step 1.
 ## WHERE
 - Create `src/mcp_coder/icoder/permissions/matcher.py`
 - Create `tests/icoder/test_permissions_matcher.py`
-- (optional) extend `__init__.py` exports with `parse_matcher`, `specificity`,
-  `matches`.
+- Extend `__init__.py` exports with `parse_matcher` (the single shared parse
+  primitive I2.2/I2.4 consume — decision #2). Keep `specificity` and `matches`
+  module-internal (not re-exported).
 
 ## WHAT (matcher.py — pure string logic; imports model only)
 
@@ -75,18 +76,28 @@ matches: split canonical_tool "mcp__server__tool"; return
   `not_a_tool`.
 - `specificity` ranking (parametrized): arg-scoped `(1,1,1)` > exact-tool `(0,1,1)` >
   server-wildcard `(0,0,1)` > global `(0,0,0)`; assert lexicographic `>`.
+- **Primary-key case (§8.3 manager, S1)**: an exact-tool matcher on server A
+  (`mcp__git__commit`, `specificity() == (0,1,1)`) outranks a server-wildcard matcher
+  on the *same* server A (`mcp__git__*`, `(0,0,1)`) — assert
+  `specificity(exact) > specificity(server_wild)`.
 - `matches` (parametrized): `mcp__git__*` matches `mcp__git__commit` but not
   `mcp__fs__read`; `mcp__*__*` matches anything; exact matches only itself.
+- **Parse-only invariant (C1)**: a `Matcher` carrying an `ArgPredicate` (e.g. from
+  `mcp__git__commit(msg=x)` or a value-set member) still `matches` the bare
+  `mcp__git__commit` name — `matches()` never evaluates the arg predicate in M2.
 
 ## CHECKS
-Same four checks as Step 1 (pylint, pytest with marker exclusions, mypy strict,
-lint-imports). The leaf contract must still pass.
+Same four checks as Step 1 (pylint, pytest, mypy strict, lint-imports). Use the canonical
+fast-unit `run_pytest_check` marker exclusions from `.claude/CLAUDE.md` (see Step 1 CHECKS
+for the full `-m` string, with `-n auto`). The leaf contract must still pass.
 
 ## LLM PROMPT
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_2.md`. Following TDD, first
 > write `tests/icoder/test_permissions_matcher.py` covering every case in TESTS
 > (parametrize the specificity and matches tables), then implement
-> `src/mcp_coder/icoder/permissions/matcher.py` per WHAT/HOW/ALGORITHM. Keep it pure:
-> return errors as data, never log. Import only from `.model`. Use MCP tools only. Run
-> pylint, pytest (unit-test marker exclusions), mypy(strict), and lint-imports; fix
-> until green. Commit as one change.
+> `src/mcp_coder/icoder/permissions/matcher.py` per WHAT/HOW/ALGORITHM, and export
+> `parse_matcher` from the package `__init__` (keep `specificity`/`matches` internal).
+> Keep it pure: return errors as data, never log. Import only from `.model`. Use MCP
+> tools only. Run pylint, pytest (canonical fast-unit marker exclusions from
+> `.claude/CLAUDE.md`), mypy(strict), and lint-imports; fix until green. Commit as one
+> change.

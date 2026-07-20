@@ -61,7 +61,8 @@ class PermissionFrame:
 @dataclass(frozen=True)
 class PermissionConfig:
     rules: tuple[Rule, ...] = ()            # all layers, declaration-ordered
-    default_policy: Policy | None = None    # from defaultMode; None -> ALWAYS
+    default_policy: Policy | None = None    # from defaultMode (unset stays None here;
+                                            # the None -> ALWAYS mapping is resolver-only, Step 3)
     groups: Mapping[str, tuple[Matcher, ...]] = field(default_factory=dict)     # stored, matched in I4.1
     scenarios: Mapping[str, tuple[Matcher, ...]] = field(default_factory=dict)  # stored, matched in I4.1
     degraded: bool = False
@@ -77,7 +78,9 @@ class Layer:
 class Frame: ...
 @dataclass(frozen=True)
 class Degraded:
-    layer: str | None = None
+    layer: str | None = None   # offending-layer identity; stays None in I2.1 (the pure
+                               # resolver has no per-layer attribution — populated later by
+                               # I2.2 when it constructs the degraded config). Not a bug.
     errors: tuple[str, ...] = ()
 
 Source = Default | Layer | Frame | Degraded
@@ -138,10 +141,13 @@ No other logic in this step — model.py is pure data.
   `Rule(source_path=Path(...))`, `PermissionConfig(groups=..., scenarios=...)`.
 
 ## CHECKS
-Run and pass: `run_pylint_check`, `run_pytest_check(extra_args=["-n","auto","-m","not
-git_integration and not claude_cli_integration and not claude_api_integration and not
-formatter_integration and not github_integration and not langchain_integration"])`,
-`run_mypy_check`, and `run_lint_imports_check` (new contract must pass).
+Run and pass: `run_pylint_check`, `run_pytest_check` with the canonical fast-unit
+selection from `.claude/CLAUDE.md`: `extra_args=["-n","auto","-m","not git_integration
+and not claude_cli_integration and not claude_api_integration and not
+copilot_cli_integration and not formatter_integration and not github_integration and not
+jenkins_integration and not langchain_integration and not llm_integration and not
+textual_integration"]`, `run_mypy_check`, and `run_lint_imports_check` (new contract must
+pass).
 
 ## LLM PROMPT
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_1.md`. Following TDD, first
@@ -150,5 +156,6 @@ formatter_integration and not github_integration and not langchain_integration"]
 > per the WHAT/HOW/DATA sections, and add the `permissions_leaf_isolation` contract to
 > `.importlinter`. Use only stdlib and frozen dataclasses / `enum.Enum`, mirroring
 > `src/mcp_coder/icoder/core/types.py`. Use MCP tools only. Then run pylint, pytest
-> (with the unit-test marker exclusions), mypy(strict), and lint-imports, and fix
-> everything until all are green. Commit as one change.
+> (with the canonical fast-unit marker exclusions from `.claude/CLAUDE.md`, see CHECKS),
+> mypy(strict), and lint-imports, and fix everything until all are green. Commit as one
+> change.
