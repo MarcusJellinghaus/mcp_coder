@@ -44,3 +44,26 @@ Plan state at start: 4 steps in `pr_info/steps/`, TASK_TRACKER empty (nothing im
 Files changed: `step_1.md`, `step_2.md`, `step_3.md`, `step_4.md`, `Decisions.md` (new).
 
 **Status**: plan changed this round -> committing, then looping to a fresh review round (Round 2).
+
+---
+
+## Round 2 — 2026-07-20
+
+Committed round 1 as `d304b75` (pushed). Fresh review engineer ran `/plan_review` again.
+
+**Findings**:
+- Verification: all 9 round-1 edits present, internally consistent, no contradictions introduced. Marker lists (all 10) typo-free; specificity tuples consistent; `matched_rule` biconditional coherent; every AC row maps to a test; step sizing sound. No Critical issues.
+- #1 (optional): Step 1 could also assert the `matched_rule is None` biconditional at pure-model level — but it's behaviorally covered in Steps 3-4 and the model has no logic enforcing it.
+- #2 (straightforward): Step 1 TESTS include a blanket "instances are hashable" bullet, but `PermissionConfig` carries `dict`-valued `groups`/`scenarios` fields — a frozen dataclass with `dict` fields raises at `hash()`. If the assertion is read as covering `PermissionConfig`, `/implement` would write a self-contradictory test.
+- #3 (settled): frame-path has no `Rule`, so `matched_rule=None` needs no origin test — consistent with §10.3 DC2. No change.
+
+**Decisions**:
+- ACCEPT & apply: #2 — scope the Step 1 hashability assertion to the genuinely-hashable value types; explicitly note `PermissionConfig` (dict-valued fields) is not required to be hashable.
+- SKIP: #1 (optional, already behaviorally covered), #3 (settled).
+- No user escalation: fix is a plan-text clarification within settled design.
+
+**User decisions**: none required.
+
+**Changes applied** (via `/plan_update`): #2 — scoped Step 1's hashability test to genuinely-hashable value types (`Policy`, `Matcher`, `Rule`, `Decision`, `Source` members); explicitly excluded `PermissionConfig` (dict-valued `groups`/`scenarios` -> `hash()` raises); corrected the "Frozen, hashable dataclasses" blanket wording; logged as R2-H1 in `Decisions.md`. Files changed: `step_1.md`, `Decisions.md`.
+
+**Status**: plan changed this round -> committing, then looping to Round 3.

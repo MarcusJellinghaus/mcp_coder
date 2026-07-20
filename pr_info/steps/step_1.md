@@ -125,13 +125,22 @@ Policy.rank: return {NEVER:2, AFTER_APPROVAL:1, ALWAYS:0}[self]
 No other logic in this step — model.py is pure data.
 
 ## DATA
-- Frozen, hashable dataclasses. Defaults chosen so every type is constructible with
-  minimal args (e.g. `PermissionConfig()` is a valid empty config; `Decision(policy,
-  source)` valid with `matched_rule=None`, `lifted_never=None`).
+- Frozen dataclasses (hashable where all fields are hashable; `PermissionConfig` is
+  the exception — its `dict`-valued `groups`/`scenarios` make it unhashable, see
+  TESTS). Defaults chosen so every type is constructible with minimal args (e.g.
+  `PermissionConfig()` is a valid empty config; `Decision(policy, source)` valid with
+  `matched_rule=None`, `lifted_never=None`).
 
 ## TESTS (write first — `test_permissions_model.py`)
 - Construction of each type with defaults; `PermissionConfig()` empty is valid.
-- Frozen: mutating a field raises `FrozenInstanceError`; instances are hashable.
+- Frozen: mutating a field raises `FrozenInstanceError`.
+- Hashable: the value types with only hashable fields are hashable — assert
+  `hash()` works for `Policy`, `Matcher`, `Rule`, `Decision`, and each `Source`
+  member (`Default`, `Layer`, `Frame`, `Degraded`). **Do NOT assert
+  `PermissionConfig` is hashable**: it is a top-level container carrying
+  `dict`-valued `groups`/`scenarios` fields, so `hash(PermissionConfig(...))`
+  raises `TypeError` even though the dataclass is frozen. `PermissionConfig` is
+  not required to be hashable.
 - `Policy.rank` ordering: `NEVER.rank > AFTER_APPROVAL.rank > ALWAYS.rank`.
 - `Specificity` compares lexicographically (e.g. `(1,0,0) > (0,1,1)`) and exposes
   `.arg_rank`.

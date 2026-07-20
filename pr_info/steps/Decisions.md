@@ -37,6 +37,18 @@ for traceability.
   comment: under a degraded config a frame `allow` over a would-be-`never` tool reports
   `lifted_never is None`.
 
+## Applied — Round 2 (2026-07-20)
+
+- **R2-H1 — `PermissionConfig` is not hashable (Step 1).** Scoped the model TESTS
+  hashability assertion to the value types that carry only hashable fields (`Policy`,
+  `Matcher`, `Rule`, `Decision`, and the `Source` members `Default`/`Layer`/`Frame`/
+  `Degraded`) and added an explicit note that `PermissionConfig` must NOT be asserted
+  hashable — its `dict`-valued `groups`/`scenarios` fields make `hash(PermissionConfig(...))`
+  raise `TypeError` even though the dataclass is frozen. Also corrected the Step 1 DATA
+  blanket "Frozen, hashable dataclasses" wording to name `PermissionConfig` as the
+  unhashable exception, so `/implement` cannot write a failing `hash(PermissionConfig(...))`
+  test.
+
 ## Skipped (recorded for awareness; not applied)
 
 - **S7** — keep the explicit `permissions_leaf_isolation` import-linter contract as-is
