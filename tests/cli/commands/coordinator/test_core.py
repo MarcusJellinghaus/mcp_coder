@@ -752,11 +752,12 @@ class TestCacheFileOperations:
             cache_path = Path(tmpdir) / "nonexistent.json"
             result = load_cache_file(cache_path)
 
-            assert result == {
-                "last_checked": None,
-                "last_full_refresh": None,
-                "issues": {},
-            }
+            # Assert on the keys of interest rather than exact full-dict
+            # equality so the tests tolerate additive schema changes in the
+            # external mcp_workspace cache structure.
+            assert result["last_checked"] is None
+            assert result["last_full_refresh"] is None
+            assert result["issues"] == {}
 
     def test_load_cache_file_valid(self) -> None:
         """Test loading valid cache file."""
@@ -784,9 +785,13 @@ class TestCacheFileOperations:
             cache_path.write_text(json.dumps(sample_cache_data))
 
             result = load_cache_file(cache_path)
-            # Loaded cache gains last_full_refresh=None when not in file
-            expected = {**sample_cache_data, "last_full_refresh": None}
-            assert result == expected
+            # Assert on the keys of interest rather than exact full-dict
+            # equality so the tests tolerate additive schema changes in the
+            # external mcp_workspace cache structure.
+            # Loaded cache gains last_full_refresh=None when not in file.
+            assert result["last_checked"] == sample_cache_data["last_checked"]
+            assert result["last_full_refresh"] is None
+            assert result["issues"] == sample_cache_data["issues"]
 
     def test_load_cache_file_invalid_json(self) -> None:
         """Test loading corrupted JSON file returns empty structure."""
@@ -795,11 +800,12 @@ class TestCacheFileOperations:
             cache_path.write_text("invalid json content")
 
             result = load_cache_file(cache_path)
-            assert result == {
-                "last_checked": None,
-                "last_full_refresh": None,
-                "issues": {},
-            }
+            # Assert on the keys of interest rather than exact full-dict
+            # equality so the tests tolerate additive schema changes in the
+            # external mcp_workspace cache structure.
+            assert result["last_checked"] is None
+            assert result["last_full_refresh"] is None
+            assert result["issues"] == {}
 
     def test_save_cache_file_success(self) -> None:
         """Test successful cache file save with atomic write."""
