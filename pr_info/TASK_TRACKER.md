@@ -21,6 +21,39 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Data model + package + import-linter contract
+
+Detail: [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: write `tests/icoder/test_permissions_model.py` (TDD), then create `permissions/__init__.py`, `permissions/model.py`, and add the `permissions_leaf_isolation` contract to `.importlinter`
+- [ ] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Matcher engine (parse + rank + match)
+
+Detail: [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: write `tests/icoder/test_permissions_matcher.py` (TDD), then create `permissions/matcher.py` and export `parse_matcher` from `__init__.py`
+- [ ] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Resolver — config precedence + default + config-path degrade
+
+Detail: [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: write `tests/icoder/test_permissions_resolver.py` (TDD, `frame=None`), then create `permissions/resolver.py` (`resolve` + `_resolve_config`), export `resolve`, and whitelist unread params in `vulture_whitelist.py`
+- [ ] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports, vulture — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Resolver — frame semantics + degrade interaction + lifted_never
+
+Detail: [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: extend `tests/icoder/test_permissions_resolver.py` (TDD, frame models A/B/C), then add `_resolve_frame` and wire the frame-first branch into `resolve()`
+- [ ] Quality checks: pylint, pytest (fast-unit), mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Review PR against issue #1041 acceptance criteria and summary.md
+- [ ] Write PR summary description
