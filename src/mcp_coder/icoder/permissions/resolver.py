@@ -136,6 +136,8 @@ def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision:
                 specificity(ir[1].matcher),
                 ir[1].policy.rank,
                 _LAYER_ORDER[ir[1].layer],
+                # Final tie-break: earlier declaration wins, so negate the
+                # index — a lower index must score higher under ``max``.
                 -ir[0],
             ),
         )
