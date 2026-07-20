@@ -361,6 +361,26 @@ forbidden_modules =
 ignore_imports =
     mcp_coder.icoder.ui.** -> textual
 
+# -----------------------------------------------------------------------------
+# Contract: iCoder Permissions Leaf Isolation
+# -----------------------------------------------------------------------------
+# The pure permission core must stay a leaf: it may not depend on the iCoder
+# UI/services layers, Textual, or any langchain provider libraries.
+# -----------------------------------------------------------------------------
+[importlinter:contract:permissions_leaf_isolation]
+name = iCoder Permissions Leaf Isolation
+type = forbidden
+source_modules =
+    mcp_coder.icoder.permissions
+forbidden_modules =
+    mcp_coder.icoder.ui
+    mcp_coder.icoder.services
+    textual
+    langchain_core
+    langchain_openai
+    langchain_google_genai
+    langchain_anthropic
+
 # =============================================================================
 # TEST MODULE CONTRACTS
 # =============================================================================
