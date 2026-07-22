@@ -15,6 +15,7 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import commit_all_changes, get_full_status
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.commit_operations import generate_commit_message_with_llm
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -26,7 +27,6 @@ from .constants import (
     LLM_FINALISATION_TIMEOUT_SECONDS,
     PR_INFO_DIR,
 )
-from .task_processing import push_changes
 
 logger = logging.getLogger(__name__)
 

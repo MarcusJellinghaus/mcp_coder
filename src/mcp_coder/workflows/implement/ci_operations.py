@@ -23,6 +23,11 @@ from mcp_coder.mcp_workspace_github import (
 )
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.workflow_steps.commit import (
+    commit_changes,
+    push_changes,
+    run_formatters,
+)
 
 from .constants import (
     CI_MAX_FIX_ATTEMPTS,
@@ -33,11 +38,6 @@ from .constants import (
     LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
     LLM_INACTIVITY_TIMEOUT_SECONDS,
     PR_INFO_DIR,
-)
-from .task_processing import (
-    commit_changes,
-    push_changes,
-    run_formatters,
 )
 
 # Setup logger

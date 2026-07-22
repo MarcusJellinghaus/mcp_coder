@@ -9,9 +9,8 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.mcp_workspace_git import rebase_onto_branch
+from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
-
-from .task_processing import push_changes
 
 logger = logging.getLogger(__name__)
 

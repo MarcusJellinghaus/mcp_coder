@@ -37,9 +37,9 @@ Move `run_formatters`, `commit_changes`, `push_changes` + `PR_INFO_DIR` /
 `COMMIT_MESSAGE_FILE` into `workflow_steps`; repoint consumers and re-export constants.
 See [step_2.md](./steps/step_2.md).
 
-- [ ] Implementation (move 3 funcs + 2 constants, repoint imports, relocate tests to `test_commit.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `refactor(workflow_steps): move commit/push/run_formatters + commit constants`
+- [x] Implementation (move 3 funcs + 2 constants, repoint imports, relocate tests to `test_commit.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `refactor(workflow_steps): move commit/push/run_formatters + commit constants`
 
 ### Step 3: Move rebase into `workflow_steps`
 

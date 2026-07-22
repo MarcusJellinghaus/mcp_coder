@@ -10,9 +10,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-# Directory paths
-PR_INFO_DIR = "pr_info"
-COMMIT_MESSAGE_FILE = f"{PR_INFO_DIR}/.commit_message.txt"
+# Directory paths (relocated to workflow_steps; re-exported here so existing
+# `from .constants import PR_INFO_DIR` call sites across implement keep working).
+# Redundant aliases mark these as explicit re-exports for mypy.
+from mcp_coder.workflow_steps.constants import (
+    COMMIT_MESSAGE_FILE as COMMIT_MESSAGE_FILE,
+)
+from mcp_coder.workflow_steps.constants import PR_INFO_DIR as PR_INFO_DIR
 
 # LLM timeout settings (in seconds)
 #
