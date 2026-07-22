@@ -23,6 +23,7 @@ from mcp_coder.workflow_steps.commit import (
     push_changes,
     run_formatters,
 )
+from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
 from mcp_coder.workflow_utils.failure_handling import format_mcp_unavailable_message
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
@@ -39,7 +40,6 @@ from .failure_reporting import _handle_workflow_failure
 from .finalisation import run_finalisation
 from .llm_failures import REASON_TO_CATEGORY, llm_failure_reason
 from .prerequisites import check_git_clean, check_main_branch, check_prerequisites
-from .rebase import _attempt_rebase_and_push
 from .task_processing import (
     check_and_fix_mypy,
     process_task_with_retry,

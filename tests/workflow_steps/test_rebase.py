@@ -1,19 +1,19 @@
-"""Tests for implement workflow rebase helpers."""
+"""Tests for the rebase-and-push workflow step."""
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from mcp_coder.workflows.implement.core import run_implement_workflow
-from mcp_coder.workflows.implement.rebase import (
+from mcp_coder.workflow_steps.rebase import (
     _attempt_rebase_and_push,
     _get_rebase_target_branch,
 )
+from mcp_coder.workflows.implement.core import run_implement_workflow
 
 
 class TestGetRebaseTargetBranch:
     """Tests for _get_rebase_target_branch function."""
 
-    @patch("mcp_coder.workflows.implement.rebase.detect_base_branch")
+    @patch("mcp_coder.workflow_steps.rebase.detect_base_branch")
     def test_returns_pr_base_branch(
         self, mock_detect_base: MagicMock, tmp_path: Path
     ) -> None:
@@ -23,7 +23,7 @@ class TestGetRebaseTargetBranch:
         result = _get_rebase_target_branch(tmp_path)
         assert result == "develop"
 
-    @patch("mcp_coder.workflows.implement.rebase.detect_base_branch")
+    @patch("mcp_coder.workflow_steps.rebase.detect_base_branch")
     def test_returns_none_when_detection_fails(
         self, mock_detect_base: MagicMock, tmp_path: Path
     ) -> None:
@@ -33,7 +33,7 @@ class TestGetRebaseTargetBranch:
         result = _get_rebase_target_branch(tmp_path)
         assert result is None
 
-    @patch("mcp_coder.workflows.implement.rebase.detect_base_branch")
+    @patch("mcp_coder.workflow_steps.rebase.detect_base_branch")
     def test_returns_valid_branch_from_detection(
         self, mock_detect_base: MagicMock, tmp_path: Path
     ) -> None:
@@ -47,9 +47,9 @@ class TestGetRebaseTargetBranch:
 class TestRebaseIntegration:
     """Tests for rebase integration in workflow."""
 
-    @patch("mcp_coder.workflows.implement.rebase.push_changes")
-    @patch("mcp_coder.workflows.implement.rebase.rebase_onto_branch")
-    @patch("mcp_coder.workflows.implement.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
@@ -78,9 +78,9 @@ class TestRebaseIntegration:
         mock_get_target.assert_called_once()
         mock_rebase.assert_called_once_with(Path("/test"), "main")
 
-    @patch("mcp_coder.workflows.implement.rebase.push_changes")
-    @patch("mcp_coder.workflows.implement.rebase.rebase_onto_branch")
-    @patch("mcp_coder.workflows.implement.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
@@ -109,9 +109,9 @@ class TestRebaseIntegration:
         # Verify push was called with force_with_lease=True
         mock_push.assert_called_once_with(Path("/test"), force_with_lease=True)
 
-    @patch("mcp_coder.workflows.implement.rebase.push_changes")
-    @patch("mcp_coder.workflows.implement.rebase.rebase_onto_branch")
-    @patch("mcp_coder.workflows.implement.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
@@ -144,8 +144,8 @@ class TestRebaseIntegration:
         # Result is 1 because prepare_task_tracker returns False, not because of rebase
         assert result == 1
 
-    @patch("mcp_coder.workflows.implement.rebase.rebase_onto_branch")
-    @patch("mcp_coder.workflows.implement.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
@@ -167,9 +167,9 @@ class TestRebaseIntegration:
 
         mock_rebase.assert_not_called()
 
-    @patch("mcp_coder.workflows.implement.rebase.push_changes")
-    @patch("mcp_coder.workflows.implement.rebase.rebase_onto_branch")
-    @patch("mcp_coder.workflows.implement.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")

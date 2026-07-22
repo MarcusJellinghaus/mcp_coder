@@ -47,9 +47,9 @@ Move `_get_rebase_target_branch` / `_attempt_rebase_and_push` into `workflow_ste
 relocate all rebase test classes, and remove `implement/rebase.py`. Depends on Step 2.
 See [step_3.md](./steps/step_3.md).
 
-- [ ] Implementation (move rebase funcs, repoint core.py, relocate all test classes to `test_rebase.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `refactor(workflow_steps): move rebase step`
+- [x] Implementation (move rebase funcs, repoint core.py, relocate all test classes to `test_rebase.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `refactor(workflow_steps): move rebase step`
 
 ### Step 4: Move CI check/fix into `workflow_steps` (loop-ready)
 

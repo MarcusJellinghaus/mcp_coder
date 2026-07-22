@@ -1,7 +1,8 @@
-"""Rebase helpers for the implement workflow.
+"""Rebase-and-push workflow step.
 
 Detects the parent/base branch and attempts to rebase the current feature
-branch onto it before pushing, without ever blocking the workflow.
+branch onto it before pushing, without ever blocking the workflow. Moved here
+from ``implement/rebase.py`` so multiple workflows can share it.
 """
 
 import logging
