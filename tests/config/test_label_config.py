@@ -10,6 +10,7 @@ import pytest
 
 from mcp_coder.config.label_config import (
     _get_labels_config_from_pyproject,
+    build_label_lookups,
     get_labels_config_path,
     load_labels_config,
     validate_labels_config,
@@ -194,6 +195,103 @@ def test_pr_created_has_no_commands() -> None:
     )
     assert "vscodeclaude" in label
     assert "commands" not in label["vscodeclaude"]
+
+
+REVIEW_LABELS = [
+    ("plan_review_bot", "status-14:plan-review-bot", "bot_pickup"),
+    ("plan_reviewing", "status-14i:plan-reviewing", "bot_busy"),
+    ("code_review_bot", "status-17:code-review-bot", "bot_pickup"),
+    ("code_reviewing", "status-17i:code-reviewing", "bot_busy"),
+    ("plan_review_failed", "status-14f:plan-review-failed", "human_action"),
+    (
+        "plan_review_rounds",
+        "status-14f-rounds:plan-review-rounds-exhausted",
+        "human_action",
+    ),
+    (
+        "plan_review_timeout",
+        "status-14f-timeout:plan-review-llm-timeout",
+        "human_action",
+    ),
+    ("plan_review_mcp", "status-14f-mcp:plan-review-mcp-unavailable", "human_action"),
+    ("code_review_failed", "status-17f:code-review-failed", "human_action"),
+    ("code_review_ci", "status-17f-ci:code-review-ci-fix-needed", "human_action"),
+    (
+        "code_review_rounds",
+        "status-17f-rounds:code-review-rounds-exhausted",
+        "human_action",
+    ),
+    (
+        "code_review_timeout",
+        "status-17f-timeout:code-review-llm-timeout",
+        "human_action",
+    ),
+    ("code_review_mcp", "status-17f-mcp:code-review-mcp-unavailable", "human_action"),
+]
+
+REVIEW_FAILURE_IDS = [
+    "plan_review_failed",
+    "plan_review_rounds",
+    "plan_review_timeout",
+    "plan_review_mcp",
+    "code_review_failed",
+    "code_review_ci",
+    "code_review_rounds",
+    "code_review_timeout",
+    "code_review_mcp",
+]
+
+
+@pytest.mark.parametrize("internal_id,name,category", REVIEW_LABELS)
+def test_review_labels_present(internal_id: str, name: str, category: str) -> None:
+    """Each of the 13 review labels exists with the expected name and category."""
+    config = load_labels_config(get_labels_config_path(None))
+    label = next(
+        (l for l in config["workflow_labels"] if l["internal_id"] == internal_id),
+        None,
+    )
+    assert label is not None, f"Missing review label: {internal_id}"
+    assert label["name"] == name
+    assert label["category"] == category
+
+
+def test_review_labels_mapped_by_lookups() -> None:
+    """build_label_lookups maps every new review label id to its name."""
+    config = load_labels_config(get_labels_config_path(None))
+    lookups = build_label_lookups(config)
+    for internal_id, name, _category in REVIEW_LABELS:
+        assert lookups["id_to_name"][internal_id] == name
+        assert name in lookups["all_names"]
+        assert lookups["name_to_id"][name] == internal_id
+
+
+def test_review_bot_busy_labels_have_stale_timeout() -> None:
+    """The two bot_busy review labels carry a positive stale_timeout_minutes."""
+    config = load_labels_config(get_labels_config_path(None))
+    for internal_id in ("plan_reviewing", "code_reviewing"):
+        label = next(
+            l for l in config["workflow_labels"] if l["internal_id"] == internal_id
+        )
+        assert isinstance(label.get("stale_timeout_minutes"), int)
+        assert label["stale_timeout_minutes"] > 0
+
+
+@pytest.mark.parametrize("internal_id", REVIEW_FAILURE_IDS)
+def test_review_failure_labels_shape(internal_id: str) -> None:
+    """Review failure labels are failure:true and launch /check_branch_status."""
+    config = load_labels_config(get_labels_config_path(None))
+    label = next(
+        l for l in config["workflow_labels"] if l["internal_id"] == internal_id
+    )
+    assert label.get("failure") is True
+    assert "vscodeclaude" in label
+    assert label["vscodeclaude"].get("commands") == ["/check_branch_status"]
+
+
+def test_review_labels_config_validates() -> None:
+    """Bundled config with review labels still passes validate_labels_config."""
+    config = load_labels_config(get_labels_config_path(None))
+    validate_labels_config(config)  # Should not raise
 
 
 def test_load_labels_config_missing_workflow_labels_key(tmp_path: Path) -> None:

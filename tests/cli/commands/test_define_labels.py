@@ -66,10 +66,10 @@ class TestWorkflowLabelsFromConfig:
         # Load the actual config to test against
         labels_config = load_labels_config(labels_config_path)
 
-        # Verify we have exactly 20 labels
+        # Verify we have exactly 33 labels
         assert (
-            len(labels_config["workflow_labels"]) == 20
-        ), "Config should contain exactly 20 workflow labels"
+            len(labels_config["workflow_labels"]) == 33
+        ), "Config should contain exactly 33 workflow labels"
 
         # Verify each label has correct structure
         for i, label in enumerate(labels_config["workflow_labels"], start=1):
@@ -126,6 +126,19 @@ class TestWorkflowLabelsFromConfig:
             "status-06f-mcp:mcp-unavailable",
             "status-06f-nochange:no-changes-after-retries",
             "status-09f:pr-creating-failed",
+            "status-14:plan-review-bot",
+            "status-14i:plan-reviewing",
+            "status-17:code-review-bot",
+            "status-17i:code-reviewing",
+            "status-14f:plan-review-failed",
+            "status-14f-rounds:plan-review-rounds-exhausted",
+            "status-14f-timeout:plan-review-llm-timeout",
+            "status-14f-mcp:plan-review-mcp-unavailable",
+            "status-17f:code-review-failed",
+            "status-17f-ci:code-review-ci-fix-needed",
+            "status-17f-rounds:code-review-rounds-exhausted",
+            "status-17f-timeout:code-review-llm-timeout",
+            "status-17f-mcp:code-review-mcp-unavailable",
         ]
 
         actual_names = [label["name"] for label in labels_config["workflow_labels"]]

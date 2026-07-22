@@ -254,6 +254,171 @@
         "commands": ["/check_branch_status"],
         "color": "red"
       }
+    },
+    {
+      "internal_id": "plan_review_bot",
+      "name": "status-14:plan-review-bot",
+      "color": "60a5fa",
+      "description": "Plan ready for automated review pickup",
+      "category": "bot_pickup"
+    },
+    {
+      "internal_id": "plan_reviewing",
+      "name": "status-14i:plan-reviewing",
+      "color": "bfdbfe",
+      "description": "Implementation plan being reviewed (auto/in-progress)",
+      "category": "bot_busy",
+      "stale_timeout_minutes": 30
+    },
+    {
+      "internal_id": "code_review_bot",
+      "name": "status-17:code-review-bot",
+      "color": "fbbf24",
+      "description": "Implementation ready for automated review pickup",
+      "category": "bot_pickup"
+    },
+    {
+      "internal_id": "code_reviewing",
+      "name": "status-17i:code-reviewing",
+      "color": "fed7aa",
+      "description": "Implementation being reviewed (auto/in-progress)",
+      "category": "bot_busy",
+      "stale_timeout_minutes": 120
+    },
+    {
+      "internal_id": "plan_review_failed",
+      "name": "status-14f:plan-review-failed",
+      "color": "b60205",
+      "description": "Automated plan review failed",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "❌",
+        "display_name": "PLAN REVIEW FAILED",
+        "stage_short": "plan-review-fail",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "plan_review_rounds",
+      "name": "status-14f-rounds:plan-review-rounds-exhausted",
+      "color": "b60205",
+      "description": "Automated plan review exhausted its round limit",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔄",
+        "display_name": "PLAN REVIEW ROUNDS EXHAUSTED",
+        "stage_short": "plan-review-rounds",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "plan_review_timeout",
+      "name": "status-14f-timeout:plan-review-llm-timeout",
+      "color": "e99695",
+      "description": "LLM timed out during automated plan review",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "⏱️",
+        "display_name": "PLAN REVIEW LLM TIMEOUT",
+        "stage_short": "plan-review-timeout",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "plan_review_mcp",
+      "name": "status-14f-mcp:plan-review-mcp-unavailable",
+      "color": "e99695",
+      "description": "MCP server(s) failed to connect during automated plan review",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔌",
+        "display_name": "PLAN REVIEW MCP UNAVAILABLE",
+        "stage_short": "plan-review-mcp-fail",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "code_review_failed",
+      "name": "status-17f:code-review-failed",
+      "color": "b60205",
+      "description": "Automated code review failed",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "❌",
+        "display_name": "CODE REVIEW FAILED",
+        "stage_short": "code-review-fail",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "code_review_ci",
+      "name": "status-17f-ci:code-review-ci-fix-needed",
+      "color": "d93f0b",
+      "description": "CI still failing after automated code review fix attempts",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔧",
+        "display_name": "CODE REVIEW CI FIX NEEDED",
+        "stage_short": "code-review-ci-fail",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "code_review_rounds",
+      "name": "status-17f-rounds:code-review-rounds-exhausted",
+      "color": "b60205",
+      "description": "Automated code review exhausted its round limit",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔄",
+        "display_name": "CODE REVIEW ROUNDS EXHAUSTED",
+        "stage_short": "code-review-rounds",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "code_review_timeout",
+      "name": "status-17f-timeout:code-review-llm-timeout",
+      "color": "e99695",
+      "description": "LLM timed out during automated code review",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "⏱️",
+        "display_name": "CODE REVIEW LLM TIMEOUT",
+        "stage_short": "code-review-timeout",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "code_review_mcp",
+      "name": "status-17f-mcp:code-review-mcp-unavailable",
+      "color": "e99695",
+      "description": "MCP server(s) failed to connect during automated code review",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔌",
+        "display_name": "CODE REVIEW MCP UNAVAILABLE",
+        "stage_short": "code-review-mcp-fail",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
     }
   ],
   "ignore_labels": ["Overview", "blocked", "wait"]
