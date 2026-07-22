@@ -15,6 +15,11 @@
    `{base_branch}` itself; return a **structured** report (findings as `file:line` + severity;
    no free prose). Says: implement fixes only when a follow-up task list is given, using
    `mcp-workspace` edit tools.
+   - **Structured-report contract (explicit requirement):** the report is the **sole**
+     reviewer→supervisor interface and **nothing machine-parses it downstream**, so the reviewer
+     prompt MUST enforce the contract — every finding is emitted as `file:line` + an explicit
+     severity, never as free prose (a finding lacking `file:line` + severity is invalid). Both
+     reviewer sections carry this hard requirement.
 2. **`Review Plan Reviewer`** — reviewer for plan review. No `{base_branch}`, no diff; reviews
    `pr_info/steps/*` + issue + knowledge base; same structured-report contract; edits plan
    files via MCP when tasked.

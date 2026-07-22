@@ -41,6 +41,12 @@ def _fail(config, project_dir, reason, *, update_issue_labels, post_issue_commen
 - **After-steps (`tasks` round):** resume reviewer session with the task list → reviewer edits
   via MCP → `run_formatters` + `commit_changes` + `push_changes` (from
   `mcp_coder.workflow_steps.commit`). `_after_steps` is a no-op stub here (Step 8 fills it).
+- **`review-plan` lane semantics (explicit):** for `review-plan` a supervisor `tasks` verdict
+  resumes the reviewer to **edit the plan files under `pr_info/steps/*` via the MCP edit tools**
+  (this mirrors the interactive `/plan_update`, i.e. the plan lane auto-edits plan files —
+  intended, matching `/plan_review_supervisor`). `escalate` on the plan lane routes to
+  needs-human `04:plan-review`; `dismiss` is converged → success (`05:plan-ready`). Same loop,
+  same routing; only the reviewer's edit target differs (plan files vs. code diff).
 - **Verdict repair:** `_get_verdict` calls the supervisor, `parse_verdict`; on `None`, resume
   the supervisor up to `VERDICT_REPAIR_RETRIES` asking for valid fenced JSON; still `None` →
   reason `"general"`.
@@ -50,12 +56,26 @@ def _fail(config, project_dir, reason, *, update_issue_labels, post_issue_commen
 - **Routing / labels:** `dismiss` → `update_workflow_label(from=busy, to=success)` → `0`;
   `escalate` → `write_round_log(escalate_reason=…)` + `update_workflow_label(from=busy,
   to=escalate)` → `0` (not a failure, no comment); `error` → `_fail(...)` → `1`.
+  - **Label-update gating (mirror `implement/core.py:434-441`):** every real
+    `update_workflow_label(...)` call is gated on `if update_issue_labels:` and requires an
+    `IssueManager(project_dir)` as its first arg — i.e.
+    `issue_manager = IssueManager(project_dir); update_workflow_label(issue_manager,
+    from_label_id=…, to_label_id=…)`, wrapped in try/except (log-and-continue on failure). The
+    pseudocode below writes `update_workflow_label(from=…, to=…)` as shorthand; construct the
+    `IssueManager` and honor the `update_issue_labels` flag at each call site. `_fail` already
+    threads `update_issue_labels`/`post_issue_comments` through `handle_workflow_failure`.
 - **`_fail`** delegates to shared `handle_workflow_failure(from_label_id=config.busy_label_id,
   category=config.failure_labels[reason], comment_body=…)` (posts a comment on the error path,
   like `implement`).
 - **Exceptions:** wrap LLM calls; `LLMTimeoutError` → reason `"timeout"`,
-  `McpServersUnavailableError` → `"mcp"` (reuse `llm_failure_reason` if convenient); other →
-  `"general"`.
+  `McpServersUnavailableError` → `"mcp"`; other → `"general"`.
+  - **Local reason mapping (no cross-workflow import):** define a **small mapping inside
+    `workflows/review/`** (e.g. a `_reason_for_exception(exc) -> str` helper plus the
+    reason→label lookup carried by `ReviewConfig.failure_labels`). Do **not** import
+    `implement`'s `llm_failure_reason` / `REASON_TO_CATEGORY` from
+    `workflows/implement/llm_failures.py` — that is a sibling workflow and a cross-workflow
+    import is smelly. The exception-class → reason mapping is tiny; keep it local to the review
+    package.
 
 ## ALGORITHM (`run_review_workflow`)
 ```
@@ -103,8 +123,12 @@ return _fail(config, "rounds", ...)                 # cap exhausted
 > session per round + persistent supervisor with re-captured session id; `mcp_config` to both;
 > verdict parse with 2 repair retries; 3-way routing via `update_workflow_label` for
 > dismiss/escalate and `handle_workflow_failure` for errors; whole-round commit-sha backstop;
-> rounds cap 5; commit/push reviewer edits via `workflow_steps.commit`). `_after_steps` is a
-> no-op stub returning `None` in this step. Map `LLMTimeoutError`→`timeout`,
-> `McpServersUnavailableError`→`mcp`, else `general`; `rounds` on cap. Write
+> rounds cap 5; commit/push reviewer edits via `workflow_steps.commit`). Gate each
+> `update_workflow_label` call on `update_issue_labels` and construct `IssueManager(project_dir)`
+> as its first arg (mirror `implement/core.py:434-441`). `_after_steps` is a
+> no-op stub returning `None` in this step. Map exceptions with a small LOCAL helper (do not
+> import `implement`'s `llm_failure_reason`/`REASON_TO_CATEGORY`): `LLMTimeoutError`→`timeout`,
+> `McpServersUnavailableError`→`mcp`, else `general`; `rounds` on cap. For `review-plan`, a
+> `tasks` verdict resumes the reviewer to edit `pr_info/steps/*` via MCP edit tools. Write
 > `tests/workflows/review/test_core.py` first with a mocked `prompt_llm` covering all cases in
 > the Step 7 TDD list, driving `REVIEW_PLAN`. Run the core tests, pylint, mypy.

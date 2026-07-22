@@ -36,6 +36,12 @@ _    = prompt_llm("Another fresh reviewer.", session_id=None)               # B 
 sup3 = prompt_llm("Name BOTH tokens you were told.", session_id=<see below>)# A (turn 3)
 assert "ALPHA" in sup3.text and "BETA" in sup3.text     # turn 3 recalls turn 1 AND turn 2
 ```
+- **Strict sequencing assertion (mandatory):** the issue requires supervisor↔reviewer
+  execution to be **strictly sequential — never concurrent**. Each `prompt_llm` call above
+  must complete (return) before the next begins; assert the calls are non-overlapping (e.g.
+  record start/end timestamps per call and assert no two intervals overlap, or drive them on a
+  single thread and assert ordered completion). Token recall alone does not prove sequencing;
+  this assertion pins that the orchestrator never runs the two sessions in parallel.
 
 ## ALGORITHM (test 2 — decides discipline, records create_plan finding)
 ```
@@ -64,7 +70,8 @@ if reuse-original drops BETA: assert recapture works, and add a NOTE in the test
 > `@pytest.mark.claude_cli_integration` tests that drive `mcp_coder.llm.interface.prompt_llm`
 > in an A-B-A interleave (persistent "supervisor" id + fresh "reviewer" `session_id=None`),
 > resuming the supervisor at least twice (≥3 supervisor turns) and asserting turn 3 recalls
-> both earlier turns. The second test compares reuse-original-id vs re-capture-returned-id and
+> both earlier turns, plus an explicit assertion that the supervisor/reviewer calls run
+> strictly sequentially (never concurrent). The second test compares reuse-original-id vs re-capture-returned-id and
 > records which discipline preserves context; if reuse-original fails, document the
 > `create_plan` context-loss finding in the docstring. No production code. Follow the exact
 > pseudocode in Step 1. Then run pylint + mypy and the `claude_cli_integration` test.

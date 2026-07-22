@@ -25,8 +25,19 @@ def _after_steps(config, project_dir, provider, mcp_config, settings_file,
   `mcp_coder.workflow_utils.base_branch.detect_base_branch(project_dir)` **only** when
   `config.inject_base_branch` (impl); plan passes `None`. Injected into the reviewer prompt's
   `{base_branch}` slot.
-- **Rebase:** `mcp_coder.workflow_steps.rebase._attempt_rebase_and_push(project_dir)` (never
-  blocks; same as `implement`).
+- **Rebase gate (mandated — never success on unresolved rebase):**
+  `mcp_coder.workflow_steps.rebase._attempt_rebase_and_push(project_dir)`. If the branch needs
+  a rebase and `_attempt_rebase_and_push` cannot complete cleanly (e.g. a merge conflict),
+  route to **needs-human `07:code-review`** — **never success**. The issue mandates this gate
+  ("rebase-needed … never success").
+  - **`#1066` integration slot (do NOT implement here):** a *conflict-resolving automatic*
+    rebase is the deliverable of a **separate issue #1066** (`mcp-coder git-tool rebase`, not
+    yet implemented). Add an explicit **rebase-status check** followed by a
+    `NotYetImplemented`-style marker/comment referencing **#1066** at the point where an
+    automatic rebase attempt will later slot in. Until #1066 lands, a "needs rebase /
+    unresolvable conflict" outcome simply routes to needs-human (`07:code-review`). This step
+    only specifies the check + the needs-human fallback + the #1066 reference — it does **not**
+    implement any automatic conflict-resolving rebase.
 - **CI:** `mcp_coder.workflow_steps.ci.check_and_fix_ci(..., session_dir_name=
   config.session_dir_name)` — reuses the default `"CI Failure Analysis Prompt"` /
   `"CI Fix Prompt"` headers. Wrap its `LLMTimeoutError`/`McpServersUnavailableError` →
@@ -43,7 +54,13 @@ def _after_steps(config, project_dir, provider, mcp_config, settings_file,
 ## ALGORITHM (`_after_steps`)
 ```
 if not config.run_after_steps: return None
-_attempt_rebase_and_push(project_dir)
+# --- rebase gate (mandated: never success on unresolved rebase) ---
+rebase_ok = _attempt_rebase_and_push(project_dir)
+if not rebase_ok:
+    # NotYetImplemented(#1066): a conflict-resolving automatic `mcp-coder git-tool rebase`
+    # attempt slots in HERE once #1066 ships (before the needs-human fallback). Until then:
+    return "rebase"          # -> needs-human 07:code-review, never success
+# --- CI ---
 try: ci_ok = check_and_fix_ci(project_dir, branch, provider, ..., session_dir_name=config.session_dir_name)
 except LLMTimeoutError: return "timeout"
 except McpServersUnavailableError: return "mcp"
@@ -55,6 +72,11 @@ return "ci" if is_dismiss else None    # mid-loop: set pending_ci_note, keep loo
 - Pass `is_dismiss=True` on the dismiss branch, `False` on the tasks branch.
 - Track `pending_ci_note`; append to the next `_run_reviewer` input; at cap choose reason
   `"ci"` if set else `"rounds"`.
+- **Rebase reason routes to needs-human, not error:** a `"rebase"` reason from `_after_steps`
+  is a **needs-human handoff** (escalate lane) → `update_workflow_label(from=busy,
+  to=escalate)` = `07:code-review`, exit `0` — it is **not** an `handle_workflow_failure`
+  error/`_fail`. (Contrast `"ci"`, which is a `17f-ci` failure.) Handle it like the `escalate`
+  verdict: log the reason, set the escalate label, return `0` — never success.
 
 ## DATA
 - `_after_steps` returns `str | None` (failure reason). `pending_ci_note: str | None` local.
@@ -62,7 +84,9 @@ return "ci" if is_dismiss else None    # mid-loop: set pending_ci_note, keep loo
 ## TDD / checks (mock `check_and_fix_ci`, `_attempt_rebase_and_push`, `detect_base_branch`, `prompt_llm`)
 - `REVIEW_IMPLEMENTATION`: `_resolve_context` injects a base branch into the reviewer prompt;
   `REVIEW_PLAN`: base is `None`, `detect_base_branch` not called.
-- dismiss + CI green → success (`ready_pr`).
+- dismiss + rebase clean + CI green → success (`ready_pr`).
+- dismiss + rebase fails (conflict) → routes to needs-human `07:code-review`, exit `0`,
+  **never success** (no `17f-*` failure); `NotYetImplemented`/#1066 marker present at the slot.
 - dismiss + CI red → returns 1 with `code_review_ci` (`17f-ci`).
 - tasks round CI red → loop continues, note reaches next reviewer prompt; cap → `17f-ci`.
 - tasks round CI green → normal loop.
@@ -73,7 +97,11 @@ return "ci" if is_dismiss else None    # mid-loop: set pending_ci_note, keep loo
 > `src/mcp_coder/workflows/review/core.py`, implement `_resolve_context` to inject
 > `detect_base_branch(...)` only when `config.inject_base_branch`, and fill `_after_steps` to run
 > `_attempt_rebase_and_push` then `check_and_fix_ci(session_dir_name=config.session_dir_name)`
-> (reusing implement's CI headers). Wire CI-as-finding: a mid-loop red CI carries a
+> (reusing implement's CI headers). **Rebase gate:** if `_attempt_rebase_and_push` cannot complete
+> cleanly (conflict), route to needs-human `07:code-review` (escalate lane, exit 0) — never
+> success and never a failure label; add a `NotYetImplemented`-style marker/comment referencing
+> **#1066** at the slot where a future conflict-resolving `mcp-coder git-tool rebase` attempt will
+> go (do NOT implement automatic rebase here). Wire CI-as-finding: a mid-loop red CI carries a
 > `pending_ci_note` into the next reviewer prompt and does not fail; a red CI on the dismiss
 > final gate returns reason `"ci"` (→ `17f-ci`); at the rounds cap prefer reason `"ci"` when the
 > note is set. Map CI-phase `LLMTimeoutError`/`McpServersUnavailableError` to `timeout`/`mcp`.
