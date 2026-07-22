@@ -89,7 +89,16 @@ def _extract_object(text: str) -> dict[str, object] | None:
 
 
 def _normalize_tasks(value: object) -> list[str]:
-    """Coerce a raw tasks value into a list of stripped, non-empty strings."""
+    """Coerce a raw tasks value into a list of stripped, non-empty strings.
+
+    Args:
+        value: A raw value parsed from the verdict JSON, expected to be a list
+            of strings but tolerant of any type.
+
+    Returns:
+        A list of stripped, non-empty strings, or an empty list when ``value``
+        is not a list or contains no usable string entries.
+    """
     if not isinstance(value, list):
         return []
     return [item.strip() for item in value if isinstance(item, str) and item.strip()]
