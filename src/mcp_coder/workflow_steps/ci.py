@@ -1,7 +1,11 @@
-"""CI check and fix operations for the implement workflow.
+"""CI check-and-fix workflow step.
 
-This module handles CI pipeline monitoring, failure analysis, and automated
-fix attempts. Extracted from core.py for maintainability.
+Monitors the CI pipeline, analyses failures, and attempts automated fixes,
+looping until CI passes or the fix budget is exhausted. Moved here from
+``implement/ci_operations.py`` so multiple workflows can share it. The three
+prompt-header / session-dir parameters default to ``implement``'s current
+literals, so ``implement``'s call site is byte-identical while an automated
+review workflow can override them per review round.
 """
 
 import logging
@@ -54,6 +58,9 @@ class CIFixConfig:
     cwd: str
     mcp_config: Optional[str]
     settings_file: str | None = None
+    analysis_prompt_header: str = "CI Failure Analysis Prompt"
+    fix_prompt_header: str = "CI Fix Prompt"
+    session_dir_name: str = "implement_sessions"
 
 
 def _short_sha(sha: str) -> str:
@@ -100,7 +107,7 @@ def _run_ci_analysis(
     try:
         analysis_prompt = get_prompt_with_substitutions(
             str(PROMPTS_FILE_PATH),
-            "CI Failure Analysis Prompt",
+            config.analysis_prompt_header,
             {
                 "job_name": failed_summary["job_name"],
                 "step_name": failed_summary["step_name"],
@@ -141,7 +148,7 @@ def _run_ci_analysis(
         store_session(
             llm_response,
             analysis_prompt,
-            store_path=str(config.project_dir / ".mcp-coder" / "implement_sessions"),
+            store_path=str(config.project_dir / ".mcp-coder" / config.session_dir_name),
             step_name=f"ci_analysis_{fix_attempt + 1}",
             branch_name=branch_name,
         )
@@ -185,7 +192,7 @@ def _run_ci_fix(
     try:
         fix_prompt = get_prompt_with_substitutions(
             str(PROMPTS_FILE_PATH),
-            "CI Fix Prompt",
+            config.fix_prompt_header,
             {"problem_description": problem_description},
         )
     except Exception as e:
@@ -221,7 +228,7 @@ def _run_ci_fix(
         store_session(
             llm_response,
             fix_prompt,
-            store_path=str(config.project_dir / ".mcp-coder" / "implement_sessions"),
+            store_path=str(config.project_dir / ".mcp-coder" / config.session_dir_name),
             step_name=f"ci_fix_{fix_attempt + 1}",
             branch_name=branch_name,
         )
@@ -467,6 +474,10 @@ def check_and_fix_ci(
     mcp_config: Optional[str] = None,
     settings_file: str | None = None,
     execution_dir: Optional[Path] = None,
+    *,
+    analysis_prompt_header: str = "CI Failure Analysis Prompt",
+    fix_prompt_header: str = "CI Fix Prompt",
+    session_dir_name: str = "implement_sessions",
 ) -> bool:
     """Check CI status after finalisation and attempt fixes if needed.
 
@@ -477,6 +488,13 @@ def check_and_fix_ci(
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         execution_dir: Optional working directory for Claude subprocess
+        analysis_prompt_header: Prompt header used for the CI failure analysis
+            phase. Defaults to implement's "CI Failure Analysis Prompt"; an
+            automated review workflow overrides it per review round.
+        fix_prompt_header: Prompt header used for the CI fix phase. Defaults to
+            implement's "CI Fix Prompt".
+        session_dir_name: Sub-directory under ``.mcp-coder`` where analysis/fix
+            sessions are stored. Defaults to implement's "implement_sessions".
 
     Returns:
         True if CI passes or on API errors (exit 0 scenarios)
@@ -532,6 +550,9 @@ def check_and_fix_ci(
         cwd=cwd,
         mcp_config=mcp_config,
         settings_file=settings_file,
+        analysis_prompt_header=analysis_prompt_header,
+        fix_prompt_header=fix_prompt_header,
+        session_dir_name=session_dir_name,
     )
 
     for fix_attempt in range(CI_MAX_FIX_ATTEMPTS):

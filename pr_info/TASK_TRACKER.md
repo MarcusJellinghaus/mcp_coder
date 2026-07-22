@@ -57,9 +57,9 @@ Move `check_and_fix_ci`, its helpers, `CIFixConfig` + 7 CI constants; add the th
 defaulted keyword params; repoint both production consumers. Depends on Step 2.
 See [step_4.md](./steps/step_4.md).
 
-- [ ] Implementation (move CI step + constants, add loop-ready params, repoint core.py + check_branch_status.py, relocate tests to `test_ci.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `refactor(workflow_steps): move CI step with loop-ready params + CI constants`
+- [x] Implementation (move CI step + constants, add loop-ready params, repoint core.py + check_branch_status.py, relocate tests to `test_ci.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `refactor(workflow_steps): move CI step with loop-ready params + CI constants`
 
 ### Step 5: Extract shared `check_git_clean` prerequisite step
 

@@ -56,6 +56,7 @@ layer = "presentation"
 depends_on = [
     { path = "mcp_coder" },              # Root module exports for convenience
     { path = "mcp_coder.workflows" },     # High-level workflow orchestration
+    { path = "mcp_coder.workflow_steps" }, # Composed workflow-agnostic steps (CI, commit)
     { path = "mcp_coder.workflow_utils" }, # Workflow helper utilities
     { path = "mcp_coder.checks" },        # High-level check modules
     { path = "mcp_coder.llm" },           # LLM interaction services
