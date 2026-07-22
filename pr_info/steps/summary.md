@@ -127,7 +127,7 @@ no #1072 benefit).
 
 ### Moved (tests relocated to mirror the source move)
 - CI / commit-push tests → `tests/workflow_steps/` (patch targets updated to `mcp_coder.workflow_steps.*`)
-- rebase tests → **split** (Step 3): unit tests → `tests/workflow_steps/test_rebase.py`; the `TestRebaseIntegration` orchestration test **stays** under `tests/workflows/implement/` (patch repointed to `implement.core._attempt_rebase_and_push`)
+- rebase tests → **all** move to `tests/workflow_steps/test_rebase.py` (Step 3): `TestGetRebaseTargetBranch` **and** all **five** `TestRebaseIntegration` methods. The integration methods assert on the internals of the real `_attempt_rebase_and_push` (e.g. `force_with_lease=True`), so their callee patches are repointed from `implement.rebase.*` to `workflow_steps.rebase.*` — **not** repointed to `core._attempt_rebase_and_push` (patching it wholesale would delete their assertions). Nothing rebase-related stays under `tests/workflows/implement/`; core-level wholesale coverage already lives in `test_core_workflow.py` / `test_failure_reporting.py` (unchanged). `implement/rebase.py` is removed once no `implement.rebase.*` patch target remains.
 
 ## Step sequence (one commit each; order is dependency-constrained)
 

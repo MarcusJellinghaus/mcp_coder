@@ -33,3 +33,17 @@ Implementation status: not started (TASK_TRACKER empty)
 - Decisions.md — created; logged the five triaged decisions
 
 **Status**: plan changed — pending commit; loop continues (fresh review round required).
+
+## Round 2 — 2026-07-22
+
+**Findings** (fresh `/plan_review` engineer, verified against actual source/tests):
+- B2-followup (blocker): The round-1 B2 fix was materially wrong. `tests/workflows/implement/test_rebase.py::TestRebaseIntegration` actually has **5** methods, all patching `implement.rebase.*` internals (`push_changes`, `rebase_onto_branch`, `_get_rebase_target_branch`) and asserting on the real `_attempt_rebase_and_push` body (e.g. `force_with_lease=True`, never-block-on-failure). Round 1's instruction to keep them under `implement/` and repoint to `core._attempt_rebase_and_push` would (a) leave dangling patch targets once `implement/rebase.py` is removed, and (b) replace the function under test with a mock, destroying the assertions.
+- B1/I1/I2/I3: re-verified as correctly and consistently applied. No new issues introduced by round 1. CI test move (Step 4) confirmed clean (no entangled orchestration tests). No other unaccounted production consumers of moved symbols.
+
+**Decisions**: Accept the B2 correction (source-verified, no scope/architecture impact — no user escalation). Move all 5 `TestRebaseIntegration` tests to `tests/workflow_steps/test_rebase.py`, repoint to `workflow_steps.rebase.*`, do NOT patch `_attempt_rebase_and_push` wholesale; core-level orchestration coverage already exists separately in `test_core_workflow.py`/`test_failure_reporting.py` (unchanged). `implement/rebase.py` removal now follows as a consequence.
+
+**User decisions**: None required this round.
+
+**Changes**: Engineer updated `step_3.md`, `Decisions.md` (§2), and `summary.md` consistently (WHERE block, TDD, LLM prompt, decision text, moved-tests bullet); fixed the 5-methods test-count wording throughout.
+
+**Status**: plan changed — pending commit; loop continues (fresh review round required).
