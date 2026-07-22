@@ -38,8 +38,11 @@ from mcp_coder.mcp_workspace_git import (
 )
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import commit_changes, push_changes, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
+from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
+from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     handle_workflow_failure,
@@ -59,6 +62,16 @@ _REPAIR_PROMPT = (
     "Your previous response did not contain a valid verdict. Reply with ONLY a "
     "fenced ```json block containing an object with a `decision` field "
     '("dismiss", "tasks", or "escalate") and nothing else.'
+)
+
+# CI-as-finding note (implementation lane only): when a mid-loop `tasks` round
+# leaves CI red, this text is carried into the *next* fresh reviewer prompt so
+# the reviewer re-surfaces the failure and the supervisor triages it within the
+# rounds cap (rather than failing the run immediately).
+_CI_NOTE = (
+    "NOTE — open CI finding: the most recent CI run on this branch is red and "
+    "could not be auto-fixed. Treat this as a finding: investigate the CI "
+    "failure yourself and include it in your structured report."
 )
 
 
@@ -92,6 +105,9 @@ def run_review_workflow(
     issue_number, base_branch = _resolve_context(config, project_dir)
     run_number = next_run_number(project_dir, config)
     supervisor_sid: str | None = None
+    # Carries a red mid-loop CI result into the next reviewer prompt; when it is
+    # still set at the rounds cap the terminal reason is "ci", not "rounds".
+    pending_ci_note: str | None = None
 
     for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
         sha_before = get_latest_commit_sha(project_dir)
@@ -109,6 +125,7 @@ def run_review_workflow(
                 base_branch,
                 session_id=None,
                 tasks=None,
+                ci_note=pending_ci_note,
             )
         except (LLMTimeoutError, McpServersUnavailableError) as exc:
             return _fail(
@@ -151,7 +168,6 @@ def run_review_workflow(
             )
 
         if verdict.decision == "dismiss":
-            # pylint: disable-next=assignment-from-none  # Step 8 returns non-None
             reason = _after_steps(
                 config,
                 project_dir,
@@ -230,6 +246,7 @@ def run_review_workflow(
                 base_branch,
                 session_id=reviewer_sid,
                 tasks=verdict.tasks,
+                ci_note=None,
             )
         except (LLMTimeoutError, McpServersUnavailableError) as exc:
             return _fail(
@@ -243,7 +260,6 @@ def run_review_workflow(
         commit_changes(project_dir, provider)
         push_changes(project_dir)
 
-        # pylint: disable-next=assignment-from-none  # Step 8 returns non-None
         reason = _after_steps(
             config,
             project_dir,
@@ -268,7 +284,12 @@ def run_review_workflow(
                 config, project_dir, config.escalate_label_id, update_issue_labels
             )
             return 0
-        if reason:
+        if reason == "ci":
+            # Mid-loop red CI is a finding, not a terminal failure: carry it into
+            # the next fresh reviewer prompt and keep looping (the supervisor
+            # triages it within the rounds cap).
+            pending_ci_note = _CI_NOTE
+        elif reason:
             return _fail(
                 config,
                 project_dir,
@@ -276,6 +297,9 @@ def run_review_workflow(
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,
             )
+        else:
+            # After-steps clean (CI green / nothing to do): clear any stale note.
+            pending_ci_note = None
 
         # Backstop (layer C): a `tasks` round that changed nothing is a silent
         # no-op — log it, but let the round count toward the cap and keep going
@@ -293,10 +317,13 @@ def run_review_workflow(
             changes="applied" if changed else "no-op",
         )
 
+    # Rounds cap: a still-open CI finding wins over the plain rounds reason so
+    # the terminal label is `17f-ci` rather than `17f-rounds`.
+    cap_reason = "ci" if pending_ci_note else "rounds"
     return _fail(
         config,
         project_dir,
-        "rounds",
+        cap_reason,
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
     )
@@ -313,8 +340,9 @@ def _resolve_context(
 
     Returns:
         ``(issue_number, base_branch)``. ``base_branch`` is ``None`` when the
-        workflow does not inject one (``review-plan``); Step 8 fills in the
-        real base-branch detection for ``review-implementation``.
+        workflow does not inject one (``review-plan``); for
+        ``review-implementation`` (``inject_base_branch``) it is the detected
+        base branch the reviewer diffs the feature branch against.
     """
     issue_number: int | None = None
     branch_name = get_current_branch_name(project_dir)
@@ -322,7 +350,8 @@ def _resolve_context(
         issue_number = extract_issue_number_from_branch(branch_name)
 
     base_branch: str | None = None
-    # Base-branch detection for the implementation lane is realized in Step 8.
+    if config.inject_base_branch:
+        base_branch = detect_base_branch(project_dir)
     return issue_number, base_branch
 
 
@@ -337,6 +366,7 @@ def _run_reviewer(
     base_branch: str | None,
     session_id: str | None,
     tasks: list[str] | None,
+    ci_note: str | None = None,
 ) -> LLMResponseDict:
     """Run one reviewer turn — a fresh review, or a resume that applies tasks.
 
@@ -357,6 +387,8 @@ def _run_reviewer(
         session_id: ``None`` for a fresh review, else the reviewer session to
             resume for task application.
         tasks: Fix instructions to apply, or ``None`` for a fresh review.
+        ci_note: Optional CI-as-finding note appended to a *fresh* reviewer
+            prompt (see :data:`_CI_NOTE`); ignored on a task-application resume.
 
     Returns:
         The reviewer's :class:`LLMResponseDict`.
@@ -370,6 +402,8 @@ def _run_reviewer(
             "{issue_number}", str(issue_number) if issue_number is not None else "?"
         )
         prompt = prompt.replace("{base_branch}", base_branch or "")
+        if ci_note:
+            prompt = f"{prompt}\n\n{ci_note}"
     else:
         task_lines = "\n".join(f"- {task}" for task in tasks)
         prompt = (
@@ -461,8 +495,20 @@ def _after_steps(
 ) -> str | None:
     """Run the after-steps (rebase + CI) for the implementation lane.
 
-    Step 7 stub: ``review-plan`` has ``run_after_steps=False`` so this always
-    returns ``None``. Step 8 fills in the rebase gate and CI-as-finding.
+    ``review-plan`` has ``run_after_steps=False`` so this is a no-op there. For
+    ``review-implementation`` it enforces two gates in order:
+
+    1. **Rebase gate (mandated — never success on an unresolved rebase):** the
+       branch is rebased onto its base branch via ``_attempt_rebase_and_push``.
+       If that cannot complete cleanly (e.g. a merge conflict) the return is
+       ``"rebase"``, which the caller routes to a needs-human handoff
+       (``07:code-review``) — never a success and never a failure label.
+    2. **CI gate:** ``check_and_fix_ci`` runs its own retries (reusing
+       ``implement``'s prompt headers, overriding only ``session_dir_name``). A
+       green result returns ``None``. A red result returns ``"ci"``: on the
+       final dismiss gate (``is_dismiss``) the caller treats that as a terminal
+       ``17f-ci`` failure; mid-loop the caller instead carries it forward as a
+       finding (see :data:`_CI_NOTE`).
 
     Args:
         config: The review workflow config.
@@ -472,15 +518,49 @@ def _after_steps(
         settings_file: Optional Claude settings file.
         execution_dir: Optional LLM subprocess working directory.
         is_dismiss: Whether this runs on the final dismiss gate (vs mid-loop).
+            Logged for diagnostics; the caller owns the terminal-vs-finding
+            interpretation of a red CI result.
 
     Returns:
-        A failure reason (Step 8: ``"rebase"`` / ``"ci"`` / ``"timeout"`` /
-        ``"mcp"``) or ``None`` when there is nothing to do.
+        A failure reason (``"rebase"`` / ``"ci"`` / ``"timeout"`` / ``"mcp"``)
+        or ``None`` when the after-steps are clean or there is nothing to do.
     """
     if not config.run_after_steps:
         return None
-    # Step 8 realizes the rebase gate and CI-as-finding here.
-    return None
+
+    # --- rebase gate (mandated: never success on an unresolved rebase) ---
+    if not _attempt_rebase_and_push(project_dir):
+        # NotYetImplemented (#1066): a conflict-resolving automatic
+        # ``mcp-coder git-tool rebase`` attempt slots in HERE once #1066 ships
+        # (before the needs-human fallback). Until then a needs-rebase /
+        # unresolvable-conflict outcome simply routes to needs-human
+        # (``07:code-review``) and is never a success.
+        logger.info("Rebase could not complete cleanly; routing to needs-human")
+        return "rebase"
+
+    # --- CI gate ---
+    branch = get_current_branch_name(project_dir)
+    if not branch:
+        return None
+    try:
+        ci_ok = check_and_fix_ci(
+            project_dir=project_dir,
+            branch=branch,
+            provider=provider,
+            mcp_config=mcp_config,
+            settings_file=settings_file,
+            execution_dir=execution_dir,
+            session_dir_name=config.session_dir_name,
+        )
+    except LLMTimeoutError:
+        return "timeout"
+    except McpServersUnavailableError:
+        return "mcp"
+    if ci_ok:
+        return None
+    if not is_dismiss:
+        logger.info("CI is red mid-loop; carrying it forward as a review finding")
+    return "ci"
 
 
 def _set_label(
