@@ -87,6 +87,9 @@ for r in 1..REVIEW_MAX_ROUNDS:
     verdict, sup_sid = _get_verdict(config, ..., sup_sid, report)   # None -> return _fail("general")
     if verdict.decision == "dismiss":
         reason = _after_steps(config, ...)          # Step 8: rebase+CI gate; Step 7: None
+        if reason == "rebase":                      # needs-human handoff, NOT a failure (Step 8)
+            write_round_log(..., escalate_reason="rebase")
+            update_workflow_label(from=busy, to=escalate); return 0   # 07:code-review, exit 0
         if reason: return _fail(config, reason, ...)
         update_workflow_label(from=busy, to=success); return 0
     if verdict.decision == "escalate":
@@ -95,6 +98,9 @@ for r in 1..REVIEW_MAX_ROUNDS:
     # decision == "tasks"
     _run_reviewer(config, ..., session_id=<reviewer_sid>, tasks=verdict.tasks); commit_changes; push_changes
     reason = _after_steps(config, ...)              # Step 8 hook; Step 7 stub None
+    if reason == "rebase":                          # needs-human handoff, NOT a failure (Step 8)
+        write_round_log(..., escalate_reason="rebase")
+        update_workflow_label(from=busy, to=escalate); return 0   # 07:code-review, exit 0
     if reason: return _fail(config, reason, ...)
     changed = get_latest_commit_sha(project_dir) != sha0 or not is_working_directory_clean(project_dir)
     write_round_log(..., findings=report, decisions=str(verdict), changes="no-op" if not changed else "applied")
@@ -122,7 +128,11 @@ return _fail(config, "rounds", ...)                 # cap exhausted
 > helpers listed, implementing the shared loop exactly as the Step 7 pseudocode (fresh reviewer
 > session per round + persistent supervisor with re-captured session id; `mcp_config` to both;
 > verdict parse with 2 repair retries; 3-way routing via `update_workflow_label` for
-> dismiss/escalate and `handle_workflow_failure` for errors; whole-round commit-sha backstop;
+> dismiss/escalate and `handle_workflow_failure` for errors — but special-case an
+> `_after_steps` reason of `"rebase"`: treat it exactly like the `escalate` verdict
+> (needs-human `07:code-review`, `update_workflow_label(from=busy, to=escalate)`, exit `0`),
+> NOT as an error/`_fail`; only non-`"rebase"` reasons fall through to `handle_workflow_failure`;
+> whole-round commit-sha backstop;
 > rounds cap 5; commit/push reviewer edits via `workflow_steps.commit`). Gate each
 > `update_workflow_label` call on `update_issue_labels` and construct `IssueManager(project_dir)`
 > as its first arg (mirror `implement/core.py:434-441`). `_after_steps` is a
