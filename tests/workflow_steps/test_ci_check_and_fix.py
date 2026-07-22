@@ -1,205 +1,20 @@
-"""Tests for CI check helper functions."""
+"""Tests for check_and_fix_ci and _read_problem_description (workflow_steps/ci.py)."""
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from unittest.mock import MagicMock, patch
-
-from mcp_coder.checks.branch_status import (
-    get_failed_jobs_summary,
-    truncate_ci_details,
-)
-from mcp_coder.mcp_workspace_github import JobData
-
-
-class TestTruncateCiDetails:
-    """Tests for truncate_ci_details function (shared truncation logic)."""
-
-    def test_short_log_returned_unchanged(self) -> None:
-        """Logs under 300 lines should be returned as-is."""
-        log = "\n".join([f"Line {i}" for i in range(200)])
-
-        result = truncate_ci_details(log)
-
-        assert result == log
-
-    def test_exactly_300_lines_returned_unchanged(self) -> None:
-        """Logs of exactly 300 lines should be returned as-is."""
-        log = "\n".join([f"Line {i}" for i in range(300)])
-
-        result = truncate_ci_details(log)
-
-        assert result == log
-
-    def test_long_log_truncated_to_first_10_last_290(self) -> None:
-        """Logs over 300 lines should have first 10 + last 290 lines."""
-        log = "\n".join([f"Line {i}" for i in range(400)])
-
-        result = truncate_ci_details(log)
-
-        # Should have 300 lines + truncation marker
-        assert "Line 0" in result  # First line preserved
-        assert "Line 9" in result  # Line 10 preserved (0-indexed)
-        assert "Line 399" in result  # Last line preserved
-        assert "Line 110" in result  # From last 290 (400-290=110)
-        assert "Line 10" not in result  # Should be truncated
-        assert "Line 109" not in result  # Should be truncated
-        assert "..." in result or "[truncated]" in result.lower()
-
-    def test_empty_log_returns_empty(self) -> None:
-        """Empty log should return empty string."""
-        result = truncate_ci_details("")
-
-        assert result == ""
-
-
-class TestGetFailedJobsSummary:
-    """Tests for get_failed_jobs_summary function (shared CI log extraction)."""
-
-    def test_single_failed_job_returns_details_with_step_info(self) -> None:
-        """Single failed job should return its name, step info, and log."""
-        jobs = cast(
-            list[JobData],
-            [
-                {"name": "build", "conclusion": "success", "steps": []},
-                {
-                    "name": "test",
-                    "conclusion": "failure",
-                    "steps": [
-                        {"number": 1, "name": "Set up job", "conclusion": "success"},
-                        {"number": 2, "name": "Checkout", "conclusion": "success"},
-                        {"number": 3, "name": "Run tests", "conclusion": "failure"},
-                    ],
-                },
-            ],
-        )
-        logs = {"test/3_Run tests.txt": "Error: test failed\nAssertionError"}
-
-        result = get_failed_jobs_summary(jobs, logs)
-
-        assert result["job_name"] == "test"
-        assert result["step_name"] == "Run tests"
-        assert result["step_number"] == 3
-        assert "Error: test failed" in result["log_excerpt"]
-        assert result["other_failed_jobs"] == []
-
-    def test_multiple_failed_jobs_returns_first_with_others_listed(self) -> None:
-        """Multiple failed jobs should detail first, list others."""
-        jobs = cast(
-            list[JobData],
-            [
-                {
-                    "name": "lint",
-                    "conclusion": "failure",
-                    "steps": [
-                        {"number": 1, "name": "Run lint", "conclusion": "failure"}
-                    ],
-                },
-                {
-                    "name": "test",
-                    "conclusion": "failure",
-                    "steps": [
-                        {"number": 1, "name": "Run tests", "conclusion": "failure"}
-                    ],
-                },
-                {
-                    "name": "build",
-                    "conclusion": "failure",
-                    "steps": [{"number": 1, "name": "Build", "conclusion": "failure"}],
-                },
-            ],
-        )
-        logs = {
-            "lint/1_Run lint.txt": "Lint error",
-            "test/1_Run tests.txt": "Test error",
-            "build/1_Build.txt": "Build error",
-        }
-
-        result = get_failed_jobs_summary(jobs, logs)
-
-        assert result["job_name"] == "lint"  # First failed job
-        assert "Lint error" in result["log_excerpt"]
-        assert "test" in result["other_failed_jobs"]
-        assert "build" in result["other_failed_jobs"]
-        assert len(result["other_failed_jobs"]) == 2
-
-    def test_no_failed_jobs_returns_empty(self) -> None:
-        """No failed jobs should return empty values."""
-        jobs = cast(
-            list[JobData],
-            [
-                {"name": "build", "conclusion": "success", "steps": []},
-                {"name": "test", "conclusion": "success", "steps": []},
-            ],
-        )
-        logs: dict[str, str] = {}
-
-        result = get_failed_jobs_summary(jobs, logs)
-
-        assert result["job_name"] == ""
-        assert result["step_name"] == ""
-        assert result["log_excerpt"] == ""
-        assert result["other_failed_jobs"] == []
-
-    def test_failed_job_with_no_matching_log(self) -> None:
-        """Failed job without matching log should return job/step info but empty excerpt."""
-        jobs = cast(
-            list[JobData],
-            [
-                {
-                    "name": "test",
-                    "conclusion": "failure",
-                    "steps": [
-                        {"number": 1, "name": "Run tests", "conclusion": "failure"}
-                    ],
-                }
-            ],
-        )
-        logs: dict[str, str] = {}  # No logs available
-
-        result = get_failed_jobs_summary(jobs, logs)
-
-        assert result["job_name"] == "test"
-        assert result["step_name"] == "Run tests"
-        assert result["log_excerpt"] == ""
-        assert result["other_failed_jobs"] == []
-
-    def test_constructs_correct_log_filename(self) -> None:
-        """Should construct log filename from job name, step number, and step name.
-
-        Note: Uses exact filename matching only (Decision 10). If no match found,
-        log_excerpt will be empty and a warning is logged with expected/found filenames (Decision 16).
-        """
-        jobs = cast(
-            list[JobData],
-            [
-                {
-                    "name": "test",
-                    "conclusion": "failure",
-                    "steps": [
-                        {"number": 1, "name": "Set up job", "conclusion": "success"},
-                        {"number": 2, "name": "Run tests", "conclusion": "failure"},
-                    ],
-                }
-            ],
-        )
-        # Log filename format: {job_name}/{step_number}_{step_name}.txt
-        logs = {"test/2_Run tests.txt": "Test failure output"}
-
-        result = get_failed_jobs_summary(jobs, logs)
-
-        assert "Test failure output" in result["log_excerpt"]
 
 
 class TestCheckAndFixCI:
     """Tests for check_and_fix_ci function."""
 
-    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
+    @patch("mcp_coder.workflow_steps.ci.CIResultsManager")
+    @patch("mcp_coder.workflow_steps.ci.time.sleep")
     def test_ci_passes_first_check_returns_true(
         self, mock_sleep: MagicMock, mock_ci_manager: MagicMock
     ) -> None:
         """When CI passes on first check, should return True immediately."""
-        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
+        from mcp_coder.workflow_steps.ci import check_and_fix_ci
 
         # Setup mock
         mock_manager = MagicMock()
@@ -218,13 +33,13 @@ class TestCheckAndFixCI:
         assert result is True
         mock_sleep.assert_not_called()  # No polling needed
 
-    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
+    @patch("mcp_coder.workflow_steps.ci.CIResultsManager")
+    @patch("mcp_coder.workflow_steps.ci.time.sleep")
     def test_ci_not_found_warns_and_returns_true(
         self, mock_sleep: MagicMock, mock_ci_manager: MagicMock
     ) -> None:
         """When no CI run found after polling, should warn and return True (exit 0)."""
-        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
+        from mcp_coder.workflow_steps.ci import check_and_fix_ci
 
         # Setup mock - always returns empty (no CI run)
         mock_manager = MagicMock()
@@ -239,13 +54,13 @@ class TestCheckAndFixCI:
 
         assert result is True  # Graceful exit
 
-    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
-    @patch("mcp_coder.workflows.implement.ci_operations.store_session")
-    @patch("mcp_coder.workflows.implement.ci_operations.run_formatters")
-    @patch("mcp_coder.workflows.implement.ci_operations.commit_changes")
-    @patch("mcp_coder.workflows.implement.ci_operations.push_changes")
-    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
+    @patch("mcp_coder.workflow_steps.ci.CIResultsManager")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.store_session")
+    @patch("mcp_coder.workflow_steps.ci.run_formatters")
+    @patch("mcp_coder.workflow_steps.ci.commit_changes")
+    @patch("mcp_coder.workflow_steps.ci.push_changes")
+    @patch("mcp_coder.workflow_steps.ci.time.sleep")
     def test_ci_fails_fix_succeeds_returns_true(
         self,
         mock_sleep: MagicMock,
@@ -257,7 +72,7 @@ class TestCheckAndFixCI:
         mock_ci_manager: MagicMock,
     ) -> None:
         """When CI fails but fix succeeds, should return True."""
-        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
+        from mcp_coder.workflow_steps.ci import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -312,13 +127,13 @@ class TestCheckAndFixCI:
 
         assert result is True
 
-    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
-    @patch("mcp_coder.workflows.implement.ci_operations.store_session")
-    @patch("mcp_coder.workflows.implement.ci_operations.run_formatters")
-    @patch("mcp_coder.workflows.implement.ci_operations.commit_changes")
-    @patch("mcp_coder.workflows.implement.ci_operations.push_changes")
-    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
+    @patch("mcp_coder.workflow_steps.ci.CIResultsManager")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.store_session")
+    @patch("mcp_coder.workflow_steps.ci.run_formatters")
+    @patch("mcp_coder.workflow_steps.ci.commit_changes")
+    @patch("mcp_coder.workflow_steps.ci.push_changes")
+    @patch("mcp_coder.workflow_steps.ci.time.sleep")
     def test_max_attempts_exhausted_returns_false(
         self,
         mock_sleep: MagicMock,
@@ -330,7 +145,7 @@ class TestCheckAndFixCI:
         mock_ci_manager: MagicMock,
     ) -> None:
         """When max fix attempts exhausted, should return False (exit 1)."""
-        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
+        from mcp_coder.workflow_steps.ci import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -390,12 +205,12 @@ class TestCheckAndFixCI:
 
         assert result is False  # Max attempts exhausted
 
-    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
+    @patch("mcp_coder.workflow_steps.ci.CIResultsManager")
     def test_api_error_returns_true_gracefully(
         self, mock_ci_manager: MagicMock
     ) -> None:
         """When API errors occur, should return True with warning (exit 0)."""
-        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
+        from mcp_coder.workflow_steps.ci import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -409,13 +224,13 @@ class TestCheckAndFixCI:
 
         assert result is True  # Graceful handling
 
-    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
-    @patch("mcp_coder.workflows.implement.ci_operations.store_session")
-    @patch("mcp_coder.workflows.implement.ci_operations.run_formatters")
-    @patch("mcp_coder.workflows.implement.ci_operations.commit_changes")
-    @patch("mcp_coder.workflows.implement.ci_operations.push_changes")
-    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
+    @patch("mcp_coder.workflow_steps.ci.CIResultsManager")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.store_session")
+    @patch("mcp_coder.workflow_steps.ci.run_formatters")
+    @patch("mcp_coder.workflow_steps.ci.commit_changes")
+    @patch("mcp_coder.workflow_steps.ci.push_changes")
+    @patch("mcp_coder.workflow_steps.ci.time.sleep")
     def test_git_push_error_returns_false(
         self,
         mock_sleep: MagicMock,
@@ -427,7 +242,7 @@ class TestCheckAndFixCI:
         mock_ci_manager: MagicMock,
     ) -> None:
         """When git push fails during fix, should return False (fail fast)."""
-        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
+        from mcp_coder.workflow_steps.ci import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -468,13 +283,13 @@ class TestCheckAndFixCI:
 
         assert result is False  # Fail fast on git errors
 
-    @patch("mcp_coder.workflows.implement.ci_operations.CIResultsManager")
-    @patch("mcp_coder.workflows.implement.ci_operations.time.sleep")
+    @patch("mcp_coder.workflow_steps.ci.CIResultsManager")
+    @patch("mcp_coder.workflow_steps.ci.time.sleep")
     def test_ci_in_progress_waits_for_completion(
         self, mock_sleep: MagicMock, mock_ci_manager: MagicMock
     ) -> None:
         """When CI is in progress, should poll until completed."""
-        from mcp_coder.workflows.implement.ci_operations import check_and_fix_ci
+        from mcp_coder.workflow_steps.ci import check_and_fix_ci
 
         mock_manager = MagicMock()
         mock_ci_manager.return_value = mock_manager
@@ -507,7 +322,7 @@ class TestReadProblemDescription:
 
     def test_empty_file_uses_fallback(self, tmp_path: Path) -> None:
         """Empty temp file should return fallback response."""
-        from mcp_coder.workflows.implement.ci_operations import (
+        from mcp_coder.workflow_steps.ci import (
             _read_problem_description,
         )
 
@@ -521,7 +336,7 @@ class TestReadProblemDescription:
 
     def test_whitespace_only_file_uses_fallback(self, tmp_path: Path) -> None:
         """File with only whitespace should return fallback response."""
-        from mcp_coder.workflows.implement.ci_operations import (
+        from mcp_coder.workflow_steps.ci import (
             _read_problem_description,
         )
 
@@ -535,7 +350,7 @@ class TestReadProblemDescription:
 
     def test_file_with_content_returns_content(self, tmp_path: Path) -> None:
         """File with content should return that content."""
-        from mcp_coder.workflows.implement.ci_operations import (
+        from mcp_coder.workflow_steps.ci import (
             _read_problem_description,
         )
 
@@ -549,7 +364,7 @@ class TestReadProblemDescription:
 
     def test_missing_file_uses_fallback(self, tmp_path: Path) -> None:
         """Missing temp file should return fallback response."""
-        from mcp_coder.workflows.implement.ci_operations import (
+        from mcp_coder.workflow_steps.ci import (
             _read_problem_description,
         )
 

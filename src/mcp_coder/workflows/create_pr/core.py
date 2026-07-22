@@ -31,6 +31,7 @@ from mcp_coder.mcp_workspace_github import (
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
+from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import format_mcp_unavailable_message
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
@@ -148,20 +149,8 @@ def check_prerequisites(project_dir: Path) -> bool:
     """
     logger.info("Checking prerequisites for PR creation...")
 
-    # Check if git working directory is clean
-    try:
-        if not is_working_directory_clean(
-            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
-        ):
-            logger.error(
-                "Git working directory is not clean. Please commit or stash changes."
-            )
-            return False
-        logger.info("✓ Git working directory is clean")
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.error(f"Error checking git status: {e}")
+    # Check if git working directory is clean (shared workflow step)
+    if not check_git_clean(project_dir):
         return False
 
     # Check for incomplete tasks
@@ -184,34 +173,18 @@ def check_prerequisites(project_dir: Path) -> bool:
         logger.error(f"Error checking incomplete tasks: {e}")
         return False
 
-    # Check current branch
+    # Check current branch (custom base resolved by the orchestrator; the
+    # shared step only compares current vs base).
     try:
         current_branch = get_current_branch_name(project_dir)
-        if current_branch is None:
-            logger.error("Could not determine current branch (possibly detached HEAD)")
-            return False
-
         base_branch = detect_base_branch(project_dir, current_branch=current_branch)
-        if base_branch is None:
-            logger.error(
-                "Could not detect base branch for PR creation.\n"
-                "Tip: Add '### Base Branch' section to your GitHub issue with the target branch name."
-            )
-            return False
-
-        if current_branch == base_branch:
-            logger.error(
-                f"Current branch '{current_branch}' is the base branch. Please create feature branch."
-            )
-            return False
-
-        logger.info(
-            f"✓ Current branch '{current_branch}' is not base branch '{base_branch}'",
-        )
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking branch status: {e}")
+        return False
+
+    if not is_branch_not_base(current_branch, base_branch):
         return False
 
     logger.info("All prerequisites passed")

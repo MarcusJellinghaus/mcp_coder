@@ -29,7 +29,7 @@ from ...mcp_workspace_github import (
     get_github_token,
 )
 from ...utils.log_utils import OUTPUT
-from ...workflows.implement.ci_operations import check_and_fix_ci
+from ...workflow_steps.ci import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,

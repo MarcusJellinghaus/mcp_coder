@@ -1,4 +1,4 @@
-"""Tests for CI operations (ci_operations.py)."""
+"""Tests for the CI check-and-fix workflow step (workflow_steps/ci.py)."""
 
 import logging
 from pathlib import Path
@@ -7,9 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.checks.branch_status import truncate_ci_details
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.implement.ci_operations import (
+from mcp_coder.workflow_steps.ci import (
     CIFixConfig,
     _poll_for_ci_completion,
     _run_ci_analysis,
@@ -47,10 +48,8 @@ class TestPollForCiCompletionHeartbeat:
             completed
         ]
 
-        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
-            with caplog.at_level(
-                logging.INFO, logger="mcp_coder.workflows.implement.ci_operations"
-            ):
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO, logger="mcp_coder.workflow_steps.ci"):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         heartbeat_logs = [
@@ -85,10 +84,8 @@ class TestPollForCiCompletionHeartbeat:
             completed
         ]
 
-        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
-            with caplog.at_level(
-                logging.INFO, logger="mcp_coder.workflows.implement.ci_operations"
-            ):
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO, logger="mcp_coder.workflow_steps.ci"):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         heartbeat_logs = [
@@ -118,10 +115,8 @@ class TestPollForCiCompletionHeartbeat:
         }
         mock_ci_manager.get_latest_ci_status.side_effect = [in_progress, completed]
 
-        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
-            with caplog.at_level(
-                logging.DEBUG, logger="mcp_coder.workflows.implement.ci_operations"
-            ):
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.DEBUG, logger="mcp_coder.workflow_steps.ci"):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         debug_logs = [
@@ -148,10 +143,8 @@ class TestPollForCiCompletionHeartbeat:
         }
         mock_ci_manager.get_latest_ci_status.side_effect = [empty_status, completed]
 
-        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
-            with caplog.at_level(
-                logging.DEBUG, logger="mcp_coder.workflows.implement.ci_operations"
-            ):
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.DEBUG, logger="mcp_coder.workflow_steps.ci"):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         no_run_logs = [
@@ -187,10 +180,8 @@ class TestPollForCiCompletionHeartbeat:
             completed
         ]
 
-        with patch("mcp_coder.workflows.implement.ci_operations.time.sleep"):
-            with caplog.at_level(
-                logging.INFO, logger="mcp_coder.workflows.implement.ci_operations"
-            ):
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO, logger="mcp_coder.workflow_steps.ci"):
                 _poll_for_ci_completion(mock_ci_manager, "main")
 
         heartbeat_logs = [
@@ -221,12 +212,80 @@ def _make_failed_summary() -> Dict[str, Any]:
     }
 
 
+class TestDefaultPromptHeaders:
+    """Characterization: default headers reach get_prompt_with_substitutions."""
+
+    @patch("mcp_coder.workflow_steps.ci.store_session")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.get_prompt_with_substitutions")
+    def test_analysis_uses_default_header(
+        self,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_store: MagicMock,
+    ) -> None:
+        """The analysis phase loads the "CI Failure Analysis Prompt" header."""
+        mock_get_prompt.return_value = "analysis prompt"
+        mock_prompt_llm.return_value = {"text": "analysis response"}
+
+        _run_ci_analysis(_make_config(), _make_failed_summary(), fix_attempt=0)
+
+        header = mock_get_prompt.call_args.args[1]
+        assert header == "CI Failure Analysis Prompt"
+
+    @patch("mcp_coder.workflow_steps.ci.push_changes", return_value=True)
+    @patch("mcp_coder.workflow_steps.ci.commit_changes", return_value=True)
+    @patch("mcp_coder.workflow_steps.ci.run_formatters", return_value=True)
+    @patch("mcp_coder.workflow_steps.ci.store_session")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.get_prompt_with_substitutions")
+    def test_fix_uses_default_header(
+        self,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_store: MagicMock,
+        _mock_format: MagicMock,
+        _mock_commit: MagicMock,
+        _mock_push: MagicMock,
+    ) -> None:
+        """The fix phase loads the "CI Fix Prompt" header."""
+        mock_get_prompt.return_value = "fix prompt"
+        mock_prompt_llm.return_value = {"text": "fix response"}
+
+        _run_ci_fix(_make_config(), "problem", fix_attempt=0)
+
+        header = mock_get_prompt.call_args.args[1]
+        assert header == "CI Fix Prompt"
+
+
+class TestDefaultSessionDir:
+    """Characterization: sessions stored under .mcp-coder/implement_sessions."""
+
+    @patch("mcp_coder.workflow_steps.ci.store_session")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.get_prompt_with_substitutions")
+    def test_analysis_session_dir(
+        self,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store: MagicMock,
+    ) -> None:
+        """Analysis sessions are stored under .mcp-coder/implement_sessions."""
+        mock_get_prompt.return_value = "analysis prompt"
+        mock_prompt_llm.return_value = {"text": "analysis response"}
+
+        _run_ci_analysis(_make_config(), _make_failed_summary(), fix_attempt=0)
+
+        store_path = mock_store.call_args.kwargs["store_path"]
+        assert store_path.endswith(str(Path(".mcp-coder") / "implement_sessions"))
+
+
 class TestRunCiAnalysisPropagatesLlmFailures:
     """_run_ci_analysis re-raises the two typed LLM failures (Decision 9)."""
 
-    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
     @patch(
-        "mcp_coder.workflows.implement.ci_operations.get_prompt_with_substitutions",
+        "mcp_coder.workflow_steps.ci.get_prompt_with_substitutions",
         return_value="analysis prompt",
     )
     def test_llm_timeout_propagates(
@@ -238,9 +297,9 @@ class TestRunCiAnalysisPropagatesLlmFailures:
         with pytest.raises(LLMTimeoutError):
             _run_ci_analysis(_make_config(), _make_failed_summary(), fix_attempt=0)
 
-    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
     @patch(
-        "mcp_coder.workflows.implement.ci_operations.get_prompt_with_substitutions",
+        "mcp_coder.workflow_steps.ci.get_prompt_with_substitutions",
         return_value="analysis prompt",
     )
     def test_mcp_unavailable_propagates(
@@ -256,11 +315,11 @@ class TestRunCiAnalysisPropagatesLlmFailures:
             _run_ci_analysis(_make_config(), _make_failed_summary(), fix_attempt=0)
 
     @patch(
-        "mcp_coder.workflows.implement.ci_operations.prompt_llm",
+        "mcp_coder.workflow_steps.ci.prompt_llm",
         side_effect=RuntimeError("boom"),
     )
     @patch(
-        "mcp_coder.workflows.implement.ci_operations.get_prompt_with_substitutions",
+        "mcp_coder.workflow_steps.ci.get_prompt_with_substitutions",
         return_value="analysis prompt",
     )
     def test_generic_exception_still_soft_fails(
@@ -274,9 +333,9 @@ class TestRunCiAnalysisPropagatesLlmFailures:
 class TestRunCiFixAbsorbsLlmFailures:
     """_run_ci_fix absorbs the two typed LLM failures into one failed attempt."""
 
-    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
     @patch(
-        "mcp_coder.workflows.implement.ci_operations.get_prompt_with_substitutions",
+        "mcp_coder.workflow_steps.ci.get_prompt_with_substitutions",
         return_value="fix prompt",
     )
     def test_llm_timeout_absorbed_as_false(
@@ -288,9 +347,9 @@ class TestRunCiFixAbsorbsLlmFailures:
         result = _run_ci_fix(_make_config(), "problem", fix_attempt=0)
         assert result is False
 
-    @patch("mcp_coder.workflows.implement.ci_operations.prompt_llm")
+    @patch("mcp_coder.workflow_steps.ci.prompt_llm")
     @patch(
-        "mcp_coder.workflows.implement.ci_operations.get_prompt_with_substitutions",
+        "mcp_coder.workflow_steps.ci.get_prompt_with_substitutions",
         return_value="fix prompt",
     )
     def test_mcp_unavailable_absorbed_as_false(
@@ -304,3 +363,44 @@ class TestRunCiFixAbsorbsLlmFailures:
 
         result = _run_ci_fix(_make_config(), "problem", fix_attempt=0)
         assert result is False
+
+
+class TestTruncateCiDetails:
+    """Tests for truncate_ci_details function (shared truncation logic)."""
+
+    def test_short_log_returned_unchanged(self) -> None:
+        """Logs under 300 lines should be returned as-is."""
+        log = "\n".join([f"Line {i}" for i in range(200)])
+
+        result = truncate_ci_details(log)
+
+        assert result == log
+
+    def test_exactly_300_lines_returned_unchanged(self) -> None:
+        """Logs of exactly 300 lines should be returned as-is."""
+        log = "\n".join([f"Line {i}" for i in range(300)])
+
+        result = truncate_ci_details(log)
+
+        assert result == log
+
+    def test_long_log_truncated_to_first_10_last_290(self) -> None:
+        """Logs over 300 lines should have first 10 + last 290 lines."""
+        log = "\n".join([f"Line {i}" for i in range(400)])
+
+        result = truncate_ci_details(log)
+
+        # Should have 300 lines + truncation marker
+        assert "Line 0" in result  # First line preserved
+        assert "Line 9" in result  # Line 10 preserved (0-indexed)
+        assert "Line 399" in result  # Last line preserved
+        assert "Line 110" in result  # From last 290 (400-290=110)
+        assert "Line 10" not in result  # Should be truncated
+        assert "Line 109" not in result  # Should be truncated
+        assert "..." in result or "[truncated]" in result.lower()
+
+    def test_empty_log_returns_empty(self) -> None:
+        """Empty log should return empty string."""
+        result = truncate_ci_details("")
+
+        assert result == ""

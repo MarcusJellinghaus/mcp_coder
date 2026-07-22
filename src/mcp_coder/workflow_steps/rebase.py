@@ -1,7 +1,8 @@
-"""Rebase helpers for the implement workflow.
+"""Rebase-and-push workflow step.
 
 Detects the parent/base branch and attempts to rebase the current feature
-branch onto it before pushing, without ever blocking the workflow.
+branch onto it before pushing, without ever blocking the workflow. Moved here
+from ``implement/rebase.py`` so multiple workflows can share it.
 """
 
 import logging
@@ -9,9 +10,8 @@ from pathlib import Path
 from typing import Optional
 
 from mcp_coder.mcp_workspace_git import rebase_onto_branch
+from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
-
-from .task_processing import push_changes
 
 logger = logging.getLogger(__name__)
 
