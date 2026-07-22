@@ -35,6 +35,12 @@ project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS)`, on dirty log detail
 - `create_pr/core.py`: in `check_prerequisites`, replace the inline
   `is_working_directory_clean(...)` try/except block with
   `if not check_git_clean(project_dir): return False`.
+- **Exception-scope delta (conscious, accepted):** create_pr's current block catches
+  **all** exceptions → False; the shared `check_git_clean` catches only `ValueError` →
+  False (letting other exceptions from the inner `get_full_status` be swallowed by its
+  nested try). Since `is_working_directory_clean` is documented to raise `ValueError`,
+  this is practically equivalent — accept the narrowing rather than widening the shared
+  step's catch.
 
 ## ALGORITHM
 

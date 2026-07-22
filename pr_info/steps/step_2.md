@@ -49,9 +49,17 @@ COMMIT_MESSAGE_FILE = f"{PR_INFO_DIR}/.commit_message.txt"
 - Update the 4 production consumers (`ci_operations`, `rebase`, `finalisation`, `core`)
   to import `commit_changes` / `push_changes` / `run_formatters` from
   `mcp_coder.workflow_steps.commit`.
-- **Reactive shim:** run the full suite; for any red `patch("…implement.task_processing.commit_changes")`
-  (or push/run_formatters) target, add a one-line re-export in `task_processing.py`:
-  `from mcp_coder.workflow_steps.commit import commit_changes, push_changes, run_formatters`.
+- **Mandatory `task_processing.py` self-import (production, not reactive):**
+  `process_single_task` (staying in `implement`) calls `run_formatters`,
+  `commit_changes`, and `push_changes` (`task_processing.py:574/578/582`). After the
+  three definitions move out, `task_processing.py` **requires**
+  `from mcp_coder.workflow_steps.commit import commit_changes, push_changes, run_formatters`
+  for its own remaining production body — add this unconditionally, independent of any
+  test. (mypy/pytest would otherwise go RED on the missing names.)
+- **Reactive shim:** this same import also serves as the `patch()` re-export target, so no
+  separate shim is needed in `task_processing.py`. For any red
+  `patch("…implement.task_processing.commit_changes")` (or push/run_formatters) target,
+  the mandatory import above resolves it.
 
 ## ALGORITHM
 

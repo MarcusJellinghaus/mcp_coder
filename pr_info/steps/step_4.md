@@ -15,8 +15,20 @@ Modify:
 - `src/mcp_coder/workflow_steps/constants.py` (add the 7 CI/timeout constants)
 - `src/mcp_coder/workflows/implement/constants.py` (remove those 7; re-export `LLM_INACTIVITY_TIMEOUT_SECONDS`)
 - `src/mcp_coder/workflows/implement/core.py` (import `check_and_fix_ci` from `workflow_steps`)
-- `src/mcp_coder/workflows/implement/ci_operations.py` → thin re-export shim, or removed
+- `src/mcp_coder/cli/commands/check_branch_status.py` (repoint its production import — see below)
+- `src/mcp_coder/workflows/implement/ci_operations.py` → reactive re-export shim only (see below)
 - `src/mcp_coder/workflows/implement/task_processing.py` (its `LLM_INACTIVITY_TIMEOUT_SECONDS` import still resolves via the re-export)
+
+**Production consumers of `check_and_fix_ci` (both repointed here — this is a production
+import migration, not a test-only courtesy):**
+- `implement/core.py:383` — `from .ci_operations import check_and_fix_ci` → `from mcp_coder.workflow_steps.ci import check_and_fix_ci`.
+- `cli/commands/check_branch_status.py:32` — `from ...workflows.implement.ci_operations import check_and_fix_ci` → `from mcp_coder.workflow_steps.ci import check_and_fix_ci`. This is the **only cross-package** production consumer; it is easy to miss because it lives in `cli`, not `implement`.
+
+Because these two repoints remove the only production importers of `check_and_fix_ci`
+from `implement/ci_operations.py`, that module needs **NO permanent production shim**.
+Keep `implement/ci_operations.py` only as a **reactive** re-export shim if (and only if)
+a red test reveals a broken `patch("…implement.ci_operations.check_and_fix_ci")` target
+— consistent with the issue's reactive-shim decision. Otherwise it can be removed.
 
 Move `tests/workflows/implement/test_ci_operations.py` + `test_ci_check.py` →
 `tests/workflow_steps/test_ci.py`.
@@ -58,6 +70,11 @@ New constants in `workflow_steps/constants.py`:
 `LLM_INACTIVITY_TIMEOUT_SECONDS`, `LLM_CI_ANALYSIS_TIMEOUT_SECONDS`,
 `CI_POLL_INTERVAL_SECONDS`, `CI_MAX_POLL_ATTEMPTS`, `CI_MAX_FIX_ATTEMPTS`,
 `CI_NEW_RUN_POLL_INTERVAL_SECONDS`, `CI_NEW_RUN_MAX_POLL_ATTEMPTS`.
+
+Note: `PR_INFO_DIR` (used at `ci_operations.py:157` for the `.ci_problem_description.md`
+temp file) is **intentionally absent** from this list — it was already relocated to
+`workflow_steps/constants.py` in Step 2, so `ci.py` imports it from `.constants`. It is
+not missing.
 
 ## HOW (integration points)
 

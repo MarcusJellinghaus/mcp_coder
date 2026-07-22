@@ -14,9 +14,18 @@ Create:
 Modify:
 - `src/mcp_coder/workflows/implement/core.py` (import rebase from `workflow_steps`)
 - `src/mcp_coder/workflows/implement/rebase.py` → becomes a thin re-export shim, or is
-  removed if no test/patch target references it.
+  removed if no test/patch target references it (see the TDD note — after the split
+  below, it likely has **no** remaining patch target and can be cleanly removed).
+- `tests/workflows/implement/test_rebase.py` (split — do **not** move wholesale; see TDD)
+- `tests/workflows/implement/test_core.py` (receives the orchestration integration test)
 
-Move `tests/workflows/implement/test_rebase.py` → `tests/workflow_steps/test_rebase.py`.
+**Do NOT move `test_rebase.py` wholesale.** It contains two distinct kinds of test:
+- Unit tests of `_get_rebase_target_branch` / `_attempt_rebase_and_push` → move to
+  `tests/workflow_steps/test_rebase.py` (these test the moved step).
+- `TestRebaseIntegration::test_rebase_and_push_called_after_prerequisites` → this is an
+  `implement/core` orchestration test (it calls `run_implement_workflow` and patches
+  `implement.core.*` prerequisites). It **stays** under `tests/workflows/implement/`
+  (e.g. moved into `test_core.py`), because tests must mirror the source they exercise.
 
 ## WHAT (signatures — unchanged)
 
@@ -49,10 +58,21 @@ import to `workflow_steps.commit`. No logic edits.
 
 ## TDD
 
-Move `test_rebase.py` into `tests/workflow_steps/`, updating patch targets to
-`mcp_coder.workflow_steps.rebase.*` (e.g. `rebase_onto_branch`, `detect_base_branch`,
-`push_changes`). Confirm the "rebase succeeds but push fails → False" and "no target →
-False" cases are preserved. Make the tests green after the move.
+Split `test_rebase.py`:
+- **Unit tests** (`TestGetRebaseTargetBranch` + the `_attempt_rebase_and_push` cases) →
+  `tests/workflow_steps/test_rebase.py`, updating patch targets to
+  `mcp_coder.workflow_steps.rebase.*` (e.g. `rebase_onto_branch`, `detect_base_branch`,
+  `push_changes`). Confirm the "rebase succeeds but push fails → False" and "no target →
+  False" cases are preserved.
+- **`TestRebaseIntegration::test_rebase_and_push_called_after_prerequisites`** → stays
+  under `tests/workflows/implement/` (e.g. `test_core.py`). Repoint its rebase-call patch
+  target to `mcp_coder.workflows.implement.core._attempt_rebase_and_push` — the name
+  `core` binds after the repoint — **not** `mcp_coder.workflows.implement.rebase.*`. Its
+  `implement.core.*` prerequisite patches keep working unchanged.
+
+After the split, verify whether `implement/rebase.py` has any remaining patch target. If
+none does, **remove `implement/rebase.py`** rather than leaving an unused shim. Make all
+tests green after the split.
 
 ## Checks / commit
 
@@ -65,9 +85,13 @@ All enforcers + pylint / pytest / mypy green. One commit:
 > `_get_rebase_target_branch` and `_attempt_rebase_and_push` verbatim from
 > `implement/rebase.py` into a new `workflow_steps/rebase.py`, importing `push_changes`
 > from `mcp_coder.workflow_steps.commit`. Repoint `implement/core.py` to import the
-> rebase step from `workflow_steps`. Move `test_rebase.py` into
-> `tests/workflow_steps/` with updated patch targets. Keep `implement/rebase.py` as a
-> thin re-export shim only if a test requires it, otherwise remove it. Do not change
+> rebase step from `workflow_steps`. **Split** `test_rebase.py`: the unit tests go to
+> `tests/workflow_steps/test_rebase.py` with `workflow_steps.rebase.*` patch targets, but
+> the `TestRebaseIntegration` orchestration test stays under `tests/workflows/implement/`
+> (e.g. `test_core.py`) with its rebase-call patch repointed to
+> `mcp_coder.workflows.implement.core._attempt_rebase_and_push`. Remove
+> `implement/rebase.py` if no patch target references it after the split; keep it as a
+> thin re-export shim only if a test requires it. Do not change
 > logic. Verify all enforcers (especially `run_lint_imports_check` — this is the step
 > that would go RED if ordering were wrong) and the pylint/pytest/mypy trio are green,
 > then produce one commit.

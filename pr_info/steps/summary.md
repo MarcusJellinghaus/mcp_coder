@@ -69,10 +69,14 @@ The duplicated sub-checks are extracted as small, pure helpers:
   create_pr → `detect_base_branch`, which can be a custom base) and passes it in.
   This preserves create_pr's custom-base semantics without the step ever resolving.
 
-### 6. Re-export shims (reactive)
+### 6. Re-export shims (reactive) vs. production import migration
 
 Moved symbols keep a thin re-export in their original module **only where a red test
-reveals a broken `patch("…implement.…")` target** — no upfront inventory.
+reveals a broken `patch("…implement.…")` target** — no upfront inventory. **Distinct from
+this** are the *production* import migrations, which are mandatory (not reactive): the
+`cli/commands/check_branch_status.py` repoint of `check_and_fix_ci` (Step 4), the
+`task_processing.py` self-import of commit/push/run_formatters for `process_single_task`
+(Step 2), and the constant re-exports in `implement/constants.py`.
 
 ## What moves (and what stays)
 
@@ -112,16 +116,18 @@ no #1072 benefit).
 - `.importlinter` — add `workflow_steps` layer + `tests.workflow_steps` to independence contract
 - `tach.toml` — add `[[modules]]` for `workflow_steps`; add it to `workflows` and `tests` `depends_on`
 - `src/mcp_coder/workflows/implement/constants.py` — remove relocated constants, re-export shared ones
-- `src/mcp_coder/workflows/implement/task_processing.py` — remove 3 moved funcs; update imports
-- `src/mcp_coder/workflows/implement/ci_operations.py` — becomes thin shim (or removed)
-- `src/mcp_coder/workflows/implement/rebase.py` — becomes thin shim (or removed)
+- `src/mcp_coder/workflows/implement/task_processing.py` — remove 3 moved funcs; add mandatory `from workflow_steps.commit import …` for its own `process_single_task` body
+- `src/mcp_coder/workflows/implement/ci_operations.py` — reactive re-export shim only (both production consumers repointed in Step 4); removed if no red test needs it
+- `src/mcp_coder/workflows/implement/rebase.py` — removed once no patch target references it after the Step 3 test split (reactive shim only otherwise)
 - `src/mcp_coder/workflows/implement/finalisation.py` — import `push_changes` from `workflow_steps`
 - `src/mcp_coder/workflows/implement/core.py` — import moved steps from `workflow_steps`
 - `src/mcp_coder/workflows/implement/prerequisites.py` — use shared `check_git_clean` / `is_branch_not_base`
 - `src/mcp_coder/workflows/create_pr/core.py` — use shared `check_git_clean` / `is_branch_not_base`
+- `src/mcp_coder/cli/commands/check_branch_status.py` — repoint `check_and_fix_ci` import to `workflow_steps.ci` (only cross-package production consumer; Step 4)
 
 ### Moved (tests relocated to mirror the source move)
-- CI / rebase / commit-push tests → `tests/workflow_steps/` (patch targets updated to `mcp_coder.workflow_steps.*`)
+- CI / commit-push tests → `tests/workflow_steps/` (patch targets updated to `mcp_coder.workflow_steps.*`)
+- rebase tests → **split** (Step 3): unit tests → `tests/workflow_steps/test_rebase.py`; the `TestRebaseIntegration` orchestration test **stays** under `tests/workflows/implement/` (patch repointed to `implement.core._attempt_rebase_and_push`)
 
 ## Step sequence (one commit each; order is dependency-constrained)
 
