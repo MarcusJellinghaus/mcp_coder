@@ -47,3 +47,18 @@ Implementation status: not started (TASK_TRACKER empty)
 **Changes**: Engineer updated `step_3.md`, `Decisions.md` (§2), and `summary.md` consistently (WHERE block, TDD, LLM prompt, decision text, moved-tests bullet); fixed the 5-methods test-count wording throughout.
 
 **Status**: plan changed — pending commit; loop continues (fresh review round required).
+
+## Round 3 — 2026-07-22
+
+**Findings** (fresh `/plan_review` engineer, verified against actual source/tests):
+- **Zero blocking issues.** Every moved symbol's production and test consumers traced and accounted for (via re-import into importing-module namespaces, the mandatory self-import, or the test moves). `.importlinter`/`tach.toml` edits verified against live files. Round-2 rebase correction confirmed correct & consistent across step_3/Decisions/summary (5 `TestRebaseIntegration` methods verbatim; callee patches → `workflow_steps.rebase.*`; wholesale core coverage stays in `test_core_workflow.py`/`test_failure_reporting.py`; no stale wording).
+- Three non-blocking clarity improvements: (1) `implement/__init__.py` re-exports the commit trio only implicitly via the self-import — make it an explicit re-export from `workflow_steps.commit`; (2) drop the moved names from `test_task_processing.py`'s module-level import; (3) note that Step 6's caller-side `try/except Exception → False` around the resolver stays put.
+- Reactive shims / constant re-exports correctly follow the issue's explicit override of the general "no re-exports" refactoring principle.
+
+**Decisions**: Accept all three improvements (straightforward robustness/clarity, in-scope, no user escalation). #1 removes a real correct-by-accident fragility.
+
+**User decisions**: None required this round.
+
+**Changes**: Engineer updated `step_2.md` (Imp #1 + #2), `step_6.md` (Imp #3), `summary.md` (implement/__init__.py in Modified list), `Decisions.md` (logged as decisions 6/7/8).
+
+**Status**: plan changed — pending commit; one confirmation round required before finalizing.

@@ -13,6 +13,7 @@ Create:
 
 Modify:
 - `src/mcp_coder/workflows/implement/constants.py` (remove the 2 constants; re-export them)
+- `src/mcp_coder/workflows/implement/__init__.py` (re-export the 3 moved funcs directly from `workflow_steps.commit` — see HOW)
 - `src/mcp_coder/workflows/implement/task_processing.py` (remove the 3 functions; keep the rest)
 - `src/mcp_coder/workflows/implement/ci_operations.py` (import the 3 from `workflow_steps`)
 - `src/mcp_coder/workflows/implement/rebase.py` (import `push_changes` from `workflow_steps`)
@@ -60,6 +61,16 @@ COMMIT_MESSAGE_FILE = f"{PR_INFO_DIR}/.commit_message.txt"
   separate shim is needed in `task_processing.py`. For any red
   `patch("…implement.task_processing.commit_changes")` (or push/run_formatters) target,
   the mandatory import above resolves it.
+- **`implement/__init__.py` package export (explicit, not implicit):** the package
+  `__init__.py` re-exports `commit_changes` / `push_changes` / `run_formatters` (with a
+  matching `__all__`) via `from .task_processing import …`. After the move these names
+  survive *only* because the mandatory self-import above re-binds them into
+  `task_processing`'s namespace — correct, but implicit and fragile. Repoint the
+  `__init__.py` export to import the trio **directly** from
+  `mcp_coder.workflow_steps.commit` (leave `__all__` unchanged), so removing the
+  self-import later can't silently break the package export. Keep the
+  `check_git_clean` / `check_main_branch` exports importing from `.prerequisites`
+  (Steps 5/6 keep them importable there — unchanged here).
 
 ## ALGORITHM
 
@@ -78,6 +89,11 @@ Move the existing `run_formatters` / `commit_changes` / `push_changes` test case
 lifecycle** is covered (assert on the `project_dir / COMMIT_MESSAGE_FILE` read/unlink
 path — NOT any substituted prompt string). If missing, add that characterization test
 here before the move. Then perform the move and make the tests green.
+
+When the three functions' test cases leave `tests/workflows/implement/test_task_processing.py`,
+drop `commit_changes` / `push_changes` / `run_formatters` from that file's module-level
+`from mcp_coder.workflows.implement.task_processing import (…)` accordingly (cosmetic —
+they remain importable via the self-import, but the leftover names should not linger).
 
 ## Checks / commit
 

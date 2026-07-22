@@ -33,6 +33,12 @@ Pure comparison + logging; it does **not** call any git resolver.
   `base = detect_base_branch(project_dir, current_branch=current)`, then use
   `is_branch_not_base(current, base)`. This preserves the custom-base semantics —
   the step only compares, the orchestrator still chooses the base.
+- **Preserve the callers' `try/except` (behavior-preserving):** `is_branch_not_base` is
+  a pure comparison and never raises. The broad `try/except Exception → False` that
+  today wraps the branch/base *resolver* calls (`check_main_branch`'s outer try;
+  create_pr's `# Check current branch` block) **stays in each caller**, still wrapping the
+  `get_current_branch_name` / `get_default_branch_name` / `detect_base_branch` calls — so
+  a resolver raising still yields `False` exactly as before. Only the comparison moves out.
 
 ## ALGORITHM
 

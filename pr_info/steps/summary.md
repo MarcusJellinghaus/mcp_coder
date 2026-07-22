@@ -117,6 +117,7 @@ no #1072 benefit).
 - `tach.toml` — add `[[modules]]` for `workflow_steps`; add it to `workflows` and `tests` `depends_on`
 - `src/mcp_coder/workflows/implement/constants.py` — remove relocated constants, re-export shared ones
 - `src/mcp_coder/workflows/implement/task_processing.py` — remove 3 moved funcs; add mandatory `from workflow_steps.commit import …` for its own `process_single_task` body
+- `src/mcp_coder/workflows/implement/__init__.py` — repoint the `commit_changes`/`push_changes`/`run_formatters` package re-export to import them **directly** from `workflow_steps.commit` (explicit, not via the self-import re-binding); `__all__` unchanged
 - `src/mcp_coder/workflows/implement/ci_operations.py` — reactive re-export shim only (both production consumers repointed in Step 4); removed if no red test needs it
 - `src/mcp_coder/workflows/implement/rebase.py` — removed once no patch target references it after the Step 3 test split (reactive shim only otherwise)
 - `src/mcp_coder/workflows/implement/finalisation.py` — import `push_changes` from `workflow_steps`
