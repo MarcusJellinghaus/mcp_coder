@@ -65,10 +65,10 @@ langchain-base = [
 
 ## Verification (run after the edit)
 
-- `mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "tests/test_pyproject_config.py"])`
+- `mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "tests/test_pyproject_config.py"])`
   — the new test goes red before the `pyproject.toml` edit, green after.
 - Full mandatory gate: `run_pylint_check`, `run_pytest_check` (unit subset), `run_mypy_check`.
-- Formatting: black/isort do not touch `.toml`; run `format_all` per CLAUDE.md as a no-op safety check.
+- Formatting: black/isort do not touch `.toml`; run `mcp__mcp-tools-py__run_format_code` per CLAUDE.md as a no-op safety check.
 
 ## LLM Prompt
 
