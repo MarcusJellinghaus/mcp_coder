@@ -334,7 +334,6 @@ ignore = [
 "src/mcp_coder/llm/serialization.py" = ["DOC502"]
 "src/mcp_coder/utils/user_config.py" = ["DOC502"]
 "src/mcp_coder/llm/providers/claude/claude_code_cli.py" = ["DOC502"]
-"src/mcp_coder/workflows/implement/ci_operations.py" = ["DOC502"]
 "src/mcp_coder/workflow_steps/ci.py" = ["DOC502"]
 
 [tool.ruff.lint.pydocstyle]
