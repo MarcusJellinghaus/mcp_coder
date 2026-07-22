@@ -66,9 +66,9 @@ See [step_6.md](./steps/step_6.md)
 ### Step 7: Review engine core loop (`core.py`)
 See [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: After-steps (base-branch injection + rebase + CI-as-finding)
 See [step_8.md](./steps/step_8.md)

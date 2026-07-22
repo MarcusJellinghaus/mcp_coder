@@ -14,9 +14,7 @@ class TestParseVerdictValid:
         assert result == Verdict(decision="dismiss")
 
     def test_tasks_with_list(self) -> None:
-        text = (
-            "```json\n" '{"decision": "tasks", "tasks": ["fix foo", "fix bar"]}\n' "```"
-        )
+        text = '```json\n{"decision": "tasks", "tasks": ["fix foo", "fix bar"]}\n```'
         result = parse_verdict(text)
         assert result == Verdict(decision="tasks", tasks=["fix foo", "fix bar"])
 
