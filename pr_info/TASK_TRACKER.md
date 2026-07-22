@@ -67,9 +67,9 @@ Create `workflow_steps/prerequisites.py` with shared `check_git_clean`; delegate
 `implement/prerequisites.py` and `create_pr/core.py`. Independent of Step 6.
 See [step_5.md](./steps/step_5.md).
 
-- [ ] Implementation (shared `check_git_clean`, delegate both callers, tests in `test_prerequisites.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `refactor(workflow_steps): extract shared check_git_clean prerequisite`
+- [x] Implementation (shared `check_git_clean`, delegate both callers, tests in `test_prerequisites.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `refactor(workflow_steps): extract shared check_git_clean prerequisite`
 
 ### Step 6: Extract shared `is_branch_not_base` prerequisite step
 

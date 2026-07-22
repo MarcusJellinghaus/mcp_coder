@@ -31,6 +31,7 @@ from mcp_coder.mcp_workspace_github import (
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
+from mcp_coder.workflow_steps.prerequisites import check_git_clean
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import format_mcp_unavailable_message
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
@@ -148,20 +149,8 @@ def check_prerequisites(project_dir: Path) -> bool:
     """
     logger.info("Checking prerequisites for PR creation...")
 
-    # Check if git working directory is clean
-    try:
-        if not is_working_directory_clean(
-            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
-        ):
-            logger.error(
-                "Git working directory is not clean. Please commit or stash changes."
-            )
-            return False
-        logger.info("✓ Git working directory is clean")
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.error(f"Error checking git status: {e}")
+    # Check if git working directory is clean (shared workflow step)
+    if not check_git_clean(project_dir):
         return False
 
     # Check for incomplete tasks
