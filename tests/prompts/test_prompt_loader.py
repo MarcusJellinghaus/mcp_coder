@@ -6,6 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
+from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.prompts.prompt_loader import (
     get_project_prompt_path,
     is_claude_md,
@@ -201,3 +203,39 @@ def test_get_prompts_config_warns_on_invalid_mode(
         config = get_prompts_config(tmp_path)
     assert config.claude_system_prompt_mode == "prepend"
     assert "Invalid claude-system-prompt-mode 'prepend'" in caplog.text
+
+
+def test_review_reviewer_sections_load() -> None:
+    """Both reviewer sections load as non-empty prompts."""
+    impl_reviewer = get_prompt(str(PROMPTS_FILE_PATH), "Review Implementation Reviewer")
+    plan_reviewer = get_prompt(str(PROMPTS_FILE_PATH), "Review Plan Reviewer")
+    assert len(impl_reviewer.strip()) > 0
+    assert len(plan_reviewer.strip()) > 0
+
+
+def test_review_supervisor_section_loads() -> None:
+    """The shared supervisor section loads as a non-empty prompt."""
+    supervisor = get_prompt(str(PROMPTS_FILE_PATH), "Review Supervisor")
+    assert len(supervisor.strip()) > 0
+
+
+def test_review_reviewer_sections_contain_issue_number_placeholder() -> None:
+    """Both reviewer prompts carry the {issue_number} substitution placeholder."""
+    impl_reviewer = get_prompt(str(PROMPTS_FILE_PATH), "Review Implementation Reviewer")
+    plan_reviewer = get_prompt(str(PROMPTS_FILE_PATH), "Review Plan Reviewer")
+    assert "{issue_number}" in impl_reviewer
+    assert "{issue_number}" in plan_reviewer
+
+
+def test_review_implementation_reviewer_contains_base_branch_placeholder() -> None:
+    """The implementation reviewer prompt carries the {base_branch} placeholder."""
+    impl_reviewer = get_prompt(str(PROMPTS_FILE_PATH), "Review Implementation Reviewer")
+    assert "{base_branch}" in impl_reviewer
+
+
+def test_review_supervisor_declares_json_decision_contract() -> None:
+    """The supervisor prompt documents the fenced-JSON verdict contract."""
+    supervisor = get_prompt(str(PROMPTS_FILE_PATH), "Review Supervisor")
+    assert "dismiss" in supervisor
+    assert "tasks" in supervisor
+    assert "escalate" in supervisor
