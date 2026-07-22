@@ -77,9 +77,9 @@ Add pure-comparison `is_branch_not_base` to `workflow_steps/prerequisites.py`; d
 from `implement`'s `check_main_branch` and `create_pr`'s branch check. Independent of Step 5.
 See [step_6.md](./steps/step_6.md).
 
-- [ ] Implementation (pure-comparison helper, delegate both callers keeping their resolvers, add tests)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `refactor(workflow_steps): extract shared is_branch_not_base prerequisite`
+- [x] Implementation (pure-comparison helper, delegate both callers keeping their resolvers, add tests)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `refactor(workflow_steps): extract shared is_branch_not_base prerequisite`
 
 ## Pull Request
 

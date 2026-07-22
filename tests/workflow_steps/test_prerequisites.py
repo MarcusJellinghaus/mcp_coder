@@ -4,7 +4,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
-from mcp_coder.workflow_steps.prerequisites import check_git_clean
+from mcp_coder.workflow_steps.prerequisites import (
+    check_git_clean,
+    is_branch_not_base,
+)
 
 
 class TestCheckGitClean:
@@ -66,3 +69,23 @@ class TestCheckGitClean:
         mock_is_clean.assert_called_once_with(
             Path("/test/project"), ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
         )
+
+
+class TestIsBranchNotBase:
+    """Test the shared is_branch_not_base pure-comparison step."""
+
+    def test_current_branch_none(self) -> None:
+        """Test returns False when current branch is None (detached HEAD)."""
+        assert is_branch_not_base(None, "main") is False
+
+    def test_base_branch_none(self) -> None:
+        """Test returns False when base branch cannot be determined."""
+        assert is_branch_not_base("feature-branch", None) is False
+
+    def test_branch_equals_base(self) -> None:
+        """Test returns False when current branch is the base branch."""
+        assert is_branch_not_base("main", "main") is False
+
+    def test_branch_distinct_from_base(self) -> None:
+        """Test returns True when current branch differs from the base branch."""
+        assert is_branch_not_base("feature-branch", "main") is True

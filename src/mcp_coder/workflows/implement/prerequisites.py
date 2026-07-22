@@ -11,7 +11,7 @@ from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
     get_default_branch_name,
 )
-from mcp_coder.workflow_steps.prerequisites import check_git_clean
+from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerSectionNotFoundError,
     _find_implementation_section,
@@ -52,35 +52,13 @@ def check_main_branch(project_dir: Path) -> bool:
     try:
         current_branch = get_current_branch_name(project_dir)
         main_branch = get_default_branch_name(project_dir)
-
-        if current_branch is None:
-            logger.error(
-                "Could not determine current branch (possibly detached HEAD state)"
-            )
-            return False
-
-        if main_branch is None:
-            logger.error(
-                "Could not determine main branch (neither 'main' nor 'master' branch found)"
-            )
-            return False
-
-        if current_branch == main_branch:
-            logger.error(
-                f"Current branch '{current_branch}' is the main branch. Please create and switch to a feature branch before running the workflow."
-            )
-            return False
-
-        logger.info(
-            f"Current branch '{current_branch}' is not the main branch '{main_branch}' - check passed"
-        )
-        return True
-
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking current branch: {e}")
         return False
+
+    return is_branch_not_base(current_branch, main_branch)
 
 
 def check_prerequisites(project_dir: Path) -> bool:
