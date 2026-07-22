@@ -27,9 +27,9 @@ Create the empty `mcp_coder.workflow_steps` package with `py.typed`, register it
 `.importlinter` and `tach.toml`, and add the `tests/workflow_steps/` scaffold tests.
 See [step_1.md](./steps/step_1.md).
 
-- [ ] Implementation (scaffold tests + package files + enforcer config; `run_lint_imports_check` + `run_tach_check` green)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `refactor(workflow_steps): scaffold workflow_steps layer + register enforcers`
+- [x] Implementation (scaffold tests + package files + enforcer config; `run_lint_imports_check` + `run_tach_check` green)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `refactor(workflow_steps): scaffold workflow_steps layer + register enforcers`
 
 ### Step 2: Move commit / push / run_formatters into `workflow_steps`
 

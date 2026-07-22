@@ -34,6 +34,7 @@ type = layers
 layers =
     mcp_coder.cli | mcp_coder.icoder
     mcp_coder.workflows
+    mcp_coder.workflow_steps
     mcp_coder.services | mcp_coder.checks
     mcp_coder.workflow_utils
     mcp_coder.llm | mcp_coder.prompt_manager
@@ -431,6 +432,7 @@ modules =
     tests.llm
     tests.utils
     tests.workflows
+    tests.workflow_steps
     tests.workflow_utils
     tests.checks
     tests.icoder

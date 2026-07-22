@@ -95,6 +95,7 @@ layer = "application"
 # Workflows implement high-level use cases (implement, create_pr, etc.)
 # They orchestrate domain services and utilities to complete tasks.
 depends_on = [
+    { path = "mcp_coder.workflow_steps" }, # Composed workflow-agnostic steps
     { path = "mcp_coder.workflow_utils" }, # Shared workflow helpers
     { path = "mcp_coder.checks" },         # High-level check modules
     { path = "mcp_coder.llm" },           # LLM for code generation
@@ -105,6 +106,25 @@ depends_on = [
     { path = "mcp_coder.utils" },         # Git, GitHub operations
     { path = "mcp_coder.config" },        # Access configuration
     { path = "mcp_coder.constants" },     # Shared constants
+]
+
+[[modules]]
+path = "mcp_coder.workflow_steps"
+layer = "application"
+# Workflow-agnostic composed steps (commit/push, rebase, CI, prerequisites).
+# The middle tier between thin workflow orchestrators and the
+# workflow_utils/checks primitives. depends_on derived from the moved code's
+# actual imports.
+depends_on = [
+    { path = "mcp_coder.checks" },
+    { path = "mcp_coder.workflow_utils" },
+    { path = "mcp_coder.llm" },
+    { path = "mcp_coder.prompt_manager" },
+    { path = "mcp_coder.mcp_tools_py" },
+    { path = "mcp_coder.mcp_workspace_git" },
+    { path = "mcp_coder.mcp_workspace_github" },
+    { path = "mcp_coder.utils" },
+    { path = "mcp_coder.constants" },
 ]
 
 [[modules]]
@@ -449,6 +469,7 @@ depends_on = [
     { path = "mcp_coder" },
     { path = "mcp_coder.cli" },
     { path = "mcp_coder.workflows" },
+    { path = "mcp_coder.workflow_steps" },
     { path = "mcp_coder.workflow_utils" },
     { path = "mcp_coder.checks" },
     { path = "mcp_coder.llm" },
