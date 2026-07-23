@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Guards (pre-flight, base-branch, pr_info-on-base) ([step_5.md](./steps/step_5.md))
 
-- [ ] Implementation: `_preflight`, `_resolve_base_branch`, `_check_pr_info_absent_on_base` + `test_guards.py`
-- [ ] Quality checks: pylint, pytest, mypy, bandit — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_preflight`, `_resolve_base_branch`, `_check_pr_info_absent_on_base` + `test_guards.py`
+- [x] Quality checks: pylint, pytest, mypy, bandit — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Orchestrator `run_rebase_workflow` ([step_6.md](./steps/step_6.md))
 

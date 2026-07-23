@@ -15,9 +15,11 @@ import subprocess
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import (
+    get_current_branch_name,
     get_latest_commit_sha,
     is_working_directory_clean,
 )
+from mcp_coder.workflow_utils.base_branch import detect_base_branch
 
 _OUTCOME_RE = re.compile(r"^\s*REBASE_OUTCOME:\s*(.+?)\s*$", re.MULTILINE)
 _REASON_RE = re.compile(r"^\s*REBASE_REASON:\s*(.+?)\s*$", re.MULTILINE)
@@ -120,3 +122,64 @@ def _rebase_success_shape(project_dir: Path, pre_sha: str) -> bool:
     if not is_working_directory_clean(project_dir):
         return False
     return get_latest_commit_sha(project_dir) != pre_sha
+
+
+_STANDARD_BASES = {"main", "master"}
+
+
+def _preflight(project_dir: Path) -> str | None:
+    """Return ``None`` if the repo is safe to rebase, else an error message.
+
+    Checks, in order: a clean working tree, no rebase/merge in progress, HEAD not
+    on ``main``/``master``, and an ``origin`` remote present. Each failing check
+    short-circuits with a human-readable reason (the caller maps this to exit
+    code ``2``).
+    """
+    if not is_working_directory_clean(project_dir):
+        return "Working tree not clean"
+
+    merge_head = project_dir / ".git" / "MERGE_HEAD"
+    if _is_rebase_in_progress(project_dir) or merge_head.exists():
+        return "Repository is mid-rebase/merge"
+
+    if get_current_branch_name(project_dir) in _STANDARD_BASES:
+        return "Refusing to rebase main/master"
+
+    if _run_git(project_dir, "remote", "get-url", "origin").returncode != 0:
+        return "Remote 'origin' not found"
+
+    return None
+
+
+def _resolve_base_branch(
+    project_dir: Path, base_branch_arg: str | None
+) -> tuple[str | None, str | None]:
+    """Return ``(base_branch, error)`` — exactly one side is non-``None``.
+
+    An explicit ``base_branch_arg`` wins verbatim (no detection). Otherwise
+    ``detect_base_branch`` runs and only the standard ``main``/``master`` bases
+    are accepted automatically; a non-standard or undetectable base returns an
+    error asking for an explicit ``--base-branch``.
+    """
+    if base_branch_arg:
+        return (base_branch_arg, None)
+
+    detected = detect_base_branch(project_dir)
+    if detected is None:
+        return (None, "Could not detect base branch; pass --base-branch")
+    if detected in _STANDARD_BASES:
+        return (detected, None)
+    return (None, f"Non-standard base '{detected}'; pass --base-branch to confirm")
+
+
+def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | None:
+    """Return ``None`` if ``pr_info/`` is absent on ``origin/<base>``, else an error.
+
+    Uses ``git ls-tree origin/<base> pr_info``: any non-empty stdout means the
+    path exists on the base branch, which is refused (the base must not already
+    carry ``pr_info/``).
+    """
+    result = _run_git(project_dir, "ls-tree", f"origin/{base_branch}", "pr_info")
+    if result.stdout.strip():
+        return f"pr_info/ present on origin/{base_branch}"
+    return None
