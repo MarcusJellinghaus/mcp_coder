@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md) for full detail. Packaging-metadata-only change for issue #1078 — no `src/` changes.
 
-- [ ] Implementation: add `test_pyproject_langchain_base_floors` to `tests/test_pyproject_config.py` (TDD, red first), then bump floors in `[project.optional-dependencies].langchain-base` of `pyproject.toml` (`langchain-core>=1.4.7`, `langgraph>=1.2.9` with `#1078` comment)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `test_pyproject_langchain_base_floors` to `tests/test_pyproject_config.py` (TDD, red first), then bump floors in `[project.optional-dependencies].langchain-base` of `pyproject.toml` (`langchain-core>=1.4.7`, `langgraph>=1.2.9` with `#1078` comment)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

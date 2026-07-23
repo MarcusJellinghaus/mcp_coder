@@ -45,3 +45,19 @@ def test_pyproject_typecheck_extra_exists() -> None:
     assert (
         "mcp-coder[types]" in typecheck
     ), f"typecheck extra must reference [types] stubs group, got: {typecheck}"
+
+
+def test_pyproject_langchain_base_floors() -> None:
+    """Verify [langchain-base] declares the floors that clear #1078's warning."""
+    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    with open(pyproject_path, "rb") as f:
+        config = tomllib.load(f)
+
+    base = config["project"]["optional-dependencies"]["langchain-base"]
+
+    assert (
+        "langchain-core>=1.4.7" in base
+    ), f"langchain-base must declare langchain-core>=1.4.7, got: {base}"
+    assert (
+        "langgraph>=1.2.9" in base
+    ), f"langchain-base must declare langgraph>=1.2.9, got: {base}"
