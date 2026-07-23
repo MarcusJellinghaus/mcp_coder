@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: CLI wiring ([step_7.md](./steps/step_7.md))
 
-- [ ] Implementation: `command_catalog`, `add_rebase_parser`, `execute_rebase` + `_resolve_rebase_settings`, `main.py` route + `test_rebase.py` (and `test_help_anti_drift.py` if needed)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `command_catalog`, `add_rebase_parser`, `execute_rebase` + `_resolve_rebase_settings`, `main.py` route + `test_rebase.py` (and `test_help_anti_drift.py` if needed)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -249,6 +249,32 @@ def add_create_plan_parser(subparsers: Any) -> None:
     )
 
 
+def add_rebase_parser(subparsers: Any) -> None:
+    """Add the rebase command parser."""
+    rebase_parser = subparsers.add_parser(
+        "rebase",
+        help=COMMAND_DESCRIPTIONS["rebase"],
+        epilog=(
+            "Exit codes: 0 = success or no-op (already current), "
+            "1 = aborted / needs human, 2 = error (bad repo/args, push rejected)."
+        ),
+        formatter_class=WideHelpFormatter,
+    )
+    add_project_dir_arg(rebase_parser)
+    add_llm_method_arg(rebase_parser)
+    add_mcp_config_arg(rebase_parser)
+    add_settings_arg(rebase_parser)
+    add_execution_dir_arg(rebase_parser)
+    rebase_parser.add_argument(
+        "--base-branch",
+        type=str,
+        default=None,
+        metavar="BRANCH",
+        help="Base branch to rebase onto (default: auto-detect; required for "
+        "non-main/master bases)",
+    )
+
+
 def add_create_pr_parser(subparsers: Any) -> None:
     """Add the create-pr command parser."""
     create_pr_parser = subparsers.add_parser(
