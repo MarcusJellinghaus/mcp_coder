@@ -1,7 +1,7 @@
 """Tests for mcp_coder.llm.providers.langchain.__init__."""
 
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -506,7 +506,8 @@ class TestAskAgentConnectionError:
             patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD}.agent._check_agent_dependencies"),
             patch(
-                f"{_MOD}.asyncio.run",
+                f"{_MOD}.agent.run_agent",
+                new_callable=AsyncMock,
                 side_effect=ConnectionError("Connection refused"),
             ),
         ):
@@ -527,7 +528,8 @@ class TestAskAgentConnectionError:
             patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD}.agent._check_agent_dependencies"),
             patch(
-                f"{_MOD}.asyncio.run",
+                f"{_MOD}.agent.run_agent",
+                new_callable=AsyncMock,
                 side_effect=RuntimeError("unexpected agent error"),
             ),
         ):
@@ -564,7 +566,8 @@ class TestAskAgentAuthError:
             patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD}.agent._check_agent_dependencies"),
             patch(
-                f"{_MOD}.asyncio.run",
+                f"{_MOD}.agent.run_agent",
+                new_callable=AsyncMock,
                 side_effect=_FakeAuthError("invalid key"),
             ),
             patch(f"{_MOD}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),

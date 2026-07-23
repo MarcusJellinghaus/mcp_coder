@@ -1,6 +1,6 @@
 """Tests for system message building and prepending in langchain provider."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 _MOD = "mcp_coder.llm.providers.langchain"
 
@@ -212,7 +212,8 @@ class TestAskLangchainPassesSystemMessages:
             patch(f"{_MOD}._create_chat_model", return_value=MagicMock()),
             patch(f"{_MOD}.agent._check_agent_dependencies"),
             patch(
-                f"{_MOD}.asyncio.run",
+                f"{_MOD}.agent.run_agent",
+                new_callable=AsyncMock,
                 return_value=(
                     "response",
                     [],
@@ -229,5 +230,7 @@ class TestAskLangchainPassesSystemMessages:
                 project_prompt="proj",
             )
 
-        # Verify asyncio.run was called (system_messages passed through _ask_agent)
-        assert mock_run.called
+        # Verify run_agent was called with the built system_messages
+        mock_run.assert_called_once()
+        system_messages = mock_run.call_args.kwargs["system_messages"]
+        assert [m.content for m in system_messages] == ["sys", "proj"]
