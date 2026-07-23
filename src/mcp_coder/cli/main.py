@@ -33,6 +33,7 @@ from .commands.icoder import execute_icoder
 from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
+from .commands.rebase import execute_rebase
 from .commands.review import execute_review_implementation, execute_review_plan
 from .commands.verify import execute_verify
 from .gh_parsers import add_gh_tool_parsers, add_git_tool_parsers
@@ -48,6 +49,7 @@ from .parsers import (
     add_implement_parser,
     add_init_parser,
     add_prompt_parser,
+    add_rebase_parser,
     add_review_implementation_parser,
     add_review_plan_parser,
     add_verify_parser,
@@ -131,6 +133,7 @@ def create_parser() -> argparse.ArgumentParser:
     add_commit_parsers(subparsers)
     add_implement_parser(subparsers)
     add_icoder_parser(subparsers)
+    add_rebase_parser(subparsers)
     add_create_plan_parser(subparsers)
     add_review_plan_parser(subparsers)
     add_review_implementation_parser(subparsers)
@@ -338,6 +341,8 @@ def main() -> int:
             return _handle_commit_command(args)
         elif args.command == "implement":
             return execute_implement(args)
+        elif args.command == "rebase":
+            return execute_rebase(args)
         elif args.command == "icoder":
             return execute_icoder(args)
         elif args.command == "create-plan":
