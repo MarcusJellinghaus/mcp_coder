@@ -41,9 +41,13 @@ _VALID_OUTCOMES = {"success", "aborted"}
 def _parse_outcome_marker(response_text: str) -> tuple[str | None, str | None]:
     """Extract ``(outcome, reason)`` from the LLM response.
 
-    ``outcome`` is ``"success"`` | ``"aborted"`` | ``None`` (unparseable or an
-    unrecognized value). ``reason`` is the ``REBASE_REASON`` text, or ``None``
-    when absent or ``"n/a"``. Last match wins for both markers.
+    Last match wins for both markers.
+
+    Returns:
+        A ``(outcome, reason)`` tuple. ``outcome`` is ``"success"`` |
+        ``"aborted"`` | ``None`` (unparseable or an unrecognized value).
+        ``reason`` is the ``REBASE_REASON`` text, or ``None`` when absent or
+        ``"n/a"``.
     """
     outcome: str | None = None
     outcome_matches = _OUTCOME_RE.findall(response_text)
@@ -81,9 +85,11 @@ def _evaluate_pre_push(
 def _run_git(project_dir: Path, *args: str) -> "subprocess.CompletedProcess[str]":
     """Run ``git <args>`` in ``project_dir`` (list form, no shell, ``check=False``).
 
-    Returns the completed process so callers can inspect ``.returncode``,
-    ``.stdout`` and ``.stderr``. Never raises on a non-zero git exit; the caller
-    decides what a failure means.
+    Never raises on a non-zero git exit; the caller decides what a failure means.
+
+    Returns:
+        The completed process so callers can inspect ``.returncode``,
+        ``.stdout`` and ``.stderr``.
     """
     # Fixed argv, no shell, trusted ``git`` CLI — bandit B603/B607 are inherent to
     # any subprocess call and accepted repo-wide (see workflows/vscodeclaude,
@@ -213,12 +219,15 @@ def _run_rebase_session(
     settings_file: str | None,
     execution_dir: Path | None,
 ) -> str:
-    """Run the single LLM rebase session and return its response text.
+    """Run the single LLM rebase session.
 
     Loads the ``Automated Rebase`` prompt, appends the resolved base branch as
     context (so the LLM rebases onto ``origin/<base>``), and issues exactly one
     ``prompt_llm`` call with a ~600s inactivity budget. Any LLM error/timeout is
     left to propagate to the orchestrator, which maps it to a needs-human exit.
+
+    Returns:
+        The LLM response text (empty string when the response carries no text).
     """
     env_vars = prepare_llm_environment(project_dir)
     branch_name = get_branch_name_for_logging(project_dir)
@@ -258,8 +267,11 @@ def run_rebase_workflow(
     worst-case-wins decision -> Python-owned force-push (with restore on
     rejection) -> ``finally`` abort safety net.
 
-    Returns ``0`` (success or no-op), ``1`` (aborted -> needs-human), or ``2``
-    (error / push rejected). See the exit-code contract in ``summary.md``.
+    See the exit-code contract in ``summary.md``.
+
+    Returns:
+        ``0`` (success or no-op), ``1`` (aborted -> needs-human), or ``2``
+        (error / push rejected).
     """
     err = _preflight(project_dir)
     if err:
