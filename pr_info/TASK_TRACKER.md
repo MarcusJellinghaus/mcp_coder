@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Least-privilege permissions constant ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation: `REBASE_LLM_PERMISSIONS` constant + tests (`test_rebase_permissions.py`, `__init__.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `REBASE_LLM_PERMISSIONS` constant + tests (`test_rebase_permissions.py`, `__init__.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Automated Rebase prompt + drift test ([step_2.md](./steps/step_2.md))
 
