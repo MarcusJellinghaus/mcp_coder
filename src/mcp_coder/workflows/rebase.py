@@ -10,16 +10,27 @@ the LLM's self-reported outcome marker and the actual git repository state (git
 is authoritative, worst-case-wins).
 """
 
+import logging
 import re
 import subprocess
 from pathlib import Path
 
+from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.llm.env import prepare_llm_environment
+from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.mcp_workspace_git import (
+    fetch_remote,
     get_current_branch_name,
     get_latest_commit_sha,
+    git_push,
     is_working_directory_clean,
+    needs_rebase,
 )
+from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
+
+logger = logging.getLogger(__name__)
 
 _OUTCOME_RE = re.compile(r"^\s*REBASE_OUTCOME:\s*(.+?)\s*$", re.MULTILINE)
 _REASON_RE = re.compile(r"^\s*REBASE_REASON:\s*(.+?)\s*$", re.MULTILINE)
@@ -183,3 +194,127 @@ def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | 
     if result.stdout.strip():
         return f"pr_info/ present on origin/{base_branch}"
     return None
+
+
+# --- LLM session + orchestrator ------------------------------------------------
+
+# Inactivity budget (max seconds with no stdout line from the LLM, NOT total
+# runtime), matching the create_plan prompts and kept below the CI step cap.
+_SESSION_TIMEOUT = 600
+
+_REBASE_PROMPT_HEADER = "Automated Rebase"
+
+
+def _run_rebase_session(
+    project_dir: Path,
+    base_branch: str,
+    provider: str,
+    mcp_config: str | None,
+    settings_file: str | None,
+    execution_dir: Path | None,
+) -> str:
+    """Run the single LLM rebase session and return its response text.
+
+    Loads the ``Automated Rebase`` prompt, appends the resolved base branch as
+    context (so the LLM rebases onto ``origin/<base>``), and issues exactly one
+    ``prompt_llm`` call with a ~600s inactivity budget. Any LLM error/timeout is
+    left to propagate to the orchestrator, which maps it to a needs-human exit.
+    """
+    env_vars = prepare_llm_environment(project_dir)
+    branch_name = get_branch_name_for_logging(project_dir)
+    prompt_template = get_prompt(str(PROMPTS_FILE_PATH), _REBASE_PROMPT_HEADER)
+    prompt = (
+        f"{prompt_template}\n\n"
+        "---\n"
+        "## Rebase context\n"
+        f"Rebase the current branch onto `origin/{base_branch}`.\n"
+    )
+    response = prompt_llm(
+        prompt,
+        provider=provider,
+        session_id=None,
+        timeout=_SESSION_TIMEOUT,
+        env_vars=env_vars,
+        execution_dir=str(execution_dir) if execution_dir else None,
+        mcp_config=mcp_config,
+        settings_file=settings_file,
+        branch_name=branch_name,
+    )
+    return response.get("text", "") or ""
+
+
+def run_rebase_workflow(
+    project_dir: Path,
+    provider: str,
+    base_branch: str | None = None,
+    mcp_config: str | None = None,
+    settings_file: str | None = None,
+    execution_dir: Path | None = None,
+) -> int:
+    """Orchestrate the automated rebase.
+
+    Composes the deterministic shell: pre-flight guards -> base-branch guard ->
+    ``pr_info/``-on-base guard -> no-op short-circuit -> single LLM session ->
+    worst-case-wins decision -> Python-owned force-push (with restore on
+    rejection) -> ``finally`` abort safety net.
+
+    Returns ``0`` (success or no-op), ``1`` (aborted -> needs-human), or ``2``
+    (error / push rejected). See the exit-code contract in ``summary.md``.
+    """
+    err = _preflight(project_dir)
+    if err:
+        logger.error("Pre-flight failed: %s", err)
+        return 2
+
+    base, base_err = _resolve_base_branch(project_dir, base_branch)
+    if base_err:
+        logger.error("Base-branch guard failed: %s", base_err)
+        return 2
+    assert base is not None  # nosec B101 — guaranteed by _resolve_base_branch
+
+    fetch_remote(project_dir, "origin")
+
+    pr_info_err = _check_pr_info_absent_on_base(project_dir, base)
+    if pr_info_err:
+        logger.error("pr_info/ guard failed: %s", pr_info_err)
+        return 2
+
+    needed, reason = needs_rebase(project_dir, base)
+    if not needed:
+        logger.info("Already current with origin/%s (%s); nothing to do", base, reason)
+        return 0
+
+    pre_sha = get_latest_commit_sha(project_dir)
+    if pre_sha is None:
+        logger.error("Could not resolve HEAD commit before rebase")
+        return 2
+
+    try:
+        text = _run_rebase_session(
+            project_dir, base, provider, mcp_config, settings_file, execution_dir
+        )
+        outcome, marker_reason = _parse_outcome_marker(text)
+        decision = _evaluate_pre_push(
+            mid_rebase=_is_rebase_in_progress(project_dir),
+            marker_outcome=outcome,
+            rebase_success_shape=_rebase_success_shape(project_dir, pre_sha),
+        )
+        if decision == "abort":
+            logger.error("Rebase aborted (needs human): %s", marker_reason or reason)
+            return 1
+
+        result = git_push(project_dir, force_with_lease=True)
+        if result["success"]:
+            logger.info("Rebased and force-pushed onto origin/%s", base)
+            return 0
+
+        logger.error("Force-push rejected/failed: %s", result.get("error"))
+        _reset_hard(project_dir, pre_sha)  # never leave unpushed rebased commits
+        return 2
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        # LLMTimeoutError is a subclass, so one branch covers timeout + errors.
+        logger.error("Rebase session failed: %s", exc)
+        return 1  # needs-human; the finally net makes this retry-safe
+    finally:
+        if _is_rebase_in_progress(project_dir):
+            _abort_rebase(project_dir)

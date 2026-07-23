@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Orchestrator `run_rebase_workflow` ([step_6.md](./steps/step_6.md))
 
-- [ ] Implementation: `run_rebase_workflow` + `_run_rebase_session` + `test_workflow.py` (mocked LLM/git)
-- [ ] Quality checks: pylint, pytest, mypy, bandit — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `run_rebase_workflow` + `_run_rebase_session` + `test_workflow.py` (mocked LLM/git)
+- [x] Quality checks: pylint, pytest, mypy, bandit — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: CLI wiring ([step_7.md](./steps/step_7.md))
 
