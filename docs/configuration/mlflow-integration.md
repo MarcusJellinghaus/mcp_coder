@@ -96,12 +96,12 @@ For detailed migration guidance, see: https://mlflow.org/docs/latest/self-hostin
 
 **Windows:**
 ```cmd
-tools\start_mlflow.bat
+tools\mlflow\start_mlflow.bat
 ```
 
 **Linux/macOS:**
 ```bash
-./tools/start_mlflow.sh
+./tools/mlflow/start_mlflow.sh
 ```
 
 The scripts will:
@@ -209,10 +209,10 @@ DEBUG:mcp_coder.llm.mlflow_logger:MLflow is not installed
 1. Start the MLflow UI (if not already running):
    ```bash
    # Windows
-   tools\start_mlflow.bat
+   tools\mlflow\start_mlflow.bat
    
    # Linux/macOS
-   ./tools/start_mlflow.sh
+   ./tools/mlflow/start_mlflow.sh
    ```
 
 2. Open http://localhost:5000 in your browser

@@ -432,7 +432,7 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
 - **Logged Data**: Model/provider/branch params, duration/cost/token metrics, prompt/conversation artifacts
 - **Graceful Degradation**: Try/except pattern ensures system works without MLflow (silent fallback, no errors)
 - **Backend Support**: SQLite (recommended), filesystem (deprecated), remote server
-- **Tools**: `start_mlflow.sh/.bat`, `stop_mlflow.py` (836 lines, diagnostic), `get_latest_mlflow_db_entries.py`
+- **Tools**: `tools/mlflow/` (`start_mlflow.sh/.bat`, `get_latest_mlflow_db_entries.py`, `inspect_mlflow_run.py`, permission-event extract/analyze, ...); see `tools/mlflow/README.md`
 - **Import Cycle Prevention**: import-linter enforces mlflow_logger cannot import logging_utils or prompt
 - **Documentation**: `docs/configuration/mlflow-integration.md`
 

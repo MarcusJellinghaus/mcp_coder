@@ -75,7 +75,7 @@ mlflow.db-wal
 mlruns/
 mlartifacts/
 
-# MLflow analysis exports (tools/extract_permission_events.py etc.)
+# MLflow analysis exports (tools/mlflow/extract_permission_events.py etc.)
 .ml_flow_analysis/
 
 # Build artifact: skill files copied at build time (canonical source: .claude/)

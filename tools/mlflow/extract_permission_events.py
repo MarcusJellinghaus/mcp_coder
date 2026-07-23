@@ -19,9 +19,9 @@ auto-denial. The ``outcome`` column is kept generic (denied/allowed/approved) so
 interactive runs can slot in later.
 
 Usage:
-    python tools/extract_permission_events.py
-    python tools/extract_permission_events.py --output permission_data/ --limit 500
-    python tools/extract_permission_events.py --db-path /path/to/mlflow.db
+    python tools/mlflow/extract_permission_events.py
+    python tools/mlflow/extract_permission_events.py --output permission_data/ --limit 500
+    python tools/mlflow/extract_permission_events.py --db-path /path/to/mlflow.db
 
 Outputs (in --output dir, default: current dir):
     permission_events.jsonl   one event per line, full detail

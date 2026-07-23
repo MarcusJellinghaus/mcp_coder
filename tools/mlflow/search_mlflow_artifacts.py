@@ -4,10 +4,10 @@
 Searches prompt text, response text, and tool calls across all MLflow runs.
 
 Usage:
-    python tools/search_mlflow_artifacts.py "680"
-    python tools/search_mlflow_artifacts.py "task tracker" --field prompt
-    python tools/search_mlflow_artifacts.py "save_file" --field tools --limit 10
-    python tools/search_mlflow_artifacts.py "pr_info" --branch 680-refactor
+    python tools/mlflow/search_mlflow_artifacts.py "680"
+    python tools/mlflow/search_mlflow_artifacts.py "task tracker" --field prompt
+    python tools/mlflow/search_mlflow_artifacts.py "save_file" --field tools --limit 10
+    python tools/mlflow/search_mlflow_artifacts.py "pr_info" --branch 680-refactor
 """
 
 import argparse
