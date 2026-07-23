@@ -33,6 +33,7 @@ from .commands.icoder import execute_icoder
 from .commands.implement import execute_implement
 from .commands.init import execute_init
 from .commands.prompt import execute_prompt
+from .commands.review import execute_review_implementation, execute_review_plan
 from .commands.verify import execute_verify
 from .gh_parsers import add_gh_tool_parsers, add_git_tool_parsers
 from .parsers import (
@@ -47,6 +48,8 @@ from .parsers import (
     add_implement_parser,
     add_init_parser,
     add_prompt_parser,
+    add_review_implementation_parser,
+    add_review_plan_parser,
     add_verify_parser,
     add_vscodeclaude_parsers,
 )
@@ -129,6 +132,8 @@ def create_parser() -> argparse.ArgumentParser:
     add_implement_parser(subparsers)
     add_icoder_parser(subparsers)
     add_create_plan_parser(subparsers)
+    add_review_plan_parser(subparsers)
+    add_review_implementation_parser(subparsers)
     add_create_pr_parser(subparsers)
     add_coordinator_parsers(subparsers)
     add_check_parsers(subparsers)
@@ -337,6 +342,10 @@ def main() -> int:
             return execute_icoder(args)
         elif args.command == "create-plan":
             return execute_create_plan(args)
+        elif args.command == "review-plan":
+            return execute_review_plan(args)
+        elif args.command == "review-implementation":
+            return execute_review_implementation(args)
         elif args.command == "create-pr":
             return execute_create_pr(args)
         elif args.command == "coordinator":

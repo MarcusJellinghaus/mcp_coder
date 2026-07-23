@@ -167,6 +167,58 @@ def add_implement_parser(subparsers: Any) -> None:
     )
 
 
+def add_review_plan_parser(subparsers: Any) -> None:
+    """Add the review-plan command parser."""
+    review_plan_parser = subparsers.add_parser(
+        "review-plan",
+        help=COMMAND_DESCRIPTIONS["review-plan"],
+        formatter_class=WideHelpFormatter,
+    )
+    add_project_dir_arg(review_plan_parser)
+    add_llm_method_arg(review_plan_parser)
+    add_mcp_config_arg(review_plan_parser)
+    add_settings_arg(review_plan_parser)
+    add_execution_dir_arg(review_plan_parser)
+    review_plan_parser.add_argument(
+        "--update-issue-labels",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Update GitHub issue labels on success/failure (default: from config)",
+    )
+    review_plan_parser.add_argument(
+        "--post-issue-comments",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Post GitHub comments on workflow failure (default: from config)",
+    )
+
+
+def add_review_implementation_parser(subparsers: Any) -> None:
+    """Add the review-implementation command parser."""
+    review_implementation_parser = subparsers.add_parser(
+        "review-implementation",
+        help=COMMAND_DESCRIPTIONS["review-implementation"],
+        formatter_class=WideHelpFormatter,
+    )
+    add_project_dir_arg(review_implementation_parser)
+    add_llm_method_arg(review_implementation_parser)
+    add_mcp_config_arg(review_implementation_parser)
+    add_settings_arg(review_implementation_parser)
+    add_execution_dir_arg(review_implementation_parser)
+    review_implementation_parser.add_argument(
+        "--update-issue-labels",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Update GitHub issue labels on success/failure (default: from config)",
+    )
+    review_implementation_parser.add_argument(
+        "--post-issue-comments",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Post GitHub comments on workflow failure (default: from config)",
+    )
+
+
 def add_create_plan_parser(subparsers: Any) -> None:
     """Add the create-plan command parser."""
     create_plan_parser = subparsers.add_parser(

@@ -415,6 +415,34 @@ github_credentials_id = "creds3"
         warnings = [e for e in result["entries"] if e["status"] == "warning"]
         assert any("unknown_key" in e["value"] for e in warnings)
 
+    def test_verify_config_auto_review_flags_no_unknown_warning(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """auto_review_plan/auto_review_implementation verify cleanly (no warning)."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            """\
+[coordinator.repos.myrepo]
+repo_url = "https://example.com/repo.git"
+executor_job_path = "Tests/test"
+github_credentials_id = "creds"
+auto_review_plan = true
+auto_review_implementation = false
+""",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        self._clear_env_vars(monkeypatch)
+
+        result = verify_config()
+
+        assert result["has_error"] is False
+        warnings = [e for e in result["entries"] if e["status"] == "warning"]
+        assert not any("auto_review_plan" in e["value"] for e in warnings)
+        assert not any("auto_review_implementation" in e["value"] for e in warnings)
+
     def test_verify_config_absent_section_info(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -16,7 +16,9 @@ COMMAND_DESCRIPTIONS: dict[str, str] = {
     "init": "Initialize project: create config and deploy Claude skills",
     "verify": "Verify CLI installation, LLM provider, and MLflow configuration",
     "create-plan": "Generate implementation plan for a GitHub issue",
+    "review-plan": "Run automated review of an implementation plan",
     "implement": "Execute implementation workflow",
+    "review-implementation": "Run automated review of an implementation",
     "create-pr": "Create pull request with AI-generated summary",
     "coordinator": "Monitor GitHub issues and dispatch automated workflows",
     "icoder": "Interactive terminal chat for LLM-assisted coding",
@@ -39,7 +41,14 @@ COMMAND_CATEGORIES: list[tuple[str, list[str]]] = [
     ("SETUP", ["init", "verify"]),
     (
         "BACKGROUND DEVELOPMENT",
-        ["create-plan", "implement", "create-pr", "coordinator"],
+        [
+            "create-plan",
+            "review-plan",
+            "implement",
+            "review-implementation",
+            "create-pr",
+            "coordinator",
+        ],
     ),
     (
         "INTERACTIVE DEVELOPMENT",

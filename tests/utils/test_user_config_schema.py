@@ -127,6 +127,51 @@ class TestConfigTypeValidation:
                 [("coordinator.repos.myrepo", "update_issue_labels", None)]
             )
 
+    def test_auto_review_flags_parse_as_booleans(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """auto_review_plan/auto_review_implementation parse as native booleans."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[coordinator.repos.myrepo]\n"
+            'repo_url = "https://example.com"\n'
+            "auto_review_plan = true\n"
+            "auto_review_implementation = false\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        result = get_config_values(
+            [
+                ("coordinator.repos.myrepo", "auto_review_plan", None),
+                ("coordinator.repos.myrepo", "auto_review_implementation", None),
+            ]
+        )
+        assert result[("coordinator.repos.myrepo", "auto_review_plan")] is True
+        assert (
+            result[("coordinator.repos.myrepo", "auto_review_implementation")] is False
+        )
+
+    def test_auto_review_plan_wrong_type_raises_valueerror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """String in auto_review_plan bool field raises ValueError."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[coordinator.repos.myrepo]\n"
+            'repo_url = "https://example.com"\n'
+            'auto_review_plan = "true"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        with pytest.raises(ValueError, match="expected bool.*got str"):
+            get_config_values([("coordinator.repos.myrepo", "auto_review_plan", None)])
+
 
 class TestConfigSchema:
     """Tests for FieldDef and _CONFIG_SCHEMA."""
