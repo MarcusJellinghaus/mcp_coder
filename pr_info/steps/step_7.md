@@ -1,8 +1,9 @@
 # Step 7 — CLI wiring
 
 Goal: expose `mcp-coder rebase` — catalog entry, parser, thin command that
-resolves the least-privilege settings default (bypassing broad auto-detect) and
-calls `run_rebase_workflow`, and the `main.py` route. One commit.
+resolves the least-privilege settings default (materializing a temp settings file
+from the in-code constant, bypassing broad auto-detect) and calls
+`run_rebase_workflow`, and the `main.py` route. One commit.
 
 ## WHERE
 - MODIFY `src/mcp_coder/cli/command_catalog.py` — add `"rebase"` description +
@@ -21,8 +22,9 @@ calls `run_rebase_workflow`, and the `main.py` route. One commit.
 def execute_rebase(args: argparse.Namespace) -> int: ...
 
 def _resolve_rebase_settings(settings_arg: str | None, project_dir: str | None) -> str:
-    """Explicit --settings via resolve_claude_settings_path; else the bundled
-    rebase_settings.json (bypassing the broad settings.local.json auto-detect)."""
+    """Explicit --settings via resolve_claude_settings_path; else materialize a
+    temp settings file from REBASE_LLM_PERMISSIONS (bypassing the broad
+    settings.local.json auto-detect)."""
 
 # cli/parsers.py
 def add_rebase_parser(subparsers: Any) -> None: ...
@@ -36,8 +38,11 @@ def add_rebase_parser(subparsers: Any) -> None: ...
   `--update-issue-labels`/`--post-issue-comments` (no GitHub side-effects).
   `help=COMMAND_DESCRIPTIONS["rebase"]`; epilog documenting exit codes `0/1/2`.
 - `_resolve_rebase_settings`: if `settings_arg` is not None →
-  `resolve_claude_settings_path(settings_arg, project_dir)`; else →
-  `str(find_data_file("mcp_coder", "resources/claude/settings/rebase_settings.json"))`.
+  `resolve_claude_settings_path(settings_arg, project_dir)`; else → write
+  `REBASE_LLM_PERMISSIONS` (from `mcp_coder.workflows.rebase_permissions`) as JSON
+  to a temp file via `tempfile` (e.g. `tempfile.NamedTemporaryFile(suffix=".json",
+  delete=False)`) and return that path. The temp file lives for the duration of
+  the process/session.
 - `execute_rebase`: mirror `execute_create_plan` shape — resolve project/execution
   dir, `resolve_llm_method` + `parse_llm_method_from_args`,
   `resolve_mcp_config_path`, then `run_rebase_workflow(project_dir, provider,
@@ -67,8 +72,8 @@ execute_rebase:
 1. Parser: `create_parser().parse_args(["rebase", "--base-branch", "main"])`
    yields `command == "rebase"` and `base_branch == "main"`; default
    `base_branch is None`.
-2. `_resolve_rebase_settings(None, None)` returns the bundled
-   `rebase_settings.json` path (ends with that filename, file exists).
+2. `_resolve_rebase_settings(None, None)` returns a path to an existing temp
+   `.json` file whose parsed contents equal `REBASE_LLM_PERMISSIONS`.
 3. `_resolve_rebase_settings("x.json", dir)` delegates to
    `resolve_claude_settings_path` (patch it; assert called).
 4. `execute_rebase` calls `run_rebase_workflow` with the parsed args and returns
@@ -84,6 +89,7 @@ catalog/help set.
 > add `add_rebase_parser` to `parsers.py` (create-plan-style flags plus
 > `--base-branch`, no issue/label flags, exit-code epilog); create
 > `cli/commands/rebase.py` with `execute_rebase` and `_resolve_rebase_settings`
-> (default to the bundled `rebase_settings.json`, bypassing broad auto-detect);
+> (default: materialize a temp JSON settings file from `REBASE_LLM_PERMISSIONS`,
+> bypassing broad auto-detect);
 > and wire import + `add_rebase_parser` + routing into `cli/main.py`. Run pylint,
 > pytest (`-n auto`, unit markers), mypy; fix everything. Exactly one commit.

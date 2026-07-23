@@ -13,7 +13,7 @@ and the dependency consumed by #1072 through a fixed three-way exit-code contrac
 | Code | Meaning | Branch state |
 |------|---------|--------------|
 | `0` | Success (rebased + pushed) **or** no-op (already current) | rebased & pushed, or unchanged |
-| `1` | Aborted → needs-human (unresolvable conflict / regression / unregenerable lockfile / session failure) | `git rebase --abort` run; retry-safe |
+| `1` | Aborted → needs-human (unresolvable conflict / regression / session failure) | `git rebase --abort` run; retry-safe |
 | `2` | Error (bad repo/args, non-standard base, `pr_info/` on base, push/lease rejected) | restored to pre-rebase state; retry-safe |
 
 ## Architecture / design
@@ -43,11 +43,11 @@ precedent is `workflows/implement/core.py` (pre-flight → protected region →
 
 ### LLM owns (inside the session, driven by the prompt)
 Per-file-type conflict resolution (additive merge; `pr_info/` → `--theirs`;
-conservative-abort on unknowns), lockfile **regeneration** (`uv lock` for this
-repo's ecosystem; abort-with-reason otherwise), no-regression verification
-(baseline checks captured **before** the rebase, re-run after), self-cancel with
-an authored human-readable reason, and emitting the outcome marker. On any
-unresolvable case it restores the original branch state and reports `aborted`.
+conservative-abort on unknowns), no-regression verification (baseline checks
+captured **before** the rebase, re-run after), self-cancel with an authored
+human-readable reason, and emitting the outcome marker. On any unresolvable case
+it restores the original branch state and reports `aborted`. (No lockfile
+regeneration — see *Deviations from the issue*.)
 
 ### Key simplifications vs. a literal reading (KISS)
 1. **Single module `workflows/rebase.py`**, not a multi-file package — no
@@ -72,21 +72,37 @@ unresolvable case it restores the original branch state and reports `aborted`.
    reason and blocks a push when it says `aborted`.
 
 ### Instruction sources (accepted two-file duplication)
-- New least-privilege **settings JSON** under `resources/` (SKILL.md
-  `allowed-tools` minus push, plus `uv lock`), bypassing the broad
-  `settings.local.json` auto-detect.
+- New least-privilege **permissions constant** `REBASE_LLM_PERMISSIONS` in
+  `workflows/rebase_permissions.py` (SKILL.md `allowed-tools` git-write ops + MCP
+  check/file tools, **minus push, minus `uv lock`**). The CLI materializes it to a
+  runtime temp settings file (via `tempfile`) and passes that path as
+  `settings_file`, bypassing the broad `settings.local.json` auto-detect. (Not a
+  shipped JSON resource: `resources/claude/settings/` is gitignored and wiped by
+  `setup.py` on build, so a resource file would vanish at install time.)
 - New **`## Automated Rebase` prompt** in `prompts.md` (SKILL.md minus the
   confirmation step). A drift test keeps the conflict-strategy table in sync
   between SKILL.md and the prompt.
 
+### Deviations from the issue
+- **Python executes the force-push** (LLM stops after rebase+verify), so
+  lease-rejection is a direct `git_push` return + restore rather than a fragile
+  inference. Narrows the least-privilege settings (no `push` grant for the LLM).
+- **Lockfile / `uv lock` handling dropped (YAGNI).** This repo has no tracked
+  lockfile (`uv.lock` is gitignored; `git ls-files` for `*.lock`/`*lock.json` is
+  empty), so a rebase can never produce a lockfile conflict — the issue's
+  `uv lock` regeneration scope is inapplicable here. A tracked lockfile, if one
+  ever existed, would fall under the generic "unknown conflict → abort with a
+  human-readable reason" rule. The before/after pytest/pylint/mypy no-regression
+  verification stays; it is simply not tied to lockfiles.
+
 ## Folders / modules / files
 
 ### Created
-- `src/mcp_coder/resources/claude/settings/rebase_settings.json` (least-privilege permissions)
+- `src/mcp_coder/workflows/rebase_permissions.py` (`REBASE_LLM_PERMISSIONS` constant)
 - `src/mcp_coder/workflows/rebase.py` (deterministic shell + orchestrator)
 - `src/mcp_coder/cli/commands/rebase.py` (`execute_rebase` + settings resolution)
 - `tests/workflows/rebase/__init__.py`
-- `tests/workflows/rebase/test_settings_resource.py`
+- `tests/workflows/rebase/test_rebase_permissions.py`
 - `tests/workflows/rebase/test_prompt.py`
 - `tests/workflows/rebase/test_decision.py`
 - `tests/workflows/rebase/test_git_helpers.py`
@@ -101,19 +117,18 @@ unresolvable case it restores the original branch state and reports `aborted`.
 - `src/mcp_coder/cli/main.py` (import `execute_rebase` + route)
 - `tests/cli/test_help_anti_drift.py` (include the new command, if it enumerates commands)
 
-### Unchanged (already covers the new resource)
-- `pyproject.toml` — `[tool.setuptools.package-data]` already declares
-  `resources/claude/**/*`, so the settings JSON is bundled automatically.
-
 ## Reused primitives (no wrappers)
-`needs_rebase(project_dir) -> (bool, reason)`, `detect_base_branch`,
+`needs_rebase(project_dir, base) -> (bool, reason)`, `detect_base_branch`,
 `is_working_directory_clean`, `get_current_branch_name`, `get_latest_commit_sha`,
 `fetch_remote`, `git_push(force_with_lease=True)` (all via `mcp_workspace_git`),
-`prepare_llm_environment`, `prompt_llm`, `get_prompt`, `find_data_file`,
-`resolve_claude_settings_path`, `get_branch_name_for_logging`.
+`prepare_llm_environment`, `prompt_llm`, `get_prompt`,
+`resolve_claude_settings_path`, `get_branch_name_for_logging`,
+`find_data_file` (only to read the packaged SKILL.md in the Step 2 drift test).
+Settings come from the in-code `REBASE_LLM_PERMISSIONS` constant materialized to a
+runtime temp file (`tempfile`) — not `find_data_file`.
 
 ## Step overview (one commit each, TDD)
-1. Least-privilege settings resource + locator test.
+1. Least-privilege permissions constant (`REBASE_LLM_PERMISSIONS`) + unit test.
 2. `## Automated Rebase` prompt + loader test + SKILL-drift test.
 3. Pure decision logic (`_parse_outcome_marker`, `_evaluate_pre_push`).
 4. Low-level git helpers (`_run_git`, rebase-in-progress, abort, reset, success-shape).

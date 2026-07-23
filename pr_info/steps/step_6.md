@@ -44,7 +44,7 @@ if (err := _preflight(project_dir)): log; return 2
 base, berr = _resolve_base_branch(project_dir, base_branch); if berr: log; return 2
 fetch_remote(project_dir, "origin")
 if (err := _check_pr_info_absent_on_base(project_dir, base)): log; return 2
-needed, reason = needs_rebase(project_dir)
+needed, reason = needs_rebase(project_dir, base)   # use the resolved base, not re-auto-detect
 if not needed: log("already current"); return 0
 pre_sha = get_latest_commit_sha(project_dir)
 try:
@@ -64,7 +64,7 @@ try:
     logger.error("Force-push rejected/failed: %s", result.get("error"))
     _reset_hard(project_dir, pre_sha)      # never leave unpushed rebased commits
     return 2
-except (LLMTimeoutError, Exception) as e:
+except Exception as e:                     # LLMTimeoutError is a subclass — one branch suffices
     logger.error("Rebase session failed: %s", e)
     return 1                               # needs-human; finally makes it retry-safe
 finally:
