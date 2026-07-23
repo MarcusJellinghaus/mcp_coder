@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Pure decision logic ([step_3.md](./steps/step_3.md))
 
-- [ ] Implementation: `_parse_outcome_marker` + `_evaluate_pre_push` in `rebase.py` + `test_decision.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_parse_outcome_marker` + `_evaluate_pre_push` in `rebase.py` + `test_decision.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Low-level git helpers ([step_4.md](./steps/step_4.md))
 
