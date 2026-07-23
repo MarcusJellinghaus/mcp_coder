@@ -21,6 +21,15 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Bump langgraph / langchain-core floors in [langchain-base] (TDD)
+
+See [step_1.md](./steps/step_1.md) for full detail. Packaging-metadata-only change for issue #1078 — no `src/` changes.
+
+- [ ] Implementation: add `test_pyproject_langchain_base_floors` to `tests/test_pyproject_config.py` (TDD, red first), then bump floors in `[project.optional-dependencies].langchain-base` of `pyproject.toml` (`langchain-core>=1.4.7`, `langgraph>=1.2.9` with `#1078` comment)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Address PR review feedback
+- [ ] Write PR summary
