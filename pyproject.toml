@@ -57,9 +57,10 @@ mlflow = [
 
 # LangChain shared runtime (langchain-core, MCP adapters, graph, HTTP)
 langchain-base = [
-    "langchain-core>=0.3.0",
+    "langchain-core>=1.4.7",
     "langchain-mcp-adapters>=0.1.0",
-    "langgraph>=0.2.0",
+    # >=1.2.9 -> langgraph-checkpoint>=4.1.0 (Reviver allowed_objects fix); see #1078
+    "langgraph>=1.2.9",
     "httpx>=0.27.0",
 ]
 
