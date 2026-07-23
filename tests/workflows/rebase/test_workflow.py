@@ -108,10 +108,23 @@ def test_non_standard_base_without_arg_returns_2(
 def test_no_op_when_not_needed_returns_0_without_llm(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
-    """``needs_rebase`` False short-circuits to ``0`` with no LLM session."""
+    """``needs_rebase`` False (up-to-date) short-circuits to ``0`` with no LLM."""
     patched.needs.return_value = (False, "up-to-date")
 
     assert _run(tmp_path) == 0
+    patched.prompt_llm.assert_not_called()
+
+
+def test_needs_rebase_error_reason_returns_2_without_llm(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """``needs_rebase`` False with an ``error:`` reason maps to ``2``, not ``0``."""
+    patched.needs.return_value = (
+        False,
+        "error: target branch 'origin/main' not found",
+    )
+
+    assert _run(tmp_path) == 2
     patched.prompt_llm.assert_not_called()
 
 

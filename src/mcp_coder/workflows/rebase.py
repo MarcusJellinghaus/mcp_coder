@@ -293,6 +293,12 @@ def run_rebase_workflow(
 
     needed, reason = needs_rebase(project_dir, base)
     if not needed:
+        # needs_rebase signals real failures (missing origin/<base>, fetch
+        # failure, detached HEAD, ...) via an "error: " reason prefix; those are
+        # errors (exit 2), not a genuine up-to-date no-op (exit 0).
+        if reason.startswith("error:"):
+            logger.error("Rebase check failed for origin/%s: %s", base, reason)
+            return 2
         logger.info("Already current with origin/%s (%s); nothing to do", base, reason)
         return 0
 

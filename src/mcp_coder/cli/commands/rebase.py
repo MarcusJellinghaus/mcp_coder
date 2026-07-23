@@ -73,7 +73,8 @@ def execute_rebase(args: argparse.Namespace) -> int:
 
     Returns:
         int: Exit code (0 success/no-op, 1 aborted, 2 error). Caught boundary
-        errors (invalid args, unexpected exceptions) return 1.
+        errors (invalid args, unexpected exceptions) return 2 — no LLM ran, so
+        they are errors, not a needs-human abort.
     """
     try:
         project_dir = resolve_project_dir(args.project_dir)
@@ -104,7 +105,7 @@ def execute_rebase(args: argparse.Namespace) -> int:
 
     except ValueError as e:
         logger.error(f"Invalid execution directory: {e}")
-        return 1
+        return 2
 
     except KeyboardInterrupt:
         logger.log(OUTPUT, "Operation cancelled by user.")
@@ -114,4 +115,4 @@ def execute_rebase(args: argparse.Namespace) -> int:
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error in rebase command: {e}", exc_info=True)
-        return 1
+        return 2

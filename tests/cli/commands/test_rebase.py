@@ -106,15 +106,30 @@ class TestExecuteRebase:
 
     @patch("mcp_coder.cli.commands.rebase.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.rebase.resolve_project_dir")
-    def test_invalid_execution_dir_returns_one(
+    def test_invalid_execution_dir_returns_two(
         self,
         mock_project: MagicMock,
         mock_exec: MagicMock,
     ) -> None:
-        """A ValueError from directory resolution returns exit code 1."""
+        """A ValueError from directory resolution returns exit code 2 (error)."""
         mock_project.return_value = Path("/test/project")
         mock_exec.side_effect = ValueError("Directory does not exist")
 
         result = execute_rebase(self._make_args())
 
-        assert result == 1
+        assert result == 2
+
+    @patch("mcp_coder.cli.commands.rebase.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.rebase.resolve_project_dir")
+    def test_unexpected_exception_boundary_returns_two(
+        self,
+        mock_project: MagicMock,
+        mock_exec: MagicMock,
+    ) -> None:
+        """The top-level exception boundary returns exit code 2 (error)."""
+        mock_project.return_value = Path("/test/project")
+        mock_exec.side_effect = RuntimeError("unexpected crash")
+
+        result = execute_rebase(self._make_args())
+
+        assert result == 2
