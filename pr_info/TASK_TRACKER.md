@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Low-level git helpers ([step_4.md](./steps/step_4.md))
 
-- [ ] Implementation: `_run_git`, `_is_rebase_in_progress`, `_abort_rebase`, `_reset_hard`, `_rebase_success_shape` + `test_git_helpers.py`
-- [ ] Quality checks: pylint, pytest, mypy, bandit — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_run_git`, `_is_rebase_in_progress`, `_abort_rebase`, `_reset_hard`, `_rebase_success_shape` + `test_git_helpers.py`
+- [x] Quality checks: pylint, pytest, mypy, bandit — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Guards (pre-flight, base-branch, pr_info-on-base) ([step_5.md](./steps/step_5.md))
 
