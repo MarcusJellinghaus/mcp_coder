@@ -34,9 +34,10 @@ import json
 import re
 import sqlite3
 import urllib.parse
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
@@ -45,7 +46,7 @@ def get_mlflow_db_path() -> Path:
     """Get the MLflow database path from config or default location."""
     config_path = get_user_app_data_dir("mcp_coder") / "config.toml"
     if config_path.exists():
-        config_text = config_path.read_text()
+        config_text = config_path.read_text(encoding="utf-8")
         match = re.search(r'tracking_uri\s*=\s*"sqlite:///([^"]+)"', config_text)
         if match:
             db_path = match.group(1)
@@ -221,7 +222,7 @@ def analyze_followup(
 def load_json(path: Path) -> Optional[Dict[str, Any]]:
     """Load a JSON file, returning None on any error."""
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return cast(Dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError, ValueError):
         return None
 
@@ -424,8 +425,6 @@ def write_outputs(events: List[Dict[str, Any]], output_dir: Path) -> None:
 
 def print_summary(events: List[Dict[str, Any]]) -> None:
     """Print aggregate stats over the extracted events."""
-    from collections import Counter
-
     if not events:
         print("\nNo permission events found.")
         return
