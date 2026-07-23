@@ -33,9 +33,9 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation — add `AsyncMock` import; repoint the 3 error-path tests to `{_MOD}.agent.run_agent` with `new_callable=AsyncMock` in `tests/llm/providers/langchain/test_langchain_provider.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — add `AsyncMock` import; repoint the 3 error-path tests to `{_MOD}.agent.run_agent` with `new_callable=AsyncMock` in `tests/llm/providers/langchain/test_langchain_provider.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Repoint + strengthen `test_agent_mode_passes_system_messages` (test-only)
 
