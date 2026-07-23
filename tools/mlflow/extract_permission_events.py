@@ -108,10 +108,11 @@ def mcp_server(tool_name: str) -> str:
 def tool_category(tool_name: str) -> str:
     """Rough category for grouping (read / write / exec / git / github / other)."""
     n = tool_name.lower()
-    if any(k in n for k in ("git_", "__git", "branch_status", "base_branch")):
-        return "git"
+    # github before git: "__github_*" also contains the "__git" substring.
     if "github" in n:
         return "github"
+    if any(k in n for k in ("git_", "__git", "branch_status", "base_branch")):
+        return "git"
     if any(
         k in n
         for k in (
