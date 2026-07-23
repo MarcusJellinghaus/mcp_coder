@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation — replace eager `Thread(target=asyncio.run, args=(_run(),))` with named `_thread_main()` closure and `target=_thread_main` in `src/mcp_coder/llm/providers/langchain/__init__.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — replace eager `Thread(target=asyncio.run, args=(_run(),))` with named `_thread_main()` closure and `target=_thread_main` in `src/mcp_coder/llm/providers/langchain/__init__.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Repoint non-stream error-path patches to `run_agent` (test-only)
 

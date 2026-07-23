@@ -500,7 +500,10 @@ def _ask_agent_stream(
         finally:
             q.put(None)  # sentinel
 
-    thread = threading.Thread(target=asyncio.run, args=(_run(),), daemon=True)
+    def _thread_main() -> None:
+        asyncio.run(_run())
+
+    thread = threading.Thread(target=_thread_main, daemon=True)
     thread.start()
 
     cancelled = False
