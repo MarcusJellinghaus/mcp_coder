@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Automated Rebase prompt + drift test ([step_2.md](./steps/step_2.md))
 
-- [ ] Implementation: add `## Automated Rebase` to `prompts.md` + `test_prompt.py` (loader + SKILL-drift test)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `## Automated Rebase` to `prompts.md` + `test_prompt.py` (loader + SKILL-drift test)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Pure decision logic ([step_3.md](./steps/step_3.md))
 
