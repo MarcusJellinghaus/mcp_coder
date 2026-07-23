@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Lazy named thread target in `_ask_agent_stream` (production)
+
+Detail: [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation — replace eager `Thread(target=asyncio.run, args=(_run(),))` with named `_thread_main()` closure and `target=_thread_main` in `src/mcp_coder/llm/providers/langchain/__init__.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Repoint non-stream error-path patches to `run_agent` (test-only)
+
+Detail: [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation — add `AsyncMock` import; repoint the 3 error-path tests to `{_MOD}.agent.run_agent` with `new_callable=AsyncMock` in `tests/llm/providers/langchain/test_langchain_provider.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Repoint + strengthen `test_agent_mode_passes_system_messages` (test-only)
+
+Detail: [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation — add `AsyncMock` import; repoint patch to `{_MOD}.agent.run_agent` with `new_callable=AsyncMock`; strengthen assertion to check `system_messages` content in `tests/llm/providers/langchain/test_langchain_provider_system_messages.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Address PR review feedback
+- [ ] Final PR summary and verification (unit subset reports `0 warnings`)
