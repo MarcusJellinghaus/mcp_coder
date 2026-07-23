@@ -12,8 +12,8 @@ is authoritative, worst-case-wins).
 
 import logging
 import re
-import subprocess
 from pathlib import Path
+from typing import NamedTuple
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
@@ -28,6 +28,7 @@ from mcp_coder.mcp_workspace_git import (
 )
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 
 logger = logging.getLogger(__name__)
@@ -82,24 +83,35 @@ def _evaluate_pre_push(
     return "push"  # marker success/unparseable AND git confirms
 
 
-def _run_git(project_dir: Path, *args: str) -> "subprocess.CompletedProcess[str]":
+class _GitResult(NamedTuple):
+    """Minimal git result exposing ``returncode``/``stdout``/``stderr``.
+
+    Mirrors the subset of ``subprocess.CompletedProcess`` that the rebase
+    callers inspect, decoupling them from the ``mcp-coder-utils``
+    ``CommandResult`` (whose field is ``return_code``).
+    """
+
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+def _run_git(project_dir: Path, *args: str) -> _GitResult:
     """Run ``git <args>`` in ``project_dir`` (list form, no shell, ``check=False``).
 
     Never raises on a non-zero git exit; the caller decides what a failure means.
 
     Returns:
-        The completed process so callers can inspect ``.returncode``,
-        ``.stdout`` and ``.stderr``.
+        A result object so callers can inspect ``.returncode``, ``.stdout``
+        and ``.stderr``.
     """
-    # Fixed argv, no shell, trusted ``git`` CLI — bandit B603/B607 are inherent to
-    # any subprocess call and accepted repo-wide (see workflows/vscodeclaude,
-    # utils/mcp_verification), so no suppression is added here for consistency.
-    return subprocess.run(
-        ["git", *args],
-        cwd=str(project_dir),
-        capture_output=True,
-        text=True,
-        check=False,
+    # Fixed argv, no shell, trusted ``git`` CLI — routed through the
+    # subprocess_runner shim (mcp-coder-utils) per the library-isolation contract.
+    result = execute_command(["git", *args], cwd=str(project_dir))
+    return _GitResult(
+        returncode=result.return_code,
+        stdout=result.stdout,
+        stderr=result.stderr,
     )
 
 

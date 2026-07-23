@@ -21,8 +21,8 @@ from mcp_coder.workflows.rebase import (
     _resolve_base_branch,
 )
 
-# Reuse the shared git-config helper for consistent commit identities.
-from tests.utils.conftest import setup_git_config
+# Reuse the local git-config helper for consistent commit identities.
+from tests.workflows.rebase.conftest import setup_git_config
 
 
 @pytest.fixture

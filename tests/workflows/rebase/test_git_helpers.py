@@ -19,8 +19,8 @@ from mcp_coder.workflows.rebase import (
     _run_git,
 )
 
-# Import git fixtures from utils (re-exported for pytest discovery).
-from tests.utils.conftest import git_repo_with_files
+# ``git_repo_with_files`` is provided by the local ``conftest.py`` via pytest
+# fixture discovery (kept out of ``tests.utils`` for module independence).
 
 
 def _commit_new_file(repo: Any, project_dir: Path, name: str, content: str) -> str:
