@@ -41,9 +41,9 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation — add `AsyncMock` import; repoint patch to `{_MOD}.agent.run_agent` with `new_callable=AsyncMock`; strengthen assertion to check `system_messages` content in `tests/llm/providers/langchain/test_langchain_provider_system_messages.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — add `AsyncMock` import; repoint patch to `{_MOD}.agent.run_agent` with `new_callable=AsyncMock`; strengthen assertion to check `system_messages` content in `tests/llm/providers/langchain/test_langchain_provider_system_messages.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
