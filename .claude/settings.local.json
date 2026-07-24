@@ -19,6 +19,7 @@
       "mcp__mcp-tools-py__run_ruff_check",
       "mcp__mcp-tools-py__run_ruff_fix",
       "mcp__mcp-tools-py__run_vulture_check",
+      "mcp__mcp-tools-py__sleep",
       "mcp__mcp-workspace__append_file",
       "mcp__mcp-workspace__delete_this_file",
       "mcp__mcp-workspace__edit_file",
