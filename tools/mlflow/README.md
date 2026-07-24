@@ -27,15 +27,18 @@ bash-approval behaviour must come from the interactive transcripts instead.
 
 ## Analysing interactive sessions
 
-`extract_interactive_events.py` covers the interactive half. It reads Claude
-Code's own transcripts under `~/.claude/projects/<sanitised-project>/*.jsonl`
-(one file per session; *not* MLflow), emits every `tool_use` call as an event
-(same schema as the headless extractor, so `analyze_permission_events.py` can
-consume it), and prints an interactive-specific summary.
+`extract_permission_events.py --source interactive` covers the interactive half.
+It reads Claude Code's own transcripts under
+`~/.claude/projects/<sanitised-project>/*.jsonl` (one file per session; *not*
+MLflow), emits every `tool_use` call in the same event schema (with
+`source: interactive`), and prints an interactive-specific summary. The output
+file is the same `permission_events.jsonl`, so `analyze_permission_events.py`
+consumes it too — run to a separate `--output` dir if you want to keep both
+source datasets.
 
 ```bash
-python tools/mlflow/extract_interactive_events.py            # auto-detects the current repo
-python tools/mlflow/extract_interactive_events.py --project-dir /path/to/repo
+python tools/mlflow/extract_permission_events.py --source interactive
+python tools/mlflow/extract_permission_events.py --source interactive --project-dir /path/to/repo
 ```
 
 Each event carries a few interactive-only fields:
@@ -80,9 +83,8 @@ These build reusable datasets (JSONL + CSV) across *all* runs.
 | Script | Purpose |
 |--------|---------|
 | `extract_mlflow_tool_calls.py` | Harvest tool-call samples (`--unique`, `--run`, `--limit`). |
-| `extract_permission_events.py` | Harvest permission (approval/denial) events → `permission_events.jsonl` + `.csv`. |
-| `analyze_permission_events.py` | Analyse that permission-events dataset (no DB needed). |
-| `extract_interactive_events.py` | Harvest tool/permission events from **interactive** transcripts (see below) → `interactive_events.jsonl` + `.csv`. |
+| `extract_permission_events.py` | Harvest permission / tool-use events → `permission_events.jsonl` + `.csv`. `--source headless` (MLflow, default) or `--source interactive` (transcripts, see below). |
+| `analyze_permission_events.py` | Analyse that dataset (no DB needed). |
 
 Default output dir for the dataset scripts is `.ml_flow_analysis/` (git-ignored).
 

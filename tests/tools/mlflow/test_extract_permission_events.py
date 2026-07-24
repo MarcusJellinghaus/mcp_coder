@@ -11,6 +11,7 @@ The script lives outside pythonpath = ["src"], so it's loaded by file path
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, List
@@ -184,3 +185,158 @@ def test_analyze_followup_last_call_in_step() -> None:
     res = extract.analyze_followup("a", "mcp__x__t", {"k": 1}, calls, {})
     assert res["followup_action"] == "none (last call in step)"
     assert res["next_tool"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Interactive-source helpers (same module, --source interactive)
+# ---------------------------------------------------------------------------
+
+
+def test_sanitize_project_dir() -> None:
+    assert (
+        extract.sanitize_project_dir(
+            Path(r"C:\Users\Marcus\Documents\GitHub\mcp_coder")
+        )
+        == "C--Users-Marcus-Documents-GitHub-mcp-coder"
+    )
+
+
+@pytest.mark.parametrize(
+    "tool_name, expected",
+    [
+        ("Bash", "bash"),
+        ("AskUserQuestion", "other"),
+        ("mcp__mcp-workspace__read_file", "read"),
+    ],
+)
+def test_tool_category_bash_and_native(tool_name: str, expected: str) -> None:
+    assert extract.tool_category(tool_name) == expected
+
+
+def test_bash_verb() -> None:
+    assert extract.bash_verb("Bash", {"command": "gh issue create --title x"}) == "gh"
+    assert extract.bash_verb("Bash", {"command": "  git status "}) == "git"
+    assert extract.bash_verb("Bash", {}) == ""
+    assert extract.bash_verb("mcp__x__y", {"command": "gh"}) == ""
+
+
+def test_load_allowlist_and_matching(tmp_path: Path) -> None:
+    claude = tmp_path / ".claude"
+    claude.mkdir()
+    (claude / "settings.local.json").write_text(
+        json.dumps(
+            {
+                "permissions": {
+                    "allow": [
+                        "mcp__mcp-tools-py__run_pytest_check",
+                        "Bash(git rebase:*)",
+                        "Bash(tach check)",
+                        "WebFetch(domain:*)",
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    allow = extract.load_allowlist(tmp_path)
+    assert allow["mcp"] == {"mcp__mcp-tools-py__run_pytest_check"}
+    assert allow["bash_prefixes"] == ["git rebase"]
+    assert allow["bash_exact"] == {"tach check"}
+
+    assert (
+        extract.was_allowlisted("mcp__mcp-tools-py__run_pytest_check", {}, allow)
+        is True
+    )
+    assert extract.was_allowlisted("mcp__mcp-tools-py__sleep", {}, allow) is False
+    assert (
+        extract.was_allowlisted("Bash", {"command": "git rebase --continue"}, allow)
+        is True
+    )
+    assert extract.was_allowlisted("Bash", {"command": "tach check"}, allow) is True
+    assert (
+        extract.was_allowlisted("Bash", {"command": "gh issue create"}, allow) is False
+    )
+    assert extract.was_allowlisted("Edit", {}, allow) is None
+
+
+def test_classify_outcome() -> None:
+    assert extract.classify_outcome(None) == "no_result"
+    assert extract.classify_outcome({"is_error": False, "text": "ok"}) == "executed"
+    assert (
+        extract.classify_outcome(
+            {
+                "is_error": True,
+                "text": "The user doesn't want to proceed with this tool use",
+            }
+        )
+        == "denied_by_user"
+    )
+    assert (
+        extract.classify_outcome({"is_error": False, "text": "x", "interrupted": True})
+        == "interrupted"
+    )
+    assert extract.classify_outcome({"is_error": True, "text": "boom"}) == "error"
+
+
+def _transcript() -> List[Dict[str, Any]]:
+    return [
+        {"type": "queue-operation", "operation": "enqueue"},
+        {
+            "type": "assistant",
+            "timestamp": "2026-07-06T20:18:39.482Z",
+            "gitBranch": "main",
+            "version": "2.1.193",
+            "sessionId": "sess-1",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "call-1",
+                        "name": "Bash",
+                        "input": {"command": "gh issue create"},
+                    }
+                ]
+            },
+        },
+        {
+            "type": "user",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "call-1",
+                        "is_error": False,
+                        "content": "https://github.com/x/y/issues/1",
+                    }
+                ]
+            },
+            "toolUseResult": {"stdout": "...", "interrupted": False},
+        },
+    ]
+
+
+def test_index_transcript() -> None:
+    calls, results = extract.index_transcript(_transcript())
+    assert len(calls) == 1
+    call_id, name, inp, env = calls[0]
+    assert (call_id, name) == ("call-1", "Bash")
+    assert env["branch"] == "main"
+    assert results["call-1"]["is_error"] is False
+
+
+def test_extract_session_events_end_to_end(tmp_path: Path) -> None:
+    transcript = tmp_path / "sess-1.jsonl"
+    transcript.write_text(
+        "\n".join(json.dumps(line) for line in _transcript()), encoding="utf-8"
+    )
+    allow = {"mcp": set(), "bash_prefixes": ["git rebase"], "bash_exact": set()}
+    events = extract.extract_session_events(transcript, allow)
+    assert len(events) == 1
+    e = events[0]
+    assert e["source"] == "interactive"
+    assert e["tool_name"] == "Bash"
+    assert e["bash_verb"] == "gh"
+    assert e["outcome"] == "executed"
+    assert e["was_allowlisted"] is False  # `gh` not covered by `git rebase`
+    assert e["branch_name"] == "main"
+    assert e["date"] == "2026-07-06"

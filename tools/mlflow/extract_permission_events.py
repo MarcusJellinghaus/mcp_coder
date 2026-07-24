@@ -1,31 +1,28 @@
 #!/usr/bin/env python3
-"""Extract permission (approval/denial) events from MLflow conversation artifacts.
+"""Extract permission / tool-use events from Claude Code sessions.
 
-mcp-coder runs Claude Code headless with a restricted tool set. A tool can be
-*connected* (via .mcp.json) yet not be on the *allow-list* (settings
-``permissions.allow`` / ``--allowedTools``). In ``permissionMode: default`` with
-no human present, every call to a non-allow-listed tool returns an error like:
+One CLI, two sources (``--source``):
 
-    "Claude requested permissions to use <tool>, but you haven't granted it yet."
+- ``headless`` (default) — mcp-coder's **MLflow** runs. Claude Code runs with a
+  restricted MCP tool set and no human, so every call to a non-allow-listed tool
+  is auto-denied and recorded as a ``permission_denials`` entry. Native ``Bash``
+  is never exposed here. One event per denial.
+- ``interactive`` — Claude Code's own **transcripts**
+  (``~/.claude/projects/<project>/*.jsonl``). ``Bash`` and native tools *are*
+  exposed and the human approves/rejects. One event per tool-use call, with an
+  ``outcome`` (executed / denied_by_user / interrupted / error) and
+  ``was_allowlisted`` (matched against ``.claude/settings*.json``).
 
-That error is recorded as a ``permission_denials`` entry in the run's result
-message. This script harvests every such event across all runs, enriches it with
-master data (date, branch, model, session, cost, ...), records what the model
-*did next* (retried / switched / gave up) and whether the tool later succeeded,
-then writes a JSONL + CSV dataset.
-
-Note: these headless runs contain no *manual* approvals — every event is an
-auto-denial. The ``outcome`` column is kept generic (denied/allowed/approved) so
-interactive runs can slot in later.
+Both sources emit the **same event schema** (with a ``source`` column) to
+``permission_events.jsonl`` + ``.csv``, so ``analyze_permission_events.py`` can
+consume either. See ``tools/mlflow/README.md`` for the headless-vs-interactive
+background.
 
 Usage:
-    python tools/mlflow/extract_permission_events.py
-    python tools/mlflow/extract_permission_events.py --output permission_data/ --limit 500
-    python tools/mlflow/extract_permission_events.py --db-path /path/to/mlflow.db
-
-Outputs (in --output dir, default: current dir):
-    permission_events.jsonl   one event per line, full detail
-    permission_events.csv     flat table for spreadsheets / pandas
+    python tools/mlflow/extract_permission_events.py                       # headless
+    python tools/mlflow/extract_permission_events.py --limit 500
+    python tools/mlflow/extract_permission_events.py --source interactive
+    python tools/mlflow/extract_permission_events.py --source interactive --project-dir /path/to/repo
 """
 
 import argparse
@@ -37,11 +34,126 @@ import urllib.parse
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
+REJECTION_MARKER = "doesn't want to proceed with this tool use"
 
+
+# ======================================================================
+# Shared classifiers / helpers
+# ======================================================================
+def mcp_server(tool_name: str) -> str:
+    """Extract the MCP server name from a tool name (mcp__<server>__<tool>)."""
+    if tool_name.startswith("mcp__"):
+        return tool_name[5:].partition("__")[0]
+    return "(native)"
+
+
+def tool_category(tool_name: str) -> str:
+    """Rough category for grouping (bash/read/write/exec/git/github/other)."""
+    n = tool_name.lower()
+    if n == "bash":
+        return "bash"
+    # github before git: "__github_*" also contains the "__git" substring.
+    if "github" in n:
+        return "github"
+    if any(k in n for k in ("git_", "__git", "branch_status", "base_branch")):
+        return "git"
+    if any(
+        k in n
+        for k in (
+            "read",
+            "search",
+            "list",
+            "glob",
+            "grep",
+            "find_ref",
+            "library_source",
+            "check_file",
+            "get_reference",
+        )
+    ):
+        return "read"
+    if any(
+        k in n
+        for k in ("save_file", "edit_file", "append", "delete", "move_", "rename_", "write", "edit")
+    ):
+        return "write"
+    if any(k in n for k in ("run_", "_check", "format_code", "sleep")):
+        return "exec"
+    return "other"
+
+
+def bash_verb(tool_name: str, tool_input: Dict[str, Any]) -> str:
+    """First token of a Bash command, for grouping (e.g. git / gh / python)."""
+    if tool_name != "Bash":
+        return ""
+    command = str(tool_input.get("command", "")).strip()
+    return command.split()[0] if command else ""
+
+
+def result_text(content: Any) -> str:
+    """Flatten a tool_result content field to plain text."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for b in content:
+            if isinstance(b, dict) and b.get("type") == "text":
+                parts.append(b.get("text", ""))
+            else:
+                parts.append(str(b))
+        return " ".join(parts)
+    return str(content)
+
+
+def analyze_followup(
+    target_id: str,
+    target_name: str,
+    target_input: Dict[str, Any],
+    calls: List[Tuple[str, str, Dict[str, Any]]],
+    results: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Determine what the model did after the target call (retry / switch / recover)."""
+    order = [c[0] for c in calls]
+    followup_action = "none (last call in step)"
+    next_tool = ""
+    if target_id in order:
+        k = order.index(target_id)
+        if k + 1 < len(calls):
+            next_tool = calls[k + 1][1]
+            followup_action = (
+                "retried_same"
+                if next_tool == target_name
+                else f"switched_to:{next_tool}"
+            )
+    eventually_succeeded = False
+    for cid, name, inp in calls:
+        if name == target_name and inp == target_input:
+            r = results.get(cid)
+            if r and not r["is_error"]:
+                eventually_succeeded = True
+                break
+    return {
+        "followup_action": followup_action,
+        "next_tool": next_tool,
+        "eventually_succeeded": eventually_succeeded,
+    }
+
+
+def load_json(path: Path) -> Optional[Dict[str, Any]]:
+    """Load a JSON file, returning None on any error."""
+    try:
+        return cast(Dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+
+
+# ======================================================================
+# Source: headless (MLflow artifacts)
+# ======================================================================
 def get_mlflow_db_path() -> Path:
     """Get the MLflow database path from config or default location."""
     config_path = get_user_app_data_dir("mcp_coder") / "config.toml"
@@ -98,60 +210,6 @@ def get_runs(conn: sqlite3.Connection, limit: Optional[int]) -> List[Dict[str, A
     return runs
 
 
-def mcp_server(tool_name: str) -> str:
-    """Extract the MCP server name from a tool name (mcp__<server>__<tool>)."""
-    if tool_name.startswith("mcp__"):
-        return tool_name[5:].partition("__")[0]
-    return "(native)"
-
-
-def tool_category(tool_name: str) -> str:
-    """Rough category for grouping (read / write / exec / git / github / other)."""
-    n = tool_name.lower()
-    # github before git: "__github_*" also contains the "__git" substring.
-    if "github" in n:
-        return "github"
-    if any(k in n for k in ("git_", "__git", "branch_status", "base_branch")):
-        return "git"
-    if any(
-        k in n
-        for k in (
-            "read",
-            "search",
-            "list",
-            "find_ref",
-            "library_source",
-            "list_symbols",
-            "check_file",
-            "get_reference",
-        )
-    ):
-        return "read"
-    if any(
-        k in n
-        for k in ("save_file", "edit_file", "append", "delete", "move_", "rename_")
-    ):
-        return "write"
-    if any(k in n for k in ("run_", "_check", "format_code", "sleep")):
-        return "exec"
-    return "other"
-
-
-def result_text(content: Any) -> str:
-    """Flatten a tool_result content field to plain text."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for b in content:
-            if isinstance(b, dict) and b.get("type") == "text":
-                parts.append(b.get("text", ""))
-            else:
-                parts.append(str(b))
-        return " ".join(parts)
-    return str(content)
-
-
 def index_step(msgs: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Pull init/result metadata and build ordered tool-call + result maps."""
     init: Dict[str, Any] = {}
@@ -185,51 +243,8 @@ def index_step(msgs: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {"init": init, "result": result, "calls": calls, "results": results}
 
 
-def analyze_followup(
-    denied_id: str,
-    denied_name: str,
-    denied_input: Dict[str, Any],
-    calls: List[Tuple[str, str, Dict[str, Any]]],
-    results: Dict[str, Dict[str, Any]],
-) -> Dict[str, Any]:
-    """Determine what the model did after a denied call."""
-    order = [c[0] for c in calls]
-    followup_action = "none (last call in step)"
-    next_tool = ""
-    if denied_id in order:
-        k = order.index(denied_id)
-        if k + 1 < len(calls):
-            next_tool = calls[k + 1][1]
-            followup_action = (
-                "retried_same"
-                if next_tool == denied_name
-                else f"switched_to:{next_tool}"
-            )
-    # Did an identical call (same name + input) later succeed in this step?
-    eventually_succeeded = False
-    for cid, name, inp in calls:
-        if name == denied_name and inp == denied_input:
-            r = results.get(cid)
-            if r and not r["is_error"]:
-                eventually_succeeded = True
-                break
-    return {
-        "followup_action": followup_action,
-        "next_tool": next_tool,
-        "eventually_succeeded": eventually_succeeded,
-    }
-
-
-def load_json(path: Path) -> Optional[Dict[str, Any]]:
-    """Load a JSON file, returning None on any error."""
-    try:
-        return cast(Dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
-    except (OSError, json.JSONDecodeError, ValueError):
-        return None
-
-
 def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Extract all permission events from one run's steps."""
+    """Extract all permission-denial events from one headless run's steps."""
     base = get_artifact_base(run["artifact_uri"])
     if not base:
         return []
@@ -264,13 +279,11 @@ def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
         if not denials:
             continue
 
-        # Per-step master data (all_params overrides DB params when present).
         params = load_json(conv_dir / f"step_{step}_all_params.json") or {}
         db_params = run["db_params"]
         tools_available = set(init.get("tools", []))
         usage = result.get("usage") or {}
 
-        # First line of the step prompt = the workflow prompt identity.
         workflow_prompt = ""
         prompt_file = conv_dir / f"step_{step}_prompt.txt"
         if prompt_file.exists():
@@ -282,7 +295,6 @@ def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
             except OSError:
                 pass
 
-        # retry_count: how many times each exact (tool, input) was denied this step.
         denial_counts: Dict[str, int] = {}
         for d in denials:
             key = (
@@ -293,6 +305,7 @@ def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
             denial_counts[key] = denial_counts.get(key, 0) + 1
 
         common = {
+            "source": "headless",
             "run_id": run["run_id"],
             "session_id": init.get("session_id"),
             "date": date_str,
@@ -340,10 +353,12 @@ def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "tool_name": tool_name,
                     "mcp_server": mcp_server(tool_name),
                     "tool_category": tool_category(tool_name),
+                    "bash_verb": bash_verb(tool_name, tool_input),
                     "tool_input": tool_input,
                     "tool_use_id": tool_use_id,
                     "outcome": "denied",
                     "was_available": tool_name in tools_available,
+                    "was_allowlisted": None,
                     "retry_count": denial_counts.get(
                         tool_name + "|" + json.dumps(tool_input, sort_keys=True), 1
                     ),
@@ -358,7 +373,234 @@ def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
     return events
 
 
+def collect_headless(args: argparse.Namespace) -> List[Dict[str, Any]]:
+    """Scan the MLflow DB + artifacts and return denial events."""
+    db_path = Path(args.db_path) if args.db_path else get_mlflow_db_path()
+    if not db_path.exists():
+        print(f"Error: MLflow database not found at {db_path}")
+        return []
+    print(f"Database: {db_path}")
+    conn = sqlite3.connect(db_path)
+    try:
+        runs = get_runs(conn, args.limit)
+        print(f"Scanning {len(runs)} runs...")
+        events: List[Dict[str, Any]] = []
+        for i, run in enumerate(runs, 1):
+            events.extend(extract_run_events(run))
+            if i % 200 == 0:
+                print(f"  ...{i}/{len(runs)} runs, {len(events)} events so far")
+    finally:
+        conn.close()
+    return events
+
+
+# ======================================================================
+# Source: interactive (Claude Code transcripts)
+# ======================================================================
+def sanitize_project_dir(path: Path) -> str:
+    """Turn a working directory into Claude Code's transcript-folder name."""
+    return re.sub(r"[^A-Za-z0-9]", "-", str(path))
+
+
+def default_transcript_dir(project_dir: Path) -> Path:
+    """Locate the transcript folder for a project under ~/.claude/projects/."""
+    return Path.home() / ".claude" / "projects" / sanitize_project_dir(project_dir)
+
+
+def load_allowlist(project_dir: Path) -> Dict[str, Any]:
+    """Parse .claude/settings*.json permissions.allow into mcp + bash rules."""
+    mcp: Set[str] = set()
+    bash_prefixes: List[str] = []
+    bash_exact: Set[str] = set()
+    for name in ("settings.json", "settings.local.json"):
+        path = project_dir / ".claude" / name
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for entry in data.get("permissions", {}).get("allow", []):
+            if not isinstance(entry, str):
+                continue
+            if entry.startswith("mcp__"):
+                mcp.add(entry)
+            elif entry.startswith("Bash(") and entry.endswith(")"):
+                inner = entry[5:-1].strip()
+                if inner.endswith(":*"):
+                    bash_prefixes.append(inner[:-2].strip())
+                else:
+                    bash_exact.add(inner)
+    return {"mcp": mcp, "bash_prefixes": bash_prefixes, "bash_exact": bash_exact}
+
+
+def bash_matches(command: str, allow: Dict[str, Any]) -> bool:
+    """Approximate Claude's Bash allow-matching (prefix / exact) on a command."""
+    command = command.strip()
+    if command in allow["bash_exact"]:
+        return True
+    return any(command.startswith(p) for p in allow["bash_prefixes"] if p)
+
+
+def was_allowlisted(
+    tool_name: str, tool_input: Dict[str, Any], allow: Dict[str, Any]
+) -> Optional[bool]:
+    """Whether a call was pre-authorised. None when it can't be determined."""
+    if tool_name.startswith("mcp__"):
+        return tool_name in allow["mcp"]
+    if tool_name == "Bash":
+        return bash_matches(str(tool_input.get("command", "")), allow)
+    return None
+
+
+def classify_outcome(result: Optional[Dict[str, Any]]) -> str:
+    """executed / denied_by_user / interrupted / error / no_result."""
+    if result is None:
+        return "no_result"
+    if REJECTION_MARKER in result.get("text", ""):
+        return "denied_by_user"
+    if result.get("interrupted"):
+        return "interrupted"
+    if result.get("is_error"):
+        return "error"
+    return "executed"
+
+
+def load_jsonl(path: Path) -> List[Dict[str, Any]]:
+    """Read a transcript file into a list of JSON objects (skips bad lines)."""
+    out: List[Dict[str, Any]] = []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return out
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+
+
+def index_transcript(
+    lines: List[Dict[str, Any]]
+) -> Tuple[
+    List[Tuple[str, str, Dict[str, Any], Dict[str, Any]]], Dict[str, Dict[str, Any]]
+]:
+    """Return ordered tool-use calls (id, name, input, envelope) and a result map."""
+    calls: List[Tuple[str, str, Dict[str, Any], Dict[str, Any]]] = []
+    results: Dict[str, Dict[str, Any]] = {}
+    for line in lines:
+        ltype = line.get("type")
+        msg = line.get("message", {})
+        content = msg.get("content", []) if isinstance(msg, dict) else []
+        if ltype == "assistant" and isinstance(content, list):
+            env = {
+                "timestamp": line.get("timestamp", ""),
+                "branch": line.get("gitBranch", ""),
+                "version": line.get("version", ""),
+                "cwd": line.get("cwd", ""),
+                "session_id": line.get("sessionId", ""),
+            }
+            for b in content:
+                if isinstance(b, dict) and b.get("type") == "tool_use":
+                    calls.append(
+                        (b.get("id", ""), b.get("name", ""), b.get("input", {}), env)
+                    )
+        elif ltype == "user" and isinstance(content, list):
+            for b in content:
+                if isinstance(b, dict) and b.get("type") == "tool_result":
+                    tur = line.get("toolUseResult")
+                    interrupted = bool(isinstance(tur, dict) and tur.get("interrupted"))
+                    results[b.get("tool_use_id", "")] = {
+                        "is_error": bool(b.get("is_error")),
+                        "text": result_text(b.get("content")),
+                        "interrupted": interrupted,
+                    }
+    return calls, results
+
+
+def extract_session_events(
+    path: Path, allow: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Build one event per tool-use call in an interactive transcript file."""
+    calls, results = index_transcript(load_jsonl(path))
+    calls3 = [(c[0], c[1], c[2]) for c in calls]
+    events: List[Dict[str, Any]] = []
+    for call_id, name, inp, env in calls:
+        if not name:
+            continue
+        result = results.get(call_id)
+        followup = analyze_followup(call_id, name, inp, calls3, results)
+        ts = env.get("timestamp", "")
+        try:
+            dt: Optional[datetime] = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        except ValueError:
+            dt = None
+        events.append(
+            {
+                "source": "interactive",
+                "session_id": env.get("session_id") or path.stem,
+                "run_id": env.get("session_id") or path.stem,
+                "date": dt.strftime("%Y-%m-%d") if dt else "",
+                "time": dt.strftime("%H:%M:%S") if dt else "",
+                "hour": dt.hour if dt else None,
+                "start_time": ts,
+                "branch_name": env.get("branch") or "(none)",
+                "claude_code_version": env.get("version"),
+                "working_directory": env.get("cwd"),
+                "tool_name": name,
+                "mcp_server": mcp_server(name),
+                "tool_category": tool_category(name),
+                "bash_verb": bash_verb(name, inp),
+                "tool_input": inp,
+                "tool_use_id": call_id,
+                "outcome": classify_outcome(result),
+                "was_available": None,
+                "was_allowlisted": was_allowlisted(name, inp, allow),
+                "retry_count": 1,
+                "result_is_error": result.get("is_error") if result else None,
+                "user_reply": (result.get("text", "") if result else "")[:300],
+                "followup_action": followup["followup_action"],
+                "next_tool": followup["next_tool"],
+                "eventually_succeeded": followup["eventually_succeeded"],
+            }
+        )
+    return events
+
+
+def collect_interactive(args: argparse.Namespace) -> List[Dict[str, Any]]:
+    """Scan interactive transcripts and return tool-use events."""
+    project_dir = Path(args.project_dir).resolve()
+    tdir = (
+        Path(args.transcripts_dir)
+        if args.transcripts_dir
+        else default_transcript_dir(project_dir)
+    )
+    if not tdir.exists():
+        print(f"Error: transcript folder not found at {tdir}")
+        return []
+    allow = load_allowlist(project_dir)
+    print(f"Transcripts: {tdir}")
+    print(
+        f"Allow rules: {len(allow['mcp'])} mcp tools, "
+        f"{len(allow['bash_prefixes']) + len(allow['bash_exact'])} bash patterns"
+    )
+    files = sorted(tdir.glob("*.jsonl"))
+    print(f"Scanning {len(files)} sessions...")
+    events: List[Dict[str, Any]] = []
+    for path in files:
+        events.extend(extract_session_events(path, allow))
+    return events
+
+
+# ======================================================================
+# Shared output + summaries
+# ======================================================================
 CSV_COLUMNS = [
+    "source",
     "date",
     "time",
     "hour",
@@ -380,8 +622,10 @@ CSV_COLUMNS = [
     "tool_name",
     "mcp_server",
     "tool_category",
+    "bash_verb",
     "outcome",
     "was_available",
+    "was_allowlisted",
     "retry_count",
     "result_is_error",
     "followup_action",
@@ -411,11 +655,15 @@ def write_outputs(events: List[Dict[str, Any]], output_dir: Path) -> None:
 
     csv_path = output_dir / "permission_events.csv"
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+        writer = csv.DictWriter(
+            f, fieldnames=CSV_COLUMNS, extrasaction="ignore", restval=""
+        )
         writer.writeheader()
         for e in events:
             row = dict(e)
-            row["tool_input"] = json.dumps(e.get("tool_input", {}), ensure_ascii=False)
+            row["tool_input"] = json.dumps(e.get("tool_input", {}), ensure_ascii=False)[
+                :300
+            ]
             row["user_reply"] = (e.get("user_reply") or "").replace("\n", " ")[:300]
             writer.writerow(row)
 
@@ -424,8 +672,8 @@ def write_outputs(events: List[Dict[str, Any]], output_dir: Path) -> None:
     print(f"  {csv_path}")
 
 
-def print_summary(events: List[Dict[str, Any]]) -> None:
-    """Print aggregate stats over the extracted events."""
+def print_summary_headless(events: List[Dict[str, Any]]) -> None:
+    """Aggregate stats over headless denial events."""
     if not events:
         print("\nNo permission events found.")
         return
@@ -439,7 +687,7 @@ def print_summary(events: List[Dict[str, Any]]) -> None:
     max_retry = max((e.get("retry_count") or 1) for e in events)
 
     print("\n" + "=" * 60)
-    print(f"SUMMARY: {len(events)} events across {len(runs)} runs")
+    print(f"HEADLESS: {len(events)} denial events across {len(runs)} runs")
     print("=" * 60)
     print(f"eventually_succeeded (same call later worked): {recovered}")
     print(f"events in a wasted denial loop (retry_count>=3): {wasted_loops}")
@@ -456,45 +704,95 @@ def print_summary(events: List[Dict[str, Any]]) -> None:
     print(f"\nDistinct days with events: {len(by_date)}")
 
 
+def print_summary_interactive(events: List[Dict[str, Any]]) -> None:
+    """Interactive summary: outcomes, bash usage, rejections, approval candidates."""
+    if not events:
+        print("\nNo interactive tool events found.")
+        return
+    sessions = {e["session_id"] for e in events}
+    by_outcome = Counter(e["outcome"] for e in events)
+    denied = [e for e in events if e["outcome"] == "denied_by_user"]
+    executed = [e for e in events if e["outcome"] == "executed"]
+
+    def _label(e: Dict[str, Any]) -> str:
+        if e["tool_name"] == "Bash":
+            return f"Bash:{e['bash_verb'] or '?'}"
+        return str(e["tool_name"])
+
+    approval_candidates = Counter(
+        _label(e) for e in executed if e["was_allowlisted"] is False
+    )
+    bash = [e for e in events if e["tool_name"] == "Bash"]
+
+    print("\n" + "=" * 60)
+    print(f"INTERACTIVE: {len(events)} tool calls across {len(sessions)} sessions")
+    print("=" * 60)
+    print("\nOutcome:")
+    for o, c in by_outcome.most_common():
+        print(f"  {c:6d}  {o}")
+    print(f"\nBash calls: {len(bash)}  (by verb)")
+    for v, c in Counter(e["bash_verb"] for e in bash).most_common(12):
+        print(f"  {c:6d}  {v or '(empty)'}")
+    print(f"\nUser-rejected calls: {len(denied)}  (by tool)")
+    for t, c in Counter(e["tool_name"] for e in denied).most_common(12):
+        print(f"  {c:6d}  {t}")
+    print("\nExecuted but NOT allow-listed (≈ manually approved), by tool:")
+    if approval_candidates:
+        for t, c in approval_candidates.most_common(15):
+            print(f"  {c:6d}  {t}")
+    else:
+        print("  (none — every executed mcp tool was on the allow-list)")
+
+
+# ======================================================================
+# CLI
+# ======================================================================
 def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Extract permission (approval/denial) events from MLflow artifacts",
+        description="Extract permission / tool-use events (headless MLflow or interactive transcripts)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument("--limit", type=int, help="Max runs to scan (default: all)")
+    parser.add_argument(
+        "--source",
+        choices=["headless", "interactive"],
+        default="headless",
+        help="Which sessions to read (default: headless)",
+    )
     parser.add_argument(
         "--output",
         type=str,
         default=".ml_flow_analysis",
         help="Output directory (default: .ml_flow_analysis)",
     )
+    # headless
+    parser.add_argument("--limit", type=int, help="[headless] Max runs to scan")
     parser.add_argument(
-        "--db-path", type=str, help="Path to MLflow SQLite database (auto-detected)"
+        "--db-path", type=str, help="[headless] Path to MLflow SQLite DB (auto-detected)"
+    )
+    # interactive
+    parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=".",
+        help="[interactive] Repo whose transcripts + allow-list to read",
+    )
+    parser.add_argument(
+        "--transcripts-dir",
+        type=str,
+        help="[interactive] Override the ~/.claude/projects/<project> folder",
     )
     args = parser.parse_args()
 
-    db_path = Path(args.db_path) if args.db_path else get_mlflow_db_path()
-    if not db_path.exists():
-        print(f"Error: MLflow database not found at {db_path}")
-        return
-
-    print(f"Database: {db_path}")
-    conn = sqlite3.connect(db_path)
-    try:
-        runs = get_runs(conn, args.limit)
-        print(f"Scanning {len(runs)} runs...")
-        events: List[Dict[str, Any]] = []
-        for i, run in enumerate(runs, 1):
-            events.extend(extract_run_events(run))
-            if i % 200 == 0:
-                print(f"  ...{i}/{len(runs)} runs, {len(events)} events so far")
-    finally:
-        conn.close()
-
-    write_outputs(events, Path(args.output))
-    print_summary(events)
+    if args.source == "interactive":
+        events = collect_interactive(args)
+        write_outputs(events, Path(args.output))
+        print_summary_interactive(events)
+    else:
+        events = collect_headless(args)
+        write_outputs(events, Path(args.output))
+        print_summary_headless(events)
 
 
 if __name__ == "__main__":
