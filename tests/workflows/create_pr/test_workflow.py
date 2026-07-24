@@ -6,10 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.workflows.create_pr.core import (
-    run_create_pr_workflow,
-    validate_branch_issue_linkage,
-)
+from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
 
 class TestRunCreatePrWorkflow:
@@ -582,78 +579,73 @@ class TestRunCreatePrWorkflow:
         assert result == 0
         mock_pr_manager_class.return_value.get_closing_issue_numbers.assert_not_called()
 
-
-class TestValidateBranchIssueLinkage:
-    """Test suite for validate_branch_issue_linkage helper function."""
-
+    @patch("mcp_coder.workflows.create_pr.core._add_pr_assignee_best_effort")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.IssueBranchManager")
-    def test_validate_branch_issue_linkage_success(
-        self, mock_manager_class: MagicMock, mock_get_branch: MagicMock, tmp_path: Path
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    def test_workflow_assigns_pr_on_success(
+        self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_add_assignee: MagicMock,
     ) -> None:
-        """Tests successful validation when branch is linked to issue."""
-        # Setup: Mock branch name "123-feature", linked branches ["123-feature"]
-        mock_get_branch.return_value = "123-feature"
-        mock_manager = MagicMock()
-        mock_manager_class.return_value = mock_manager
-        mock_manager.get_linked_branches.return_value = ["123-feature"]
-
-        # Call: validate_branch_issue_linkage(tmp_path)
-        result = validate_branch_issue_linkage(tmp_path)
-
-        # Assert: Returns 123
-        assert result == 123
-        mock_get_branch.assert_called_once_with(tmp_path)
-        mock_manager_class.assert_called_once_with(project_dir=tmp_path)
-        mock_manager.get_linked_branches.assert_called_once_with(123)
-
-    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    @patch("mcp_coder.workflows.create_pr.core.IssueBranchManager")
-    def test_validate_branch_issue_linkage_not_linked(
-        self, mock_manager_class: MagicMock, mock_get_branch: MagicMock, tmp_path: Path
-    ) -> None:
-        """Tests validation fails when branch is not linked."""
-        # Setup: Mock branch name "123-feature", linked branches []
-        mock_get_branch.return_value = "123-feature"
-        mock_manager = MagicMock()
-        mock_manager_class.return_value = mock_manager
-        mock_manager.get_linked_branches.return_value = []
-
-        # Call: validate_branch_issue_linkage(tmp_path)
-        result = validate_branch_issue_linkage(tmp_path)
-
-        # Assert: Returns None
-        assert result is None
-        mock_get_branch.assert_called_once_with(tmp_path)
-        mock_manager_class.assert_called_once_with(project_dir=tmp_path)
-        mock_manager.get_linked_branches.assert_called_once_with(123)
-
-    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    def test_validate_branch_issue_linkage_no_issue_number(
-        self, mock_get_branch: MagicMock, tmp_path: Path
-    ) -> None:
-        """Tests validation fails when branch name has no issue number."""
-        # Setup: Mock branch name "feature-branch" (no issue number prefix)
+        """Assignee-add runs after a successful PR creation with the PR number."""
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Title", "Body")
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
         mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
 
-        # Call: validate_branch_issue_linkage(tmp_path)
-        result = validate_branch_issue_linkage(tmp_path)
+        result = run_create_pr_workflow(Path("/test"), "claude")
 
-        # Assert: Returns None
-        assert result is None
-        mock_get_branch.assert_called_once_with(tmp_path)
+        assert result == 0
+        mock_add_assignee.assert_called_once_with(Path("/test"), 42)
 
-    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
-    def test_validate_branch_issue_linkage_no_branch_name(
-        self, mock_get_branch: MagicMock, tmp_path: Path
+    @patch("mcp_coder.workflows.create_pr.core._add_pr_assignee_best_effort")
+    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    def test_workflow_skips_assignee_add_on_pr_failure(
+        self,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
+        mock_add_assignee: MagicMock,
     ) -> None:
-        """Tests validation fails when branch name cannot be determined."""
-        # Setup: Mock branch name return None
-        mock_get_branch.return_value = None
+        """Assignee-add is skipped when PR creation fails (not on a failed path)."""
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Title", "Body")
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = (None, "GitHub API error")
 
-        # Call: validate_branch_issue_linkage(tmp_path)
-        result = validate_branch_issue_linkage(tmp_path)
+        result = run_create_pr_workflow(Path("/test"), "claude")
 
-        # Assert: Returns None
-        assert result is None
-        mock_get_branch.assert_called_once_with(tmp_path)
+        assert result == 1
+        mock_add_assignee.assert_not_called()

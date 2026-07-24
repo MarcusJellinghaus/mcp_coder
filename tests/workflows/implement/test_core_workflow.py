@@ -153,6 +153,7 @@ class TestIntegration:
 class TestRunImplementWorkflowLabelTransitions:
     """Test that labels always transition on success/failure."""
 
+    @patch("mcp_coder.workflows.implement.core.get_repo_flag")
     @patch("mcp_coder.workflows.implement.core.update_workflow_label")
     @patch("mcp_coder.workflows.implement.core.IssueManager")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
@@ -179,8 +180,9 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_ci: MagicMock,
         mock_issue_cls: MagicMock,
         mock_update_label: MagicMock,
+        mock_get_repo_flag: MagicMock,
     ) -> None:
-        """On success with update_issue_labels=True, label transitions to code_review."""
+        """Flag off: on success the label transitions to code_review."""
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
@@ -190,6 +192,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_finalise.return_value = True
         mock_branch.return_value = "189-feature"
         mock_ci.return_value = True
+        mock_get_repo_flag.return_value = False
         mock_manager = MagicMock()
         mock_issue_cls.return_value = mock_manager
 
@@ -202,6 +205,63 @@ class TestRunImplementWorkflowLabelTransitions:
             mock_manager,
             from_label_id="implementing",
             to_label_id="code_review",
+        )
+
+    @patch("mcp_coder.workflows.implement.core.get_repo_flag")
+    @patch("mcp_coder.workflows.implement.core.update_workflow_label")
+    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
+    @patch("mcp_coder.workflows.implement.core.run_finalisation")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    @patch("mcp_coder.workflows.implement.core.get_current_branch_name")
+    def test_success_updates_label_to_bot_when_auto_review_enabled(
+        self,
+        mock_branch: MagicMock,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_finalise: MagicMock,
+        mock_ci: MagicMock,
+        mock_issue_cls: MagicMock,
+        mock_update_label: MagicMock,
+        mock_get_repo_flag: MagicMock,
+    ) -> None:
+        """Flag on: on success the label transitions to code_review_bot."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = (False, "no_tasks")
+        mock_finalise.return_value = True
+        mock_branch.return_value = "189-feature"
+        mock_ci.return_value = True
+        mock_get_repo_flag.return_value = True
+        mock_manager = MagicMock()
+        mock_issue_cls.return_value = mock_manager
+
+        result = run_implement_workflow(
+            Path("/project"), "claude", update_issue_labels=True
+        )
+
+        assert result == 0
+        mock_get_repo_flag.assert_called_once_with(
+            Path("/project"), "auto_review_implementation"
+        )
+        mock_update_label.assert_called_once_with(
+            mock_manager,
+            from_label_id="implementing",
+            to_label_id="code_review_bot",
         )
 
     @patch("mcp_coder.workflows.implement.core.IssueManager")

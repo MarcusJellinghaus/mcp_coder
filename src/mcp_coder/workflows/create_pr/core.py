@@ -27,10 +27,12 @@ from mcp_coder.mcp_workspace_github import (
     IssueBranchManager,
     PullRequestData,
     PullRequestManager,
+    get_authenticated_username,
 )
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
+from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import format_mcp_unavailable_message
@@ -420,6 +422,29 @@ _format_failure_comment = _format_failure_comment_impl
 _handle_create_pr_failure = _handle_create_pr_failure_impl
 
 
+def _add_pr_assignee_best_effort(project_dir: Path, pr_number: int) -> None:
+    """Assign the PR to the authenticated user on the auto-review path only.
+
+    No-op when auto_review_implementation is off for the repo. Best-effort:
+    logs a warning on failure, never raises.
+
+    Args:
+        project_dir: Path to the project directory (git remote → repo config).
+        pr_number: Number of the freshly created pull request.
+    """
+    if not get_repo_flag(project_dir, "auto_review_implementation"):
+        return
+
+    try:
+        username = get_authenticated_username()
+        PullRequestManager(project_dir).add_assignees(pr_number, username)
+        logger.log(OUTPUT, "Assigned PR #%s to %s", pr_number, username)
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # best-effort; never fail the workflow
+        logger.warning("assignee-add failed (non-blocking): %s", e)
+
+
 def run_create_pr_workflow(
     project_dir: Path,
     provider: str,
@@ -612,6 +637,10 @@ def run_create_pr_workflow(
         logger.log(OUTPUT, "PR Title: %s", pr_title)
         logger.log(OUTPUT, "Base Branch: %s", base_branch)
         logger.log(OUTPUT, "Head Branch: %s", current_branch)
+
+        # Auto-review path only: assign the PR to the authenticated user
+        # (best-effort — never fails the workflow or flips a label).
+        _add_pr_assignee_best_effort(project_dir, pr_number)
 
         # Fallback: query closingIssuesReferences if no issue found from branch
         if update_issue_labels and cached_issue_number is None:
