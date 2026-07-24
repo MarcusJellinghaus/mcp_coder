@@ -52,9 +52,9 @@ Detail: [step_4.md](./steps/step_4.md)
 ### Step 5: Add review workflows — templates + routing tables + guard test
 Detail: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation (tests + production code): 4 review templates, `WORKFLOW_MAPPING` entries, `PRIORITY_ORDER`, exports + template/watchdog/guard tests
-- [ ] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): 4 review templates, `WORKFLOW_MAPPING` entries, `PRIORITY_ORDER`, exports + template/watchdog/guard tests
+- [x] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: create-pr auto-path assignee-add (best-effort)
 Detail: [step_6.md](./steps/step_6.md)

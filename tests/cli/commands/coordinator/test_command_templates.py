@@ -18,6 +18,10 @@ from mcp_coder.cli.commands.coordinator import (
     DEFAULT_TEST_COMMAND_WINDOWS,
     IMPLEMENT_COMMAND_TEMPLATE,
     IMPLEMENT_COMMAND_WINDOWS,
+    REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+    REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
+    REVIEW_PLAN_COMMAND_TEMPLATE,
+    REVIEW_PLAN_COMMAND_WINDOWS,
     WORKFLOW_MAPPING,
     WORKFLOW_TEMPLATES,
 )
@@ -34,6 +38,8 @@ class TestTemplateWatchdogLines:
             CREATE_PLAN_COMMAND_TEMPLATE,
             IMPLEMENT_COMMAND_TEMPLATE,
             CREATE_PR_COMMAND_TEMPLATE,
+            REVIEW_PLAN_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
         ):
             assert "RC=$?" in template, f"Missing RC=$? in {template[:40]}"
 
@@ -43,6 +49,8 @@ class TestTemplateWatchdogLines:
             CREATE_PLAN_COMMAND_WINDOWS,
             IMPLEMENT_COMMAND_WINDOWS,
             CREATE_PR_COMMAND_WINDOWS,
+            REVIEW_PLAN_COMMAND_WINDOWS,
+            REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
         ):
             assert (
                 "set RC=%ERRORLEVEL%" in template
@@ -54,6 +62,8 @@ class TestTemplateWatchdogLines:
             CREATE_PLAN_COMMAND_TEMPLATE,
             IMPLEMENT_COMMAND_TEMPLATE,
             CREATE_PR_COMMAND_TEMPLATE,
+            REVIEW_PLAN_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
         ):
             assert "echo RC=$RC" in template, f"Missing echo RC=$RC in {template[:40]}"
 
@@ -63,6 +73,8 @@ class TestTemplateWatchdogLines:
             CREATE_PLAN_COMMAND_WINDOWS,
             IMPLEMENT_COMMAND_WINDOWS,
             CREATE_PR_COMMAND_WINDOWS,
+            REVIEW_PLAN_COMMAND_WINDOWS,
+            REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
         ):
             assert (
                 "echo RC=%RC%" in template
@@ -88,6 +100,16 @@ class TestTemplateWatchdogLines:
                 "set-status status-09f:pr-creating-failed "
                 "--from-status status-09:pr-creating",
             ),
+            (
+                REVIEW_PLAN_COMMAND_TEMPLATE,
+                "set-status status-14f:plan-review-failed "
+                "--from-status status-14i:plan-reviewing",
+            ),
+            (
+                REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+                "set-status status-17f:code-review-failed "
+                "--from-status status-17i:code-reviewing",
+            ),
         ]
         for template, expected_fragment in cases:
             assert expected_fragment in template
@@ -111,6 +133,16 @@ class TestTemplateWatchdogLines:
                 "set-status status-09f:pr-creating-failed "
                 "--from-status status-09:pr-creating",
             ),
+            (
+                REVIEW_PLAN_COMMAND_WINDOWS,
+                "set-status status-14f:plan-review-failed "
+                "--from-status status-14i:plan-reviewing",
+            ),
+            (
+                REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
+                "set-status status-17f:code-review-failed "
+                "--from-status status-17i:code-reviewing",
+            ),
         ]
         for template, expected_fragment in cases:
             assert expected_fragment in template
@@ -124,6 +156,8 @@ class TestTemplateWatchdogLines:
             CREATE_PLAN_COMMAND_TEMPLATE,
             IMPLEMENT_COMMAND_TEMPLATE,
             CREATE_PR_COMMAND_TEMPLATE,
+            REVIEW_PLAN_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
         ):
             assert "exit $RC" in template
 
@@ -133,6 +167,8 @@ class TestTemplateWatchdogLines:
             CREATE_PLAN_COMMAND_WINDOWS,
             IMPLEMENT_COMMAND_WINDOWS,
             CREATE_PR_COMMAND_WINDOWS,
+            REVIEW_PLAN_COMMAND_WINDOWS,
+            REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
         ):
             assert "exit /b %RC%" in template
 
@@ -150,6 +186,10 @@ class TestTemplateWatchdogLines:
             IMPLEMENT_COMMAND_WINDOWS,
             CREATE_PR_COMMAND_TEMPLATE,
             CREATE_PR_COMMAND_WINDOWS,
+            REVIEW_PLAN_COMMAND_TEMPLATE,
+            REVIEW_PLAN_COMMAND_WINDOWS,
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
         ):
             # Find the watchdog line and check it doesn't have --issue
             for line in template.splitlines():
@@ -161,16 +201,20 @@ class TestTemplateWatchdogLines:
     # -- Project dir in watchdog lines --
 
     def test_watchdog_lines_include_project_dir(self) -> None:
-        """All 6 watchdog set-status lines must include --project-dir."""
+        """All watchdog set-status lines must include --project-dir."""
         linux_templates = (
             CREATE_PLAN_COMMAND_TEMPLATE,
             IMPLEMENT_COMMAND_TEMPLATE,
             CREATE_PR_COMMAND_TEMPLATE,
+            REVIEW_PLAN_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
         )
         windows_templates = (
             CREATE_PLAN_COMMAND_WINDOWS,
             IMPLEMENT_COMMAND_WINDOWS,
             CREATE_PR_COMMAND_WINDOWS,
+            REVIEW_PLAN_COMMAND_WINDOWS,
+            REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
         )
         for template in linux_templates:
             found = False
@@ -226,6 +270,26 @@ class TestTemplateWatchdogLines:
                 CREATE_PR_COMMAND_WINDOWS,
                 {"log_level": "debug", "branch_name": "feat-x"},
                 id="create-pr-windows",
+            ),
+            pytest.param(
+                REVIEW_PLAN_COMMAND_TEMPLATE,
+                {"log_level": "debug", "branch_name": "feat-x"},
+                id="review-plan-linux",
+            ),
+            pytest.param(
+                REVIEW_PLAN_COMMAND_WINDOWS,
+                {"log_level": "debug", "branch_name": "feat-x"},
+                id="review-plan-windows",
+            ),
+            pytest.param(
+                REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+                {"log_level": "debug", "branch_name": "feat-x"},
+                id="review-implementation-linux",
+            ),
+            pytest.param(
+                REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
+                {"log_level": "debug", "branch_name": "feat-x"},
+                id="review-implementation-windows",
             ),
         ],
     )
@@ -328,3 +392,63 @@ class TestWorkflowTemplates:
             CREATE_PR_COMMAND_TEMPLATE,
             CREATE_PR_COMMAND_WINDOWS,
         )
+        assert WORKFLOW_TEMPLATES["review-plan"] == (
+            REVIEW_PLAN_COMMAND_TEMPLATE,
+            REVIEW_PLAN_COMMAND_WINDOWS,
+        )
+        assert WORKFLOW_TEMPLATES["review-implementation"] == (
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
+        )
+
+    def test_all_templates_format_uniformly_with_all_kwargs(self) -> None:
+        """Every WORKFLOW_TEMPLATES pair formats with all three kwargs, no KeyError.
+
+        Locks in the invariant that the dispatch site can call
+        ``tpl.format(log_level=..., issue_number=..., branch_name=...)`` uniformly
+        for every workflow: review/implement/create-pr use only ``{branch_name}``,
+        create-plan only ``{issue_number}``, and ``str.format`` silently ignores
+        the extra kwargs.
+        """
+        for workflow, (linux_tpl, windows_tpl) in WORKFLOW_TEMPLATES.items():
+            for tpl in (linux_tpl, windows_tpl):
+                # Must not raise KeyError for any entry.
+                result = tpl.format(log_level="info", issue_number=1, branch_name="x")
+                assert not re.search(
+                    r"\{[a-zA-Z_][a-zA-Z0-9_]*\}", result
+                ), f"Unresolved placeholder for workflow {workflow!r}"
+
+
+class TestReviewTemplateVerbs:
+    """Tests that the review templates carry their expected verbs and checkout."""
+
+    def test_review_plan_templates_have_verb(self) -> None:
+        """Both review-plan templates invoke the review-plan verb."""
+        for template in (REVIEW_PLAN_COMMAND_TEMPLATE, REVIEW_PLAN_COMMAND_WINDOWS):
+            assert "review-plan" in template
+
+    def test_review_implementation_templates_have_verb(self) -> None:
+        """Both review-implementation templates invoke the verb."""
+        for template in (
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
+        ):
+            assert "review-implementation" in template
+
+    def test_review_linux_templates_checkout_branch(self) -> None:
+        """Linux review templates check out the feature branch via {branch_name}."""
+        for template in (
+            REVIEW_PLAN_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+        ):
+            assert "git checkout {branch_name}" in template
+
+    def test_review_templates_have_no_update_issue_labels_flag(self) -> None:
+        """Review templates are config-driven: no --update-issue-labels flag."""
+        for template in (
+            REVIEW_PLAN_COMMAND_TEMPLATE,
+            REVIEW_PLAN_COMMAND_WINDOWS,
+            REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+            REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
+        ):
+            assert "--update-issue-labels" not in template
