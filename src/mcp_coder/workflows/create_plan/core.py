@@ -27,6 +27,7 @@ from mcp_coder.mcp_workspace_github import (
 )
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure as SharedWorkflowFailure,
 )
@@ -728,11 +729,16 @@ def run_create_plan_workflow(
     if update_issue_labels:
         logger.info("Updating GitHub issue label...")
         try:
+            to_label_id = (
+                "plan_review_bot"
+                if get_repo_flag(project_dir, "auto_review_plan")
+                else "plan_review"
+            )
             issue_manager = IssueManager(project_dir)
             success = update_workflow_label(
                 issue_manager,
                 from_label_id="planning",
-                to_label_id="plan_review",
+                to_label_id=to_label_id,
                 validated_issue_number=issue_number,
             )
 

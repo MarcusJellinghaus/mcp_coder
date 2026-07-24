@@ -31,9 +31,9 @@ Detail: [step_1.md](./steps/step_1.md)
 ### Step 2: create-plan config-gated success transition
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code): gate `to_label_id` on `auto_review_plan` in `workflows/create_plan/core.py` + tests
-- [ ] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): gate `to_label_id` on `auto_review_plan` in `workflows/create_plan/core.py` + tests
+- [x] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: implement config-gated success transition
 Detail: [step_3.md](./steps/step_3.md)
