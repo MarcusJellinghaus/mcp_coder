@@ -38,9 +38,9 @@ Detail: [step_2.md](./steps/step_2.md)
 ### Step 3: implement config-gated success transition
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code): gate `to_label_id` on `auto_review_implementation` in `workflows/implement/core.py` + update tests
-- [ ] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): gate `to_label_id` on `auto_review_implementation` in `workflows/implement/core.py` + update tests
+- [x] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Refactor coordinator dispatch to data-driven `WORKFLOW_TEMPLATES` (pure refactor)
 Detail: [step_4.md](./steps/step_4.md)
