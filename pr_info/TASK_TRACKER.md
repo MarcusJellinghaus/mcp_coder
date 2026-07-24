@@ -72,5 +72,5 @@ Detail: [step_7.md](./steps/step_7.md)
 
 ## Pull Request
 
-- [ ] Review complete implementation against [summary.md](./steps/summary.md) — verify both concerns (A) wiring and (B) doc-correctness are covered
+- [x] Review complete implementation against [summary.md](./steps/summary.md) — verify both concerns (A) wiring and (B) doc-correctness are covered
 - [ ] Prepare PR summary/description (flag concerns A and B separately per summary)
