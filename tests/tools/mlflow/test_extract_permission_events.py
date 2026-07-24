@@ -10,31 +10,34 @@ The script lives outside pythonpath = ["src"], so it's loaded by file path
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import json
+import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, List
 
 import pytest
 
-_TOOL_PY = (
-    Path(__file__).resolve().parents[3]
-    / "tools"
-    / "mlflow"
-    / "extract_permission_events.py"
-)
+# The tools live outside pythonpath = ["src"]; put their dir on sys.path so the
+# split modules (_permission_common / _source_mlflow / _source_transcripts)
+# resolve, then merge them into one namespace for convenient access.
+_TOOL_DIR = Path(__file__).resolve().parents[3] / "tools" / "mlflow"
+if str(_TOOL_DIR) not in sys.path:
+    sys.path.insert(0, str(_TOOL_DIR))
 
 
-def _load() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("extract_permission_events", _TOOL_PY)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def _merged() -> ModuleType:
+    merged = ModuleType("permission_events_merged")
+    for name in ("_permission_common", "_source_mlflow", "_source_transcripts"):
+        module = importlib.import_module(name)
+        for key, value in vars(module).items():
+            if not key.startswith("__"):
+                setattr(merged, key, value)
+    return merged
 
 
-extract = _load()
+extract = _merged()
 
 
 @pytest.mark.parametrize(
