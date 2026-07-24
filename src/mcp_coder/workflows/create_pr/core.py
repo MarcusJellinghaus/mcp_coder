@@ -437,13 +437,7 @@ def _add_pr_assignee_best_effort(project_dir: Path, pr_number: int) -> None:
 
     try:
         username = get_authenticated_username()
-        # add_assignees is provided by the floating mcp-workspace pin. Resolve it
-        # dynamically so the call is version-agnostic: neither mypy's attr-defined
-        # nor pylint's no-member fire whether or not the locally installed shim
-        # exposes the method yet (a missing attribute surfaces as a caught
-        # AttributeError below, keeping this helper best-effort).
-        add_assignees = getattr(PullRequestManager(project_dir), "add_assignees")
-        add_assignees(pr_number, username)
+        PullRequestManager(project_dir).add_assignees(pr_number, username)
         logger.log(OUTPUT, "Assigned PR #%s to %s", pr_number, username)
     except (
         Exception

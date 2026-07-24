@@ -268,7 +268,7 @@ def update_success_label(project_dir: Path, issue_number: int) -> None:
         )
 
         if success:
-            logger.info("✓ Issue label updated: planning → plan-review")
+            logger.info(f"✓ Issue label updated: planning → {to_label_id}")
         else:
             logger.warning("✗ Failed to update issue label (non-blocking)")
 
