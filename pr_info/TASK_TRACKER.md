@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: `utils/repo_config.py` — `get_repo_flag` primitive
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code): create `src/mcp_coder/utils/repo_config.py` with `get_repo_flag` and `tests/utils/test_repo_config.py` (TDD)
-- [ ] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): create `src/mcp_coder/utils/repo_config.py` with `get_repo_flag` and `tests/utils/test_repo_config.py` (TDD)
+- [x] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: create-plan config-gated success transition
 Detail: [step_2.md](./steps/step_2.md)
