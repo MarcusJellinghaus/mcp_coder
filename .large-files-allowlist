@@ -8,7 +8,6 @@ docs/cli-reference.md
 docs/configuration/config.md
 docs/processes-prompts/development-process.md
 tools/safe_delete_folder.py
-src/mcp_coder/workflows/vscodeclaude/workspace.py
 tests/cli/commands/coordinator/test_core.py
 tests/cli/commands/test_commit.py
 tests/icoder/test_app_pilot.py
@@ -24,4 +23,3 @@ tests/workflows/vscodeclaude/test_cleanup.py
 tests/workflows/vscodeclaude/test_sessions.py
 tests/workflows/vscodeclaude/test_issues.py
 tests/workflows/vscodeclaude/test_session_restart.py
-tests/workflows/vscodeclaude/test_workspace_startup_script.py

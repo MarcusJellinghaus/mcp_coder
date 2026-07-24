@@ -15,6 +15,8 @@ from mcp_coder.mcp_workspace_github import (
     IssueData,
     IssueManager,
 )
+from mcp_coder.utils.repo_config import get_repo_flag
+from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 
 # Setup logger
@@ -237,3 +239,40 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
         sys.exit(1)
 
     return project_path
+
+
+def update_success_label(project_dir: Path, issue_number: int) -> None:
+    """Transition the issue label after a successful plan run.
+
+    Selects the review label based on the ``auto_review_plan`` repo flag
+    (``plan_review_bot`` when enabled, otherwise ``plan_review``) and applies
+    it. Failures are logged but non-blocking.
+
+    Args:
+        project_dir: Path to the project directory
+        issue_number: GitHub issue number whose label should be updated
+    """
+    logger.info("Updating GitHub issue label...")
+    try:
+        to_label_id = (
+            "plan_review_bot"
+            if get_repo_flag(project_dir, "auto_review_plan")
+            else "plan_review"
+        )
+        issue_manager = IssueManager(project_dir)
+        success = update_workflow_label(
+            issue_manager,
+            from_label_id="planning",
+            to_label_id=to_label_id,
+            validated_issue_number=issue_number,
+        )
+
+        if success:
+            logger.info("✓ Issue label updated: planning → plan-review")
+        else:
+            logger.warning("✗ Failed to update issue label (non-blocking)")
+
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        logger.error(f"Error updating issue label (non-blocking): {e}")
