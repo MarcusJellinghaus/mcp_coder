@@ -25,23 +25,37 @@ gap**. There are **zero Bash approvals** in the data — not because Bash is alw
 approved, but because Bash is never offered to headless runs. Any question about
 bash-approval behaviour must come from the interactive transcripts instead.
 
-## Analysing interactive sessions (not yet built)
+## Analysing interactive sessions
 
-Bash/approval behaviour lives only in the interactive transcripts — a different
-data source with a different schema. To analyse it you'd need:
+`extract_interactive_events.py` covers the interactive half. It reads Claude
+Code's own transcripts under `~/.claude/projects/<sanitised-project>/*.jsonl`
+(one file per session; *not* MLflow), emits every `tool_use` call as an event
+(same schema as the headless extractor, so `analyze_permission_events.py` can
+consume it), and prints an interactive-specific summary.
 
-1. **A transcript reader** for `~/.claude/projects/<sanitised-project>/*.jsonl`
-   (one file per session; these are Claude Code's own logs, *not* MLflow).
-2. **Event extraction** — pull `tool_use` blocks (incl. `Bash`) and their results:
-   - Manual **denials** are detectable: a rejected call's result contains
-     `"The user doesn't want to proceed with this tool use"`.
-   - **Approvals are implicit** — an executed call was permitted, but the
-     transcript doesn't record whether it was auto-allowed or manually approved.
-3. **Allow-list context** to separate auto-allowed from manually-approved:
-   reconstruct from `.claude/settings*.json` (the `allow` list grows as the user
-   clicks "always allow"), or — cleaner and prospective — add a `PreToolUse` hook
-   that logs `{tool, input, decision}` per call. That hook would give the
-   interactive equivalent of the headless `permission_denials` dataset.
+```bash
+python tools/mlflow/extract_interactive_events.py            # auto-detects the current repo
+python tools/mlflow/extract_interactive_events.py --project-dir /path/to/repo
+```
+
+Each event carries a few interactive-only fields:
+
+- `outcome` — `executed` / `denied_by_user` / `interrupted` / `error`. A user
+  rejection is detected by the marker
+  `"The user doesn't want to proceed with this tool use"` in the result.
+- `was_allowlisted` — is the call pre-authorised by `.claude/settings*.json`
+  `permissions.allow`? `True`/`False` for `mcp__*` tools and `Bash` (matched
+  against `Bash(prefix:*)` / `Bash(exact)` rules); `None` for other native tools.
+- `bash_verb` — first token of a Bash command, for grouping (`gh`, `git`, ...).
+
+The summary's **"executed but NOT allow-listed"** list ≈ *what a human had to
+approve* — the interactive counterpart of the headless `permission_denials`.
+
+Caveats: **approvals are implicit** (an executed call was permitted, but the
+transcript doesn't say whether it was auto-allowed or manually clicked); Bash
+matching is approximate (it doesn't split `&&`/`|` the way Claude Code does).
+For an exact record, a `PreToolUse` hook logging `{tool, input, decision}` per
+call would be the clean prospective source.
 
 ## Server
 
@@ -68,6 +82,7 @@ These build reusable datasets (JSONL + CSV) across *all* runs.
 | `extract_mlflow_tool_calls.py` | Harvest tool-call samples (`--unique`, `--run`, `--limit`). |
 | `extract_permission_events.py` | Harvest permission (approval/denial) events → `permission_events.jsonl` + `.csv`. |
 | `analyze_permission_events.py` | Analyse that permission-events dataset (no DB needed). |
+| `extract_interactive_events.py` | Harvest tool/permission events from **interactive** transcripts (see below) → `interactive_events.jsonl` + `.csv`. |
 
 Default output dir for the dataset scripts is `.ml_flow_analysis/` (git-ignored).
 
