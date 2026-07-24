@@ -23,25 +23,28 @@ def _add_pr_assignee_best_effort(project_dir: Path, pr_number: int) -> None:
 
 ## HOW
 - `from mcp_coder.utils.repo_config import get_repo_flag`
-- `get_authenticated_username`, `PullRequestManager` are already importable from
-  `mcp_coder.mcp_workspace_github` (`PullRequestManager` is already imported in this module).
+- **Add `get_authenticated_username` to the existing `mcp_coder.mcp_workspace_github` import** in
+  this module — `PullRequestManager` is already imported here, but `get_authenticated_username` is
+  **not yet** imported and must be added.
 - Call `_add_pr_assignee_best_effort(project_dir, pr_number)` on the success path only.
 - `add_assignees` is best-effort by construction upstream (returns `{}` on API failure, never
   raises); the local try/except guards only non-API exceptions.
+- **`get_authenticated_username()` takes NO `project_dir`.** Its upstream signature is
+  `get_authenticated_username(hostname: Optional[str] = None) -> str` — call it with **no
+  arguments** (it resolves the token internally). It **raises `ValueError`** on auth failure and
+  never returns an empty string, so no empty-username check is needed; the `try/except Exception`
+  catches that `ValueError` and keeps the assignee-add best-effort.
 
 ## ALGORITHM
 ```
 if not get_repo_flag(project_dir, "auto_review_implementation"): return
 try:
-    username = get_authenticated_username(project_dir)
-    if not username: log warning "could not resolve username"; return
+    username = get_authenticated_username()   # no args; raises ValueError on auth failure
     PullRequestManager(project_dir).add_assignees(pr_number, username)
     log OUTPUT "Assigned PR #{pr_number} to {username}"
 except Exception as e:  # pylint: disable=broad-exception-caught
     log warning "assignee-add failed (non-blocking): {e}"
 ```
-(Confirm `get_authenticated_username`'s signature — pass `project_dir` if it accepts it, matching
-how the GitHub layer resolves the token/context; otherwise call as documented by the shim.)
 
 ## DATA
 - Helper returns `None`. No change to `run_create_pr_workflow`'s `int` return contract.

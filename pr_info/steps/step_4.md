@@ -27,6 +27,12 @@ WORKFLOW_TEMPLATES: dict[str, tuple[str, str]] = {
 ## HOW
 - In `core.py`, import `WORKFLOW_TEMPLATES` (drop the now-unused individual template imports if
   they are only used by the selector; keep any still referenced).
+- **The individual template constants must stay importable.** Even when `core.py` stops importing
+  `CREATE_PLAN_COMMAND_TEMPLATE` / `IMPLEMENT_COMMAND_TEMPLATE` / `CREATE_PR_COMMAND_TEMPLATE` (+ the
+  `*_WINDOWS` variants), they must remain module-level constants in `command_templates.py` **and**
+  stay re-exported in `coordinator/__init__.py`'s `__all__`, because existing tests import them from
+  there. The refactor must not break those imports (`vulture` won't flag them since
+  `WORKFLOW_TEMPLATES` still references each).
 - `str.format()` ignores extra kwargs, so pass `log_level`, `issue_number`, and `branch_name`
   uniformly. `branch_name` is already bound on every path before the selector (`"main"` for the
   create-plan strategy).

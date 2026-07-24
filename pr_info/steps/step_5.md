@@ -63,9 +63,18 @@ PRIORITY_ORDER = [
 
 ## TESTS
 1. **Template tests** (`test_command_templates.py`): extend the parametrized Linux/Windows lists to
-   include the 4 new templates; assert each carries its exact watchdog `set-status ... --from-status`
-   line and captures RC (`RC=$?` / `set RC=%ERRORLEVEL%`). Assert Linux templates contain
-   `review-plan` / `review-implementation` verbs and `git checkout {branch_name}` formats.
+   include the 4 new templates; assert each carries its exact watchdog line — the review-plan
+   templates must contain `set-status status-14f:plan-review-failed --from-status
+   status-14i:plan-reviewing` and the review-implementation templates
+   `set-status status-17f:code-review-failed --from-status status-17i:code-reviewing` — and captures
+   RC (`RC=$?` / `set RC=%ERRORLEVEL%`). Assert Linux templates contain `review-plan` /
+   `review-implementation` verbs and `git checkout {branch_name}` formats.
+1b. **Format invariant** (`test_command_templates.py`): assert every `WORKFLOW_TEMPLATES` entry's
+   both templates format successfully when called uniformly with all three kwargs —
+   `tpl.format(log_level="info", issue_number=1, branch_name="x")` raises no `KeyError` for any
+   entry. This locks in the invariant that the review templates use only `{branch_name}` (and
+   create-plan only `{issue_number}`) while `str.format` silently ignores the extra kwargs, so the
+   uniform dispatch-site `.format(...)` call in Step 4 is safe for all workflows.
 2. **Behavioral silent-fallthrough guard** (`test_core.py`): for every distinct `workflow` in
    `WORKFLOW_MAPPING`, build a fake `IssueData` carrying that workflow's pickup label, mock the
    Jenkins client / branch resolution, and drive `dispatch_workflow` on **both** `executor_os`

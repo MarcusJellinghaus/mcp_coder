@@ -50,7 +50,11 @@ Mock `get_repository_identifier`, `find_repo_section_by_url`, `get_config_values
 3. Flag unset (`None`) → returns `default` (test both default=False and default=True).
 4. No matching section (`find_repo_section_by_url` returns `None`) → returns `default`.
 5. No git remote (`get_repository_identifier` returns `None`) → returns `default`.
-6. Non-boolean value in config → returns `default`.
+6. Non-boolean value → returns `default`. Note: in production `get_config_values` validates
+   values against the FieldDef schema and **raises `ValueError`** on a type mismatch, so a real
+   non-bool never reaches `get_repo_flag`'s `isinstance` guard. This test still stands because it
+   mocks `get_config_values` to return a non-bool directly, and the `isinstance(value, bool)` guard
+   remains sound defensive code — just don't describe it as a real-world code path.
 
 ## Commit
 One commit: new module + tests. Run pylint, pytest (`-n auto` unit exclusion pattern), mypy,
