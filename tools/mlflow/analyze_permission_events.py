@@ -191,6 +191,11 @@ def main() -> None:
         type=str,
         help="Extra breakdown by a field (e.g. branch_name, date, mcp_server)",
     )
+    parser.add_argument(
+        "--since",
+        type=str,
+        help="Only events with date >= this YYYY-MM-DD (ISO dates sort lexically)",
+    )
     args = parser.parse_args()
 
     path = Path(args.input)
@@ -202,6 +207,9 @@ def main() -> None:
         return
 
     events = load_events(path)
+    if args.since:
+        events = [e for e in events if str(e.get("date") or "") >= args.since]
+        print(f"Filtered to {len(events)} events since {args.since}\n")
     summary = summarize(events)
     extra_group = (
         (args.group_by, cluster_by(events, args.group_by)) if args.group_by else None
