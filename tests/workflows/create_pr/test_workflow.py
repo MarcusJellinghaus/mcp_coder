@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.create_pr.core import (
+    _add_pr_assignee_best_effort,
     run_create_pr_workflow,
     validate_branch_issue_linkage,
 )
@@ -581,6 +582,164 @@ class TestRunCreatePrWorkflow:
 
         assert result == 0
         mock_pr_manager_class.return_value.get_closing_issue_numbers.assert_not_called()
+
+    @patch("mcp_coder.workflows.create_pr.core._add_pr_assignee_best_effort")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    def test_workflow_assigns_pr_on_success(
+        self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_add_assignee: MagicMock,
+    ) -> None:
+        """Assignee-add runs after a successful PR creation with the PR number."""
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Title", "Body")
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
+
+        result = run_create_pr_workflow(Path("/test"), "claude")
+
+        assert result == 0
+        mock_add_assignee.assert_called_once_with(Path("/test"), 42)
+
+    @patch("mcp_coder.workflows.create_pr.core._add_pr_assignee_best_effort")
+    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    def test_workflow_skips_assignee_add_on_pr_failure(
+        self,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
+        mock_add_assignee: MagicMock,
+    ) -> None:
+        """Assignee-add is skipped when PR creation fails (not on a failed path)."""
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Title", "Body")
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = (None, "GitHub API error")
+
+        result = run_create_pr_workflow(Path("/test"), "claude")
+
+        assert result == 1
+        mock_add_assignee.assert_not_called()
+
+
+class TestAddPrAssigneeBestEffort:
+    """Test suite for _add_pr_assignee_best_effort helper."""
+
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_authenticated_username")
+    @patch("mcp_coder.workflows.create_pr.core.get_repo_flag")
+    def test_flag_on_assigns_pr_to_authenticated_user(
+        self,
+        mock_get_flag: MagicMock,
+        mock_get_username: MagicMock,
+        mock_pr_manager_class: MagicMock,
+    ) -> None:
+        """Flag on → add_assignees called once with the PR number + username."""
+        mock_get_flag.return_value = True
+        mock_get_username.return_value = "octocat"
+        mock_pr_mgr = MagicMock()
+        mock_pr_manager_class.return_value = mock_pr_mgr
+
+        _add_pr_assignee_best_effort(Path("/test"), 42)
+
+        mock_get_flag.assert_called_once_with(
+            Path("/test"), "auto_review_implementation"
+        )
+        mock_pr_manager_class.assert_called_once_with(Path("/test"))
+        mock_pr_mgr.add_assignees.assert_called_once_with(42, "octocat")
+
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_authenticated_username")
+    @patch("mcp_coder.workflows.create_pr.core.get_repo_flag")
+    def test_flag_off_skips_assignment(
+        self,
+        mock_get_flag: MagicMock,
+        mock_get_username: MagicMock,
+        mock_pr_manager_class: MagicMock,
+    ) -> None:
+        """Flag off → add_assignees never called (manual PRs don't get assigned)."""
+        mock_get_flag.return_value = False
+
+        _add_pr_assignee_best_effort(Path("/test"), 42)
+
+        mock_get_username.assert_not_called()
+        mock_pr_manager_class.assert_not_called()
+
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_authenticated_username")
+    @patch("mcp_coder.workflows.create_pr.core.get_repo_flag")
+    def test_assignee_add_failure_is_swallowed(
+        self,
+        mock_get_flag: MagicMock,
+        mock_get_username: MagicMock,
+        mock_pr_manager_class: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """add_assignees raises → helper logs a warning and never re-raises."""
+        mock_get_flag.return_value = True
+        mock_get_username.return_value = "octocat"
+        mock_pr_mgr = MagicMock()
+        mock_pr_mgr.add_assignees.side_effect = RuntimeError("boom")
+        mock_pr_manager_class.return_value = mock_pr_mgr
+
+        with caplog.at_level(logging.WARNING):
+            # Must not raise.
+            _add_pr_assignee_best_effort(Path("/test"), 42)
+
+        assert "non-blocking" in caplog.text
+
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_authenticated_username")
+    @patch("mcp_coder.workflows.create_pr.core.get_repo_flag")
+    def test_auth_failure_is_swallowed(
+        self,
+        mock_get_flag: MagicMock,
+        mock_get_username: MagicMock,
+        mock_pr_manager_class: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """get_authenticated_username raising ValueError is caught (no re-raise)."""
+        mock_get_flag.return_value = True
+        mock_get_username.side_effect = ValueError("no token")
+
+        with caplog.at_level(logging.WARNING):
+            _add_pr_assignee_best_effort(Path("/test"), 42)
+
+        mock_pr_manager_class.assert_not_called()
+        assert "non-blocking" in caplog.text
 
 
 class TestValidateBranchIssueLinkage:

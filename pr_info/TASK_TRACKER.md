@@ -59,9 +59,9 @@ Detail: [step_5.md](./steps/step_5.md)
 ### Step 6: create-pr auto-path assignee-add (best-effort)
 Detail: [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code): `_add_pr_assignee_best_effort` helper + call site in `workflows/create_pr/core.py` + tests
-- [ ] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): `_add_pr_assignee_best_effort` helper + call site in `workflows/create_pr/core.py` + tests
+- [x] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Docs — config.md flags + `executor_test_path` → `executor_job_path` rename
 Detail: [step_7.md](./steps/step_7.md)
