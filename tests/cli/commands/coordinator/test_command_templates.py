@@ -18,6 +18,8 @@ from mcp_coder.cli.commands.coordinator import (
     DEFAULT_TEST_COMMAND_WINDOWS,
     IMPLEMENT_COMMAND_TEMPLATE,
     IMPLEMENT_COMMAND_WINDOWS,
+    WORKFLOW_MAPPING,
+    WORKFLOW_TEMPLATES,
 )
 
 
@@ -297,3 +299,32 @@ class TestWindowsTemplatesInstallTypeStubs:
         """CREATE_PR_COMMAND_WINDOWS should install type stubs."""
         assert "uv sync --project %WORKSPACE%" in CREATE_PR_COMMAND_WINDOWS
         assert "--extra types" in CREATE_PR_COMMAND_WINDOWS
+
+
+class TestWorkflowTemplates:
+    """Tests for the data-driven WORKFLOW_TEMPLATES dispatch table."""
+
+    def test_every_mapping_workflow_has_template(self) -> None:
+        """Every workflow in WORKFLOW_MAPPING has a WORKFLOW_TEMPLATES entry.
+
+        This is the structural invariant that replaces the silent-fallthrough
+        failure mode: a workflow present in WORKFLOW_MAPPING but missing its
+        template would raise KeyError at dispatch instead of misrouting.
+        """
+        mapping_workflows = {config["workflow"] for config in WORKFLOW_MAPPING.values()}
+        assert mapping_workflows <= set(WORKFLOW_TEMPLATES)
+
+    def test_templates_map_to_expected_constants(self) -> None:
+        """Each WORKFLOW_TEMPLATES entry pairs the correct (linux, windows) constants."""
+        assert WORKFLOW_TEMPLATES["create-plan"] == (
+            CREATE_PLAN_COMMAND_TEMPLATE,
+            CREATE_PLAN_COMMAND_WINDOWS,
+        )
+        assert WORKFLOW_TEMPLATES["implement"] == (
+            IMPLEMENT_COMMAND_TEMPLATE,
+            IMPLEMENT_COMMAND_WINDOWS,
+        )
+        assert WORKFLOW_TEMPLATES["create-pr"] == (
+            CREATE_PR_COMMAND_TEMPLATE,
+            CREATE_PR_COMMAND_WINDOWS,
+        )

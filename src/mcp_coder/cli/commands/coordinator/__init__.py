@@ -12,6 +12,7 @@ from .command_templates import (
     IMPLEMENT_COMMAND_WINDOWS,
     PRIORITY_ORDER,
     TEST_COMMAND_TEMPLATES,
+    WORKFLOW_TEMPLATES,
 )
 from .commands import (
     execute_coordinator_run,
@@ -57,6 +58,7 @@ __all__ = [
     "CREATE_PLAN_COMMAND_TEMPLATE",
     "IMPLEMENT_COMMAND_TEMPLATE",
     "CREATE_PR_COMMAND_TEMPLATE",
+    "WORKFLOW_TEMPLATES",
     "PRIORITY_ORDER",
     "WORKFLOW_MAPPING",
     # Internal (kept for compatibility if needed)

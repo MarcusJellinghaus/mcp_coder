@@ -307,6 +307,17 @@ dir logs
 exit /b %RC%
 """
 
+# Data-driven workflow dispatch table.
+# Maps a workflow name to its (linux_template, windows_template) pair so the
+# coordinator can select templates by lookup instead of mirrored if/elif ladders.
+# An unknown workflow raises KeyError at dispatch instead of silently misrouting.
+WORKFLOW_TEMPLATES: dict[str, tuple[str, str]] = {
+    # workflow name -> (linux_template, windows_template)
+    "create-plan": (CREATE_PLAN_COMMAND_TEMPLATE, CREATE_PLAN_COMMAND_WINDOWS),
+    "implement": (IMPLEMENT_COMMAND_TEMPLATE, IMPLEMENT_COMMAND_WINDOWS),
+    "create-pr": (CREATE_PR_COMMAND_TEMPLATE, CREATE_PR_COMMAND_WINDOWS),
+}
+
 # Priority order for processing issues (highest to lowest)
 PRIORITY_ORDER: list[str] = [
     "status-08:ready-pr",

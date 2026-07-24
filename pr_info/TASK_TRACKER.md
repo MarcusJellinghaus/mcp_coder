@@ -45,9 +45,9 @@ Detail: [step_3.md](./steps/step_3.md)
 ### Step 4: Refactor coordinator dispatch to data-driven `WORKFLOW_TEMPLATES` (pure refactor)
 Detail: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code): add `WORKFLOW_TEMPLATES`, replace selector block in `core.py`, export from `__init__.py` + coverage
-- [ ] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code): add `WORKFLOW_TEMPLATES`, replace selector block in `core.py`, export from `__init__.py` + coverage
+- [x] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Add review workflows — templates + routing tables + guard test
 Detail: [step_5.md](./steps/step_5.md)

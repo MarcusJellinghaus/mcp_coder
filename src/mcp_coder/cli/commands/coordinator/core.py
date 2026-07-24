@@ -20,15 +20,7 @@ from ....mcp_workspace_github import (
 )
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.user_config import get_config_file_path, get_config_values
-from .command_templates import (
-    CREATE_PLAN_COMMAND_TEMPLATE,
-    CREATE_PLAN_COMMAND_WINDOWS,
-    CREATE_PR_COMMAND_TEMPLATE,
-    CREATE_PR_COMMAND_WINDOWS,
-    IMPLEMENT_COMMAND_TEMPLATE,
-    IMPLEMENT_COMMAND_WINDOWS,
-    PRIORITY_ORDER,
-)
+from .command_templates import PRIORITY_ORDER, WORKFLOW_TEMPLATES
 from .workflow_constants import WORKFLOW_MAPPING
 
 logger = logging.getLogger(__name__)
@@ -429,36 +421,15 @@ def dispatch_workflow(
         branch_name = resolved_branch
 
     # Step 3: Select appropriate command template based on executor_os and build command
+    # Data-driven lookup: an unknown workflow raises KeyError here instead of
+    # silently misrouting. str.format() ignores extra kwargs, so all three
+    # placeholders are passed uniformly (branch_name is always bound above).
     executor_os = repo_config.get("executor_os", "linux")
-
-    if executor_os == "windows":
-        # Windows templates
-        if workflow_config["workflow"] == "create-plan":
-            command = CREATE_PLAN_COMMAND_WINDOWS.format(
-                log_level=log_level, issue_number=issue["number"]
-            )
-        elif workflow_config["workflow"] == "implement":
-            command = IMPLEMENT_COMMAND_WINDOWS.format(
-                log_level=log_level, branch_name=branch_name
-            )
-        else:  # create-pr
-            command = CREATE_PR_COMMAND_WINDOWS.format(
-                log_level=log_level, branch_name=branch_name
-            )
-    else:
-        # Linux templates (default)
-        if workflow_config["workflow"] == "create-plan":
-            command = CREATE_PLAN_COMMAND_TEMPLATE.format(
-                log_level=log_level, issue_number=issue["number"]
-            )
-        elif workflow_config["workflow"] == "implement":
-            command = IMPLEMENT_COMMAND_TEMPLATE.format(
-                log_level=log_level, branch_name=branch_name
-            )
-        else:  # create-pr
-            command = CREATE_PR_COMMAND_TEMPLATE.format(
-                log_level=log_level, branch_name=branch_name
-            )
+    linux_tpl, windows_tpl = WORKFLOW_TEMPLATES[workflow_config["workflow"]]
+    template = windows_tpl if executor_os == "windows" else linux_tpl
+    command = template.format(
+        log_level=log_level, issue_number=issue["number"], branch_name=branch_name
+    )
 
     # Step 4: Build Jenkins job parameters
     params = {
