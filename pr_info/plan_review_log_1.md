@@ -28,3 +28,27 @@
 - step_1.md — reworded test #6 as a mock-only path (production `get_config_values` schema-validates and raises on type mismatch).
 
 **Status**: plan changed → dispatching commit agent, then re-running review (loop).
+
+## Round 2 — 2026-07-24
+
+**Findings** (fresh re-review after round-1 edits):
+- Plan is clean. All four round-1 edits confirmed correct, internally consistent, no leftover contradictions (no step still references `get_authenticated_username(project_dir)` or the removed empty-username branch).
+- Re-verified against code/reference: upstream `get_authenticated_username(hostname=None)`; `create_pr/core.py` imports `PullRequestManager` but not yet `get_authenticated_username`; shim re-exports both; test files depend on the individual template constants via both `__init__` and module import (step 4 note correct); watchdog `--from-status` values match `labels.json` in-progress labels; `test_core_workflow.py:204` asserts `code_review`; hardcoded sites, bot internal_ids, config.md 15-place rename, and vscodeclaude no-session claim all hold.
+- No straightforward improvements required; no design/requirements questions.
+
+**Decisions**: no changes — loop terminates (a round produced zero plan changes).
+
+**User decisions**: none.
+
+**Changes**: none.
+
+**Status**: no changes needed — review complete.
+
+---
+
+## Final Status
+
+- **Rounds run:** 2 (Round 1: 4 edits applied & committed; Round 2: clean, zero changes).
+- **Commits produced:** `51fb25f` — `docs(plan): fix get_authenticated_username call + tighten test notes (#1073)` (4 step files + this log). Plus a final commit for this Final Status section.
+- **Escalations to user:** none — all findings were straightforward improvements handled autonomously; no design/requirements questions surfaced.
+- **Outcome:** Plan for issue #1073 is sound, complete, correctly scoped and ordered, with all load-bearing claims verified against committed code. **Ready for approval.**
