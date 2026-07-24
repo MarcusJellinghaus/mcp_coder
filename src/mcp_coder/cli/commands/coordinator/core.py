@@ -366,7 +366,7 @@ def dispatch_workflow(
     Args:
         issue: GitHub issue data
         workflow_name: Workflow to execute ("create-plan", "implement", "create-pr")
-        repo_config: Repository configuration with repo_url, executor_test_path, credentials
+        repo_config: Repository configuration with repo_url, executor_job_path, credentials
         jenkins_client: Jenkins client for job triggering
         issue_manager: IssueManager for label updates
         branch_manager: IssueBranchManager for branch resolution

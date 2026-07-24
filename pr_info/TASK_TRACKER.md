@@ -66,9 +66,9 @@ Detail: [step_6.md](./steps/step_6.md)
 ### Step 7: Docs — config.md flags + `executor_test_path` → `executor_job_path` rename
 Detail: [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation: add two flag rows to `config.md`, rename `executor_test_path` → `executor_job_path` (15 places), fix `core.py:377` docstring; verify sweep finds no old field name
-- [ ] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add two flag rows to `config.md`, rename `executor_test_path` → `executor_job_path` (15 places), fix `core.py:377` docstring; verify sweep finds no old field name
+- [x] Quality checks: pylint, pytest (`-n auto` unit exclusion), mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
