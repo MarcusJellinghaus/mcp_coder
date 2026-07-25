@@ -77,7 +77,9 @@ When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 **Allowed commands via Bash tool.** These have no MCP equivalent — use Bash directly. Skills that instruct bash commands (e.g. `git commit`) must also use Bash.
 
 ```
-git commit / add / rebase / push
+git commit / add / rebase / push / checkout -b / branch
+gh issue create / edit / comment (labels only via set-status)
+gh pr create · gh api (read-only)
 mcp-coder gh-tool set-status <label>
 ```
 
