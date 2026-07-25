@@ -42,6 +42,8 @@
 | `gh pr view` | `mcp__mcp-workspace__github_pr_view` |
 | `gh search` | `mcp__mcp-workspace__github_search` |
 
+Sibling repos (`mcp-workspace`, `mcp-tools-py`, `mcp-config`, `mcp-tools-sql`, `mcp-coder-utils`) are registered as reference projects — use the reference tools / `git` `reference_name`, never `cat`/`grep` on site-packages or `git -C`.
+
 ## Code quality checks
 
 After making code changes, run:
