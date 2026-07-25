@@ -33,6 +33,7 @@
 | Run ruff check | `mcp__mcp-tools-py__run_ruff_check` |
 | Run ruff fix | `mcp__mcp-tools-py__run_ruff_fix` |
 | Run bandit | `mcp__mcp-tools-py__run_bandit_check` |
+| Run tach | `mcp__mcp-tools-py__run_tach_check` |
 | Format code (black+isort) | `mcp__mcp-tools-py__run_format_code` |
 | Get library source of installed deps (never `python -c "__file__"` + cat site-packages) | `mcp__mcp-tools-py__get_library_source` |
 | Refactoring | `mcp__mcp-tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
