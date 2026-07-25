@@ -34,7 +34,7 @@
 | Run ruff fix | `mcp__mcp-tools-py__run_ruff_fix` |
 | Run bandit | `mcp__mcp-tools-py__run_bandit_check` |
 | Format code (black+isort) | `mcp__mcp-tools-py__run_format_code` |
-| Get library source | `mcp__mcp-tools-py__get_library_source` |
+| Get library source of installed deps (never `python -c "__file__"` + cat site-packages) | `mcp__mcp-tools-py__get_library_source` |
 | Refactoring | `mcp__mcp-tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
 | Git read-only (status, diff, log, show, fetch, ls-tree, ls-files, ls-remote, rev-parse, branch list) | `mcp__mcp-workspace__git` |
 | `gh issue view` | `mcp__mcp-workspace__github_issue_view` |
