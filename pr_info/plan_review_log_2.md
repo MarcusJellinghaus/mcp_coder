@@ -27,3 +27,19 @@ Note: branch is behind origin/main by one docs-only commit (5357e07, `.claude/CL
 - Decisions.md: "## Round 3" section appended with decisions 12–15.
 
 **Status**: committed
+
+## Round 2 — 2026-07-26
+
+**Findings** (fresh engineer; round-3 edits verified PASS, all library claims re-verified):
+1. IMPROVEMENT — step_6: corroboration-gate failure (`_rebase_success_shape` false) was the only post-rebase exit-1 path without `_reset_hard(pre_sha)` — left a rebased-but-unpushed/dirty state, contradicting the decision-9 invariant (old code relied on the LLM's restore instruction, which this plan removes).
+2. COSMETIC — step_6: pseudocode `others = files - pr_info_files` is a TypeError if transcribed literally.
+
+**Decisions**: accept both at triage (1 extends the settled decision-9 invariant; 2 mechanical). No user escalation.
+
+**User decisions**: none needed.
+
+**Changes** (applied via /plan_update):
+- step_6.md: corroboration gate resets to `pre_sha` before exit 1 (+ TDD case 7b); pseudocode fixed to a list comprehension.
+- Decisions.md: "## Round 4" section with decision 16 appended.
+
+**Status**: committed

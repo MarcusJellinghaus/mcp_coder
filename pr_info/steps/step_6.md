@@ -64,7 +64,7 @@ try:
         pr_info_files = [f for f in files if f.startswith("pr_info/")]
         for f in pr_info_files:
             if not _resolve_pr_info_conflict(dir, f): abort → exit 1
-        others = files - pr_info_files
+        others = [f for f in files if f not in pr_info_files]
         if others:
             OUTPUT "Resolving N conflicted file(s) via LLM..."
             stop += 1
@@ -90,7 +90,11 @@ try:
         regressions = _run_all_checks(dir) - baseline
     if regressions: _reset_hard(dir, pre_sha) → exit 1
 
-    if not _rebase_success_shape(dir, pre_sha): → exit 1   # git corroboration gate
+    if not _rebase_success_shape(dir, pre_sha):           # git corroboration gate
+        _reset_hard(dir, pre_sha) → exit 1                # reset safe: rebase completed,
+                                                          # finally net won't act; same
+                                                          # never-leave-rebased-unpushed
+                                                          # invariant as the other paths
     OUTPUT "Force-pushing (with lease)..."
     push (unchanged): success → OUTPUT result, exit 0
                       rejected → _reset_hard(pre_sha), exit 2
@@ -160,6 +164,8 @@ Rework `tests/workflows/rebase/test_workflow.py` first (mock at the existing bou
 7. Verification `CheckRunError` → reset, exit 1.
 7a. LLM timeout during a fix attempt (rebase already completed, not mid-rebase) →
     `_reset_hard(pre_sha)` called, exit 1.
+7b. Corroboration gate fails (`_rebase_success_shape` returns False after a completed,
+    regression-free rebase) → `_reset_hard(pre_sha)` called, exit 1.
 8. Push rejected → reset, exit 2 (existing test survives with new mocks).
 9. Session threading: `session_id` from first LLM response passed to second call.
 10. OUTPUT logging: caplog at OUTPUT level sees start/end lines; a no-op run logs

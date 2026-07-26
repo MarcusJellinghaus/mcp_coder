@@ -75,3 +75,14 @@ by the user.
     (mypy "already defined on line N", pylint R0801) can still shift keys after
     a rebase; red-baseline-only, bounded by the 2-attempt fix cap — no ad-hoc
     normalization.
+
+## Round 4 (all accepted at triage)
+
+16. **Corroboration-gate failure resets to `pre_sha`** (review finding, accepted):
+    in Step 6, `_rebase_success_shape` returning False after a completed,
+    regression-free rebase runs `_reset_hard(pre_sha)` before exiting 1 — it was
+    the only post-rebase failure path without a reset. Extends the decision-9
+    invariant (never leave a rebased-but-unpushed or dirty state behind); reset
+    is safe there because the rebase already completed, so the `finally` net
+    cannot act. TDD case 7b added. (Cosmetic pseudocode fix applied alongside:
+    `others` is a list comprehension, not list subtraction — no decision needed.)
