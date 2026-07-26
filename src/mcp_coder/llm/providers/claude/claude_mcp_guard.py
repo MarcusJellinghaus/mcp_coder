@@ -159,6 +159,40 @@ def find_fatal_mcp_servers(
     return _scan_mcp_servers(system_message, tolerate_pending=True)
 
 
+def load_mcp_server_names(mcp_config: str, base_dir: str | None = None) -> set[str]:
+    """Return the ``mcpServers`` keys of an mcp-config file.
+
+    Relative paths resolve against ``base_dir`` (the subprocess cwd /
+    execution_dir), NOT the caller's cwd. A file without ``mcpServers`` yields
+    an empty set (valid: a session deliberately configured with no servers).
+
+    Args:
+        mcp_config: Path to the mcp-config JSON file.
+        base_dir: Directory that relative ``mcp_config`` paths resolve against.
+
+    Returns:
+        Set of configured MCP server names; empty when none configured.
+
+    Raises:
+        ValueError: Naming the file, when it is missing, unreadable, not valid
+            JSON, not a JSON object, or ``mcpServers`` is present but not a
+            dict.
+    """
+    path = Path(mcp_config)
+    if not path.is_absolute() and base_dir:
+        path = Path(base_dir) / path
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise ValueError(f"Cannot read MCP config {path}: {e}") from e
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid MCP config {path}: expected top-level object")
+    servers = data.get("mcpServers", {})
+    if not isinstance(servers, dict):
+        raise ValueError(f"Invalid 'mcpServers' in {path}: expected object")
+    return set(servers.keys())
+
+
 # Prefix identifying MCP tools in the init event's ``tools`` field. Built-in
 # tools (e.g. ``ToolSearch``, ``Bash``) do not carry this prefix.
 _MCP_TOOL_PREFIX = "mcp__"

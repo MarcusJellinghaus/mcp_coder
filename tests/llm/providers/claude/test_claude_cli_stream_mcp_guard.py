@@ -23,6 +23,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
     find_exposed_mcp_tools,
     find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
+    load_mcp_server_names,
     parse_stream_json_string,
 )
 from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
@@ -822,3 +823,218 @@ class TestStreamMcpGuard:
         assert "mcp-workspace=failed" in str(exc.value)
         # Aborted before any assistant content was leaked to the consumer.
         assert not any(e.get("type") == "text_delta" for e in events)
+
+
+class TestLoadMcpServerNames:
+    """load_mcp_server_names parses the mcpServers keys of an mcp-config file."""
+
+    def test_happy_path_returns_server_names(self, tmp_path: Path) -> None:
+        config = tmp_path / "mcp.json"
+        config.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "mcp-tools-py": {"command": "x"},
+                        "mcp-workspace": {"command": "y"},
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        assert load_mcp_server_names(str(config)) == {"mcp-tools-py", "mcp-workspace"}
+
+    def test_relative_path_resolves_against_base_dir(self, tmp_path: Path) -> None:
+        """A relative path resolves against base_dir (subprocess cwd), not our cwd."""
+        (tmp_path / "sub").mkdir()
+        config = tmp_path / "sub" / "mcp.json"
+        config.write_text(
+            json.dumps({"mcpServers": {"only-server": {}}}), encoding="utf-8"
+        )
+        result = load_mcp_server_names("sub/mcp.json", base_dir=str(tmp_path))
+        assert result == {"only-server"}
+
+    def test_missing_file_raises_value_error_naming_path(self, tmp_path: Path) -> None:
+        missing = tmp_path / "nope.json"
+        with pytest.raises(ValueError) as exc:
+            load_mcp_server_names(str(missing))
+        assert str(missing) in str(exc.value)
+
+    def test_malformed_json_raises_value_error(self, tmp_path: Path) -> None:
+        config = tmp_path / "broken.json"
+        config.write_text("{not json", encoding="utf-8")
+        with pytest.raises(ValueError) as exc:
+            load_mcp_server_names(str(config))
+        assert str(config) in str(exc.value)
+
+    def test_top_level_non_dict_raises_value_error(self, tmp_path: Path) -> None:
+        config = tmp_path / "list.json"
+        config.write_text(json.dumps(["not", "a", "dict"]), encoding="utf-8")
+        with pytest.raises(ValueError):
+            load_mcp_server_names(str(config))
+
+    def test_mcp_servers_non_dict_raises_value_error(self, tmp_path: Path) -> None:
+        config = tmp_path / "bad_servers.json"
+        config.write_text(json.dumps({"mcpServers": ["a", "b"]}), encoding="utf-8")
+        with pytest.raises(ValueError) as exc:
+            load_mcp_server_names(str(config))
+        assert "mcpServers" in str(exc.value)
+
+    def test_missing_mcp_servers_key_yields_empty_set(self, tmp_path: Path) -> None:
+        """No mcpServers key is valid: a session deliberately without servers."""
+        config = tmp_path / "empty.json"
+        config.write_text(json.dumps({"other": 1}), encoding="utf-8")
+        assert load_mcp_server_names(str(config)) == set()
+
+
+class TestStreamMcpGuardScoping:
+    """With mcp_config supplied, only servers listed in it can abort (#1090)."""
+
+    @staticmethod
+    def _write_config(tmp_path: Path, server_names: list[str]) -> str:
+        config = tmp_path / "mcp.json"
+        config.write_text(
+            json.dumps({"mcpServers": {name: {} for name in server_names}}),
+            encoding="utf-8",
+        )
+        return str(config)
+
+    @staticmethod
+    def _init_line(servers: list[dict[str, str]]) -> str:
+        return json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": servers,
+            }
+        )
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_non_configured_failed_server_does_not_raise(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A failed server outside --mcp-config is ignored (with needs-auth too)."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mcp_config = self._write_config(tmp_path, ["mcp-workspace"])
+        init = self._init_line(
+            [
+                {"name": "mcp-workspace", "status": "connected"},
+                {"name": "obsidian-wiki", "status": "failed"},
+                {"name": "claude.ai Gmail", "status": "needs-auth"},
+            ]
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "real answer"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, assistant])
+
+        events = list(ask_claude_code_cli_stream("q", mcp_config=mcp_config))
+
+        text_deltas = [e for e in events if e.get("type") == "text_delta"]
+        assert [e["text"] for e in text_deltas] == ["real answer"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_configured_failed_server_still_raises(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A failed server that IS listed in --mcp-config still aborts."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mcp_config = self._write_config(tmp_path, ["mcp-workspace"])
+        init = self._init_line([{"name": "mcp-workspace", "status": "failed"}])
+        mock_stream_sub.return_value = _make_mock_stream([init])
+
+        with pytest.raises(McpServersUnavailableError) as exc:
+            list(ask_claude_code_cli_stream("q", mcp_config=mcp_config))
+
+        assert "mcp-workspace=failed" in str(exc.value)
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_mixed_failures_raise_naming_only_configured(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Configured and non-configured failures: only the configured one aborts."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mcp_config = self._write_config(tmp_path, ["mcp-workspace"])
+        init = self._init_line(
+            [
+                {"name": "mcp-workspace", "status": "failed"},
+                {"name": "obsidian-wiki", "status": "failed"},
+            ]
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init])
+
+        with pytest.raises(McpServersUnavailableError) as exc:
+            list(ask_claude_code_cli_stream("q", mcp_config=mcp_config))
+
+        assert exc.value.unavailable_servers == {"mcp-workspace": "failed"}
+        assert "obsidian-wiki" not in str(exc.value)
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_bad_config_path_raises_before_subprocess(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """An unreadable --mcp-config is an operator error: fail fast, no launch."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        missing = tmp_path / "missing.json"
+
+        with pytest.raises(ValueError) as exc:
+            list(ask_claude_code_cli_stream("q", mcp_config=str(missing)))
+
+        assert str(missing) in str(exc.value)
+        mock_stream_sub.assert_not_called()

@@ -25,6 +25,7 @@ from .claude_mcp_guard import (
     StreamMessage,
     find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
+    load_mcp_server_names,
     parse_stream_json_line,
 )
 
@@ -107,10 +108,14 @@ def ask_claude_code_cli_stream(
         raw_line, system (the init message payload)
 
     Raises:
-        ValueError: If the question is empty/whitespace or timeout is not positive.
+        ValueError: If the question is empty/whitespace, timeout is not
+            positive, or ``mcp_config`` is set but missing/unreadable/malformed
+            (raised before the subprocess launches).
         McpServersUnavailableError: If the init event reports a configured MCP
             server that did not reach ``connected`` status; aborted before any
-            assistant content is yielded.
+            assistant content is yielded. With ``mcp_config`` set, only servers
+            listed in that file's ``mcpServers`` can trigger this abort; other
+            servers (e.g. account-level connectors) are logged and ignored.
 
     The "done" event includes session_id and usage data from the result message.
     The "raw_line" event wraps each raw NDJSON line for json-raw mode consumers.
@@ -119,6 +124,14 @@ def ask_claude_code_cli_stream(
         raise ValueError("Question cannot be empty or whitespace only")
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
+
+    # Positive list for the MCP guard: with an explicit mcp_config, only the
+    # servers it lists may abort the session. Parsed before the subprocess
+    # launches so an operator error (bad path/JSON) surfaces up front, not
+    # mid-stream. None means "no config supplied": guard every listed server.
+    configured_servers: set[str] | None = (
+        load_mcp_server_names(mcp_config, cwd) if mcp_config else None
+    )
 
     claude_cmd = _find_claude_executable()
     command = build_cli_command(
@@ -174,6 +187,26 @@ def ask_claude_code_cli_stream(
                 # within the session via the ToolSearch wait-bridge, so they are
                 # tolerated and only logged.
                 fatal_servers = find_fatal_mcp_servers(msg)
+                if configured_servers is not None:
+                    # Scope fatality to the supplied --mcp-config: servers the
+                    # operator did not configure (e.g. injected account-level
+                    # connectors) must never abort the session.
+                    ignored = {
+                        name: status
+                        for name, status in fatal_servers.items()
+                        if name not in configured_servers
+                    }
+                    fatal_servers = {
+                        name: status
+                        for name, status in fatal_servers.items()
+                        if name in configured_servers
+                    }
+                    if ignored:
+                        logger.info(
+                            "Ignoring non-configured MCP server(s) outside "
+                            "--mcp-config: %s",
+                            ignored,
+                        )
                 if fatal_servers:
                     detail = ", ".join(
                         f"{name}={status}" for name, status in fatal_servers.items()
