@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -126,6 +127,32 @@ def _mock_externals(
         return dict(assembler.result())
 
     monkeypatch.setattr("mcp_coder.llm.interface.prompt_llm", _fake_prompt_llm)
+
+
+def _make_prompt_llm_with_servers(
+    mcp_servers: list[dict[str, str]],
+) -> Callable[..., dict[str, object]]:
+    """Build a fake prompt_llm whose init event reports the given MCP servers."""
+    from mcp_coder.llm.types import ResponseAssembler
+
+    def _fake_prompt_llm(*_a: object, **_kw: object) -> dict[str, object]:
+        assembler = ResponseAssembler(provider="claude")
+        assembler.add(
+            {
+                "type": "system",
+                "data": {
+                    "type": "system",
+                    "subtype": "init",
+                    "tools": ["mcp__srv__tool_a"],
+                    "mcp_servers": mcp_servers,
+                },
+            }
+        )
+        assembler.add({"type": "text_delta", "text": "OK"})
+        assembler.add({"type": "done", "session_id": "s1", "usage": {}})
+        return dict(assembler.result())
+
+    return _fake_prompt_llm
 
 
 @pytest.mark.usefixtures("_clear_mcp_env", "_mock_externals")
@@ -280,6 +307,95 @@ class TestProbeExposedMcpTools:
 
         assert info.mcp_tools_exposed is None
         assert info.mcp_tools_status is None
+
+    def test_needs_auth_only_stays_connected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Only non-connected servers are needs-auth → status 'connected'."""
+        monkeypatch.setattr(
+            "mcp_coder.llm.interface.prompt_llm",
+            _make_prompt_llm_with_servers(
+                [
+                    {"name": "srv", "status": "connected"},
+                    {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                ]
+            ),
+        )
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        info = setup_icoder_environment(project_dir, provider="claude")
+
+        assert info.mcp_tools_status == "connected"
+
+    def test_needs_auth_plus_pending_is_pending(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """needs-auth + one pending server → status 'pending'."""
+        monkeypatch.setattr(
+            "mcp_coder.llm.interface.prompt_llm",
+            _make_prompt_llm_with_servers(
+                [
+                    {"name": "srv", "status": "pending"},
+                    {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                ]
+            ),
+        )
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        info = setup_icoder_environment(project_dir, provider="claude")
+
+        assert info.mcp_tools_status == "pending"
+
+    def test_needs_auth_plus_failed_is_fatal(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """needs-auth + one failed server → status 'fatal'."""
+        monkeypatch.setattr(
+            "mcp_coder.llm.interface.prompt_llm",
+            _make_prompt_llm_with_servers(
+                [
+                    {"name": "srv", "status": "failed"},
+                    {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                ]
+            ),
+        )
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        info = setup_icoder_environment(project_dir, provider="claude")
+
+        assert info.mcp_tools_status == "fatal"
+
+    def test_needs_auth_connectors_logged_at_info(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """needs-auth connectors are listed in an INFO log message."""
+        monkeypatch.setattr(
+            "mcp_coder.llm.interface.prompt_llm",
+            _make_prompt_llm_with_servers(
+                [
+                    {"name": "srv", "status": "connected"},
+                    {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                    {"name": "claude.ai Gmail", "status": "needs-auth"},
+                ]
+            ),
+        )
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        with caplog.at_level(logging.INFO, logger="mcp_coder.icoder.env_setup"):
+            info = setup_icoder_environment(project_dir, provider="claude")
+
+        assert info.mcp_tools_status == "connected"
+        assert any(
+            "claude.ai Google Drive" in msg and "claude.ai Gmail" in msg
+            for msg in caplog.messages
+        )
 
     def test_probe_helper_langchain_returns_none_pair(self) -> None:
         """Direct call: non-claude provider returns (None, None) without prompting."""

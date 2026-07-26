@@ -103,6 +103,7 @@ def _probe_exposed_mcp_tools(
     try:
         from mcp_coder.llm.interface import prompt_llm
         from mcp_coder.llm.providers.claude.claude_mcp_guard import (
+            MCP_NEEDS_AUTH_STATUS,
             find_exposed_mcp_tools,
             find_fatal_mcp_servers,
             find_unavailable_mcp_servers,
@@ -118,12 +119,28 @@ def _probe_exposed_mcp_tools(
         )
         raw_response = cast(dict[str, Any], resp.get("raw_response", {}))
         system_message = cast(Any, raw_response.get("system"))
-        if find_fatal_mcp_servers(system_message):
+        fatal = find_fatal_mcp_servers(system_message)
+        unavailable = find_unavailable_mcp_servers(system_message)
+        needs_auth = {
+            name
+            for name, state in unavailable.items()
+            if state == MCP_NEEDS_AUTH_STATUS
+        }
+        pending = {
+            name for name in unavailable if name not in fatal and name not in needs_auth
+        }
+        if fatal:
             status = "fatal"
-        elif find_unavailable_mcp_servers(system_message):
+        elif pending:
             status = "pending"
         else:
             status = "connected"
+        if needs_auth:
+            logger.info(
+                "Unauthenticated account connector(s), "
+                "not part of MCP health assessment: %s",
+                sorted(needs_auth),
+            )
         count = len(find_exposed_mcp_tools(system_message))
         return (status, count)
     except Exception:  # pylint: disable=broad-exception-caught
