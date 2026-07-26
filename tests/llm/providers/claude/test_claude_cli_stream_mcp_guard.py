@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import (
+    MCP_NEEDS_AUTH_STATUS,
     McpServersUnavailableError,
     StreamMessage,
     ask_claude_code_cli,
@@ -113,6 +114,25 @@ class TestFindUnavailableMcpServers:
         )
         assert find_unavailable_mcp_servers(msg) == {"x": "unknown"}
 
+    def test_needs_auth_is_reported(self) -> None:
+        """Unauthenticated account connectors stay visible to reporting consumers."""
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "mcp_servers": [
+                    {"name": "a", "status": "connected"},
+                    {"name": "b", "status": "pending"},
+                    {"name": "c", "status": "needs-auth"},
+                ],
+            },
+        )
+        assert find_unavailable_mcp_servers(msg) == {
+            "b": "pending",
+            "c": MCP_NEEDS_AUTH_STATUS,
+        }
+
     def test_status_is_case_insensitive(self) -> None:
         msg = cast(
             StreamMessage,
@@ -173,6 +193,39 @@ class TestFindFatalMcpServers:
             "mcp-tools-py": "failed",
             "mcp-workspace": "unknown",
         }
+
+    def test_needs_auth_is_tolerated(self) -> None:
+        """Unauthenticated claude.ai account connectors are optional, never fatal (#1090)."""
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "mcp_servers": [
+                    {"name": "a", "status": "connected"},
+                    {"name": "b", "status": "pending"},
+                    {"name": "c", "status": "needs-auth"},
+                ],
+            },
+        )
+        assert find_fatal_mcp_servers(msg) == {}
+
+    def test_failed_still_fatal_alongside_needs_auth(self) -> None:
+        """Tolerating needs-auth must not mask genuinely failed servers."""
+        msg = cast(
+            StreamMessage,
+            {
+                "type": "system",
+                "subtype": "init",
+                "mcp_servers": [
+                    {"name": "a", "status": "connected"},
+                    {"name": "b", "status": "pending"},
+                    {"name": "c", "status": "needs-auth"},
+                    {"name": "d", "status": "failed"},
+                ],
+            },
+        )
+        assert find_fatal_mcp_servers(msg) == {"d": "failed"}
 
     def test_mixed_failed_and_pending_reports_only_failed(self) -> None:
         msg = cast(
@@ -592,6 +645,135 @@ class TestStreamMcpGuard:
 
         text_deltas = [e for e in events if e.get("type") == "text_delta"]
         assert [e["text"] for e in text_deltas] == ["real answer"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_needs_auth_only_proceeds(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """needs-auth-only connectors are optional account connectors: no abort (#1090)."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [
+                    {"name": "mcp-workspace", "status": "connected"},
+                    {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                ],
+            }
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "real answer"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, assistant])
+
+        events = list(ask_claude_code_cli_stream("q"))
+
+        text_deltas = [e for e in events if e.get("type") == "text_delta"]
+        assert [e["text"] for e in text_deltas] == ["real answer"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_incident_1090_shape_proceeds(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """The #1090 incident init (pending + 3 needs-auth connectors) must not abort."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [
+                    {"name": "obsidian-wiki", "status": "pending"},
+                    {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                    {"name": "claude.ai Gmail", "status": "needs-auth"},
+                    {"name": "claude.ai Google Calendar", "status": "needs-auth"},
+                ],
+            }
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "commit msg"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, assistant])
+
+        events = list(ask_claude_code_cli_stream("q"))
+
+        text_deltas = [e for e in events if e.get("type") == "text_delta"]
+        assert [e["text"] for e in text_deltas] == ["commit msg"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_aborts_on_failed_alongside_needs_auth(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A failed configured server still aborts even with needs-auth connectors present."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [
+                    {"name": "mcp-workspace", "status": "failed"},
+                    {"name": "claude.ai Gmail", "status": "needs-auth"},
+                ],
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init])
+
+        with pytest.raises(McpServersUnavailableError) as exc:
+            list(ask_claude_code_cli_stream("q"))
+
+        assert "mcp-workspace=failed" in str(exc.value)
+        assert exc.value.unavailable_servers == {"mcp-workspace": "failed"}
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",

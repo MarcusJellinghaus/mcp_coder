@@ -22,9 +22,13 @@ _MCP_SERVER_READY_STATUS = "connected"
 
 # A server still cold-starting ("pending") is not fatal: with "ToolSearch"
 # restored as the built-in wait-bridge, the model waits for it to connect within
-# the same session instead of running blind. Only non-connected, non-pending
-# statuses (e.g. "failed", "unknown") are terminal.
+# the same session instead of running blind. Only non-connected, non-pending,
+# non-needs-auth statuses (e.g. "failed", "unknown") are terminal.
 _MCP_PENDING_STATUS = "pending"
+
+# An account-level claude.ai connector that has not completed OAuth. Optional
+# by definition (tied to the login, not any config), so never fatal.
+MCP_NEEDS_AUTH_STATUS = "needs-auth"
 
 
 class StreamMessage(TypedDict, total=False):
@@ -62,6 +66,8 @@ class McpServersUnavailableError(RuntimeError):
     Continuing would run the model with no tools, which can silently yield
     hallucinated results, so the call is aborted instead. A ``pending`` server
     is *not* terminal: it self-heals via ``ToolSearch`` and does not abort.
+    A ``needs-auth`` server is *not* terminal either: it is an optional
+    unauthenticated account-level connector, not a crashed configured server.
 
     ``unavailable_servers`` maps each fatal server name to its status.
     """
@@ -88,9 +94,10 @@ def _scan_mcp_servers(
 
     Args:
         system_message: The parsed ``system``/``init`` StreamMessage, or None.
-        tolerate_pending: When True, ``pending`` servers are skipped (they
-            self-heal via ToolSearch); when False, every non-connected server
-            is reported.
+        tolerate_pending: When True, ``pending`` servers (they self-heal via
+            ToolSearch) and ``needs-auth`` servers (optional unauthenticated
+            account connectors) are skipped; when False, every non-connected
+            server is reported.
 
     Returns:
         Mapping of server name to lowercased status for the matching servers.
@@ -106,7 +113,7 @@ def _scan_mcp_servers(
         status = str(server.get("status", "")).strip().lower() or "unknown"
         if status == _MCP_SERVER_READY_STATUS:
             continue
-        if tolerate_pending and status == _MCP_PENDING_STATUS:
+        if tolerate_pending and status in (_MCP_PENDING_STATUS, MCP_NEEDS_AUTH_STATUS):
             continue
         result[str(server.get("name", "?"))] = status
     return result
@@ -135,17 +142,19 @@ def find_fatal_mcp_servers(
 ) -> dict[str, str]:
     """Return ``{name: status}`` for servers in a terminal non-connected state.
 
-    Like :func:`find_unavailable_mcp_servers` but tolerates ``pending``: a
-    still-starting server self-heals via ``ToolSearch`` within the session, so
-    it is not reported. Only terminal statuses (e.g. ``failed`` / ``unknown``)
-    appear here, identifying servers that warrant aborting the run.
+    Like :func:`find_unavailable_mcp_servers` but tolerates ``pending`` (a
+    still-starting server self-heals via ``ToolSearch`` within the session)
+    and ``needs-auth`` (an optional unauthenticated account-level connector),
+    so neither is reported. Only terminal statuses (e.g. ``failed`` /
+    ``unknown``) appear here, identifying servers that warrant aborting the
+    run.
 
     Args:
         system_message: The parsed ``system``/``init`` StreamMessage, or None.
 
     Returns:
         Mapping of server name to lowercased status for servers whose status is
-        neither ``connected`` nor ``pending``; empty otherwise.
+        none of ``connected``, ``pending``, or ``needs-auth``; empty otherwise.
     """
     return _scan_mcp_servers(system_message, tolerate_pending=True)
 

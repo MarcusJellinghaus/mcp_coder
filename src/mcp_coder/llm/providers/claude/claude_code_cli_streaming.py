@@ -20,6 +20,7 @@ from .claude_code_cli import (
 )
 from .claude_code_cli_log_paths import get_stream_log_path
 from .claude_mcp_guard import (
+    MCP_NEEDS_AUTH_STATUS,
     McpServersUnavailableError,
     StreamMessage,
     find_fatal_mcp_servers,
@@ -188,12 +189,31 @@ def ask_claude_code_cli_stream(
                     )
 
                 # Fatal servers already aborted above, so any remaining
-                # non-connected servers are pending.
-                pending_servers = find_unavailable_mcp_servers(msg)
+                # non-connected servers are pending or needs-auth. Log the two
+                # groups separately: pending servers self-heal, needs-auth
+                # connectors are optional account-level connectors and must not
+                # be described as starting.
+                non_connected = find_unavailable_mcp_servers(msg)
+                pending_servers = {
+                    name: status
+                    for name, status in non_connected.items()
+                    if status != MCP_NEEDS_AUTH_STATUS
+                }
+                needs_auth_servers = {
+                    name: status
+                    for name, status in non_connected.items()
+                    if status == MCP_NEEDS_AUTH_STATUS
+                }
                 if pending_servers:
                     logger.info(
                         "MCP server(s) still starting; ToolSearch will wait: %s",
                         pending_servers,
+                    )
+                if needs_auth_servers:
+                    logger.info(
+                        "Unauthenticated account connector(s) (not part of "
+                        "configured-server health): %s",
+                        needs_auth_servers,
                     )
             yield from _map_stream_message_to_event(msg)
 
