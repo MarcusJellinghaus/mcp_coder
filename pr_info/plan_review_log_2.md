@@ -43,3 +43,23 @@ Note: branch is behind origin/main by one docs-only commit (5357e07, `.claude/CL
 - Decisions.md: "## Round 4" section with decision 16 appended.
 
 **Status**: committed
+
+## Round 3 — 2026-07-26
+
+**Findings** (fresh engineer, final sweep): none. Round-4 edits (decision 16: corroboration-gate reset + TDD 7b + `others` comprehension) verified correctly applied; full deletion inventory, permissions list, library shapes (`mcp-tools-py`), session/API claims, import contract, prompt plumbing, SKILL.md fidelity, planning principles, and the step-6 loop logic all re-verified against source with no discrepancies.
+
+**Decisions**: none needed.
+
+**User decisions**: none needed.
+
+**Changes**: none.
+
+**Status**: no changes needed — loop terminates.
+
+## Final Status
+
+Run 2 complete after 3 rounds (overall rounds 3–5 across both runs). Two rounds produced changes, committed as:
+- `9d2a9c8` — docs(steps): exclude skipped collectors from failure keys, OUTPUT on no-op path (plan review round 3)
+- `d65f2c6` — docs(steps): reset on corroboration-gate failure, fix others pseudocode (plan review round 4)
+
+Cumulative decisions now number 16 in `pr_info/steps/Decisions.md`. Round 3 was a clean pass with all claims re-verified against source. **The plan is ready for implementation approval.**
