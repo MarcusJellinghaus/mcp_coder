@@ -32,12 +32,18 @@ def _run_all_checks(project_dir: Path) -> set[FailureKey]: ...
   `mcp_checker_isolation` contract forbids the external package outside the shim.
   (Tests are outside the contract and may construct library dataclasses directly.)
 - Line numbers **never** enter pylint/mypy keys (a rebase shifts lines; merely-moved
-  messages must not look new).
+  messages must not look new). Known limitation (accepted): messages that embed line
+  numbers in their *text* (e.g. mypy `already defined on line N`, pylint R0801
+  similar-lines) can still shift keys after a rebase — only matters with a red
+  baseline, bounded by the 2-attempt fix cap; do not add ad-hoc normalization.
 - Pytest: **failing outcomes are failure keys** — `failed`, `error`, and any
   unrecognized outcome. `skipped`/`xfailed`/`xpassed` are **not** keys: a rebase can
   pull new self-skipping tests in from the base branch (e.g. integration tests skipping
   in the unattended runner), and a skip or non-strict xpass the LLM cannot "fix" must
-  not read as a regression. Collection errors count as failure keys too.
+  not read as a regression. Collection errors count as failure keys too — but only
+  collectors with outcome `"failed"`: a collector outcome of `"skipped"` (module-level
+  `pytest.importorskip` / `skip(allow_module_level=True)`) is excluded for the same
+  reason as skipped tests.
 - Infrastructure vs. findings:
   - pytest `success` not `True`, or `test_results` missing → `CheckRunError`.
     **Do NOT key off `error_info`**: the library sets `error_info` for ANY non-zero
@@ -59,7 +65,8 @@ _pytest_failure_keys(results):
         raise CheckRunError
     keys = {("pytest", t.nodeid) for t in report.tests or []
             if t.outcome not in ("passed", "skipped", "xfailed", "xpassed")}
-    keys |= {("pytest", c.nodeid) for c in report.collectors or [] if c.outcome != "passed"}
+    keys |= {("pytest", c.nodeid) for c in report.collectors or []
+             if c.outcome == "failed"}   # not "skipped" — module-level skips are no regression
     return keys
 
 _pylint_failure_keys(result):
@@ -74,7 +81,7 @@ _mypy_failure_keys(result):
 _run_all_checks(project_dir):
     for wrapper, extractor in the three pairs:
         try: keys |= extractor(wrapper(project_dir))
-        except CheckRunError: raise
+        except CheckRunError as exc: raise CheckRunError(f"{name}: {exc}") from exc
         except Exception as exc: raise CheckRunError(f"{name}: {exc}") from exc
     return keys
 ```
@@ -93,7 +100,8 @@ construct library dataclasses (`PytestReport`, `Test`, `Collector`, `PylintMessa
 `PylintResult`, `MypyMessage`, `MypyResult`) directly:
 
 1. pytest keys: failed/error tests become keys, passed/skipped/xfailed/xpassed do
-   not; collector with non-passed outcome becomes a key; `success: False` (crash
+   not; collector with outcome `failed` becomes a key, collector with outcome
+   `skipped` (module-level `importorskip`) produces **no** key; `success: False` (crash
    dict without `test_results`) → `CheckRunError`; a dict with `success: True`,
    failing tests, and **non-empty `error_info`** (exit code 1) yields failure keys,
    NOT `CheckRunError`.
@@ -116,7 +124,7 @@ One commit. Suggested message:
 > Read `pr_info/steps/summary.md` for context, then implement `pr_info/steps/step_2.md`
 > exactly: add `CheckRunError`, the three `_*_failure_keys` extractors, and
 > `_run_all_checks` to `src/mcp_coder/workflows/rebase.py`, keyed as specified (pytest by
-> node ID with any non-passed outcome plus collection errors; pylint/mypy by
+> node ID with failing outcomes plus failed collectors — skipped collectors excluded; pylint/mypy by
 > file/code/message with line numbers ignored). Write
 > `tests/workflows/rebase/test_checks.py` first (TDD, pure unit tests). Do not modify the
 > existing orchestrator or any other function in `rebase.py`. Run pylint, pytest, and

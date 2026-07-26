@@ -34,9 +34,13 @@ wrapper and reduces results to a flat `set` of failure keys:
 
 - `("pytest", node_id)` for failing outcomes (`failed`/`error`/unrecognized —
   not `skipped`/`xfailed`/`xpassed`, so new self-skipping or xpassing tests from
-  base are not phantom regressions), plus collection errors
+  base are not phantom regressions), plus failed collectors; skipped collectors
+  (e.g. module-level `importorskip`) are excluded like skipped tests
 - `("pylint", path, message_id, message)` — line numbers never enter the key
 - `("mypy", file, code, message)` — line numbers never enter the key
+  (accepted limitation: messages embedding line numbers in their text — e.g. mypy
+  "already defined on line N", pylint R0801 — can still shift keys; red-baseline-only,
+  bounded by the 2-attempt fix cap)
 
 After the rebase the same checks run again; **regression = verification − baseline** (one
 set difference). Pre-existing failures never block. A check that fails to *run* (pytest crash/timeout —

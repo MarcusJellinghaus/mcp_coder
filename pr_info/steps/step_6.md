@@ -31,9 +31,12 @@ _MAX_FIX_ATTEMPTS = 2          # /rebase abort rule 5
 ## ALGORITHM — `run_rebase_workflow` (signature unchanged)
 
 ```
+OUTPUT log (first statement, before any guard): "Starting automated rebase..."
 guards (unchanged): _preflight → _resolve_base_branch → fetch_remote →
     _check_pr_info_absent_on_base → needs_rebase no-op short-circuit → pre_sha
-OUTPUT log: "Rebasing <branch> onto origin/<base>..." at the very start
+    no-op branch logs at OUTPUT (not INFO):
+        "Already current with origin/<base>; nothing to do" → exit 0
+OUTPUT log: "Rebasing <branch> onto origin/<base>..." once the base is resolved
 
 baseline:
     OUTPUT "Running baseline checks (pytest, pylint, mypy)..."
@@ -159,7 +162,8 @@ Rework `tests/workflows/rebase/test_workflow.py` first (mock at the existing bou
     `_reset_hard(pre_sha)` called, exit 1.
 8. Push rejected → reset, exit 2 (existing test survives with new mocks).
 9. Session threading: `session_id` from first LLM response passed to second call.
-10. OUTPUT logging: caplog at OUTPUT level sees start/end lines.
+10. OUTPUT logging: caplog at OUTPUT level sees start/end lines; a no-op run logs
+    the "Already current with origin/<base>; nothing to do" line at OUTPUT.
 
 Also: delete `test_decision.py`; remove "Automated Rebase" assertions from
 `test_prompt.py` (add an assertion the section is gone). Keep the SKILL.md drift

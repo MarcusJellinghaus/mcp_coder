@@ -52,3 +52,26 @@ by the user.
 11. **Stage `:1:` label leftover in summary fixed** (review finding, accepted):
     the "Design change" section now reads "common-ancestor (merge base)/ours/
     theirs", per decision 6 (never bare "base").
+
+## Round 3 (all accepted at triage)
+
+12. **Skipped collectors are not failure keys** (review finding, accepted):
+    collectors are keyed only on outcome `"failed"`; `"skipped"` (module-level
+    `pytest.importorskip` / `skip(allow_module_level=True)`) is excluded like
+    skipped tests — extends decisions 1/4 to the collector predicate. Evidence:
+    pytest-json-report serializes `CollectReport.outcome` verbatim. TDD case
+    added (skipped collector → no key).
+13. **First OUTPUT line before guards; no-op logs at OUTPUT** (review finding,
+    accepted): Step 6 logs "Starting automated rebase..." before any guard, and
+    the `needs_rebase` no-op branch logs "Already current with
+    origin/<base>; nothing to do" at OUTPUT (was INFO) — the most common run
+    must not be silent (issue defect 1). TDD case 10 extended.
+14. **`_run_all_checks` names the failing checker on every path** (review
+    finding, accepted): extractor-raised `CheckRunError` is wrapped with the
+    checker name (`raise CheckRunError(f"{name}: {exc}") from exc`), so the
+    DATA contract holds on the predicate path too.
+15. **Message-embedded line numbers are an accepted limitation** (review
+    finding, accepted): messages embedding line references in their text
+    (mypy "already defined on line N", pylint R0801) can still shift keys after
+    a rebase; red-baseline-only, bounded by the 2-attempt fix cap — no ad-hoc
+    normalization.
