@@ -32,7 +32,9 @@ contract and its parse machinery (`_parse_outcome_marker`, `_evaluate_pre_push`,
 no marker filter, library-default timeouts) through the shared `mcp_coder.mcp_tools_py`
 wrapper and reduces results to a flat `set` of failure keys:
 
-- `("pytest", node_id)` for any non-`passed` outcome, plus collection errors
+- `("pytest", node_id)` for failing outcomes (`failed`/`error`/unrecognized —
+  not `skipped`/`xfailed`, so new self-skipping tests from base are not phantom
+  regressions), plus collection errors
 - `("pylint", path, message_id, message)` — line numbers never enter the key
 - `("mypy", file, code, message)` — line numbers never enter the key
 

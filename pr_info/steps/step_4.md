@@ -39,7 +39,10 @@ Content requirements (fenced block, following the file's existing section format
 - Modeled on the existing "Mypy Fix Prompt" section (same placeholder pattern).
 - Role: the rebase introduced the regressions below (new failures vs. the pre-rebase
   baseline); fix them via MCP file tools, preserving the intent of both branches.
-- Placeholder `[regression_output]` for the concrete failure text.
+- Placeholder `[regression_output]` for the concrete failure text. Because that text
+  lists failure keys only (for pytest: bare node IDs, no tracebacks), the section must
+  instruct the LLM to re-run the granted MCP check tools (pytest/pylint/mypy) for full
+  failure detail before editing.
 - Same prohibitions: no shell, no git writes, no markers; reads via
   `mcp__mcp-workspace__git` only.
 

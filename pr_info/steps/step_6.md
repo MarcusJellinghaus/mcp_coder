@@ -65,7 +65,7 @@ try:
         result = _stage_all_and_continue(dir)
 
     OUTPUT "Verifying no regression..."
-    regressions = _run_all_checks(dir) - baseline     # CheckRunError → reset, exit 1
+    regressions = _run_all_checks(dir) - baseline     # CheckRunError → caught below
     attempt = 0; last_text = None
     while regressions and attempt < _MAX_FIX_ATTEMPTS:
         text = _format_failure_keys(regressions)
@@ -84,6 +84,11 @@ try:
     OUTPUT "Force-pushing (with lease)..."
     push (unchanged): success → OUTPUT result, exit 0
                       rejected → _reset_hard(pre_sha), exit 2
+except CheckRunError → _reset_hard(dir, pre_sha); log error, exit 1
+                                                  # verification/re-check infra failure:
+                                                  # the rebase already completed, so the
+                                                  # finally net cannot restore — explicit
+                                                  # reset to pre_sha is required
 except Exception → log error, exit 1                  # LLM/unexpected; finally net cleans up
 finally: if _is_rebase_in_progress(dir): _abort_rebase(dir)   # unchanged safety net
 ```
@@ -98,6 +103,11 @@ Notes:
 - Empty-commit edge in the fix loop: if the LLM changed nothing, the commit exits
   non-zero — harmless (re-check runs anyway; identical regressions then hit the stall
   guard or attempt cap).
+- Fix-prompt detail: `_format_failure_keys` output carries file/code/message for
+  pylint/mypy but only node IDs for pytest (no tracebacks — keys must stay
+  line-insensitive and deterministic for the stall guard). The "Rebase Regression
+  Fix" prompt therefore instructs the LLM to re-run the granted MCP check tools for
+  full failure detail before editing (see step_4.md).
 
 ## DATA
 

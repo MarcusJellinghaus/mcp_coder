@@ -30,13 +30,17 @@ def _run_all_checks(project_dir: Path) -> set[FailureKey]: ...
   result types for annotations.
 - Line numbers **never** enter pylint/mypy keys (a rebase shifts lines; merely-moved
   messages must not look new).
-- Pytest: **any non-`passed` outcome is a failure key** — `failed`, `error`, and also
-  `skipped`/`xfailed` (issue wording is literal; stable skips exist in both sets and
-  cancel out in the difference). Collection errors count as failure keys too.
+- Pytest: **failing outcomes are failure keys** — `failed`, `error`, and any
+  unrecognized outcome. `skipped`/`xfailed` are **not** keys: a rebase can pull new
+  self-skipping tests in from the base branch (e.g. integration tests skipping in the
+  unattended runner), and a skip the LLM cannot "fix" must not read as a regression.
+  Collection errors count as failure keys too.
 - Infrastructure vs. findings:
   - pytest `error_info` non-empty, or `test_results` missing → `CheckRunError`
   - pylint `result.error` set → `CheckRunError`
-  - mypy: any exception from the wrapper → `CheckRunError`
+  - mypy `result.error` set → `CheckRunError` (the library reports run failures by
+    returning `MypyResult(error=...)`, it does not raise); any exception from the
+    wrapper → `CheckRunError` too
   - findings (failed tests, lint messages, type errors) are **keys, not errors**.
 
 ## ALGORITHM
@@ -44,7 +48,8 @@ def _run_all_checks(project_dir: Path) -> set[FailureKey]: ...
 ```
 _pytest_failure_keys(results):
     if results.get("error_info") or results.get("test_results") is None: raise CheckRunError
-    keys = {("pytest", t.nodeid) for t in report.tests or [] if t.outcome != "passed"}
+    keys = {("pytest", t.nodeid) for t in report.tests or []
+            if t.outcome not in ("passed", "skipped", "xfailed")}
     keys |= {("pytest", c.nodeid) for c in report.collectors or [] if c.outcome != "passed"}
     return keys
 
@@ -53,6 +58,7 @@ _pylint_failure_keys(result):
     return {("pylint", m.path, m.message_id, m.message) for m in result.messages}
 
 _mypy_failure_keys(result):
+    if result.error: raise CheckRunError
     return {("mypy", m.file, m.code or "", m.message)
             for m in result.messages if m.severity == "error"}
 
@@ -77,10 +83,11 @@ Write `tests/workflows/rebase/test_checks.py` first — pure unit tests, no mock
 construct library dataclasses (`PytestReport`, `Test`, `Collector`, `PylintMessage`,
 `PylintResult`, `MypyMessage`, `MypyResult`) directly:
 
-1. pytest keys: failed/error/skipped tests become keys, passed does not; collector with
-   non-passed outcome becomes a key; `error_info` → `CheckRunError`.
+1. pytest keys: failed/error tests become keys, passed/skipped/xfailed do not;
+   collector with non-passed outcome becomes a key; `error_info` → `CheckRunError`.
 2. pylint keys: message → key without line/column; `error` set → `CheckRunError`.
-3. mypy keys: only `severity == "error"`; `code=None` maps to `""`.
+3. mypy keys: only `severity == "error"`; `code=None` maps to `""`; `error` set →
+   `CheckRunError`.
 4. Line-insensitivity: two messages identical except line number produce the same key.
 5. Regression semantics: `verification - baseline` flags only new keys (test with
    plain set literals — documents the comparison contract).
