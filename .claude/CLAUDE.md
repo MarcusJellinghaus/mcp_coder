@@ -122,6 +122,10 @@ This repo uses `mcp-coder-utils` for subprocess execution, logging, and redactio
 
 Be concise. If one line works, don't use three.
 
+## Asking questions
+
+Never use the AskUserQuestion tool. Ask questions as plain text in the chat.
+
 ## Obsidian knowledge base
 
 An Obsidian vault (`obsidian-dev-wiki`) is available via the `obsidian-wiki` MCP server.
