@@ -21,6 +21,49 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Layer 1 — treat `needs-auth` as non-fatal in the MCP guard ([details](./steps/step_1.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Layer 2 — positive-list scoping from the supplied `--mcp-config` ([details](./steps/step_2.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Presentation — `env_setup` probe stays `connected` on needs-auth-only ([details](./steps/step_3.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Presentation — `verify_formatting` row stays OK on needs-auth-only ([details](./steps/step_4.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Layer 3 — thread session params through the commit path ([details](./steps/step_5.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Part 2 — fallback commit message when LLM generation fails ([details](./steps/step_6.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Part 3 — review loop fails on commit/push failure ([details](./steps/step_7.md))
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review completed
+- [ ] PR summary prepared
