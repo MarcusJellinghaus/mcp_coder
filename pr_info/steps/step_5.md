@@ -54,7 +54,7 @@ def commit_changes(
 
 - `test_commit_operations.py`: `generate_commit_message_with_llm(..., mcp_config="cfg.json", settings_file="s.json", execution_dir="/x")` forwards exactly those kwargs to the mocked `prompt_llm`.
 - `test_workflow_steps/test_commit.py`: `commit_changes(..., mcp_config=..., execution_dir=..., settings_file=...)` forwards them to the mocked `generate_commit_message_with_llm`.
-- One representative caller test (extend an existing `review/core` or `ci` test's mock assertion). Do NOT add kwarg-assertion tests for every caller — mypy and existing mocks cover the one-line additions.
+- One representative caller test: extend an existing mock assertion in `tests/workflows/review/test_core.py` (the `review/core.py:260` call site). Do NOT add kwarg-assertion tests for every caller — mypy and existing mocks cover the one-line additions.
 
 ## Commit
 

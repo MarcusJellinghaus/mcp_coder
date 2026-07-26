@@ -26,17 +26,22 @@ Note on labels: `_fail` resolves `reason` via `config.failure_labels.get(reason,
 
 ```
 run_formatters(project_dir)                       # unchanged (non-fatal today; leave as-is)
-for step_name, ok in (("commit-failed", commit_changes(...)), ("push-failed", push_changes(...))):
-    # evaluate sequentially; skip push when commit already failed
-    if not ok:
-        write_round_log(project_dir, config, run_number, round_number,
-                        findings=report, decisions=str(verdict),
-                        changes=step_name, escalate_reason=step_name)
-        return _fail(config, project_dir, step_name,
-                     update_issue_labels=update_issue_labels,
-                     post_issue_comments=post_issue_comments)
+if not commit_changes(project_dir, provider, ...): # step-5 session params
+    write_round_log(project_dir, config, run_number, round_number,
+                    findings=report, decisions=str(verdict),
+                    changes="commit-failed", escalate_reason="commit-failed")
+    return _fail(config, project_dir, "commit-failed",
+                 update_issue_labels=update_issue_labels,
+                 post_issue_comments=post_issue_comments)
+if not push_changes(project_dir):                 # only reached when commit succeeded
+    write_round_log(project_dir, config, run_number, round_number,
+                    findings=report, decisions=str(verdict),
+                    changes="push-failed", escalate_reason="push-failed")
+    return _fail(config, project_dir, "push-failed",
+                 update_issue_labels=update_issue_labels,
+                 post_issue_comments=post_issue_comments)
 ```
-(Plain sequential `if not commit_changes(...)` / `if not push_changes(...)` blocks are fine — the loop above is only illustrating the shape. Push must not run when commit failed.)
+Push must not run when commit failed — the sequential shape above guarantees that via the early `return`.
 
 Keep passing the step-5 session params to `commit_changes` (already done in step 5 at this call site).
 

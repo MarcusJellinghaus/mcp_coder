@@ -33,7 +33,7 @@ The `review-plan` run for #1085 (2026-07-26) went UNSTABLE because of three stac
 | 6 | Part 2: fallback commit message in `commit_changes` |
 | 7 | Part 3: review loop fails on commit/push failure |
 
-Steps 1–5 are independent of each other. Step 7 requires step 6.
+Steps 3 and 4 depend on step 1: they import `MCP_NEEDS_AUTH_STATUS` and their tests (needs-auth-only ⇒ healthy) only pass with step 1's guard change in place. Steps 2 and 5 are independent of the others. Step 7 requires step 6. Any ordering that respects these dependencies keeps every step's checks green (one commit per step).
 
 ## Files modified (no new modules)
 
@@ -57,7 +57,7 @@ Tests (all existing files, extended):
 - `tests/cli/commands/test_verify_format_mcp_section.py` (step 4)
 - `tests/workflow_utils/test_commit_operations.py` (step 5)
 - `tests/workflow_steps/test_commit.py` (steps 5, 6)
-- `tests/workflows/review/test_core.py` (step 7)
+- `tests/workflows/review/test_core.py` (steps 5, 7)
 
 ## Quality gates (every step, via MCP tools)
 
