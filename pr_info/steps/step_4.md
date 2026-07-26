@@ -70,6 +70,13 @@ Update tests first:
    (`[conflict_context]` / `[regression_output]`) and the string
    `mcp__mcp-workspace__git`; neither contains `REBASE_OUTCOME`, `git rebase`, or
    `Bash`. Existing "Automated Rebase" tests stay (section still exists until Step 6).
+3. Re-target the existing drift test `test_prompt_conflict_strategy_matches_skill`
+   at the new "Rebase Conflict Resolution" section: assert the SKILL.md strategy
+   rows for code files / test files / config files appear in it (subset check
+   restricted to those three rows — the `pr_info/` and lockfile rows are
+   intentionally omitted because Python handles those cases). This keeps the
+   automated prompt in sync with `.claude/skills/rebase/SKILL.md` after the old
+   section (and its full-table drift check target) is deleted in Step 6.
 
 ## DATA
 

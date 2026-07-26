@@ -96,7 +96,14 @@ except CheckRunError → _reset_hard(dir, pre_sha); log error, exit 1
                                                   # the rebase already completed, so the
                                                   # finally net cannot restore — explicit
                                                   # reset to pre_sha is required
-except Exception → log error, exit 1                  # LLM/unexpected; finally net cleans up
+except Exception → if not _is_rebase_in_progress(dir): _reset_hard(dir, pre_sha)
+                   log error, exit 1              # LLM/unexpected. Mid-rebase: the
+                                                  # finally net aborts. Post-rebase
+                                                  # (regression-fix phase): explicit
+                                                  # reset — same invariant as the
+                                                  # CheckRunError-at-verification and
+                                                  # push-rejection paths: never leave a
+                                                  # rebased-but-unpushed / dirty state
 finally: if _is_rebase_in_progress(dir): _abort_rebase(dir)   # unchanged safety net
 ```
 
@@ -148,12 +155,16 @@ Rework `tests/workflows/rebase/test_workflow.py` first (mock at the existing bou
    attempt 2 → stall guard, reset to `pre_sha`, exit 1. Still failing after 2 attempts
    → reset, exit 1.
 7. Verification `CheckRunError` → reset, exit 1.
+7a. LLM timeout during a fix attempt (rebase already completed, not mid-rebase) →
+    `_reset_hard(pre_sha)` called, exit 1.
 8. Push rejected → reset, exit 2 (existing test survives with new mocks).
 9. Session threading: `session_id` from first LLM response passed to second call.
 10. OUTPUT logging: caplog at OUTPUT level sees start/end lines.
 
 Also: delete `test_decision.py`; remove "Automated Rebase" assertions from
-`test_prompt.py` (add an assertion the section is gone).
+`test_prompt.py` (add an assertion the section is gone). Keep the SKILL.md drift
+test — it was re-targeted at "Rebase Conflict Resolution" in Step 4 and must NOT
+be deleted here.
 
 ## Commit
 

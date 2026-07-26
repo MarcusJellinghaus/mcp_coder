@@ -18,8 +18,8 @@ outcome marker that Python cross-checks. After this change, **Python executes ev
 operation and every check deterministically**; the LLM is a content editor only, invoked
 for exactly two jobs, both via MCP file tools with context inlined by Python:
 
-- resolving non-`pr_info/` merge conflicts (Python inlines base/ours/theirs via
-  `git show :1:/:2:/:3:<file>` into the prompt), and
+- resolving non-`pr_info/` merge conflicts (Python inlines common-ancestor
+  (merge base)/ours/theirs via `git show :1:/:2:/:3:<file>` into the prompt), and
 - fixing regressions found by the deterministic baseline-vs-verification comparison.
 
 **Python is the judge.** Success is decided purely from repo state (no conflict markers,

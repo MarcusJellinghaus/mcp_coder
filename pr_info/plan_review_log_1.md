@@ -36,3 +36,24 @@ Note: branch is behind origin/main by one docs-only commit (5357e07, `.claude/CL
 - Decisions.md: new — logs the 8 decisions incl. user's option A.
 
 **Status**: committed
+
+## Round 2 — 2026-07-26
+
+**Findings** (fresh engineer, verified round-1 edits + full re-check against codebase):
+1. IMPROVEMENT — step_6: generic `except Exception` left a rebased-but-unpushed/dirty state when the failure happens post-rebase (regression-fix phase) — the `finally` net only covers mid-rebase. Reset to `pre_sha` instead, matching the CheckRunError/push-rejection invariant.
+2. IMPROVEMENT — step_4/6: drift test `test_prompt_conflict_strategy_matches_skill` was slated for deletion without replacement — SKILL.md ↔ prompt sync guarantee lost. Re-target at the new "Rebase Conflict Resolution" section (code/test/config rows only).
+3. COSMETIC — summary: one leftover stage-`:1:` "base" label.
+
+Verdict: plan sound; all round-1 fixes correctly applied; all codebase/library claims verified.
+
+**Decisions**: accept all 3 at triage (mechanical; finding 1 follows the plan's own reset invariant). No user escalation.
+
+**User decisions**: none needed.
+
+**Changes** (applied via /plan_update):
+- step_6.md: post-rebase exception path resets to `pre_sha` (+ TDD case 7a: LLM timeout during fix → reset, exit 1); keeps re-targeted drift test.
+- step_4.md: TDD item 3 — re-target drift test at "Rebase Conflict Resolution", subset = code/test/config rows.
+- summary.md: stage `:1:` label fixed.
+- Decisions.md: round-2 decisions 9–11 appended.
+
+**Status**: committed

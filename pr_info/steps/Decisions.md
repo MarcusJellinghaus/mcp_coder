@@ -35,3 +35,20 @@ by the user.
 8. **Red-baseline visibility** (accepted at triage): Step 6 logs an OUTPUT-level
    warning when the baseline contains pre-existing failures ("N pre-existing
    failure(s) in baseline — these will not block the rebase").
+
+## Round 2 (all accepted at triage)
+
+9. **Generic exception after a completed rebase → reset** (review finding, accepted):
+   in Step 6's `except Exception` handler, when NOT mid-rebase (LLM/unexpected
+   failure during the regression-fix phase), Python runs `_reset_hard(pre_sha)`
+   before exiting 1; the `finally` net still owns the mid-rebase case. Same
+   invariant as the CheckRunError-at-verification and push-rejection paths:
+   never leave a rebased-but-unpushed or dirty state behind. TDD case added.
+10. **SKILL.md drift test survives** (review finding, accepted): Step 4 re-targets
+    `test_prompt_conflict_strategy_matches_skill` at the "Rebase Conflict
+    Resolution" section, restricted to the code/test/config strategy rows
+    (`pr_info/` and lockfile rows intentionally omitted — Python handles those);
+    Step 6 must not delete it.
+11. **Stage `:1:` label leftover in summary fixed** (review finding, accepted):
+    the "Design change" section now reads "common-ancestor (merge base)/ours/
+    theirs", per decision 6 (never bare "base").
