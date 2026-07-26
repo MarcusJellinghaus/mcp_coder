@@ -27,8 +27,10 @@ Content requirements (fenced block, following the file's existing section format
   for code files / test files / config files (the `pr_info/` and lockfile rows are
   handled by Python and this repo has no lockfile — omit them).
 - Placeholder `[conflict_context]`: Python replaces it with, per file: path plus the
-  base (`:1:`), ours (`:2:`, base branch), theirs (`:3:`, feature branch) versions,
-  with absent sides marked (delete/modify).
+  common ancestor (merge base, `:1:`), ours (`:2:`, base branch), theirs (`:3:`,
+  feature branch) versions, with absent sides marked (delete/modify). Label stage
+  `:1:` "common ancestor (merge base)" — never bare "base", which would collide with
+  "base branch" (`:2:`) in the prompt.
 - Tools: edit via MCP file tools (`mcp__mcp-workspace__read_file`, `edit_file`,
   `save_file`, `delete_this_file`); read git state only via `mcp__mcp-workspace__git`.
 - Explicit prohibitions: no shell commands, no staging/continuing/pushing (Python does

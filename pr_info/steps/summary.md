@@ -33,14 +33,16 @@ no marker filter, library-default timeouts) through the shared `mcp_coder.mcp_to
 wrapper and reduces results to a flat `set` of failure keys:
 
 - `("pytest", node_id)` for failing outcomes (`failed`/`error`/unrecognized —
-  not `skipped`/`xfailed`, so new self-skipping tests from base are not phantom
-  regressions), plus collection errors
+  not `skipped`/`xfailed`/`xpassed`, so new self-skipping or xpassing tests from
+  base are not phantom regressions), plus collection errors
 - `("pylint", path, message_id, message)` — line numbers never enter the key
 - `("mypy", file, code, message)` — line numbers never enter the key
 
 After the rebase the same checks run again; **regression = verification − baseline** (one
-set difference). Pre-existing failures never block. A check that fails to *run* (pytest
-crash/timeout/`error_info`, pylint target error, mypy exception) raises `CheckRunError`:
+set difference). Pre-existing failures never block. A check that fails to *run* (pytest crash/timeout —
+detected as `success` not `True` or `test_results` missing, **not** via `error_info`,
+which the library sets for any non-zero pytest exit including ordinary failures;
+pylint target error; mypy exception) raises `CheckRunError`:
 at baseline time → exit 2, no git mutation; at verification time → reset + exit 1.
 
 **Conflict loop (Python-driven, per `/rebase` strategy table).** Conflicted files via
@@ -50,8 +52,12 @@ delete/modify — "keep feature version" = stays deleted), no LLM. Other files g
 LLM. Python verifies no conflict markers remain, stages with **plain `git add -A`**
 (delete/modify + adjacent-edit safety; relies on the existing convention that target
 projects gitignore `.mcp-coder/`), and continues with `git -c core.editor=true rebase
---continue` (never blocks on an editor). Abort rules from `/rebase`: binary conflict,
-markers remain, same file conflicts 3+ times, unexpected error.
+--continue` (never blocks on an editor). If `--continue` fails because the resolved
+commit became empty (all changes already on base — detected as mid-rebase, no
+conflicted files, `git diff --cached --quiet` clean), Python runs `git rebase --skip`
+(logged at OUTPUT) and continues the loop; other non-conflict failures still abort.
+Abort rules from `/rebase`: binary conflict, markers remain, same file conflicts
+3+ times, unexpected error.
 
 **Regression-fix loop** mirrors implement's `check_and_fix_mypy`: Python feeds concrete
 failure text into a fix prompt, the LLM edits, Python runs `run_format_code`, stages

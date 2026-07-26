@@ -34,11 +34,21 @@ def run_pylint_check(project_dir: Union[str, Path]) -> PylintResult:
 - Match the existing file's style: module-level imports where the existing code has
   them, lazy imports where it uses lazy imports; keep wrappers dumb (no result
   interpretation — that belongs to `workflows/rebase.py`, Step 2).
+- Re-export `PylintResult` at module level (alongside the existing `MypyResult`
+  import), plus any other result type Step 2 needs for annotations: the import-linter
+  `mcp_checker_isolation` contract forbids importing `mcp_tools_py` outside this shim,
+  so downstream code must get the types from `mcp_coder.mcp_tools_py`.
 
 ## DATA
 
-- `run_pytest_check` returns the library dict unchanged: keys `success`, `summary`,
-  `failed_tests_prompt`, `test_results` (a `PytestReport`), `error_info`.
+- `run_pytest_check` returns the library dict unchanged. Two shapes:
+  - success path: `success` (`True`), `summary`, `summary_text`,
+    `failed_tests_prompt`, `test_results` (a `PytestReport`), `error_info` —
+    `error_info` is non-`None` for ANY non-zero pytest exit, including exit 1
+    (ordinary test failures);
+  - crash path (timeout, internal/usage error, missing report):
+    `{"success": False, "error": ...}` only — no `test_results`, no `error_info`.
+    Step 2's infrastructure predicate keys off `success`/`test_results`.
 - `run_pylint_check` returns the library `PylintResult` unchanged
   (`return_code`, `messages: list[PylintMessage]`, `error`, `raw_output`).
 

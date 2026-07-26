@@ -39,6 +39,8 @@ baseline:
     OUTPUT "Running baseline checks (pytest, pylint, mypy)..."
     try: baseline = _run_all_checks(project_dir)
     except CheckRunError → log error, exit 2          # no git mutation yet
+    if baseline: OUTPUT f"{len(baseline)} pre-existing failure(s) in baseline — "
+                        "these will not block the rebase"
 
 try:
     session_id = None; env_vars = prepare_llm_environment(project_dir)
@@ -47,7 +49,12 @@ try:
     while result.returncode != 0:                     # conflict stop
         if not _is_rebase_in_progress(dir): abort → exit 1   # unexpected rebase error
         files = _conflicted_files(dir)
-        if not files: abort → exit 1                  # non-conflict failure
+        if not files:
+            if _run_git(dir, "diff", "--cached", "--quiet").returncode == 0:
+                # resolved commit became empty (all changes already on base)
+                OUTPUT "Skipping commit made redundant by rebase (already on base)..."
+                result = _run_git(dir, "rebase", "--skip"); continue
+            abort → exit 1                            # other non-conflict failure
         if _binary_conflict(dir): abort → exit 1      # rule 2
         conflict_counts.update(files)
         if any count >= _MAX_SAME_FILE_CONFLICTS: abort → exit 1   # rule 4
@@ -103,6 +110,13 @@ Notes:
 - Empty-commit edge in the fix loop: if the LLM changed nothing, the commit exits
   non-zero — harmless (re-check runs anyway; identical regressions then hit the stall
   guard or attempt cap).
+- Empty-commit stop in the conflict loop (decided: auto-skip): when a resolution
+  takes the base's version wholesale, the replayed commit becomes empty and
+  `git rebase --continue` refuses with "nothing to commit" while staying mid-rebase.
+  Python detects the state deterministically (mid-rebase, no conflicted files,
+  `git diff --cached --quiet` clean) and runs `git rebase --skip`, logging at OUTPUT
+  that the commit was skipped as redundant, then continues the loop. Only this
+  specific case skips; any other non-conflict `--continue` failure still aborts.
 - Fix-prompt detail: `_format_failure_keys` output carries file/code/message for
   pylint/mypy but only node IDs for pytest (no tracebacks — keys must stay
   line-insensitive and deterministic for the stall guard). The "Rebase Regression
@@ -127,6 +141,9 @@ Rework `tests/workflows/rebase/test_workflow.py` first (mock at the existing bou
 4. Mixed conflict → LLM called with inlined context; markers remaining after LLM →
    exit 1; markers gone → continue.
 5. Binary conflict → exit 1. Same file at 3 stops → exit 1.
+5a. Empty-commit stop (continue fails, no conflicted files, staged diff clean) →
+    `git rebase --skip` invoked, loop continues, exit 0; same state but staged diff
+    dirty → abort, exit 1.
 6. Regression fixed on attempt 1 → commit made, exit 0. Identical failure text on
    attempt 2 → stall guard, reset to `pre_sha`, exit 1. Still failing after 2 attempts
    → reset, exit 1.

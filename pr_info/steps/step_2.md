@@ -26,17 +26,25 @@ def _run_all_checks(project_dir: Path) -> set[FailureKey]: ...
 
 ## HOW
 
-- Import the three wrappers from `mcp_coder.mcp_tools_py` (Step 1) and the library
-  result types for annotations.
+- Import the three wrappers from `mcp_coder.mcp_tools_py` (Step 1) and the result
+  types (`PylintResult`, `MypyResult`) for annotations **from the shim
+  `mcp_coder.mcp_tools_py`, never from `mcp_tools_py` directly** — the import-linter
+  `mcp_checker_isolation` contract forbids the external package outside the shim.
+  (Tests are outside the contract and may construct library dataclasses directly.)
 - Line numbers **never** enter pylint/mypy keys (a rebase shifts lines; merely-moved
   messages must not look new).
 - Pytest: **failing outcomes are failure keys** — `failed`, `error`, and any
-  unrecognized outcome. `skipped`/`xfailed` are **not** keys: a rebase can pull new
-  self-skipping tests in from the base branch (e.g. integration tests skipping in the
-  unattended runner), and a skip the LLM cannot "fix" must not read as a regression.
-  Collection errors count as failure keys too.
+  unrecognized outcome. `skipped`/`xfailed`/`xpassed` are **not** keys: a rebase can
+  pull new self-skipping tests in from the base branch (e.g. integration tests skipping
+  in the unattended runner), and a skip or non-strict xpass the LLM cannot "fix" must
+  not read as a regression. Collection errors count as failure keys too.
 - Infrastructure vs. findings:
-  - pytest `error_info` non-empty, or `test_results` missing → `CheckRunError`
+  - pytest `success` not `True`, or `test_results` missing → `CheckRunError`.
+    **Do NOT key off `error_info`**: the library sets `error_info` for ANY non-zero
+    pytest exit — including exit 1 (ordinary test failures) and exit 2 (collection
+    errors, report still parsed) — while genuine infrastructure failures (timeout,
+    exit 3/4/>5, missing report) take the exception path and return
+    `{"success": False, "error": ...}` with no `test_results` key.
   - pylint `result.error` set → `CheckRunError`
   - mypy `result.error` set → `CheckRunError` (the library reports run failures by
     returning `MypyResult(error=...)`, it does not raise); any exception from the
@@ -47,9 +55,10 @@ def _run_all_checks(project_dir: Path) -> set[FailureKey]: ...
 
 ```
 _pytest_failure_keys(results):
-    if results.get("error_info") or results.get("test_results") is None: raise CheckRunError
+    if results.get("success") is not True or results.get("test_results") is None:
+        raise CheckRunError
     keys = {("pytest", t.nodeid) for t in report.tests or []
-            if t.outcome not in ("passed", "skipped", "xfailed")}
+            if t.outcome not in ("passed", "skipped", "xfailed", "xpassed")}
     keys |= {("pytest", c.nodeid) for c in report.collectors or [] if c.outcome != "passed"}
     return keys
 
@@ -83,8 +92,11 @@ Write `tests/workflows/rebase/test_checks.py` first — pure unit tests, no mock
 construct library dataclasses (`PytestReport`, `Test`, `Collector`, `PylintMessage`,
 `PylintResult`, `MypyMessage`, `MypyResult`) directly:
 
-1. pytest keys: failed/error tests become keys, passed/skipped/xfailed do not;
-   collector with non-passed outcome becomes a key; `error_info` → `CheckRunError`.
+1. pytest keys: failed/error tests become keys, passed/skipped/xfailed/xpassed do
+   not; collector with non-passed outcome becomes a key; `success: False` (crash
+   dict without `test_results`) → `CheckRunError`; a dict with `success: True`,
+   failing tests, and **non-empty `error_info`** (exit code 1) yields failure keys,
+   NOT `CheckRunError`.
 2. pylint keys: message → key without line/column; `error` set → `CheckRunError`.
 3. mypy keys: only `severity == "error"`; `code=None` maps to `""`; `error` set →
    `CheckRunError`.

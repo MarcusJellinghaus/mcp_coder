@@ -44,8 +44,9 @@ def _format_failure_keys(keys: set[FailureKey]) -> str: ...
   threads the session onward.
 - `_build_conflict_prompt` loads the "Rebase Conflict Resolution" section via
   `get_prompt` and replaces `[conflict_context]` with per-file blocks built from
-  `_show_stage` (Step 3): path, then base/ours/theirs contents in fenced blocks, absent
-  sides rendered as `(absent — file does not exist on this side)`.
+  `_show_stage` (Step 3): path, then common-ancestor (merge base)/ours/theirs contents
+  in fenced blocks, absent sides rendered as
+  `(absent — file does not exist on this side)`.
 - `_build_regression_fix_prompt` loads "Rebase Regression Fix" and replaces
   `[regression_output]`.
 - `_format_failure_keys` renders a key set as sorted, one-per-line text

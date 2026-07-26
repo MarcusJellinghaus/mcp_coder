@@ -38,8 +38,9 @@ _has_conflict_markers:  read file text (utf-8, errors="replace"); True if any li
                         (legitimately deleted during resolution)
 _show_stage(stage, file):
                         git show :<stage>:<file> → stdout, or None on non-zero exit
-                        (side absent, e.g. delete/modify) — stages: 1=base, 2=ours
-                        (branch rebased onto), 3=theirs (feature commits)
+                        (side absent, e.g. delete/modify) — stages: 1=common ancestor
+                        (merge base), 2=ours (base branch, rebased onto), 3=theirs
+                        (feature commits)
 _stage_all_and_continue:
                         git add -A            # plain, no pathspec — see summary
                         git -c core.editor=true rebase --continue
@@ -55,6 +56,12 @@ Notes:
   blocks on an editor. `_run_git` itself is not modified.
 - `=======` alone must NOT count as a conflict marker (it appears in legitimate text,
   e.g. markdown underlines); only the seven-char `<<<<<<< ` / `>>>>>>> ` line prefixes.
+- `_binary_conflict` **must be verified against real git behavior** (the two
+  integration tests below): at a conflict stop, bare `git diff --numstat` output for
+  unmerged paths is not guaranteed to distinguish binary from text. If it proves
+  ambiguous (e.g. `-`/`-` for every unmerged path, or unmerged paths omitted), fall
+  back to stage-blob comparison: `git ls-files -u` for the stage SHAs, then blob-level
+  `git diff --numstat <ours-sha> <theirs-sha>` (where `-` reliably means binary).
 
 ## DATA
 
@@ -75,7 +82,11 @@ Extend `tests/workflows/rebase/test_git_helpers.py` first:
    three versions; a `pr_info/` conflict resolves via `--theirs`; a delete/modify
    `pr_info/` conflict falls back to `git rm`; `_stage_all_and_continue` finishes a
    single-conflict rebase.
-2. Plain unit tests: `_has_conflict_markers` on temp files — real markers → True,
+2. `_binary_conflict` integration tests (`git_integration`, both mandatory — a false
+   positive here would abort every LLM conflict resolution):
+   - text-file conflict → `_binary_conflict(...)` returns `None`;
+   - binary-file conflict (conflicting NUL-byte blobs) → returns the path.
+3. Plain unit tests: `_has_conflict_markers` on temp files — real markers → True,
    markdown `=======` underline → False, missing file → False.
 
 ## Commit
