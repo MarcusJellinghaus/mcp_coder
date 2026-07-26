@@ -11,6 +11,7 @@ import textwrap
 from typing import Any, cast
 
 from ...llm.providers.claude.claude_mcp_guard import (
+    MCP_NEEDS_AUTH_STATUS,
     find_exposed_mcp_tools,
     find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
@@ -360,6 +361,11 @@ def _format_tools_exposed_section(
           - ``None``  -> a server is pending (WARN only; never fails the build)
           - ``False`` -> a server is fatal (failed/unknown) OR
             connected-but-0-tools
+
+        ``needs-auth`` servers (unauthenticated claude.ai account connectors)
+        are excluded from the health assessment: needs-auth-only yields the
+        same outcome as all-connected (subject to the 0-tools check), with
+        the connectors listed on an extra labeled info line.
     """
     label = "MCP tools exposed to model"
     if system_message is None:
@@ -377,7 +383,10 @@ def _format_tools_exposed_section(
     guard_msg = cast(Any, system_message)
     fatal = find_fatal_mcp_servers(guard_msg)
     unavailable = find_unavailable_mcp_servers(guard_msg)
-    pending = {k: v for k, v in unavailable.items() if k not in fatal}
+    needs_auth = {k: v for k, v in unavailable.items() if v == MCP_NEEDS_AUTH_STATUS}
+    pending = {
+        k: v for k, v in unavailable.items() if k not in fatal and k not in needs_auth
+    }
     tools = find_exposed_mcp_tools(guard_msg)
     names = [
         str(s["name"])
@@ -414,4 +423,10 @@ def _format_tools_exposed_section(
     lines = [_format_row(label, marker, value, indent=2)]
     if hint is not None:
         lines.append(f"{' ' * _VALUE_COLUMN_INDENT}{hint}")
+    if needs_auth:
+        note = (
+            "-> unauthenticated account connector(s), "
+            f"not part of health assessment: {sorted(needs_auth)}"
+        )
+        lines.append(f"{' ' * _VALUE_COLUMN_INDENT}{note}")
     return lines, ok
