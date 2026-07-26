@@ -65,6 +65,7 @@ memory/
 # VSCodeClaude session files (auto-generated)
 .vscodeclaude_status.txt
 .vscodeclaude_analysis.json
+.vscodeclaude_session.json
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh
 
