@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from mcp_coder.cli.commands.coordinator import (
+    WORKFLOW_MAPPING,
     dispatch_workflow,
     get_cached_eligible_issues,
     get_eligible_issues,
@@ -701,6 +702,94 @@ class TestDispatchWorkflow:
             123, "status-05:plan-ready"
         )
         mock_issue_mgr.add_labels.assert_called_once_with(123, "status-06:implementing")
+
+
+class TestDispatchWorkflowSilentFallthroughGuard:
+    """Behavioral guard: every WORKFLOW_MAPPING workflow dispatches its own verb.
+
+    A workflow present in WORKFLOW_MAPPING but missing from WORKFLOW_TEMPLATES
+    would raise KeyError at dispatch (loud failure) instead of silently
+    misrouting to create-pr. This test drives dispatch_workflow for every
+    distinct workflow on both executor_os arms and asserts the COMMAND passed
+    to Jenkins carries that workflow's CLI verb.
+    """
+
+    @staticmethod
+    def _make_issue(pickup_label: str) -> IssueData:
+        """Build a minimal open IssueData carrying the given pickup label.
+
+        Returns:
+            IssueData with the pickup label applied.
+        """
+        return {
+            "number": 777,
+            "title": "Guard issue",
+            "body": "",
+            "state": "open",
+            "labels": [pickup_label],
+            "assignees": [],
+            "user": "testuser",
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z",
+            "url": "https://github.com/test/repo/issues/777",
+            "locked": False,
+        }
+
+    @pytest.mark.parametrize("executor_os", ["windows", "linux"])
+    @pytest.mark.parametrize(
+        "pickup_label,config",
+        list(WORKFLOW_MAPPING.items()),
+        ids=[config["workflow"] for config in WORKFLOW_MAPPING.values()],
+    )
+    @patch("mcp_coder.cli.commands.coordinator.core.RepoIdentifier")
+    def test_each_workflow_dispatches_its_verb(
+        self,
+        mock_repo_id_cls: MagicMock,
+        pickup_label: str,
+        config: dict[str, str],
+        executor_os: str,
+    ) -> None:
+        """The COMMAND for each workflow contains that workflow's CLI verb."""
+        workflow = config["workflow"]
+
+        issue = self._make_issue(pickup_label)
+
+        repo_config = {
+            "repo_url": "https://github.com/test/repo.git",
+            "executor_job_path": "Tests/executor",
+            "github_credentials_id": "github-pat",
+            "executor_os": executor_os,
+        }
+
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        # Branch resolution (used by from_issue strategies)
+        mock_repo_id = MagicMock(owner="test", repo_name="repo")
+        mock_repo_id_cls.from_repo_url.return_value = mock_repo_id
+        mock_branch_mgr.get_branch_with_pr_fallback.return_value = "feature/issue-777"
+
+        mock_jenkins.start_job.return_value = 12345
+        mock_jenkins.get_job_status.return_value = MagicMock(url=None)
+        mock_jenkins._client.server = "https://jenkins.test.com"
+
+        dispatch_workflow(
+            issue=issue,
+            workflow_name=workflow,
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        mock_jenkins.start_job.assert_called_once()
+        params = mock_jenkins.start_job.call_args[0][1]
+        command = params["COMMAND"]
+        assert (
+            f"mcp-coder --log-level INFO {workflow} " in command
+        ), f"COMMAND for {workflow!r} ({executor_os}) missing its verb"
 
 
 class TestCacheFilePath:

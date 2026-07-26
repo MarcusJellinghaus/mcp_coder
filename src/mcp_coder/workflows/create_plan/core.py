@@ -21,10 +21,7 @@ from mcp_coder.mcp_workspace_git import (
     git_push,
     is_working_directory_clean,
 )
-from mcp_coder.mcp_workspace_github import (
-    IssueData,
-    IssueManager,
-)
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.workflow_utils.failure_handling import (
@@ -36,7 +33,6 @@ from mcp_coder.workflow_utils.failure_handling import (
     get_diff_stat,
     handle_workflow_failure,
 )
-from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 from .constants import FailureCategory, WorkflowFailure
 from .prerequisites import (
@@ -44,6 +40,7 @@ from .prerequisites import (
     check_prerequisites,
     create_pr_info_structure,
     manage_branch,
+    update_success_label,
 )
 
 # Setup logger
@@ -726,25 +723,7 @@ def run_create_plan_workflow(
 
     # Update GitHub issue label if requested
     if update_issue_labels:
-        logger.info("Updating GitHub issue label...")
-        try:
-            issue_manager = IssueManager(project_dir)
-            success = update_workflow_label(
-                issue_manager,
-                from_label_id="planning",
-                to_label_id="plan_review",
-                validated_issue_number=issue_number,
-            )
-
-            if success:
-                logger.info("✓ Issue label updated: planning → plan-review")
-            else:
-                logger.warning("✗ Failed to update issue label (non-blocking)")
-
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            logger.error(f"Error updating issue label (non-blocking): {e}")
+        update_success_label(project_dir, issue_number)
 
     logger.info("Create plan workflow completed successfully!")
     return 0

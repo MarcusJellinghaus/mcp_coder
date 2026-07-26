@@ -18,6 +18,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailable
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_full_status
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.utils.pyproject_config import get_implement_config
+from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import (
     commit_changes,
@@ -433,11 +434,16 @@ def run_implement_workflow(
         # Step 6: Success label transition
         if update_issue_labels:
             try:
+                to_label_id = (
+                    "code_review_bot"
+                    if get_repo_flag(project_dir, "auto_review_implementation")
+                    else "code_review"
+                )
                 issue_manager = IssueManager(project_dir)
                 update_workflow_label(
                     issue_manager,
                     from_label_id="implementing",
-                    to_label_id="code_review",
+                    to_label_id=to_label_id,
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.warning("Failed to update issue label on success: %s", exc)

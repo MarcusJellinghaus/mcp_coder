@@ -88,18 +88,18 @@ api_token = "your-jenkins-api-token"
 
 [coordinator.repos.repo_a]
 repo_url = "https://github.com/your-org/repo_a.git"
-executor_test_path = "jenkins_folder_a/test-job-a"
+executor_job_path = "jenkins_folder_a/test-job-a"
 github_credentials_id = "github-general-pat"
 
 [coordinator.repos.repo_b]
 repo_url = "https://github.com/your-org/repo_b.git"
-executor_test_path = "jenkins_folder_b/test-job-b"
+executor_job_path = "jenkins_folder_b/test-job-b"
 github_credentials_id = "github-general-pat"
 
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
 # repo_url = "https://github.com/your-org/your_repo.git"
-# executor_test_path = "Folder/job-name"
+# executor_job_path = "Folder/job-name"
 # github_credentials_id = "github-credentials-id"
 ```
 
@@ -441,16 +441,18 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 | Field | Type | Description | Required | Default |
 |-------|------|-------------|----------|---------|
 | `repo_url` | string | Git repository HTTPS URL | Yes | — |
-| `executor_test_path` | string | Jenkins job path (folder/job-name) | Yes | — |
+| `executor_job_path` | string | Jenkins job path (folder/job-name) | Yes | — |
 | `github_credentials_id` | string | Jenkins GitHub credentials ID (see setup below) | Yes | — |
 | `update_issue_labels` | boolean | Update GitHub issue labels on workflow success/failure | No | `false` |
 | `post_issue_comments` | boolean | Post GitHub comments on workflow failure | No | `false` |
+| `auto_review_plan` | boolean | Gate automated plan review (routes create-plan success to `status-14:plan-review-bot` for coordinator pickup). | No | `false` |
+| `auto_review_implementation` | boolean | Gate automated implementation review (routes implement success to `status-17:code-review-bot` for coordinator pickup). | No | `false` |
 
 **Example:**
 ```toml
 [coordinator.repos.my_project]
 repo_url = "https://github.com/myorg/my_project.git"
-executor_test_path = "MyProject/integration-tests"
+executor_job_path = "MyProject/integration-tests"
 github_credentials_id = "github-pat-token"
 update_issue_labels = true
 post_issue_comments = true
@@ -491,7 +493,7 @@ Use the **ID** from step 2 as the `github_credentials_id` in your repository con
 ```toml
 [coordinator.repos.my_project]
 repo_url = "https://github.com/myorg/my_project.git"
-executor_test_path = "MyProject/integration-tests"
+executor_job_path = "MyProject/integration-tests"
 github_credentials_id = "github-general-pat"  # ← The ID from Jenkins
 ```
 
@@ -771,14 +773,14 @@ Add it to config file under [coordinator.repos.nonexistent_repo]
 ```toml
 [coordinator.repos.nonexistent_repo]
 repo_url = "https://github.com/your-org/repo.git"
-executor_test_path = "Folder/job-name"
+executor_job_path = "Folder/job-name"
 github_credentials_id = "github-credentials-id"
 ```
 
 ### Error: Missing required field
 
 ```
-Error: Repository 'mcp_coder' missing required field 'executor_test_path'
+Error: Repository 'mcp_coder' missing required field 'executor_job_path'
 ```
 
 **Solution:** Ensure all three fields are present in repository config.
@@ -896,7 +898,7 @@ api_token = "your-api-token"
 
 [coordinator.repos.my_project]
 repo_url = "https://github.com/myorg/my_project.git"
-executor_test_path = "MyProject/integration-tests"
+executor_job_path = "MyProject/integration-tests"
 github_credentials_id = "github-pat"
 ```
 
@@ -913,7 +915,7 @@ api_token = "dev-token-123"
 
 [coordinator.repos.active_project]
 repo_url = "https://github.com/myorg/active_project.git"
-executor_test_path = "Development/test-job"
+executor_job_path = "Development/test-job"
 github_credentials_id = "github-dev-token"
 ```
 
@@ -930,7 +932,7 @@ api_token = "prod-secure-token"
 
 [coordinator.repos.stable_service]
 repo_url = "https://github.com/company/stable_service.git"
-executor_test_path = "Production/integration-suite"
+executor_job_path = "Production/integration-suite"
 github_credentials_id = "github-prod-pat"
 ```
 
@@ -948,19 +950,19 @@ api_token = "company-jenkins-token"
 # Active development repository - more frequent updates
 [coordinator.repos.frontend_app]
 repo_url = "https://github.com/company/frontend-app.git"
-executor_test_path = "Frontend/test-suite"
+executor_job_path = "Frontend/test-suite"
 github_credentials_id = "github-frontend-pat"
 
 # Backend service - moderate activity
 [coordinator.repos.backend_api]
 repo_url = "https://github.com/company/backend-api.git"
-executor_test_path = "Backend/api-tests"
+executor_job_path = "Backend/api-tests"
 github_credentials_id = "github-backend-pat"
 
 # Infrastructure repository - infrequent changes
 [coordinator.repos.infrastructure]
 repo_url = "https://github.com/company/infrastructure.git"
-executor_test_path = "Infrastructure/validation"
+executor_job_path = "Infrastructure/validation"
 github_credentials_id = "github-infra-pat"
 ```
 
@@ -984,7 +986,7 @@ github_credentials_id = "github-infra-pat"
    ```toml
    [coordinator.repos.new_repo]
    repo_url = "https://github.com/org/new_repo.git"
-   executor_test_path = "NewRepo/test-job"
+   executor_job_path = "NewRepo/test-job"
    github_credentials_id = "github-credentials"
    ```
 

@@ -191,6 +191,46 @@ ls -la logs
 exit $RC
 """
 
+REVIEW_PLAN_COMMAND_TEMPLATE: str = """git checkout {branch_name}
+git pull
+export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --extra types
+mcp-coder --log-level {log_level} review-plan --project-dir /workspace/repo --mcp-config .mcp.json
+RC=$?
+echo RC=$RC
+
+mcp-coder gh-tool set-status status-14f:plan-review-failed --from-status status-14i:plan-reviewing --project-dir /workspace/repo --force || true
+
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
+
+exit $RC
+"""
+
+REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE: str = """git checkout {branch_name}
+git pull
+export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --extra types
+mcp-coder --log-level {log_level} review-implementation --project-dir /workspace/repo --mcp-config .mcp.json
+RC=$?
+echo RC=$RC
+
+mcp-coder gh-tool set-status status-17f:code-review-failed --from-status status-17i:code-reviewing --project-dir /workspace/repo --force || true
+
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
+
+exit $RC
+"""
+
 # Windows workflow command templates
 # Note: Using raw strings (r""") for cleaner Windows path handling
 CREATE_PLAN_COMMAND_WINDOWS: str = r"""@echo ON
@@ -307,9 +347,104 @@ dir logs
 exit /b %RC%
 """
 
-# Priority order for processing issues (highest to lowest)
+REVIEW_PLAN_COMMAND_WINDOWS: str = r"""@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+set DISABLE_AUTOUPDATER=1
+set MCP_TIMEOUT=30000
+
+echo Install type stubs in project environment ====================
+uv sync --project %WORKSPACE%\repo --extra types
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} review-plan --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
+set RC=%ERRORLEVEL%
+echo RC=%RC%
+
+mcp-coder gh-tool set-status status-14f:plan-review-failed --from-status status-14i:plan-reviewing --project-dir %WORKSPACE%\repo --force
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
+
+exit /b %RC%
+"""
+
+REVIEW_IMPLEMENTATION_COMMAND_WINDOWS: str = r"""@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+set DISABLE_AUTOUPDATER=1
+set MCP_TIMEOUT=30000
+
+echo Install type stubs in project environment ====================
+uv sync --project %WORKSPACE%\repo --extra types
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} review-implementation --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
+set RC=%ERRORLEVEL%
+echo RC=%RC%
+
+mcp-coder gh-tool set-status status-17f:code-review-failed --from-status status-17i:code-reviewing --project-dir %WORKSPACE%\repo --force
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
+
+exit /b %RC%
+"""
+
+# Data-driven workflow dispatch table.
+# Maps a workflow name to its (linux_template, windows_template) pair so the
+# coordinator can select templates by lookup instead of mirrored if/elif ladders.
+# An unknown workflow raises KeyError at dispatch instead of silently misrouting.
+WORKFLOW_TEMPLATES: dict[str, tuple[str, str]] = {
+    # workflow name -> (linux_template, windows_template)
+    "create-plan": (CREATE_PLAN_COMMAND_TEMPLATE, CREATE_PLAN_COMMAND_WINDOWS),
+    "implement": (IMPLEMENT_COMMAND_TEMPLATE, IMPLEMENT_COMMAND_WINDOWS),
+    "create-pr": (CREATE_PR_COMMAND_TEMPLATE, CREATE_PR_COMMAND_WINDOWS),
+    "review-plan": (REVIEW_PLAN_COMMAND_TEMPLATE, REVIEW_PLAN_COMMAND_WINDOWS),
+    "review-implementation": (
+        REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
+        REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
+    ),
+}
+
+# Priority order for processing issues (highest to lowest).
+# Each review step sits just below the stage it unblocks: 08 -> 17 -> 05 -> 14 -> 02.
 PRIORITY_ORDER: list[str] = [
-    "status-08:ready-pr",
-    "status-05:plan-ready",
-    "status-02:awaiting-planning",
+    "status-08:ready-pr",  # create-pr (closest to done)
+    "status-17:code-review-bot",  # review-implementation
+    "status-05:plan-ready",  # implement
+    "status-14:plan-review-bot",  # review-plan
+    "status-02:awaiting-planning",  # create-plan (furthest from done)
 ]
