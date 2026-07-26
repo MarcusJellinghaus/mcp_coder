@@ -6,7 +6,7 @@ REM This script reads the MLflow configuration and starts the UI accordingly
 echo Reading MLflow configuration from config.toml...
 
 REM Use Python helper to read tracking_uri from config.toml
-for /f "usebackq delims=" %%i in (`python tools\get_mlflow_config.py 2^>nul`) do set TRACKING_URI=%%i
+for /f "usebackq delims=" %%i in (`python tools\mlflow\get_mlflow_config.py 2^>nul`) do set TRACKING_URI=%%i
 
 REM Fallback to default if Python script fails
 if "!TRACKING_URI!"=="" (

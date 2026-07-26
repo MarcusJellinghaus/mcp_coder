@@ -5,10 +5,10 @@ Shows the full tool call trace for a specific run, useful for debugging
 why a step failed or understanding what Claude did during implementation.
 
 Usage:
-    python tools/inspect_mlflow_run.py <run_id>
-    python tools/inspect_mlflow_run.py <run_id> --step 2
-    python tools/inspect_mlflow_run.py <run_id> --show-content
-    python tools/inspect_mlflow_run.py <run_id> --filter save_file
+    python tools/mlflow/inspect_mlflow_run.py <run_id>
+    python tools/mlflow/inspect_mlflow_run.py <run_id> --step 2
+    python tools/mlflow/inspect_mlflow_run.py <run_id> --show-content
+    python tools/mlflow/inspect_mlflow_run.py <run_id> --filter save_file
 """
 
 import argparse

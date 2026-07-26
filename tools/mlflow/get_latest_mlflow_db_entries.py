@@ -5,17 +5,17 @@ This script queries the MLflow SQLite database and displays recent runs
 with their parameters, metrics, and artifact locations.
 
 Usage:
-    python tools/get_latest_mlflow_db_entries.py [--limit N] [--experiment NAME]
+    python tools/mlflow/get_latest_mlflow_db_entries.py [--limit N] [--experiment NAME]
 
 Examples:
     # Show last 5 runs
-    python tools/get_latest_mlflow_db_entries.py
+    python tools/mlflow/get_latest_mlflow_db_entries.py
 
     # Show last 10 runs
-    python tools/get_latest_mlflow_db_entries.py --limit 10
+    python tools/mlflow/get_latest_mlflow_db_entries.py --limit 10
 
     # Show runs from specific experiment
-    python tools/get_latest_mlflow_db_entries.py --experiment mcp-coder-conversations
+    python tools/mlflow/get_latest_mlflow_db_entries.py --experiment mcp-coder-conversations
 """
 
 import argparse

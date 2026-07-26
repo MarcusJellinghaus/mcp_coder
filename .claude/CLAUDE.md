@@ -33,14 +33,17 @@
 | Run ruff check | `mcp__mcp-tools-py__run_ruff_check` |
 | Run ruff fix | `mcp__mcp-tools-py__run_ruff_fix` |
 | Run bandit | `mcp__mcp-tools-py__run_bandit_check` |
+| Run tach | `mcp__mcp-tools-py__run_tach_check` |
 | Format code (black+isort) | `mcp__mcp-tools-py__run_format_code` |
-| Get library source | `mcp__mcp-tools-py__get_library_source` |
+| Get library source of installed deps (never `python -c "__file__"` + cat site-packages) | `mcp__mcp-tools-py__get_library_source` |
 | Refactoring | `mcp__mcp-tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
-| Git read-only (fetch, ls-tree, show, ls-files, ls-remote, rev-parse, branch list) | `mcp__mcp-workspace__git` |
+| Git read-only (status, diff, log, show, fetch, ls-tree, ls-files, ls-remote, rev-parse, branch list) | `mcp__mcp-workspace__git` |
 | `gh issue view` | `mcp__mcp-workspace__github_issue_view` |
 | `gh issue list` | `mcp__mcp-workspace__github_issue_list` |
 | `gh pr view` | `mcp__mcp-workspace__github_pr_view` |
 | `gh search` | `mcp__mcp-workspace__github_search` |
+
+Sibling repos (`mcp-workspace`, `mcp-tools-py`, `mcp-config`, `mcp-tools-sql`, `mcp-coder-utils`) are registered as reference projects — use the reference tools / `git` `reference_name`, never `cat`/`grep` on site-packages or `git -C`.
 
 ## Code quality checks
 
@@ -75,7 +78,9 @@ When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 **Allowed commands via Bash tool.** These have no MCP equivalent — use Bash directly. Skills that instruct bash commands (e.g. `git commit`) must also use Bash.
 
 ```
-git commit / add / rebase / push
+git commit / add / rebase / push / checkout -b / branch
+gh issue create / edit / comment (labels only via set-status)
+gh pr create · gh api (read-only)
 mcp-coder gh-tool set-status <label>
 ```
 

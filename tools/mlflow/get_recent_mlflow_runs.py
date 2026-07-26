@@ -10,7 +10,7 @@ from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
 def get_db_path() -> Path:
     """Get the MLflow database path."""
-    # Read from config using the same logic as get_mlflow_config.py
+    # Read from config using the same logic as tools/mlflow/get_mlflow_config.py
     import os
 
     try:

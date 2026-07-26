@@ -21,12 +21,15 @@ Internal scripts for inspecting mcp-coder's own LLM call history during developm
 
 | File | Purpose |
 |---|---|
-| `tools/start_mlflow.sh` / `.bat` | Start the local mlflow tracking server |
-| `tools/get_mlflow_config.py` | Read mlflow config |
-| `tools/get_latest_mlflow_db_entries.py` | Inspect recent mlflow DB entries |
-| `tools/get_recent_mlflow_runs.py` | List recent mlflow runs |
-| `tools/inspect_mlflow_run.py` | Inspect a specific mlflow run |
-| `tools/search_mlflow_artifacts.py` | Search mlflow artifacts |
+| `tools/mlflow/start_mlflow.sh` / `.bat` | Start the local mlflow tracking server |
+| `tools/mlflow/get_mlflow_config.py` | Read mlflow config |
+| `tools/mlflow/get_latest_mlflow_db_entries.py` | Inspect recent mlflow DB entries |
+| `tools/mlflow/get_recent_mlflow_runs.py` | List recent mlflow runs |
+| `tools/mlflow/inspect_mlflow_run.py` | Inspect a specific mlflow run |
+| `tools/mlflow/search_mlflow_artifacts.py` | Search mlflow artifacts |
+| `tools/mlflow/extract_permission_events.py` / `analyze_permission_events.py` | Harvest & analyse permission (denial) events |
+
+See [`tools/mlflow/README.md`](../../tools/mlflow/README.md) for the full list.
 
 ## Other Internal Scripts
 

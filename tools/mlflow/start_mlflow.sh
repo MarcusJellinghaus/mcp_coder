@@ -7,7 +7,7 @@ set -e
 echo "Reading MLflow configuration from config.toml..."
 
 # Use Python helper to read tracking_uri from config.toml
-TRACKING_URI=$(python3 tools/get_mlflow_config.py 2>/dev/null || true)
+TRACKING_URI=$(python3 tools/mlflow/get_mlflow_config.py 2>/dev/null || true)
 
 # Fallback to default if Python script fails
 if [ -z "$TRACKING_URI" ]; then
