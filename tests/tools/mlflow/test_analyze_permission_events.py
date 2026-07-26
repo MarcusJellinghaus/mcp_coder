@@ -55,25 +55,37 @@ def _event(**overrides: Any) -> Dict[str, Any]:
 
 
 @pytest.mark.parametrize(
-    "tool_name, expected",
+    "tool_name, mcp_servers, expected",
     [
-        ("mcp__mcp-workspace__read_file", "current"),
-        ("mcp__workspace__search_files", "legacy"),
-        ("mcp__tools-py__run_ruff_check", "legacy"),
-        ("Bash", "native"),
+        # Data-driven: server segment matched against the run's connected servers.
+        ("mcp__mcp-workspace__read_file", "mcp-workspace,mcp-tools-py", "current"),
+        ("mcp__workspace__search_files", "mcp-workspace,mcp-tools-py", "legacy"),
+        # A server that is neither connected nor a legacy rename is NOT "legacy"
+        # (regression: non-mcp-* servers used to be misclassified by prefix).
+        ("mcp__obsidian-wiki__read-note", "mcp-workspace", "unknown_server"),
+        ("Bash", "mcp-workspace", "native"),
+        # Fallback prefix heuristic for datasets without mcp_servers.
+        ("mcp__mcp-workspace__read_file", "", "current"),
+        ("mcp__tools-py__run_ruff_check", "", "legacy"),
+        ("Bash", "", "native"),
     ],
 )
-def test_prefix_era(tool_name: str, expected: str) -> None:
-    assert analyze.prefix_era(tool_name) == expected
+def test_name_era(tool_name: str, mcp_servers: str, expected: str) -> None:
+    event = _event(tool_name=tool_name, mcp_servers=mcp_servers)
+    assert analyze.name_era(event) == expected
 
 
 def test_gap_class() -> None:
     # Connected but not permitted -> real allow-list gap.
     assert analyze.gap_class(_event(was_available=True)) == "allowlist_gap"
-    # Not connected + legacy prefix -> naming mismatch.
+    # Not connected + legacy name for a connected mcp-* server -> naming mismatch.
     assert (
         analyze.gap_class(
-            _event(was_available=False, tool_name="mcp__workspace__search_files")
+            _event(
+                was_available=False,
+                tool_name="mcp__workspace__search_files",
+                mcp_servers="mcp-workspace",
+            )
         )
         == "naming_mismatch"
     )
@@ -82,6 +94,34 @@ def test_gap_class() -> None:
         analyze.gap_class(_event(was_available=False, tool_name="Bash"))
         == "not_connected"
     )
+    # A denial for a server that isn't connected at all is not a naming mismatch.
+    assert (
+        analyze.gap_class(
+            _event(
+                was_available=False,
+                tool_name="mcp__obsidian-wiki__read-note",
+                mcp_servers="mcp-workspace",
+            )
+        )
+        == "not_connected"
+    )
+    # Interactive events are human rejections, not config gaps.
+    assert (
+        analyze.gap_class(_event(source="interactive", was_available=None))
+        == "user_rejection"
+    )
+
+
+def test_denial_events_filters_interactive_non_denials() -> None:
+    events = [
+        _event(),  # headless: a denial by construction
+        _event(source="interactive", outcome="executed"),
+        _event(source="interactive", outcome="denied_by_user"),
+        _event(source="interactive", outcome="error"),
+    ]
+    kept = analyze.denial_events(events)
+    assert len(kept) == 2
+    assert {e.get("outcome") for e in kept} == {None, "denied_by_user"}
 
 
 def test_cluster_by_handles_missing() -> None:
@@ -122,8 +162,8 @@ def test_summarize_shape() -> None:
     assert summary["total_events"] == 3
     assert summary["total_runs"] == 1
     assert summary["recovered"] == 1
-    assert summary["by_prefix_era"]["legacy"] == 2
-    assert summary["by_prefix_era"]["current"] == 1
+    assert summary["by_name_era"]["legacy"] == 2
+    assert summary["by_name_era"]["current"] == 1
     assert summary["by_gap_class"]["allowlist_gap"] == 3
 
 

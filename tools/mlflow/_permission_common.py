@@ -98,6 +98,7 @@ def analyze_followup(
     order = [c[0] for c in calls]
     followup_action = "none (last call in step)"
     next_tool = ""
+    eventually_succeeded = False
     if target_id in order:
         k = order.index(target_id)
         if k + 1 < len(calls):
@@ -107,13 +108,14 @@ def analyze_followup(
                 if next_tool == target_name
                 else f"switched_to:{next_tool}"
             )
-    eventually_succeeded = False
-    for cid, name, inp in calls:
-        if name == target_name and inp == target_input:
-            r = results.get(cid)
-            if r and not r["is_error"]:
-                eventually_succeeded = True
-                break
+        # Only calls AFTER the target count as recovery — the target itself and
+        # earlier identical calls must not mark this one as recovered.
+        for cid, name, inp in calls[k + 1 :]:
+            if name == target_name and inp == target_input:
+                r = results.get(cid)
+                if r and not r["is_error"]:
+                    eventually_succeeded = True
+                    break
     return {
         "followup_action": followup_action,
         "next_tool": next_tool,

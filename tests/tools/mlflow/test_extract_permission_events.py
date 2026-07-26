@@ -8,6 +8,10 @@ The script lives outside pythonpath = ["src"], so it's loaded by file path
 (same approach as tests/tools/test_install_py.py).
 """
 
+# The `extract` namespace below is a synthetic ModuleType assembled at runtime,
+# so pylint cannot see its members.
+# pylint: disable=no-member
+
 from __future__ import annotations
 
 import importlib
@@ -190,6 +194,29 @@ def test_analyze_followup_last_call_in_step() -> None:
     assert res["next_tool"] == ""
 
 
+def test_analyze_followup_ignores_earlier_success() -> None:
+    # A success BEFORE the denial must not count as recovery.
+    calls = [
+        ("a", "mcp__x__t", {"k": 1}),
+        ("b", "mcp__x__t", {"k": 1}),
+    ]
+    results = {
+        "a": {"is_error": False, "text": "ok"},
+        "b": {"is_error": True, "text": "denied"},
+    }
+    res = extract.analyze_followup("b", "mcp__x__t", {"k": 1}, calls, results)
+    assert res["eventually_succeeded"] is False
+
+
+def test_analyze_followup_ignores_self_match() -> None:
+    # An executed call must not trivially recover via its own result
+    # (interactive source builds an event for every call, not just denials).
+    calls = [("a", "mcp__x__t", {"k": 1})]
+    results = {"a": {"is_error": False, "text": "ok"}}
+    res = extract.analyze_followup("a", "mcp__x__t", {"k": 1}, calls, results)
+    assert res["eventually_succeeded"] is False
+
+
 # ---------------------------------------------------------------------------
 # Interactive-source helpers (same module, --source interactive)
 # ---------------------------------------------------------------------------
@@ -321,7 +348,7 @@ def _transcript() -> List[Dict[str, Any]]:
 def test_index_transcript() -> None:
     calls, results = extract.index_transcript(_transcript())
     assert len(calls) == 1
-    call_id, name, inp, env = calls[0]
+    call_id, name, _inp, env = calls[0]
     assert (call_id, name) == ("call-1", "Bash")
     assert env["branch"] == "main"
     assert results["call-1"]["is_error"] is False

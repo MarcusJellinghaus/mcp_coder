@@ -99,13 +99,18 @@ python tools/mlflow/analyze_permission_events.py
 python tools/mlflow/analyze_permission_events.py --group-by branch_name
 ```
 
-`analyze_permission_events.py` classifies each denial by **cause**:
+`analyze_permission_events.py` analyses **denials only** — headless events are
+denials by construction; from interactive datasets it keeps `denied_by_user`
+events and reports how many others it skipped. Each denial is classified by
+**cause**:
 
 - `allowlist_gap` — the tool was connected/available (`was_available`) but not on
   `permissions.allow`; a genuine config gap.
-- `naming_mismatch` — the model called a tool that wasn't connected, using a
-  legacy `mcp__<server>__*` prefix (vs the current `mcp__mcp-<server>__*`).
-- `not_connected` — unavailable and not a recognisable legacy name.
+- `naming_mismatch` — the model used a legacy `mcp__<server>__*` name whose
+  current `mcp__mcp-<server>__*` form IS connected (per the run's `mcp_servers`
+  list; prefix heuristic as fallback for older datasets).
+- `not_connected` — the server isn't connected and isn't a legacy rename.
+- `user_rejection` — interactive event a human explicitly rejected.
 
 It also quantifies wasted retry loops (`retried_same`, `retry_count`) and the
 step cost/turns spent on them, and clusters events by tool, mcp_server,

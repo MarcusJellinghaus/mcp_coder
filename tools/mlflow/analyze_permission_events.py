@@ -26,13 +26,13 @@ import argparse
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 Event = Dict[str, Any]
 
-# Current tool names are ``mcp__mcp-<server>__<tool>``; older sessions called
-# ``mcp__<server>__<tool>`` (no ``mcp-`` in the server segment), which no longer
-# resolves to a connected tool.
+# Fallback for datasets without a per-event ``mcp_servers`` list: current tool
+# names are ``mcp__mcp-<server>__<tool>``; older sessions called
+# ``mcp__<server>__<tool>`` (no ``mcp-`` in the server segment).
 _CURRENT_PREFIX = "mcp__mcp-"
 
 
@@ -49,28 +49,63 @@ def load_events(path: Path) -> List[Event]:
     return events
 
 
-def prefix_era(tool_name: str) -> str:
-    """Classify a tool name as current / legacy naming, or native."""
-    if tool_name.startswith(_CURRENT_PREFIX):
-        return "current"
-    if tool_name.startswith("mcp__"):
-        return "legacy"
-    return "native"
+def denial_events(events: List[Event]) -> List[Event]:
+    """Filter to actual denials.
+
+    Headless events are denials by construction (the extractor harvests
+    ``permission_denials``). Interactive events cover *every* tool call —
+    including successful ones — so keep only user rejections.
+    """
+    return [
+        e
+        for e in events
+        if e.get("source") != "interactive" or e.get("outcome") == "denied_by_user"
+    ]
+
+
+def _connected_servers(event: Event) -> Set[str]:
+    """The run's connected MCP server names (empty if the dataset lacks them)."""
+    return {
+        s.strip() for s in str(event.get("mcp_servers") or "").split(",") if s.strip()
+    }
+
+
+def name_era(event: Event) -> str:
+    """Classify the tool name as current / legacy naming, native, or unknown.
+
+    Uses the run's actual connected-server list when the event carries one
+    (``legacy`` = the server segment only resolves via the ``mcp-`` rename);
+    falls back to the repo-specific prefix heuristic for older datasets.
+    """
+    tool_name = str(event.get("tool_name") or "")
+    if not tool_name.startswith("mcp__"):
+        return "native"
+    servers = _connected_servers(event)
+    if servers:
+        server = tool_name[5:].partition("__")[0]
+        if server in servers:
+            return "current"
+        if f"mcp-{server}" in servers:
+            return "legacy"
+        return "unknown_server"
+    return "current" if tool_name.startswith(_CURRENT_PREFIX) else "legacy"
 
 
 def gap_class(event: Event) -> str:
     """Classify *why* a denial happened.
 
-    - ``naming_mismatch``: the tool was not connected (``was_available`` false)
-      and used a legacy prefix — the model guessed an outdated tool name.
+    - ``user_rejection``: interactive event a human explicitly rejected.
     - ``allowlist_gap``: the tool was connected/available but not permitted — a
       genuine ``permissions.allow`` gap.
+    - ``naming_mismatch``: not connected, but the current ``mcp-`` renamed form
+      of the server is — the model guessed an outdated tool name.
     - ``not_connected``: not available and not a recognisable legacy name.
     """
-    available = bool(event.get("was_available"))
-    if available:
+    if event.get("source") == "interactive":
+        return "user_rejection"
+    if bool(event.get("was_available")):
         return "allowlist_gap"
-    if prefix_era(event.get("tool_name", "")) == "legacy":
+    if name_era(event) == "legacy":
         return "naming_mismatch"
     return "not_connected"
 
@@ -114,7 +149,7 @@ def summarize(events: List[Event]) -> Dict[str, Any]:
         "total_runs": len(runs),
         "recovered": sum(1 for e in events if e.get("eventually_succeeded")),
         "by_gap_class": Counter(gap_class(e) for e in events),
-        "by_prefix_era": Counter(prefix_era(e.get("tool_name", "")) for e in events),
+        "by_name_era": Counter(name_era(e) for e in events),
         "by_tool": cluster_by(events, "tool_name"),
         "by_mcp_server": cluster_by(events, "mcp_server"),
         "by_category": cluster_by(events, "tool_category"),
@@ -160,7 +195,7 @@ def print_report(
     )
 
     _print_counter("Denial cause (gap class)", summary["by_gap_class"])
-    _print_counter("Tool-name era", summary["by_prefix_era"])
+    _print_counter("Tool-name era", summary["by_name_era"])
     _print_counter("Top tools denied", summary["by_tool"], top=12)
     _print_counter("By mcp server", summary["by_mcp_server"])
     _print_counter("By category", summary["by_category"])
@@ -210,6 +245,13 @@ def main() -> None:
     if args.since:
         events = [e for e in events if str(e.get("date") or "") >= args.since]
         print(f"Filtered to {len(events)} events since {args.since}\n")
+    denials = denial_events(events)
+    if len(denials) < len(events):
+        print(
+            f"Skipped {len(events) - len(denials)} non-denial interactive events "
+            f"(analysing {len(denials)} denials)"
+        )
+    events = denials
     summary = summarize(events)
     extra_group = (
         (args.group_by, cluster_by(events, args.group_by)) if args.group_by else None
