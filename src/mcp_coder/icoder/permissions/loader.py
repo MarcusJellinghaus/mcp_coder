@@ -194,8 +194,10 @@ def emit_schema(project_dir: Path) -> bool:
 
 
 def _discover_layers(project_dir: Path) -> list[tuple[str, Path]]:
-    """Return (layer_tag, path) for each existing settings file, ordered
-    lowest -> highest precedence: user, project, local. Absent files omitted.
+    """Return (layer_tag, path) tuples for each existing settings file.
+
+    Ordered lowest -> highest precedence: user, project, local. Absent
+    files are omitted.
 
     Each returned path is resolved to absolute so ``Rule.source_path``
     provenance stays absolute even when ``project_dir`` is relative
