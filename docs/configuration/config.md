@@ -5,7 +5,7 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 ## Quick Reference
 
 | Topic | Location |
-|-------|----------|
+| ------- | ---------- |
 | **User Config** | `~/.mcp_coder/config.toml` (Linux/macOS)<br>`%USERPROFILE%\.mcp_coder\config.toml` (Windows) |
 | **Environment Variables** | `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN` |
 | **LLM Provider** | `[llm]` section in `config.toml` |
@@ -30,6 +30,7 @@ MCP Coder uses two separate configuration files for different purposes:
 ## Configuration File Locations
 
 ### Windows
+
 ```
 %USERPROFILE%\.mcp_coder\config.toml
 ```
@@ -37,6 +38,7 @@ MCP Coder uses two separate configuration files for different purposes:
 Example: `C:\Users\YourName\.mcp_coder\config.toml`
 
 ### Linux / macOS / Containers
+
 ```
 ~/.mcp_coder/config.toml
 ```
@@ -116,24 +118,28 @@ Coordinator-specific settings for GitHub API optimization and caching.
 #### Configuration Examples
 
 **Default Configuration (24-hour refresh):**
+
 ```toml
 [coordinator]
 cache_refresh_minutes = 1440  # 24 hours (default)
 ```
 
 **Active Development (1-hour refresh):**
+
 ```toml
 [coordinator]
 cache_refresh_minutes = 60  # 1 hour - for repositories with frequent changes
 ```
 
 **Conservative Refresh (48-hour refresh):**
+
 ```toml
 [coordinator]
 cache_refresh_minutes = 2880  # 48 hours - for stable repositories
 ```
 
 **Custom Refresh (6-hour refresh):**
+
 ```toml
 [coordinator]
 cache_refresh_minutes = 360  # 6 hours - balanced approach
@@ -142,7 +148,7 @@ cache_refresh_minutes = 360  # 6 hours - balanced approach
 #### Recommended Values by Use Case
 
 | Use Case | Recommended Value | Rationale |
-|----------|------------------|-----------|
+| ---------- | ------------------ | ----------- |
 | **Active Development** | `60` (1 hour) | Frequent issue updates, labels, assignments |
 | **Regular Development** | `1440` (24 hours) | Default balance of freshness and performance |
 | **Stable Projects** | `2880` (48 hours) | Minimal changes, maximize cache benefits |
@@ -150,6 +156,7 @@ cache_refresh_minutes = 360  # 6 hours - balanced approach
 | **Demo Environments** | `4320` (72 hours) | Infrequent changes, optimize for performance |
 
 #### Cache Behavior
+
 - GitHub API calls are cached to reduce API rate limiting
 - Issues are fetched incrementally using `since` parameter
 - Cache files are stored per repository in `~/.mcp_coder/cache/`
@@ -158,6 +165,7 @@ cache_refresh_minutes = 360  # 6 hours - balanced approach
 - Cache bypass available with `--force-refresh` flag
 
 #### Performance Benefits
+
 - Reduces GitHub API calls by 70-90% for subsequent runs
 - Faster coordinator execution on large repositories
 - Respects GitHub API rate limits
@@ -175,17 +183,20 @@ Configures the default MCP (Model Context Protocol) configuration file path. Whe
 **Resolution priority:** CLI `--mcp-config` arg > `MCP_CODER_MCP_CONFIG` env var > `[mcp] default_config_path` config > auto-detect
 
 **Relative path resolution (uniform across all four sources):**
+
 - Absolute path → used as-is.
 - Relative path → resolved against `--project-dir`.
 - When `--project-dir` is not provided → relative paths fall back to CWD.
 
 **Error behavior:**
+
 - **CLI arg** (`--mcp-config`): strict — raises `FileNotFoundError` if file not found
 - **Env var / config**: lenient — logs warning with source, falls back to auto-detect
 
 **Example:**
 
 The same relative path works from any working directory when `--project-dir` is set:
+
 ```bash
 # Resolves to <repo>/.mcp.json regardless of CWD
 mcp-coder implement --project-dir /workspace/repo --mcp-config .mcp.json
@@ -217,12 +228,14 @@ project directory.
 **Relative path resolution** mirrors `--mcp-config`: absolute paths are used as-is; relative paths resolve against `--project-dir`, falling back to CWD when `--project-dir` is not provided.
 
 **Error behavior:**
+
 - **CLI arg** (`--settings`): strict — raises `FileNotFoundError` if file not found
 - **Env var / config**: lenient — logs warning with source, falls back to auto-detect
 
 **Example:**
 
 The same relative path works from any working directory when `--project-dir` is set:
+
 ```bash
 # Resolves to <repo>/.claude/settings.local.json regardless of CWD
 mcp-coder implement --project-dir /workspace/repo --settings .claude/settings.local.json
@@ -244,24 +257,28 @@ Selects the LLM provider. Defaults to `"claude"` when omitted.
 | `provider` | string | LLM provider: `"claude"`, `"copilot"`, or `"langchain"` | No | `"claude"` |
 
 **Example — use Claude (default, no change needed):**
+
 ```toml
 [llm]
 provider = "claude"
 ```
 
 **Example — use Copilot CLI:**
+
 ```toml
 [llm]
 provider = "copilot"
 ```
 
 **Example — use LangChain:**
+
 ```toml
 [llm]
 provider = "langchain"
 ```
 
 **Ad-hoc provider selection:** Any command with `--llm-method` supports all providers without changing config:
+
 ```bash
 mcp-coder prompt "Your prompt" --llm-method copilot
 mcp-coder implement --llm-method copilot
@@ -272,6 +289,7 @@ mcp-coder implement --llm-method copilot
 LangChain backend configuration. Required when `[llm] provider = "langchain"`.
 
 Install the extra dependency first:
+
 ```bash
 pip install 'mcp-coder[langchain]'
 ```
@@ -280,7 +298,7 @@ See [`optional-dependencies.md`](./optional-dependencies.md) for per-provider
 extras (smaller footprints if you only need one backend).
 
 | Field | Type | Description | Required |
-|-------|------|-------------|----------|
+| ------- | ------ | ------------- | ---------- |
 | `backend` | string | LangChain backend: `"openai"`, `"gemini"`, `"anthropic"`, or `"ollama"` | Yes |
 | `model` | string | Model name (e.g. `"gpt-4o"`, `"gemini-1.5-pro"`). Doubles as `azure_deployment` for Azure | Yes |
 | `api_key` | string | API key (env var takes priority — see below) | No |
@@ -292,6 +310,7 @@ extras (smaller footprints if you only need one backend).
 > produces a doubled path and a `404 - {'detail': 'Not Found'}`.
 
 **Example — OpenAI GPT-4o:**
+
 ```toml
 [llm]
 provider = "langchain"
@@ -303,6 +322,7 @@ api_key  = "sk-..."       # or set OPENAI_API_KEY env var
 ```
 
 **Example — OpenAI-compatible relay:**
+
 ```toml
 [llm.langchain]
 backend  = "openai"
@@ -312,6 +332,7 @@ api_key  = "..."                    # or OPENAI_API_KEY env var
 ```
 
 **Example — Google Gemini:**
+
 ```toml
 [llm]
 provider = "langchain"
@@ -323,6 +344,7 @@ api_key  = "..."          # or set GEMINI_API_KEY env var
 ```
 
 **Example — Azure OpenAI:**
+
 ```toml
 [llm]
 provider = "langchain"
@@ -336,6 +358,7 @@ api_key     = "..."
 ```
 
 **Example — Anthropic Claude:**
+
 ```toml
 [llm]
 provider = "langchain"
@@ -347,6 +370,7 @@ api_key  = "sk-ant-..."   # or set ANTHROPIC_API_KEY env var
 ```
 
 **Example — Local Ollama (native backend):**
+
 ```toml
 [llm]
 provider = "langchain"
@@ -380,7 +404,7 @@ model    = "llama3:latest"
 Environment variables take **highest priority** over config file values.
 
 | Environment Variable | Overrides | Backend |
-|---------------------|-----------|---------|
+| --------------------- | ----------- | --------- |
 | `OPENAI_API_KEY` | `[llm.langchain] api_key` | `openai` |
 | `GEMINI_API_KEY` | `[llm.langchain] api_key` | `gemini` |
 | `ANTHROPIC_API_KEY` | `[llm.langchain] api_key` | `anthropic` |
@@ -390,6 +414,7 @@ Environment variables take **highest priority** over config file values.
 | `MCP_CODER_CLAUDE_SETTINGS` | `[claude] default_settings_path` | `.claude/settings.local.json` |
 
 **Usage in CI/CD:**
+
 ```bash
 export OPENAI_API_KEY="sk-prod-key"
 mcp-coder prompt "Summarise this PR"
@@ -411,12 +436,13 @@ history server-side).
 Jenkins server credentials for job automation.
 
 | Field | Type | Description | Required |
-|-------|------|-------------|----------|
+| ------- | ------ | ------------- | ---------- |
 | `server_url` | string | Jenkins server URL with port | Yes |
 | `username` | string | Jenkins username | Yes |
 | `api_token` | string | Jenkins API token (not password) | Yes |
 
 **Example:**
+
 ```toml
 [jenkins]
 server_url = "https://jenkins.company.com:8080"
@@ -425,6 +451,7 @@ api_token = "11a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5"
 ```
 
 **How to get API token:**
+
 1. Log into Jenkins web UI
 2. Click your name (top right) → Configure
 3. Under "API Token", click "Add new Token"
@@ -439,7 +466,7 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 **Note:** These are nested TOML sections using dot notation. The configuration system supports accessing nested sections like `coordinator.repos.mcp_coder` to retrieve values from the `[coordinator.repos.mcp_coder]` section
 
 | Field | Type | Description | Required | Default |
-|-------|------|-------------|----------|---------|
+| ------- | ------ | ------------- | ---------- | --------- |
 | `repo_url` | string | Git repository HTTPS URL | Yes | — |
 | `executor_job_path` | string | Jenkins job path (folder/job-name) | Yes | — |
 | `github_credentials_id` | string | Jenkins GitHub credentials ID (see setup below) | Yes | — |
@@ -449,6 +476,7 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 | `auto_review_implementation` | boolean | Gate automated implementation review (routes implement success to `status-17:code-review-bot` for coordinator pickup). | No | `false` |
 
 **Example:**
+
 ```toml
 [coordinator.repos.my_project]
 repo_url = "https://github.com/myorg/my_project.git"
@@ -456,9 +484,12 @@ executor_job_path = "MyProject/integration-tests"
 github_credentials_id = "github-pat-token"
 update_issue_labels = true
 post_issue_comments = true
+auto_review_plan = true
+auto_review_implementation = true
 ```
 
 **Repository naming:**
+
 - Use lowercase with underscores (e.g., `mcp_coder`, `my_project`)
 - Must match the repo_name used in CLI commands
 - Can be different from actual GitHub repo name
@@ -498,6 +529,7 @@ github_credentials_id = "github-general-pat"  # ← The ID from Jenkins
 ```
 
 **Security Notes:**
+
 - Use descriptive but not sensitive credential IDs
 - Regularly rotate GitHub tokens
 - Use minimum required token scopes
@@ -508,12 +540,13 @@ github_credentials_id = "github-general-pat"  # ← The ID from Jenkins
 Environment variables take **highest priority** over config file values.
 
 | Environment Variable | Overrides | Example |
-|---------------------|-----------|---------|
+| --------------------- | ----------- | --------- |
 | `JENKINS_URL` | `[jenkins] server_url` | `https://jenkins.local:8080` |
 | `JENKINS_USER` | `[jenkins] username` | `automation-user` |
 | `JENKINS_TOKEN` | `[jenkins] api_token` | `abc123def456...` |
 
 **Usage:**
+
 ```bash
 # Override all Jenkins config via environment
 export JENKINS_URL="https://jenkins.dev.local:8080"
@@ -524,6 +557,7 @@ mcp-coder coordinator --repo mcp_coder
 ```
 
 **Use cases:**
+
 - CI/CD pipelines (inject secrets via environment)
 - Testing with different Jenkins servers
 - Temporary credential overrides
@@ -559,22 +593,26 @@ mcp-coder coordinator --repo mcp_coder --force-refresh --log-level DEBUG
 #### CLI Flag Usage Examples
 
 **Normal operation (uses cache):**
+
 ```bash
 mcp-coder coordinator --repo mcp_coder
 ```
 
 **Force fresh data (bypass cache completely):**
+
 ```bash
 mcp-coder coordinator --repo mcp_coder --force-refresh
 ```
 
 **Multiple repositories with fresh data:**
+
 ```bash
 mcp-coder coordinator --repo repo_a --force-refresh
 mcp-coder coordinator --repo repo_b --force-refresh
 ```
 
 **Debug cache behavior:**
+
 ```bash
 mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 ```
@@ -582,7 +620,7 @@ mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 #### When to use `--force-refresh`
 
 | Scenario | Use `--force-refresh` | Reason |
-|----------|---------------------|--------|
+| ---------- | --------------------- | -------- |
 | **New issues created** | Yes | Ensure latest issues are included |
 | **Label changes** | Yes | Fresh label data needed |
 | **Milestone updates** | Yes | Current milestone assignments |
@@ -593,6 +631,7 @@ mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 | **Troubleshooting** | Yes | Eliminate cache as variable |
 
 **Performance Impact:**
+
 - Without `--force-refresh`: 1-3 GitHub API calls (using cache)
 - With `--force-refresh`: 10-50+ GitHub API calls (fresh data)
 - Trade-off between data freshness and execution speed
@@ -657,26 +696,31 @@ When you trigger a coordinator test, Jenkins executes a comprehensive verificati
 The default test command performs the following checks:
 
 #### 1. Tool Verification
+
 - Verifies `mcp-coder` is installed and displays version
 - Verifies `mcp-tools-py` is installed
 - Verifies `mcp-workspace` is installed
 - Runs `mcp-coder verify` to check environment
 
 #### 2. Environment Setup
+
 - Sets `MCP_CODER_PROJECT_DIR=/workspace/repo`
 - Sets `MCP_CODER_VENV_DIR=/workspace/.venv`
 - Syncs dependencies using `uv sync --extra dev`
 
 #### 3. Claude CLI Verification
+
 - Verifies `claude` CLI is installed
 - Lists configured MCP servers with `claude mcp list`
 - Tests basic Claude functionality with simple prompt
 
 #### 4. MCP Coder Functionality
+
 - Tests MCP Coder with debug logging
 - Verifies prompt command works correctly
 
 #### 5. Virtual Environment
+
 - Activates project virtual environment
 - Re-verifies `mcp-coder` from within venv
 
@@ -757,6 +801,7 @@ dev = [
 ```
 
 This ensures:
+
 - Automated workflows install only type stubs (`uv sync --extra types`)
 - Local development installs everything (`pip install -e ".[dev]"`)
 
@@ -770,6 +815,7 @@ Add it to config file under [coordinator.repos.nonexistent_repo]
 ```
 
 **Solution:** Add repository configuration to config file:
+
 ```toml
 [coordinator.repos.nonexistent_repo]
 repo_url = "https://github.com/your-org/repo.git"
@@ -793,7 +839,9 @@ Set via environment variables (JENKINS_URL, JENKINS_USER, JENKINS_TOKEN) or conf
 ```
 
 **Solution:** Either:
+
 1. Add to config file:
+
    ```toml
    [jenkins]
    server_url = "https://jenkins.example.com:8080"
@@ -802,6 +850,7 @@ Set via environment variables (JENKINS_URL, JENKINS_USER, JENKINS_TOKEN) or conf
    ```
 
 2. Or set environment variables:
+
    ```bash
    export JENKINS_URL="https://jenkins.example.com:8080"
    export JENKINS_USER="your-username"
@@ -821,11 +870,13 @@ PermissionError: [Errno 13] Permission denied: '/home/user/.mcp_coder/config.tom
 #### Error: Stale or incorrect data
 
 **Symptoms:**
+
 - Coordinator missing recently created issues
 - Issue counts seem incorrect
 - Recent label changes not reflected
 
 **Solution:**
+
 ```bash
 # Force refresh to bypass cache
 mcp-coder coordinator --repo mcp_coder --force-refresh
@@ -834,11 +885,13 @@ mcp-coder coordinator --repo mcp_coder --force-refresh
 #### Error: Cache file corruption
 
 **Symptoms:**
+
 - JSON decode errors in logs
 - Coordinator fails with cache-related errors
 - Unexpected cache behavior
 
 **Solution:**
+
 ```bash
 # Clear cache directory (cache will rebuild automatically)
 rm -rf ~/.mcp_coder/cache/
@@ -852,11 +905,13 @@ mcp-coder coordinator --repo mcp_coder
 #### Performance: Cache not improving speed
 
 **Symptoms:**
+
 - Still making many GitHub API calls
 - No noticeable speed improvement
 - Cache files seem small or missing
 
 **Diagnosis:**
+
 ```bash
 # Check cache directory exists and has recent files
 ls -la ~/.mcp_coder/cache/
@@ -868,6 +923,7 @@ mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 ```
 
 **Solutions:**
+
 - Ensure `cache_refresh_minutes` is set appropriately (not too low)
 - Check that repository URL in cache filename matches config
 - Verify sufficient disk space for cache files
@@ -875,10 +931,12 @@ mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 #### Cache file locations
 
 **Default cache directory:**
+
 - **Linux/macOS:** `~/.mcp_coder/cache/`
 - **Windows:** `%USERPROFILE%\.mcp_coder\cache\`
 
 **Cache file naming:**
+
 - Format: `issues_cache_{owner}_{repo}.json`
 - Example: `issues_cache_myorg_myrepo.json`
 - Falls back to URL hash if repository parsing fails
@@ -886,6 +944,7 @@ mcp-coder coordinator --repo mcp_coder --log-level DEBUG
 #### Complete Configuration Examples
 
 **Standard Development Configuration:**
+
 ```toml
 [coordinator]
 # Cache GitHub API calls for 24 hours (recommended default)
@@ -903,6 +962,7 @@ github_credentials_id = "github-pat"
 ```
 
 **Active Development Environment:**
+
 ```toml
 [coordinator]
 # Refresh cache hourly for repositories with frequent issue updates
@@ -920,6 +980,7 @@ github_credentials_id = "github-dev-token"
 ```
 
 **Production Environment with Conservative Caching:**
+
 ```toml
 [coordinator]
 # Refresh cache every 48 hours for stable production repositories
@@ -937,6 +998,7 @@ github_credentials_id = "github-prod-pat"
 ```
 
 **Multi-Repository Configuration with Different Cache Settings:**
+
 ```toml
 [coordinator]
 # Default cache setting (applies to all repos unless overridden)
@@ -969,6 +1031,7 @@ github_credentials_id = "github-infra-pat"
 ## Security Best Practices
 
 ### API Tokens
+
 - ✅ Use API tokens (NOT passwords)
 - ✅ Store tokens in config file (user-only permissions)
 - ✅ Use environment variables in CI/CD
@@ -983,6 +1046,7 @@ github_credentials_id = "github-infra-pat"
    - GitHub credentials ID in Jenkins
 
 2. Add to config:
+
    ```toml
    [coordinator.repos.new_repo]
    repo_url = "https://github.com/org/new_repo.git"
@@ -991,6 +1055,7 @@ github_credentials_id = "github-infra-pat"
    ```
 
 3. Test:
+
    ```bash
    mcp-coder coordinator --repo new_repo --dry-run
    ```
@@ -998,12 +1063,15 @@ github_credentials_id = "github-infra-pat"
 ## Platform-Specific Notes
 
 ### Windows
+
 - Config path uses `%USERPROFILE%` (typically `C:\Users\YourName`)
 - Path separators are handled automatically
 - Use PowerShell or Command Prompt
 
 ### Docker/Containers
+
 Mount config directory as volume:
+
 ```bash
 docker run -v ~/.mcp_coder:/root/.mcp_coder my-container
 ```
@@ -1011,10 +1079,12 @@ docker run -v ~/.mcp_coder:/root/.mcp_coder my-container
 ## Related Documentation
 
 ### Setup and Usage
+
 - **[Repository Setup](../repository-setup/README.md)** - GitHub Actions, labels, and repository configuration
 - **[CLI Reference](../cli-reference.md)** - Complete command documentation
 - **[Development Process](../processes-prompts/development-process.md)** - Detailed workflow methodology
 
 ### Technical Documentation
+
 - **[Architecture Overview](../architecture/architecture.md)** - System architecture and design
 - **[Main README](../../README.md)** - Project overview and quick start

@@ -9,6 +9,7 @@ Core commands for help, verification, and interactive prompts.
 
 | Command | Description |
 |---------|-------------|
+| [`init`](#init) | Initialize project: create config and deploy Claude skills |
 | [`help`](#help) | Show comprehensive help information with examples |
 | [`verify`](#verify) | Verify Claude CLI installation and configuration |
 | [`prompt`](#prompt) | Execute prompt via Claude API with configurable debug output |
@@ -26,7 +27,10 @@ End-to-end development automation from planning to pull requests.
 | Command | Description |
 |---------|-------------|
 | [`create-plan`](#create-plan) | Generate implementation plan for a GitHub issue |
+| [`review-plan`](#review-plan) | Run automated review of an implementation plan |
 | [`implement`](#implement) | Execute implementation workflow from task tracker |
+| [`rebase`](#rebase) | Automatically rebase the current branch onto its base branch |
+| [`review-implementation`](#review-implementation) | Run automated review of an implementation |
 | [`create-pr`](#create-pr) | Create pull request with AI-generated summary |
 
 ### Interactive Development
@@ -59,6 +63,7 @@ GitHub repository utilities for branch detection and workflow automation.
 
 | Command | Description |
 |---------|-------------|
+| [`gh-tool checkout-issue-branch`](#gh-tool-checkout-issue-branch) | Checkout or create a branch linked to a GitHub issue |
 | [`gh-tool get-base-branch`](#gh-tool-get-base-branch) | Detect base branch for current feature branch |
 | [`gh-tool define-labels`](#gh-tool-define-labels) | Sync workflow status labels to GitHub repository |
 | [`gh-tool issue-stats`](#gh-tool-issue-stats) | Display issue statistics grouped by workflow status category |
@@ -83,6 +88,34 @@ mcp-coder help                         # Show comprehensive help with examples (
 ---
 
 ## Commands
+
+### init
+
+Initialize a project for MCP Coder: create the user config file (if missing) and deploy the bundled Claude Code skills into the project.
+
+```bash
+mcp-coder init [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Target project directory (default: current directory)
+- `--just-skills` - Deploy skills only, skip config creation
+
+**Description:** Bootstraps a project so the automated workflows and interactive tools can run: writes a starter user configuration and installs the `.claude/skills/` slash-command skills. Use `--just-skills` to refresh only the deployed skills without touching config.
+
+**Examples:**
+```bash
+# Initialize the current project (config + skills)
+mcp-coder init
+
+# Refresh deployed skills only
+mcp-coder init --just-skills
+
+# Initialize a specific project directory
+mcp-coder init --project-dir /path/to/project
+```
+
+---
 
 ### help
 
@@ -314,6 +347,67 @@ mcp-coder create-plan 789 --project-dir /path/to/project
 
 ---
 
+### review-plan
+
+Run automated review of an implementation plan.
+
+```bash
+mcp-coder review-plan [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
+- `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
+- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
+- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
+
+**Description:** Automatically review the implementation plan on the current branch. The issue number is derived from the branch (no positional argument). A multi-round loop pairs a fresh reviewer session each round with a persistent supervisor session (rounds cap: 5) and ends in a 3-way decision: **success** advances the issue to `status-05:plan-ready`; **needs-human** routes to `status-04:plan-review` for the interactive supervisor; **error** sets a `status-14f-*` failure label. Each round appends to `pr_info/plan_review_log_{n}.md`. Requires `auto_review_plan = true` for the coordinator to dispatch it; otherwise run manually.
+
+**Examples:**
+```bash
+# Review the plan on the current branch
+mcp-coder review-plan
+
+# Update labels and post comments on the outcome
+mcp-coder review-plan --update-issue-labels --post-issue-comments
+```
+
+---
+
+### rebase
+
+Automatically rebase the current branch onto its base branch.
+
+```bash
+mcp-coder rebase [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
+- `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
+- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--base-branch BRANCH` - Base branch to rebase onto (default: auto-detect; required for non-main/master bases)
+
+**Description:** Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. The base branch is auto-detected unless `--base-branch` is given (required when the base is not `main`/`master`). This is the same rebase step the `review-implementation` workflow runs between rounds.
+
+**Exit codes:** `0` = success or no-op (already current); `1` = aborted / needs human; `2` = error (bad repo/args, push rejected).
+
+**Examples:**
+```bash
+# Rebase onto the auto-detected base branch
+mcp-coder rebase
+
+# Rebase onto an explicit base branch
+mcp-coder rebase --base-branch develop
+```
+
+---
+
 ### create-pr
 
 Create pull request with AI-generated summary.
@@ -350,6 +444,36 @@ mcp-coder create-pr --update-issue-labels --post-issue-comments
 
 ---
 
+### review-implementation
+
+Run automated review of an implementation.
+
+```bash
+mcp-coder review-implementation [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
+- `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
+- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
+- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
+
+**Description:** Automatically review the implemented code on the current branch. The issue number is derived from the branch (no positional argument). A multi-round loop pairs a fresh reviewer session each round with a persistent supervisor session (rounds cap: 5), applies fixes via MCP edit tools, and re-runs the shared rebase/CI steps between rounds. It ends in a 3-way decision: **success** advances the issue to `status-08:ready-pr`; **needs-human** routes to `status-07:code-review` for the interactive supervisor; **error** sets a `status-17f-*` failure label (`status-17f-ci:code-review-ci-fix-needed` when CI is still red at the rounds cap). Each round appends to `pr_info/implementation_review_log_{n}.md`. Requires `auto_review_implementation = true` for the coordinator to dispatch it; otherwise run manually.
+
+**Examples:**
+```bash
+# Review the implementation on the current branch
+mcp-coder review-implementation
+
+# Update labels and post comments on the outcome
+mcp-coder review-implementation --update-issue-labels --post-issue-comments
+```
+
+---
+
 ### coordinator
 
 Monitor and dispatch workflows for GitHub issues.
@@ -366,7 +490,7 @@ mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]
 - `--dry-run` - Trigger Jenkins integration test for repository
 - `--force-refresh` - Force full cache refresh, bypass all caching
 
-**Description:** Monitor GitHub issues and automatically dispatch workflows (create-plan, implement, create-pr) based on issue labels and status.
+**Description:** Monitor GitHub issues and automatically dispatch workflows (create-plan, implement, create-pr, and the optional review-plan / review-implementation) based on issue labels and status.
 
 **Examples:**
 ```bash
@@ -726,6 +850,35 @@ mcp-coder check file-size --allowlist-file .my-allowlist
 - **CI/CD Integration:** Add to pre-commit hooks or CI pipelines to enforce file size limits
 - **Codebase Cleanup:** Identify large files that may need refactoring
 - **Gradual Adoption:** Use `--generate-allowlist` to create an allowlist of existing large files, then enforce limits on new files
+
+---
+
+### gh-tool checkout-issue-branch
+
+Checkout or create a branch linked to a GitHub issue.
+
+```bash
+mcp-coder gh-tool checkout-issue-branch ISSUE_NUMBER [OPTIONS]
+```
+
+**Arguments:**
+- `issue_number` - GitHub issue number (required)
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+
+**Description:** Checkout the branch linked to the given GitHub issue, creating it if it does not yet exist. Used by the automated workflows to land on the correct branch for an issue before running.
+
+**Exit codes:** `0` = success (branch checked out); `1` = could not find or create branch; `2` = error (not a git repo, API failure).
+
+**Examples:**
+```bash
+# Checkout (or create) the branch for issue #123
+mcp-coder gh-tool checkout-issue-branch 123
+
+# Target a specific project directory
+mcp-coder gh-tool checkout-issue-branch 123 --project-dir /path/to/project
+```
 
 ---
 

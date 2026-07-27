@@ -314,6 +314,8 @@ flowchart LR
 
 **📍 Position in Flow:** `status:plan-review` → **👤 Plan Review** → `status:plan-ready`
 
+> **Human or automated.** This review can run either as an interactive human session (the default flow described below) or fully automated via the `review-plan` workflow when `auto_review_plan` is enabled. See [Automated Review](#9-automated-review-optional).
+
 ```mermaid
 flowchart LR
     Input1[🏷️ status:plan-review]
@@ -730,6 +732,8 @@ This could benefit from `format_and_commit` tool.
 
 **📍 Position in Flow:** `status:code-review` → **👤 Code Review** → `status:ready-pr`
 
+> **Human or automated.** This review can run either as an interactive human session (the default flow described below) or fully automated via the `review-implementation` workflow when `auto_review_implementation` is enabled. See [Automated Review](#9-automated-review-optional).
+
 ```mermaid
 flowchart TD
     Input1["🏷️ status:code-review"]
@@ -1125,5 +1129,46 @@ Automated workflows can fail at several points. When a failure occurs, the issue
 | `status-06f-ci:ci-fix-needed` | CI exhausted 3 fix attempts | `mcp-coder gh-tool set-status status-05:plan-ready` |
 | `status-06f-timeout:llm-timeout` | LLM API timeout during implementation | `mcp-coder gh-tool set-status status-05:plan-ready` |
 | `status-09f:pr-creating-failed` | PR creation fails | `mcp-coder gh-tool set-status status-08:ready-pr` |
+| `status-14f:plan-review-failed` | Automated plan review failed (generic error / unparseable verdict) | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
+| `status-14f-rounds:plan-review-rounds-exhausted` | Plan review hit the rounds cap (5) without converging | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
+| `status-14f-timeout:plan-review-llm-timeout` | LLM API timeout during automated plan review | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
+| `status-14f-mcp:plan-review-mcp-unavailable` | MCP server unavailable during automated plan review | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
+| `status-17f:code-review-failed` | Automated code review failed (generic error / unparseable verdict) | `mcp-coder gh-tool set-status status-17:code-review-bot` |
+| `status-17f-ci:code-review-ci-fix-needed` | CI still red at the rounds cap | `mcp-coder gh-tool set-status status-17:code-review-bot` |
+| `status-17f-rounds:code-review-rounds-exhausted` | Code review hit the rounds cap (5) without converging | `mcp-coder gh-tool set-status status-17:code-review-bot` |
+| `status-17f-timeout:code-review-llm-timeout` | LLM API timeout during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
+| `status-17f-mcp:code-review-mcp-unavailable` | MCP server unavailable during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 
 To recover from a failure, investigate the root cause (logs, CI output, API errors), resolve the underlying issue, then use `mcp-coder gh-tool set-status` to transition the issue back to a retry-ready state as shown in the table above. The bot will automatically pick up the issue again from the recovery status.
+
+The `status-14f-*` / `status-17f-*` labels only occur when automated review is enabled (`auto_review_plan` / `auto_review_implementation`; see [Automated Review](#9-automated-review-optional) below). Their recovery commands re-queue the automated review; to instead hand off to the interactive supervisor, set `status-04:plan-review` or `status-07:code-review`. Each carries a `/check_branch_status` vscodeclaude command so a human review session opens automatically.
+
+### 9. Automated Review (optional)
+
+Plan review (stage 4) and code review (stage 7) normally run as human-triggered vscodeclaude supervisor sessions. Two optional headless workflows — `review-plan` and `review-implementation` — automate them so the bot lane can review without a human, pulling one in only when needed.
+
+**Off by default.** Both are gated by per-repo config flags, `auto_review_plan` and `auto_review_implementation` (see [Configuration Guide](../configuration/config.md)), which default to `false`. With the flags off, behavior is identical to today: `create-plan` transitions to `status-04:plan-review` and `implement` to `status-07:code-review` for the interactive supervisor.
+
+**When enabled**, the create-plan / implement success transition instead targets a dedicated bot-pickup label, which the coordinator dispatches to the review workflow:
+
+```
+create-plan ──▶ status-14:plan-review-bot ──▶ (coordinator dispatches review-plan)
+                    ├─ success     → status-05:plan-ready
+                    ├─ needs-human → status-04:plan-review  (interactive supervisor)
+                    └─ error       → status-14f-*           (failure label)
+
+implement ────▶ status-17:code-review-bot ──▶ (coordinator dispatches review-implementation)
+                    ├─ success     → status-08:ready-pr
+                    ├─ needs-human → status-07:code-review  (interactive supervisor)
+                    └─ error       → status-17f-*           (failure label)
+```
+
+**How a review runs.** Each workflow runs a multi-round loop (rounds cap: 5) pairing a **fresh reviewer session per round** with a **persistent supervisor session**:
+
+1. The reviewer session (fresh each round) fetches the plan/diff, issue, and knowledge base via MCP tools and returns a structured findings report.
+2. The supervisor session (persistent across rounds) triages the report into a machine-readable verdict: `dismiss` (converged → success), `tasks` (fixes for the reviewer to apply via MCP edit tools), or `escalate` (a design/scope question → needs-human).
+3. On `tasks`, the reviewer applies the fixes; `review-implementation` then re-runs the shared rebase/CI steps. The loop repeats with a new reviewer session until convergence or the rounds cap.
+
+Every round appends a detailed log to `pr_info/plan_review_log_{n}.md` / `pr_info/implementation_review_log_{n}.md` — the source of truth for an escalation handoff (no separate issue comment is posted for escalations). Rebase-needed or still-red CI is a gate: it routes to needs-human or error, never success. Failure labels and their recovery are in the [Failure Handling](#8-failure-handling) table above.
+
+> **Quality gate before enabling.** Before setting `auto_review_*=true` on a repo, validate that the bot's review quality matches a trusted reference (the interactive supervisor or a human) on real branches. The deterministic behavior is unit-tested and the session interleave is integration-tested, but the model-judgment match is a manual pre-enable check, not something CI enforces.
