@@ -18,6 +18,7 @@ from typing import Any, Callable, NamedTuple
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_tools_py import (
     MypyResult,
     PylintResult,
@@ -36,6 +37,7 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.subprocess_runner import execute_command
+from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 
 logger = logging.getLogger(__name__)
@@ -422,6 +424,107 @@ def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | 
     if result.stdout.strip():
         return f"pr_info/ present on origin/{base_branch}"
     return None
+
+
+# --- LLM steps ---
+
+_CONFLICT_PROMPT_HEADER = "Rebase Conflict Resolution"
+_REGRESSION_PROMPT_HEADER = "Rebase Regression Fix"
+
+_ABSENT_SIDE_NOTE = "(absent — file does not exist on this side)"
+
+# Stage labels mirror the wording of the "Rebase Conflict Resolution" prompt.
+_STAGE_LABELS: tuple[tuple[int, str], ...] = (
+    (1, "common ancestor (merge base)"),
+    (2, "ours (base branch)"),
+    (3, "theirs (feature branch)"),
+)
+
+
+def _prompt_in_session(
+    prompt: str,
+    session_id: str | None,
+    *,
+    project_dir: Path,
+    provider: str,
+    env_vars: dict[str, str],
+    mcp_config: str | None,
+    settings_file: str | None,
+    execution_dir: Path | None,
+    step_name: str,
+) -> tuple[str, str | None]:
+    """Send one prompt in the resumable rebase LLM session.
+
+    Issues a single ``prompt_llm`` call (``session_id=None`` starts the
+    session; a previous id resumes it), then best-effort persists the exchange
+    under ``.mcp-coder/rebase_sessions``. LLM errors/timeouts propagate to the
+    orchestrator, which maps them to a needs-human exit.
+
+    Returns:
+        ``(response_text, new_session_id)`` — the caller threads the session
+        id into the next call.
+    """
+    branch_name = get_branch_name_for_logging(project_dir)
+    response = prompt_llm(
+        prompt,
+        provider=provider,
+        session_id=session_id,
+        # Tool-using site (conflict/regression edits): inactivity budget, not wall-clock.
+        timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
+        env_vars=env_vars,
+        execution_dir=str(execution_dir) if execution_dir else None,
+        mcp_config=mcp_config,
+        settings_file=settings_file,
+        branch_name=branch_name,
+    )
+    try:
+        store_session(
+            response_data=response,
+            prompt=prompt,
+            store_path=str(project_dir / ".mcp-coder" / "rebase_sessions"),
+            step_name=step_name,
+            branch_name=branch_name,
+        )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to store rebase session: %s", exc)
+    return response.get("text", "") or "", response.get("session_id")
+
+
+def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
+    """Build the conflict-resolution prompt with three-stage content inlined.
+
+    Each conflicted file contributes a block: its path, then the common
+    ancestor (merge base) / ours / theirs contents in fenced blocks. A side
+    absent from the index (delete/modify conflict) renders an absence note
+    instead of content.
+    """
+    blocks: list[str] = []
+    for file in files:
+        parts = [f"### `{file}`"]
+        for stage, label in _STAGE_LABELS:
+            content = _show_stage(project_dir, stage, file)
+            if content is None:
+                parts.append(f"**{label}:** {_ABSENT_SIDE_NOTE}")
+            else:
+                parts.append(f"**{label}:**\n```\n{content}\n```")
+        blocks.append("\n\n".join(parts))
+    template = get_prompt(str(PROMPTS_FILE_PATH), _CONFLICT_PROMPT_HEADER)
+    return template.replace("[conflict_context]", "\n\n".join(blocks))
+
+
+def _build_regression_fix_prompt(regression_text: str) -> str:
+    """Build the regression-fix prompt with the failure-key text inlined."""
+    template = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_PROMPT_HEADER)
+    return template.replace("[regression_output]", regression_text)
+
+
+def _format_failure_keys(keys: set[FailureKey]) -> str:
+    """Render failure keys as sorted, one-per-line text ("" for an empty set).
+
+    Sorted output is required for determinism: besides feeding the regression
+    prompt, this string doubles as the stall-guard comparison value.
+    """
+    return "\n".join(f"{key[0]}: {' '.join(key[1:])}" for key in sorted(keys))
 
 
 # --- LLM session + orchestrator ------------------------------------------------
