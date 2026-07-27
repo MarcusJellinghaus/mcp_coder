@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: create `tests/test_depcheck.py` (7 cases) and `src/mcp_coder/_depcheck.py` (`find_missing_dependencies`, `ensure_dependencies`, `_installed_version`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `tests/test_depcheck.py` (7 cases) and `src/mcp_coder/_depcheck.py` (`find_missing_dependencies`, `ensure_dependencies`, `_installed_version`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Wire the guard into `__init__.py` (fail-open)
 
