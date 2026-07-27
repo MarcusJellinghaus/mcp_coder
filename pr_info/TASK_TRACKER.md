@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Create the pure `_depcheck` module (TDD)
+
+Detail: [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: create `tests/test_depcheck.py` (7 cases) and `src/mcp_coder/_depcheck.py` (`find_missing_dependencies`, `ensure_dependencies`, `_installed_version`)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Wire the guard into `__init__.py` (fail-open)
+
+Detail: [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: add 4-line fail-open guard to `src/mcp_coder/__init__.py` + smoke test and fail-open regression test
+- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] Code review of the full branch and address findings
+- [ ] PR summary prepared
