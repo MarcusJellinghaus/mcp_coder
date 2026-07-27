@@ -28,6 +28,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 3 — Git conflict helpers](./steps/step_3.md)
 - [x] [Step 4 — New prompts + permission pruning](./steps/step_4.md)
 - [x] [Step 5 — LLM session helper + prompt builders](./steps/step_5.md)
-- [ ] [Step 6 — Orchestrator rewrite, marker-machinery removal, OUTPUT logging](./steps/step_6.md)
+- [x] [Step 6 — Orchestrator rewrite, marker-machinery removal, OUTPUT logging](./steps/step_6.md)
 
 ## Pull Request

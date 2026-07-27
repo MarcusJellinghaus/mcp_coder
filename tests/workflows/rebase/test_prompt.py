@@ -1,16 +1,17 @@
 """Tests for the rebase prompts in ``prompts.md``.
 
-Covers the legacy ``Automated Rebase`` section (removed in Step 6) plus the new
-``Rebase Conflict Resolution`` and ``Rebase Regression Fix`` sections used by the
-Python-driven rebase, including a drift check that keeps the conflict prompt's
-strategy rows in sync with the packaged ``SKILL.md``.
+Covers the ``Rebase Conflict Resolution`` and ``Rebase Regression Fix`` sections
+used by the Python-driven rebase, including a drift check that keeps the
+conflict prompt's strategy rows in sync with the packaged ``SKILL.md``, plus a
+guard that the legacy ``Automated Rebase`` section stays removed.
 """
+
+import pytest
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.data_files import find_data_file
 
-_PROMPT_HEADER = "Automated Rebase"
 _CONFLICT_HEADER = "Rebase Conflict Resolution"
 _REGRESSION_HEADER = "Rebase Regression Fix"
 
@@ -60,35 +61,10 @@ def _skill_llm_strategy_rows() -> set[str]:
     }
 
 
-def _load_prompt() -> str:
-    return get_prompt(str(PROMPTS_FILE_PATH), _PROMPT_HEADER)
-
-
-def test_automated_rebase_prompt_loads() -> None:
-    """Prompt is retrievable and non-empty (body must be a fenced code block)."""
-    prompt = _load_prompt()
-    assert prompt.strip()
-
-
-def test_prompt_contains_outcome_marker_tokens() -> None:
-    """Prompt documents the outcome-marker contract."""
-    prompt = _load_prompt()
-    assert "REBASE_OUTCOME:" in prompt
-    assert "REBASE_REASON:" in prompt
-
-
-def test_prompt_requires_baseline_before_no_regression() -> None:
-    """Prompt captures a baseline before rebasing and checks for regressions."""
-    prompt = _load_prompt().lower()
-    assert "baseline" in prompt
-    assert "before" in prompt
-    assert "regress" in prompt
-
-
-def test_prompt_forbids_push() -> None:
-    """Prompt tells the LLM not to push (Python owns the force-push)."""
-    prompt = _load_prompt().lower()
-    assert "not push" in prompt or "do not push" in prompt
+def test_automated_rebase_section_removed() -> None:
+    """The legacy marker-contract prompt section is gone (Step 6)."""
+    with pytest.raises(ValueError, match="Automated Rebase"):
+        get_prompt(str(PROMPTS_FILE_PATH), "Automated Rebase")
 
 
 def test_prompt_conflict_strategy_matches_skill() -> None:

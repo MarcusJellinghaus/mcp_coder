@@ -1,17 +1,17 @@
-"""Automated ``mcp-coder rebase`` workflow — deterministic shell (Issue #1066).
+"""Automated ``mcp-coder rebase`` workflow — Python-driven (Issues #1066, #1085).
 
-Python owns the deterministic shell around a single LLM session: pre-flight
-guards, the outcome→exit-code decision, the force-push, and a ``finally`` safety
-net. This module currently holds only the two pure decision functions; git
-helpers, guards, and the orchestrator are added in later steps.
-
-The exit-code contract cross-checks two signals and never trusts either alone:
-the LLM's self-reported outcome marker and the actual git repository state (git
-is authoritative, worst-case-wins).
+Python executes every git operation and every check deterministically: guards,
+the rebase itself, the conflict loop, the baseline-vs-verification regression
+comparison, the force-push, and a ``finally`` abort safety net. The LLM is a
+content editor only, invoked for exactly two jobs — resolving non-``pr_info/``
+merge conflicts (three-stage content inlined by Python) and fixing regressions
+found by the deterministic check comparison. Success is decided purely from
+repository state plus a set-difference of failure keys; the LLM never
+self-reports an outcome.
 """
 
 import logging
-import re
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, NamedTuple
 
@@ -22,6 +22,7 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_tools_py import (
     MypyResult,
     PylintResult,
+    run_format_code,
     run_mypy_check,
     run_pylint_check,
     run_pytest_check,
@@ -36,60 +37,12 @@ from mcp_coder.mcp_workspace_git import (
 )
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 
 logger = logging.getLogger(__name__)
-
-_OUTCOME_RE = re.compile(r"^\s*REBASE_OUTCOME:\s*(.+?)\s*$", re.MULTILINE)
-_REASON_RE = re.compile(r"^\s*REBASE_REASON:\s*(.+?)\s*$", re.MULTILINE)
-
-_VALID_OUTCOMES = {"success", "aborted"}
-
-
-def _parse_outcome_marker(response_text: str) -> tuple[str | None, str | None]:
-    """Extract ``(outcome, reason)`` from the LLM response.
-
-    Last match wins for both markers.
-
-    Returns:
-        A ``(outcome, reason)`` tuple. ``outcome`` is ``"success"`` |
-        ``"aborted"`` | ``None`` (unparseable or an unrecognized value).
-        ``reason`` is the ``REBASE_REASON`` text, or ``None`` when absent or
-        ``"n/a"``.
-    """
-    outcome: str | None = None
-    outcome_matches = _OUTCOME_RE.findall(response_text)
-    if outcome_matches:
-        candidate = outcome_matches[-1].strip().lower()
-        if candidate in _VALID_OUTCOMES:
-            outcome = candidate
-
-    reason: str | None = None
-    reason_matches = _REASON_RE.findall(response_text)
-    if reason_matches:
-        candidate_reason = reason_matches[-1].strip()
-        if candidate_reason and candidate_reason.lower() != "n/a":
-            reason = candidate_reason
-
-    return outcome, reason
-
-
-def _evaluate_pre_push(
-    *,
-    mid_rebase: bool,
-    marker_outcome: str | None,
-    rebase_success_shape: bool,
-) -> str:
-    """Return ``"push"`` or ``"abort"`` (worst-case-wins, git is authoritative)."""
-    if mid_rebase:
-        return "abort"  # unfinished / crashed session
-    if marker_outcome == "aborted":
-        return "abort"  # trust the self-report
-    if not rebase_success_shape:
-        return "abort"  # git can't corroborate success
-    return "push"  # marker success/unparseable AND git confirms
 
 
 class _GitResult(NamedTuple):
@@ -527,54 +480,10 @@ def _format_failure_keys(keys: set[FailureKey]) -> str:
     return "\n".join(f"{key[0]}: {' '.join(key[1:])}" for key in sorted(keys))
 
 
-# --- LLM session + orchestrator ------------------------------------------------
+# --- Orchestrator --------------------------------------------------------------
 
-# Inactivity budget (max seconds with no stdout line from the LLM, NOT total
-# runtime), matching the create_plan prompts and kept below the CI step cap.
-_SESSION_TIMEOUT = 600
-
-_REBASE_PROMPT_HEADER = "Automated Rebase"
-
-
-def _run_rebase_session(
-    project_dir: Path,
-    base_branch: str,
-    provider: str,
-    mcp_config: str | None,
-    settings_file: str | None,
-    execution_dir: Path | None,
-) -> str:
-    """Run the single LLM rebase session.
-
-    Loads the ``Automated Rebase`` prompt, appends the resolved base branch as
-    context (so the LLM rebases onto ``origin/<base>``), and issues exactly one
-    ``prompt_llm`` call with a ~600s inactivity budget. Any LLM error/timeout is
-    left to propagate to the orchestrator, which maps it to a needs-human exit.
-
-    Returns:
-        The LLM response text (empty string when the response carries no text).
-    """
-    env_vars = prepare_llm_environment(project_dir)
-    branch_name = get_branch_name_for_logging(project_dir)
-    prompt_template = get_prompt(str(PROMPTS_FILE_PATH), _REBASE_PROMPT_HEADER)
-    prompt = (
-        f"{prompt_template}\n\n"
-        "---\n"
-        "## Rebase context\n"
-        f"Rebase the current branch onto `origin/{base_branch}`.\n"
-    )
-    response = prompt_llm(
-        prompt,
-        provider=provider,
-        session_id=None,
-        timeout=_SESSION_TIMEOUT,
-        env_vars=env_vars,
-        execution_dir=str(execution_dir) if execution_dir else None,
-        mcp_config=mcp_config,
-        settings_file=settings_file,
-        branch_name=branch_name,
-    )
-    return response.get("text", "") or ""
+_MAX_SAME_FILE_CONFLICTS = 3  # /rebase abort rule 4
+_MAX_FIX_ATTEMPTS = 2  # /rebase abort rule 5
 
 
 def run_rebase_workflow(
@@ -585,12 +494,14 @@ def run_rebase_workflow(
     settings_file: str | None = None,
     execution_dir: Path | None = None,
 ) -> int:
-    """Orchestrate the automated rebase.
+    """Orchestrate the automated rebase (Python-driven).
 
     Composes the deterministic shell: pre-flight guards -> base-branch guard ->
-    ``pr_info/``-on-base guard -> no-op short-circuit -> single LLM session ->
-    worst-case-wins decision -> Python-owned force-push (with restore on
-    rejection) -> ``finally`` abort safety net.
+    ``pr_info/``-on-base guard -> no-op short-circuit -> baseline checks ->
+    Python-executed rebase with a conflict loop (LLM edits content only) ->
+    regression verification and bounded LLM fix loop -> git corroboration
+    gate -> Python-owned force-push (with restore on rejection) -> ``finally``
+    abort safety net.
 
     See the exit-code contract in ``summary.md``.
 
@@ -598,6 +509,8 @@ def run_rebase_workflow(
         ``0`` (success or no-op), ``1`` (aborted -> needs-human), or ``2``
         (error / push rejected).
     """
+    logger.log(OUTPUT, "Starting automated rebase...")
+
     err = _preflight(project_dir)
     if err:
         logger.error("Pre-flight failed: %s", err)
@@ -624,7 +537,7 @@ def run_rebase_workflow(
         if reason.startswith("error:"):
             logger.error("Rebase check failed for origin/%s: %s", base, reason)
             return 2
-        logger.info("Already current with origin/%s (%s); nothing to do", base, reason)
+        logger.log(OUTPUT, "Already current with origin/%s; nothing to do", base)
         return 0
 
     pre_sha = get_latest_commit_sha(project_dir)
@@ -632,32 +545,198 @@ def run_rebase_workflow(
         logger.error("Could not resolve HEAD commit before rebase")
         return 2
 
+    logger.log(
+        OUTPUT,
+        "Rebasing %s onto origin/%s...",
+        get_branch_name_for_logging(project_dir),
+        base,
+    )
+
+    logger.log(OUTPUT, "Running baseline checks (pytest, pylint, mypy)...")
     try:
-        text = _run_rebase_session(
-            project_dir, base, provider, mcp_config, settings_file, execution_dir
+        baseline = _run_all_checks(project_dir)
+    except CheckRunError as exc:
+        # No git mutation has happened yet — plain infrastructure error.
+        logger.error("Baseline checks failed to run: %s", exc)
+        return 2
+    if baseline:
+        logger.log(
+            OUTPUT,
+            "%d pre-existing failure(s) in baseline — "
+            "these will not block the rebase",
+            len(baseline),
         )
-        outcome, marker_reason = _parse_outcome_marker(text)
-        decision = _evaluate_pre_push(
-            mid_rebase=_is_rebase_in_progress(project_dir),
-            marker_outcome=outcome,
-            rebase_success_shape=_rebase_success_shape(project_dir, pre_sha),
-        )
-        if decision == "abort":
-            logger.error("Rebase aborted (needs human): %s", marker_reason or reason)
+
+    try:
+        session_id: str | None = None
+        env_vars = prepare_llm_environment(project_dir)
+        conflict_counts: Counter[str] = Counter()
+        stop = 0
+
+        result = _run_git(project_dir, "rebase", f"origin/{base}")
+        while result.returncode != 0:  # conflict stop (or unexpected failure)
+            if not _is_rebase_in_progress(project_dir):
+                logger.log(
+                    OUTPUT,
+                    "Aborted: git rebase failed unexpectedly: %s",
+                    result.stderr.strip() or result.stdout.strip(),
+                )
+                return 1
+            files = _conflicted_files(project_dir)
+            if not files:
+                if _run_git(project_dir, "diff", "--cached", "--quiet").returncode == 0:
+                    # Resolved commit became empty (all changes already on base).
+                    logger.log(
+                        OUTPUT,
+                        "Skipping commit made redundant by rebase "
+                        "(already on base)...",
+                    )
+                    result = _run_git(project_dir, "rebase", "--skip")
+                    continue
+                logger.log(
+                    OUTPUT,
+                    "Aborted: rebase stopped without conflicted files: %s",
+                    result.stderr.strip() or result.stdout.strip(),
+                )
+                return 1
+            binary = _binary_conflict(project_dir)
+            if binary:
+                logger.log(OUTPUT, "Aborted: binary conflict in %s", binary)
+                return 1
+            conflict_counts.update(files)
+            repeated = [
+                f
+                for f, count in conflict_counts.items()
+                if count >= _MAX_SAME_FILE_CONFLICTS
+            ]
+            if repeated:
+                logger.log(
+                    OUTPUT,
+                    "Aborted: %s conflicted at %d rebase stops",
+                    repeated[0],
+                    conflict_counts[repeated[0]],
+                )
+                return 1
+            pr_info_files = [f for f in files if f.startswith("pr_info/")]
+            for file in pr_info_files:
+                if not _resolve_pr_info_conflict(project_dir, file):
+                    logger.log(OUTPUT, "Aborted: could not auto-resolve %s", file)
+                    return 1
+            others = [f for f in files if f not in pr_info_files]
+            if others:
+                logger.log(
+                    OUTPUT, "Resolving %d conflicted file(s) via LLM...", len(others)
+                )
+                stop += 1
+                _, session_id = _prompt_in_session(
+                    _build_conflict_prompt(project_dir, others),
+                    session_id,
+                    project_dir=project_dir,
+                    provider=provider,
+                    env_vars=env_vars,
+                    mcp_config=mcp_config,
+                    settings_file=settings_file,
+                    execution_dir=execution_dir,
+                    step_name=f"conflict_{stop}",
+                )
+                unresolved = [
+                    f for f in others if _has_conflict_markers(project_dir, f)
+                ]
+                if unresolved:
+                    logger.log(
+                        OUTPUT,
+                        "Aborted: conflict markers remain in %s",
+                        ", ".join(unresolved),
+                    )
+                    return 1
+            result = _stage_all_and_continue(project_dir)
+
+        logger.log(OUTPUT, "Verifying no regression...")
+        regressions = _run_all_checks(project_dir) - baseline
+        attempt = 0
+        last_text: str | None = None
+        while regressions and attempt < _MAX_FIX_ATTEMPTS:
+            text = _format_failure_keys(regressions)
+            if text == last_text:
+                break  # stall guard: the LLM changed nothing observable
+            last_text = text
+            attempt += 1
+            logger.log(
+                OUTPUT,
+                "Fixing %d regression(s) (attempt %d/%d)...",
+                len(regressions),
+                attempt,
+                _MAX_FIX_ATTEMPTS,
+            )
+            _, session_id = _prompt_in_session(
+                _build_regression_fix_prompt(text),
+                session_id,
+                project_dir=project_dir,
+                provider=provider,
+                env_vars=env_vars,
+                mcp_config=mcp_config,
+                settings_file=settings_file,
+                execution_dir=execution_dir,
+                step_name=f"fix_{attempt}",
+            )
+            run_format_code(project_dir)
+            _run_git(project_dir, "add", "-A")
+            # An empty commit exits non-zero — harmless (re-check runs anyway;
+            # identical regressions then hit the stall guard or attempt cap).
+            _run_git(
+                project_dir,
+                "commit",
+                "-m",
+                f"fix: resolve regressions from rebase onto origin/{base}",
+            )
+            regressions = _run_all_checks(project_dir) - baseline
+        if regressions:
+            logger.log(
+                OUTPUT,
+                "Aborted: %d unfixed regression(s); pre-rebase state restored",
+                len(regressions),
+            )
+            _reset_hard(project_dir, pre_sha)
             return 1
 
-        result = git_push(project_dir, force_with_lease=True)
-        if result["success"]:
-            logger.info("Rebased and force-pushed onto origin/%s", base)
+        if not _rebase_success_shape(project_dir, pre_sha):
+            # Reset is safe here: the rebase completed, so the finally net
+            # won't act — same never-leave-rebased-unpushed invariant as the
+            # other post-rebase failure paths.
+            logger.log(
+                OUTPUT,
+                "Aborted: git state does not corroborate a successful rebase; "
+                "pre-rebase state restored",
+            )
+            _reset_hard(project_dir, pre_sha)
+            return 1
+
+        logger.log(OUTPUT, "Force-pushing (with lease)...")
+        push_result = git_push(project_dir, force_with_lease=True)
+        if push_result["success"]:
+            logger.log(OUTPUT, "Rebased and force-pushed onto origin/%s", base)
             return 0
 
-        logger.error("Force-push rejected/failed: %s", result.get("error"))
+        logger.error("Force-push rejected/failed: %s", push_result.get("error"))
         _reset_hard(project_dir, pre_sha)  # never leave unpushed rebased commits
+        logger.log(OUTPUT, "Aborted: force-push rejected; pre-rebase state restored")
         return 2
+    except CheckRunError as exc:
+        # Verification/re-check infrastructure failure: the rebase already
+        # completed, so the finally net cannot restore — explicit reset.
+        _reset_hard(project_dir, pre_sha)
+        logger.error("Verification checks failed to run: %s", exc)
+        logger.log(OUTPUT, "Aborted: checks failed to run; pre-rebase state restored")
+        return 1
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        # LLMTimeoutError is a subclass, so one branch covers timeout + errors.
-        logger.error("Rebase session failed: %s", exc)
-        return 1  # needs-human; the finally net makes this retry-safe
+        # LLM failure/timeout or unexpected error. Mid-rebase: the finally net
+        # aborts. Post-rebase (regression-fix phase): explicit reset — same
+        # never-leave-rebased-unpushed invariant as the paths above.
+        if not _is_rebase_in_progress(project_dir):
+            _reset_hard(project_dir, pre_sha)
+        logger.error("Rebase failed: %s", exc)
+        logger.log(OUTPUT, "Aborted: %s", exc)
+        return 1
     finally:
         if _is_rebase_in_progress(project_dir):
             _abort_rebase(project_dir)
