@@ -134,6 +134,8 @@ def run_finalisation(
             project_dir,
             provider=provider,
             execution_dir=str(execution_dir) if execution_dir else None,
+            mcp_config=mcp_config,
+            settings_file=settings_file,
         )
         if success and llm_message:
             commit_message = llm_message

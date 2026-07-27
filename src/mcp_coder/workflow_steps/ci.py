@@ -243,8 +243,14 @@ def _run_ci_fix(
     # Run formatters (non-critical, continue even if fails)
     run_formatters(config.project_dir)
 
-    # Commit changes
-    if not commit_changes(config.project_dir, config.provider):
+    # Commit changes (same session params as the fix-phase LLM call)
+    if not commit_changes(
+        config.project_dir,
+        config.provider,
+        mcp_config=config.mcp_config,
+        execution_dir=config.cwd,
+        settings_file=config.settings_file,
+    ):
         logger.warning("Failed to commit CI fix changes")
         return False
 

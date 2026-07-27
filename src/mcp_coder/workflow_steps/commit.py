@@ -52,12 +52,23 @@ def run_formatters(project_dir: Path) -> bool:
         return False
 
 
-def commit_changes(project_dir: Path, provider: str = "claude") -> bool:
+def commit_changes(
+    project_dir: Path,
+    provider: str = "claude",
+    *,
+    mcp_config: str | None = None,
+    execution_dir: str | None = None,
+    settings_file: str | None = None,
+) -> bool:
     """Commit changes using existing git operations and return success status.
 
     Args:
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
+        mcp_config: Optional MCP config path; forwarded to commit-message
+            generation so the LLM call runs scoped like the workflow's main sessions
+        execution_dir: Optional working directory for the LLM subprocess
+        settings_file: Optional Claude settings file; forwarded to message generation
 
     Returns:
         True if changes were committed successfully, False on error.
@@ -80,7 +91,11 @@ def commit_changes(project_dir: Path, provider: str = "claude") -> bool:
         # Fall back to LLM generation if no prepared message
         if not commit_message:
             success, commit_message, error = generate_commit_message_with_llm(
-                project_dir, provider
+                project_dir,
+                provider,
+                mcp_config=mcp_config,
+                execution_dir=execution_dir,
+                settings_file=settings_file,
             )
 
             if not success:

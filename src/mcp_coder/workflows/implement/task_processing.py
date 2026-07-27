@@ -447,8 +447,14 @@ Please implement this task step by step."""
         if not run_formatters(project_dir):
             return False, "error"
 
-    # Step 9: Commit changes
-    if not commit_changes(project_dir, provider):
+    # Step 9: Commit changes (same session params as the step's main LLM call)
+    if not commit_changes(
+        project_dir,
+        provider,
+        mcp_config=mcp_config,
+        execution_dir=cwd,
+        settings_file=settings_file,
+    ):
         return False, "error"
 
     # Step 10: Push changes to remote

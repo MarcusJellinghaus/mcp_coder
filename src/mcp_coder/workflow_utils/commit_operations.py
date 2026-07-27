@@ -17,8 +17,9 @@ from ..utils.git_utils import get_branch_name_for_logging
 
 # Constants
 # Inactivity/silence budget (max seconds with no stdout line from `claude`), NOT wall-clock.
-# Commit-message generation is a pure-LLM call (no MCP tools), so 120s is safe: an LLM emits a
-# token quickly. Kept below the external CI step cap.
+# Commit-message generation needs no MCP tools, but when the caller supplies session params
+# (mcp_config/execution_dir/settings_file) it runs scoped/hermetic exactly like the workflow's
+# main sessions. 120s is safe: an LLM emits a token quickly. Kept below the external CI step cap.
 LLM_COMMIT_TIMEOUT_SECONDS = 120  # 2 minutes of silence for commit message generation
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,8 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     project_dir: Path,
     provider: str = "claude",
     execution_dir: Optional[str] = None,
+    mcp_config: Optional[str] = None,
+    settings_file: Optional[str] = None,
 ) -> Tuple[bool, str, Optional[str]]:
     """Generate commit message using LLM. Returns (success, message, error).
 
@@ -72,6 +75,9 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
         project_dir: Path to the project directory
         provider: LLM provider (e.g., 'claude')
         execution_dir: Optional execution directory for Claude subprocess
+        mcp_config: Optional path to an MCP configuration file; forwarded to
+            prompt_llm so the call runs scoped (--mcp-config/--strict-mcp-config)
+        settings_file: Optional path to a Claude settings file; forwarded to prompt_llm
 
     Returns:
         Tuple of (success, commit_message, error_message)
@@ -163,6 +169,8 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
             timeout=LLM_COMMIT_TIMEOUT_SECONDS,
             env_vars=env_vars,
             execution_dir=execution_dir,
+            mcp_config=mcp_config,
+            settings_file=settings_file,
             branch_name=branch_name,
         )["text"]
 

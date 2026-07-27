@@ -150,9 +150,45 @@ class TestCommitChanges:
         result = commit_changes(Path("/test/project"))
 
         assert result is True
-        mock_generate_message.assert_called_once_with(Path("/test/project"), "claude")
+        mock_generate_message.assert_called_once_with(
+            Path("/test/project"),
+            "claude",
+            mcp_config=None,
+            execution_dir=None,
+            settings_file=None,
+        )
         mock_commit.assert_called_once_with(
             "feat: add new feature", Path("/test/project")
+        )
+
+    @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
+    @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
+    def test_commit_changes_forwards_session_params(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock
+    ) -> None:
+        """Test commit_changes forwards session params to message generation."""
+        mock_generate_message.return_value = (True, "feat: add new feature", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(
+            Path("/test/project"),
+            "claude",
+            mcp_config="cfg.json",
+            execution_dir="/x",
+            settings_file="s.json",
+        )
+
+        assert result is True
+        mock_generate_message.assert_called_once_with(
+            Path("/test/project"),
+            "claude",
+            mcp_config="cfg.json",
+            execution_dir="/x",
+            settings_file="s.json",
         )
 
     @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
@@ -165,7 +201,13 @@ class TestCommitChanges:
         result = commit_changes(Path("/test/project"))
 
         assert result is False
-        mock_generate_message.assert_called_once_with(Path("/test/project"), "claude")
+        mock_generate_message.assert_called_once_with(
+            Path("/test/project"),
+            "claude",
+            mcp_config=None,
+            execution_dir=None,
+            settings_file=None,
+        )
 
     @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
     @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")

@@ -257,7 +257,13 @@ def run_review_workflow(
                 post_issue_comments=post_issue_comments,
             )
         run_formatters(project_dir)
-        commit_changes(project_dir, provider)
+        commit_changes(
+            project_dir,
+            provider,
+            mcp_config=mcp_config,
+            execution_dir=str(execution_dir) if execution_dir else None,
+            settings_file=settings_file,
+        )
         push_changes(project_dir)
 
         reason = _after_steps(

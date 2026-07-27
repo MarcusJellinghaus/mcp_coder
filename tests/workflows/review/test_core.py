@@ -154,7 +154,12 @@ def test_tasks_then_dismiss_resumes_reviewer(
         _resp(_DISMISS),  # round 2 supervisor -> dismiss
     ]
 
-    result = _run(tmp_path)
+    result = _run(
+        tmp_path,
+        mcp_config="cfg.json",
+        settings_file="s.json",
+        execution_dir=tmp_path,
+    )
 
     assert result == 0
     assert env.prompt_llm.call_count == 5
@@ -162,7 +167,14 @@ def test_tasks_then_dismiss_resumes_reviewer(
     apply_call = env.prompt_llm.call_args_list[2]
     assert apply_call.kwargs["session_id"] == "rev-1"
     assert "Fix the bug at foo.py:1" in apply_call.args[0]
-    env.commit_changes.assert_called_once()
+    # The post-apply commit runs with the same session params as the reviewer.
+    env.commit_changes.assert_called_once_with(
+        tmp_path,
+        "claude",
+        mcp_config="cfg.json",
+        execution_dir=str(tmp_path),
+        settings_file="s.json",
+    )
     env.push_changes.assert_called_once()
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_PLAN.success_label_id
