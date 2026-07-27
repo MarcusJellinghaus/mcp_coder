@@ -22,6 +22,7 @@ from mcp_coder.workflow_steps.commit import (
     push_changes,
     run_formatters,
 )
+from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 from .constants import (
@@ -31,7 +32,6 @@ from .constants import (
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
 )
-from .llm_failures import llm_failure_reason
 
 # Setup logger
 logger = logging.getLogger(__name__)
