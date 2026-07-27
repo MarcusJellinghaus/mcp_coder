@@ -23,4 +23,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
+- [ ] [Step 1 — Shared check wrappers: `run_pytest_check` + `run_pylint_check`](./steps/step_1.md)
+- [ ] [Step 2 — Failure keys, `CheckRunError`, `_run_all_checks`](./steps/step_2.md)
+- [ ] [Step 3 — Git conflict helpers](./steps/step_3.md)
+- [ ] [Step 4 — New prompts + permission pruning](./steps/step_4.md)
+- [ ] [Step 5 — LLM session helper + prompt builders](./steps/step_5.md)
+- [ ] [Step 6 — Orchestrator rewrite, marker-machinery removal, OUTPUT logging](./steps/step_6.md)
+
 ## Pull Request
