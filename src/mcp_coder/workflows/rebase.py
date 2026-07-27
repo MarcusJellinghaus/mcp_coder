@@ -246,6 +246,9 @@ def _pytest_failure_keys(results: dict[str, Any]) -> set[FailureKey]:
     (collection errors, report still parsed). Genuine infrastructure failures
     take the crash path (``success=False``, no ``test_results``).
 
+    Returns:
+        The set of failure keys derived from failing tests and collectors.
+
     Raises:
         CheckRunError: If pytest failed to run.
     """
@@ -270,6 +273,9 @@ def _pytest_failure_keys(results: dict[str, Any]) -> set[FailureKey]:
 def _pylint_failure_keys(result: PylintResult) -> set[FailureKey]:
     """Reduce a ``PylintResult`` to line-insensitive failure keys.
 
+    Returns:
+        The set of failure keys derived from the pylint messages.
+
     Raises:
         CheckRunError: If pylint failed to run (``result.error`` set).
     """
@@ -280,6 +286,9 @@ def _pylint_failure_keys(result: PylintResult) -> set[FailureKey]:
 
 def _mypy_failure_keys(result: MypyResult) -> set[FailureKey]:
     """Reduce a ``MypyResult`` to line-insensitive failure keys (errors only).
+
+    Returns:
+        The set of failure keys derived from the mypy error messages.
 
     Raises:
         CheckRunError: If mypy failed to run (``result.error`` set).
@@ -298,6 +307,9 @@ def _run_all_checks(project_dir: Path) -> set[FailureKey]:
 
     Findings (failed tests, lint messages, type errors) become keys; a check
     that fails to *run* raises ``CheckRunError`` naming the checker.
+
+    Returns:
+        The union of failure keys across all three checks.
 
     Raises:
         CheckRunError: If any check fails to run.
@@ -450,6 +462,9 @@ def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
     ancestor (merge base) / ours / theirs contents in fenced blocks. A side
     absent from the index (delete/modify conflict) renders an absence note
     instead of content.
+
+    Returns:
+        The assembled conflict-resolution prompt string.
     """
     blocks: list[str] = []
     for file in files:
@@ -466,7 +481,11 @@ def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
 
 
 def _build_regression_fix_prompt(regression_text: str) -> str:
-    """Build the regression-fix prompt with the failure-key text inlined."""
+    """Build the regression-fix prompt with the failure-key text inlined.
+
+    Returns:
+        The assembled regression-fix prompt string.
+    """
     template = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_PROMPT_HEADER)
     return template.replace("[regression_output]", regression_text)
 
@@ -476,6 +495,10 @@ def _format_failure_keys(keys: set[FailureKey]) -> str:
 
     Sorted output is required for determinism: besides feeding the regression
     prompt, this string doubles as the stall-guard comparison value.
+
+    Returns:
+        The sorted, newline-joined text rendering of the keys, or an empty
+        string for an empty set.
     """
     return "\n".join(f"{key[0]}: {' '.join(key[1:])}" for key in sorted(keys))
 
