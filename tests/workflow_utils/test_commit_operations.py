@@ -110,6 +110,53 @@ class TestGenerateCommitMessageWithLLM:
 
     @patch("mcp_coder.workflow_utils.commit_operations.prepare_llm_environment")
     @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
+    @patch("mcp_coder.workflow_utils.commit_operations.get_git_diff_for_commit")
+    @patch("mcp_coder.prompt_manager.get_prompt")
+    @patch("mcp_coder.workflow_utils.commit_operations.prompt_llm")
+    def test_generate_commit_message_forwards_session_params(
+        self,
+        mock_prompt_llm: Mock,
+        mock_get_prompt: Mock,
+        mock_get_diff: Mock,
+        mock_stage: Mock,
+        mock_prepare_env: Mock,
+    ) -> None:
+        """Test mcp_config/settings_file/execution_dir are forwarded to prompt_llm."""
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
+        mock_stage.return_value = True
+        mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
+        mock_get_prompt.return_value = "Generate commit message"
+        mock_prompt_llm.return_value = {
+            "text": "feat: add new feature",
+            "session_id": None,
+            "provider": "claude",
+            "version": None,
+            "timestamp": None,
+            "raw_response": None,
+        }
+
+        project_dir = Path("/test/repo")
+
+        success, message, error = generate_commit_message_with_llm(
+            project_dir,
+            "claude",
+            execution_dir="/x",
+            mcp_config="cfg.json",
+            settings_file="s.json",
+        )
+
+        assert success is True
+        assert message == "feat: add new feature"
+        assert error is None
+
+        mock_prompt_llm.assert_called_once()
+        call_kwargs = mock_prompt_llm.call_args.kwargs
+        assert call_kwargs["execution_dir"] == "/x"
+        assert call_kwargs["mcp_config"] == "cfg.json"
+        assert call_kwargs["settings_file"] == "s.json"
+
+    @patch("mcp_coder.workflow_utils.commit_operations.prepare_llm_environment")
+    @patch("mcp_coder.workflow_utils.commit_operations.stage_all_changes")
     def test_generate_commit_message_stage_failure(
         self, mock_stage: Mock, mock_prepare_env: Mock
     ) -> None:

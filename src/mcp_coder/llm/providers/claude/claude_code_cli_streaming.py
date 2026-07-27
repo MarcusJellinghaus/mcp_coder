@@ -20,10 +20,12 @@ from .claude_code_cli import (
 )
 from .claude_code_cli_log_paths import get_stream_log_path
 from .claude_mcp_guard import (
+    MCP_NEEDS_AUTH_STATUS,
     McpServersUnavailableError,
     StreamMessage,
     find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
+    load_mcp_server_names,
     parse_stream_json_line,
 )
 
@@ -106,10 +108,14 @@ def ask_claude_code_cli_stream(
         raw_line, system (the init message payload)
 
     Raises:
-        ValueError: If the question is empty/whitespace or timeout is not positive.
+        ValueError: If the question is empty/whitespace, timeout is not
+            positive, or ``mcp_config`` is set but missing/unreadable/malformed
+            (raised before the subprocess launches).
         McpServersUnavailableError: If the init event reports a configured MCP
             server that did not reach ``connected`` status; aborted before any
-            assistant content is yielded.
+            assistant content is yielded. With ``mcp_config`` set, only servers
+            listed in that file's ``mcpServers`` can trigger this abort; other
+            servers (e.g. account-level connectors) are logged and ignored.
 
     The "done" event includes session_id and usage data from the result message.
     The "raw_line" event wraps each raw NDJSON line for json-raw mode consumers.
@@ -118,6 +124,14 @@ def ask_claude_code_cli_stream(
         raise ValueError("Question cannot be empty or whitespace only")
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
+
+    # Positive list for the MCP guard: with an explicit mcp_config, only the
+    # servers it lists may abort the session. Parsed before the subprocess
+    # launches so an operator error (bad path/JSON) surfaces up front, not
+    # mid-stream. None means "no config supplied": guard every listed server.
+    configured_servers: set[str] | None = (
+        load_mcp_server_names(mcp_config, cwd) if mcp_config else None
+    )
 
     claude_cmd = _find_claude_executable()
     command = build_cli_command(
@@ -173,6 +187,26 @@ def ask_claude_code_cli_stream(
                 # within the session via the ToolSearch wait-bridge, so they are
                 # tolerated and only logged.
                 fatal_servers = find_fatal_mcp_servers(msg)
+                if configured_servers is not None:
+                    # Scope fatality to the supplied --mcp-config: servers the
+                    # operator did not configure (e.g. injected account-level
+                    # connectors) must never abort the session.
+                    ignored = {
+                        name: status
+                        for name, status in fatal_servers.items()
+                        if name not in configured_servers
+                    }
+                    fatal_servers = {
+                        name: status
+                        for name, status in fatal_servers.items()
+                        if name in configured_servers
+                    }
+                    if ignored:
+                        logger.info(
+                            "Ignoring non-configured MCP server(s) outside "
+                            "--mcp-config: %s",
+                            ignored,
+                        )
                 if fatal_servers:
                     detail = ", ".join(
                         f"{name}={status}" for name, status in fatal_servers.items()
@@ -188,12 +222,31 @@ def ask_claude_code_cli_stream(
                     )
 
                 # Fatal servers already aborted above, so any remaining
-                # non-connected servers are pending.
-                pending_servers = find_unavailable_mcp_servers(msg)
+                # non-connected servers are pending or needs-auth. Log the two
+                # groups separately: pending servers self-heal, needs-auth
+                # connectors are optional account-level connectors and must not
+                # be described as starting.
+                non_connected = find_unavailable_mcp_servers(msg)
+                pending_servers = {
+                    name: status
+                    for name, status in non_connected.items()
+                    if status != MCP_NEEDS_AUTH_STATUS
+                }
+                needs_auth_servers = {
+                    name: status
+                    for name, status in non_connected.items()
+                    if status == MCP_NEEDS_AUTH_STATUS
+                }
                 if pending_servers:
                     logger.info(
                         "MCP server(s) still starting; ToolSearch will wait: %s",
                         pending_servers,
+                    )
+                if needs_auth_servers:
+                    logger.info(
+                        "Unauthenticated account connector(s) (not part of "
+                        "configured-server health): %s",
+                        needs_auth_servers,
                     )
             yield from _map_stream_message_to_event(msg)
 

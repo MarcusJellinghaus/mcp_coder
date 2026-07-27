@@ -826,7 +826,13 @@ Please implement this task step by step."""
             project_dir, 2, "claude", ANY, None, None, None
         )
         mock_run_formatters.assert_called_once_with(project_dir)
-        mock_commit.assert_called_once_with(project_dir, "claude")
+        mock_commit.assert_called_once_with(
+            project_dir,
+            "claude",
+            mcp_config=None,
+            execution_dir=str(project_dir),
+            settings_file=None,
+        )
         mock_push.assert_called_once_with(project_dir)
 
     def test_error_recovery_patterns(self) -> None:

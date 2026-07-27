@@ -24,12 +24,14 @@ from .claude_executable_finder import find_claude_executable
 # They are re-exported here so existing importers (and patch targets) keep
 # working from claude_code_cli unchanged.
 from .claude_mcp_guard import (
+    MCP_NEEDS_AUTH_STATUS,
     McpServersUnavailableError,
     ParsedStreamResponse,
     StreamMessage,
     find_exposed_mcp_tools,
     find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
+    load_mcp_server_names,
     parse_stream_json_file,
     parse_stream_json_line,
     parse_stream_json_string,
@@ -45,6 +47,7 @@ CLAUDE_BUILTIN_TOOLS = "ToolSearch"
 
 __all__ = [
     "CLAUDE_BUILTIN_TOOLS",
+    "MCP_NEEDS_AUTH_STATUS",
     "McpServersUnavailableError",
     "ParsedCliResponse",
     "ParsedStreamResponse",
@@ -56,6 +59,7 @@ __all__ = [
     "find_fatal_mcp_servers",
     "find_unavailable_mcp_servers",
     "format_stream_json_input",
+    "load_mcp_server_names",
     "parse_cli_json_string",
     "parse_stream_json_file",
     "parse_stream_json_line",

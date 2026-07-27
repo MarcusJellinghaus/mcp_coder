@@ -2,25 +2,21 @@
 """Tests for the Claude CLI MCP-availability guard.
 
 Split from test_claude_cli_stream_parsing.py to keep file sizes manageable.
-Covers find_unavailable_mcp_servers, find_fatal_mcp_servers, the init-event
-capture regression (#998), and the guard behaviour in both the blocking and
-streaming code paths.
+Covers the init-event capture regression (#998) and the guard behaviour in
+both the blocking and streaming code paths. Unit tests for the pure guard
+helpers live in test_claude_mcp_guard.py.
 """
 
 import json
 import tempfile
 from pathlib import Path
-from typing import cast
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import (
     McpServersUnavailableError,
-    StreamMessage,
     ask_claude_code_cli,
-    find_exposed_mcp_tools,
-    find_fatal_mcp_servers,
     find_unavailable_mcp_servers,
     parse_stream_json_string,
 )
@@ -48,218 +44,6 @@ def _make_mock_stream(
         timed_out=timed_out,
     )
     return mock_stream
-
-
-class TestFindUnavailableMcpServers:
-    """Tests for the MCP server availability guard (find_unavailable_mcp_servers)."""
-
-    def test_none_system_message_returns_empty(self) -> None:
-        assert find_unavailable_mcp_servers(None) == {}
-
-    def test_no_servers_configured_returns_empty(self) -> None:
-        msg = cast(StreamMessage, {"type": "system", "subtype": "init", "tools": []})
-        assert find_unavailable_mcp_servers(msg) == {}
-
-    def test_all_connected_returns_empty(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "mcp_servers": [
-                    {"name": "mcp-tools-py", "status": "connected"},
-                    {"name": "mcp-workspace", "status": "connected"},
-                ],
-            },
-        )
-        assert find_unavailable_mcp_servers(msg) == {}
-
-    def test_failed_and_pending_are_reported(self) -> None:
-        """Reproduces the #995 init: mcp-tools-py failed, mcp-workspace pending."""
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "mcp_servers": [
-                    {"name": "mcp-tools-py", "status": "failed"},
-                    {"name": "mcp-workspace", "status": "pending"},
-                ],
-            },
-        )
-        assert find_unavailable_mcp_servers(msg) == {
-            "mcp-tools-py": "failed",
-            "mcp-workspace": "pending",
-        }
-
-    def test_only_unavailable_servers_reported(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "mcp_servers": [
-                    {"name": "mcp-tools-py", "status": "connected"},
-                    {"name": "mcp-workspace", "status": "failed"},
-                ],
-            },
-        )
-        assert find_unavailable_mcp_servers(msg) == {"mcp-workspace": "failed"}
-
-    def test_missing_status_treated_as_unavailable(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {"type": "system", "subtype": "init", "mcp_servers": [{"name": "x"}]},
-        )
-        assert find_unavailable_mcp_servers(msg) == {"x": "unknown"}
-
-    def test_status_is_case_insensitive(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "mcp_servers": [{"name": "mcp-workspace", "status": "Connected"}],
-            },
-        )
-        assert find_unavailable_mcp_servers(msg) == {}
-
-
-class TestFindFatalMcpServers:
-    """find_fatal_mcp_servers reports only terminal (non-pending) servers."""
-
-    def test_none_system_message_returns_empty(self) -> None:
-        assert find_fatal_mcp_servers(None) == {}
-
-    def test_pending_is_tolerated(self) -> None:
-        """A still-starting (pending) server self-heals via ToolSearch."""
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "mcp_servers": [
-                    {"name": "mcp-tools-py", "status": "pending"},
-                    {"name": "mcp-workspace", "status": "pending"},
-                ],
-            },
-        )
-        assert find_fatal_mcp_servers(msg) == {}
-
-    def test_all_connected_returns_empty(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "mcp_servers": [{"name": "mcp-workspace", "status": "connected"}],
-            },
-        )
-        assert find_fatal_mcp_servers(msg) == {}
-
-    def test_failed_and_unknown_are_reported(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "mcp_servers": [
-                    {"name": "mcp-tools-py", "status": "failed"},
-                    {"name": "mcp-workspace"},
-                ],
-            },
-        )
-        assert find_fatal_mcp_servers(msg) == {
-            "mcp-tools-py": "failed",
-            "mcp-workspace": "unknown",
-        }
-
-    def test_mixed_failed_and_pending_reports_only_failed(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "mcp_servers": [
-                    {"name": "mcp-tools-py", "status": "failed"},
-                    {"name": "mcp-workspace", "status": "pending"},
-                ],
-            },
-        )
-        assert find_fatal_mcp_servers(msg) == {"mcp-tools-py": "failed"}
-
-
-class TestFindExposedMcpTools:
-    """find_exposed_mcp_tools reads the init event's ``tools`` field.
-
-    Fixtures mirror the verified real init-event shape: a connected server
-    publishes its ``mcp__*`` names into ``tools`` (non-zero count), while a
-    pending/cold-starting server exposes only ``ToolSearch`` (zero count).
-    """
-
-    def test_none_system_message_returns_empty(self) -> None:
-        assert find_exposed_mcp_tools(None) == []
-
-    def test_no_tools_key_returns_empty(self) -> None:
-        msg = cast(StreamMessage, {"type": "system", "subtype": "init"})
-        assert find_exposed_mcp_tools(msg) == []
-
-    def test_healthy_returns_sorted_mcp_names_only(self) -> None:
-        """Connected server: ``tools`` mixes builtin + mcp names (real shape)."""
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "tools": [
-                    "ToolSearch",
-                    "mcp__mcp-tools-py__run_pytest_check",
-                    "mcp__mcp-workspace__read_file",
-                ],
-            },
-        )
-        assert find_exposed_mcp_tools(msg) == [
-            "mcp__mcp-tools-py__run_pytest_check",
-            "mcp__mcp-workspace__read_file",
-        ]
-
-    def test_degraded_connected_but_no_tools_returns_empty(self) -> None:
-        """Pending/cold-start: only ToolSearch published → zero MCP tools."""
-        msg = cast(
-            StreamMessage,
-            {"type": "system", "subtype": "init", "tools": ["ToolSearch"]},
-        )
-        assert find_exposed_mcp_tools(msg) == []
-
-    def test_empty_tools_list_returns_empty(self) -> None:
-        msg = cast(StreamMessage, {"type": "system", "subtype": "init", "tools": []})
-        assert find_exposed_mcp_tools(msg) == []
-
-    def test_dict_shaped_entries_are_supported(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "tools": [{"name": "mcp__x__y"}, {"name": "Bash"}],
-            },
-        )
-        assert find_exposed_mcp_tools(msg) == ["mcp__x__y"]
-
-    def test_duplicates_collapse_and_output_is_sorted(self) -> None:
-        msg = cast(
-            StreamMessage,
-            {
-                "type": "system",
-                "subtype": "init",
-                "tools": [
-                    "mcp__b__two",
-                    "mcp__a__one",
-                    "mcp__b__two",
-                ],
-            },
-        )
-        assert find_exposed_mcp_tools(msg) == ["mcp__a__one", "mcp__b__two"]
 
 
 class TestMcpServerGuardInAskClaude:
@@ -603,6 +387,135 @@ class TestStreamMcpGuard:
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
     )
+    def test_stream_needs_auth_only_proceeds(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """needs-auth-only connectors are optional account connectors: no abort (#1090)."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [
+                    {"name": "mcp-workspace", "status": "connected"},
+                    {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                ],
+            }
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "real answer"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, assistant])
+
+        events = list(ask_claude_code_cli_stream("q"))
+
+        text_deltas = [e for e in events if e.get("type") == "text_delta"]
+        assert [e["text"] for e in text_deltas] == ["real answer"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_incident_1090_shape_proceeds(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """The #1090 incident init (pending + 3 needs-auth connectors) must not abort."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [
+                    {"name": "obsidian-wiki", "status": "pending"},
+                    {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                    {"name": "claude.ai Gmail", "status": "needs-auth"},
+                    {"name": "claude.ai Google Calendar", "status": "needs-auth"},
+                ],
+            }
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "commit msg"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, assistant])
+
+        events = list(ask_claude_code_cli_stream("q"))
+
+        text_deltas = [e for e in events if e.get("type") == "text_delta"]
+        assert [e["text"] for e in text_deltas] == ["commit msg"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_stream_aborts_on_failed_alongside_needs_auth(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A failed configured server still aborts even with needs-auth connectors present."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        init = json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": [
+                    {"name": "mcp-workspace", "status": "failed"},
+                    {"name": "claude.ai Gmail", "status": "needs-auth"},
+                ],
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init])
+
+        with pytest.raises(McpServersUnavailableError) as exc:
+            list(ask_claude_code_cli_stream("q"))
+
+        assert "mcp-workspace=failed" in str(exc.value)
+        assert exc.value.unavailable_servers == {"mcp-workspace": "failed"}
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
     def test_stream_aborts_on_fatal_despite_thinking(
         self,
         mock_stream_sub: MagicMock,
@@ -640,3 +553,157 @@ class TestStreamMcpGuard:
         assert "mcp-workspace=failed" in str(exc.value)
         # Aborted before any assistant content was leaked to the consumer.
         assert not any(e.get("type") == "text_delta" for e in events)
+
+
+class TestStreamMcpGuardScoping:
+    """With mcp_config supplied, only servers listed in it can abort (#1090)."""
+
+    @staticmethod
+    def _write_config(tmp_path: Path, server_names: list[str]) -> str:
+        config = tmp_path / "mcp.json"
+        config.write_text(
+            json.dumps({"mcpServers": {name: {} for name in server_names}}),
+            encoding="utf-8",
+        )
+        return str(config)
+
+    @staticmethod
+    def _init_line(servers: list[dict[str, str]]) -> str:
+        return json.dumps(
+            {
+                "type": "system",
+                "subtype": "init",
+                "session_id": "s",
+                "tools": [],
+                "mcp_servers": servers,
+            }
+        )
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_non_configured_failed_server_does_not_raise(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A failed server outside --mcp-config is ignored (with needs-auth too)."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mcp_config = self._write_config(tmp_path, ["mcp-workspace"])
+        init = self._init_line(
+            [
+                {"name": "mcp-workspace", "status": "connected"},
+                {"name": "obsidian-wiki", "status": "failed"},
+                {"name": "claude.ai Gmail", "status": "needs-auth"},
+            ]
+        )
+        assistant = json.dumps(
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "real answer"}]},
+            }
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init, assistant])
+
+        events = list(ask_claude_code_cli_stream("q", mcp_config=mcp_config))
+
+        text_deltas = [e for e in events if e.get("type") == "text_delta"]
+        assert [e["text"] for e in text_deltas] == ["real answer"]
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_configured_failed_server_still_raises(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A failed server that IS listed in --mcp-config still aborts."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mcp_config = self._write_config(tmp_path, ["mcp-workspace"])
+        init = self._init_line([{"name": "mcp-workspace", "status": "failed"}])
+        mock_stream_sub.return_value = _make_mock_stream([init])
+
+        with pytest.raises(McpServersUnavailableError) as exc:
+            list(ask_claude_code_cli_stream("q", mcp_config=mcp_config))
+
+        assert "mcp-workspace=failed" in str(exc.value)
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_mixed_failures_raise_naming_only_configured(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Configured and non-configured failures: only the configured one aborts."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        mcp_config = self._write_config(tmp_path, ["mcp-workspace"])
+        init = self._init_line(
+            [
+                {"name": "mcp-workspace", "status": "failed"},
+                {"name": "obsidian-wiki", "status": "failed"},
+            ]
+        )
+        mock_stream_sub.return_value = _make_mock_stream([init])
+
+        with pytest.raises(McpServersUnavailableError) as exc:
+            list(ask_claude_code_cli_stream("q", mcp_config=mcp_config))
+
+        assert exc.value.unavailable_servers == {"mcp-workspace": "failed"}
+        assert "obsidian-wiki" not in str(exc.value)
+
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming._find_claude_executable",
+        return_value="claude",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.get_stream_log_path",
+    )
+    @patch(
+        "mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess",
+    )
+    def test_bad_config_path_raises_before_subprocess(
+        self,
+        mock_stream_sub: MagicMock,
+        mock_log_path: MagicMock,
+        _mock_find: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """An unreadable --mcp-config is an operator error: fail fast, no launch."""
+        mock_log_path.return_value = tmp_path / "stream.ndjson"
+        missing = tmp_path / "missing.json"
+
+        with pytest.raises(ValueError) as exc:
+            list(ask_claude_code_cli_stream("q", mcp_config=str(missing)))
+
+        assert str(missing) in str(exc.value)
+        mock_stream_sub.assert_not_called()

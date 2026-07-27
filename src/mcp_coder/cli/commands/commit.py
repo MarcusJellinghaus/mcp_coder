@@ -91,9 +91,10 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     success, commit_message, error = generate_commit_message_with_llm(
         project_dir, provider, execution_dir=str(execution_dir)
     )
-    # Commit message generation is text-in/text-out: it takes diff text as input
-    # and produces a commit message as output. No MCP tool use is involved,
-    # so --mcp-config is not applicable here.
+    # Interactive command: mcp_config deliberately stays None so the subprocess
+    # uses normal MCP config discovery from execution_dir. Workflow-internal
+    # callers pass explicit session params instead (see workflow_steps/commit.py);
+    # the guard's needs-auth tolerance (layer 1) covers this discovery mode.
     if not success:
         logger.error("%s", error)
         return 2

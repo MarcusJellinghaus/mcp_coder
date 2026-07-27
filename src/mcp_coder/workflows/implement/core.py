@@ -323,7 +323,13 @@ def run_implement_workflow(
 
             if all_changes:
                 logger.info("Committing final mypy fixes...")
-                if not commit_changes(project_dir, provider):
+                if not commit_changes(
+                    project_dir,
+                    provider,
+                    mcp_config=mcp_config,
+                    execution_dir=str(execution_dir) if execution_dir else None,
+                    settings_file=settings_file,
+                ):
                     logger.error("Failed to commit final mypy fixes")
                     _handle_workflow_failure(
                         WorkflowFailure(

@@ -154,7 +154,12 @@ def test_tasks_then_dismiss_resumes_reviewer(
         _resp(_DISMISS),  # round 2 supervisor -> dismiss
     ]
 
-    result = _run(tmp_path)
+    result = _run(
+        tmp_path,
+        mcp_config="cfg.json",
+        settings_file="s.json",
+        execution_dir=tmp_path,
+    )
 
     assert result == 0
     assert env.prompt_llm.call_count == 5
@@ -162,7 +167,14 @@ def test_tasks_then_dismiss_resumes_reviewer(
     apply_call = env.prompt_llm.call_args_list[2]
     assert apply_call.kwargs["session_id"] == "rev-1"
     assert "Fix the bug at foo.py:1" in apply_call.args[0]
-    env.commit_changes.assert_called_once()
+    # The post-apply commit runs with the same session params as the reviewer.
+    env.commit_changes.assert_called_once_with(
+        tmp_path,
+        "claude",
+        mcp_config="cfg.json",
+        execution_dir=str(tmp_path),
+        settings_file="s.json",
+    )
     env.push_changes.assert_called_once()
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_PLAN.success_label_id
@@ -282,6 +294,71 @@ def test_mcp_unavailable_maps_to_mcp_label(
     assert result == 1
     failure = env.handle_workflow_failure.call_args.args[0]
     assert failure.category == REVIEW_PLAN.failure_labels["mcp"]
+
+
+def test_commit_failure_fails_run_and_skips_push(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """commit_changes False -> return 1, general label, log entry, no push."""
+    env.commit_changes.return_value = False
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    env.push_changes.assert_not_called()
+    env.handle_workflow_failure.assert_called_once()
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["general"]
+    assert "commit-failed" in failure.message
+
+    log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
+    assert "commit-failed" in log
+
+
+def test_push_failure_fails_run(env: SimpleNamespace, tmp_path: Path) -> None:
+    """push_changes False -> return 1, general label, log entry."""
+    env.push_changes.return_value = False
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    env.commit_changes.assert_called_once()
+    env.handle_workflow_failure.assert_called_once()
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["general"]
+    assert "push-failed" in failure.message
+
+    log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
+    assert "push-failed" in log
+
+
+def test_clean_tree_round_proceeds_normally(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A round with no file changes (commit no-ops True) keeps looping to success."""
+    env.is_working_directory_clean.return_value = True
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+        _reviewer(),
+        _resp(_DISMISS),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
 
 
 def test_labels_not_touched_when_gating_off(

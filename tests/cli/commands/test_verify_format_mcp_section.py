@@ -3,8 +3,10 @@
 from typing import Any
 
 from mcp_coder.cli.commands.verify_formatting import (
+    STATUS_SYMBOLS,
     _format_claude_mcp_section,
     _format_mcp_section,
+    _format_tools_exposed_section,
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
@@ -340,3 +342,59 @@ class TestFormatMcpSectionForCompleteness:
         )
         assert "for completeness" in output
         assert "via langchain-mcp-adapters" in output
+
+
+class TestFormatToolsExposedSectionNeedsAuth:
+    """Tests for needs-auth connector handling in _format_tools_exposed_section."""
+
+    def test_needs_auth_only_stays_ok_with_connector_note(self) -> None:
+        """Only non-connected servers are needs-auth + >=1 tool -> ok True + note."""
+        system_message = {
+            "mcp_servers": [
+                {"name": "mcp-tools-py", "status": "connected"},
+                {"name": "claude.ai Google Drive", "status": "needs-auth"},
+                {"name": "claude.ai Gmail", "status": "needs-auth"},
+            ],
+            "tools": ["mcp__tools__a"],
+        }
+        lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
+        text = "\n".join(lines)
+        assert ok is True
+        assert STATUS_SYMBOLS["success"] in text
+        assert "unauthenticated account connector" in text
+        assert "not part of health assessment" in text
+        assert "claude.ai Gmail" in text
+        assert "claude.ai Google Drive" in text
+
+    def test_needs_auth_plus_pending_warns_without_needs_auth_in_pending(
+        self,
+    ) -> None:
+        """needs-auth + pending server -> ok None; pending list excludes needs-auth."""
+        system_message = {
+            "mcp_servers": [
+                {"name": "mcp-tools-py", "status": "pending"},
+                {"name": "claude.ai Google Drive", "status": "needs-auth"},
+            ],
+            "tools": [],
+        }
+        lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
+        text = "\n".join(lines)
+        assert ok is None
+        assert STATUS_SYMBOLS["warning"] in text
+        pending_line = lines[0]
+        assert "mcp-tools-py" in pending_line
+        assert "claude.ai Google Drive" not in pending_line
+
+    def test_needs_auth_plus_failed_fails(self) -> None:
+        """needs-auth + failed server -> ok False."""
+        system_message = {
+            "mcp_servers": [
+                {"name": "mcp-tools-py", "status": "failed"},
+                {"name": "claude.ai Google Drive", "status": "needs-auth"},
+            ],
+            "tools": [],
+        }
+        lines, ok = _format_tools_exposed_section(system_message, STATUS_SYMBOLS)
+        text = "\n".join(lines)
+        assert ok is False
+        assert STATUS_SYMBOLS["failure"] in text

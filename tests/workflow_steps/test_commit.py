@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflow_steps.commit import (
+    FALLBACK_COMMIT_MESSAGE,
     commit_changes,
     push_changes,
     run_formatters,
@@ -150,22 +151,134 @@ class TestCommitChanges:
         result = commit_changes(Path("/test/project"))
 
         assert result is True
-        mock_generate_message.assert_called_once_with(Path("/test/project"), "claude")
+        mock_generate_message.assert_called_once_with(
+            Path("/test/project"),
+            "claude",
+            mcp_config=None,
+            execution_dir=None,
+            settings_file=None,
+        )
         mock_commit.assert_called_once_with(
             "feat: add new feature", Path("/test/project")
         )
 
+    @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
     @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
-    def test_commit_changes_message_generation_fails(
-        self, mock_generate_message: MagicMock
+    def test_commit_changes_forwards_session_params(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock
     ) -> None:
-        """Test committing changes when message generation fails."""
-        mock_generate_message.return_value = (False, None, "LLM error")
+        """Test commit_changes forwards session params to message generation."""
+        mock_generate_message.return_value = (True, "feat: add new feature", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(
+            Path("/test/project"),
+            "claude",
+            mcp_config="cfg.json",
+            execution_dir="/x",
+            settings_file="s.json",
+        )
+
+        assert result is True
+        mock_generate_message.assert_called_once_with(
+            Path("/test/project"),
+            "claude",
+            mcp_config="cfg.json",
+            execution_dir="/x",
+            settings_file="s.json",
+        )
+
+    @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
+    @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
+    def test_commit_changes_uses_fallback_when_generation_fails(
+        self,
+        mock_generate_message: MagicMock,
+        mock_commit: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test fallback commit message is used when LLM generation fails."""
+        mock_generate_message.return_value = (False, "", "boom")
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(Path("/test/project"))
+
+        assert result is True
+        mock_generate_message.assert_called_once_with(
+            Path("/test/project"),
+            "claude",
+            mcp_config=None,
+            execution_dir=None,
+            settings_file=None,
+        )
+        mock_commit.assert_called_once_with(
+            FALLBACK_COMMIT_MESSAGE, Path("/test/project")
+        )
+        # Error is logged; git history gets only the static message
+        assert "boom" in caplog.text
+
+    @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
+    @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
+    def test_commit_changes_clean_tree_flows_through_fallback(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock
+    ) -> None:
+        """Test clean tree: generation fails, commit no-ops with success."""
+        mock_generate_message.return_value = (False, "", "No changes to commit")
+        # Clean tree: commit_all_changes no-ops and reports success
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": None,
+            "error": None,
+        }
+
+        result = commit_changes(Path("/test/project"))
+
+        assert result is True
+        mock_commit.assert_called_once_with(
+            FALLBACK_COMMIT_MESSAGE, Path("/test/project")
+        )
+
+    @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
+    @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
+    def test_commit_changes_fallback_commit_failure_returns_false(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock
+    ) -> None:
+        """Test git-level failure still returns False after fallback message."""
+        mock_generate_message.return_value = (False, "", "boom")
+        mock_commit.return_value = {
+            "success": False,
+            "commit_hash": None,
+            "error": "Git commit failed",
+        }
 
         result = commit_changes(Path("/test/project"))
 
         assert result is False
-        mock_generate_message.assert_called_once_with(Path("/test/project"), "claude")
+
+    @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
+    @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")
+    def test_commit_changes_no_fallback_when_generation_succeeds(
+        self, mock_generate_message: MagicMock, mock_commit: MagicMock
+    ) -> None:
+        """Test LLM message is used, not the fallback, when generation succeeds."""
+        mock_generate_message.return_value = (True, "feat: llm message", None)
+        mock_commit.return_value = {
+            "success": True,
+            "commit_hash": "abc123",
+            "error": None,
+        }
+
+        result = commit_changes(Path("/test/project"))
+
+        assert result is True
+        mock_commit.assert_called_once_with("feat: llm message", Path("/test/project"))
 
     @patch("mcp_coder.workflow_steps.commit.commit_all_changes")
     @patch("mcp_coder.workflow_steps.commit.generate_commit_message_with_llm")

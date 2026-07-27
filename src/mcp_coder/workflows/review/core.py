@@ -257,8 +257,51 @@ def run_review_workflow(
                 post_issue_comments=post_issue_comments,
             )
         run_formatters(project_dir)
-        commit_changes(project_dir, provider)
-        push_changes(project_dir)
+        if not commit_changes(
+            project_dir,
+            provider,
+            mcp_config=mcp_config,
+            execution_dir=str(execution_dir) if execution_dir else None,
+            settings_file=settings_file,
+        ):
+            # Looping over an uncommitted round would hide the state from CI
+            # and reviewers — fail the run instead (falls back to the
+            # `general` failure label; the reason names the failed step).
+            write_round_log(
+                project_dir,
+                config,
+                run_number,
+                round_number,
+                findings=report,
+                decisions=str(verdict),
+                changes="commit-failed",
+                escalate_reason="commit-failed",
+            )
+            return _fail(
+                config,
+                project_dir,
+                "commit-failed",
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+            )
+        if not push_changes(project_dir):
+            write_round_log(
+                project_dir,
+                config,
+                run_number,
+                round_number,
+                findings=report,
+                decisions=str(verdict),
+                changes="push-failed",
+                escalate_reason="push-failed",
+            )
+            return _fail(
+                config,
+                project_dir,
+                "push-failed",
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+            )
 
         reason = _after_steps(
             config,
