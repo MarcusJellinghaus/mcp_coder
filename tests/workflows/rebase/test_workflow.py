@@ -18,12 +18,8 @@ import pytest
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflows import rebase as rebase_module
-from mcp_coder.workflows.rebase import (
-    CheckRunError,
-    FailureKey,
-    _GitResult,
-    run_rebase_workflow,
-)
+from mcp_coder.workflows.rebase import _GitResult, run_rebase_workflow
+from mcp_coder.workflows.rebase_checks import CheckRunError, FailureKey
 
 _OK = _GitResult(0, "", "")
 _FAIL = _GitResult(1, "", "boom")

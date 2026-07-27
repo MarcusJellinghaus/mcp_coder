@@ -14,7 +14,7 @@ from mcp_tools_py.code_checker_mypy import MypyMessage, MypyResult
 from mcp_tools_py.code_checker_pylint import PylintMessage, PylintResult
 from mcp_tools_py.code_checker_pytest import Collector, PytestReport, Summary, Test
 
-from mcp_coder.workflows.rebase import (
+from mcp_coder.workflows.rebase_checks import (
     CheckRunError,
     _mypy_failure_keys,
     _pylint_failure_keys,
@@ -314,15 +314,15 @@ class TestRunAllChecks:
         )
         with (
             patch(
-                "mcp_coder.workflows.rebase.run_pytest_check",
+                "mcp_coder.workflows.rebase_checks.run_pytest_check",
                 return_value=_pytest_results(report),
             ),
             patch(
-                "mcp_coder.workflows.rebase.run_pylint_check",
+                "mcp_coder.workflows.rebase_checks.run_pylint_check",
                 return_value=pylint_result,
             ),
             patch(
-                "mcp_coder.workflows.rebase.run_mypy_check",
+                "mcp_coder.workflows.rebase_checks.run_mypy_check",
                 return_value=mypy_result,
             ),
         ):
@@ -338,15 +338,15 @@ class TestRunAllChecks:
         """All-green checks produce an empty key set."""
         with (
             patch(
-                "mcp_coder.workflows.rebase.run_pytest_check",
+                "mcp_coder.workflows.rebase_checks.run_pytest_check",
                 return_value=_pytest_results(_make_report()),
             ),
             patch(
-                "mcp_coder.workflows.rebase.run_pylint_check",
+                "mcp_coder.workflows.rebase_checks.run_pylint_check",
                 return_value=PylintResult(return_code=0, messages=[]),
             ),
             patch(
-                "mcp_coder.workflows.rebase.run_mypy_check",
+                "mcp_coder.workflows.rebase_checks.run_mypy_check",
                 return_value=MypyResult(return_code=0, messages=[]),
             ),
         ):
@@ -355,7 +355,7 @@ class TestRunAllChecks:
     def test_wrapper_exception_becomes_check_run_error(self, tmp_path: Path) -> None:
         """An unexpected exception from a wrapper is wrapped, naming the checker."""
         with patch(
-            "mcp_coder.workflows.rebase.run_pytest_check",
+            "mcp_coder.workflows.rebase_checks.run_pytest_check",
             side_effect=RuntimeError("No pyproject.toml found"),
         ):
             with pytest.raises(CheckRunError, match="pytest"):
@@ -365,11 +365,11 @@ class TestRunAllChecks:
         """A CheckRunError from an extractor is re-raised naming the checker."""
         with (
             patch(
-                "mcp_coder.workflows.rebase.run_pytest_check",
+                "mcp_coder.workflows.rebase_checks.run_pytest_check",
                 return_value=_pytest_results(_make_report()),
             ),
             patch(
-                "mcp_coder.workflows.rebase.run_pylint_check",
+                "mcp_coder.workflows.rebase_checks.run_pylint_check",
                 return_value=PylintResult(
                     return_code=32, messages=[], error="pylint crashed"
                 ),

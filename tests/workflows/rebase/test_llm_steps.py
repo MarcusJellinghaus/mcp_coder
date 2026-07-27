@@ -14,12 +14,12 @@ import pytest
 
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflows.rebase import (
-    FailureKey,
     _build_conflict_prompt,
     _build_regression_fix_prompt,
     _format_failure_keys,
     _prompt_in_session,
 )
+from mcp_coder.workflows.rebase_checks import FailureKey
 
 _ABSENT_NOTE = "(absent — file does not exist on this side)"
 
