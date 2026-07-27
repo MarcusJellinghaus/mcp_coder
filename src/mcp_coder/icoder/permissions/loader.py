@@ -16,6 +16,11 @@ matcher grammar stays with ``parse_matcher``) and the editor-hint file written
 by the gated :func:`emit_schema`. ``_POLICY_BY_TOKEN`` is the single source for
 the Claude-style token vocabulary shared by rules, ``defaultMode``, and the
 schema enum.
+
+Step 4 adds :func:`_discover_layers`, which locates the three ``.icoder/``
+settings files in precedence order (``user``, ``project``, ``local``), skips
+absent layers silently, resolves each to an absolute path (so ``Rule.source_path``
+provenance is absolute), and never touches ``.claude/*``.
 """
 
 from __future__ import annotations
@@ -26,6 +31,7 @@ from pathlib import Path
 import jsonschema
 
 from mcp_coder.icoder.permissions.model import Policy
+from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
 _POLICY_BY_TOKEN: dict[str, Policy] = {
     "allow": Policy.ALWAYS,
@@ -160,3 +166,26 @@ def emit_schema(project_dir: Path) -> bool:
         return False
     target.write_text(new, encoding="utf-8")
     return True
+
+
+def _discover_layers(project_dir: Path) -> list[tuple[str, Path]]:
+    """Return (layer_tag, path) for each existing settings file, ordered
+    lowest -> highest precedence: user, project, local. Absent files omitted.
+
+    Each returned path is resolved to absolute so ``Rule.source_path``
+    provenance stays absolute even when ``project_dir`` is relative
+    (issue #1042 Decisions). ``.claude/*`` is never consulted.
+
+    Args:
+        project_dir: The project root whose ``.icoder/`` layers are located.
+
+    Returns:
+        A list of ``(layer_tag, absolute_path)`` tuples ordered lowest ->
+        highest precedence; layers whose file is absent are omitted.
+    """
+    candidates: list[tuple[str, Path]] = [
+        ("user", get_user_app_data_dir("mcp_coder") / ".icoder" / "settings.json"),
+        ("project", project_dir / ".icoder" / "settings.json"),
+        ("local", project_dir / ".icoder" / "settings.local.json"),
+    ]
+    return [(tag, p.resolve()) for tag, p in candidates if p.is_file()]

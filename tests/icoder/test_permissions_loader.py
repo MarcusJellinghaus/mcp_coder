@@ -8,6 +8,10 @@ quotes) must survive intact; the result must be valid JSON for ``json.loads``.
 
 Step 3 covers the JSON-Schema builder, the ``_schema_errors`` validation
 helper (structure + enums only), and the gated ``emit_schema`` writer.
+
+Step 4 covers ``_discover_layers`` — locating the three settings files in
+precedence order (user, project, local), skipping absent layers silently,
+never touching ``.claude/*``, and returning absolute paths.
 """
 
 from __future__ import annotations
@@ -15,7 +19,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from mcp_coder.icoder.permissions.loader import (
+    _discover_layers,
     _schema_errors,
     _strip_jsonc,
     build_settings_schema,
@@ -171,3 +178,140 @@ def test_emit_schema_rewrites_when_content_differs(tmp_path: Path) -> None:
     target.write_text("{}\n", encoding="utf-8")
     assert emit_schema(tmp_path) is True
     assert json.loads(target.read_text(encoding="utf-8")) == build_settings_schema()
+
+
+# --- Step 4: layer discovery ---
+
+
+def _make_settings(directory: Path, name: str) -> Path:
+    """Create ``<directory>/.icoder/<name>`` with a minimal body."""
+    icoder = directory / ".icoder"
+    icoder.mkdir(exist_ok=True)
+    path = icoder / name
+    path.write_text("{}\n", encoding="utf-8")
+    return path
+
+
+def test_discover_all_three_layers_in_precedence_order(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """All three present → tuples ordered exactly user, project, local."""
+    user_root = tmp_path / "user"
+    user_root.mkdir()
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _make_settings(user_root, "settings.json")
+    _make_settings(project_dir, "settings.json")
+    _make_settings(project_dir, "settings.local.json")
+
+    layers = _discover_layers(project_dir)
+
+    assert [tag for tag, _ in layers] == ["user", "project", "local"]
+
+
+def test_discover_only_project_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Only ``project`` present → a single ``("project", ...)`` tuple."""
+    user_root = tmp_path / "user"
+    user_root.mkdir()
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _make_settings(project_dir, "settings.json")
+
+    layers = _discover_layers(project_dir)
+
+    assert len(layers) == 1
+    tag, path = layers[0]
+    assert tag == "project"
+    assert path == (project_dir / ".icoder" / "settings.json").resolve()
+
+
+def test_discover_none_present_returns_empty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """None present → empty list (no error)."""
+    user_root = tmp_path / "user"
+    user_root.mkdir()
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    assert _discover_layers(project_dir) == []
+
+
+def test_discover_user_layer_under_app_data_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The user layer resolves under ``get_user_app_data_dir``."""
+    user_root = tmp_path / "user"
+    user_root.mkdir()
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _make_settings(user_root, "settings.json")
+
+    layers = _discover_layers(project_dir)
+
+    assert len(layers) == 1
+    tag, path = layers[0]
+    assert tag == "user"
+    assert str(user_root.resolve()) in str(path)
+
+
+def test_discover_never_reads_dot_claude(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ``.claude/settings.json`` in the project dir is never returned."""
+    user_root = tmp_path / "user"
+    user_root.mkdir()
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    claude = project_dir / ".claude"
+    claude.mkdir()
+    (claude / "settings.json").write_text("{}\n", encoding="utf-8")
+    _make_settings(project_dir, "settings.json")
+
+    layers = _discover_layers(project_dir)
+
+    assert all(".claude" not in str(path) for _, path in layers)
+
+
+def test_discover_relative_project_dir_yields_absolute_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A relative ``project_dir`` still yields absolute discovered paths."""
+    user_root = tmp_path / "user"
+    user_root.mkdir()
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _make_settings(project_dir, "settings.json")
+    _make_settings(project_dir, "settings.local.json")
+
+    monkeypatch.chdir(tmp_path)
+    layers = _discover_layers(Path("project"))
+
+    assert layers
+    assert all(path.is_absolute() for _, path in layers)
