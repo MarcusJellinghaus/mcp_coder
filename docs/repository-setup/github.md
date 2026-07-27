@@ -138,6 +138,10 @@ Default timeouts:
 | status-03:planning | 15 minutes |
 | status-06:implementing | 120 minutes |
 | status-09:pr-creating | 15 minutes |
+| status-14i:plan-reviewing | 30 minutes |
+| status-17i:code-reviewing | 120 minutes |
+
+The `status-14i` / `status-17i` labels are the in-progress states for the optional automated review workflows (enabled via `auto_review_plan` / `auto_review_implementation`).
 
 ## Base Branch Support for Issues
 

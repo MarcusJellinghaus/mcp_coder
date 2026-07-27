@@ -290,6 +290,20 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
   - `prerequisites.py` - Git status and prerequisite validation
   - `task_processing.py` - Individual task processing, mypy checks, formatting
   - **CLI Integration**: Accessible via `cli/commands/implement.py`
+- **Automated review workflows**: `workflows/review/` - Shared engine behind `mcp-coder review-plan` and `review-implementation` (tests: `workflows/review/test_*.py`)
+  - `core.py` - Multi-round review loop (fresh reviewer session per round + persistent supervisor session, rounds cap 5), 3-way outcome routing
+  - `config.py` - `ReviewConfig` (`REVIEW_PLAN` / `REVIEW_IMPLEMENTATION`) parameterizing the shared engine
+  - `verdict.py` - Strict fenced-JSON supervisor verdict parser (`dismiss` / `tasks` / `escalate`)
+  - `review_log.py` - Per-round `pr_info/*_review_log_{n}.md` logging
+  - **Optional & config-gated**: dispatched only when `auto_review_plan` / `auto_review_implementation` are enabled (default off)
+
+#### Three-tier workflow architecture
+
+The workflow code is layered into three tiers, enforced by the import-linter `Layered Architecture` contract and `tach.toml`:
+
+- **`workflows/`** (top) - Thin orchestrators. Each owns its labels, config, and `FailureCategory`, and sequences steps.
+- **`workflow_steps/`** (middle) - Workflow-agnostic composed steps (commit/push, rebase, CI check-and-fix, prerequisite checks) shared across `implement` and the review workflows. Sits **above** `checks` so a step may compose a `check` (e.g. CI summary).
+- **`workflow_utils/`** + **`checks/`** (primitives) - Single-purpose capabilities (`task_tracker`, `commit_operations`, `base_branch`, `label_transitions`, `failure_handling`) and branch/CI assessments. `workflow_utils` stays a pure primitive layer with only downward imports.
 
 ---
 
@@ -444,7 +458,7 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
 
 ### Architectural Boundary Enforcement
 - **Tools**: import-linter, tach, pycycle for static analysis of module dependencies; vulture for dead code detection
-- **Configuration**: `.importlinter` (19 contracts), `tach.toml` (layer definitions)
+- **Configuration**: `.importlinter` (20 contracts), `tach.toml` (layer definitions)
 - **CI Integration**: Architecture checks run automatically on pull requests
 - **Documentation**: See `docs/architecture/dependencies/README.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
 - **Visualization**: `docs/architecture/dependencies/dependency_graph.html` for interactive dependency graph

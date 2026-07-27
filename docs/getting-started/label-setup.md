@@ -276,16 +276,31 @@ The default workflow uses these status labels:
 
 | Label | Description |
 |-------|-------------|
-| `status-01:created` | Issue created, awaiting triage |
-| `status-02:awaiting-planning` | Ready for planning phase |
-| `status-03:planning-in-progress` | Currently being planned |
-| `status-04:plan-review` | Plan ready for review |
-| `status-05:plan-ready` | Plan approved, ready for implementation |
-| `status-06:implementation-in-progress` | Currently being implemented |
-| `status-07:code-review` | Code ready for review |
-| `status-08:ready-pr` | Ready for pull request |
-| `status-09:pr-in-progress` | PR being created |
+| `status-01:created` | Fresh issue, may need refinement |
+| `status-02:awaiting-planning` | Refined, ready for planning pickup |
+| `status-03:planning` | Plan being drafted (in progress) |
+| `status-04:plan-review` | Plan available for review |
+| `status-05:plan-ready` | Plan approved, ready to code |
+| `status-06:implementing` | Code being written (in progress) |
+| `status-07:code-review` | Implementation complete, needs review |
+| `status-08:ready-pr` | Approved for pull request creation |
+| `status-09:pr-creating` | Pull request being created (in progress) |
 | `status-10:pr-created` | PR created, awaiting merge |
+
+### Optional Automated Review Labels
+
+These labels are used only when automated review is enabled via `auto_review_plan` / `auto_review_implementation` (see [Configuration Guide](../configuration/config.md)). With the flags off (default) they go unused.
+
+| Label | Description |
+|-------|-------------|
+| `status-14:plan-review-bot` | Plan ready for automated review pickup |
+| `status-14i:plan-reviewing` | Plan being reviewed (auto/in-progress) |
+| `status-17:code-review-bot` | Implementation ready for automated review pickup |
+| `status-17i:code-reviewing` | Implementation being reviewed (auto/in-progress) |
+
+Automated review can also emit fine-grained failure labels (`status-14f-*` for plan review, `status-17f-*` for code review). See the [Failure Handling](../processes-prompts/development-process.md#8-failure-handling) table for the full list and recovery steps.
+
+The complete, authoritative label set (colors, categories, timeouts) is defined in [`config/labels.json`](../../src/mcp_coder/config/labels.json).
 
 ## Verification
 

@@ -218,6 +218,21 @@
         .status-ci-fix-needed { --label-color: #d93f0b; }
         .status-llm-timeout { --label-color: #e99695; }
         .status-pr-creating-failed { --label-color: #b60205; }
+
+        /* Optional automated-review lane */
+        .status-plan-review-bot { --label-color: #60a5fa; }
+        .status-plan-reviewing { --label-color: #bfdbfe; }
+        .status-code-review-bot { --label-color: #fbbf24; }
+        .status-code-reviewing { --label-color: #fed7aa; }
+        .status-plan-review-failed { --label-color: #b60205; }
+        .status-plan-review-rounds { --label-color: #b60205; }
+        .status-plan-review-timeout { --label-color: #e99695; }
+        .status-plan-review-mcp { --label-color: #e99695; }
+        .status-code-review-failed { --label-color: #b60205; }
+        .status-code-review-ci { --label-color: #d93f0b; }
+        .status-code-review-rounds { --label-color: #b60205; }
+        .status-code-review-timeout { --label-color: #e99695; }
+        .status-code-review-mcp { --label-color: #e99695; }
         
         /* Flow arrows inline */
         .flow-cell {
@@ -470,6 +485,130 @@
             <div class="cell-empty"></div>
         </div>
         
+        <!-- Optional: Automated Review Lane (branches from stages 4 & 7) -->
+        <div class="row-label" style="border-top: 2px dashed #cbd5e0; padding-top: 20px; margin-top: 25px;">Optional: Automated Review Lane <span style="font-weight: 400; font-style: italic; color: #718096;">— enabled per-repo via <code>auto_review_plan</code> / <code>auto_review_implementation</code> (default off)</span></div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 15px;">
+            When enabled, <code>create-plan</code> / <code>implement</code> route their success to the review-bot pickup label instead of the human review label. Each review ends in a 3-way outcome: <strong>success</strong> advances (→ <code>05:plan-ready</code> / <code>08:ready-pr</code>), <strong>needs-human</strong> reuses the interactive review label, <strong>error</strong> sets a failure label.
+        </div>
+
+        <!-- Row: Automated Plan Review (14 → 14i → 14f-*) -->
+        <div class="row-label">Automated Plan Review</div>
+        <div class="workflow-row">
+            <div class="label-card muted status-plan-review">
+                <div class="step-number">→4</div>
+                <div class="label-name">status-04:plan-review</div>
+                <div class="label-description">needs-human: escalation reuses the interactive supervisor</div>
+                <div class="status-badge badge-human">Escalate</div>
+            </div>
+
+            <div class="label-card status-plan-review-bot">
+                <div class="step-number">14</div>
+                <div class="label-name">status-14:plan-review-bot</div>
+                <div class="label-description">Plan ready for automated review pickup (success → 05:plan-ready)</div>
+                <div class="status-badge badge-pickup">Waiting</div>
+            </div>
+
+            <div class="label-card status-plan-reviewing">
+                <div class="step-number">14i</div>
+                <div class="label-name">status-14i:plan-reviewing</div>
+                <div class="label-description">Plan being reviewed (auto/in-progress)</div>
+                <div class="status-badge badge-busy">Working</div>
+            </div>
+
+            <div class="failed-stack">
+                <div class="label-card highlight-red status-plan-review-failed">
+                    <div class="step-number">14f</div>
+                    <div class="label-name">status-14f:plan-review-failed</div>
+                    <div class="label-description">General failure / unparseable verdict</div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+                <div class="label-card highlight-red status-plan-review-rounds">
+                    <div class="step-number">14f-r</div>
+                    <div class="label-name">status-14f-rounds:plan-review-rounds-exhausted</div>
+                    <div class="label-description">Rounds cap (5) hit without converging</div>
+                    <div class="status-badge badge-failed">Rounds</div>
+                </div>
+                <div class="label-card highlight-red status-plan-review-timeout">
+                    <div class="step-number">14f-t</div>
+                    <div class="label-name">status-14f-timeout:plan-review-llm-timeout</div>
+                    <div class="label-description">LLM API timeout</div>
+                    <div class="status-badge badge-failed">Timeout</div>
+                </div>
+                <div class="label-card highlight-red status-plan-review-mcp">
+                    <div class="step-number">14f-m</div>
+                    <div class="label-name">status-14f-mcp:plan-review-mcp-unavailable</div>
+                    <div class="label-description">MCP server unavailable</div>
+                    <div class="status-badge badge-failed">MCP</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arrow row -->
+        <div class="row-arrow">
+            <div class="arrow-down">&#x2193;</div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+
+        <!-- Row: Automated Code Review (17 → 17i → 17f-*) -->
+        <div class="row-label">Automated Code Review</div>
+        <div class="workflow-row">
+            <div class="label-card muted status-code-review">
+                <div class="step-number">→7</div>
+                <div class="label-name">status-07:code-review</div>
+                <div class="label-description">needs-human: escalation reuses the interactive supervisor</div>
+                <div class="status-badge badge-human">Escalate</div>
+            </div>
+
+            <div class="label-card status-code-review-bot">
+                <div class="step-number">17</div>
+                <div class="label-name">status-17:code-review-bot</div>
+                <div class="label-description">Implementation ready for automated review pickup (success → 08:ready-pr)</div>
+                <div class="status-badge badge-pickup">Waiting</div>
+            </div>
+
+            <div class="label-card status-code-reviewing">
+                <div class="step-number">17i</div>
+                <div class="label-name">status-17i:code-reviewing</div>
+                <div class="label-description">Implementation being reviewed (auto/in-progress)</div>
+                <div class="status-badge badge-busy">Working</div>
+            </div>
+
+            <div class="failed-stack">
+                <div class="label-card highlight-red status-code-review-failed">
+                    <div class="step-number">17f</div>
+                    <div class="label-name">status-17f:code-review-failed</div>
+                    <div class="label-description">General failure / unparseable verdict</div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+                <div class="label-card highlight-red status-code-review-ci">
+                    <div class="step-number">17f-ci</div>
+                    <div class="label-name">status-17f-ci:code-review-ci-fix-needed</div>
+                    <div class="label-description">CI still red at the rounds cap</div>
+                    <div class="status-badge badge-failed">CI Failed</div>
+                </div>
+                <div class="label-card highlight-red status-code-review-rounds">
+                    <div class="step-number">17f-r</div>
+                    <div class="label-name">status-17f-rounds:code-review-rounds-exhausted</div>
+                    <div class="label-description">Rounds cap (5) hit without converging</div>
+                    <div class="status-badge badge-failed">Rounds</div>
+                </div>
+                <div class="label-card highlight-red status-code-review-timeout">
+                    <div class="step-number">17f-t</div>
+                    <div class="label-name">status-17f-timeout:code-review-llm-timeout</div>
+                    <div class="label-description">LLM API timeout</div>
+                    <div class="status-badge badge-failed">Timeout</div>
+                </div>
+                <div class="label-card highlight-red status-code-review-mcp">
+                    <div class="step-number">17f-m</div>
+                    <div class="label-name">status-17f-mcp:code-review-mcp-unavailable</div>
+                    <div class="label-description">MCP server unavailable</div>
+                    <div class="status-badge badge-failed">MCP</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Color Reference -->
         <div class="color-reference">
             <h3 style="text-align: center; margin-bottom: 20px; color: #2d3748;">Color Reference</h3>
@@ -563,6 +702,13 @@
                     <div class="color-info">
                         <div class="color-name">LLM Timeout</div>
                         <div class="color-hex">#e99695</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #60a5fa;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Plan Review Bot</div>
+                        <div class="color-hex">#60a5fa</div>
                     </div>
                 </div>
             </div>
