@@ -146,7 +146,9 @@ mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integra
 
 > Implement Step 1 from `pr_info/steps/step_1.md` (context in
 > `pr_info/steps/summary.md`). Work test-first: create `tests/test_depcheck.py`
-> with the six cases listed, then create `src/mcp_coder/_depcheck.py` with
+> with the seven cases listed (including case #5, the invalid-spec test that
+> guards the "one bad spec cannot make the whole function raise" contract),
+> then create `src/mcp_coder/_depcheck.py` with
 > `find_missing_dependencies()`, `ensure_dependencies()`, and `_installed_version()`
 > exactly as specified. `_depcheck.py` must import only the stdlib and
 > `packaging` — nothing from `mcp_coder.*`. Do **not** modify `__init__.py` in

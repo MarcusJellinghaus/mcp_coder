@@ -109,8 +109,10 @@ mcp__tools-py__run_lint_imports_check
 > of `src/mcp_coder/__init__.py` — after the module docstring, before the first
 > real import — calling `_depcheck.ensure_dependencies()` exactly as specified.
 > Do not change the existing `__version__` block or any other imports. Add the
-> smoke test verifying `import mcp_coder` still works and the guard no-ops in
-> this metadata-absent environment. Use MCP workspace tools for all file
+> smoke test verifying `import mcp_coder` still works and the guard passes
+> through here (keep the assertion behavioral — `ensure_dependencies()` returns
+> `None` — without asserting the environment's metadata state, per the TEST
+> section). Use MCP workspace tools for all file
 > operations. Run pylint, mypy, pytest (fast-unit marker exclusions per
 > CLAUDE.md), and lint-imports, and fix anything until all pass. This step is
 > one commit.
