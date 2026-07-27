@@ -62,11 +62,12 @@ return PermissionConfig(tuple(rules), default, groups, scenarios, degraded, tupl
 - **Fail-closed (two distinct assertions):** one good layer + one broken layer →
   (a) on the returned config: `degraded is True`, `errors` non-empty, the good
   layer's rules **are present**, the broken layer's rules are **absent**;
-  (b) separately, `resolve("mcp__x__y", None, None, config)` returns
-  `Policy.AFTER_APPROVAL` (never a silent `allow`) even though the good layer had
-  an `allow` rule / `defaultMode: allow`.
+  (b) separately, `resolve("mcp__x__y", None, None, config).policy ==
+  Policy.AFTER_APPROVAL` (never a silent `allow`) even though the good layer had
+  an `allow` rule / `defaultMode: allow`. (`resolve()` returns a `Decision`;
+  assert on its `.policy`.)
 - All three layers absent → `degraded is False`, `default_policy is None`, and
-  `resolve(...)` returns `Policy.ALWAYS` (backward-compat opt-in).
+  `resolve(...).policy == Policy.ALWAYS` (backward-compat opt-in).
 - Shadowed group name across layers logs a warning (use `caplog`) and the higher
   layer's definition wins.
 - `emit_schema` accept/reject already covered in Step 3; here assert

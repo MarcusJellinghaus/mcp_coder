@@ -36,6 +36,9 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
 - `allow`/`ask`/`deny` map to policy via `_POLICY_BY_TOKEN`.
 - `groups`/`scenarios` members are parsed with the same `_parse_matchers`
   (concrete `mcp__…` only; an `@ref` member degrades the layer).
+- `path` arrives already absolute from `_discover_layers` (Step 4 calls
+  `.resolve()`), so `Rule(m, policy, layer, path)` stores absolute provenance as
+  required by issue #1042 Decisions + Loop-A refinement.
 
 ## ALGORITHM
 `_parse_matchers`:
@@ -69,8 +72,9 @@ errors. On any failure: `default_policy=None`, empty collections, non-empty
 
 ## TESTS (write first)
 - Good layer: `allow`/`ask`/`deny` → correct `Rule.policy`, each `Rule` carries
-  `source_path == path` and `layer == tag`; value-set matcher expands to N rules;
-  `toolGroups`/`toolScenarios` populated; `defaultMode` parsed.
+  `source_path == path` (and `source_path.is_absolute()`) and `layer == tag`;
+  value-set matcher expands to N rules; `toolGroups`/`toolScenarios` populated;
+  `defaultMode` parsed.
 - `@ref` in a rule list → layer grants nothing, error mentions `@` /
   "not supported until I4.1" and the token.
 - `@ref` nested inside a `toolGroups` member → same specific diagnostic.

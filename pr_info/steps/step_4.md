@@ -22,6 +22,10 @@ def _discover_layers(project_dir: Path) -> list[tuple[str, Path]]:
 - `project` → `project_dir / ".icoder" / "settings.json"`
 - `local` → `project_dir / ".icoder" / "settings.local.json"`
 - Include a tuple only when `path.is_file()`.
+- **Resolve each candidate path to absolute** (`.resolve()`) so the stored
+  `Rule.source_path` provenance is absolute (issue #1042 Decisions + Loop-A
+  refinement); `get_user_app_data_dir` is already absolute, but a relative
+  `project_dir` would otherwise yield relative project/local paths.
 
 ## ALGORITHM
 ```
@@ -30,7 +34,8 @@ candidates = [
     ("project", project_dir/".icoder"/"settings.json"),
     ("local",   project_dir/".icoder"/"settings.local.json"),
 ]
-return [(tag, p) for tag, p in candidates if p.is_file()]
+# .resolve() so provenance (Rule.source_path) is absolute (issue #1042 Decisions).
+return [(tag, p.resolve()) for tag, p in candidates if p.is_file()]
 ```
 
 ## DATA
@@ -45,6 +50,8 @@ lowest → highest precedence.
   tmp dir and assert the returned path sits under it).
 - A `.claude/settings.json` in the project dir is **never** returned (assert no
   discovered path contains `.claude`).
+- Passing a **relative** `project_dir` still yields absolute discovered paths
+  (assert every returned `path.is_absolute()`).
 
 ## VERIFICATION
 All four MCP checks pass.
