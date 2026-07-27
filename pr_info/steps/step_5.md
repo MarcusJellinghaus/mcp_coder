@@ -58,12 +58,18 @@ if errors: return _LayerResult(None, [], {}, {}, errors)   # schema failed: gran
                                                            # (non-dict root / wrong-typed section
                                                            #  would raise, not degrade)
 rules=[]; groups={}; scenarios={}
-for token in data.get("allow"/"ask"/"deny"):        # each section -> its Policy
-    ms, errs = _parse_matchers(token, path)
-    errors += errs
-    rules += [Rule(m, policy, layer, path) for m in ms]
-for name, members in data.get("toolGroups"/"toolScenarios").items():   # into groups/scenarios
-    collect members via _parse_matchers; accumulate errors; store tuple
+# All keys optional -> default-safe access. An omitted section must yield an
+# empty iterable, never None: `for token in None` / `None.items()` would raise
+# OUTSIDE the try above and break fail-closed (an absent section is the common
+# case, not an error).
+for section, policy in {"allow":ALLOW, "ask":ASK, "deny":DENY}:   # each section -> its Policy
+    for token in data.get(section, []):
+        ms, errs = _parse_matchers(token, path)
+        errors += errs
+        rules += [Rule(m, policy, layer, path) for m in ms]
+for name, members in data.get("toolGroups", {}).items():         # -> groups (same for
+    collect members via _parse_matchers; accumulate errors; store tuple   # toolScenarios via
+                                                                          # data.get("toolScenarios", {}))
 default = _POLICY_BY_TOKEN.get(data.get("defaultMode")) if present else None
 if errors: return _LayerResult(None, [], {}, {}, errors)   # per-layer atomic: grant nothing
 return _LayerResult(default, rules, groups, scenarios, [])
@@ -88,6 +94,9 @@ errors. On any failure: `default_policy=None`, empty collections, non-empty
   `42` / `"x"`) and a wrong-typed section (e.g. `"allow": 5`) each →
   layer grants nothing, `errors` populated (names the file), no exception.
 - JSONC with comments inside string values parses to the correct rules.
+- A layer that omits **all** sections (e.g. `{}` or only `defaultMode`) loads
+  cleanly — no rules, empty groups/scenarios, **no error/degrade** and no raise
+  (guards the default-safe `.get(section, [])` / `.get("toolGroups", {})` access).
 
 ## VERIFICATION
 All four MCP checks pass.

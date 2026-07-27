@@ -59,13 +59,16 @@ return PermissionConfig(tuple(rules), default, groups, scenarios, degraded, tupl
 ## TESTS (write first)
 - Two good layers → rules concatenated; each rule keeps its own `source_path`
   and `layer`; `defaultMode` from the higher layer wins.
-- **Fail-closed (two distinct assertions):** one good layer + one broken layer →
+- **Fail-closed (three distinct assertions):** one good layer + one broken layer →
   (a) on the returned config: `degraded is True`, `errors` non-empty, the good
   layer's rules **are present**, the broken layer's rules are **absent**;
   (b) separately, `resolve("mcp__x__y", None, None, config).policy ==
   Policy.AFTER_APPROVAL` (never a silent `allow`) even though the good layer had
   an `allow` rule / `defaultMode: allow`. (`resolve()` returns a `Decision`;
-  assert on its `.policy`.)
+  assert on its `.policy`.);
+  (c) the degrade diagnostic **is emitted to the logger** — assert via `caplog`
+  (at `ERROR`) that the broken-layer error is logged, not only surfaced in
+  `errors` (AC: "the diagnostic is emitted (`logger` + `PermissionConfig.errors`)").
 - All three layers absent → `degraded is False`, `default_policy is None`, and
   `resolve(...).policy == Policy.ALWAYS` (backward-compat opt-in).
 - Shadowed group name across layers logs a warning (use `caplog`) and the higher
