@@ -22,6 +22,7 @@ the whole layer (grants nothing); errors always name the file + offending token.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -34,8 +35,10 @@ from mcp_coder.icoder.permissions.loader import (
     _strip_jsonc,
     build_settings_schema,
     emit_schema,
+    load_permission_config,
 )
-from mcp_coder.icoder.permissions.model import Policy
+from mcp_coder.icoder.permissions.model import PermissionConfig, Policy
+from mcp_coder.icoder.permissions.resolver import resolve
 
 # --- comment removal ---
 
@@ -552,3 +555,201 @@ def test_load_layer_only_default_mode_loads_cleanly(tmp_path: Path) -> None:
     assert result.groups == {}
     assert result.scenarios == {}
     assert result.default_policy is Policy.ALWAYS
+
+
+# --- Step 6: public load_permission_config (merge + degrade + provenance) ---
+
+
+def _empty_user_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point ``get_user_app_data_dir`` at an empty dir (no user layer)."""
+    user_root = tmp_path / "user"
+    user_root.mkdir()
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+
+
+def _write_project_layers(
+    project_dir: Path, project_body: str | None, local_body: str | None
+) -> None:
+    """Write project/local ``.icoder`` settings bodies (skip ``None``)."""
+    icoder = project_dir / ".icoder"
+    icoder.mkdir(exist_ok=True)
+    if project_body is not None:
+        (icoder / "settings.json").write_text(project_body, encoding="utf-8")
+    if local_body is not None:
+        (icoder / "settings.local.json").write_text(local_body, encoding="utf-8")
+
+
+def test_load_two_good_layers_concatenates_rules_last_default_wins(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two good layers → rules concatenated with per-rule provenance; the higher
+    layer's ``defaultMode`` wins."""
+    _empty_user_dir(tmp_path, monkeypatch)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _write_project_layers(
+        project_dir,
+        json.dumps({"defaultMode": "allow", "allow": ["mcp__fs__read"]}),
+        json.dumps({"defaultMode": "ask", "allow": ["mcp__git__status"]}),
+    )
+
+    config = load_permission_config(project_dir)
+
+    assert config.degraded is False
+    assert config.errors == ()
+    by_layer = {r.layer: r for r in config.rules}
+    assert set(by_layer) == {"project", "local"}
+    assert by_layer["project"].matcher.tool == "read"
+    assert by_layer["local"].matcher.tool == "status"
+    icoder = (project_dir / ".icoder").resolve()
+    assert by_layer["project"].source_path == icoder / "settings.json"
+    assert by_layer["local"].source_path == icoder / "settings.local.json"
+    # Higher (local) layer's defaultMode wins.
+    assert config.default_policy is Policy.AFTER_APPROVAL
+
+
+def test_load_fail_closed_config_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One good + one broken layer → degraded True, errors non-empty, the good
+    layer's rules present, the broken layer's rules absent."""
+    _empty_user_dir(tmp_path, monkeypatch)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _write_project_layers(
+        project_dir,
+        json.dumps({"defaultMode": "allow", "allow": ["mcp__x__y"]}),
+        json.dumps({"allow": ["github:*"]}),  # bad matcher -> broken layer
+    )
+
+    config = load_permission_config(project_dir)
+
+    assert config.degraded is True
+    assert config.errors
+    # Good (project) layer's rule survives; broken (local) layer grants nothing.
+    assert [r.matcher.tool for r in config.rules] == ["y"]
+    assert all(r.layer == "project" for r in config.rules)
+
+
+def test_load_fail_closed_resolve_never_silent_allow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Even with a good ``allow`` rule / ``defaultMode: allow``, a degraded
+    config forces ``resolve()`` to ASK (never a silent allow)."""
+    _empty_user_dir(tmp_path, monkeypatch)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _write_project_layers(
+        project_dir,
+        json.dumps({"defaultMode": "allow", "allow": ["mcp__x__y"]}),
+        json.dumps({"allow": ["github:*"]}),  # bad matcher -> broken layer
+    )
+
+    config = load_permission_config(project_dir)
+
+    decision = resolve("mcp__x__y", None, None, config)
+    assert decision.policy is Policy.AFTER_APPROVAL
+
+
+def test_load_fail_closed_diagnostic_logged(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The broken-layer error is emitted to the logger at ERROR (not only in
+    ``PermissionConfig.errors``)."""
+    _empty_user_dir(tmp_path, monkeypatch)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _write_project_layers(
+        project_dir,
+        json.dumps({"allow": ["mcp__x__y"]}),
+        json.dumps({"allow": ["github:*"]}),  # bad matcher -> broken layer
+    )
+
+    with caplog.at_level(logging.ERROR):
+        load_permission_config(project_dir)
+
+    error_logs = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert error_logs
+    assert any("github:*" in r.getMessage() for r in error_logs)
+
+
+def test_load_all_layers_absent_backward_compat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """All three layers absent → not degraded, no default, resolve ALWAYS."""
+    _empty_user_dir(tmp_path, monkeypatch)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    config = load_permission_config(project_dir)
+
+    assert config.degraded is False
+    assert config.default_policy is None
+    assert config.errors == ()
+    assert resolve("mcp__any__tool", None, None, config).policy is Policy.ALWAYS
+
+
+def test_load_shadowed_group_warns_and_higher_layer_wins(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A group name redefined by a higher layer logs a warning; the higher
+    layer's definition wins."""
+    _empty_user_dir(tmp_path, monkeypatch)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _write_project_layers(
+        project_dir,
+        json.dumps({"toolGroups": {"git": ["mcp__git__status"]}}),
+        json.dumps({"toolGroups": {"git": ["mcp__git__log"]}}),
+    )
+
+    with caplog.at_level(logging.WARNING):
+        config = load_permission_config(project_dir)
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert any("git" in r.getMessage() for r in warnings)
+    assert [m.tool for m in config.groups["git"]] == ["log"]
+
+
+def test_load_emits_schema_when_icoder_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``load_permission_config`` writes ``settings.schema.json`` when
+    ``.icoder/`` exists."""
+    _empty_user_dir(tmp_path, monkeypatch)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    _write_project_layers(project_dir, "{}", None)
+
+    load_permission_config(project_dir)
+
+    schema = project_dir / ".icoder" / "settings.schema.json"
+    assert schema.is_file()
+    assert json.loads(schema.read_text(encoding="utf-8")) == build_settings_schema()
+
+
+def test_init_exports_load_permission_config() -> None:
+    """The package re-exports ``load_permission_config``."""
+    import mcp_coder.icoder.permissions as pkg
+
+    assert hasattr(pkg, "load_permission_config")
+    assert pkg.load_permission_config is load_permission_config
+    assert "load_permission_config" in pkg.__all__
+
+
+def test_load_returns_permission_config_instance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The return value is a ``PermissionConfig``."""
+    _empty_user_dir(tmp_path, monkeypatch)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+
+    assert isinstance(load_permission_config(project_dir), PermissionConfig)

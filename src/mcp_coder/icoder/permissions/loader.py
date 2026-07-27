@@ -29,19 +29,34 @@ schema-validates one file, then builds rules/groups/scenarios/default. Failure i
 per-layer atomic: any single error (bad JSONC, schema reject, bad matcher, or an
 ``@ref``) fails the whole layer — it contributes nothing and every error string
 names the source file plus the offending token/key.
+
+Step 6 adds the public :func:`load_permission_config` entry point: it emits the
+schema (gated), discovers and loads each layer, then merges the good layers
+(rules concatenated, ``defaultMode`` and ``groups``/``scenarios`` last-layer-wins)
+while degrading fail-closed on any broken layer (``degraded=True``; every error
+both logged and surfaced in ``PermissionConfig.errors``). All layers absent
+yields the empty backward-compat config (``default_policy=None``).
 """
 
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import NamedTuple
 
 import jsonschema
 
 from mcp_coder.icoder.permissions.matcher import parse_matcher
-from mcp_coder.icoder.permissions.model import Matcher, Policy, Rule
+from mcp_coder.icoder.permissions.model import (
+    Matcher,
+    PermissionConfig,
+    Policy,
+    Rule,
+)
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
+
+logger = logging.getLogger(__name__)
 
 _POLICY_BY_TOKEN: dict[str, Policy] = {
     "allow": Policy.ALWAYS,
@@ -306,3 +321,62 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
     if errors:
         return _LayerResult(None, [], {}, {}, errors)
     return _LayerResult(default, rules, groups, scenarios, [])
+
+
+def load_permission_config(project_dir: Path) -> PermissionConfig:
+    """Load all layers into a merged :class:`PermissionConfig`.
+
+    Concatenates good layers' rules (the resolver owns precedence); ``defaultMode``
+    and ``groups``/``scenarios`` are last-layer-wins. A present-but-broken layer
+    contributes nothing and sets ``degraded=True`` (plus its ``errors``). Emits
+    ``settings.schema.json`` as a gated side effect. All layers absent ->
+    ``default_policy=None`` (backward compat: the resolver then answers ALWAYS).
+
+    Every collected error is both logged at ``ERROR`` and surfaced in
+    :attr:`PermissionConfig.errors`. ``Matcher.origin`` and ``Degraded.layer``
+    stay ``None`` (not populated here).
+
+    Args:
+        project_dir: The project root whose ``.icoder/`` layers are loaded.
+
+    Returns:
+        The merged :class:`PermissionConfig` across all discovered layers.
+    """
+    emit_schema(project_dir)
+    layers = _discover_layers(project_dir)
+    if not layers:
+        # No layer on disk -> empty config; default_policy None keeps the
+        # resolver at its ALWAYS backward-compat default.
+        return PermissionConfig()
+
+    rules: list[Rule] = []
+    groups: dict[str, tuple[Matcher, ...]] = {}
+    scenarios: dict[str, tuple[Matcher, ...]] = {}
+    errors: list[str] = []
+    default: Policy | None = None
+
+    for tag, path in layers:  # lowest -> highest precedence
+        result = _load_layer(tag, path)
+        if result.errors:
+            # A present-but-broken layer grants nothing (fail-closed).
+            errors += result.errors
+            continue
+        rules += result.rules
+        if result.default_policy is not None:
+            default = result.default_policy  # last-layer-wins
+        for name, members in result.groups.items():
+            if name in groups:
+                logger.warning("group %r shadowed by %s", name, path)
+            groups[name] = members
+        for name, members in result.scenarios.items():
+            if name in scenarios:
+                logger.warning("scenario %r shadowed by %s", name, path)
+            scenarios[name] = members
+
+    degraded = bool(errors)
+    for err in errors:
+        logger.error("permission config: %s", err)
+
+    return PermissionConfig(
+        tuple(rules), default, groups, scenarios, degraded, tuple(errors)
+    )
