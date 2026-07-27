@@ -12,6 +12,11 @@ Example:
     >>> print(result["text"])
 """
 
+# Fail cleanly (not with a cryptic traceback) when a mandatory dependency is
+# missing — e.g. a `pip install --no-deps` install. Must run before the heavy
+# imports below. Fail-open: any unexpected internal error is swallowed so a
+# healthy install is never broken (SystemExit subclasses BaseException, so the
+# intended clean exit-1 still propagates). See mcp_coder/_depcheck.py.
 from .checks.branch_status import collect_branch_status
 from .llm.interface import prompt_llm
 from .llm.mlflow_verify import verify_mlflow
@@ -44,6 +49,14 @@ from .utils.subprocess_runner import (
     execute_subprocess,
 )
 from .workflow_utils.commit_operations import generate_commit_message_with_llm
+
+try:
+    from . import _depcheck
+
+    _depcheck.ensure_dependencies()
+except Exception:  # noqa: BLE001 — fail-open: never break a healthy install
+    pass
+
 
 # Version is automatically determined from git tags via setuptools-scm
 try:

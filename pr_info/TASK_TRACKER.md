@@ -33,9 +33,9 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: add 4-line fail-open guard to `src/mcp_coder/__init__.py` + smoke test and fail-open regression test
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add 4-line fail-open guard to `src/mcp_coder/__init__.py` + smoke test and fail-open regression test
+- [x] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

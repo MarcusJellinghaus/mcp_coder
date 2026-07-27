@@ -6,10 +6,12 @@ using a single patch seam: ``mcp_coder._depcheck.requires``. The real
 distribution as absent, so no import-name<->dist-name map is needed.
 """
 
+import importlib
 from importlib.metadata import PackageNotFoundError
 
 import pytest
 
+import mcp_coder
 from mcp_coder import _depcheck
 
 
@@ -87,3 +89,40 @@ def test_ensure_dependencies_exits_on_missing(
     assert "python-jenkins" in stderr
     assert "textual" in stderr
     assert "pip install mcp-coder" in stderr
+
+
+def test_init_guard_smoke() -> None:
+    """The ``__init__`` guard does not break normal import in this env.
+
+    Behavioral only: ``import mcp_coder`` works and exposes a non-empty
+    ``__version__``, and the guard's ``ensure_dependencies()`` passes through
+    (returns ``None``) here — without asserting the environment's metadata
+    state, which differs between editable and source-only installs.
+    """
+    assert isinstance(mcp_coder.__version__, str)
+    assert mcp_coder.__version__
+    # Typed ``-> None``; calling it confirms it passes through without raising.
+    _depcheck.ensure_dependencies()
+
+
+def test_init_guard_fails_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unexpected internal ``_depcheck`` error never breaks import.
+
+    Monkeypatch ``find_missing_dependencies`` to raise a non-``SystemExit``
+    exception, reload ``mcp_coder``, and confirm the reload succeeds — proving
+    the ``__init__`` guard's ``except Exception`` swallowed the error and
+    loading proceeded. Teardown reloads the real module for later tests.
+    """
+
+    def _boom() -> list[str]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(_depcheck, "find_missing_dependencies", _boom)
+
+    reloaded = importlib.reload(mcp_coder)
+    assert isinstance(reloaded.__version__, str)
+    assert reloaded.__version__
+
+    # Restore the real module so later tests see an unpatched import.
+    monkeypatch.undo()
+    importlib.reload(mcp_coder)
