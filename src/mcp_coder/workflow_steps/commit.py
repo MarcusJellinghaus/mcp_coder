@@ -20,6 +20,10 @@ from .constants import COMMIT_MESSAGE_FILE
 # Setup logger
 logger = logging.getLogger(__name__)
 
+# Static fallback when LLM commit-message generation fails. Deliberately free
+# of error detail: it lands in public git history; logs carry the diagnostics.
+FALLBACK_COMMIT_MESSAGE = "chore: automated commit (message generation failed)"
+
 
 def run_formatters(project_dir: Path) -> bool:
     """Run code formatters (black, isort) and return success status.
@@ -71,7 +75,10 @@ def commit_changes(
         settings_file: Optional Claude settings file; forwarded to message generation
 
     Returns:
-        True if changes were committed successfully, False on error.
+        True if changes were committed successfully or the tree was clean
+        (no-op); False only on git-level failure. LLM message-generation
+        failure is non-fatal: the commit proceeds with
+        ``FALLBACK_COMMIT_MESSAGE``.
     """
     logger.info("Committing changes...")
     commit_message = ""
@@ -100,7 +107,8 @@ def commit_changes(
 
             if not success:
                 logger.error(f"Error generating commit message: {error}")
-                return False
+                logger.warning("Falling back to static commit message")
+                commit_message = FALLBACK_COMMIT_MESSAGE
 
         # Commit using the message
         commit_result = commit_all_changes(commit_message, project_dir)
