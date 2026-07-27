@@ -12,6 +12,11 @@ helper (structure + enums only), and the gated ``emit_schema`` writer.
 Step 4 covers ``_discover_layers`` — locating the three settings files in
 precedence order (user, project, local), skipping absent layers silently,
 never touching ``.claude/*``, and returning absolute paths.
+
+Step 5 covers ``_parse_matchers`` (single-token matcher parsing with ``@ref``
+pre-detection) and ``_load_layer`` — reading + JSONC-parsing + schema-validating
+one file, then building rules/groups/scenarios/default. Any single error fails
+the whole layer (grants nothing); errors always name the file + offending token.
 """
 
 from __future__ import annotations
@@ -23,11 +28,14 @@ import pytest
 
 from mcp_coder.icoder.permissions.loader import (
     _discover_layers,
+    _load_layer,
+    _parse_matchers,
     _schema_errors,
     _strip_jsonc,
     build_settings_schema,
     emit_schema,
 )
+from mcp_coder.icoder.permissions.model import Policy
 
 # --- comment removal ---
 
@@ -315,3 +323,232 @@ def test_discover_relative_project_dir_yields_absolute_paths(
 
     assert layers
     assert all(path.is_absolute() for _, path in layers)
+
+
+# --- Step 5: per-layer load ---
+
+
+def _write_layer(tmp_path: Path, body: str) -> Path:
+    """Write ``body`` to an absolute ``settings.json`` under ``tmp_path``."""
+    path = (tmp_path / "settings.json").resolve()
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_parse_matchers_concrete_token(tmp_path: Path) -> None:
+    """A concrete ``mcp__…`` token parses to one matcher, no errors."""
+    path = _write_layer(tmp_path, "{}")
+    matchers, errors = _parse_matchers("mcp__fs__write", path)
+    assert errors == []
+    assert len(matchers) == 1
+    assert matchers[0].server == "fs"
+    assert matchers[0].tool == "write"
+
+
+def test_parse_matchers_ref_pre_detected(tmp_path: Path) -> None:
+    """An ``@ref`` token is rejected with the I4.1 diagnostic, not the generic
+    malformed-matcher message."""
+    path = _write_layer(tmp_path, "{}")
+    matchers, errors = _parse_matchers("@git", path)
+    assert matchers == []
+    assert len(errors) == 1
+    assert "not supported until I4.1" in errors[0]
+    assert "@git" in errors[0]
+    assert str(path) in errors[0]
+
+
+def test_parse_matchers_bad_token_names_file_and_token(tmp_path: Path) -> None:
+    """A non-``mcp__`` token fails and the error names the file + token."""
+    path = _write_layer(tmp_path, "{}")
+    matchers, errors = _parse_matchers("github:*", path)
+    assert matchers == []
+    assert errors
+    assert str(path) in errors[0]
+    assert "github:*" in errors[0]
+
+
+def test_load_layer_good_allow_ask_deny_policies(tmp_path: Path) -> None:
+    """``allow``/``ask``/``deny`` map to the correct ``Rule.policy``."""
+    path = _write_layer(
+        tmp_path,
+        json.dumps(
+            {
+                "allow": ["mcp__fs__read"],
+                "ask": ["mcp__fs__write"],
+                "deny": ["mcp__shell__exec"],
+            }
+        ),
+    )
+    result = _load_layer("project", path)
+    assert result.errors == []
+    by_policy = {r.matcher.tool: r.policy for r in result.rules}
+    assert by_policy["read"] is Policy.ALWAYS
+    assert by_policy["write"] is Policy.AFTER_APPROVAL
+    assert by_policy["exec"] is Policy.NEVER
+
+
+def test_load_layer_provenance_absolute_and_layer_tag(tmp_path: Path) -> None:
+    """Each rule carries the absolute source path and the layer tag."""
+    path = _write_layer(tmp_path, json.dumps({"allow": ["mcp__fs__read"]}))
+    result = _load_layer("local", path)
+    assert result.errors == []
+    assert len(result.rules) == 1
+    rule = result.rules[0]
+    assert rule.source_path == path
+    assert rule.source_path is not None and rule.source_path.is_absolute()
+    assert rule.layer == "local"
+
+
+def test_load_layer_value_set_expands_to_n_rules(tmp_path: Path) -> None:
+    """A value-set matcher expands to N rules within the layer."""
+    path = _write_layer(
+        tmp_path,
+        json.dumps({"allow": ["mcp__fs__write(path={a,b,c})"]}),
+    )
+    result = _load_layer("project", path)
+    assert result.errors == []
+    assert len(result.rules) == 3
+    assert {r.matcher.arg.value for r in result.rules if r.matcher.arg} == {
+        "a",
+        "b",
+        "c",
+    }
+
+
+def test_load_layer_populates_groups_and_scenarios(tmp_path: Path) -> None:
+    """``toolGroups``/``toolScenarios`` are parsed into matcher tuples."""
+    path = _write_layer(
+        tmp_path,
+        json.dumps(
+            {
+                "toolGroups": {"git": ["mcp__git__status", "mcp__git__log"]},
+                "toolScenarios": {"review": ["mcp__github__pr_view"]},
+            }
+        ),
+    )
+    result = _load_layer("project", path)
+    assert result.errors == []
+    assert set(result.groups) == {"git"}
+    assert len(result.groups["git"]) == 2
+    assert set(result.scenarios) == {"review"}
+    assert result.scenarios["review"][0].tool == "pr_view"
+
+
+def test_load_layer_parses_default_mode(tmp_path: Path) -> None:
+    """``defaultMode`` maps to the corresponding policy."""
+    path = _write_layer(tmp_path, json.dumps({"defaultMode": "deny"}))
+    result = _load_layer("project", path)
+    assert result.errors == []
+    assert result.default_policy is Policy.NEVER
+
+
+def test_load_layer_ref_in_rule_list_grants_nothing(tmp_path: Path) -> None:
+    """An ``@ref`` in a rule list degrades the whole layer."""
+    path = _write_layer(
+        tmp_path,
+        json.dumps({"allow": ["mcp__fs__read", "@git"]}),
+    )
+    result = _load_layer("project", path)
+    assert result.rules == []
+    assert result.default_policy is None
+    assert result.errors
+    joined = " ".join(result.errors)
+    assert "not supported until I4.1" in joined
+    assert "@git" in joined
+
+
+def test_load_layer_ref_in_group_member_grants_nothing(tmp_path: Path) -> None:
+    """An ``@ref`` nested in a ``toolGroups`` member gives the same diagnostic
+    and degrades the layer."""
+    path = _write_layer(
+        tmp_path,
+        json.dumps({"toolGroups": {"git": ["mcp__git__status", "@other"]}}),
+    )
+    result = _load_layer("project", path)
+    assert result.groups == {}
+    assert result.errors
+    joined = " ".join(result.errors)
+    assert "not supported until I4.1" in joined
+    assert "@other" in joined
+
+
+def test_load_layer_bad_matcher_names_file_and_token(tmp_path: Path) -> None:
+    """A non-``mcp__`` matcher degrades the layer; error names file + token."""
+    path = _write_layer(tmp_path, json.dumps({"allow": ["github:*"]}))
+    result = _load_layer("project", path)
+    assert result.rules == []
+    assert result.errors
+    joined = " ".join(result.errors)
+    assert str(path) in joined
+    assert "github:*" in joined
+
+
+def test_load_layer_schema_invalid_names_file(tmp_path: Path) -> None:
+    """A schema-invalid ``defaultMode`` degrades the layer and names the file."""
+    path = _write_layer(tmp_path, json.dumps({"defaultMode": "maybe"}))
+    result = _load_layer("project", path)
+    assert result.rules == []
+    assert result.default_policy is None
+    assert result.errors
+    assert all(str(path) in e for e in result.errors)
+
+
+@pytest.mark.parametrize("root", ["[]", "42", '"x"'])
+def test_load_layer_non_dict_root_degrades(tmp_path: Path, root: str) -> None:
+    """A non-dict root degrades (does not raise); errors name the file."""
+    path = _write_layer(tmp_path, root)
+    result = _load_layer("project", path)
+    assert result.rules == []
+    assert result.errors
+    assert all(str(path) in e for e in result.errors)
+
+
+def test_load_layer_wrong_typed_section_degrades(tmp_path: Path) -> None:
+    """A wrong-typed section (``"allow": 5``) degrades without raising."""
+    path = _write_layer(tmp_path, '{"allow": 5}')
+    result = _load_layer("project", path)
+    assert result.rules == []
+    assert result.errors
+    assert all(str(path) in e for e in result.errors)
+
+
+def test_load_layer_bad_jsonc_degrades(tmp_path: Path) -> None:
+    """Unparseable JSON degrades the layer and names the file."""
+    path = _write_layer(tmp_path, "{not valid json")
+    result = _load_layer("project", path)
+    assert result.rules == []
+    assert result.errors
+    assert all(str(path) in e for e in result.errors)
+
+
+def test_load_layer_jsonc_comment_in_string_value(tmp_path: Path) -> None:
+    """JSONC comments outside strings are stripped while ``//`` inside a string
+    value survives, yielding the correct rule."""
+    body = '{\n  // grant read\n  "allow": ["mcp__fs__read"]\n}'
+    path = _write_layer(tmp_path, body)
+    result = _load_layer("project", path)
+    assert result.errors == []
+    assert len(result.rules) == 1
+    assert result.rules[0].matcher.tool == "read"
+
+
+def test_load_layer_empty_object_loads_cleanly(tmp_path: Path) -> None:
+    """A layer with no sections loads with no rules and no error/degrade."""
+    path = _write_layer(tmp_path, "{}")
+    result = _load_layer("project", path)
+    assert result.errors == []
+    assert result.rules == []
+    assert result.groups == {}
+    assert result.scenarios == {}
+    assert result.default_policy is None
+
+
+def test_load_layer_only_default_mode_loads_cleanly(tmp_path: Path) -> None:
+    """A layer with only ``defaultMode`` loads cleanly (guards ``.get`` access)."""
+    path = _write_layer(tmp_path, json.dumps({"defaultMode": "allow"}))
+    result = _load_layer("project", path)
+    assert result.errors == []
+    assert result.rules == []
+    assert result.groups == {}
+    assert result.scenarios == {}
+    assert result.default_policy is Policy.ALWAYS

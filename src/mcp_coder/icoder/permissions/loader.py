@@ -21,16 +21,26 @@ Step 4 adds :func:`_discover_layers`, which locates the three ``.icoder/``
 settings files in precedence order (``user``, ``project``, ``local``), skips
 absent layers silently, resolves each to an absolute path (so ``Rule.source_path``
 provenance is absolute), and never touches ``.claude/*``.
+
+Step 5 adds :func:`_parse_matchers` and :func:`_load_layer`. The former parses a
+single matcher token, pre-detecting ``@ref`` members (unsupported until I4.1)
+before delegating to ``parse_matcher``. The latter reads + JSONC-parses +
+schema-validates one file, then builds rules/groups/scenarios/default. Failure is
+per-layer atomic: any single error (bad JSONC, schema reject, bad matcher, or an
+``@ref``) fails the whole layer — it contributes nothing and every error string
+names the source file plus the offending token/key.
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import NamedTuple
 
 import jsonschema
 
-from mcp_coder.icoder.permissions.model import Policy
+from mcp_coder.icoder.permissions.matcher import parse_matcher
+from mcp_coder.icoder.permissions.model import Matcher, Policy, Rule
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
 _POLICY_BY_TOKEN: dict[str, Policy] = {
@@ -189,3 +199,110 @@ def _discover_layers(project_dir: Path) -> list[tuple[str, Path]]:
         ("local", project_dir / ".icoder" / "settings.local.json"),
     ]
     return [(tag, p.resolve()) for tag, p in candidates if p.is_file()]
+
+
+class _LayerResult(NamedTuple):
+    """The outcome of loading one layer.
+
+    On success: the parsed ``default_policy`` (or ``None`` when absent) plus the
+    built ``rules``/``groups``/``scenarios`` and an empty ``errors`` list. On any
+    failure: ``default_policy=None`` with empty collections and a non-empty
+    ``errors`` list — the layer contributes nothing (per-layer atomic
+    fail-closed).
+    """
+
+    default_policy: Policy | None
+    rules: list[Rule]
+    groups: dict[str, tuple[Matcher, ...]]
+    scenarios: dict[str, tuple[Matcher, ...]]
+    errors: list[str]
+
+
+def _parse_matchers(token: str, path: Path) -> tuple[list[Matcher], list[str]]:
+    """Parse one matcher token, pre-detecting ``@ref`` members.
+
+    ``@ref`` is checked *before* delegating to ``parse_matcher`` (which would
+    otherwise emit a generic "malformed matcher"): group references are not
+    supported until I4.1. Every returned error names the source file and the
+    offending token.
+
+    Args:
+        token: The single matcher token to parse.
+        path: The source file the token came from (for error provenance).
+
+    Returns:
+        A ``(matchers, errors)`` tuple. Success yields ``(>=1 matchers, [])``;
+        failure yields ``([], [reason, ...])``.
+    """
+    if token.startswith("@"):
+        return [], [
+            f"{path}: group references (@…) not supported until I4.1: {token!r}"
+        ]
+    matchers, errs = parse_matcher(token)
+    if errs:
+        return [], [f"{path}: {e} (token {token!r})" for e in errs]
+    return matchers, []
+
+
+def _load_layer(layer: str, path: Path) -> _LayerResult:
+    """Read + JSONC-parse + schema-validate one file, then build its rules.
+
+    Failure is per-layer atomic: on any error (unreadable/unparseable file,
+    schema rejection, bad matcher, or an ``@ref`` token) the layer contributes
+    nothing and ``errors`` is populated, each entry naming the file plus the
+    offending token/key.
+
+    Args:
+        layer: The layer tag (``"user"`` | ``"project"`` | ``"local"``) stamped
+            onto each built :class:`~mcp_coder.icoder.permissions.model.Rule`.
+        path: The absolute settings-file path to load.
+
+    Returns:
+        A :class:`_LayerResult`; on failure its collections are empty and
+        ``errors`` is non-empty.
+    """
+    try:
+        data = json.loads(_strip_jsonc(path.read_text(encoding="utf-8")))
+    except (OSError, json.JSONDecodeError) as exc:
+        return _LayerResult(None, [], {}, {}, [f"{path}: {exc}"])
+
+    # Validate the whole structure before walking it: a non-dict root or a
+    # wrong-typed section would otherwise raise below (breaking fail-closed).
+    schema_errors = [f"{path}: {m}" for m in _schema_errors(data)]
+    if schema_errors:
+        return _LayerResult(None, [], {}, {}, schema_errors)
+
+    errors: list[str] = []
+    rules: list[Rule] = []
+    groups: dict[str, tuple[Matcher, ...]] = {}
+    scenarios: dict[str, tuple[Matcher, ...]] = {}
+
+    # All keys optional -> default-safe access. An omitted section yields an
+    # empty iterable (never ``None``), so the common "absent section" case is
+    # not an error.
+    for section, policy in (
+        ("allow", Policy.ALWAYS),
+        ("ask", Policy.AFTER_APPROVAL),
+        ("deny", Policy.NEVER),
+    ):
+        for token in data.get(section, []):
+            matchers, errs = _parse_matchers(token, path)
+            errors += errs
+            rules += [Rule(m, policy, layer, path) for m in matchers]
+
+    for named, store in (("toolGroups", groups), ("toolScenarios", scenarios)):
+        for name, members in data.get(named, {}).items():
+            collected: list[Matcher] = []
+            for token in members:
+                matchers, errs = _parse_matchers(token, path)
+                errors += errs
+                collected += matchers
+            store[name] = tuple(collected)
+
+    default = (
+        _POLICY_BY_TOKEN.get(data["defaultMode"]) if "defaultMode" in data else None
+    )
+
+    if errors:
+        return _LayerResult(None, [], {}, {}, errors)
+    return _LayerResult(default, rules, groups, scenarios, [])

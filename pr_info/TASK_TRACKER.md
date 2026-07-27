@@ -25,7 +25,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 2 — JSONC preprocessor (`_strip_jsonc`)](./steps/step_2.md)
 - [x] [Step 3 — Schema: token map, builder, validation, gated emit](./steps/step_3.md)
 - [x] [Step 4 — Layer discovery (`_discover_layers`)](./steps/step_4.md)
-- [ ] [Step 5 — Per-layer load (`_load_layer`)](./steps/step_5.md)
+- [x] [Step 5 — Per-layer load (`_load_layer`)](./steps/step_5.md)
 - [ ] [Step 6 — Public `load_permission_config` (merge + degrade + provenance)](./steps/step_6.md)
 
 ## Pull Request
