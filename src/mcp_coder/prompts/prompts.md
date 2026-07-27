@@ -424,74 +424,88 @@ Example object (inside the fenced json block):
 {"decision": "tasks", "tasks": ["Fix the null check at foo.py:42", "Add a test for the empty-input case"]}
 ```
 
-## Automated Rebase
+## Rebase Conflict Resolution
 
-The automated counterpart of the interactive `/rebase` skill: rebase the current
-feature branch onto its base branch, resolve conflicts, verify no regression, and
-report an outcome marker — fully automated, with **no confirmation step**. The
-base branch is provided in the context appended after this prompt. The surrounding
-Python program performs the final force-push, so this session must NOT push.
+The conflict-resolution prompt for the Python-driven rebase: the surrounding
+Python program runs every git command and inlines the three-stage content of
+each conflicted file; the LLM session only edits files.
+Placeholders: `[conflict_context]`
 
 ```
-You are rebasing the current feature branch onto its base branch, fully
-automated. No human is watching and there is no confirmation step. The base
-branch is provided in the context appended below.
+You are resolving merge conflicts during a rebase of the current feature branch
+onto its base branch, fully automated — no human is watching. A surrounding
+Python program runs every git command; your ONLY job is to edit the conflicted
+files listed below so each one contains the correct merged content.
 
-**Core philosophy:** the base branch is the source of truth. The feature branch
-adapts to it. For source-code conflicts, preserve the base branch's improvements
-and rework the feature-branch code to fit. Note on `--ours` / `--theirs` during a
-rebase: `--ours` = the base branch (rebased onto); `--theirs` = the feature-branch
-commits being replayed.
-
-**Step 1 — inspect.** Run `git status` before doing anything else.
-
-**Step 2 — capture the baseline BEFORE rebasing.** Before you start the rebase,
-run `run_pytest_check`, `run_pylint_check`, and `run_mypy_check` and record their
-results as a baseline. You need this baseline to prove that nothing regressed
-after the rebase. The bar is no-regression versus this baseline, not
-absolute-pass.
-
-**Step 3 — rebase.** Fetch the remote with `git fetch origin`, then run
-`git rebase origin/<base>` using the base branch from the appended context. For
-each conflict, resolve it per the strategy table below, verify that no conflict
-markers remain, `git add <file>`, and then `git rebase --continue`.
+**Core philosophy:** the base branch is the source of truth. Preserve the base
+branch's improvements and rework the feature-branch code to fit.
 
 **Conflict Resolution Strategies**
 
 | File Type | Strategy |
 |-----------|----------|
-| `pr_info/` files | Auto-resolve with `--theirs` (keep feature branch version) |
 | Code files (`.py`, `.js`, etc.) | Keep both sides, merge imports |
 | Test files | Keep all tests from both sides |
 | Config files | Merge additively, prefer HEAD for same keys |
-| Lockfiles (`*-lock.json`, `*.lock`) | Accept theirs (`--theirs`), notify user to regenerate after rebase |
 
-There is no lockfile-regeneration step: this repository has no tracked lockfile,
-so a lockfile conflict cannot actually arise. Any genuinely unfamiliar or unknown
-conflict is treated by the abort rule below.
+(During a rebase, HEAD is the base branch.)
 
-**Step 4 — verify no regression AFTER rebasing.** Once the rebase completes
-cleanly, re-run `run_pytest_check`, `run_pylint_check`, and `run_mypy_check` and
-compare the results against the baseline you captured earlier. Ensure nothing
-regressed. Fix any regression the merge introduced; if a regression cannot be
-fixed, abort (see below).
+**Conflicts to resolve.** For each conflicted file below you get its path plus
+up to three versions:
 
-**Step 5 — do NOT push.** Stop after a clean, verified rebase. Do NOT run any
-push command — the surrounding Python program performs the force-push itself.
+- common ancestor (merge base) — the content both branches started from
+- ours (base branch) — the version on the branch being rebased onto
+- theirs (feature branch) — the version from the commit being replayed
 
-**Abort rule.** On any unresolvable conflict, any unfixable regression, or any
-other genuinely unexpected situation, restore the original branch state: if the
-rebase is still in progress run `git rebase --abort`; if the rebase already
-completed, reset the branch back to its pre-rebase state. Then report the outcome
-as aborted with a one-line, human-readable reason.
+A side marked as absent means that branch deleted the file (a delete/modify
+conflict): decide per the strategies above whether the file should keep the
+surviving side's content or be deleted via the delete tool.
 
-**Outcome marker (mandatory).** End your response with exactly these two lines and
-nothing after them:
+[conflict_context]
 
-REBASE_OUTCOME: success
-REBASE_REASON: n/a
+**Tools:** edit files with the MCP file tools only
+(`mcp__mcp-workspace__read_file`, `mcp__mcp-workspace__edit_file`,
+`mcp__mcp-workspace__save_file`, `mcp__mcp-workspace__delete_this_file`).
+To inspect repository state, use the read-only `mcp__mcp-workspace__git` tool —
+nothing else.
 
-Use `REBASE_OUTCOME: success` with `REBASE_REASON: n/a` only when the rebase is
-clean and nothing regressed. Otherwise emit `REBASE_OUTCOME: aborted` and replace
-the reason with a one-line, human-readable explanation of why you aborted.
+**Prohibited:** no shell commands of any kind; no staging, continuing, or
+pushing — the Python program performs every git write itself; no outcome
+markers or status lines in your response. When you finish, every resolved file
+must contain its final merged content with no conflict markers
+(`<<<<<<<`, `=======`, `>>>>>>>`) remaining.
+```
+
+## Rebase Regression Fix
+
+The regression-fix prompt for the Python-driven rebase, modeled on the Mypy Fix
+Prompt: Python inlines the concrete failure keys, the LLM re-runs the check
+tools for detail and edits files to fix the regressions.
+Placeholders: `[regression_output]`
+
+```
+The rebase of the current feature branch onto its base branch introduced the
+regressions listed below — failures that are new compared to the pre-rebase
+baseline. Fix them while preserving the intent of both branches.
+
+The list contains failure keys only (for pytest: bare test node IDs, no
+tracebacks). Before editing anything, re-run the granted MCP check tools
+(`mcp__mcp-tools-py__run_pytest_check`, `mcp__mcp-tools-py__run_pylint_check`,
+`mcp__mcp-tools-py__run_mypy_check`) to get the full failure detail.
+
+Regressions (new failures versus the pre-rebase baseline):
+[regression_output]
+
+Keep changes minimal and focused on the listed regressions — pre-existing
+failures are out of scope and must not block you.
+
+**Tools:** edit files with the MCP file tools only
+(`mcp__mcp-workspace__read_file`, `mcp__mcp-workspace__edit_file`,
+`mcp__mcp-workspace__save_file`, `mcp__mcp-workspace__delete_this_file`).
+To inspect repository state, use the read-only `mcp__mcp-workspace__git` tool —
+nothing else.
+
+**Prohibited:** no shell commands of any kind; no staging, committing, or
+pushing — the Python program performs every git write itself; no outcome
+markers or status lines in your response.
 ```

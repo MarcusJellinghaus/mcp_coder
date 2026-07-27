@@ -1,15 +1,20 @@
 """Least-privilege Claude Code settings for the automated rebase session.
 
-``REBASE_LLM_PERMISSIONS`` holds exactly the write operations the automated
-rebase LLM session needs: the git-write ops and MCP check/file tools from
+``REBASE_LLM_PERMISSIONS`` holds exactly the tools the automated rebase LLM
+session needs: the MCP check/file tools and the read-only git tool from
 ``.claude/skills/rebase/SKILL.md`` (``allowed-tools``), converted to the
 ``settings.local.json`` permission-string format.
 
 Deliberately narrower than SKILL.md:
+- **no ``Bash(...)`` grants** — non-interactive LLM sessions load no Bash tool
+  (the Claude CLI provider hardcodes ``--tools ToolSearch``), so shell grants
+  would be dead entries. All git writes are performed by the surrounding Python
+  program; the LLM reads git state via ``mcp__mcp-workspace__git`` only.
 - **no ``push``** — Python performs the final ``--force-with-lease`` push, so the
   LLM never needs a push grant (see summary.md, "Python executes the force-push").
 - **no ``uv lock``** — lockfile handling is out of scope for this repo (no tracked
   lockfile exists).
+- **no reference-project tools** — the rebase session works on this repo only.
 
 The CLI (Step 7) materializes this dict to a runtime temp settings file and passes
 its path to ``prompt_llm`` as ``settings_file``.
@@ -24,16 +29,6 @@ REBASE_LLM_PERMISSIONS: dict[str, Any] = {
     "permissions": {
         "allow": [
             "mcp__mcp-workspace__git",
-            "Bash(git rebase:*)",
-            "Bash(git add:*)",
-            "Bash(git rm:*)",
-            "Bash(git commit:*)",
-            "Bash(git checkout --ours:*)",
-            "Bash(git checkout --theirs:*)",
-            "Bash(git restore:*)",
-            "Bash(git remote get-url:*)",
-            "Bash(git status:*)",
-            "Bash(git diff:*)",
             "mcp__mcp-tools-py__run_format_code",
             "mcp__mcp-tools-py__run_pylint_check",
             "mcp__mcp-tools-py__run_pytest_check",
