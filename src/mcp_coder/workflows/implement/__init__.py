@@ -10,7 +10,6 @@ from mcp_coder.workflow_steps.commit import (
     run_formatters,
 )
 
-from .constants import FailureCategory, WorkflowFailure
 from .core import run_implement_workflow
 from .prerequisites import (
     check_git_clean,
@@ -26,8 +25,6 @@ from .task_processing import (
 from .task_tracker_prep import log_progress_summary, prepare_task_tracker
 
 __all__ = [
-    "FailureCategory",
-    "WorkflowFailure",
     "check_git_clean",
     "check_main_branch",
     "check_prerequisites",
