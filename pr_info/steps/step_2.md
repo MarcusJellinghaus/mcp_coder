@@ -31,12 +31,26 @@ FAILURE_LABELS: dict[str, str] = {
     "ci_fix_exhausted": "ci_fix_needed",
 }
 
+# Maps a reason -> the exact human-readable Category text the deleted enum
+# produced (`FailureCategory.<NAME>.name.replace("_", " ").title()`), so the
+# comment stays byte-identical. Only `timeout` actually diverges from a naive
+# title-cased reason: it must render "Llm Timeout" (was `LLM_TIMEOUT`), NOT
+# "Timeout".
+CATEGORY_DISPLAY: dict[str, str] = {
+    "general": "General",
+    "timeout": "Llm Timeout",
+    "mcp_unavailable": "Mcp Unavailable",
+    "task_tracker_prep_failed": "Task Tracker Prep Failed",
+    "no_changes_after_retries": "No Changes After Retries",
+    "ci_fix_exhausted": "Ci Fix Exhausted",
+}
+
 @dataclass
 class Progress:            # mutable holder read by the net's build_comment
     completed: int = 0
     total: int = 0
 
-def format_failure_comment(stage, message, *, completed, total,
+def format_failure_comment(reason, stage, message, *, completed, total,
                            elapsed, build_url, diff_stat) -> str: ...
 
 def _fail(project_dir, reason, *, stage, message, progress, start_time, build_url,
@@ -45,12 +59,18 @@ def _fail(project_dir, reason, *, stage, message, progress, start_time, build_ur
 
 ## HOW
 
-- `format_failure_comment` reproduces the current `_format_failure_comment` output (header
-  `## Implementation Failed`, Category = title-cased reason, Stage, Error, optional Progress /
-  Elapsed / Build, and the `### Uncommitted Changes` block). Category text now derives from the
-  `reason` string, not an enum name.
+- `format_failure_comment` reproduces the current `_format_failure_comment` output
+  **byte-identically** (header `## Implementation Failed`, `**Category:** …`, Stage, Error,
+  optional Progress / Elapsed / Build, and the `### Uncommitted Changes` block). The Category
+  line is rendered as `CATEGORY_DISPLAY[reason]` (falling back to `CATEGORY_DISPLAY["general"]`),
+  **not** by title-casing the reason. This matters because title-casing `"timeout"` yields
+  `"Timeout"`, whereas the deleted `FailureCategory.LLM_TIMEOUT` enum rendered `"Llm Timeout"` —
+  the kept regression assertion `"Llm Timeout" in comment`
+  (`tests/workflows/implement/test_failure_reporting.py:107`) still passes only with the
+  `CATEGORY_DISPLAY` mapping. All other reasons already round-trip identically.
 - `_fail`: `category = FAILURE_LABELS.get(reason, FAILURE_LABELS["general"])`; build comment via
-  `format_failure_comment`; call shared `handle_workflow_failure(WorkflowFailure(category, stage,
+  `format_failure_comment(reason, stage, message, …)`; call shared
+  `handle_workflow_failure(WorkflowFailure(category, stage,
   message, elapsed), comment, project_dir, from_label_id="implementing", …)`; `return 1`.
 - `core.py`: keep the three prereq checks + `_attempt_rebase_and_push` **before** the guard
   (unlabeled, unchanged). Wrap the rest (config read → task loop → final mypy → finalisation →
@@ -81,7 +101,7 @@ _attempt_rebase_and_push(project_dir)
 progress = Progress(); start = time.time(); build_url = env["BUILD_URL"]
 fail = partial(_fail, project_dir, progress=progress, start_time=start, build_url=build_url, ...)
 def body() -> int:  ... uses fail(...) at each deliberate failure; returns 0 on success
-def build_comment(o): return format_failure_comment(o.stage, o.message, completed=progress.completed, ...)
+def build_comment(o): return format_failure_comment("general", o.stage, o.message, completed=progress.completed, ...)
 return run_guarded(body, project_dir=project_dir, from_label_id="implementing",
                    general_category="implementing_failed", comment_header="## Implementation Failed",
                    build_comment=build_comment, update_issue_labels=..., post_issue_comments=...)
