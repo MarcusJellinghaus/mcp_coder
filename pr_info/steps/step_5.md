@@ -53,6 +53,10 @@ return (matchers, []) if not errs else ([], [f"{path}: {e} (token {token!r})" fo
 try: data = json.loads(_strip_jsonc(path.read_text(encoding="utf-8")))
 except (OSError, json.JSONDecodeError) as e: return _LayerResult(None,[],{},{},[f"{path}: {e}"])
 errors = [f"{path}: {m}" for m in _schema_errors(data)]
+if errors: return _LayerResult(None, [], {}, {}, errors)   # schema failed: grant nothing,
+                                                           # do NOT walk a malformed `data`
+                                                           # (non-dict root / wrong-typed section
+                                                           #  would raise, not degrade)
 rules=[]; groups={}; scenarios={}
 for token in data.get("allow"/"ask"/"deny"):        # each section -> its Policy
     ms, errs = _parse_matchers(token, path)
@@ -80,6 +84,9 @@ errors. On any failure: `default_policy=None`, empty collections, non-empty
 - `@ref` nested inside a `toolGroups` member → same specific diagnostic.
 - Bad matcher (e.g. non-`mcp__`) → layer grants nothing, error names file+token.
 - Schema-invalid content (`defaultMode: "maybe"`) → error names the file.
+- Malformed structure degrades (does NOT raise): a non-dict root (e.g. `[]` /
+  `42` / `"x"`) and a wrong-typed section (e.g. `"allow": 5`) each →
+  layer grants nothing, `errors` populated (names the file), no exception.
 - JSONC with comments inside string values parses to the correct rules.
 
 ## VERIFICATION
