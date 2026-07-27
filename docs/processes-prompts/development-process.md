@@ -1141,7 +1141,7 @@ Automated workflows can fail at several points. When a failure occurs, the issue
 
 To recover from a failure, investigate the root cause (logs, CI output, API errors), resolve the underlying issue, then use `mcp-coder gh-tool set-status` to transition the issue back to a retry-ready state as shown in the table above. The bot will automatically pick up the issue again from the recovery status.
 
-The `status-14f-*` / `status-17f-*` labels only occur when automated review is enabled (`auto_review_plan` / `auto_review_implementation`; see [Automated Review](#9-automated-review-optional) below). Their recovery commands re-queue the automated review; to instead hand off to the interactive supervisor, set `status-04:plan-review` or `status-07:code-review`. Each carries a `/check_branch_status` vscodeclaude command so a human review session opens automatically.
+The `status-14f-*` / `status-17f-*` labels only occur when automated review is enabled (`auto_review_plan` / `auto_review_implementation`; see [Automated Review](#9-automated-review-optional) below). Their recovery commands re-queue the automated review; to instead hand off to the interactive supervisor, set `status-04:plan-review` or `status-07:code-review`. `status-04:plan-review` carries `/plan_review_supervisor` and `status-07:code-review` carries `/implementation_review_supervisor`, so a human review session opens automatically.
 
 ### 9. Automated Review (optional)
 

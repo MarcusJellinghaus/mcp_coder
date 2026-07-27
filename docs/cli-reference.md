@@ -91,7 +91,7 @@ mcp-coder help                         # Show comprehensive help with examples (
 
 ### init
 
-Initialize a project for MCP Coder: create the user config file (if missing) and deploy the bundled Claude Code skills into the project.
+Initialize a project for MCP Coder: create the user config file (if missing) and deploy the bundled Claude Code resources (skills, knowledge base, and agents) into the project.
 
 ```bash
 mcp-coder init [OPTIONS]
@@ -99,16 +99,16 @@ mcp-coder init [OPTIONS]
 
 **Options:**
 - `--project-dir PATH` - Target project directory (default: current directory)
-- `--just-skills` - Deploy skills only, skip config creation
+- `--just-skills` - Deploy the bundled resources only (skills, knowledge base, and agents, despite the name), skip config creation
 
-**Description:** Bootstraps a project so the automated workflows and interactive tools can run: writes a starter user configuration and installs the `.claude/skills/` slash-command skills. Use `--just-skills` to refresh only the deployed skills without touching config.
+**Description:** Bootstraps a project so the automated workflows and interactive tools can run: writes a starter user configuration and installs the bundled Claude Code resources into `.claude/` — `.claude/skills/`, `.claude/knowledge_base/`, and `.claude/agents/`. Use `--just-skills` to refresh only the deployed resources (all three sets, despite the name) without touching config.
 
 **Examples:**
 ```bash
-# Initialize the current project (config + skills)
+# Initialize the current project (config + bundled resources)
 mcp-coder init
 
-# Refresh deployed skills only
+# Refresh deployed resources only (skills, knowledge base, agents)
 mcp-coder init --just-skills
 
 # Initialize a specific project directory

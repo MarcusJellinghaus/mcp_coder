@@ -458,7 +458,7 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 
 ### Architectural Boundary Enforcement
 - **Tools**: import-linter, tach, pycycle for static analysis of module dependencies; vulture for dead code detection
-- **Configuration**: `.importlinter` (22 contracts), `tach.toml` (layer definitions)
+- **Configuration**: `.importlinter` (20 contracts), `tach.toml` (layer definitions)
 - **CI Integration**: Architecture checks run automatically on pull requests
 - **Documentation**: See `docs/architecture/dependencies/README.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
 - **Visualization**: `docs/architecture/dependencies/dependency_graph.html` for interactive dependency graph

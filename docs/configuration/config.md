@@ -63,16 +63,19 @@ The auto-created template includes all sections with example values:
 # MCP Coder Configuration
 # Update with your actual credentials and repository information
 
-[coordinator]
-# GitHub API caching settings (optional)
-# Controls how long to cache GitHub API responses before refreshing
-# Reduces API calls and improves performance for subsequent runs
-cache_refresh_minutes = 1440  # 24 hours (default)
+# [llm]
+# Default LLM provider: "claude" (default), "copilot", or "langchain"
+# default_provider = "copilot"
 
-# Alternative cache durations based on your needs:
-# cache_refresh_minutes = 60    # 1 hour - for active development
-# cache_refresh_minutes = 360   # 6 hours - balanced approach
-# cache_refresh_minutes = 2880  # 48 hours - for stable repositories
+# [mcp]
+# Default MCP config file path (relative to CWD or absolute)
+# Environment variable (higher priority): MCP_CODER_MCP_CONFIG
+# default_config_path = ".mcp.json"
+
+[github]
+# GitHub authentication
+# Environment variable (higher priority): GITHUB_TOKEN
+token = "ghp_your_github_personal_access_token_here"
 
 [jenkins]
 # Jenkins server configuration
@@ -80,29 +83,50 @@ cache_refresh_minutes = 1440  # 24 hours (default)
 server_url = "https://jenkins.example.com:8080"
 username = "your-jenkins-username"
 api_token = "your-jenkins-api-token"
-# The Jenkins variables can be also configured as environment variables:
-# - JENKINS_URL
-# - JENKINS_USER
-# - JENKINS_TOKEN
+test_job = "Tests/mcp-coder-simple-test"  # Job for integration tests
+test_job_coordination = "Tests/mcp-coder-coordinator-test"  # Job for coordinator tests
 
-# Coordinator repositories
+# Coordinator test repositories
 # Add your repositories here following this pattern
 
-[coordinator.repos.repo_a]
-repo_url = "https://github.com/your-org/repo_a.git"
-executor_job_path = "jenkins_folder_a/test-job-a"
+[coordinator.repos.mcp_coder]
+repo_url = "https://github.com/your-org/mcp_coder.git"
+executor_job_path = "Tests/mcp-coder-coordinator-test"
 github_credentials_id = "github-general-pat"
+# executor_os: "windows" or "linux" (default: "linux", case-insensitive)
+# Use "windows" for Windows Jenkins executors, "linux" for Linux/container executors
+executor_os = "linux"
+update_issue_labels = true
+post_issue_comments = true
 
-[coordinator.repos.repo_b]
-repo_url = "https://github.com/your-org/repo_b.git"
-executor_job_path = "jenkins_folder_b/test-job-b"
+[coordinator.repos.mcp_workspace]
+repo_url = "https://github.com/your-org/mcp-workspace.git"
+executor_job_path = "Tests/mcp-workspace-coordinator-test"
 github_credentials_id = "github-general-pat"
+executor_os = "linux"
+update_issue_labels = true
+post_issue_comments = true
+
+# Example Windows executor configuration:
+# [coordinator.repos.windows_project]
+# repo_url = "https://github.com/your-org/windows-app.git"
+# executor_job_path = "Windows/Executor/Test"
+# github_credentials_id = "github-general-pat"
+# executor_os = "windows"
+# update_issue_labels = true
+# post_issue_comments = true
 
 # Add more repositories as needed:
 # [coordinator.repos.your_repo_name]
 # repo_url = "https://github.com/your-org/your_repo.git"
-# executor_job_path = "Folder/job-name"
+# executor_job_path = "Tests/your-repo-coordinator-test"
 # github_credentials_id = "github-credentials-id"
+# executor_os = "linux"
+
+[vscodeclaude]
+# VSCodeClaude session configuration
+# workspace_base = "C:/path/to/vscodeclaude/workspaces"
+# max_sessions = 3
 ```
 
 ## Configuration Sections
@@ -252,29 +276,31 @@ default_settings_path = ".claude/settings.local.json"
 
 Selects the LLM provider. Defaults to `"claude"` when omitted.
 
+Resolution order (highest priority first): the `--llm-method` CLI flag, the `MCP_CODER_LLM_PROVIDER` environment variable, `[llm] default_provider` in config, then the `"claude"` default.
+
 | Field | Type | Description | Required | Default |
 |-------|------|-------------|----------|---------|
-| `provider` | string | LLM provider: `"claude"`, `"copilot"`, or `"langchain"` | No | `"claude"` |
+| `default_provider` | string | LLM provider: `"claude"`, `"copilot"`, or `"langchain"` | No | `"claude"` |
 
 **Example — use Claude (default, no change needed):**
 
 ```toml
 [llm]
-provider = "claude"
+default_provider = "claude"
 ```
 
 **Example — use Copilot CLI:**
 
 ```toml
 [llm]
-provider = "copilot"
+default_provider = "copilot"
 ```
 
 **Example — use LangChain:**
 
 ```toml
 [llm]
-provider = "langchain"
+default_provider = "langchain"
 ```
 
 **Ad-hoc provider selection:** Any command with `--llm-method` supports all providers without changing config:
@@ -286,7 +312,7 @@ mcp-coder implement --llm-method copilot
 
 ### [llm.langchain]
 
-LangChain backend configuration. Required when `[llm] provider = "langchain"`.
+LangChain backend configuration. Required when `[llm] default_provider = "langchain"`.
 
 Install the extra dependency first:
 
@@ -313,7 +339,7 @@ extras (smaller footprints if you only need one backend).
 
 ```toml
 [llm]
-provider = "langchain"
+default_provider = "langchain"
 
 [llm.langchain]
 backend  = "openai"
@@ -335,7 +361,7 @@ api_key  = "..."                    # or OPENAI_API_KEY env var
 
 ```toml
 [llm]
-provider = "langchain"
+default_provider = "langchain"
 
 [llm.langchain]
 backend  = "gemini"
@@ -347,7 +373,7 @@ api_key  = "..."          # or set GEMINI_API_KEY env var
 
 ```toml
 [llm]
-provider = "langchain"
+default_provider = "langchain"
 
 [llm.langchain]
 backend     = "openai"
@@ -361,7 +387,7 @@ api_key     = "..."
 
 ```toml
 [llm]
-provider = "langchain"
+default_provider = "langchain"
 
 [llm.langchain]
 backend  = "anthropic"
@@ -373,7 +399,7 @@ api_key  = "sk-ant-..."   # or set ANTHROPIC_API_KEY env var
 
 ```toml
 [llm]
-provider = "langchain"
+default_provider = "langchain"
 
 [llm.langchain]
 backend  = "ollama"
@@ -470,10 +496,13 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 | `repo_url` | string | Git repository HTTPS URL | Yes | — |
 | `executor_job_path` | string | Jenkins job path (folder/job-name) | Yes | — |
 | `github_credentials_id` | string | Jenkins GitHub credentials ID (see setup below) | Yes | — |
+| `executor_os` | string | Executor platform: `"windows"` or `"linux"` (case-insensitive) | No | `"linux"` |
 | `update_issue_labels` | boolean | Update GitHub issue labels on workflow success/failure | No | `false` |
 | `post_issue_comments` | boolean | Post GitHub comments on workflow failure | No | `false` |
 | `auto_review_plan` | boolean | Gate automated plan review (routes create-plan success to `status-14:plan-review-bot` for coordinator pickup). | No | `false` |
 | `auto_review_implementation` | boolean | Gate automated implementation review (routes implement success to `status-17:code-review-bot` for coordinator pickup). | No | `false` |
+| `setup_commands_windows` | list | Shell commands run during environment setup on Windows executors | No | — |
+| `setup_commands_linux` | list | Shell commands run during environment setup on Linux executors | No | — |
 
 **Example:**
 
@@ -544,6 +573,7 @@ Environment variables take **highest priority** over config file values.
 | `JENKINS_URL` | `[jenkins] server_url` | `https://jenkins.local:8080` |
 | `JENKINS_USER` | `[jenkins] username` | `automation-user` |
 | `JENKINS_TOKEN` | `[jenkins] api_token` | `abc123def456...` |
+| `MCP_CODER_LLM_PROVIDER` | `[llm] default_provider` | `claude` |
 
 **Usage:**
 
