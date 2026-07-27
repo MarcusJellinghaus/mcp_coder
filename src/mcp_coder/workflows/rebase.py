@@ -160,6 +160,106 @@ def _rebase_success_shape(project_dir: Path, pre_sha: str) -> bool:
     return get_latest_commit_sha(project_dir) != pre_sha
 
 
+# --- Conflict handling ---
+
+
+def _conflicted_files(project_dir: Path) -> list[str]:
+    """Return the unmerged paths (repo-relative, git's own output order)."""
+    result = _run_git(project_dir, "diff", "--name-only", "--diff-filter=U")
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def _binary_conflict(project_dir: Path) -> str | None:
+    """Return the first conflicted path with binary content, or ``None``.
+
+    At a conflict stop, bare ``git diff --numstat`` omits unmerged paths
+    (verified against real git), so binary-ness is decided at blob level:
+    stage SHAs via ``git ls-files -u``, then ``git diff --numstat <ours>
+    <theirs>`` where ``-`` added/deleted columns reliably mean binary.
+    """
+    listing = _run_git(project_dir, "ls-files", "-u")
+    stages: dict[str, dict[int, str]] = {}
+    for line in listing.stdout.splitlines():
+        # "<mode> <sha> <stage>\t<path>"
+        meta, _, path = line.partition("\t")
+        fields = meta.split()
+        if len(fields) != 3 or not path:
+            continue
+        stages.setdefault(path, {})[int(fields[2])] = fields[1]
+    for path, shas in stages.items():
+        # A missing side (delete/modify) falls back to the common ancestor so
+        # single-sided binary content is still caught; identical blobs simply
+        # produce no diff output.
+        ours = shas.get(2) or shas.get(1)
+        theirs = shas.get(3) or shas.get(1)
+        if not ours or not theirs:
+            continue
+        numstat = _run_git(project_dir, "diff", "--numstat", ours, theirs)
+        for stat_line in numstat.stdout.splitlines():
+            columns = stat_line.split("\t")
+            if len(columns) >= 2 and columns[0] == "-" and columns[1] == "-":
+                return path
+    return None
+
+
+def _resolve_pr_info_conflict(project_dir: Path, file: str) -> bool:
+    """Resolve a ``pr_info/`` conflict deterministically (keep the feature side).
+
+    ``git checkout --theirs`` takes the feature version (stage 3); when that
+    side does not exist (delete/modify — the feature branch deleted the file)
+    the fallback is ``git rm`` so the file stays deleted.
+
+    Returns:
+        True when the file is resolved and staged.
+    """
+    checkout = _run_git(project_dir, "checkout", "--theirs", "--", file)
+    if checkout.returncode == 0:
+        return _run_git(project_dir, "add", "--", file).returncode == 0
+    return _run_git(project_dir, "rm", "--", file).returncode == 0
+
+
+def _has_conflict_markers(project_dir: Path, file: str) -> bool:
+    """Return True if ``file`` still contains git conflict marker lines.
+
+    Only the seven-char ``<<<<<<< `` / ``>>>>>>> `` line prefixes count — a
+    bare ``=======`` appears in legitimate text (e.g. markdown underlines).
+    A missing file is marker-free (legitimately deleted during resolution).
+    """
+    path = project_dir / file
+    if not path.is_file():
+        return False
+    text = path.read_text(encoding="utf-8", errors="replace")
+    return any(line.startswith(("<<<<<<< ", ">>>>>>> ")) for line in text.splitlines())
+
+
+def _show_stage(project_dir: Path, stage: int, file: str) -> str | None:
+    """Return the content of ``:<stage>:<file>``, or ``None`` when absent.
+
+    Stages: 1 = common ancestor (merge base), 2 = ours (the base branch being
+    rebased onto), 3 = theirs (the feature commits being replayed). A missing
+    side (e.g. delete/modify) yields ``None``.
+    """
+    result = _run_git(project_dir, "show", f":{stage}:{file}")
+    if result.returncode != 0:
+        return None
+    return result.stdout
+
+
+def _stage_all_and_continue(project_dir: Path) -> _GitResult:
+    """Stage everything and run the non-interactive ``rebase --continue``.
+
+    ``git add -A`` is deliberate (no pathspec): per-file adds break on
+    delete/modify resolutions and adjacent LLM edits. ``-c core.editor=true``
+    keeps the continue from ever blocking on an editor.
+
+    Returns:
+        The ``_GitResult`` of the continue; non-zero usually means the next
+        commit also conflicts (the loop's continue condition, not an error).
+    """
+    _run_git(project_dir, "add", "-A")
+    return _run_git(project_dir, "-c", "core.editor=true", "rebase", "--continue")
+
+
 # --- Check baseline / comparison ---
 
 
