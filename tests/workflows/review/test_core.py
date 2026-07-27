@@ -296,6 +296,71 @@ def test_mcp_unavailable_maps_to_mcp_label(
     assert failure.category == REVIEW_PLAN.failure_labels["mcp"]
 
 
+def test_commit_failure_fails_run_and_skips_push(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """commit_changes False -> return 1, general label, log entry, no push."""
+    env.commit_changes.return_value = False
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    env.push_changes.assert_not_called()
+    env.handle_workflow_failure.assert_called_once()
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["general"]
+    assert "commit-failed" in failure.message
+
+    log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
+    assert "commit-failed" in log
+
+
+def test_push_failure_fails_run(env: SimpleNamespace, tmp_path: Path) -> None:
+    """push_changes False -> return 1, general label, log entry."""
+    env.push_changes.return_value = False
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    env.commit_changes.assert_called_once()
+    env.handle_workflow_failure.assert_called_once()
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["general"]
+    assert "push-failed" in failure.message
+
+    log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
+    assert "push-failed" in log
+
+
+def test_clean_tree_round_proceeds_normally(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A round with no file changes (commit no-ops True) keeps looping to success."""
+    env.is_working_directory_clean.return_value = True
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+        _reviewer(),
+        _resp(_DISMISS),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
+
+
 def test_labels_not_touched_when_gating_off(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
