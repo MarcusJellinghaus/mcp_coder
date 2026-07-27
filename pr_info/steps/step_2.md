@@ -65,6 +65,25 @@ run source-only (no dist, short-circuits to `[]`); the behavioral assertion
 holds in both, whereas a metadata-state assertion would break under an
 editable install.
 
+### Fail-open regression test (swallow-and-continue)
+
+The guard's headline guarantee — an unexpected internal `_depcheck` error must
+**never** break a healthy install — needs its own test; the smoke test above
+only exercises the happy pass-through.
+
+- Monkeypatch `mcp_coder._depcheck.find_missing_dependencies` to raise a
+  **non-`SystemExit`** exception (e.g. `RuntimeError("boom")`), then
+  `importlib.reload(mcp_coder)` and assert the reload **succeeds** —
+  `mcp_coder.__version__` is a non-empty `str`. This proves the `__init__`
+  guard's `except Exception` swallowed the internal error and loading proceeded
+  (import does not propagate the exception).
+- Contrast (already covered, do not re-test here): the intended clean
+  `SystemExit(1)` on a real broken install is **not** swallowed, because
+  `SystemExit` subclasses `BaseException`, not `Exception`; that exit path is
+  covered by Step 1's `ensure_dependencies()` test.
+- Restore the patch (fixture teardown / `monkeypatch` auto-undo) and
+  `importlib.reload(mcp_coder)` once more so later tests see the real module.
+
 (The broken-install path itself is fully covered by Step 1's pure-function
 tests — no subprocess or hand-broken venv is needed.)
 

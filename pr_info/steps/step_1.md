@@ -52,9 +52,12 @@ def _installed_version() -> str:
   fail-open on every real install (mcp-coder always has extras in
   `requires()`), silently defeating the guard. Platform markers like
   `sys_platform == 'win32'` (pywin32) still evaluate against the real platform.
-- Wrap the per-requirement marker check in `try/except Exception` and treat an
-  odd/unparseable spec as "not filtered out" (fall through to the presence
-  check) so one bad spec cannot make the whole function raise and fail-open.
+- Wrap **both** the `Requirement(spec)` construction and the marker check in
+  `try/except Exception` so one bad spec cannot make the whole function raise
+  and fail-open. An unparseable spec (`InvalidRequirement`) has no usable
+  `.name` to check, so **skip** it (`continue`); an odd marker still has a
+  name, so treat it as "not filtered out" and fall through to the presence
+  check.
 - `_installed_version()` reuses the `PackageNotFoundError → "0.0.0.dev0+unknown"`
   fallback pattern that `__init__` already uses.
 
@@ -68,13 +71,16 @@ except PackageNotFoundError:
     return []
 missing = []
 for spec in reqs:
-    req = Requirement(spec)
+    try:
+        req = Requirement(spec)                     # InvalidRequirement -> skip
+    except Exception:  # unparseable spec -> no name to check; skip this one
+        continue
     try:
         # explicit extra="" -> extra-markers evaluate False across packaging
         # versions; off-platform markers drop too
         if req.marker and not req.marker.evaluate(environment={"extra": ""}):
             continue
-    except Exception:  # odd/unparseable spec -> don't fail-open; check presence
+    except Exception:  # odd marker -> don't fail-open; fall through to presence
         pass
     try:
         version(req.name)                          # distribution present?
@@ -116,9 +122,14 @@ Pure-function tests, single patch seam (`mcp_coder._depcheck.requires`):
    behavior is version-dependent); the explicit environment guarantees it, so
    this test genuinely guards against the fail-open regression rather than
    silently erroring on older `packaging`.
-5. `ensure_dependencies()` with `find_missing_dependencies` monkeypatched to
-   return `[]` → returns `None`, no exit.
+5. `requires` returning `["not a valid spec!!!", "definitely-absent-xyz>=1"]`
+   → returns `["definitely-absent-xyz"]` — the unparseable spec is caught
+   (`InvalidRequirement`) and skipped without raising, so the function still
+   reports the genuinely-missing dep. Guards the "one bad spec cannot make the
+   whole function raise" contract.
 6. `ensure_dependencies()` with `find_missing_dependencies` monkeypatched to
+   return `[]` → returns `None`, no exit.
+7. `ensure_dependencies()` with `find_missing_dependencies` monkeypatched to
    return `["python-jenkins", "textual"]` → `pytest.raises(SystemExit)` with
    code `1`; `capsys` stderr contains `"mcp-coder "`, `"Installation incomplete"`,
    both dep names, and `"pip install mcp-coder"`.
