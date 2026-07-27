@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1 — Dependencies + narrow import-linter contract](./steps/step_1.md)
+- [x] [Step 1 — Dependencies + narrow import-linter contract](./steps/step_1.md)
 - [ ] [Step 2 — JSONC preprocessor (`_strip_jsonc`)](./steps/step_2.md)
 - [ ] [Step 3 — Schema: token map, builder, validation, gated emit](./steps/step_3.md)
 - [ ] [Step 4 — Layer discovery (`_discover_layers`)](./steps/step_4.md)
