@@ -43,10 +43,16 @@ functions, called as the **first statement** of `mcp_coder/__init__.py`.
 
 ### Guaranteed behaviours
 
-- **No-metadata / source-only runs no-op.** Under `pythonpath=["src"]` (how
-  pytest runs here) there is no installed dist, so `requires("mcp-coder")`
-  raises `PackageNotFoundError`; `requires()` may also return `None`. Both →
-  `find_missing_dependencies()` returns `[]` and loading proceeds.
+- **Healthy dev/test env passes through.** In this repo mcp-coder is normally
+  editable-installed, so it carries `.dist-info` metadata and
+  `requires("mcp-coder")` resolves (the same metadata `__init__` already reads
+  via `importlib.metadata.version("mcp-coder")` for `__version__`). The guard
+  therefore **actually runs** on every `import mcp_coder` here — it is not a
+  no-op. Safety rests on all **mandatory** deps being present in the venv: the
+  guard enumerates them, finds nothing missing, returns `[]`, and loading
+  proceeds. (Only a genuinely source-only run with no installed dist — where
+  `requires("mcp-coder")` raises `PackageNotFoundError`, or `requires()`
+  returns `None` — short-circuits to `[]` without enumerating.)
 - **Fail-open on unexpected internal error.** The `__init__` guard is wrapped
   in `try/except Exception`, so any unforeseen error is swallowed and normal
   loading proceeds (worst case: today's traceback). `SystemExit` subclasses

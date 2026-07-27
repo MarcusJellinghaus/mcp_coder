@@ -50,13 +50,20 @@ installs; the surrounding `try/except` makes the guard a no-op there.
 
 ## TEST — smoke / regression
 
-Protects requirement #4 (no-op under `pythonpath` runs) and confirms the guard
-does not break normal import in the dev/test env:
+Confirms the guard does not break normal import in the dev/test env:
 
 - `import mcp_coder` succeeds and `mcp_coder.__version__` is a non-empty `str`.
-- `mcp_coder._depcheck.ensure_dependencies` is callable and returns `None`
-  in this (metadata-absent) environment — i.e. `find_missing_dependencies()`
-  returns `[]` here, so the guard passes through.
+- `mcp_coder._depcheck.ensure_dependencies()` is callable and returns `None`
+  in this env, so the guard passes through.
+
+Keep the assertion **strictly behavioral** (`assert ensure_dependencies() is
+None`). Do **not** encode the environment's metadata state into the test — in
+particular do **not** assert that `requires("mcp-coder")` raises
+`PackageNotFoundError`. mcp-coder may be editable-installed here (metadata
+present, guard enumerates all mandatory deps and finds none missing) **or**
+run source-only (no dist, short-circuits to `[]`); the behavioral assertion
+holds in both, whereas a metadata-state assertion would break under an
+editable install.
 
 (The broken-install path itself is fully covered by Step 1's pure-function
 tests — no subprocess or hand-broken venv is needed.)
