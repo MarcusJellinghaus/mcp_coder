@@ -1,17 +1,26 @@
-"""Tests for the iCoder permission loader (Step 2, TDD).
+"""Tests for the iCoder permission loader (Steps 2-3, TDD).
 
 Step 2 covers only the JSONC preprocessor
 ``mcp_coder.icoder.permissions.loader._strip_jsonc`` — a stdlib,
 string/escape-aware comment stripper that also tolerates trailing commas.
 Comment-like sequences inside string literals (URLs, ``"a // b"``, escaped
 quotes) must survive intact; the result must be valid JSON for ``json.loads``.
+
+Step 3 covers the JSON-Schema builder, the ``_schema_errors`` validation
+helper (structure + enums only), and the gated ``emit_schema`` writer.
 """
 
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
-from mcp_coder.icoder.permissions.loader import _strip_jsonc
+from mcp_coder.icoder.permissions.loader import (
+    _schema_errors,
+    _strip_jsonc,
+    build_settings_schema,
+    emit_schema,
+)
 
 # --- comment removal ---
 
@@ -84,3 +93,81 @@ def test_plain_json_roundtrips() -> None:
     obj = {"a": 1, "b": ["x", "y"], "c": {"d": True}}
     text = json.dumps(obj)
     assert json.loads(_strip_jsonc(text)) == obj
+
+
+# --- Step 3: schema validation (structure + enums only) ---
+
+
+def test_schema_accepts_full_valid_config() -> None:
+    """A config using every section with a valid ``defaultMode`` passes."""
+    data = {
+        "$schema": "./settings.schema.json",
+        "defaultMode": "ask",
+        "allow": ["github:*"],
+        "ask": ["fs:write"],
+        "deny": ["shell:*"],
+        "toolGroups": {"git": ["github:*", "shell:git"]},
+        "toolScenarios": {"review": ["github:pr_view"]},
+    }
+    assert _schema_errors(data) == []
+
+
+def test_schema_rejects_bad_default_mode() -> None:
+    """``defaultMode: "maybe"`` is not in the enum and is rejected."""
+    errors = _schema_errors({"defaultMode": "maybe"})
+    assert errors
+    assert any("defaultMode" in e for e in errors)
+
+
+def test_schema_rejects_non_array_allow() -> None:
+    """``allow`` must be an array; a string value is rejected."""
+    errors = _schema_errors({"allow": "github:*"})
+    assert errors
+    assert any("allow" in e for e in errors)
+
+
+def test_schema_rejects_unknown_top_level_key() -> None:
+    """An unknown top-level key is rejected (additionalProperties false)."""
+    errors = _schema_errors({"bogus": 1})
+    assert errors
+
+
+def test_schema_rejects_tool_groups_value_not_string_array() -> None:
+    """A ``toolGroups`` value that is not an array of strings is rejected."""
+    errors = _schema_errors({"toolGroups": {"git": [1, 2]}})
+    assert errors
+    assert any("toolGroups" in e or "git" in e for e in errors)
+
+
+# --- Step 3: gated schema emit ---
+
+
+def test_emit_schema_absent_dir_writes_nothing(tmp_path: Path) -> None:
+    """When ``.icoder/`` does not exist, nothing is written and it returns False."""
+    assert emit_schema(tmp_path) is False
+    assert not (tmp_path / ".icoder").exists()
+
+
+def test_emit_schema_writes_when_missing(tmp_path: Path) -> None:
+    """With ``.icoder/`` present but the file missing, it writes and returns True."""
+    (tmp_path / ".icoder").mkdir()
+    assert emit_schema(tmp_path) is True
+    target = tmp_path / ".icoder" / "settings.schema.json"
+    assert target.exists()
+    assert json.loads(target.read_text(encoding="utf-8")) == build_settings_schema()
+
+
+def test_emit_schema_no_rewrite_on_identical_content(tmp_path: Path) -> None:
+    """A second call with identical content returns False (no rewrite)."""
+    (tmp_path / ".icoder").mkdir()
+    assert emit_schema(tmp_path) is True
+    assert emit_schema(tmp_path) is False
+
+
+def test_emit_schema_rewrites_when_content_differs(tmp_path: Path) -> None:
+    """When existing content differs, the file is rewritten and returns True."""
+    (tmp_path / ".icoder").mkdir()
+    target = tmp_path / ".icoder" / "settings.schema.json"
+    target.write_text("{}\n", encoding="utf-8")
+    assert emit_schema(tmp_path) is True
+    assert json.loads(target.read_text(encoding="utf-8")) == build_settings_schema()
