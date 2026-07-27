@@ -454,13 +454,6 @@ def run_rebase_workflow(
         logger.error("Could not resolve HEAD commit before rebase")
         return 2
 
-    logger.log(
-        OUTPUT,
-        "Rebasing %s onto origin/%s...",
-        get_branch_name_for_logging(project_dir),
-        base,
-    )
-
     logger.log(OUTPUT, "Running baseline checks (pytest, pylint, mypy)...")
     try:
         baseline = _run_all_checks(project_dir)
@@ -482,6 +475,12 @@ def run_rebase_workflow(
         conflict_counts: Counter[str] = Counter()
         stop = 0
 
+        logger.log(
+            OUTPUT,
+            "Rebasing %s onto origin/%s...",
+            get_branch_name_for_logging(project_dir),
+            base,
+        )
         result = _run_git(project_dir, "rebase", f"origin/{base}")
         while result.returncode != 0:  # conflict stop (or unexpected failure)
             if not _is_rebase_in_progress(project_dir):
