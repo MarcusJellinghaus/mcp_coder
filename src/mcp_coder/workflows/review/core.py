@@ -113,6 +113,12 @@ def run_review_workflow(
         sha_before = get_latest_commit_sha(project_dir)
 
         # Reviewer: a fresh session per round.
+        logger.info(
+            "%s round %d/%d: reviewer starting",
+            config.name,
+            round_number,
+            REVIEW_MAX_ROUNDS,
+        )
         try:
             report_response = _run_reviewer(
                 config,
@@ -139,6 +145,7 @@ def run_review_workflow(
         report = report_response["text"]
 
         # Supervisor: persistent session, verdict parsed with repair retries.
+        logger.info("Round %d: supervisor triage starting", round_number)
         try:
             verdict, supervisor_sid = _get_verdict(
                 config,
@@ -166,6 +173,8 @@ def run_review_workflow(
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,
             )
+
+        logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
 
         if verdict.decision == "dismiss":
             reason = _after_steps(
@@ -234,6 +243,11 @@ def run_review_workflow(
             return 0
 
         # decision == "tasks": resume the reviewer to apply the fixes.
+        logger.info(
+            "Round %d: applying %d fix task(s)",
+            round_number,
+            len(verdict.tasks),
+        )
         try:
             _run_reviewer(
                 config,
