@@ -10,9 +10,12 @@ guard. One commit.
 - Modify `src/mcp_coder/workflows/implement/failure_reporting.py`
 - Modify `src/mcp_coder/workflows/implement/core.py`
 - Modify `src/mcp_coder/workflows/implement/constants.py` (delete enum + private dataclass)
+- Modify `src/mcp_coder/workflows/implement/__init__.py` (drop the `FailureCategory` /
+  `WorkflowFailure` re-export)
 - Modify `src/mcp_coder/workflows/implement/task_processing.py` (import move)
 - Delete `src/mcp_coder/workflows/implement/llm_failures.py`
 - Delete `tests/workflows/implement/test_llm_failures.py`
+- Delete `tests/workflows/implement/test_constants.py`
 
 ## WHAT
 
@@ -66,6 +69,9 @@ def _fail(project_dir, reason, *, stage, message, progress, start_time, build_ur
   `from mcp_coder.workflow_utils.failure_handling import llm_failure_reason`.
 - `constants.py`: delete `FailureCategory` and the private `WorkflowFailure` (and now-unused
   `Enum`/`dataclass` imports). Keep every other constant.
+- `__init__.py`: remove `FailureCategory` / `WorkflowFailure` from the `from .constants import …`
+  line (`__init__.py:13`) and drop their two entries from `__all__` (`__init__.py:29-30`). Without
+  this, `import mcp_coder.workflows.implement` raises `ImportError` after the constants deletion.
 
 ## ALGORITHM — `run_implement_workflow` skeleton
 
@@ -90,6 +96,10 @@ return run_guarded(body, project_dir=project_dir, from_label_id="implementing",
 ## TESTS (write/adjust first)
 
 - Delete `test_llm_failures.py` (classifier now covered in `test_failure_handling.py`).
+- Delete `test_constants.py` — it imports and directly tests the now-deleted `FailureCategory`
+  enum and private `WorkflowFailure` dataclass, so it cannot be "updated to label-string
+  assertions"; leaving it would fail pytest collection. (The enum-value↔label coupling it checked
+  is now expressed by the `FAILURE_LABELS` dict; no replacement test is required for this step.)
 - Keep all `test_core*` / `test_failure_reporting` behavior assertions; update imports/patch
   targets from `FailureCategory`/local `WorkflowFailure` to label-string / new helper names.
   Assert the deliberate paths still label `llm_timeout` / `mcp_unavailable` /
