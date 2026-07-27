@@ -495,3 +495,89 @@ Use `REBASE_OUTCOME: success` with `REBASE_REASON: n/a` only when the rebase is
 clean and nothing regressed. Otherwise emit `REBASE_OUTCOME: aborted` and replace
 the reason with a one-line, human-readable explanation of why you aborted.
 ```
+
+## Rebase Conflict Resolution
+
+The conflict-resolution prompt for the Python-driven rebase: the surrounding
+Python program runs every git command and inlines the three-stage content of
+each conflicted file; the LLM session only edits files.
+Placeholders: `[conflict_context]`
+
+```
+You are resolving merge conflicts during a rebase of the current feature branch
+onto its base branch, fully automated — no human is watching. A surrounding
+Python program runs every git command; your ONLY job is to edit the conflicted
+files listed below so each one contains the correct merged content.
+
+**Core philosophy:** the base branch is the source of truth. Preserve the base
+branch's improvements and rework the feature-branch code to fit.
+
+**Conflict Resolution Strategies**
+
+| File Type | Strategy |
+|-----------|----------|
+| Code files (`.py`, `.js`, etc.) | Keep both sides, merge imports |
+| Test files | Keep all tests from both sides |
+| Config files | Merge additively, prefer HEAD for same keys |
+
+(During a rebase, HEAD is the base branch.)
+
+**Conflicts to resolve.** For each conflicted file below you get its path plus
+up to three versions:
+
+- common ancestor (merge base) — the content both branches started from
+- ours (base branch) — the version on the branch being rebased onto
+- theirs (feature branch) — the version from the commit being replayed
+
+A side marked as absent means that branch deleted the file (a delete/modify
+conflict): decide per the strategies above whether the file should keep the
+surviving side's content or be deleted via the delete tool.
+
+[conflict_context]
+
+**Tools:** edit files with the MCP file tools only
+(`mcp__mcp-workspace__read_file`, `mcp__mcp-workspace__edit_file`,
+`mcp__mcp-workspace__save_file`, `mcp__mcp-workspace__delete_this_file`).
+To inspect repository state, use the read-only `mcp__mcp-workspace__git` tool —
+nothing else.
+
+**Prohibited:** no shell commands of any kind; no staging, continuing, or
+pushing — the Python program performs every git write itself; no outcome
+markers or status lines in your response. When you finish, every resolved file
+must contain its final merged content with no conflict markers
+(`<<<<<<<`, `=======`, `>>>>>>>`) remaining.
+```
+
+## Rebase Regression Fix
+
+The regression-fix prompt for the Python-driven rebase, modeled on the Mypy Fix
+Prompt: Python inlines the concrete failure keys, the LLM re-runs the check
+tools for detail and edits files to fix the regressions.
+Placeholders: `[regression_output]`
+
+```
+The rebase of the current feature branch onto its base branch introduced the
+regressions listed below — failures that are new compared to the pre-rebase
+baseline. Fix them while preserving the intent of both branches.
+
+The list contains failure keys only (for pytest: bare test node IDs, no
+tracebacks). Before editing anything, re-run the granted MCP check tools
+(`mcp__mcp-tools-py__run_pytest_check`, `mcp__mcp-tools-py__run_pylint_check`,
+`mcp__mcp-tools-py__run_mypy_check`) to get the full failure detail.
+
+Regressions (new failures versus the pre-rebase baseline):
+[regression_output]
+
+Keep changes minimal and focused on the listed regressions — pre-existing
+failures are out of scope and must not block you.
+
+**Tools:** edit files with the MCP file tools only
+(`mcp__mcp-workspace__read_file`, `mcp__mcp-workspace__edit_file`,
+`mcp__mcp-workspace__save_file`, `mcp__mcp-workspace__delete_this_file`).
+To inspect repository state, use the read-only `mcp__mcp-workspace__git` tool —
+nothing else.
+
+**Prohibited:** no shell commands of any kind; no staging, committing, or
+pushing — the Python program performs every git write itself; no outcome
+markers or status lines in your response.
+```

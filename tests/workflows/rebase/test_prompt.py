@@ -1,8 +1,9 @@
-"""Tests for the ``Automated Rebase`` prompt in ``prompts.md``.
+"""Tests for the rebase prompts in ``prompts.md``.
 
-Covers loader retrieval, the outcome-marker tokens, the baseline/no-regression
-ordering cue, and a drift check that keeps the prompt's conflict-strategy table
-in sync with the packaged ``SKILL.md``.
+Covers the legacy ``Automated Rebase`` section (removed in Step 6) plus the new
+``Rebase Conflict Resolution`` and ``Rebase Regression Fix`` sections used by the
+Python-driven rebase, including a drift check that keeps the conflict prompt's
+strategy rows in sync with the packaged ``SKILL.md``.
 """
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
@@ -10,6 +11,8 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.data_files import find_data_file
 
 _PROMPT_HEADER = "Automated Rebase"
+_CONFLICT_HEADER = "Rebase Conflict Resolution"
+_REGRESSION_HEADER = "Rebase Regression Fix"
 
 
 def _normalize(line: str) -> str:
@@ -44,6 +47,19 @@ def _skill_strategy_rows() -> set[str]:
     return _table_rows(section)
 
 
+def _skill_llm_strategy_rows() -> set[str]:
+    """SKILL.md strategy rows the LLM handles.
+
+    The ``pr_info/`` and lockfile rows are intentionally excluded: Python
+    auto-resolves ``pr_info/`` conflicts and this repo has no tracked lockfile.
+    """
+    return {
+        row
+        for row in _skill_strategy_rows()
+        if row.startswith(("| Code files", "| Test files", "| Config files"))
+    }
+
+
 def _load_prompt() -> str:
     return get_prompt(str(PROMPTS_FILE_PATH), _PROMPT_HEADER)
 
@@ -76,8 +92,52 @@ def test_prompt_forbids_push() -> None:
 
 
 def test_prompt_conflict_strategy_matches_skill() -> None:
-    """Every SKILL.md conflict-strategy row appears in the prompt (no drift)."""
-    prompt_rows = _table_rows(_load_prompt().splitlines())
-    skill_rows = _skill_strategy_rows()
-    assert skill_rows  # guard: the SKILL section was actually located
+    """The LLM-handled SKILL.md strategy rows appear in the conflict prompt."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), _CONFLICT_HEADER)
+    prompt_rows = _table_rows(prompt.splitlines())
+    skill_rows = _skill_llm_strategy_rows()
+    assert len(skill_rows) == 3  # guard: the SKILL rows were actually located
     assert skill_rows.issubset(prompt_rows)
+
+
+def test_conflict_resolution_prompt_loads() -> None:
+    """Conflict prompt is retrievable, has its placeholder and the git tool."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), _CONFLICT_HEADER)
+    assert prompt.strip()
+    assert "[conflict_context]" in prompt
+    assert "mcp__mcp-workspace__git" in prompt
+
+
+def test_conflict_resolution_prompt_has_no_shell_or_markers() -> None:
+    """Conflict prompt never instructs shell git or outcome markers."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), _CONFLICT_HEADER)
+    assert "REBASE_OUTCOME" not in prompt
+    assert "git rebase" not in prompt
+    assert "Bash" not in prompt
+
+
+def test_regression_fix_prompt_loads() -> None:
+    """Regression prompt is retrievable, has its placeholder and the git tool."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_HEADER)
+    assert prompt.strip()
+    assert "[regression_output]" in prompt
+    assert "mcp__mcp-workspace__git" in prompt
+
+
+def test_regression_fix_prompt_rerequests_check_detail() -> None:
+    """Regression prompt tells the LLM to re-run the MCP check tools for detail."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_HEADER)
+    for tool in (
+        "mcp__mcp-tools-py__run_pytest_check",
+        "mcp__mcp-tools-py__run_pylint_check",
+        "mcp__mcp-tools-py__run_mypy_check",
+    ):
+        assert tool in prompt
+
+
+def test_regression_fix_prompt_has_no_shell_or_markers() -> None:
+    """Regression prompt never instructs shell git or outcome markers."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_HEADER)
+    assert "REBASE_OUTCOME" not in prompt
+    assert "git rebase" not in prompt
+    assert "Bash" not in prompt
