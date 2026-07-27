@@ -43,10 +43,18 @@ def _installed_version() -> str:
 - Import names into the module namespace as
   `from importlib.metadata import PackageNotFoundError, requires, version`
   so tests can monkeypatch `mcp_coder._depcheck.requires`.
-- Marker evaluation: `req.marker.evaluate()` with the **default** environment
-  (no `extra` set) — this makes `extra == "..."` markers evaluate `False`
-  (drops optional-extra deps) and platform markers like
-  `sys_platform == 'win32'` (pywin32) evaluate against the real platform.
+- Marker evaluation: `req.marker.evaluate(environment={"extra": ""})` — pass
+  `extra` **explicitly** so `extra == "..."` markers evaluate `False` (drops
+  optional-extra deps) reliably across `packaging` versions. Relying on the
+  bare `req.marker.evaluate()` default is version-fragile: older `packaging`
+  does not default `extra` and raises `UndefinedEnvironmentName` on an
+  extra-marker, which would propagate out and make the `__init__` guard
+  fail-open on every real install (mcp-coder always has extras in
+  `requires()`), silently defeating the guard. Platform markers like
+  `sys_platform == 'win32'` (pywin32) still evaluate against the real platform.
+- Wrap the per-requirement marker check in `try/except Exception` and treat an
+  odd/unparseable spec as "not filtered out" (fall through to the presence
+  check) so one bad spec cannot make the whole function raise and fail-open.
 - `_installed_version()` reuses the `PackageNotFoundError → "0.0.0.dev0+unknown"`
   fallback pattern that `__init__` already uses.
 
@@ -61,8 +69,13 @@ except PackageNotFoundError:
 missing = []
 for spec in reqs:
     req = Requirement(spec)
-    if req.marker and not req.marker.evaluate():   # drop extras + off-platform
-        continue
+    try:
+        # explicit extra="" -> extra-markers evaluate False across packaging
+        # versions; off-platform markers drop too
+        if req.marker and not req.marker.evaluate(environment={"extra": ""}):
+            continue
+    except Exception:  # odd/unparseable spec -> don't fail-open; check presence
+        pass
     try:
         version(req.name)                          # distribution present?
     except PackageNotFoundError:
@@ -97,8 +110,12 @@ Pure-function tests, single patch seam (`mcp_coder._depcheck.requires`):
 2. `requires` returning `None` → `find_missing_dependencies() == []`.
 3. `requires` returning `["definitely-absent-xyz>=1"]` → returns
    `["definitely-absent-xyz"]` (real `version()` lookup reports it absent).
-4. `requires` returning `["some-pkg; extra == 'dev'"]` → `[]` (extra marker
-   dropped).
+4. `requires` returning `["some-pkg; extra == 'dev'"]` → `[]` — the extra
+   marker is dropped via the explicit `environment={"extra": ""}`. This must
+   hold regardless of the installed `packaging` version (the bare-default
+   behavior is version-dependent); the explicit environment guarantees it, so
+   this test genuinely guards against the fail-open regression rather than
+   silently erroring on older `packaging`.
 5. `ensure_dependencies()` with `find_missing_dependencies` monkeypatched to
    return `[]` → returns `None`, no exit.
 6. `ensure_dependencies()` with `find_missing_dependencies` monkeypatched to

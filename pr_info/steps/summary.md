@@ -33,7 +33,11 @@ functions, called as the **first statement** of `mcp_coder/__init__.py`.
    non-applicable platform markers), then checks each **distribution** is
    installed via `importlib.metadata` — presence, **not** importability, so no
    import-name↔dist-name map is ever needed. Returns the missing distribution
-   names.
+   names. Marker evaluation passes `environment={"extra": ""}` **explicitly**
+   (not the bare default) so extra-markers evaluate `False` across all
+   `packaging` versions, and the per-requirement marker check is wrapped in
+   `try/except` — an odd spec or an old `packaging` can never make the whole
+   function raise and fail-open on a real install.
 2. `ensure_dependencies() -> None` — thin wrapper. If anything is missing,
    prints version + friendly message to **stderr**, then `raise SystemExit(1)`.
 
