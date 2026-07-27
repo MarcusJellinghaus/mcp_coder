@@ -26,3 +26,19 @@ changes for absolute-path provenance and a `Decision`/`Policy` test-assertion fi
 
 **Status**: applied to plan; committing.
 
+## Round 2 — 2026-07-27
+**Findings** (fresh engineer /plan_review; both Round-1 fixes verified against real I2.1 code, `.importlinter`, `pyproject.toml`):
+- Fix 1 (step_5 default-safe section access) — sound; schema container-check early-return precedes the section walk, omitted sections yield empty iterables, no residual raise path outside the try. Fail-closed holds.
+- Fix 2 (step_6 caplog ERROR assertion) — sound; matches the step_6 `logger.error` algorithm and the "logger + errors" AC.
+- Full API cross-check (`Rule`, `PermissionConfig` field order, `parse_matcher` return + value-set expansion, `@ref` pre-detection need, `Policy` tokens, `resolve()→Decision.policy`, `.importlinter` forbidden contract with `include_external_packages`, `get_user_app_data_dir` import path, pyproject targets, `jsonschema>=4.0` pin for `json_path`) — all correct.
+- Stale `Degraded.layer` / `Matcher.origin` comments present as described; plan correctly flags-not-changes them.
+
+**Decisions**: none needed — plan is clean.
+**User decisions**: none.
+**Changes**: none.
+**Status**: no changes needed — review loop closed.
+
+## Final Status
+- **Rounds run this supervisor session:** 2 (Round 1 applied 2 fixes; Round 2 clean).
+- **Commits produced:** `e6e7691` — `docs(steps): make loader section access default-safe and assert degrade logging` (+ this log).
+- **Plan ready for approval:** YES. No critical or blocking defects; all load-bearing API assumptions verified against the real I2.1 code; fail-closed correctness gap closed; degrade-diagnostic AC now covered by a test. No open design/requirements questions.
