@@ -25,6 +25,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 2: Migrate implement onto run_guarded (pure refactor)](./steps/step_2.md)
 - [x] [Step 3: Migrate create-plan + add planning_mcp label](./steps/step_3.md)
 - [x] [Step 4: Migrate create-pr + add pr_creating_timeout / pr_creating_mcp](./steps/step_4.md)
-- [ ] [Step 5: Enhance review (guard + broadened excepts + empty-report retry)](./steps/step_5.md)
+- [x] [Step 5: Enhance review (guard + broadened excepts + empty-report retry)](./steps/step_5.md)
 
 ## Pull Request

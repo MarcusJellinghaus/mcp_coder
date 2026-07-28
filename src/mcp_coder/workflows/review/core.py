@@ -23,12 +23,12 @@ by :func:`parse_verdict`; a ``None`` result is repaired up to
 """
 
 import logging
+import time
 from pathlib import Path
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm
-from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
+from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
@@ -45,7 +45,10 @@ from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
+    format_elapsed_time,
     handle_workflow_failure,
+    llm_failure_reason,
+    run_guarded,
 )
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
@@ -57,6 +60,9 @@ logger = logging.getLogger(__name__)
 
 REVIEW_MAX_ROUNDS = 5
 VERDICT_REPAIR_RETRIES = 2
+# Bounded inner retry on a whitespace-only reviewer report: re-invokes the
+# fresh reviewer without consuming a round; on exhaustion the run fails general.
+EMPTY_REPORT_RETRIES = 3
 
 _REPAIR_PROMPT = (
     "Your previous response did not contain a valid verdict. Reply with ONLY a "
@@ -103,80 +109,268 @@ def run_review_workflow(
         any error (unparseable verdict, timeout, MCP down, rounds cap).
     """
     issue_number, base_branch = _resolve_context(config, project_dir)
+    start_time = time.time()
     run_number = next_run_number(project_dir, config)
     supervisor_sid: str | None = None
     # Carries a red mid-loop CI result into the next reviewer prompt; when it is
     # still set at the rounds cap the terminal reason is "ci", not "rounds".
     pending_ci_note: str | None = None
+    # Most recently parsed verdict; carried into the failure comment when set.
+    last_verdict: Verdict | None = None
 
-    for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
-        sha_before = get_latest_commit_sha(project_dir)
+    def body() -> int:
+        nonlocal supervisor_sid, pending_ci_note, last_verdict
 
-        # Reviewer: a fresh session per round.
-        logger.info(
-            "%s round %d/%d: reviewer starting",
-            config.name,
-            round_number,
-            REVIEW_MAX_ROUNDS,
-        )
-        try:
-            report_response = _run_reviewer(
-                config,
+        for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
+            sha_before = get_latest_commit_sha(project_dir)
+
+            # Reviewer: a fresh session per round.
+            logger.info(
+                "%s round %d/%d: reviewer starting",
+                config.name,
+                round_number,
+                REVIEW_MAX_ROUNDS,
+            )
+            # Fresh reviewer with a bounded empty-report retry (an inner loop
+            # that consumes no round): re-invoke on a whitespace-only report and
+            # fail general on exhaustion. Exceptions are never retried here — the
+            # broadened `except` categorizes them and fails immediately.
+            reviewer_sid: str | None = None
+            report = ""
+            for _ in range(EMPTY_REPORT_RETRIES):
+                try:
+                    report_response = _run_reviewer(
+                        config,
+                        project_dir,
+                        provider,
+                        mcp_config,
+                        settings_file,
+                        execution_dir,
+                        issue_number,
+                        base_branch,
+                        session_id=None,
+                        tasks=None,
+                        ci_note=pending_ci_note,
+                    )
+                except Exception as exc:  # pylint: disable=broad-exception-caught
+                    return _fail(
+                        config,
+                        project_dir,
+                        llm_failure_reason(exc) or "general",
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
+                        round_number=round_number,
+                        verdict=last_verdict,
+                        elapsed=time.time() - start_time,
+                    )
+                reviewer_sid = report_response["session_id"]
+                report = report_response["text"]
+                if report.strip():
+                    break
+            else:
+                return _fail(
+                    config,
+                    project_dir,
+                    "general",
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    round_number=round_number,
+                    verdict=last_verdict,
+                    elapsed=time.time() - start_time,
+                )
+
+            # Supervisor: persistent session, verdict parsed with repair retries.
+            logger.info("Round %d: supervisor triage starting", round_number)
+            try:
+                verdict, supervisor_sid = _get_verdict(
+                    config,
+                    project_dir,
+                    provider,
+                    mcp_config,
+                    settings_file,
+                    execution_dir,
+                    supervisor_sid,
+                    report,
+                )
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                return _fail(
+                    config,
+                    project_dir,
+                    llm_failure_reason(exc) or "general",
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    round_number=round_number,
+                    verdict=last_verdict,
+                    elapsed=time.time() - start_time,
+                )
+            if verdict is None:
+                return _fail(
+                    config,
+                    project_dir,
+                    "general",
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    round_number=round_number,
+                    verdict=last_verdict,
+                    elapsed=time.time() - start_time,
+                )
+            last_verdict = verdict
+
+            logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
+
+            if verdict.decision == "dismiss":
+                reason = _after_steps(
+                    config,
+                    project_dir,
+                    provider,
+                    mcp_config,
+                    settings_file,
+                    execution_dir,
+                    is_dismiss=True,
+                )
+                if reason == "rebase":
+                    write_round_log(
+                        project_dir,
+                        config,
+                        run_number,
+                        round_number,
+                        findings=report,
+                        decisions=str(verdict),
+                        changes="rebase-needed",
+                        escalate_reason="rebase",
+                    )
+                    _set_label(
+                        config,
+                        project_dir,
+                        config.escalate_label_id,
+                        update_issue_labels,
+                    )
+                    return 0
+                if reason:
+                    return _fail(
+                        config,
+                        project_dir,
+                        reason,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
+                        round_number=round_number,
+                        verdict=last_verdict,
+                        elapsed=time.time() - start_time,
+                    )
+                write_round_log(
+                    project_dir,
+                    config,
+                    run_number,
+                    round_number,
+                    findings=report,
+                    decisions=str(verdict),
+                    changes="dismiss",
+                )
+                _set_label(
+                    config, project_dir, config.success_label_id, update_issue_labels
+                )
+                return 0
+
+            if verdict.decision == "escalate":
+                write_round_log(
+                    project_dir,
+                    config,
+                    run_number,
+                    round_number,
+                    findings=report,
+                    decisions=str(verdict),
+                    changes="escalate",
+                    escalate_reason=verdict.escalate_reason,
+                )
+                _set_label(
+                    config, project_dir, config.escalate_label_id, update_issue_labels
+                )
+                return 0
+
+            # decision == "tasks": resume the reviewer to apply the fixes.
+            logger.info(
+                "Round %d: applying %d fix task(s)",
+                round_number,
+                len(verdict.tasks),
+            )
+            try:
+                _run_reviewer(
+                    config,
+                    project_dir,
+                    provider,
+                    mcp_config,
+                    settings_file,
+                    execution_dir,
+                    issue_number,
+                    base_branch,
+                    session_id=reviewer_sid,
+                    tasks=verdict.tasks,
+                    ci_note=None,
+                )
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                return _fail(
+                    config,
+                    project_dir,
+                    llm_failure_reason(exc) or "general",
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    round_number=round_number,
+                    verdict=last_verdict,
+                    elapsed=time.time() - start_time,
+                )
+            run_formatters(project_dir)
+            if not commit_changes(
                 project_dir,
                 provider,
-                mcp_config,
-                settings_file,
-                execution_dir,
-                issue_number,
-                base_branch,
-                session_id=None,
-                tasks=None,
-                ci_note=pending_ci_note,
-            )
-        except (LLMTimeoutError, McpServersUnavailableError) as exc:
-            return _fail(
-                config,
-                project_dir,
-                _reason_for_exception(exc),
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-            )
-        reviewer_sid = report_response["session_id"]
-        report = report_response["text"]
+                mcp_config=mcp_config,
+                execution_dir=str(execution_dir) if execution_dir else None,
+                settings_file=settings_file,
+            ):
+                # Looping over an uncommitted round would hide the state from CI
+                # and reviewers — fail the run instead (falls back to the
+                # `general` failure label; the reason names the failed step).
+                write_round_log(
+                    project_dir,
+                    config,
+                    run_number,
+                    round_number,
+                    findings=report,
+                    decisions=str(verdict),
+                    changes="commit-failed",
+                    escalate_reason="commit-failed",
+                )
+                return _fail(
+                    config,
+                    project_dir,
+                    "commit-failed",
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    round_number=round_number,
+                    verdict=last_verdict,
+                    elapsed=time.time() - start_time,
+                )
+            if not push_changes(project_dir):
+                write_round_log(
+                    project_dir,
+                    config,
+                    run_number,
+                    round_number,
+                    findings=report,
+                    decisions=str(verdict),
+                    changes="push-failed",
+                    escalate_reason="push-failed",
+                )
+                return _fail(
+                    config,
+                    project_dir,
+                    "push-failed",
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    round_number=round_number,
+                    verdict=last_verdict,
+                    elapsed=time.time() - start_time,
+                )
 
-        # Supervisor: persistent session, verdict parsed with repair retries.
-        logger.info("Round %d: supervisor triage starting", round_number)
-        try:
-            verdict, supervisor_sid = _get_verdict(
-                config,
-                project_dir,
-                provider,
-                mcp_config,
-                settings_file,
-                execution_dir,
-                supervisor_sid,
-                report,
-            )
-        except (LLMTimeoutError, McpServersUnavailableError) as exc:
-            return _fail(
-                config,
-                project_dir,
-                _reason_for_exception(exc),
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-            )
-        if verdict is None:
-            return _fail(
-                config,
-                project_dir,
-                "general",
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-            )
-
-        logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
-
-        if verdict.decision == "dismiss":
             reason = _after_steps(
                 config,
                 project_dir,
@@ -184,7 +378,7 @@ def run_review_workflow(
                 mcp_config,
                 settings_file,
                 execution_dir,
-                is_dismiss=True,
+                is_dismiss=False,
             )
             if reason == "rebase":
                 write_round_log(
@@ -198,35 +392,35 @@ def run_review_workflow(
                     escalate_reason="rebase",
                 )
                 _set_label(
-                    config,
-                    project_dir,
-                    config.escalate_label_id,
-                    update_issue_labels,
+                    config, project_dir, config.escalate_label_id, update_issue_labels
                 )
                 return 0
-            if reason:
+            if reason == "ci":
+                # Mid-loop red CI is a finding, not a terminal failure: carry it
+                # into the next fresh reviewer prompt and keep looping (the
+                # supervisor triages it within the rounds cap).
+                pending_ci_note = _CI_NOTE
+            elif reason:
                 return _fail(
                     config,
                     project_dir,
                     reason,
                     update_issue_labels=update_issue_labels,
                     post_issue_comments=post_issue_comments,
+                    round_number=round_number,
+                    verdict=last_verdict,
+                    elapsed=time.time() - start_time,
                 )
-            write_round_log(
-                project_dir,
-                config,
-                run_number,
-                round_number,
-                findings=report,
-                decisions=str(verdict),
-                changes="dismiss",
-            )
-            _set_label(
-                config, project_dir, config.success_label_id, update_issue_labels
-            )
-            return 0
+            else:
+                # After-steps clean (CI green / nothing to do): clear stale note.
+                pending_ci_note = None
 
-        if verdict.decision == "escalate":
+            # Backstop (layer C): a `tasks` round that changed nothing is a
+            # silent no-op — log it, but let the round count toward the cap and
+            # keep going (the next fresh reviewer re-surfaces the finding).
+            changed = get_latest_commit_sha(
+                project_dir
+            ) != sha_before or not is_working_directory_clean(project_dir)
             write_round_log(
                 project_dir,
                 config,
@@ -234,155 +428,32 @@ def run_review_workflow(
                 round_number,
                 findings=report,
                 decisions=str(verdict),
-                changes="escalate",
-                escalate_reason=verdict.escalate_reason,
-            )
-            _set_label(
-                config, project_dir, config.escalate_label_id, update_issue_labels
-            )
-            return 0
-
-        # decision == "tasks": resume the reviewer to apply the fixes.
-        logger.info(
-            "Round %d: applying %d fix task(s)",
-            round_number,
-            len(verdict.tasks),
-        )
-        try:
-            _run_reviewer(
-                config,
-                project_dir,
-                provider,
-                mcp_config,
-                settings_file,
-                execution_dir,
-                issue_number,
-                base_branch,
-                session_id=reviewer_sid,
-                tasks=verdict.tasks,
-                ci_note=None,
-            )
-        except (LLMTimeoutError, McpServersUnavailableError) as exc:
-            return _fail(
-                config,
-                project_dir,
-                _reason_for_exception(exc),
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-            )
-        run_formatters(project_dir)
-        if not commit_changes(
-            project_dir,
-            provider,
-            mcp_config=mcp_config,
-            execution_dir=str(execution_dir) if execution_dir else None,
-            settings_file=settings_file,
-        ):
-            # Looping over an uncommitted round would hide the state from CI
-            # and reviewers — fail the run instead (falls back to the
-            # `general` failure label; the reason names the failed step).
-            write_round_log(
-                project_dir,
-                config,
-                run_number,
-                round_number,
-                findings=report,
-                decisions=str(verdict),
-                changes="commit-failed",
-                escalate_reason="commit-failed",
-            )
-            return _fail(
-                config,
-                project_dir,
-                "commit-failed",
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-            )
-        if not push_changes(project_dir):
-            write_round_log(
-                project_dir,
-                config,
-                run_number,
-                round_number,
-                findings=report,
-                decisions=str(verdict),
-                changes="push-failed",
-                escalate_reason="push-failed",
-            )
-            return _fail(
-                config,
-                project_dir,
-                "push-failed",
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
+                changes="applied" if changed else "no-op",
             )
 
-        reason = _after_steps(
+        # Rounds cap: a still-open CI finding wins over the plain rounds reason
+        # so the terminal label is `17f-ci` rather than `17f-rounds`.
+        cap_reason = "ci" if pending_ci_note else "rounds"
+        return _fail(
             config,
             project_dir,
-            provider,
-            mcp_config,
-            settings_file,
-            execution_dir,
-            is_dismiss=False,
-        )
-        if reason == "rebase":
-            write_round_log(
-                project_dir,
-                config,
-                run_number,
-                round_number,
-                findings=report,
-                decisions=str(verdict),
-                changes="rebase-needed",
-                escalate_reason="rebase",
-            )
-            _set_label(
-                config, project_dir, config.escalate_label_id, update_issue_labels
-            )
-            return 0
-        if reason == "ci":
-            # Mid-loop red CI is a finding, not a terminal failure: carry it into
-            # the next fresh reviewer prompt and keep looping (the supervisor
-            # triages it within the rounds cap).
-            pending_ci_note = _CI_NOTE
-        elif reason:
-            return _fail(
-                config,
-                project_dir,
-                reason,
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-            )
-        else:
-            # After-steps clean (CI green / nothing to do): clear any stale note.
-            pending_ci_note = None
-
-        # Backstop (layer C): a `tasks` round that changed nothing is a silent
-        # no-op — log it, but let the round count toward the cap and keep going
-        # (the next fresh reviewer re-surfaces the unmet finding, layer A).
-        changed = get_latest_commit_sha(
-            project_dir
-        ) != sha_before or not is_working_directory_clean(project_dir)
-        write_round_log(
-            project_dir,
-            config,
-            run_number,
-            round_number,
-            findings=report,
-            decisions=str(verdict),
-            changes="applied" if changed else "no-op",
+            cap_reason,
+            update_issue_labels=update_issue_labels,
+            post_issue_comments=post_issue_comments,
+            round_number=REVIEW_MAX_ROUNDS,
+            verdict=last_verdict,
+            elapsed=time.time() - start_time,
         )
 
-    # Rounds cap: a still-open CI finding wins over the plain rounds reason so
-    # the terminal label is `17f-ci` rather than `17f-rounds`.
-    cap_reason = "ci" if pending_ci_note else "rounds"
-    return _fail(
-        config,
-        project_dir,
-        cap_reason,
+    return run_guarded(
+        body,
+        project_dir=project_dir,
+        from_label_id=config.busy_label_id,
+        general_category=config.failure_labels["general"],
+        comment_header=f"❌ {config.name} review terminated unexpectedly",
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
+        issue_number=issue_number,
     )
 
 
@@ -579,8 +650,12 @@ def _after_steps(
             interpretation of a red CI result.
 
     Returns:
-        A failure reason (``"rebase"`` / ``"ci"`` / ``"timeout"`` / ``"mcp"``)
-        or ``None`` when the after-steps are clean or there is nothing to do.
+        A failure reason (``"rebase"`` / ``"ci"`` / ``"timeout"`` /
+        ``"mcp_unavailable"`` / ``"general"``) or ``None`` when the after-steps
+        are clean or there is nothing to do. The broadened ``except`` scoped to
+        the CI call categorizes a generic exception as ``"general"`` rather than
+        letting it escape — but it does **not** wrap the rebase gate, so the
+        ``"rebase"`` control-flow return is preserved.
     """
     if not config.run_after_steps:
         return None
@@ -609,10 +684,8 @@ def _after_steps(
             execution_dir=execution_dir,
             session_dir_name=config.session_dir_name,
         )
-    except LLMTimeoutError:
-        return "timeout"
-    except McpServersUnavailableError:
-        return "mcp"
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        return llm_failure_reason(exc) or "general"
     if ci_ok:
         return None
     if not is_dismiss:
@@ -658,8 +731,16 @@ def _fail(
     *,
     update_issue_labels: bool,
     post_issue_comments: bool,
+    round_number: int | None = None,
+    verdict: Verdict | None = None,
+    elapsed: float | None = None,
 ) -> int:
     """Route a terminal error through the shared failure handler; return ``1``.
+
+    The comment is enriched — when the values are supplied by the call site (all
+    of which are lexically inside the round loop, where these are live locals) —
+    with the current round number, the most recently parsed verdict decision,
+    and the elapsed wall-clock time.
 
     Args:
         config: The review workflow config (provides busy + failure labels).
@@ -667,6 +748,9 @@ def _fail(
         reason: Failure reason key into ``config.failure_labels``.
         update_issue_labels: Whether to apply the failure label transition.
         post_issue_comments: Whether to post a failure comment on the issue.
+        round_number: Current review round, appended to the comment when given.
+        verdict: Most recent verdict, whose ``decision`` is appended when given.
+        elapsed: Elapsed seconds since the run started, appended when given.
 
     Returns:
         Always ``1``.
@@ -677,8 +761,16 @@ def _fail(
         category=category,
         stage="Review",
         message=message,
+        elapsed_time=elapsed,
     )
-    comment_body = f"❌ {message}"
+    comment_lines = [f"❌ {message}"]
+    if round_number is not None:
+        comment_lines.append(f"Round: {round_number}")
+    if verdict is not None:
+        comment_lines.append(f"Verdict: {verdict.decision}")
+    if elapsed is not None:
+        comment_lines.append(f"Elapsed: {format_elapsed_time(elapsed)}")
+    comment_body = "\n".join(comment_lines)
     handle_workflow_failure(
         failure,
         comment_body,
@@ -688,20 +780,3 @@ def _fail(
         post_issue_comments=post_issue_comments,
     )
     return 1
-
-
-def _reason_for_exception(exc: Exception) -> str:
-    """Map an LLM exception to a local failure reason (no cross-workflow import).
-
-    Args:
-        exc: The exception raised by an ``prompt_llm`` call.
-
-    Returns:
-        ``"timeout"`` for :class:`LLMTimeoutError`, ``"mcp"`` for
-        :class:`McpServersUnavailableError`, else ``"general"``.
-    """
-    if isinstance(exc, LLMTimeoutError):
-        return "timeout"
-    if isinstance(exc, McpServersUnavailableError):
-        return "mcp"
-    return "general"

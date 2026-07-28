@@ -243,7 +243,7 @@ def test_dismiss_ci_mcp_down_maps_to_mcp_label(
 
     assert result == 1
     failure = env.handle_workflow_failure.call_args.args[0]
-    assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["mcp"]
+    assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["mcp_unavailable"]
 
 
 # --- CI-as-finding (mid-loop) ----------------------------------------------
@@ -328,3 +328,65 @@ def test_tasks_rebase_conflict_routes_to_needs_human(
     env.handle_workflow_failure.assert_not_called()
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_IMPLEMENTATION.escalate_label_id
+
+
+# --- Step 5: broadened CI-gate except (scoped, control-flow preserved) ------
+
+
+def test_dismiss_ci_generic_exception_fails_general(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A generic exception escaping ``check_and_fix_ci`` is categorized general.
+
+    The broadened ``except`` scoped to the CI call must catch it (not an uncaught
+    escape) and route it to the general failure label.
+    """
+    env.check_and_fix_ci.side_effect = RuntimeError("ci boom")
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    env.handle_workflow_failure.assert_called_once()
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["general"]
+
+
+def test_broadened_ci_except_does_not_swallow_rebase(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """The rebase gate sits outside the broadened CI except: it still escalates.
+
+    An unresolved rebase must route to needs-human (escalate, return 0) — the
+    broadened ``except`` around ``check_and_fix_ci`` must not swallow it, and CI
+    is never even reached.
+    """
+    env.attempt_rebase_and_push.return_value = False
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 0  # needs-human handoff, never a failure label
+    env.check_and_fix_ci.assert_not_called()
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_IMPLEMENTATION.escalate_label_id
+
+
+def test_broadened_ci_except_does_not_swallow_ci_carry_forward(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A returned (non-raised) red CI still routes as the ``ci`` finding reason.
+
+    ``check_and_fix_ci`` returning ``False`` must map to the ``ci`` reason/label,
+    not be collapsed into the general bucket by the broadened ``except``.
+    """
+    env.check_and_fix_ci.return_value = False
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["ci"]
+    assert failure.category != REVIEW_IMPLEMENTATION.failure_labels["general"]
