@@ -23,7 +23,7 @@ import pytest
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.review import core
+from mcp_coder.workflows.review import core, reviewer
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 
 # --- verdict payloads -------------------------------------------------------
@@ -59,9 +59,9 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     mocks = SimpleNamespace()
 
     mocks.prompt_llm = MagicMock(name="prompt_llm")
-    monkeypatch.setattr(core, "prompt_llm", mocks.prompt_llm)
+    monkeypatch.setattr(reviewer, "prompt_llm", mocks.prompt_llm)
 
-    monkeypatch.setattr(core, "prepare_llm_environment", MagicMock(return_value={}))
+    monkeypatch.setattr(reviewer, "prepare_llm_environment", MagicMock(return_value={}))
 
     mocks.run_formatters = MagicMock(return_value=True)
     monkeypatch.setattr(core, "run_formatters", mocks.run_formatters)

@@ -26,10 +26,6 @@ import logging
 import time
 from pathlib import Path
 
-from mcp_coder.constants import PROMPTS_FILE_PATH
-from mcp_coder.llm.env import prepare_llm_environment
-from mcp_coder.llm.interface import prompt_llm
-from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
@@ -37,10 +33,8 @@ from mcp_coder.mcp_workspace_git import (
     is_working_directory_clean,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
-from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import commit_changes, push_changes, run_formatters
-from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import (
@@ -52,23 +46,17 @@ from mcp_coder.workflow_utils.failure_handling import (
 )
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
+from . import reviewer
 from .config import ReviewConfig
 from .review_log import next_run_number, write_round_log
-from .verdict import Verdict, parse_verdict
+from .verdict import Verdict
 
 logger = logging.getLogger(__name__)
 
 REVIEW_MAX_ROUNDS = 5
-VERDICT_REPAIR_RETRIES = 2
 # Bounded inner retry on a whitespace-only reviewer report: re-invokes the
 # fresh reviewer without consuming a round; on exhaustion the run fails general.
 EMPTY_REPORT_RETRIES = 3
-
-_REPAIR_PROMPT = (
-    "Your previous response did not contain a valid verdict. Reply with ONLY a "
-    "fenced ```json block containing an object with a `decision` field "
-    '("dismiss", "tasks", or "escalate") and nothing else.'
-)
 
 # CI-as-finding note (implementation lane only): when a mid-loop `tasks` round
 # leaves CI red, this text is carried into the *next* fresh reviewer prompt so
@@ -139,7 +127,7 @@ def run_review_workflow(
             report = ""
             for _ in range(EMPTY_REPORT_RETRIES):
                 try:
-                    report_response = _run_reviewer(
+                    report_response = reviewer._run_reviewer(
                         config,
                         project_dir,
                         provider,
@@ -182,7 +170,7 @@ def run_review_workflow(
             # Supervisor: persistent session, verdict parsed with repair retries.
             logger.info("Round %d: supervisor triage starting", round_number)
             try:
-                verdict, supervisor_sid = _get_verdict(
+                verdict, supervisor_sid = reviewer._get_verdict(
                     config,
                     project_dir,
                     provider,
@@ -294,7 +282,7 @@ def run_review_workflow(
                 len(verdict.tasks),
             )
             try:
-                _run_reviewer(
+                reviewer._run_reviewer(
                     config,
                     project_dir,
                     provider,
@@ -481,135 +469,6 @@ def _resolve_context(
     if config.inject_base_branch:
         base_branch = detect_base_branch(project_dir)
     return issue_number, base_branch
-
-
-def _run_reviewer(
-    config: ReviewConfig,
-    project_dir: Path,
-    provider: str,
-    mcp_config: str | None,
-    settings_file: str | None,
-    execution_dir: Path | None,
-    issue_number: int | None,
-    base_branch: str | None,
-    session_id: str | None,
-    tasks: list[str] | None,
-    ci_note: str | None = None,
-) -> LLMResponseDict:
-    """Run one reviewer turn — a fresh review, or a resume that applies tasks.
-
-    When ``tasks`` is ``None`` this is the fresh per-round review: the reviewer
-    prompt header is loaded and its ``{issue_number}`` / ``{base_branch}``
-    placeholders substituted. When ``tasks`` is provided, the existing reviewer
-    session (``session_id``) is resumed with the concrete fix instructions.
-
-    Args:
-        config: The review workflow config.
-        project_dir: Repository root.
-        provider: LLM provider.
-        mcp_config: Optional MCP config path (threaded to the reviewer session).
-        settings_file: Optional Claude settings file.
-        execution_dir: Optional LLM subprocess working directory.
-        issue_number: Issue number injected into the reviewer prompt.
-        base_branch: Base branch injected into the reviewer prompt (impl only).
-        session_id: ``None`` for a fresh review, else the reviewer session to
-            resume for task application.
-        tasks: Fix instructions to apply, or ``None`` for a fresh review.
-        ci_note: Optional CI-as-finding note appended to a *fresh* reviewer
-            prompt (see :data:`_CI_NOTE`); ignored on a task-application resume.
-
-    Returns:
-        The reviewer's :class:`LLMResponseDict`.
-    """
-    env_vars = prepare_llm_environment(project_dir)
-    cwd = str(execution_dir) if execution_dir else str(project_dir)
-
-    if tasks is None:
-        prompt = get_prompt(str(PROMPTS_FILE_PATH), config.reviewer_prompt_header)
-        prompt = prompt.replace(
-            "{issue_number}", str(issue_number) if issue_number is not None else "?"
-        )
-        prompt = prompt.replace("{base_branch}", base_branch or "")
-        if ci_note:
-            prompt = f"{prompt}\n\n{ci_note}"
-    else:
-        task_lines = "\n".join(f"- {task}" for task in tasks)
-        prompt = (
-            "Apply the following fixes now, editing the relevant files with the "
-            "`mcp-workspace` edit tools, then re-emit your structured report:\n"
-            f"{task_lines}"
-        )
-
-    return prompt_llm(
-        prompt,
-        provider=provider,
-        session_id=session_id,
-        timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
-        env_vars=env_vars,
-        execution_dir=cwd,
-        mcp_config=mcp_config,
-        settings_file=settings_file,
-    )
-
-
-def _get_verdict(
-    config: ReviewConfig,
-    project_dir: Path,
-    provider: str,
-    mcp_config: str | None,
-    settings_file: str | None,
-    execution_dir: Path | None,
-    supervisor_sid: str | None,
-    report: str,
-) -> tuple[Verdict | None, str | None]:
-    """Ask the supervisor to triage the report, repairing an unparseable verdict.
-
-    The supervisor is a persistent session: it is resumed with
-    ``supervisor_sid`` and its returned session id is re-captured for the next
-    turn. A ``None`` parse is repaired up to :data:`VERDICT_REPAIR_RETRIES`
-    times before giving up.
-
-    Args:
-        config: The review workflow config.
-        project_dir: Repository root.
-        provider: LLM provider.
-        mcp_config: Optional MCP config path (threaded to the supervisor).
-        settings_file: Optional Claude settings file.
-        execution_dir: Optional LLM subprocess working directory.
-        supervisor_sid: Supervisor session id to resume, or ``None`` on round 1.
-        report: The reviewer's structured findings text.
-
-    Returns:
-        ``(verdict, next_supervisor_sid)`` where ``verdict`` is ``None`` if it
-        could not be parsed after all repair retries.
-    """
-    env_vars = prepare_llm_environment(project_dir)
-    cwd = str(execution_dir) if execution_dir else str(project_dir)
-
-    header = get_prompt(str(PROMPTS_FILE_PATH), config.supervisor_prompt_header)
-    prompt = f"{header}\n\n## Reviewer report\n\n{report}"
-
-    current_sid = supervisor_sid
-    attempts = 0
-    while True:
-        response = prompt_llm(
-            prompt,
-            provider=provider,
-            session_id=current_sid,
-            timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
-            env_vars=env_vars,
-            execution_dir=cwd,
-            mcp_config=mcp_config,
-            settings_file=settings_file,
-        )
-        current_sid = response["session_id"] or current_sid
-        verdict = parse_verdict(response["text"])
-        if verdict is not None:
-            return verdict, current_sid
-        if attempts >= VERDICT_REPAIR_RETRIES:
-            return None, current_sid
-        attempts += 1
-        prompt = _REPAIR_PROMPT
 
 
 def _after_steps(
