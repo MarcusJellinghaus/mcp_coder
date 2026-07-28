@@ -3,8 +3,8 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
+from mcp_coder.llm.interface import LLMTimeoutError
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflows.create_pr.core import (
     _format_failure_comment,
     _handle_create_pr_failure,
@@ -97,6 +97,55 @@ class TestCreatePrFailureHandling:
         call_kwargs = mock_handle_failure.call_args.kwargs
         assert call_kwargs["stage"] == "summary_generation"
         assert "LLM connection lost" in call_kwargs["message"]
+        # Generic exception → general label
+        assert call_kwargs["category"] == "pr_creating_failed"
+
+    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    def test_summary_generation_mcp_unavailable_routes_to_mcp_label(
+        self,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """MCP-unavailable during summary generation routes to pr_creating_mcp."""
+        mock_prereqs.return_value = True
+        mock_generate.side_effect = McpServersUnavailableError(
+            "boom", unavailable_servers={"mcp-tools-py": "failed"}
+        )
+
+        result = run_create_pr_workflow(Path("/test"), "claude")
+
+        assert result == 1
+        mock_handle_failure.assert_called_once()
+        call_kwargs = mock_handle_failure.call_args.kwargs
+        assert call_kwargs["stage"] == "summary_generation"
+        assert call_kwargs["category"] == "pr_creating_mcp"
+        # Message is built via the server-naming formatter.
+        assert "mcp-tools-py" in call_kwargs["message"]
+
+    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    def test_summary_generation_timeout_routes_to_timeout_label(
+        self,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """LLM timeout during summary generation routes to pr_creating_timeout."""
+        mock_prereqs.return_value = True
+        mock_generate.side_effect = LLMTimeoutError("timed out")
+
+        result = run_create_pr_workflow(Path("/test"), "claude")
+
+        assert result == 1
+        mock_handle_failure.assert_called_once()
+        call_kwargs = mock_handle_failure.call_args.kwargs
+        assert call_kwargs["stage"] == "summary_generation"
+        assert call_kwargs["category"] == "pr_creating_timeout"
+        assert "timed out" in call_kwargs["message"]
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -223,21 +272,33 @@ class TestCreatePrFailureHandling:
         assert "pr_url" not in call_kwargs
         assert "pr_number" not in call_kwargs
 
+    @patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure")
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
-    def test_safety_net_fires_on_unexpected_exception(
-        self, mock_prereqs: MagicMock, mock_handle_failure: MagicMock
+    def test_unexpected_exception_netted_by_guard(
+        self,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
+        mock_workflow_failure: MagicMock,
     ) -> None:
-        """Test safety net fires when unexpected exception occurs."""
+        """An unexpected escape is netted by run_guarded, not the seam.
+
+        The deliberate ``_handle_create_pr_failure`` seam is bypassed on the
+        net path; the guard calls ``handle_workflow_failure`` directly with the
+        general ``pr_creating_failed`` label and returns 1 (the escape is
+        swallowed for a non-``SystemExit`` exception).
+        """
         mock_prereqs.side_effect = RuntimeError("Unexpected crash")
 
-        with pytest.raises(RuntimeError, match="Unexpected crash"):
-            run_create_pr_workflow(Path("/test"), "claude")
+        result = run_create_pr_workflow(Path("/test"), "claude")
 
-        # Safety net should have called _handle_create_pr_failure
-        mock_handle_failure.assert_called_once()
-        call_kwargs = mock_handle_failure.call_args.kwargs
-        assert call_kwargs["stage"] == "unexpected"
+        assert result == 1
+        # Net path bypasses the deliberate seam entirely.
+        mock_handle_failure.assert_not_called()
+        # Guard applies the general label via the shared handler.
+        mock_workflow_failure.assert_called_once()
+        failure = mock_workflow_failure.call_args.args[0]
+        assert failure.category == "pr_creating_failed"
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")

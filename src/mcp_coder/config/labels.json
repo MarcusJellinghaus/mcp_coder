@@ -256,6 +256,36 @@
       }
     },
     {
+      "internal_id": "pr_creating_timeout",
+      "name": "status-09f-timeout:pr-creating-llm-timeout",
+      "color": "e99695",
+      "description": "LLM timed out during PR creation",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "⏱️",
+        "display_name": "PR CREATION LLM TIMEOUT",
+        "stage_short": "pr-timeout",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "pr_creating_mcp",
+      "name": "status-09f-mcp:pr-creating-mcp-unavailable",
+      "color": "e99695",
+      "description": "MCP server(s) failed to connect during PR creation",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔌",
+        "display_name": "PR CREATION MCP UNAVAILABLE",
+        "stage_short": "pr-mcp-fail",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
       "internal_id": "pr_creating_failed",
       "name": "status-09f:pr-creating-failed",
       "color": "b60205",

@@ -124,8 +124,14 @@ def handle_create_pr_failure(
     pr_url: str | None = None,
     pr_number: int | None = None,
     is_cleanup_failure: bool = False,
+    category: str = "pr_creating_failed",
 ) -> None:
-    """Convenience wrapper: format comment + call shared handler."""
+    """Convenience wrapper: format comment + call shared handler.
+
+    ``category`` is the label ID applied to the issue for this failure; it
+    defaults to the general ``pr_creating_failed``, while the summary-generation
+    catch passes the classified ``pr_creating_timeout`` / ``pr_creating_mcp``.
+    """
     comment = format_failure_comment(
         stage=stage,
         message=message,
@@ -135,7 +141,7 @@ def handle_create_pr_failure(
         is_cleanup_failure=is_cleanup_failure,
     )
     failure = WorkflowFailure(
-        category="pr_creating_failed",
+        category=category,
         stage=stage,
         message=message,
         elapsed_time=elapsed_time,
