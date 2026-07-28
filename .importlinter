@@ -382,6 +382,23 @@ forbidden_modules =
     langchain_google_genai
     langchain_anthropic
 
+# -----------------------------------------------------------------------------
+# Contract: iCoder Permissions Core Purity
+# -----------------------------------------------------------------------------
+# The pure permission core (model/matcher/resolver) must stay I/O-free: no
+# serialization libraries. Only the loader (not listed here) may import them.
+# -----------------------------------------------------------------------------
+[importlinter:contract:permissions_core_purity]
+name = iCoder Permissions Core Purity
+type = forbidden
+source_modules =
+    mcp_coder.icoder.permissions.model
+    mcp_coder.icoder.permissions.matcher
+    mcp_coder.icoder.permissions.resolver
+forbidden_modules =
+    json
+    jsonschema
+
 # =============================================================================
 # TEST MODULE CONTRACTS
 # =============================================================================
