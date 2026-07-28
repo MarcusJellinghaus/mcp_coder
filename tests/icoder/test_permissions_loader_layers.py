@@ -316,6 +316,61 @@ def test_load_layer_ref_in_group_member_grants_nothing(tmp_path: Path) -> None:
     assert "@other" in joined
 
 
+def test_load_layer_ref_with_leading_whitespace_group_member(tmp_path: Path) -> None:
+    """A whitespace-padded ``@ref`` group member still gets the I4.1 diagnostic.
+
+    A ``toolGroups`` member written with leading whitespace (``" @git"``) must
+    route to the specific I4.1 diagnostic, never the generic malformed-matcher
+    message.
+    """
+    path = _write_layer(
+        tmp_path,
+        json.dumps({"toolGroups": {"git": [" @git"]}}),
+    )
+    result = _load_layer("project", path)
+    assert result.groups == {}
+    assert result.errors
+    joined = " ".join(result.errors)
+    assert "not supported until I4.1" in joined
+    assert "malformed" not in joined
+    assert "@git" in joined
+
+
+def test_parse_matchers_ref_with_leading_whitespace(tmp_path: Path) -> None:
+    """A whitespace-padded ``@ref`` token routes to the I4.1 diagnostic."""
+    path = _write_layer(tmp_path, "{}")
+    matchers, errors = _parse_matchers(" @git", path)
+    assert matchers == []
+    assert len(errors) == 1
+    assert "not supported until I4.1" in errors[0]
+    assert "malformed" not in errors[0]
+
+
+def test_load_layer_unexpected_exception_degrades_not_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An unexpected exception while loading a layer degrades fail-closed.
+
+    Instead of propagating and aborting startup, the layer records an error and
+    contributes nothing (per-layer atomic fail-closed).
+    """
+
+    def _boom(_data: object) -> list[str]:
+        raise RuntimeError("schema validator exploded")
+
+    monkeypatch.setattr("mcp_coder.icoder.permissions.loader._schema_errors", _boom)
+    path = _write_layer(tmp_path, json.dumps({"allow": ["mcp__fs__read"]}))
+
+    result = _load_layer("project", path)
+
+    assert result.rules == []
+    assert result.default_policy is None
+    assert result.errors
+    joined = " ".join(result.errors)
+    assert str(path) in joined
+    assert "schema validator exploded" in joined
+
+
 def test_load_layer_bad_matcher_names_file_and_token(tmp_path: Path) -> None:
     """A non-``mcp__`` matcher degrades the layer; error names file + token."""
     path = _write_layer(tmp_path, json.dumps({"allow": ["github:*"]}))

@@ -251,7 +251,10 @@ def _parse_matchers(token: str, path: Path) -> tuple[list[Matcher], list[str]]:
         A ``(matchers, errors)`` tuple. Success yields ``(>=1 matchers, [])``;
         failure yields ``([], [reason, ...])``.
     """
-    if token.startswith("@"):
+    # Strip before the ``@``-prefix check so a member written with leading or
+    # trailing whitespace (e.g. ``" @git"``) still routes to the specific I4.1
+    # diagnostic instead of falling through to a generic "malformed matcher".
+    if token.strip().startswith("@"):
         return [], [
             f"{path}: group references (@…) not supported until I4.1: {token!r}"
         ]
@@ -283,46 +286,62 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
     except (OSError, json.JSONDecodeError) as exc:
         return _LayerResult(None, [], {}, {}, [f"{path}: {exc}"])
 
-    # Validate the whole structure before walking it: a non-dict root or a
-    # wrong-typed section would otherwise raise below (breaking fail-closed).
-    schema_errors = [f"{path}: {m}" for m in _schema_errors(data)]
-    if schema_errors:
-        return _LayerResult(None, [], {}, {}, schema_errors)
+    # Fail-closed final safety net: this is a security-startup path, so a
+    # present-but-broken layer must DEGRADE (contribute nothing, record an
+    # error) rather than raise and abort startup. The only hard-raise case is
+    # inability to construct a config object at all; an unexpected failure from
+    # _schema_errors/parse_matcher below is converted into a per-layer degrade.
+    try:
+        # Validate the whole structure before walking it: a non-dict root or a
+        # wrong-typed section would otherwise raise below (breaking fail-closed).
+        schema_errors = [f"{path}: {m}" for m in _schema_errors(data)]
+        if schema_errors:
+            return _LayerResult(None, [], {}, {}, schema_errors)
 
-    errors: list[str] = []
-    rules: list[Rule] = []
-    groups: dict[str, tuple[Matcher, ...]] = {}
-    scenarios: dict[str, tuple[Matcher, ...]] = {}
+        errors: list[str] = []
+        rules: list[Rule] = []
+        groups: dict[str, tuple[Matcher, ...]] = {}
+        scenarios: dict[str, tuple[Matcher, ...]] = {}
 
-    # All keys optional -> default-safe access. An omitted section yields an
-    # empty iterable (never ``None``), so the common "absent section" case is
-    # not an error.
-    for section, policy in (
-        ("allow", Policy.ALWAYS),
-        ("ask", Policy.AFTER_APPROVAL),
-        ("deny", Policy.NEVER),
-    ):
-        for token in data.get(section, []):
-            matchers, errs = _parse_matchers(token, path)
-            errors += errs
-            rules += [Rule(m, policy, layer, path) for m in matchers]
-
-    for named, store in (("toolGroups", groups), ("toolScenarios", scenarios)):
-        for name, members in data.get(named, {}).items():
-            collected: list[Matcher] = []
-            for token in members:
+        # All keys optional -> default-safe access. An omitted section yields an
+        # empty iterable (never ``None``), so the common "absent section" case
+        # is not an error.
+        for section, policy in (
+            ("allow", Policy.ALWAYS),
+            ("ask", Policy.AFTER_APPROVAL),
+            ("deny", Policy.NEVER),
+        ):
+            for token in data.get(section, []):
                 matchers, errs = _parse_matchers(token, path)
                 errors += errs
-                collected += matchers
-            store[name] = tuple(collected)
+                rules += [Rule(m, policy, layer, path) for m in matchers]
 
-    default = (
-        _POLICY_BY_TOKEN.get(data["defaultMode"]) if "defaultMode" in data else None
-    )
+        for named, store in (("toolGroups", groups), ("toolScenarios", scenarios)):
+            for name, members in data.get(named, {}).items():
+                collected: list[Matcher] = []
+                for token in members:
+                    matchers, errs = _parse_matchers(token, path)
+                    errors += errs
+                    collected += matchers
+                store[name] = tuple(collected)
 
-    if errors:
-        return _LayerResult(None, [], {}, {}, errors)
-    return _LayerResult(default, rules, groups, scenarios, [])
+        default = (
+            _POLICY_BY_TOKEN.get(data["defaultMode"]) if "defaultMode" in data else None
+        )
+
+        if errors:
+            return _LayerResult(None, [], {}, {}, errors)
+        return _LayerResult(default, rules, groups, scenarios, [])
+    # pylint: disable=broad-exception-caught
+    # Fail-closed: a bad security layer must degrade, not abort startup.
+    except Exception as exc:  # noqa: BLE001
+        return _LayerResult(
+            None,
+            [],
+            {},
+            {},
+            [f"{path}: unexpected error loading layer: {exc}"],
+        )
 
 
 def load_permission_config(project_dir: Path) -> PermissionConfig:
