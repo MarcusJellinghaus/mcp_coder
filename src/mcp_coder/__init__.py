@@ -12,11 +12,28 @@ Example:
     >>> print(result["text"])
 """
 
+# isort: skip_file
+#
+# This module's import order is load-bearing and must NOT be auto-sorted. isort
+# is configured with `float_to_top`, which hoists every import to the top of the
+# file and would move the dependency guard below the heavy imports — defeating
+# it. `skip_file` freezes the order here; the imports below are kept sorted by
+# hand. (black still runs; pylint's import-position checks are convention-class
+# and disabled project-wide.)
+
 # Fail cleanly (not with a cryptic traceback) when a mandatory dependency is
-# missing — e.g. a `pip install --no-deps` install. Must run before the heavy
-# imports below. Fail-open: any unexpected internal error is swallowed so a
-# healthy install is never broken (SystemExit subclasses BaseException, so the
-# intended clean exit-1 still propagates). See mcp_coder/_depcheck.py.
+# missing — e.g. a `pip install --no-deps` install. This guard MUST run before
+# the heavy imports below, which is why it is the first statement after the
+# docstring. Fail-open: any unexpected internal error is swallowed so a healthy
+# install is never broken (SystemExit subclasses BaseException, so the intended
+# clean exit-1 still propagates). See mcp_coder/_depcheck.py.
+try:
+    from . import _depcheck
+
+    _depcheck.ensure_dependencies()
+except Exception:  # noqa: BLE001 — fail-open: never break a healthy install
+    pass
+
 from .checks.branch_status import collect_branch_status
 from .llm.interface import prompt_llm
 from .llm.mlflow_verify import verify_mlflow
@@ -49,14 +66,6 @@ from .utils.subprocess_runner import (
     execute_subprocess,
 )
 from .workflow_utils.commit_operations import generate_commit_message_with_llm
-
-try:
-    from . import _depcheck
-
-    _depcheck.ensure_dependencies()
-except Exception:  # noqa: BLE001 — fail-open: never break a healthy install
-    pass
-
 
 # Version is automatically determined from git tags via setuptools-scm
 try:

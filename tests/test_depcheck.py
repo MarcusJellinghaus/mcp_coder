@@ -8,6 +8,7 @@ distribution as absent, so no import-name<->dist-name map is needed.
 
 import importlib
 from importlib.metadata import PackageNotFoundError
+from pathlib import Path
 
 import pytest
 
@@ -103,6 +104,27 @@ def test_init_guard_smoke() -> None:
     assert mcp_coder.__version__
     # Typed ``-> None``; calling it confirms it passes through without raising.
     _depcheck.ensure_dependencies()
+
+
+def test_guard_precedes_heavy_imports() -> None:
+    """The guard must run before the heavy imports in ``__init__``.
+
+    Static source-order check: ``ensure_dependencies()`` / ``_depcheck`` must
+    appear before the first ``from .checks`` import. A subprocess/broken venv
+    is not needed — the guard is inert on a broken install if it is placed
+    after any import that can raise ``ModuleNotFoundError`` first.
+    """
+    source = Path(mcp_coder.__file__).read_text(encoding="utf-8")
+
+    guard_pos = source.find("ensure_dependencies()")
+    heavy_pos = source.find("from .checks")
+
+    assert guard_pos != -1, "guard call not found in __init__.py"
+    assert heavy_pos != -1, "expected heavy import 'from .checks' not found"
+    assert guard_pos < heavy_pos, (
+        "dependency guard must run before the heavy imports, otherwise a "
+        "missing mandatory dep raises ModuleNotFoundError before the guard fires"
+    )
 
 
 def test_init_guard_fails_open(monkeypatch: pytest.MonkeyPatch) -> None:
