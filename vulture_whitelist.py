@@ -354,3 +354,8 @@ _.session_folder_path
 # vulture stays green project-wide; this entry documents the intent and keeps
 # it green if that changes.
 _.args
+
+# workflow_utils/failure_handling.py - GuardOutcome.caught_exception is a public
+# dataclass field read by build_comment closures passed to run_guarded (e.g.
+# implement's Progress line); vulture can't see the cross-closure read.
+_.caught_exception
