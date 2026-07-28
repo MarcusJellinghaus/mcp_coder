@@ -35,7 +35,11 @@ from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
-from mcp_coder.workflow_utils.failure_handling import format_mcp_unavailable_message
+from mcp_coder.workflow_utils.failure_handling import (
+    format_mcp_unavailable_message,
+    llm_failure_reason,
+    run_guarded,
+)
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -467,12 +471,19 @@ def run_create_pr_workflow(
 
     Returns:
         int: Exit code (0 for success, 1 for failure)
+
+    Note:
+        The orchestrator body is wrapped in :func:`run_guarded`, which nets
+        SIGTERM / unexpected exits into the general ``pr_creating_failed``
+        label. Deliberate failure sites still call
+        :func:`_handle_create_pr_failure` and ``return 1``; the
+        summary-generation catch classifies the LLM failure into
+        ``pr_creating_timeout`` / ``pr_creating_mcp`` / ``pr_creating_failed``.
     """
     logger.log(OUTPUT, "Starting create PR workflow...")
     logger.log(OUTPUT, "Using project directory: %s", project_dir)
 
     start_time = time.time()
-    reached_terminal_state = False
 
     # Cache branch-issue linkage BEFORE PR creation.
     # GitHub automatically removes linkedBranches when a PR is created from a branch
@@ -489,7 +500,9 @@ def run_create_pr_workflow(
                 "Branch not linked to any issue, label update will be skipped"
             )
 
-    try:
+    def body() -> int:
+        nonlocal cached_issue_number
+
         # Step 1: Check prerequisites
         logger.log(OUTPUT, "Step 1/5: Checking prerequisites...")
         if not check_prerequisites(project_dir):
@@ -504,7 +517,6 @@ def run_create_pr_workflow(
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
             )
-            reached_terminal_state = True
             return 1
 
         # Step 2: Generate PR summary
@@ -516,6 +528,11 @@ def run_create_pr_workflow(
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(f"Failed to generate PR summary: {e}")
             elapsed = time.time() - start_time
+            reason = llm_failure_reason(e) or "general"
+            category = {
+                "timeout": "pr_creating_timeout",
+                "mcp_unavailable": "pr_creating_mcp",
+            }.get(reason, "pr_creating_failed")
             message = (
                 format_mcp_unavailable_message(e)
                 if isinstance(e, McpServersUnavailableError)
@@ -529,8 +546,8 @@ def run_create_pr_workflow(
                 post_issue_comments=post_issue_comments,
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
+                category=category,
             )
-            reached_terminal_state = True
             return 1
 
         # Step 3: Clean up repository
@@ -547,7 +564,6 @@ def run_create_pr_workflow(
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
             )
-            reached_terminal_state = True
             return 1
 
         # Check if there are changes to commit
@@ -577,7 +593,6 @@ def run_create_pr_workflow(
                         elapsed_time=elapsed,
                         issue_number=cached_issue_number,
                     )
-                    reached_terminal_state = True
                     return 1
                 logger.log(
                     OUTPUT, "No cleanup changes to commit (files were already clean)"
@@ -604,7 +619,6 @@ def run_create_pr_workflow(
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
             )
-            reached_terminal_state = True
             return 1
         logger.log(OUTPUT, "Commits pushed successfully")
 
@@ -624,7 +638,6 @@ def run_create_pr_workflow(
                 elapsed_time=elapsed,
                 issue_number=cached_issue_number,
             )
-            reached_terminal_state = True
             return 1
 
         pr_number = pr_result["number"]
@@ -701,21 +714,15 @@ def run_create_pr_workflow(
             logger.log(OUTPUT, "Create PR workflow completed with warnings")
         else:
             logger.log(OUTPUT, "Create PR workflow completed successfully!")
-        reached_terminal_state = True
         return 0
 
-    finally:
-        if not reached_terminal_state:
-            elapsed = time.time() - start_time
-            try:
-                _handle_create_pr_failure(
-                    stage="unexpected",
-                    message="Workflow exited unexpectedly",
-                    project_dir=project_dir,
-                    update_issue_labels=update_issue_labels,
-                    post_issue_comments=post_issue_comments,
-                    elapsed_time=elapsed,
-                    issue_number=cached_issue_number,
-                )
-            except Exception:  # pylint: disable=broad-exception-caught
-                logger.error("Safety net failure handler also failed")
+    return run_guarded(
+        body,
+        project_dir=project_dir,
+        from_label_id="pr_creating",
+        general_category="pr_creating_failed",
+        comment_header="## PR Creation Failed",
+        update_issue_labels=update_issue_labels,
+        post_issue_comments=post_issue_comments,
+        issue_number=cached_issue_number,
+    )

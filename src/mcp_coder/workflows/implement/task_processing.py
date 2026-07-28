@@ -22,6 +22,7 @@ from mcp_coder.workflow_steps.commit import (
     push_changes,
     run_formatters,
 )
+from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 from .constants import (
@@ -31,7 +32,6 @@ from .constants import (
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
 )
-from .llm_failures import llm_failure_reason
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -311,7 +311,7 @@ def process_single_task(
         - reason: 'completed' | 'no_tasks' | 'no_changes' | 'error' | 'timeout'
           | 'mcp_unavailable'. The two LLM failures (inactivity timeout, MCP
           servers unavailable) are categorized here into their reason strings so
-          the orchestrator can map them to a FailureCategory/label.
+          the orchestrator can map them to a failure label.
     """
     # Cleanup stale commit message file from previous failed runs
     _cleanup_commit_message_file(project_dir)
@@ -394,7 +394,7 @@ Please implement this task step by step."""
     except (LLMTimeoutError, McpServersUnavailableError) as e:
         # Categorize the two typed LLM failures into stable workflow reasons
         # ("timeout" / "mcp_unavailable") so the orchestrator can map them to a
-        # FailureCategory/label. Fallback keeps mypy happy; both branches of
+        # failure label. Fallback keeps mypy happy; both branches of
         # llm_failure_reason are non-None for these exception types.
         reason = llm_failure_reason(e) or "error"
         logger.error("LLM call failed (%s) for task: %s", reason, next_task)

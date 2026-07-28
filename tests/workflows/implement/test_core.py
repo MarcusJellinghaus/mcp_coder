@@ -3,7 +3,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from mcp_coder.workflows.implement.constants import FailureCategory
 from mcp_coder.workflows.implement.core import run_implement_workflow
 
 
@@ -399,7 +398,7 @@ class TestRunImplementWorkflow:
         # but formatters should NOT be called since format_code=False
         mock_run_formatters.assert_not_called()
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
@@ -458,11 +457,11 @@ class TestRunImplementWorkflow:
 
         assert result == 1
         mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[0][0]
-        assert failure_arg.category == FailureCategory.LLM_TIMEOUT
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "llm_timeout"
         assert failure_arg.stage == "Final mypy check"
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
@@ -526,11 +525,11 @@ class TestRunImplementWorkflow:
 
         assert result == 1
         mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[0][0]
-        assert failure_arg.category == FailureCategory.MCP_UNAVAILABLE
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "mcp_unavailable"
         assert failure_arg.stage == "Final mypy check"
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
@@ -589,11 +588,11 @@ class TestRunImplementWorkflow:
 
         assert result == 1
         mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[0][0]
-        assert failure_arg.category == FailureCategory.LLM_TIMEOUT
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "llm_timeout"
         assert failure_arg.stage == "CI pipeline analysis"
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
@@ -657,6 +656,6 @@ class TestRunImplementWorkflow:
 
         assert result == 1
         mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[0][0]
-        assert failure_arg.category == FailureCategory.MCP_UNAVAILABLE
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "mcp_unavailable"
         assert failure_arg.stage == "CI pipeline analysis"

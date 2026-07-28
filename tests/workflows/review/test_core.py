@@ -23,7 +23,7 @@ import pytest
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.review import core
+from mcp_coder.workflows.review import core, reviewer
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 
 # --- verdict payloads -------------------------------------------------------
@@ -59,9 +59,9 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     mocks = SimpleNamespace()
 
     mocks.prompt_llm = MagicMock(name="prompt_llm")
-    monkeypatch.setattr(core, "prompt_llm", mocks.prompt_llm)
+    monkeypatch.setattr(reviewer, "prompt_llm", mocks.prompt_llm)
 
-    monkeypatch.setattr(core, "prepare_llm_environment", MagicMock(return_value={}))
+    monkeypatch.setattr(reviewer, "prepare_llm_environment", MagicMock(return_value={}))
 
     mocks.run_formatters = MagicMock(return_value=True)
     monkeypatch.setattr(core, "run_formatters", mocks.run_formatters)
@@ -293,7 +293,7 @@ def test_mcp_unavailable_maps_to_mcp_label(
 
     assert result == 1
     failure = env.handle_workflow_failure.call_args.args[0]
-    assert failure.category == REVIEW_PLAN.failure_labels["mcp"]
+    assert failure.category == REVIEW_PLAN.failure_labels["mcp_unavailable"]
 
 
 def test_commit_failure_fails_run_and_skips_push(
@@ -371,3 +371,107 @@ def test_labels_not_touched_when_gating_off(
 
     assert result == 0
     env.update_workflow_label.assert_not_called()
+
+
+# --- Step 5: broadened excepts + empty-report retry + enriched comment ------
+
+
+def test_generic_exception_at_reviewer_fails_general(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A generic (non-LLM) exception at the fresh reviewer is categorized general.
+
+    The broadened ``except`` must catch it and route through ``_fail`` with the
+    general label + a comment + exit 1 — never an uncaught escape.
+    """
+    env.prompt_llm.side_effect = RuntimeError("kaboom")
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    env.handle_workflow_failure.assert_called_once()
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["general"]
+    # A generic exception is not retried — it fails on the first invocation.
+    assert env.prompt_llm.call_count == 1
+
+
+def test_empty_reports_retry_inline_then_fail_general(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Whitespace-only reports are retried inline (no round consumed) then fail."""
+    env.prompt_llm.side_effect = [
+        _reviewer(text="   "),
+        _reviewer(text="\n\t "),
+        _reviewer(text="  "),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    # The reviewer is re-invoked as an INNER retry, all within round 1.
+    assert env.prompt_llm.call_count == core.EMPTY_REPORT_RETRIES
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["general"]
+    # No round was consumed by the inner retry: the comment still reports round 1.
+    comment = env.handle_workflow_failure.call_args.args[1]
+    assert "Round: 1" in comment
+
+
+def test_empty_then_valid_report_recovers(env: SimpleNamespace, tmp_path: Path) -> None:
+    """A whitespace report retried once then valid proceeds to a normal verdict."""
+    env.prompt_llm.side_effect = [
+        _reviewer(text="   "),  # empty -> inner retry
+        _reviewer(),  # valid report
+        _resp(_DISMISS),  # supervisor -> dismiss
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
+
+
+def test_body_escape_is_netted_by_guard(
+    env: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ``SystemExit`` escaping ``body()`` is netted (general) then re-raised.
+
+    ``SystemExit`` (SIGTERM / ``sys.exit``) is not an ``Exception``, so it slips
+    past the in-body classify-and-fail paths and is caught only by the guard,
+    which maps it to the general label and re-raises.
+    """
+    net = MagicMock()
+    monkeypatch.setattr(
+        "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure", net
+    )
+    env.prompt_llm.side_effect = SystemExit(1)
+
+    with pytest.raises(SystemExit):
+        _run(tmp_path)
+
+    net.assert_called_once()
+    failure = net.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["general"]
+    comment = net.call_args.args[1]
+    assert "review terminated unexpectedly" in comment
+
+
+def test_deliberate_fail_comment_carries_round_verdict_elapsed(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A deliberate failure comment is enriched with round, verdict, elapsed."""
+    env.commit_changes.return_value = False  # deliberate _fail after a tasks verdict
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    comment = env.handle_workflow_failure.call_args.args[1]
+    assert "Round: 1" in comment
+    assert "Verdict: tasks" in comment
+    assert "Elapsed:" in comment

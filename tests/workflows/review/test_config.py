@@ -42,7 +42,7 @@ class TestReviewImplementation:
             "general": "code_review_failed",
             "rounds": "code_review_rounds",
             "timeout": "code_review_timeout",
-            "mcp": "code_review_mcp",
+            "mcp_unavailable": "code_review_mcp",
             "ci": "code_review_ci",
         }
 
@@ -76,7 +76,7 @@ class TestReviewPlan:
             "general": "plan_review_failed",
             "rounds": "plan_review_rounds",
             "timeout": "plan_review_timeout",
-            "mcp": "plan_review_mcp",
+            "mcp_unavailable": "plan_review_mcp",
         }
 
     def test_has_no_ci_failure_key(self) -> None:

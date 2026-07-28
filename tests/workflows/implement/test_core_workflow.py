@@ -9,13 +9,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.workflows.implement.constants import FailureCategory
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_tracker_prep import (
     log_progress_summary,
     prepare_task_tracker,
 )
 from mcp_coder.workflows.utils import resolve_project_dir
+
+# Patch targets for the two failure boundaries after the run_guarded migration:
+# - deliberate in-body failures go through implement's `_fail` -> this handler
+_DELIBERATE_HANDLER = (
+    "mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure"
+)
+# - the SIGTERM / unexpected-exit safety net lives in run_guarded -> this handler
+_NET_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
+# run_guarded installs/restores the SIGTERM handler via the signal module here
+_NET_SIGNAL = "mcp_coder.workflow_utils.failure_handling.signal.signal"
 
 
 # Reusable LLMResponseDict mock value
@@ -307,7 +316,7 @@ class TestRunImplementWorkflowLabelTransitions:
         assert result == 0
         mock_issue_cls.assert_not_called()
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
@@ -326,7 +335,7 @@ class TestRunImplementWorkflowLabelTransitions:
         assert result == 1
         mock_handle_failure.assert_not_called()
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -345,7 +354,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_progress: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """When LLM times out, calls _handle_workflow_failure with LLM_TIMEOUT."""
+        """When LLM times out, deliberate failure labels llm_timeout."""
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
@@ -357,11 +366,11 @@ class TestRunImplementWorkflowLabelTransitions:
 
         assert result == 1
         mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[0][0]
-        assert failure_arg.category == FailureCategory.LLM_TIMEOUT
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "llm_timeout"
         assert failure_arg.stage == "Task implementation"
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -380,7 +389,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_progress: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """reason 'mcp_unavailable' routes to MCP_UNAVAILABLE failure handling."""
+        """reason 'mcp_unavailable' routes to mcp_unavailable failure handling."""
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
@@ -392,11 +401,11 @@ class TestRunImplementWorkflowLabelTransitions:
 
         assert result == 1
         mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[0][0]
-        assert failure_arg.category == FailureCategory.MCP_UNAVAILABLE
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "mcp_unavailable"
         assert failure_arg.stage == "Task implementation"
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -415,7 +424,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_progress: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """No changes after retries routes to NO_CHANGES_AFTER_RETRIES failure."""
+        """No changes after retries routes to no_changes_after_retries failure."""
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
@@ -427,11 +436,11 @@ class TestRunImplementWorkflowLabelTransitions:
 
         assert result == 1
         mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[0][0]
-        assert failure_arg.category == FailureCategory.NO_CHANGES_AFTER_RETRIES
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "no_changes_after_retries"
         assert failure_arg.stage == "Task implementation"
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -450,7 +459,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_progress: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """When task errors, calls _handle_workflow_failure with GENERAL."""
+        """When task errors, deliberate failure labels implementing_failed."""
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
@@ -462,15 +471,15 @@ class TestRunImplementWorkflowLabelTransitions:
 
         assert result == 1
         mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[0][0]
-        assert failure_arg.category == FailureCategory.GENERAL
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "implementing_failed"
         assert failure_arg.stage == "Task implementation"
 
 
 class TestNoPostErrorProgressDisplay:
     """Verify post-error progress display is removed."""
 
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
@@ -507,10 +516,9 @@ class TestNoPostErrorProgressDisplay:
 
 
 class TestWorkflowSafetyNet:
-    """Tests for the try/finally safety net in run_implement_workflow."""
+    """Tests for the run_guarded safety net wrapping run_implement_workflow."""
 
-    @patch("mcp_coder.workflows.implement.core.signal.signal")
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_NET_HANDLER)
     @patch(
         "mcp_coder.workflows.implement.core.prepare_task_tracker",
         side_effect=RuntimeError("unexpected"),
@@ -527,16 +535,15 @@ class TestWorkflowSafetyNet:
         mock_rebase: MagicMock,
         mock_prepare: MagicMock,
         mock_handle: MagicMock,
-        mock_signal: MagicMock,
     ) -> None:
         """Safety net fires on unexpected exception to post GitHub comment and set label."""
         result = run_implement_workflow(Path("/fake"), "claude")
 
         assert result == 1
         mock_handle.assert_called_once()
+        assert mock_handle.call_args[0][0].category == "implementing_failed"
 
-    @patch("mcp_coder.workflows.implement.core.signal.signal")
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_NET_HANDLER)
     @patch("mcp_coder.workflows.implement.core.IssueManager")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch(
@@ -570,19 +577,15 @@ class TestWorkflowSafetyNet:
         mock_ci: MagicMock,
         mock_issue_mgr: MagicMock,
         mock_handle: MagicMock,
-        mock_signal: MagicMock,
     ) -> None:
         """Safety net does NOT fire when workflow completes successfully."""
         result = run_implement_workflow(Path("/fake"), "claude")
 
         assert result == 0
-        unexpected_calls = [
-            c for c in mock_handle.call_args_list if c[0][0].stage == "Unexpected exit"
-        ]
-        assert len(unexpected_calls) == 0
+        mock_handle.assert_not_called()
 
-    @patch("mcp_coder.workflows.implement.core.signal.signal")
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_NET_HANDLER)
+    @patch(_DELIBERATE_HANDLER)
     @patch(
         "mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=False
     )
@@ -597,18 +600,22 @@ class TestWorkflowSafetyNet:
         mock_prereq: MagicMock,
         mock_rebase: MagicMock,
         mock_prepare: MagicMock,
-        mock_handle: MagicMock,
-        mock_signal: MagicMock,
+        mock_deliberate: MagicMock,
+        mock_net: MagicMock,
     ) -> None:
-        """When workflow already handled a failure, safety net does not fire again."""
+        """A deliberate failure returns 1 cleanly; the net stays silent."""
         result = run_implement_workflow(Path("/fake"), "claude")
 
         assert result == 1
-        assert mock_handle.call_count == 1
-        assert mock_handle.call_args[0][0].stage == "Task tracker preparation"
+        # Deliberate handler fired once for the task-tracker-prep failure.
+        mock_deliberate.assert_called_once()
+        assert (
+            mock_deliberate.call_args[1]["failure"].stage == "Task tracker preparation"
+        )
+        # The net did NOT fire (body returned 1 cleanly).
+        mock_net.assert_not_called()
 
-    @patch("mcp_coder.workflows.implement.core.signal.signal")
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_NET_HANDLER)
     @patch(
         "mcp_coder.workflows.implement.core.prepare_task_tracker",
         side_effect=RuntimeError("boom"),
@@ -626,7 +633,6 @@ class TestWorkflowSafetyNet:
         mock_rebase: MagicMock,
         mock_prepare: MagicMock,
         mock_handle: MagicMock,
-        mock_signal: MagicMock,
     ) -> None:
         """Unexpected exception allows safety net to fire for GitHub reporting."""
         result = run_implement_workflow(Path("/fake"), "claude")
@@ -636,10 +642,10 @@ class TestWorkflowSafetyNet:
 
 
 class TestSigtermHandler:
-    """Tests for SIGTERM handler registration and behavior."""
+    """Tests for SIGTERM handler registration and behavior (owned by run_guarded)."""
 
-    @patch("mcp_coder.workflows.implement.core.signal.signal")
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_NET_SIGNAL)
+    @patch(_DELIBERATE_HANDLER)
     @patch(
         "mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=False
     )
@@ -657,7 +663,7 @@ class TestSigtermHandler:
         mock_handle: MagicMock,
         mock_signal: MagicMock,
     ) -> None:
-        """SIGTERM handler is registered after prereq checks pass."""
+        """SIGTERM handler is registered by run_guarded after prereq checks pass."""
         run_implement_workflow(Path("/fake"), "claude")
 
         sigterm_calls = [
@@ -665,8 +671,8 @@ class TestSigtermHandler:
         ]
         assert len(sigterm_calls) >= 1
 
-    @patch("mcp_coder.workflows.implement.core.signal.signal")
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_NET_SIGNAL)
+    @patch(_DELIBERATE_HANDLER)
     @patch(
         "mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=False
     )
@@ -684,7 +690,7 @@ class TestSigtermHandler:
         mock_handle: MagicMock,
         mock_signal: MagicMock,
     ) -> None:
-        """Previous SIGTERM handler is restored after workflow completes."""
+        """Previous SIGTERM handler is restored after run_guarded completes."""
         original_handler = MagicMock()
         mock_signal.return_value = original_handler
 
@@ -694,8 +700,8 @@ class TestSigtermHandler:
         assert final_call[0][0] == signal.SIGTERM
         assert final_call[0][1] == original_handler
 
-    @patch("mcp_coder.workflows.implement.core.signal.signal")
-    @patch("mcp_coder.workflows.implement.core._handle_workflow_failure")
+    @patch(_NET_SIGNAL)
+    @patch(_NET_HANDLER)
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
@@ -711,8 +717,8 @@ class TestSigtermHandler:
         mock_handle: MagicMock,
         mock_signal: MagicMock,
     ) -> None:
-        """SIGTERM handler sets sigterm_received flag and calls sys.exit(1)."""
-        # Capture the registered handler
+        """SIGTERM handler sets its flag and the net reports 'SIGTERM received'."""
+        # Capture the handler run_guarded registers.
         handlers: dict[int, Any] = {}
 
         def capture_handler(sig: int, handler: Any) -> Any:
@@ -721,7 +727,7 @@ class TestSigtermHandler:
 
         mock_signal.side_effect = capture_handler
 
-        # Make prepare_task_tracker call the SIGTERM handler
+        # Make prepare_task_tracker call the registered SIGTERM handler.
         def trigger_sigterm(*args: Any, **kwargs: Any) -> None:
             handler = handlers.get(signal.SIGTERM)
             if handler:
@@ -734,8 +740,7 @@ class TestSigtermHandler:
         with pytest.raises(SystemExit):
             run_implement_workflow(Path("/fake"), "claude")
 
-        # The finally block should have called _handle_workflow_failure
-        # with stage "SIGTERM received"
+        # The net should have reported the SIGTERM-driven exit.
         mock_handle.assert_called()
         failure = mock_handle.call_args[0][0]
         assert failure.stage == "SIGTERM received"
