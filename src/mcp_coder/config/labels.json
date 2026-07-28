@@ -121,6 +121,21 @@
       }
     },
     {
+      "internal_id": "planning_mcp",
+      "name": "status-03f-mcp:planning-mcp-unavailable",
+      "color": "e99695",
+      "description": "MCP server(s) failed to connect during planning",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔌",
+        "display_name": "PLANNING MCP UNAVAILABLE",
+        "stage_short": "plan-mcp-fail",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
       "internal_id": "planning_prereq_failed",
       "name": "status-03f-prereq:planning-prereq-failed",
       "color": "b60205",

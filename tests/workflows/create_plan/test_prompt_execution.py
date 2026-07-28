@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder.llm.interface import LLMTimeoutError
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.create_plan import (
     _load_prompt_or_exit,
@@ -13,7 +14,6 @@ from mcp_coder.workflows.create_plan import (
     run_planning_prompts,
     validate_output_files,
 )
-from mcp_coder.workflows.create_plan.constants import FailureCategory
 
 _CORE = "mcp_coder.workflows.create_plan.core"
 
@@ -217,9 +217,8 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].category == FailureCategory.GENERAL
-        assert result[1].stage == "Prompt 1"
-        assert result[1].prompt_stage == 1
+        assert result[1].category == "planning_failed"
+        assert result[1].stage == "Prompt 1 (general)"
 
     def test_run_planning_prompts_first_timeout(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when first prompt times out."""
@@ -234,9 +233,44 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].category == FailureCategory.LLM_TIMEOUT
+        assert result[1].category == "planning_llm_timeout"
         assert result[1].stage == "Prompt 1 (timeout)"
-        assert result[1].prompt_stage == 1
+
+    def test_run_planning_prompts_first_mcp_unavailable(self, tmp_path: Path) -> None:
+        """Test run_planning_prompts routes MCP failures to planning_mcp."""
+        issue_data = _make_issue_data()
+
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(
+                f"{_CORE}.prompt_llm",
+                side_effect=McpServersUnavailableError(
+                    "boom", unavailable_servers={"mcp-tools-py": "failed"}
+                ),
+            ):
+                result = run_planning_prompts(tmp_path, issue_data, "claude")
+
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].category == "planning_mcp"
+        assert result[1].stage == "Prompt 1 (mcp_unavailable)"
+        assert "mcp-tools-py" in result[1].message
+
+    def test_run_planning_prompts_first_generic_error(self, tmp_path: Path) -> None:
+        """Test run_planning_prompts routes generic errors to planning_failed."""
+        issue_data = _make_issue_data()
+
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(
+                f"{_CORE}.prompt_llm",
+                side_effect=RuntimeError("boom"),
+            ):
+                result = run_planning_prompts(tmp_path, issue_data, "claude")
+
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].category == "planning_failed"
+        assert result[1].stage == "Prompt 1 (general)"
+        assert result[1].message == "boom"
 
     def test_run_planning_prompts_session_continuation(self, tmp_path: Path) -> None:
         """Test run_planning_prompts properly continues session across prompts."""
@@ -284,8 +318,8 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
+        assert result[1].category == "planning_failed"
         assert result[1].stage == "Prompt 1 (empty response)"
-        assert result[1].prompt_stage == 1
 
     def test_run_planning_prompts_no_session_id(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when first response has no session_id."""
@@ -318,7 +352,7 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].category == FailureCategory.GENERAL
+        assert result[1].category == "planning_failed"
 
     def test_run_planning_prompts_second_prompt_fails(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when second prompt fails."""
@@ -341,8 +375,8 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].stage == "Prompt 2"
-        assert result[1].prompt_stage == 2
+        assert result[1].category == "planning_failed"
+        assert result[1].stage == "Prompt 2 (general)"
 
     def test_run_planning_prompts_second_prompt_timeout(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when second prompt times out."""
@@ -365,9 +399,8 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].category == FailureCategory.LLM_TIMEOUT
+        assert result[1].category == "planning_llm_timeout"
         assert result[1].stage == "Prompt 2 (timeout)"
-        assert result[1].prompt_stage == 2
 
     def test_run_planning_prompts_third_prompt_fails(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when third prompt fails."""
@@ -392,8 +425,8 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].stage == "Prompt 3"
-        assert result[1].prompt_stage == 3
+        assert result[1].category == "planning_failed"
+        assert result[1].stage == "Prompt 3 (general)"
 
     def test_run_planning_prompts_third_prompt_timeout(self, tmp_path: Path) -> None:
         """Test run_planning_prompts when third prompt times out."""
@@ -418,9 +451,8 @@ class TestRunPlanningPrompts:
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].category == FailureCategory.LLM_TIMEOUT
+        assert result[1].category == "planning_llm_timeout"
         assert result[1].stage == "Prompt 3 (timeout)"
-        assert result[1].prompt_stage == 3
 
 
 class TestValidateOutputFiles:
