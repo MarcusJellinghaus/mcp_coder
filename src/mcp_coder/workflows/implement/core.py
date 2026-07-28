@@ -80,9 +80,6 @@ def run_implement_workflow(
         The prerequisite checks and rebase run *before* the safety net (unlabeled,
         as before); everything after is wrapped in :func:`run_guarded`, which nets
         SIGTERM / unexpected exits into the general ``implementing_failed`` label.
-
-    Raises:
-        SystemExit: If SIGTERM signal is received during workflow execution.
     """
     logger.info(f"Starting implement workflow for project: {project_dir}")
 
