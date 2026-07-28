@@ -51,7 +51,11 @@ def find_missing_dependencies() -> list[str]:
 
 
 def ensure_dependencies() -> None:
-    """Print a friendly message to stderr and exit 1 if deps are missing."""
+    """Print a friendly message to stderr and exit 1 if deps are missing.
+
+    Raises:
+        SystemExit: With exit code 1 when required dependencies are missing.
+    """
     missing = find_missing_dependencies()
     if not missing:
         return
@@ -70,7 +74,12 @@ def ensure_dependencies() -> None:
 
 
 def _installed_version() -> str:
-    """mcp-coder version via importlib.metadata, or the dev fallback."""
+    """mcp-coder version via importlib.metadata, or the dev fallback.
+
+    Returns:
+        The installed package version from ``importlib.metadata``, or the
+        ``"0.0.0.dev0+unknown"`` dev fallback when the package is not found.
+    """
     try:
         return version("mcp-coder")
     except PackageNotFoundError:
