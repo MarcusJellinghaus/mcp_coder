@@ -28,11 +28,10 @@ FAILURE_LABELS: dict[str, str] = {
     "ci_fix_exhausted": "ci_fix_needed",
 }
 
-# Maps a reason -> the exact human-readable Category text the deleted enum
-# produced (`FailureCategory.<NAME>.name.replace("_", " ").title()`), so the
-# comment stays byte-identical. Only `timeout` actually diverges from a naive
-# title-cased reason: it must render "Llm Timeout" (was `LLM_TIMEOUT`), NOT
-# "Timeout".
+# Maps a reason -> the exact human-readable Category text used in the failure
+# comment, so the rendered comment stays byte-identical to earlier releases.
+# Only `timeout` diverges from a naive title-cased reason: it must render
+# "Llm Timeout", NOT "Timeout".
 CATEGORY_DISPLAY: dict[str, str] = {
     "general": "General",
     "timeout": "Llm Timeout",
@@ -72,8 +71,8 @@ def format_failure_comment(
     Reproduces the historical ``_format_failure_comment`` output byte-for-byte.
     The Category line is rendered from :data:`CATEGORY_DISPLAY` (falling back to
     the ``"general"`` display), not by title-casing ``reason`` — title-casing
-    ``"timeout"`` would yield ``"Timeout"`` whereas the old
-    ``FailureCategory.LLM_TIMEOUT`` enum rendered ``"Llm Timeout"``.
+    ``"timeout"`` would yield ``"Timeout"`` whereas the comment must render
+    ``"Llm Timeout"``.
 
     Args:
         reason: Failure reason string (key of :data:`FAILURE_LABELS`).
