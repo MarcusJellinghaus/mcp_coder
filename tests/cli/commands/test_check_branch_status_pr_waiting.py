@@ -6,14 +6,13 @@ and --wait-for-pr / --pr-timeout CLI arguments.
 
 import argparse
 import logging
-from dataclasses import replace
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
-from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
@@ -37,6 +36,7 @@ def _make_base_args(**overrides: object) -> argparse.Namespace:
         execution_dir=None,
         wait_for_pr=False,
         pr_timeout=600,
+        fail_on_reviews=False,
     )
     defaults.update(overrides)
     return argparse.Namespace(**defaults)
@@ -526,3 +526,49 @@ class TestNoPRWaitingSkipsPolling:
 
         assert result == 0
         mock_pr_cls.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Formatter wiring: flag threaded, report not enriched
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(
+    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
+    reason="check_branch_status module not yet implemented",
+)
+class TestReportFormatterWiring:
+    """The report flows unenriched into the formatter, with the review flag."""
+
+    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
+    def test_formatter_gets_flag_and_unenriched_report(
+        self,
+        mock_collect: Mock,
+        mock_resolve: Mock,
+        mock_branch: Mock,
+    ) -> None:
+        """format_for_human receives fail_on_reviews and the exact mocked report.
+
+        The dropped replace() enrichment means the report object passed to the
+        formatter is the very one collect_branch_status returned — not a copy.
+        """
+        mock_resolve.return_value = Path("/test/project")
+        mock_branch.return_value = "feature/xyz"
+        report = _make_report(pr_found=True, pr_number=999, pr_url="u")
+        mock_collect.return_value = report
+
+        with patch.object(
+            BranchStatusReport,
+            "format_for_human",
+            autospec=True,
+            return_value="OUT",
+        ) as mock_fmt:
+            args = _make_base_args(fail_on_reviews=True)
+            result = execute_check_branch_status(args)
+
+        assert result == 0
+        mock_fmt.assert_called_once()
+        assert mock_fmt.call_args.args[0] is report  # no replace() copy
+        assert mock_fmt.call_args.kwargs == {"fail_on_reviews": True}

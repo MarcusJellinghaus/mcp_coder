@@ -7,7 +7,6 @@ branch status information and can automatically fix CI failures when requested.
 import argparse
 import logging
 import time
-from dataclasses import replace
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -134,6 +133,31 @@ def _wait_for_ci_completion(
     return ci_status, False
 
 
+def _exit_code(report: BranchStatusReport, fail_on_reviews: bool) -> int:
+    """Map a report to a process exit code. Evaluated 2 -> 1 -> 0.
+
+    Precedence: undeterminable (2) wins over blocking (1) wins over clean (0).
+
+    Args:
+        report: Collected branch status report.
+        fail_on_reviews: When True, PR-review feedback participates in the gate;
+            when False, only CI status drives the code.
+
+    Returns:
+        2 if CI truth or (gated) review state is undeterminable; 1 if determined
+        and blocking; 0 if proven clean.
+    """
+    if report.ci_status in (CIStatus.UNAVAILABLE, CIStatus.UNKNOWN):
+        return 2
+    if fail_on_reviews and report.pr_feedback_undeterminable:
+        return 2
+    if report.ci_status == CIStatus.FAILED:
+        return 1
+    if fail_on_reviews and report.pr_feedback_blocks_merge:
+        return 1
+    return 0
+
+
 def execute_check_branch_status(args: argparse.Namespace) -> int:
     """Execute branch status check command.
 
@@ -146,12 +170,17 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             - llm_method: LLM method for fixes (if --fix enabled)
             - mcp_config: Optional MCP configuration path
             - execution_dir: Optional execution directory
+            - fail_on_reviews: Gate the exit code on PR-review feedback
 
     Returns:
-        Exit code (0 for success, 1 for failure, 2 for technical error)
+        Exit code (0 for success, 1 for failure, 2 for technical error or
+        undeterminable reviews)
     """
     try:
         logger.info("Starting branch status check")
+
+        # Read defensively — older callers / tests may omit the flag.
+        fail_on_reviews = getattr(args, "fail_on_reviews", False)
 
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
@@ -253,20 +282,20 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 logger.error(f"CI wait failed: {e}")
                 return 2  # Technical error
 
-        # Collect branch status
+        # Collect branch status. Upstream collect_branch_status fills the PR
+        # fields itself — no post-hoc enrichment. The pr_number/pr_url/pr_found
+        # locals above remain purely for the --wait-for-pr gate and its logging.
         logger.debug("Collecting branch status information")
         report = collect_branch_status(project_dir)
 
-        # Enrich report with PR fields if PR discovery was performed
-        if pr_found is not None:
-            report = replace(
-                report, pr_number=pr_number, pr_url=pr_url, pr_found=pr_found
-            )
-
-        # Display status report
+        # Display status report. Pass fail_on_reviews unconditionally: feedback
+        # renders by default; the flag only adds the Review Gate header (and,
+        # below, the exit-code gate).
         # Use errors='replace' to handle emoji encoding issues on Windows
         output = (
-            report.format_for_llm() if args.llm_truncate else report.format_for_human()
+            report.format_for_llm(fail_on_reviews=fail_on_reviews)
+            if args.llm_truncate
+            else report.format_for_human(fail_on_reviews=fail_on_reviews)
         )
         _safe_print(output)
 
@@ -274,11 +303,12 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         if getattr(args, "ci_timeout", 0) == 0 and report.ci_status == CIStatus.PENDING:
             logger.log(OUTPUT, "CI pending. Use --ci-timeout to wait for completion.")
 
-        # Missing token — CI truth is unknown; nothing to fix. Hoisted above the
-        # --fix block so exit code 2 is consistent on the read-only, --ci-timeout
-        # and --fix paths alike (the partial report is already printed above).
-        if report.ci_status == CIStatus.UNAVAILABLE:
-            return 2
+        # Undeterminable CI truth (missing token, or collection failure); nothing
+        # to fix. Hoisted above the --fix block so exit code 2 is consistent on
+        # the read-only, --ci-timeout and --fix paths alike, and so no pointless
+        # fix attempt runs (the partial report is already printed above).
+        if report.ci_status in (CIStatus.UNAVAILABLE, CIStatus.UNKNOWN):
+            return _exit_code(report, fail_on_reviews)
 
         # Run auto-fixes if requested
         if args.fix > 0:
@@ -315,14 +345,13 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 return 1
 
             logger.info("Auto-fix operations completed successfully")
-            # If fixes succeeded, return success regardless of initial CI status
+            # If fixes succeeded, return success regardless of initial CI status.
+            # Known limitation (intentional): --fail-on-reviews is not evaluated
+            # on this path — the --fix success path returns before the review gate.
             return 0
 
-        # NEW: Determine exit code based on CI status (only when no fixes attempted)
-        if report.ci_status == CIStatus.FAILED:
-            return 1  # CI failed
-
-        return 0
+        # No fixes attempted — the pure exit-code contract decides (2 -> 1 -> 0).
+        return _exit_code(report, fail_on_reviews)
 
     except (
         Exception

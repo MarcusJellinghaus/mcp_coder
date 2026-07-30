@@ -442,6 +442,12 @@ def add_check_parsers(subparsers: Any) -> None:
         metavar="SECONDS",
         help="Max seconds to wait for PR to appear (default: 600) (only used with --wait-for-pr)",
     )
+    branch_status_parser.add_argument(
+        "--fail-on-reviews",
+        action="store_true",
+        help="Exit non-zero unless PR reviews are proven clean; also renders the "
+        "Review Gate header (default: off = informational)",
+    )
 
     # check file-size command
     file_size_parser = check_subparsers.add_parser(

@@ -686,14 +686,17 @@ mcp-coder check branch-status [OPTIONS]
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--execution-dir PATH` - Working directory for Claude subprocess
+- `--fail-on-reviews` - Exit non-zero unless PR reviews are proven clean; also renders the Review Gate header (default: off = informational)
 
 #### Exit Codes
 
 | Code | Meaning | Description |
 |------|---------|-------------|
 | 0 | Success | CI passed, or graceful scenarios (no CI configured, no wait requested) |
-| 1 | Failure | CI failed, timeout, pending status, or fix operations failed |
-| 2 | Technical Error | Invalid arguments, Git errors, API errors, or unexpected exceptions |
+| 1 | Failure | CI failed, timeout, pending status, or fix operations failed; or (with `--fail-on-reviews`) PR reviews block merge |
+| 2 | Technical Error or Undeterminable | Invalid arguments, Git errors, API errors, unexpected exceptions, missing GitHub token (CI unavailable); or (with `--fail-on-reviews`) PR review state is undeterminable |
+
+> **Known limitation:** `--fail-on-reviews` is not evaluated when `--fix` resolves CI — the `--fix` success path returns before the review gate.
 
 #### Behavior
 
