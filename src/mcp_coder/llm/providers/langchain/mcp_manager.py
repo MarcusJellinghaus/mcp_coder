@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from mcp_coder.llm.providers.langchain.agent import (  # noqa: PLC2701
-    _sanitize_tool_schema,
+    _convert_server_tools,
 )
 
 logger = logging.getLogger(__name__)
@@ -79,9 +79,11 @@ class MCPManager:
     def __init__(
         self,
         server_config: dict[str, dict[str, object]],
+        tool_interceptors: list[Any] | None = None,
     ) -> None:
         self._server_names = list(server_config.keys())
         self._server_config = server_config
+        self._tool_interceptors = tool_interceptors
         self._cached_tools: list[Any] | None = None
         self._client: Any | None = None
         self._tool_counts: dict[str, int] = {}
@@ -141,7 +143,6 @@ class MCPManager:
             List of discovered LangChain-compatible tools from all servers.
         """
         from langchain_mcp_adapters.client import MultiServerMCPClient
-        from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
 
         client = MultiServerMCPClient(cast(Any, self._server_config))
         self._client = client
@@ -149,25 +150,26 @@ class MCPManager:
         tool_counts: dict[str, int] = {}
 
         for server_name, connection in client.connections.items():
-            count = 0
             async with client.session(server_name) as session:
                 raw_tools = await session.list_tools()
-                for tool in raw_tools.tools:
-                    sanitized = _sanitize_tool_schema(tool.inputSchema)
-                    tool = tool.model_copy(update={"inputSchema": sanitized})
-                    lc_tool = convert_mcp_tool_to_langchain_tool(
-                        None,
-                        tool,
-                        connection=connection,
-                        server_name=server_name,
-                    )
+                lc_tools = _convert_server_tools(
+                    raw_tools.tools,
+                    connection,
+                    server_name,
+                    self._tool_interceptors,
+                )
+                # Re-apply canonical-name stamping from the raw MCP tool name
+                # (NOT lc_tool.name) so the stamp stays identical to the
+                # interceptor's f"mcp__{server}__{request.name}" reconstruction.
+                # Order is preserved by the helper, so zip pairs each returned
+                # lc_tool with its source raw tool.
+                for raw_tool, lc_tool in zip(raw_tools.tools, lc_tools, strict=True):
                     lc_tool.metadata = {
                         **(lc_tool.metadata or {}),
-                        "mcp_canonical_name": f"mcp__{server_name}__{tool.name}",
+                        "mcp_canonical_name": f"mcp__{server_name}__{raw_tool.name}",
                     }
                     all_tools.append(lc_tool)
-                    count += 1
-            tool_counts[server_name] = count
+            tool_counts[server_name] = len(lc_tools)
 
         self._tool_counts = tool_counts
         return all_tools

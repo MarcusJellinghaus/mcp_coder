@@ -33,9 +33,9 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: extract `_convert_server_tools()` helper; rewire `run_agent`, `run_agent_stream` (else-branch), and `MCPManager._connect_and_discover`; add pass-through `tool_interceptors` param to `MCPManager.__init__`; preserve launch-error handling + canonical-name stamping; tests first (TDD)
-- [ ] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports) — fix all issues
-- [ ] Commit message prepared: `I2.3 step 2: unify MCP tool-build loops into one interceptor-aware helper`
+- [x] Implementation: extract `_convert_server_tools()` helper; rewire `run_agent`, `run_agent_stream` (else-branch), and `MCPManager._connect_and_discover`; add pass-through `tool_interceptors` param to `MCPManager.__init__`; preserve launch-error handling + canonical-name stamping; tests first (TDD)
+- [x] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports) — fix all issues
+- [x] Commit message prepared: `I2.3 step 2: unify MCP tool-build loops into one interceptor-aware helper`
 
 ### Step 3: Gateway core — turn filter + interceptor + frame builder + deny bridge (D3/D4/D5)
 

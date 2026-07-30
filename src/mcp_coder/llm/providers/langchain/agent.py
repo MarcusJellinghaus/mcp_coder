@@ -281,6 +281,54 @@ def _sanitize_tool_schema(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
+def _convert_server_tools(
+    raw_tools: list[Any],
+    connection: Any,
+    server_name: str,
+    tool_interceptors: list[Any] | None = None,
+) -> list[Any]:
+    """Convert one server's raw MCP tools to LangChain tools.
+
+    Single home for the ``sanitize -> model_copy -> convert`` inner loop shared
+    by ``run_agent``, ``run_agent_stream`` (else-branch), and
+    ``MCPManager._connect_and_discover``. Optional ``tool_interceptors`` are
+    forwarded verbatim to ``convert_mcp_tool_to_langchain_tool`` (the injection
+    point for host-side permission enforcement, issue I2.3).
+
+    No canonical-name metadata stamping is done here — that stays the caller's
+    job so the stamp can remain pinned to the raw MCP tool name rather than the
+    (possibly renamed) LangChain tool name.
+
+    Args:
+        raw_tools: Raw MCP tool objects from ``session.list_tools()``.
+        connection: The MCP connection object for this server.
+        server_name: Name of the MCP server the tools belong to.
+        tool_interceptors: Optional call-level interceptors forwarded to
+            ``convert_mcp_tool_to_langchain_tool``. ``None`` means no
+            enforcement (the default at every non-manager site).
+
+    Returns:
+        LangChain tools in the same order as *raw_tools*.
+    """
+    from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
+
+    lc_tools: list[Any] = []
+    for tool in raw_tools:
+        sanitized = _sanitize_tool_schema(tool.inputSchema)
+        # Shallow copy to avoid mutating the original MCP tool
+        tool = tool.model_copy(update={"inputSchema": sanitized})
+        lc_tools.append(
+            convert_mcp_tool_to_langchain_tool(
+                None,
+                tool,
+                connection=connection,
+                server_name=server_name,
+                tool_interceptors=tool_interceptors,
+            )
+        )
+    return lc_tools
+
+
 async def run_agent(
     question: str,
     chat_model: BaseChatModel,
@@ -323,7 +371,6 @@ async def run_agent(
         messages_from_dict,
     )
     from langchain_mcp_adapters.client import MultiServerMCPClient
-    from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
     from langgraph.prebuilt import create_react_agent
 
     server_config = _load_mcp_server_config(mcp_config_path, env_vars)
@@ -338,17 +385,9 @@ async def run_agent(
         try:
             async with client.session(server_name) as session:
                 raw_tools = await session.list_tools()
-                for tool in raw_tools.tools:
-                    sanitized = _sanitize_tool_schema(tool.inputSchema)
-                    # Shallow copy to avoid mutating the original MCP tool
-                    tool = tool.model_copy(update={"inputSchema": sanitized})
-                    lc_tool = convert_mcp_tool_to_langchain_tool(
-                        None,
-                        tool,
-                        connection=connection,
-                        server_name=server_name,
-                    )
-                    all_tools.append(lc_tool)
+                all_tools.extend(
+                    _convert_server_tools(raw_tools.tools, connection, server_name)
+                )
         except (FileNotFoundError, PermissionError) as exc:
             raise LLMMCPLaunchError(
                 _format_launch_error(
@@ -487,7 +526,6 @@ async def run_agent_stream(
         all_tools = tools
     else:
         from langchain_mcp_adapters.client import MultiServerMCPClient
-        from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
 
         server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
@@ -498,16 +536,9 @@ async def run_agent_stream(
             try:
                 async with client.session(server_name) as session:
                     raw_tools = await session.list_tools()
-                    for tool in raw_tools.tools:
-                        sanitized = _sanitize_tool_schema(tool.inputSchema)
-                        tool = tool.model_copy(update={"inputSchema": sanitized})
-                        lc_tool = convert_mcp_tool_to_langchain_tool(
-                            None,
-                            tool,
-                            connection=connection,
-                            server_name=server_name,
-                        )
-                        all_tools.append(lc_tool)
+                    all_tools.extend(
+                        _convert_server_tools(raw_tools.tools, connection, server_name)
+                    )
             except (FileNotFoundError, PermissionError) as exc:
                 raise LLMMCPLaunchError(
                     _format_launch_error(
