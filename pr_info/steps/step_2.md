@@ -7,7 +7,10 @@ Depends on Step 1 (shim). One commit.
 - `src/mcp_coder/cli/parsers.py` — add the flag (branch-status subparser).
 - `src/mcp_coder/cli/commands/check_branch_status.py` — new `_exit_code` helper;
   drop `replace()` enrichment; pass `fail_on_reviews` to the formatters; use the
-  helper for the final exit code.
+  helper for the final exit code; update the `execute_check_branch_status`
+  docstring's exit-code wording.
+- `docs/cli-reference.md` — document `--fail-on-reviews` and the widened
+  exit-code-2 meaning (`### check branch-status`).
 - `tests/cli/commands/` — exit-contract table + parser test (extend an existing
   `test_check_branch_status*.py` or add a focused module).
 
@@ -96,6 +99,19 @@ Command wiring (extend existing tests, mock `collect_branch_status`):
 - assert the dropped `replace()` enrichment is gone (report PR fields come
   straight from the mocked `collect_branch_status`).
 
+## DOCS
+
+- `docs/cli-reference.md`, `### check branch-status`:
+  - **Options** list — add a bullet:
+    `` `--fail-on-reviews` - Exit non-zero unless PR reviews are proven clean; also renders the Review Gate header (default: off = informational) ``.
+  - **Exit Codes** table — widen the code-`2` row: it now also means
+    "reviews undeterminable" (`--fail-on-reviews` + `pr_feedback_undeterminable`),
+    not only a technical error. Keep the existing technical-error meaning; append
+    the new one.
+- `check_branch_status.py` — update the `execute_check_branch_status` docstring
+  `Returns:` line (currently "2 for technical error") to reflect the new
+  undeterminable meaning (e.g. "2 for technical error or undeterminable reviews").
+
 ## CHECKS
 
 pylint / pytest (parallel, unit-only exclusions) / mypy — all pass.
@@ -119,6 +135,10 @@ pylint / pytest (parallel, unit-only exclusions) / mypy — all pass.
 > 3. Write the `_exit_code` contract-table tests (including the FAILED +
 >    undeterminable precedence case), the parser test, and the wiring assertions
 >    in the step. TDD: tests first.
+> 4. Update the docs per the step's DOCS section: add `--fail-on-reviews` to the
+>    `check branch-status` options list in `docs/cli-reference.md`, widen the
+>    exit-code-2 row to also mean "reviews undeterminable", and fix the
+>    `execute_check_branch_status` docstring's "2 for technical error" wording.
 >
 > Use MCP tools only. Run pylint, pytest (parallel, unit-only exclusions), mypy;
 > all must pass. Produce exactly one commit.

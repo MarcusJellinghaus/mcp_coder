@@ -55,11 +55,15 @@ must succeed. If it fails, the venv holds the older #175 build — upgrade
    `collect_branch_status` fills the PR fields itself. `--wait-for-pr` stays as a
    pure gate (block-until-PR, exit 1 on timeout).
 
-5. **Review workflows see reviewer feedback.** Each round calls
-   `collect_branch_status(project_dir)` once (fresh, so resolved comments drop
-   out) and threads `report.pr_feedback_text` (None-guarded) into **both** the
+5. **Review workflows see reviewer feedback (implementation lane only).** A new
+   `ReviewConfig.thread_pr_feedback` flag (`True` for `review-implementation`,
+   `False` for `review-plan`, mirroring the existing `inject_base_branch` /
+   `run_after_steps` split) gates the feed. Each **implementation-lane** round
+   calls `collect_branch_status(project_dir)` once (fresh, so resolved comments
+   drop out) and threads `pr_feedback_text` (None-guarded) into **both** the
    fresh reviewer prompt (wrapped in a framing note so the reviewer treats
-   comments as actionable findings) and the supervisor context (raw append).
+   comments as actionable findings) and the supervisor context (raw append). The
+   **plan lane** skips the `collect_branch_status` GitHub call entirely.
 
 ### Exit-code contract (CLI) — evaluated in order
 
@@ -88,10 +92,15 @@ must succeed. If it fails, the venv holds the older #175 build — upgrade
 - `src/mcp_coder/cli/parsers.py` — add `--fail-on-reviews` (Step 2)
 - `src/mcp_coder/cli/commands/check_branch_status.py` — `_exit_code` helper, drop
   `replace()` enrichment, pass `fail_on_reviews` to formatters (Step 2)
-- `src/mcp_coder/workflows/review/core.py` — per-round `collect_branch_status`,
-  `_pr_feedback_note` helper, thread into reviewer + supervisor (Step 3)
+- `src/mcp_coder/workflows/review/config.py` — new `thread_pr_feedback` flag on
+  `ReviewConfig` (Step 3)
+- `src/mcp_coder/workflows/review/core.py` — per-round `collect_branch_status`
+  (gated on `thread_pr_feedback`), `_pr_feedback_note` helper, thread into
+  reviewer + supervisor (Step 3)
 - `src/mcp_coder/workflows/review/reviewer.py` — new `pr_note` kwarg on
   `_run_reviewer` (Step 3)
+- `docs/cli-reference.md` — `--fail-on-reviews` option + widened exit-code-2
+  meaning (Step 2)
 
 ### Deleted (src)
 - `src/mcp_coder/checks/ci_log_parser.py` (Step 1)
@@ -101,8 +110,10 @@ must succeed. If it fails, the venv holds the older #175 build — upgrade
   re-export assertions (Step 1)
 - `tests/cli/commands/` — `_exit_code` contract table + `--fail-on-reviews`
   parser test (Step 2)
-- `tests/workflows/review/` — `_pr_feedback_note` unit test + core threading
-  test (Step 3)
+- `tests/workflows/review/test_reviewer.py` (`_run_reviewer` `pr_note` kwarg),
+  `test_config.py` (new `thread_pr_feedback` flag), `test_core.py` (plan lane) +
+  `test_core_after_steps.py` (implementation lane) — `_pr_feedback_note` unit +
+  lane-gated core threading (Step 3)
 
 ### Deleted (tests)
 - `tests/checks/test_ci_log_parser.py` (Step 1)
@@ -125,5 +136,7 @@ Decisions table are upstream (#244) concerns and are **out of scope** here.
   test; delete `test_branch_status_pr_fields.py`; recreate `test_branch_status.py`.
 - **Step 2** — CLI: `--fail-on-reviews` flag + `_exit_code` contract + drop
   `replace()` enrichment + pass `fail_on_reviews` to formatters.
-- **Step 3** — Review workflow: per-round `collect_branch_status`,
-  `_pr_feedback_note` framing helper, thread into reviewer + supervisor.
+- **Step 3** — Review workflow (implementation lane only, via
+  `ReviewConfig.thread_pr_feedback`): per-round `collect_branch_status`,
+  `_pr_feedback_note` framing helper, thread into reviewer + supervisor; plan
+  lane skips the GitHub call.

@@ -48,6 +48,11 @@ __all__: List[str] = [
 ]
 ```
 
+> Note: `create_empty_report` is retained in the re-export surface per the
+> issue's Decisions table (its specified re-export surface), even though no
+> mcp-coder caller consumes it directly — this is intentional, not a violation
+> of the "re-export only consumed names" principle.
+
 ## HOW (integration points)
 
 - `checks/__init__.py` imports `collect_branch_status` from `.branch_status` —
