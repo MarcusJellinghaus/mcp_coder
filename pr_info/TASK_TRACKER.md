@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Replace the `branch_status` fork with a shim; delete dead code
+
+See [step_1.md](./steps/step_1.md).
+
+- [ ] Implementation: rewrite `checks/branch_status.py` as a shim; delete `ci_log_parser.py`, `test_ci_log_parser.py`, `test_branch_status_pr_fields.py`; recreate small `test_branch_status.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: CLI — `--fail-on-reviews` flag + pure exit-code contract
+
+See [step_2.md](./steps/step_2.md).
+
+- [ ] Implementation: add `--fail-on-reviews` flag, `_exit_code` helper (2→1→0), drop `replace()` enrichment, pass `fail_on_reviews` to formatters, update docs + docstring
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Review workflow reads PR review feedback (implementation lane only)
+
+See [step_3.md](./steps/step_3.md).
+
+- [ ] Implementation: add `thread_pr_feedback` flag on `ReviewConfig`, `pr_note` kwarg on `_run_reviewer`, `_pr_feedback_note` helper, per-round `collect_branch_status` threading into reviewer + supervisor
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review feedback addressed
+- [ ] PR summary prepared
