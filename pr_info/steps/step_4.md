@@ -9,8 +9,15 @@ unchanged when absent. Enforcement is **config-driven, not gated on `enforce_ski
 ## WHERE
 - `src/mcp_coder/icoder/services/llm_service.py` — `RealLLMService.__init__` / `.stream`.
 - `src/mcp_coder/llm/providers/langchain/mcp_manager.py` — **delete** `filter_tools_by_declaration`.
+- `src/mcp_coder/icoder/ui/app.py` — remove the now-orphaned `permission_warning` branch in
+  `_handle_stream_event` (its **only** producer is being deleted).
 - `tests/llm/test_skill_tool_filter.py` — **delete** (tests the removed helper).
-- `tests/icoder/test_llm_service.py` — update for the gateway path.
+- `tests/icoder/test_llm_service.py` — update for the gateway path (drop `permission_warning`
+  assertions).
+- `tests/icoder/test_app_core.py` — **delete** `test_stream_llm_passes_permission_warning_through`
+  (exercises the removed event path).
+- `tests/icoder/test_app_pilot.py` — **delete** `test_permission_warning_event_renders_message_text`
+  (renders the removed event).
 
 ## WHAT
 ```python
@@ -31,7 +38,12 @@ class RealLLMService:
 - In `stream()`, replace the old `if self._enforce_skill_tools and allowed_tools:` block with the
   gateway path. The `LLMService` Protocol signature is **unchanged** (`allowed_tools` stays; no new
   `frame` param). `FakeLLMService` is untouched.
-- Remove the `permission_warning` event emission (subsumed; not an AC).
+- Remove the `permission_warning` event emission (subsumed; not an AC). Because `RealLLMService` is its
+  **only** producer, clean up the whole path: delete the `permission_warning` branch in
+  `ICoderApp._handle_stream_event` (`ui/app.py`), and delete the two tests that inject a synthetic
+  `permission_warning` event (`test_app_core.py::test_stream_llm_passes_permission_warning_through`,
+  `test_app_pilot.py::test_permission_warning_event_renders_message_text`). Grep for `permission_warning`
+  afterwards to confirm no references remain (production or tests).
 - Verify `filter_tools_by_declaration` has no remaining references (only `llm_service` +
   `test_skill_tool_filter.py`), then delete the function and its test file.
 
@@ -68,7 +80,8 @@ for event in prompt_llm_stream(question, ..., tools=tools, ...):
 
 ## Checks
 Full quality gate green. Confirm `test_skill_tool_filter.py` deletion leaves no dangling imports
-(`lint-imports`, pytest collection).
+(`lint-imports`, pytest collection). Confirm no `permission_warning` references survive in production or
+tests (grep) after removing the emission, the `ui/app.py` branch, and the two synthetic-event tests.
 
 ## Commit
 `I2.3 step 4: enforce never/always at turn level in RealLLMService; drop I1.1 filter`
@@ -79,6 +92,7 @@ Full quality gate green. Confirm `test_skill_tool_filter.py` deletion leaves no 
 > `gateway` parameter to `RealLLMService` and replace the `filter_tools_by_declaration` block in
 > `stream()` with `build_legacy_frame` + `gateway.begin_turn` + `gateway.filter_tools` (translating the
 > already-flowing `allowed_tools` into the frame inline — do NOT add a new `frame` parameter). Remove
-> the `permission_warning` emission, delete `filter_tools_by_declaration` and its test file after
-> confirming no other references. Enforcement must run regardless of `enforce_skill_tools`. Use MCP
+> the `permission_warning` emission plus its now-orphaned consumer (the `_handle_stream_event` branch in
+> `ui/app.py`) and the two synthetic-event tests (`test_app_core.py`, `test_app_pilot.py`), delete
+> `filter_tools_by_declaration` and its test file after confirming no other references. Enforcement must run regardless of `enforce_skill_tools`. Use MCP
 > tools only; all checks pass; one commit.

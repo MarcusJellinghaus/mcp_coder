@@ -54,6 +54,14 @@ class LangchainEnforcementGateway:
 - **D5 via frame base:** `build_legacy_frame` sets `base="none"` when `enforce_skill_tools` else
   `"inherit"`. `"inherit"` = elevation without narrowing (undeclared tools fall through to config);
   `"none"` = narrow undeclared to NEVER. No policy branching lives in the gateway.
+- **Arg-scoped `never` stays visible (Scope requirement).** In M2 the resolver matches arg-predicate
+  rules by server/tool only (`matcher.matches` ignores the predicate — parse-only until I5.4), so a
+  rule like `deny mcp__git__push(command=push)` resolves the *bare* tool to `NEVER`. The turn filter
+  MUST NOT hide such a tool: it hides a tool only when the decision is `NEVER` **and** the tool is
+  unconditionally denied — i.e. the matched rule (`decision.matched_rule`) is absent or its
+  `matcher.arg is None`. When the matched rule carries an arg predicate, the tool stays **visible** and
+  is refused at call level (the interceptor still resolves `NEVER` and denies). Frame-`deny` and
+  `base="none"` sandbox NEVERs have `matched_rule is None` → correctly hidden (unconditional).
 
 ## ALGORITHM
 ```
@@ -63,11 +71,22 @@ matchers = flatten(parse_matcher(tok)[0] for tok in allowed_tools)   # drop pars
 return PermissionFrame(base="none" if enforce_skill_tools else "inherit", allow=tuple(matchers))
 
 # filter_tools  (turn level; never mutates input)
+# Hide ONLY unconditional NEVER. An arg-scoped never (the matched rule's
+# matcher carries an arg predicate) stays visible and is refused at call level
+# (predicate matching is parse-only in M2 -> the tool must not be hidden).
 kept = []
 for tool in tools:
     name = canonical_name_of(tool)
-    if name is None or resolve(name, {}, self._frame, self._config).policy is not Policy.NEVER:
+    if name is None:
         kept.append(tool)
+        continue
+    decision = resolve(name, {}, self._frame, self._config)
+    if decision.policy is not Policy.NEVER:
+        kept.append(tool)
+        continue
+    rule = decision.matched_rule
+    if rule is not None and rule.matcher.arg is not None:
+        kept.append(tool)   # arg-scoped never -> visible, refused at call level
 return kept
 
 # interceptor  (call level)
@@ -79,7 +98,8 @@ return build_deny_tool_message(text, request.name)
 ```
 
 ## DATA
-- `filter_tools` → a **new** `list[Any]` (never the input list); `NEVER` tools dropped.
+- `filter_tools` → a **new** `list[Any]` (never the input list); unconditional `NEVER` tools dropped,
+  arg-scoped `NEVER` tools kept visible.
 - `interceptor` → either the real `MCPToolCallResult` from `handler`, or a deny `ToolMessage`.
 - `begin_turn` stores `frame` on `self._frame` (per-turn holder); `self._config` is immutable.
 
@@ -88,6 +108,9 @@ Turn level (`filter_tools`):
 - `never` tool dropped; `always` and `ask` kept.
 - input list unmodified (identity check: original list still holds all tools → cache-safe).
 - frame-elevated `never` kept: config `deny mcp__s__t`, synthetic frame `allow mcp__s__t` → tool kept.
+- arg-scoped `never` kept **visible**: config `deny mcp__git__push(command=push)`, no frame → resolve
+  returns `NEVER` with a `matched_rule` whose `matcher.arg is not None` → the `mcp__git__push` tool is
+  kept in the filtered list (it is refused later at call level, not hidden).
 - `canonical_name_of` returning `None` → tool kept (non-MCP not hidden).
 Interceptor (fake `request` object with `.server_name`, `.name`, `.args`; fake async `handler`):
 - `always` → `handler` awaited, its result returned (pass-through identity).
