@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator, Protocol, runtime_checkable
 
-from mcp_coder.llm.interface import prompt_llm_stream
-from mcp_coder.llm.providers.langchain.mcp_manager import (
-    filter_tools_by_declaration,
+from mcp_coder.icoder.permissions.gateway import (
+    LangchainEnforcementGateway,
+    build_legacy_frame,
 )
+from mcp_coder.llm.interface import prompt_llm_stream
 from mcp_coder.llm.types import StreamEvent
 
 if TYPE_CHECKING:
@@ -57,6 +58,7 @@ class RealLLMService:
         mcp_manager: MCPManager | None = None,
         project_dir: str | None = None,
         enforce_skill_tools: bool = False,
+        gateway: LangchainEnforcementGateway | None = None,
     ) -> None:
         self._provider = provider
         self._session_id = session_id
@@ -68,6 +70,7 @@ class RealLLMService:
         self._mcp_manager = mcp_manager
         self._project_dir = project_dir
         self._enforce_skill_tools = enforce_skill_tools
+        self._gateway = gateway
 
     def stream(
         self,
@@ -76,32 +79,38 @@ class RealLLMService:
     ) -> Iterator[StreamEvent]:
         """Call prompt_llm_stream() with stored config. Updates session_id from 'done' events.
 
-        When ``enforce_skill_tools`` is set and ``allowed_tools`` is present,
-        the tool list is narrowed host-side to the declared MCP tokens before
-        reaching the injection seam. Filtering operates on a copy, never
-        mutating the manager's shared cache.
+        When a ``gateway`` is present, the declared ``allowed_tools`` tokens are
+        translated into a throwaway per-turn permission frame
+        (:func:`build_legacy_frame`), the frame is installed via
+        ``gateway.begin_turn``, and the manager's tool list is filtered against
+        the resolver (``never`` tools hidden). Enforcement is config-driven and
+        runs regardless of ``enforce_skill_tools`` (the flag only chooses the
+        frame's ``base``). Filtering operates on a copy, never mutating the
+        manager's shared cache.
 
         Args:
             question: The user input to send to the LLM.
             allowed_tools: Declared MCP tool tokens for this turn, or None.
 
         Yields:
-            StreamEvent dicts from the underlying LLM provider. When
-            enforcement drops un-parseable tokens, a synthetic
-            ``permission_warning`` event is yielded before the agent stream.
+            StreamEvent dicts from the underlying LLM provider. A
+            ``permission_warning`` event is yielded for each malformed declared
+            token collected by :func:`build_legacy_frame` (fail-closed: the
+            token is not silently elevated), before the agent stream begins.
         """
         tools = None
         if self._mcp_manager is not None:
             tools = self._mcp_manager.tools()
-            if self._enforce_skill_tools and allowed_tools:
-                filtered, warnings = filter_tools_by_declaration(
-                    list(tools),
-                    self._mcp_manager.canonical_name,
-                    allowed_tools,
+            if self._gateway is not None:
+                frame, warnings = build_legacy_frame(
+                    allowed_tools, self._enforce_skill_tools
                 )
-                tools = filtered
                 for warning in warnings:
                     yield {"type": "permission_warning", "message": warning}
+                self._gateway.begin_turn(frame)
+                tools = self._gateway.filter_tools(
+                    tools, self._mcp_manager.canonical_name
+                )
         for event in prompt_llm_stream(
             question,
             provider=self._provider,

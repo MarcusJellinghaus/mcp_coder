@@ -49,9 +49,9 @@ Detail: [step_3.md](./steps/step_3.md)
 
 Detail: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: add `gateway` param to `RealLLMService`; replace `filter_tools_by_declaration` block in `stream()` with `build_legacy_frame` + `begin_turn` + `filter_tools`; repurpose `permission_warning` emission for malformed tokens; update docstring; delete `filter_tools_by_declaration` + its test file; tests first (TDD)
-- [ ] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports) — fix all issues
-- [ ] Commit message prepared: `I2.3 step 4: enforce never/always at turn level in RealLLMService; drop I1.1 filter`
+- [x] Implementation: add `gateway` param to `RealLLMService`; replace `filter_tools_by_declaration` block in `stream()` with `build_legacy_frame` + `begin_turn` + `filter_tools`; repurpose `permission_warning` emission for malformed tokens; update docstring; delete `filter_tools_by_declaration` + its test file; tests first (TDD)
+- [x] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports) — fix all issues
+- [x] Commit message prepared: `I2.3 step 4: enforce never/always at turn level in RealLLMService; drop I1.1 filter`
 
 ### Step 5: Startup wiring + bypass guard + real-agent integration (D1/D2)
 
