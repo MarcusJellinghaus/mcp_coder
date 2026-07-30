@@ -41,3 +41,34 @@ findings, the supervisor's triage decisions, any user decisions, and the changes
 - `Decisions.md` — new; logs the four review decisions.
 
 **Status**: committed (see commit below). Plan files changed → loop continues with a fresh review round.
+
+---
+
+## Round 2 — 2026-07-30
+
+**Findings** (fresh `/plan_review` engineer subagent, validating the round-1 updates):
+- Updates A–D all applied correctly and internally consistent (summary.md ↔ step files ↔ Decisions.md ↔ real code names). Upstream prerequisite re-confirmed.
+- (1) [correctness] Step 2 instruction "delete the `pr_number`/`pr_url` locals" is **wrong** — those locals still feed the `--wait-for-pr` log lines (`"PR #42 found…"`, multiple-PR warning) that existing tests assert. Following it literally → NameError + failing tests.
+- (2) [missing-test] Step 2 doesn't name the concrete fallout file for the dropped `replace()` enrichment (`test_check_branch_status_pr_waiting.py`).
+- (3) [design] `--fail-on-reviews` is bypassed when `--fix` succeeds (the `--fix` path returns 0 before the review gate).
+- (4) [other] `test_reviewer.py` is a brand-new module, not an extension — informational, already handled by Change D.
+- (5) [formatting] summary.md's `check_branch_status.py` bullet omits the docstring fix — trivial.
+
+**Decisions**:
+- (1) **Accept** — correct Step 2: keep `pr_number`/`pr_url` locals for logging; drop only the report `replace()` enrichment.
+- (2) **Accept** — name `test_check_branch_status_pr_waiting.py` in Step 2 as the file whose enrichment assertions get revised.
+- (4) **No action** — informational; already covered.
+- (5) **Accept** — align summary.md bullet to mention the docstring fix.
+
+**User decisions**:
+- (3) User chose **A** — keep the `--fix` early-return as-is (pre-existing path, out of issue scope; YAGNI/KISS). Add one line to Step 2 documenting the known limitation: `--fail-on-reviews` is not evaluated when `--fix` resolves CI.
+
+**Changes**: applying via `/plan_update` (findings 1, 2, 3A, 5). See engineer report below.
+
+**Changes applied** (via `/plan_update` engineer):
+- `step_2.md` — corrected HOW to keep `pr_number`/`pr_url` locals for `--wait-for-pr` log lines, drop only the `replace()` enrichment; named `tests/cli/commands/test_check_branch_status_pr_waiting.py` as the enrichment-fallout test; added the `--fix`/`--fail-on-reviews` known-limitation note in HOW + the `docs/cli-reference.md` docs task (findings 1, 2, 3A).
+- `summary.md` — `check_branch_status.py` bullet now mentions the docstring update (finding 5).
+- `Decisions.md` — appended round-2 decisions (keep locals; option A `--fix` limitation).
+- Step 2 LLM PROMPT needed no edit — it never instructed deleting the locals.
+
+**Status**: committed (see below). Plan files changed → loop continues with another review round.

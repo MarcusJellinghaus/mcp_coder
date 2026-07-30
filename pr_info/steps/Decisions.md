@@ -46,3 +46,28 @@ Decisions from the tech-lead plan review (findings 1, 2, 3, 5). Applied via
   not required scope.
 - **Plan effect:** Step 3 TESTS section and summary test list name the file
   explicitly; the optional `ci_note` backfill is called out as optional.
+
+## Round-2 plan review
+
+### R2-1 — Keep `pr_number`/`pr_url` locals; drop only the `replace()` enrichment
+
+- **Decided:** Step 2 keeps the `pr_number`/`pr_url` (and `pr_found`) locals in
+  `check_branch_status.py` — they still feed the `--wait-for-pr` log lines
+  (`"PR #%s found (%s). Proceeding..."` and the multiple-PR `"...Using PR #%s."`),
+  which existing tests assert. The **only** thing removed is the post-hoc
+  `replace(report, pr_number=…, pr_url=…)` enrichment (upstream
+  `collect_branch_status` now fills those report fields).
+- **Rationale:** the round-1 wording ("delete the `pr_number`/`pr_url` locals")
+  would cause a NameError and break the log-line assertions.
+- **Plan effect:** Step 2 HOW/TESTS reworded; the concrete test file
+  `tests/cli/commands/test_check_branch_status_pr_waiting.py` named explicitly as
+  the one whose enrichment assertions get revised.
+
+### R2-3 — `--fail-on-reviews` intentionally not evaluated on the `--fix` path (option A)
+
+- **Decided:** Option A — leave the pre-existing `--fix` code path as-is. It
+  returns 0/1 before the review-gate `_exit_code` is evaluated, so
+  `--fail-on-reviews` is not applied when `--fix` resolves CI. Out of scope, KISS.
+- **Plan effect:** Step 2 documents this as a known limitation (in the step text
+  and the `docs/cli-reference.md` docs task); no code change to alter the
+  behaviour.

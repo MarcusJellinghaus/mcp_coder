@@ -91,7 +91,8 @@ must succeed. If it fails, the venv holds the older #175 build — upgrade
 - `src/mcp_coder/checks/branch_status.py` — replaced with shim (Step 1)
 - `src/mcp_coder/cli/parsers.py` — add `--fail-on-reviews` (Step 2)
 - `src/mcp_coder/cli/commands/check_branch_status.py` — `_exit_code` helper, drop
-  `replace()` enrichment, pass `fail_on_reviews` to formatters (Step 2)
+  `replace()` enrichment, pass `fail_on_reviews` to formatters, update the
+  `execute_check_branch_status` docstring (Step 2)
 - `src/mcp_coder/workflows/review/config.py` — new `thread_pr_feedback` flag on
   `ReviewConfig` (Step 3)
 - `src/mcp_coder/workflows/review/core.py` — per-round `collect_branch_status`

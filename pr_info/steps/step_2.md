@@ -12,7 +12,9 @@ Depends on Step 1 (shim). One commit.
 - `docs/cli-reference.md` — document `--fail-on-reviews` and the widened
   exit-code-2 meaning (`### check branch-status`).
 - `tests/cli/commands/` — exit-contract table + parser test (extend an existing
-  `test_check_branch_status*.py` or add a focused module).
+  `test_check_branch_status*.py` or add a focused module); revise
+  `test_check_branch_status_pr_waiting.py` for the dropped `replace()`
+  enrichment.
 
 ## WHAT
 
@@ -39,10 +41,13 @@ def _exit_code(report: BranchStatusReport, fail_on_reviews: bool) -> int:
 In `execute_check_branch_status`:
 - **Drop** the `from dataclasses import replace` import and the
   `if pr_found is not None: report = replace(report, pr_number=…, pr_url=…,
-  pr_found=…)` block — upstream `collect_branch_status` fills the PR fields.
-- Keep the `--wait-for-pr` polling loop as a **pure gate**: keep a single local
-  `pr_found` bool only to `return 1` on timeout; delete the `pr_number`/`pr_url`
-  locals (no longer threaded into the report).
+  pr_found=…)` enrichment block — upstream `collect_branch_status` fills the PR
+  fields. This is the **only** thing removed from the PR-discovery path.
+- Keep the `--wait-for-pr` polling loop as a **pure gate**: keep the `pr_found`
+  bool (to `return 1` on timeout). **Keep the `pr_number`/`pr_url` locals too** —
+  they still feed the `"PR #%s found (%s). Proceeding..."` and the multiple-PR
+  `"...Using PR #%s."` log lines (asserted by existing tests). They are simply no
+  longer threaded into the report.
 - Formatter call becomes (pass the flag unconditionally):
   ```python
   output = (
@@ -61,6 +66,10 @@ In `execute_check_branch_status`:
       ... existing fix path (returns 0 or 1) ...
   return _exit_code(report, args.fail_on_reviews)
   ```
+- **Known limitation (intentional, out of scope):** `--fail-on-reviews` is not
+  evaluated when `--fix` resolves CI — the pre-existing `--fix` path returns 0/1
+  before the review gate. Left as-is per KISS; documentation only, no behaviour
+  change.
 
 ## ALGORITHM (`_exit_code`)
 
@@ -94,10 +103,15 @@ Parser test:
 - Parsing `check branch-status --fail-on-reviews` sets `args.fail_on_reviews is True`;
   default is `False`.
 
-Command wiring (extend existing tests, mock `collect_branch_status`):
+Command wiring — revise
+`tests/cli/commands/test_check_branch_status_pr_waiting.py` (it imports
+`dataclasses.replace` and asserts the enrichment path + the `"PR #42 found"` log
+lines); mock `collect_branch_status`:
 - assert the formatter is called with `fail_on_reviews=...`;
 - assert the dropped `replace()` enrichment is gone (report PR fields come
-  straight from the mocked `collect_branch_status`).
+  straight from the mocked `collect_branch_status`);
+- keep the `"PR #%s found"` / multiple-PR log assertions green — the
+  `pr_number`/`pr_url` locals remain for logging.
 
 ## DOCS
 
@@ -108,6 +122,8 @@ Command wiring (extend existing tests, mock `collect_branch_status`):
     "reviews undeterminable" (`--fail-on-reviews` + `pr_feedback_undeterminable`),
     not only a technical error. Keep the existing technical-error meaning; append
     the new one.
+  - **Known limitation** — note that `--fail-on-reviews` is not evaluated when
+    `--fix` resolves CI (the `--fix` path returns before the review gate).
 - `check_branch_status.py` — update the `execute_check_branch_status` docstring
   `Returns:` line (currently "2 for technical error") to reflect the new
   undeterminable meaning (e.g. "2 for technical error or undeterminable reviews").
