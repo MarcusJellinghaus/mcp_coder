@@ -7,9 +7,9 @@ from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytest
+from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
-from mcp_coder.workflow_utils.task_tracker import TaskTrackerStatus
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:

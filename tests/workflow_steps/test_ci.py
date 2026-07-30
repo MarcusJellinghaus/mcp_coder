@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.checks.branch_status import truncate_ci_details
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflow_steps.ci import (
@@ -363,44 +362,3 @@ class TestRunCiFixAbsorbsLlmFailures:
 
         result = _run_ci_fix(_make_config(), "problem", fix_attempt=0)
         assert result is False
-
-
-class TestTruncateCiDetails:
-    """Tests for truncate_ci_details function (shared truncation logic)."""
-
-    def test_short_log_returned_unchanged(self) -> None:
-        """Logs under 300 lines should be returned as-is."""
-        log = "\n".join([f"Line {i}" for i in range(200)])
-
-        result = truncate_ci_details(log)
-
-        assert result == log
-
-    def test_exactly_300_lines_returned_unchanged(self) -> None:
-        """Logs of exactly 300 lines should be returned as-is."""
-        log = "\n".join([f"Line {i}" for i in range(300)])
-
-        result = truncate_ci_details(log)
-
-        assert result == log
-
-    def test_long_log_truncated_to_first_10_last_290(self) -> None:
-        """Logs over 300 lines should have first 10 + last 290 lines."""
-        log = "\n".join([f"Line {i}" for i in range(400)])
-
-        result = truncate_ci_details(log)
-
-        # Should have 300 lines + truncation marker
-        assert "Line 0" in result  # First line preserved
-        assert "Line 9" in result  # Line 10 preserved (0-indexed)
-        assert "Line 399" in result  # Last line preserved
-        assert "Line 110" in result  # From last 290 (400-290=110)
-        assert "Line 10" not in result  # Should be truncated
-        assert "Line 109" not in result  # Should be truncated
-        assert "..." in result or "[truncated]" in result.lower()
-
-    def test_empty_log_returns_empty(self) -> None:
-        """Empty log should return empty string."""
-        result = truncate_ci_details("")
-
-        assert result == ""

@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 See [step_1.md](./steps/step_1.md).
 
-- [ ] Implementation: rewrite `checks/branch_status.py` as a shim; delete `ci_log_parser.py`, `test_ci_log_parser.py`, `test_branch_status_pr_fields.py`; recreate small `test_branch_status.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rewrite `checks/branch_status.py` as a shim; delete `ci_log_parser.py`, `test_ci_log_parser.py`, `test_branch_status_pr_fields.py`; recreate small `test_branch_status.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: CLI — `--fail-on-reviews` flag + pure exit-code contract
 
