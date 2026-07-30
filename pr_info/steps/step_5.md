@@ -89,7 +89,11 @@ Integration (`@pytest.mark.langchain_integration`):
   `convert_mcp_tool_to_langchain_tool(None, fake_mcp_tool, connection=..., tool_interceptors=[gate.interceptor])`
   for an in-process/fake MCP tool; a config denying it → invoking the tool yields a
   `ToolMessage(status="error")` and does **not** raise; an `always` tool returns the same result as with
-  no gateway.
+  no gateway. **End-to-end canonical-identity assertion (one line):** capture the `request` the real
+  interceptor receives and assert the turn-level stamp (`metadata["mcp_canonical_name"]` /
+  `MCPManager.canonical_name(tool)`) equals the interceptor-reconstructed
+  `f"mcp__{server}__{request.name}"` — turning the turn/call identity assumption into a guarded fact
+  through the real `convert_...` + interceptor path.
 
 ## Checks
 Full quality gate green. Run the integration test explicitly:

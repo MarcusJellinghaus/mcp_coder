@@ -44,9 +44,14 @@ class MCPManager:
   `None`).
 - `MCPManager.__init__`: store `self._tool_interceptors = tool_interceptors`.
 - `MCPManager._connect_and_discover`: replace its inline loop with
-  `_convert_server_tools(raw.tools, connection, server_name, self._tool_interceptors)`, then keep the
-  existing canonical-name metadata stamping (`lc_tool.metadata["mcp_canonical_name"] =
-  f"mcp__{server_name}__{lc_tool.name}"`) on each returned tool.
+  `_convert_server_tools(raw.tools, connection, server_name, self._tool_interceptors)`, then re-apply
+  the existing canonical-name metadata stamping from the **raw MCP tool name** — pair each returned
+  lc_tool with its source `raw.tools[i]` (order is preserved by the helper) and set
+  `lc_tool.metadata["mcp_canonical_name"] = f"mcp__{server_name}__{raw_tool.name}"`. The stamp stays
+  bare-MCP-name-based (identical to the interceptor's `f"mcp__{server}__{request.name}"`
+  reconstruction), **not** `lc_tool.name`. The two coincide today, but stamping from `lc_tool.name`
+  would silently break the turn-vs-call canonical-identity invariant if a future `convert_...` ever
+  renames the tool.
 
 ## ALGORITHM (`_convert_server_tools`)
 ```
@@ -73,10 +78,16 @@ return lc_tools
   assert stored; (with `_connect_and_discover` patched) assert the helper receives it.
 - `test_run_agent_stream_inline_loader_passes_no_interceptors` — the else-branch path uses the helper
   with `tool_interceptors=None`.
-- `test_connect_and_discover_stamps_canonical_name` (**regression** — the stamping source moves from
-  the raw MCP tool to `lc_tool.name` in the unified path) — after `_connect_and_discover`, each tool's
-  `metadata["mcp_canonical_name"]` equals `f"mcp__{server_name}__{lc_tool.name}"`, unchanged by the
-  refactor. Guards the turn/call canonical-identity invariant against the stamping-source micro-change.
+- `test_connect_and_discover_stamps_canonical_name_from_raw_mcp_name` (**regression — non-tautological**)
+  — patch `convert_mcp_tool_to_langchain_tool` with a controllable mock whose returned lc_tool's `.name`
+  **differs** from the raw MCP tool's name (e.g. raw MCP tool `name="foo"` → returned lc_tool
+  `.name = "renamed_foo"`). After `_connect_and_discover`, assert `metadata["mcp_canonical_name"]`
+  equals the **literal, raw-name-derived** `"mcp__{server_name}__foo"` — NOT `"...__renamed_foo"`.
+  Because the expected value is pinned to the raw MCP name (a *different* source than `lc_tool.name`),
+  the test genuinely fails if stamping ever drifts to `lc_tool.name`; deriving expected from
+  `lc_tool.name` would have been tautological and could never catch that drift. Guards the
+  turn-vs-call canonical-identity invariant (the turn-level stamp must equal the interceptor's
+  `f"mcp__{server}__{request.name}"` reconstruction) that a security-relevant AC depends on.
 
 ## Checks
 Full quality gate (pylint / mypy / pytest fast / ruff / lint-imports) green.

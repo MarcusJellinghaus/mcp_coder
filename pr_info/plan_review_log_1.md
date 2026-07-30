@@ -41,3 +41,13 @@ Supervised plan review. Base branch: main. Branch up to date (no rebase needed).
   icoder.py / agent.py entries in Files-modified; marked the two `permission_warning` render tests as
   kept; updated the Step-5 step-plan line and the requirements-traceability list.
 **Status**: committed
+
+## Round 2 — 2026-07-30
+**Findings**: Round-1 fixes all verified landed correctly (malformed-token warning preserved; early capability check; conftest-mock guard; call-level skill-elevated-never test; site-2 bypass guard; canonical-name regression test; summary traceability). Two minor test-strengthening items remained: (a1) Step 2 canonical-name regression test was tautological (expected stamp derived from `lc_tool.name`); (a2) integration test could assert turn/call identity end-to-end.
+**Decisions**: Accept both test-strengthening items (a1 guards a security-relevant AC; a2 cheap end-to-end hardening). No design/requirements questions. No settled decisions reopened.
+**User decisions**: None this round.
+**Changes**:
+- `pr_info/steps/step_2.md` (a1): rewrote the canonical-name regression test to be non-tautological — the mock `convert_...` now returns a renamed lc_tool (`.name` differs from the raw MCP name) and the expected stamp is pinned to the literal raw-name-derived `mcp__{server}__foo`, so the test fails if stamping ever drifts to `lc_tool.name`. Also corrected the HOW stamping line back to the raw MCP tool name (`f"mcp__{server_name}__{raw_tool.name}"`, matching current `main` and the interceptor's `request.name` reconstruction) — the round-1 HOW had drifted it to `lc_tool.name`, which the strengthened test now forbids.
+- `pr_info/steps/step_5.md` (a2): added a one-line end-to-end canonical-identity assertion to the `langchain_integration` real-agent test — the real turn-level stamp (`metadata["mcp_canonical_name"]` / `MCPManager.canonical_name`) must equal the interceptor-reconstructed `f"mcp__{server}__{request.name}"`, turning the turn/call identity assumption into a guarded fact through the real convert + interceptor path.
+- `pr_info/steps/summary.md`: updated two requirements-traceability lines to match — the turn-vs-call canonical-identity AC now also maps to Step 5 (end-to-end), and the Step-2 regression line reframed to "stamp stays raw-MCP-name-based (not `lc_tool.name`)".
+**Status**: committed

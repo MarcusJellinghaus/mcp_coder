@@ -149,7 +149,8 @@ for malformed tokens instead of dropping them silently.
 - AC D2 "config loaded + wired; no-config → ALWAYS default" → Step 5.
 - AC D1 "single injection point + bypass guard (no un-instrumented convert site reachable from
   iCoder)" → Steps 2 (helper), 5 (guard — **both** site 2 stream-only + site 3 inline-loader).
-- AC "same canonical identity turn vs call; two servers same bare name" → Step 3.
+- AC "same canonical identity turn vs call; two servers same bare name" → Step 3, Step 5
+  (end-to-end assertion: real turn-level stamp equals interceptor `f"mcp__{server}__{request.name}"`).
 - AC "`_cached_tools` never mutated" → Step 4.
 - AC "skill-elevated `never` stays callable (synthetic frame)" → Step 3 (turn-level visibility +
   **call-level interceptor** callable test).
@@ -158,5 +159,7 @@ for malformed tokens instead of dropping them silently.
   Step 1 (reusable guarded helper), Step 5 (early startup call + ordering test).
 - USER DECISION "malformed skill token → warning surfaced, tool not silently elevated" → Step 3
   (`build_legacy_frame` collects warnings), Step 4 (`permission_warning` emission + test).
-- Regression "canonical-name stamp unchanged after unification" → Step 2.
+- Regression "canonical-name stamp stays raw-MCP-name-based after unification (not `lc_tool.name`)" →
+  Step 2 (non-tautological test: mock `convert_...` returns a renamed lc_tool; expected pinned to the
+  raw-name literal).
 - AC "unit + integration tests; pylint/mypy/ruff/import-linter green" → all steps.
