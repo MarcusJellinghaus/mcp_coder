@@ -7,17 +7,18 @@ Wire the gateway's turn filter into `RealLLMService.stream()`, replacing I1.1's
 unchanged when absent. Enforcement is **config-driven, not gated on `enforce_skill_tools`**.
 
 ## WHERE
-- `src/mcp_coder/icoder/services/llm_service.py` — `RealLLMService.__init__` / `.stream`.
+- `src/mcp_coder/icoder/services/llm_service.py` — `RealLLMService.__init__` / `.stream` (+ docstring).
 - `src/mcp_coder/llm/providers/langchain/mcp_manager.py` — **delete** `filter_tools_by_declaration`.
-- `src/mcp_coder/icoder/ui/app.py` — remove the now-orphaned `permission_warning` branch in
-  `_handle_stream_event` (its **only** producer is being deleted).
+- `src/mcp_coder/icoder/ui/app.py` — **KEEP** the `permission_warning` branch in `_handle_stream_event`
+  (it now renders malformed-token warnings from `build_legacy_frame`; new producer, same event). No
+  change unless the message text needs tweaking.
 - `tests/llm/test_skill_tool_filter.py` — **delete** (tests the removed helper).
-- `tests/icoder/test_llm_service.py` — update for the gateway path (drop `permission_warning`
-  assertions).
-- `tests/icoder/test_app_core.py` — **delete** `test_stream_llm_passes_permission_warning_through`
-  (exercises the removed event path).
-- `tests/icoder/test_app_pilot.py` — **delete** `test_permission_warning_event_renders_message_text`
-  (renders the removed event).
+- `tests/icoder/test_llm_service.py` — update for the gateway path; keep/adjust a `permission_warning`
+  assertion covering the malformed-token path (see TDD tests).
+- `tests/icoder/test_app_core.py` — **KEEP** `test_stream_llm_passes_permission_warning_through`
+  (the event path is preserved, now fed by malformed tokens).
+- `tests/icoder/test_app_pilot.py` — **KEEP** `test_permission_warning_event_renders_message_text`
+  (the event still renders).
 
 ## WHAT
 ```python
@@ -38,12 +39,15 @@ class RealLLMService:
 - In `stream()`, replace the old `if self._enforce_skill_tools and allowed_tools:` block with the
   gateway path. The `LLMService` Protocol signature is **unchanged** (`allowed_tools` stays; no new
   `frame` param). `FakeLLMService` is untouched.
-- Remove the `permission_warning` event emission (subsumed; not an AC). Because `RealLLMService` is its
-  **only** producer, clean up the whole path: delete the `permission_warning` branch in
-  `ICoderApp._handle_stream_event` (`ui/app.py`), and delete the two tests that inject a synthetic
-  `permission_warning` event (`test_app_core.py::test_stream_llm_passes_permission_warning_through`,
-  `test_app_pilot.py::test_permission_warning_event_renders_message_text`). Grep for `permission_warning`
-  afterwards to confirm no references remain (production or tests).
+- **Repurpose (not remove) the `permission_warning` emission (USER DECISION).** `build_legacy_frame`
+  now returns `(frame, warnings)`; emit one `permission_warning` event per malformed-token warning
+  **before** setting the turn frame. The producer moves from I1.1's filter to the frame builder, but
+  the event, the `ui/app.py` render branch, and the two rendering tests are **kept**. This preserves a
+  user-visible signal for un-parseable skill tokens (which stay fail-closed — not silently elevated).
+- **Docstring Boy-Scout (`stream()`):** update the docstring so it no longer says warnings come from
+  "un-parseable tokens dropped by enforcement"; describe the new behaviour — a `permission_warning`
+  event is yielded for each malformed declared token collected by `build_legacy_frame`, before the
+  agent stream.
 - Verify `filter_tools_by_declaration` has no remaining references (only `llm_service` +
   `test_skill_tool_filter.py`), then delete the function and its test file.
 
@@ -53,7 +57,9 @@ tools = None
 if self._mcp_manager is not None:
     tools = self._mcp_manager.tools()                 # cached list — read only
     if self._gateway is not None:
-        frame = build_legacy_frame(allowed_tools, self._enforce_skill_tools)
+        frame, warnings = build_legacy_frame(allowed_tools, self._enforce_skill_tools)
+        for msg in warnings:                          # surface malformed tokens (repurposed path)
+            yield {"type": "permission_warning", "message": msg}
         self._gateway.begin_turn(frame)
         tools = self._gateway.filter_tools(tools, self._mcp_manager.canonical_name)
 for event in prompt_llm_stream(question, ..., tools=tools, ...):
@@ -75,13 +81,18 @@ for event in prompt_llm_stream(question, ..., tools=tools, ...):
   the full set.
 - `test_stream_sets_per_turn_frame` — with `allowed_tools` set, `gateway.begin_turn` receives a
   `PermissionFrame`; with `allowed_tools=None`, it receives `None`.
+- `test_stream_emits_permission_warning_for_malformed_token` (USER DECISION) — `allowed_tools`
+  containing an un-parseable token → `stream()` yields a `permission_warning` event carrying the
+  warning text, AND the malformed token is not elevated (the tool is not force-kept via the frame).
+  Confirms the repurposed warning path surfaces the signal instead of dropping it silently.
 - Patch `prompt_llm_stream` to a canned generator in these tests; use a fake mcp_manager exposing
   `tools()` + `canonical_name`.
 
 ## Checks
 Full quality gate green. Confirm `test_skill_tool_filter.py` deletion leaves no dangling imports
-(`lint-imports`, pytest collection). Confirm no `permission_warning` references survive in production or
-tests (grep) after removing the emission, the `ui/app.py` branch, and the two synthetic-event tests.
+(`lint-imports`, pytest collection). Confirm the `permission_warning` path still works end-to-end:
+the `ui/app.py` render branch and the two rendering tests remain, now fed by malformed-token warnings
+from `build_legacy_frame`.
 
 ## Commit
 `I2.3 step 4: enforce never/always at turn level in RealLLMService; drop I1.1 filter`
@@ -91,8 +102,10 @@ tests (grep) after removing the emission, the `ui/app.py` branch, and the two sy
 > `pr_info/steps/step_4.md`. Following TDD, first update `tests/icoder/test_llm_service.py`, then add a
 > `gateway` parameter to `RealLLMService` and replace the `filter_tools_by_declaration` block in
 > `stream()` with `build_legacy_frame` + `gateway.begin_turn` + `gateway.filter_tools` (translating the
-> already-flowing `allowed_tools` into the frame inline — do NOT add a new `frame` parameter). Remove
-> the `permission_warning` emission plus its now-orphaned consumer (the `_handle_stream_event` branch in
-> `ui/app.py`) and the two synthetic-event tests (`test_app_core.py`, `test_app_pilot.py`), delete
-> `filter_tools_by_declaration` and its test file after confirming no other references. Enforcement must run regardless of `enforce_skill_tools`. Use MCP
+> already-flowing `allowed_tools` into the frame inline — do NOT add a new `frame` parameter).
+> `build_legacy_frame` now returns `(frame, warnings)`: **repurpose** (do NOT delete) the
+> `permission_warning` emission to yield one event per malformed-token warning before setting the
+> frame, keeping the `ui/app.py` branch and the two rendering tests. Update the `stream()` docstring to
+> describe this new warning behaviour. Delete `filter_tools_by_declaration` and its test file after
+> confirming no other references. Enforcement must run regardless of `enforce_skill_tools`. Use MCP
 > tools only; all checks pass; one commit.

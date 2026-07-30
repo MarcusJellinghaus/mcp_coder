@@ -22,8 +22,14 @@ def build_deny_tool_message(text: str, name: str) -> Any:
 def build_legacy_frame(
     allowed_tools: tuple[str, ...] | None,
     enforce_skill_tools: bool,
-) -> PermissionFrame | None:
-    """Throwaway model-C frame from declared tokens (D4). None when no tokens."""
+) -> tuple[PermissionFrame | None, list[str]]:
+    """Throwaway model-C frame from declared tokens (D4).
+
+    Returns ``(frame, warnings)``. ``frame`` is ``None`` when there are no
+    tokens. Per-token parse failures are **collected** into ``warnings``
+    (fail-closed: the un-parseable token contributes no matcher, so it is not
+    silently elevated) — the caller surfaces them (Step 4). Do NOT drop them.
+    """
 
 class LangchainEnforcementGateway:
     def __init__(self, config: PermissionConfig) -> None: ...
@@ -65,10 +71,15 @@ class LangchainEnforcementGateway:
 
 ## ALGORITHM
 ```
-# build_legacy_frame
-if not allowed_tools: return None
-matchers = flatten(parse_matcher(tok)[0] for tok in allowed_tools)   # drop parse errors
-return PermissionFrame(base="none" if enforce_skill_tools else "inherit", allow=tuple(matchers))
+# build_legacy_frame  (collect parse failures — do NOT silently drop)
+if not allowed_tools: return None, []
+matchers, warnings = [], []
+for tok in allowed_tools:
+    parsed, errors = parse_matcher(tok)      # ([], [reason]) on failure (fail-closed)
+    matchers.extend(parsed)
+    warnings.extend(errors)                  # collected for the gateway to surface
+frame = PermissionFrame(base="none" if enforce_skill_tools else "inherit", allow=tuple(matchers))
+return frame, warnings
 
 # filter_tools  (turn level; never mutates input)
 # Hide ONLY unconditional NEVER. An arg-scoped never (the matched rule's
@@ -102,6 +113,8 @@ return build_deny_tool_message(text, request.name)
   arg-scoped `NEVER` tools kept visible.
 - `interceptor` → either the real `MCPToolCallResult` from `handler`, or a deny `ToolMessage`.
 - `begin_turn` stores `frame` on `self._frame` (per-turn holder); `self._config` is immutable.
+- `build_legacy_frame` → `(PermissionFrame | None, list[str] warnings)`; warnings hold every
+  un-parseable token's reason (surfaced by the caller in Step 4, not dropped).
 
 ## TDD tests (write first)
 Turn level (`filter_tools`):
@@ -116,13 +129,21 @@ Interceptor (fake `request` object with `.server_name`, `.name`, `.args`; fake a
 - `always` → `handler` awaited, its result returned (pass-through identity).
 - `never` → `handler` **not** awaited; returns a `ToolMessage` with `status == "error"` and the never text.
 - `ask` (config `ask`) → deny with the approval text; resolver still reported `AFTER_APPROVAL`.
+- **skill-elevated `never` stays CALLABLE (frame-first, call level):** config `deny mcp__s__t`,
+  synthetic frame `allow mcp__s__t`, `begin_turn(frame)` → interceptor **awaits** the real `handler`
+  and returns its result (resolves `ALWAYS`), i.e. NOT denied. Covers the callable half of the
+  frame-first AC (turn-level visibility is covered separately under `filter_tools`).
 - canonical reconstruction: `server_name="s"`, `name="t"` resolves the rule matching `mcp__s__t`.
 - two servers, same bare tool name: `mcp__a__run` denied while `mcp__b__run` allowed (disambiguation).
 - `begin_turn(None)` then `begin_turn(frame)` → interceptor honours the latest frame.
 Frame builder:
-- `None`/empty tokens → `None`.
-- tokens + `enforce_skill_tools=False` → `base=="inherit"`, matchers parsed.
+- `None`/empty tokens → `(None, [])`.
+- tokens + `enforce_skill_tools=False` → `base=="inherit"`, matchers parsed, `warnings==[]`.
 - tokens + `enforce_skill_tools=True` → `base=="none"`.
+- **malformed token → warning collected, tool not elevated:** an un-parseable skill token (e.g.
+  `"mcp__s__t(bad"`) yields a non-empty `warnings` list AND contributes no matcher to `frame.allow`
+  (so the tool is not silently elevated to ALWAYS). Complements the Step 4 test that the warning is
+  surfaced.
 Bridge:
 - `build_deny_tool_message("x","t")` → `ToolMessage`, `status=="error"`, `content=="x"`, `name=="t"`.
 
@@ -136,7 +157,8 @@ the gateway is allowed to import the resolver + provider bridge).
 ## LLM prompt
 > Implement Step 3 of the I2.3 plan. Read `pr_info/steps/summary.md` (D3/D4/D5 + KISS notes) and
 > `pr_info/steps/step_3.md`. Following TDD, first write the gateway, bridge, and frame-builder tests,
-> then implement `permission_bridge.build_deny_tool_message`, `gateway.build_legacy_frame`, and
+> then implement `permission_bridge.build_deny_tool_message`, `gateway.build_legacy_frame` (returns
+> `(frame, warnings)`, collecting per-token parse failures rather than dropping them), and
 > `gateway.LangchainEnforcementGateway` (`begin_turn` / `filter_tools` / async `interceptor`). The
 > gateway must import only the resolver/model/matcher and the provider bridge — annotate adapter types
 > as `Any`; never import `langchain_core` in the gateway. Narrow the `permissions_leaf_isolation`

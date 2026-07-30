@@ -73,6 +73,10 @@ return lc_tools
   assert stored; (with `_connect_and_discover` patched) assert the helper receives it.
 - `test_run_agent_stream_inline_loader_passes_no_interceptors` — the else-branch path uses the helper
   with `tool_interceptors=None`.
+- `test_connect_and_discover_stamps_canonical_name` (**regression** — the stamping source moves from
+  the raw MCP tool to `lc_tool.name` in the unified path) — after `_connect_and_discover`, each tool's
+  `metadata["mcp_canonical_name"]` equals `f"mcp__{server_name}__{lc_tool.name}"`, unchanged by the
+  refactor. Guards the turn/call canonical-identity invariant against the stamping-source micro-change.
 
 ## Checks
 Full quality gate (pylint / mypy / pytest fast / ruff / lint-imports) green.
