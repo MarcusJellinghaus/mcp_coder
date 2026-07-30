@@ -41,9 +41,9 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: add `permission_bridge.build_deny_tool_message`, `gateway.build_legacy_frame` (returns `(frame, warnings)`), `gateway.LangchainEnforcementGateway` (`begin_turn`/`filter_tools`/async `interceptor`); narrow `permissions_leaf_isolation` import-linter contract; tests first (TDD)
-- [ ] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports) — fix all issues
-- [ ] Commit message prepared: `I2.3 step 3: enforcement gateway (turn filter + call interceptor + frame + deny bridge)`
+- [x] Implementation: add `permission_bridge.build_deny_tool_message`, `gateway.build_legacy_frame` (returns `(frame, warnings)`), `gateway.LangchainEnforcementGateway` (`begin_turn`/`filter_tools`/async `interceptor`); narrow `permissions_leaf_isolation` import-linter contract; tests first (TDD)
+- [x] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports) — fix all issues
+- [x] Commit message prepared: `I2.3 step 3: enforcement gateway (turn filter + call interceptor + frame + deny bridge)`
 
 ### Step 4: Turn-level integration in `RealLLMService`; remove I1.1 filter (D5)
 
