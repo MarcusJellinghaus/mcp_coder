@@ -72,3 +72,26 @@ findings, the supervisor's triage decisions, any user decisions, and the changes
 - Step 2 LLM PROMPT needed no edit — it never instructed deleting the locals.
 
 **Status**: committed (see below). Plan files changed → loop continues with another review round.
+
+---
+
+## Round 3 — 2026-07-30 (convergence check)
+
+**Findings**: All four round-2 corrections verified correct against real code/tests and internally consistent (summary.md ↔ step files ↔ Decisions.md):
+- Step 2 keeps `pr_number`/`pr_url` locals for the `--wait-for-pr` log lines; drops only the `replace()` enrichment. ✅
+- `test_check_branch_status_pr_waiting.py` named as the enrichment-fallout test (file exists, imports `dataclasses.replace`, asserts `"PR #42 found"`). ✅
+- `--fix`/`--fail-on-reviews` known limitation documented as intentional (HOW + docs task), no behavior change. ✅
+- summary.md `check_branch_status.py` bullet mentions the docstring update. ✅
+
+**Decisions**: No new substantive findings (one skip-level formatting nit). No changes needed.
+
+**Status**: **No plan changes this round** — loop terminates.
+
+---
+
+## Final Status
+
+- **Rounds run:** 3 (2 update rounds + 1 convergence check).
+- **Commits produced:** `a382318` (round-1 updates), `933d8f4` (round-2 fixes), plus the final log commit.
+- **Outcome:** Plan **converged and READY FOR APPROVAL.** Steps 1–3 are each one cohesive commit; upstream prerequisite (mcp-workspace #244) verified installed; exit-code contract, impl-lane PR-feedback gating, docs, and test file naming all validated against the real code.
+- **Escalated design decisions (user-approved):** (5B) PR-feedback threading gated to the implementation lane only via `ReviewConfig.thread_pr_feedback`; (3A) `--fail-on-reviews` intentionally not evaluated on the `--fix` path (documented limitation).
