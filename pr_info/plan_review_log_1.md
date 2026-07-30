@@ -51,3 +51,17 @@ Supervised plan review. Base branch: main. Branch up to date (no rebase needed).
 - `pr_info/steps/step_5.md` (a2): added a one-line end-to-end canonical-identity assertion to the `langchain_integration` real-agent test — the real turn-level stamp (`metadata["mcp_canonical_name"]` / `MCPManager.canonical_name`) must equal the interceptor-reconstructed `f"mcp__{server}__{request.name}"`, turning the turn/call identity assumption into a guarded fact through the real convert + interceptor path.
 - `pr_info/steps/summary.md`: updated two requirements-traceability lines to match — the turn-vs-call canonical-identity AC now also maps to Step 5 (end-to-end), and the Step-2 regression line reframed to "stamp stays raw-MCP-name-based (not `lc_tool.name`)".
 **Status**: committed
+
+## Round 3 — 2026-07-30
+**Findings**: Convergence check. Verified round-2 edits landed and are self-consistent: Step 2 stamps from the RAW MCP tool name (not `lc_tool.name`) with a non-tautological regression test (mock renames the lc_tool; expected pinned to the raw-name literal); Step 5 integration test carries the end-to-end turn/call identity assertion; summary traceability matches; the D1 shared helper's raw-name recovery (zip returned lc_tools with raw tool list) is coherent; no leftover superseded references ("delete permission_warning" / "stamp from lc_tool.name").
+**Decisions**: Nothing to change.
+**User decisions**: None.
+**Changes**: None — zero substantive findings.
+**Status**: no changes needed.
+
+## Final Status
+Plan review complete after 3 rounds. Round 1 applied 6 accepted improvements + 1 user decision (preserve the malformed skill-token warning). Round 2 applied 2 test-strengthening fixes and, in doing so, corrected a canonical-name stamping drift (raw MCP name, not `lc_tool.name`) that would have broken turn-vs-call identity. Round 3 confirmed convergence with zero changes.
+
+All 12+ acceptance criteria trace to steps; decisions D1–D5 honoured; steps are one-commit-each with checks green; tests mirror src structure. **The plan is ready for approval.**
+
+Commits: b6494aa (round 1), 6fe0d80 (round 2), + this log finalization.
