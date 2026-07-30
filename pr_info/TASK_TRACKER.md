@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: raise `langchain-mcp-adapters` floor to `>=0.3.0` in `pyproject.toml`; add reusable `_assert_tool_interceptors_supported()` helper (guarded `inspect.signature`) in `agent.py`, called from `_check_agent_dependencies()`; tests first (TDD)
-- [ ] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports) — fix all issues
-- [ ] Commit message prepared: `I2.3 step 1: raise langchain-mcp-adapters floor to >=0.3.0 with capability check`
+- [x] Implementation: raise `langchain-mcp-adapters` floor to `>=0.3.0` in `pyproject.toml`; add reusable `_assert_tool_interceptors_supported()` helper (guarded `inspect.signature`) in `agent.py`, called from `_check_agent_dependencies()`; tests first (TDD)
+- [x] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports) — fix all issues
+- [x] Commit message prepared: `I2.3 step 1: raise langchain-mcp-adapters floor to >=0.3.0 with capability check`
 
 ### Step 2: Unify the three tool-build loops + `MCPManager` interceptor param (D1)
 
