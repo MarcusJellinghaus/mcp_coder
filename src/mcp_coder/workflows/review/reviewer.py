@@ -40,6 +40,7 @@ def _run_reviewer(
     session_id: str | None,
     tasks: list[str] | None,
     ci_note: str | None = None,
+    pr_note: str | None = None,
 ) -> LLMResponseDict:
     """Run one reviewer turn — a fresh review, or a resume that applies tasks.
 
@@ -62,6 +63,9 @@ def _run_reviewer(
         tasks: Fix instructions to apply, or ``None`` for a fresh review.
         ci_note: Optional CI-as-finding note appended to a *fresh* reviewer
             prompt (see ``_CI_NOTE``); ignored on a task-application resume.
+        pr_note: Optional PR-feedback-as-findings note appended to a *fresh*
+            reviewer prompt (see ``_pr_feedback_note``); ignored on a
+            task-application resume.
 
     Returns:
         The reviewer's :class:`LLMResponseDict`.
@@ -77,6 +81,8 @@ def _run_reviewer(
         prompt = prompt.replace("{base_branch}", base_branch or "")
         if ci_note:
             prompt = f"{prompt}\n\n{ci_note}"
+        if pr_note:
+            prompt = f"{prompt}\n\n{pr_note}"
     else:
         task_lines = "\n".join(f"- {task}" for task in tasks)
         prompt = (

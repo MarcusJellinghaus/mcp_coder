@@ -96,6 +96,14 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     mocks.check_and_fix_ci = MagicMock(return_value=True)
     monkeypatch.setattr(core, "check_and_fix_ci", mocks.check_and_fix_ci)
 
+    # PR-feedback fetch (implementation lane): default to a report with no open
+    # feedback so existing tests see no note; individual tests override the
+    # return value to exercise the threading.
+    mocks.collect_branch_status = MagicMock(
+        return_value=SimpleNamespace(pr_feedback_text=None)
+    )
+    monkeypatch.setattr(core, "collect_branch_status", mocks.collect_branch_status)
+
     return mocks
 
 
@@ -390,3 +398,62 @@ def test_broadened_ci_except_does_not_swallow_ci_carry_forward(
     failure = env.handle_workflow_failure.call_args.args[0]
     assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["ci"]
     assert failure.category != REVIEW_IMPLEMENTATION.failure_labels["general"]
+
+
+# --- Step 3: PR-feedback threading (implementation lane) --------------------
+
+
+def test_impl_lane_threads_pr_feedback_into_both_targets(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Open feedback reaches the fresh reviewer prompt AND the supervisor report."""
+    env.collect_branch_status.return_value = SimpleNamespace(
+        pr_feedback_text="PR-FEEDBACK-XYZ"
+    )
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.collect_branch_status.assert_called_once_with(tmp_path)
+    # Reviewer prompt (call 0): framed note + raw feedback.
+    reviewer_prompt = env.prompt_llm.call_args_list[0].args[0]
+    assert "open PR review feedback" in reviewer_prompt
+    assert "PR-FEEDBACK-XYZ" in reviewer_prompt
+    # Supervisor prompt (call 1): raw feedback under its own section.
+    supervisor_prompt = env.prompt_llm.call_args_list[1].args[0]
+    assert "## Open PR review feedback" in supervisor_prompt
+    assert "PR-FEEDBACK-XYZ" in supervisor_prompt
+
+
+def test_impl_lane_no_open_feedback_threads_nothing(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """With pr_feedback_text None, status is fetched but no note is threaded."""
+    env.collect_branch_status.return_value = SimpleNamespace(pr_feedback_text=None)
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.collect_branch_status.assert_called_once_with(tmp_path)
+    assert "open PR review feedback" not in env.prompt_llm.call_args_list[0].args[0]
+    assert "## Open PR review feedback" not in env.prompt_llm.call_args_list[1].args[0]
+
+
+def test_impl_lane_fetches_status_fresh_each_round(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """collect_branch_status is called once per round (so resolved comments drop)."""
+    env.prompt_llm.side_effect = [
+        _reviewer(),  # round 1 fresh reviewer
+        _resp(_TASKS),  # round 1 supervisor -> tasks
+        _reviewer(session_id="rev-1"),  # round 1 apply-tasks resume
+        _reviewer(),  # round 2 fresh reviewer
+        _resp(_DISMISS),  # round 2 supervisor -> dismiss
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    assert env.collect_branch_status.call_count == 2

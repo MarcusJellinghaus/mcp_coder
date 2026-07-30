@@ -88,6 +88,13 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     mocks.handle_workflow_failure = MagicMock()
     monkeypatch.setattr(core, "handle_workflow_failure", mocks.handle_workflow_failure)
 
+    # Present so the plan lane can assert it is never called (thread_pr_feedback
+    # is False for REVIEW_PLAN); a stray call would surface as a real GitHub hit.
+    mocks.collect_branch_status = MagicMock(
+        return_value=SimpleNamespace(pr_feedback_text=None)
+    )
+    monkeypatch.setattr(core, "collect_branch_status", mocks.collect_branch_status)
+
     return mocks
 
 
@@ -475,3 +482,36 @@ def test_deliberate_fail_comment_carries_round_verdict_elapsed(
     assert "Round: 1" in comment
     assert "Verdict: tasks" in comment
     assert "Elapsed:" in comment
+
+
+# --- Step 3: PR-feedback threading (plan lane skips it) ---------------------
+
+
+class TestPrFeedbackNote:
+    """The pure framing helper."""
+
+    def test_none_in_none_out(self) -> None:
+        assert core._pr_feedback_note(None) is None
+
+    def test_empty_in_none_out(self) -> None:
+        assert core._pr_feedback_note("") is None
+
+    def test_wraps_non_empty_text(self) -> None:
+        note = core._pr_feedback_note("changes requested on foo.py")
+        assert note is not None
+        assert "open PR review feedback" in note  # framing preamble
+        assert "changes requested on foo.py" in note  # raw text preserved
+
+
+def test_plan_lane_skips_pr_feedback(env: SimpleNamespace, tmp_path: Path) -> None:
+    """REVIEW_PLAN makes no branch-status call and threads no PR feedback."""
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.collect_branch_status.assert_not_called()
+    # Fresh reviewer prompt carries no PR-feedback note...
+    assert "open PR review feedback" not in env.prompt_llm.call_args_list[0].args[0]
+    # ...and the supervisor got the bare reviewer report.
+    assert "## Open PR review feedback" not in env.prompt_llm.call_args_list[1].args[0]

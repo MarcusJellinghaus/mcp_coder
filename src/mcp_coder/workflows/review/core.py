@@ -26,6 +26,7 @@ import logging
 import time
 from pathlib import Path
 
+from mcp_coder.checks.branch_status import collect_branch_status
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
@@ -67,6 +68,27 @@ _CI_NOTE = (
     "could not be auto-fixed. Treat this as a finding: investigate the CI "
     "failure yourself and include it in your structured report."
 )
+
+
+def _pr_feedback_note(pr_feedback_text: str | None) -> str | None:
+    """Wrap PR review feedback as an actionable-findings note for the reviewer.
+
+    Args:
+        pr_feedback_text: Raw open-feedback text from the branch status report,
+            or ``None`` / empty when there is no PR or nothing unresolved.
+
+    Returns:
+        A framed note instructing the reviewer to treat each item as a finding,
+        or ``None`` when there is no feedback to thread.
+    """
+    if not pr_feedback_text:
+        return None
+    return (
+        "NOTE — open PR review feedback: the following unresolved threads / "
+        "changes-requested / alerts were posted on this PR. Treat each as a "
+        "finding: verify it, then address or justify dismissing it in your "
+        f"report.\n\n{pr_feedback_text}"
+    )
 
 
 def run_review_workflow(
@@ -112,6 +134,16 @@ def run_review_workflow(
         for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
             sha_before = get_latest_commit_sha(project_dir)
 
+            # Open PR review feedback (implementation lane only): fetch fresh
+            # branch status each round so resolved comments drop out, and thread
+            # the feedback into both the reviewer prompt and the supervisor
+            # report. The plan lane skips this — no GitHub call.
+            status = None
+            pr_note = None
+            if config.thread_pr_feedback:
+                status = collect_branch_status(project_dir)
+                pr_note = _pr_feedback_note(status.pr_feedback_text)
+
             # Reviewer: a fresh session per round.
             logger.info(
                 "%s round %d/%d: reviewer starting",
@@ -139,6 +171,7 @@ def run_review_workflow(
                         session_id=None,
                         tasks=None,
                         ci_note=pending_ci_note,
+                        pr_note=pr_note,
                     )
                 except Exception as exc:  # pylint: disable=broad-exception-caught
                     return _fail(
@@ -168,6 +201,14 @@ def run_review_workflow(
                 )
 
             # Supervisor: persistent session, verdict parsed with repair retries.
+            # Append the raw open PR feedback (impl lane only, non-empty) so the
+            # supervisor triages it alongside the reviewer's own findings.
+            supervisor_report = report
+            if status is not None and status.pr_feedback_text:
+                supervisor_report = (
+                    f"{report}\n\n## Open PR review feedback\n\n"
+                    f"{status.pr_feedback_text}"
+                )
             logger.info("Round %d: supervisor triage starting", round_number)
             try:
                 verdict, supervisor_sid = reviewer._get_verdict(
@@ -178,7 +219,7 @@ def run_review_workflow(
                     settings_file,
                     execution_dir,
                     supervisor_sid,
-                    report,
+                    supervisor_report,
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 return _fail(

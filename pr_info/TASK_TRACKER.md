@@ -41,9 +41,9 @@ See [step_2.md](./steps/step_2.md).
 
 See [step_3.md](./steps/step_3.md).
 
-- [ ] Implementation: add `thread_pr_feedback` flag on `ReviewConfig`, `pr_note` kwarg on `_run_reviewer`, `_pr_feedback_note` helper, per-round `collect_branch_status` threading into reviewer + supervisor
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `thread_pr_feedback` flag on `ReviewConfig`, `pr_note` kwarg on `_run_reviewer`, `_pr_feedback_note` helper, per-round `collect_branch_status` threading into reviewer + supervisor
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
