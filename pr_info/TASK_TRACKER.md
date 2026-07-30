@@ -57,9 +57,9 @@ Detail: [step_4.md](./steps/step_4.md)
 
 Detail: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: in `execute_icoder()` call `_assert_tool_interceptors_supported()` early, `load_permission_config(project_dir)` once, construct gateway, inject `tool_interceptors=[gateway.interceptor]` into `MCPManager`, pass `gateway` to `RealLLMService`; add wiring, bypass-guard (site 2 + site 3), ordering, and `langchain_integration` integration tests first (TDD)
-- [ ] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports, `langchain_integration` marker) — fix all issues
-- [ ] Commit message prepared: `I2.3 step 5: wire permission gateway into iCoder startup + bypass guard + integration`
+- [x] Implementation: in `execute_icoder()` call `_assert_tool_interceptors_supported()` early, `load_permission_config(project_dir)` once, construct gateway, inject `tool_interceptors=[gateway.interceptor]` into `MCPManager`, pass `gateway` to `RealLLMService`; add wiring, bypass-guard (site 2 + site 3), ordering, and `langchain_integration` integration tests first (TDD)
+- [x] Quality checks: pylint, pytest, mypy (+ ruff, lint-imports, `langchain_integration` marker) — fix all issues
+- [x] Commit message prepared: `I2.3 step 5: wire permission gateway into iCoder startup + bypass guard + integration`
 
 ## Pull Request
 

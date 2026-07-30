@@ -264,3 +264,44 @@ class TestRunAgentStreamInlineLoader:
         # No interceptors forwarded: neither a 4th positional nor a kwarg.
         assert "tool_interceptors" not in mock_helper.call_args.kwargs
         assert len(mock_helper.call_args.args) == 3
+
+    @pytest.mark.asyncio
+    async def test_run_agent_stream_skips_inline_loader_when_tools_provided(
+        self,
+    ) -> None:
+        """Providing ``tools`` skips the site-3 inline loader entirely (D1 guard).
+
+        This is the iCoder path: ``MCPManager`` supplies pre-built, interceptor-
+        instrumented tools, so ``run_agent_stream`` must never construct a
+        ``MultiServerMCPClient`` (the un-instrumented site-3 convert loop). A
+        client patched to blow up on construction proves the branch is not taken.
+        """
+        boom_client = MagicMock(
+            side_effect=AssertionError("site-3 inline loader must not run")
+        )
+        mock_agent = MagicMock()
+
+        async def _empty_events() -> Any:
+            for _ in []:
+                yield
+
+        mock_agent.astream_events.return_value = _empty_events()
+
+        with (
+            patch(_PATCH_MCP_CLIENT, boom_client),
+            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
+            patch(_PATCH_FROM_DICT, return_value=[]),
+            patch(_PATCH_STORE_HISTORY, MagicMock()),
+        ):
+            gen = run_agent_stream(
+                question="test",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path="/does/not/matter.json",
+                session_id="s1",
+                tools=[MagicMock()],
+            )
+            async for _ in gen:
+                pass
+
+        boom_client.assert_not_called()
