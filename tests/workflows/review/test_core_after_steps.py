@@ -16,6 +16,7 @@ or after a ``tasks`` application (mid-loop).
 """
 
 import inspect
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -34,6 +35,13 @@ _DISMISS = '```json\n{"decision": "dismiss"}\n```'
 _TASKS = '```json\n{"decision": "tasks", "tasks": ["Fix the bug at foo.py:1"]}\n```'
 
 _REPORT = "foo.py:1 — high — something is wrong"
+
+
+def _status(text: str | None = None, undeterminable: bool = False) -> SimpleNamespace:
+    """Build a branch-status stand-in with the fields the review loop reads."""
+    return SimpleNamespace(
+        pr_feedback_text=text, pr_feedback_undeterminable=undeterminable
+    )
 
 
 def _resp(text: str, session_id: str = "sup-1") -> dict[str, Any]:
@@ -99,9 +107,7 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     # PR-feedback fetch (implementation lane): default to a report with no open
     # feedback so existing tests see no note; individual tests override the
     # return value to exercise the threading.
-    mocks.collect_branch_status = MagicMock(
-        return_value=SimpleNamespace(pr_feedback_text=None)
-    )
+    mocks.collect_branch_status = MagicMock(return_value=_status())
     monkeypatch.setattr(core, "collect_branch_status", mocks.collect_branch_status)
 
     return mocks
@@ -407,9 +413,7 @@ def test_impl_lane_threads_pr_feedback_into_both_targets(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
     """Open feedback reaches the fresh reviewer prompt AND the supervisor report."""
-    env.collect_branch_status.return_value = SimpleNamespace(
-        pr_feedback_text="PR-FEEDBACK-XYZ"
-    )
+    env.collect_branch_status.return_value = _status("PR-FEEDBACK-XYZ")
     env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
 
     result = _run(tmp_path)
@@ -430,7 +434,7 @@ def test_impl_lane_no_open_feedback_threads_nothing(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
     """With pr_feedback_text None, status is fetched but no note is threaded."""
-    env.collect_branch_status.return_value = SimpleNamespace(pr_feedback_text=None)
+    env.collect_branch_status.return_value = _status()
     env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
 
     result = _run(tmp_path)
@@ -457,3 +461,42 @@ def test_impl_lane_fetches_status_fresh_each_round(
 
     assert result == 0
     assert env.collect_branch_status.call_count == 2
+
+
+def _undeterminable_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """Warning-level messages naming an undeterminable feedback fetch."""
+    return [
+        r.getMessage()
+        for r in caplog.records
+        if r.levelno == logging.WARNING and "undeterminable" in r.getMessage()
+    ]
+
+
+def test_undeterminable_feedback_logs_warning(
+    env: SimpleNamespace, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A failed feedback fetch is logged, not silently read as 'no feedback'."""
+    env.collect_branch_status.return_value = _status(undeterminable=True)
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    with caplog.at_level(logging.WARNING):
+        result = _run(tmp_path)
+
+    # Log-only: the round still completes normally and threads no note.
+    assert result == 0
+    assert len(_undeterminable_warnings(caplog)) == 1
+    assert "open PR review feedback" not in env.prompt_llm.call_args_list[0].args[0]
+
+
+def test_clean_feedback_logs_no_warning(
+    env: SimpleNamespace, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A determinable report produces no undeterminable warning."""
+    env.collect_branch_status.return_value = _status("PR-FEEDBACK-XYZ")
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    with caplog.at_level(logging.WARNING):
+        result = _run(tmp_path)
+
+    assert result == 0
+    assert _undeterminable_warnings(caplog) == []

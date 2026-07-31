@@ -26,7 +26,7 @@ import logging
 import time
 from pathlib import Path
 
-from mcp_coder.checks.branch_status import collect_branch_status
+from mcp_coder.checks.branch_status import BranchStatusReport, collect_branch_status
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
@@ -138,10 +138,18 @@ def run_review_workflow(
             # branch status each round so resolved comments drop out, and thread
             # the feedback into both the reviewer prompt and the supervisor
             # report. The plan lane skips this — no GitHub call.
-            status = None
-            pr_note = None
+            status: BranchStatusReport | None = None
+            pr_note: str | None = None
             if config.thread_pr_feedback:
                 status = collect_branch_status(project_dir)
+                if status.pr_feedback_undeterminable:
+                    # Distinguish a failed fetch from "no open feedback" in the
+                    # logs. Informational only: the round proceeds unchanged.
+                    logger.warning(
+                        "Round %d: PR review feedback undeterminable "
+                        "(collection failed); reviewing without it",
+                        round_number,
+                    )
                 pr_note = _pr_feedback_note(status.pr_feedback_text)
 
             # Reviewer: a fresh session per round.

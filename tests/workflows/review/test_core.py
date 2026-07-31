@@ -91,7 +91,9 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     # Present so the plan lane can assert it is never called (thread_pr_feedback
     # is False for REVIEW_PLAN); a stray call would surface as a real GitHub hit.
     mocks.collect_branch_status = MagicMock(
-        return_value=SimpleNamespace(pr_feedback_text=None)
+        return_value=SimpleNamespace(
+            pr_feedback_text=None, pr_feedback_undeterminable=False
+        )
     )
     monkeypatch.setattr(core, "collect_branch_status", mocks.collect_branch_status)
 
