@@ -490,6 +490,32 @@ def test_stream_does_not_mutate_manager_cache(
     assert manager.tools() == ["mcp__srv__keep", "mcp__srv__drop"]
 
 
+def test_stream_with_empty_config_forwards_all_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D2: a gateway with no config layers keeps every tool (ALWAYS default).
+
+    Pins the "no behaviour change vs today" half of the config-wiring AC: with a
+    gateway wired but an empty ``PermissionConfig``, the resolver falls back to
+    the backward-compat ``ALWAYS`` default, so the forwarded tool list is
+    identical to the gateway=None case — for a skill turn and a plain turn alike.
+    """
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        gateway=LangchainEnforcementGateway(PermissionConfig()),
+    )
+    list(service.stream("hello"))
+    assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
+    # A declared-tools turn builds a frame, which must not narrow either
+    # (enforce_skill_tools=False -> base="inherit", elevation only).
+    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
+    assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
+
+
 def test_stream_sets_per_turn_frame(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
