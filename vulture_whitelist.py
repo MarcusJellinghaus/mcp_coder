@@ -359,3 +359,14 @@ _.args
 # dataclass field read by build_comment closures passed to run_guarded (e.g.
 # implement's Progress line); vulture can't see the cross-closure read.
 _.caught_exception
+
+# tests/icoder/test_icoder_permission_wiring.py - _FakeSession duck-types the MCP
+# ClientSession for convert_mcp_tool_to_langchain_tool; the adapter awaits
+# call_tool(name, args, progress_callback=...) so both the method and the
+# signature-mandated parameter are used only through the adapter.
+_.call_tool
+_.progress_callback
+
+# tests/icoder/test_permissions_gateway.py - Autouse fixture stubbing the
+# langchain deny bridge so gateway tests need no langchain_core.
+_._fake_deny_bridge
