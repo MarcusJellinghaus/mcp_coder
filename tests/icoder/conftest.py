@@ -11,6 +11,7 @@ import pytest
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.icoder.permissions import PermissionConfig
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.utils.mcp_verification import MCPServerInfo
 
@@ -73,6 +74,17 @@ def patch_icoder_deps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
         lambda *a, **_kw: "/fake/.mcp.json",
+    )
+    # Keep the langchain permission-wiring branch hermetic: skip the real
+    # adapter capability probe and the on-disk permission-config load so wiring
+    # tests never touch langchain internals or the user's ``.icoder`` layers.
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder._assert_tool_interceptors_supported",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.load_permission_config",
+        lambda _project_dir: PermissionConfig(),
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.load_skills",

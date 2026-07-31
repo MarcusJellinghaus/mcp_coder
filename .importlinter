@@ -50,6 +50,8 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.event_log
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.log_inventory
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.env_setup
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.gateway
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.command_registry
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.skills
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.commands.info
@@ -366,13 +368,18 @@ ignore_imports =
 # Contract: iCoder Permissions Leaf Isolation
 # -----------------------------------------------------------------------------
 # The pure permission core must stay a leaf: it may not depend on the iCoder
-# UI/services layers, Textual, or any langchain provider libraries.
+# UI/services layers, Textual, or any langchain provider libraries. Only the
+# pure modules are pinned here; the gateway (a real consumer) is excluded so it
+# may import the resolver + the langchain provider deny bridge.
 # -----------------------------------------------------------------------------
 [importlinter:contract:permissions_leaf_isolation]
 name = iCoder Permissions Leaf Isolation
 type = forbidden
 source_modules =
-    mcp_coder.icoder.permissions
+    mcp_coder.icoder.permissions.model
+    mcp_coder.icoder.permissions.matcher
+    mcp_coder.icoder.permissions.resolver
+    mcp_coder.icoder.permissions.loader
 forbidden_modules =
     mcp_coder.icoder.ui
     mcp_coder.icoder.services

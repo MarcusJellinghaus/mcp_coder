@@ -8,8 +8,11 @@ from pathlib import Path
 from ...icoder.core.event_log import emit_session_start, read_session_id_from_log
 from ...icoder.core.log_inventory import list_icoder_logs
 from ...icoder.env_setup import setup_icoder_environment
+from ...icoder.permissions import load_permission_config
+from ...icoder.permissions.gateway import LangchainEnforcementGateway
 from ...icoder.ui.widgets.session_picker import run_startup_picker
 from ...llm.providers.langchain.agent import (  # noqa: PLC2701
+    _assert_tool_interceptors_supported,
     _load_mcp_server_config,
 )
 from ...llm.providers.langchain.mcp_manager import MCPManager
@@ -82,11 +85,23 @@ def execute_icoder(args: argparse.Namespace) -> int:
 
         env_vars = runtime_info.env_vars
 
-        # Create MCPManager for persistent MCP connections (langchain only)
+        # Create MCPManager for persistent MCP connections + the permission
+        # enforcement gateway (langchain only). The adapter capability check
+        # fires first so a <0.3.0 adapter yields a clear ImportError before the
+        # manager builds tools with tool_interceptors, instead of the raw
+        # TypeError raised at the first convert_...(tool_interceptors=...) call
+        # (Decisions D1/D2/D3). One PermissionConfig snapshot + one gateway are
+        # shared by the interceptor (call level) and RealLLMService (turn level).
         mcp_manager: MCPManager | None = None
+        gateway: LangchainEnforcementGateway | None = None
         if provider == "langchain" and mcp_config:
+            _assert_tool_interceptors_supported()
+            config = load_permission_config(project_dir)
+            gateway = LangchainEnforcementGateway(config)
             server_config = _load_mcp_server_config(mcp_config, env_vars)
-            mcp_manager = MCPManager(server_config)
+            mcp_manager = MCPManager(
+                server_config, tool_interceptors=[gateway.interceptor]
+            )
 
         # Resume resolution.
         # The three flags (--session-id / --continue-session-from /
@@ -152,6 +167,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
             mcp_manager=mcp_manager,
             project_dir=str(project_dir),
             enforce_skill_tools=False,
+            gateway=gateway,
         )
 
         from ...icoder.core.app_core import AppCore

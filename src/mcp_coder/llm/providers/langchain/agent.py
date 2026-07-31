@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import inspect
 import json
 import logging
 import os
@@ -55,6 +56,53 @@ def _check_agent_dependencies() -> None:
             f"Agent mode requires additional packages: {', '.join(missing)}.\n"
             f"Install with: pip install {packages}"
         )
+    _assert_tool_interceptors_supported()
+
+
+def _assert_tool_interceptors_supported() -> None:
+    """Raise ImportError if the installed adapter lacks ``tool_interceptors``.
+
+    Permission enforcement (issue I2.3) rides on the ``tool_interceptors``
+    parameter of ``convert_mcp_tool_to_langchain_tool``, added in
+    ``langchain-mcp-adapters>=0.3.0``. This reusable helper fails fast with a
+    clear upgrade message so a ``<0.3.0`` adapter does not instead raise a raw
+    ``TypeError: unexpected keyword argument 'tool_interceptors'`` at the first
+    ``convert_...(tool_interceptors=...)`` call.
+
+    The ``inspect.signature`` call is guarded so a non-introspectable or
+    mock stand-in cannot be misread as an unsupported adapter:
+
+    * If the signature cannot be read at all (``TypeError``/``ValueError``),
+      the check is a silent no-op.
+    * If the callable accepts arbitrary ``**kwargs`` (the shape reported for the
+      langchain conftest ``MagicMock`` stand-in, ``(*args, **kwargs)``), then it
+      would accept a ``tool_interceptors`` keyword too, so the check does not
+      block.
+
+    Raises:
+        ImportError: If ``convert_mcp_tool_to_langchain_tool`` has an
+            introspectable, fixed signature that does not accept a
+            ``tool_interceptors`` parameter.
+    """
+    from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
+
+    try:
+        params = inspect.signature(convert_mcp_tool_to_langchain_tool).parameters
+    except (TypeError, ValueError):
+        # Not introspectable — cannot determine capability, so do not block.
+        return
+    if "tool_interceptors" in params:
+        return
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
+        # Accepts arbitrary **kwargs (e.g. the conftest MagicMock stand-in whose
+        # signature is (*args, **kwargs)) — tool_interceptors would be accepted
+        # too, so this is not an unsupported real adapter.
+        return
+    raise ImportError(
+        "Permission enforcement requires langchain-mcp-adapters>=0.3.0 "
+        "(the installed version does not support tool_interceptors). "
+        "Upgrade with: pip install 'langchain-mcp-adapters>=0.3.0'"
+    )
 
 
 _KNOWN_FIELDS = {"command", "args", "env", "transport", "type"}
@@ -233,6 +281,54 @@ def _sanitize_tool_schema(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
+def _convert_server_tools(
+    raw_tools: list[Any],
+    connection: Any,
+    server_name: str,
+    tool_interceptors: list[Any] | None = None,
+) -> list[Any]:
+    """Convert one server's raw MCP tools to LangChain tools.
+
+    Single home for the ``sanitize -> model_copy -> convert`` inner loop shared
+    by ``run_agent``, ``run_agent_stream`` (else-branch), and
+    ``MCPManager._connect_and_discover``. Optional ``tool_interceptors`` are
+    forwarded verbatim to ``convert_mcp_tool_to_langchain_tool`` (the injection
+    point for host-side permission enforcement, issue I2.3).
+
+    No canonical-name metadata stamping is done here — that stays the caller's
+    job so the stamp can remain pinned to the raw MCP tool name rather than the
+    (possibly renamed) LangChain tool name.
+
+    Args:
+        raw_tools: Raw MCP tool objects from ``session.list_tools()``.
+        connection: The MCP connection object for this server.
+        server_name: Name of the MCP server the tools belong to.
+        tool_interceptors: Optional call-level interceptors forwarded to
+            ``convert_mcp_tool_to_langchain_tool``. ``None`` means no
+            enforcement (the default at every non-manager site).
+
+    Returns:
+        LangChain tools in the same order as *raw_tools*.
+    """
+    from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
+
+    lc_tools: list[Any] = []
+    for tool in raw_tools:
+        sanitized = _sanitize_tool_schema(tool.inputSchema)
+        # Shallow copy to avoid mutating the original MCP tool
+        tool = tool.model_copy(update={"inputSchema": sanitized})
+        lc_tools.append(
+            convert_mcp_tool_to_langchain_tool(
+                None,
+                tool,
+                connection=connection,
+                server_name=server_name,
+                tool_interceptors=tool_interceptors,
+            )
+        )
+    return lc_tools
+
+
 async def run_agent(
     question: str,
     chat_model: BaseChatModel,
@@ -275,7 +371,6 @@ async def run_agent(
         messages_from_dict,
     )
     from langchain_mcp_adapters.client import MultiServerMCPClient
-    from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
     from langgraph.prebuilt import create_react_agent
 
     server_config = _load_mcp_server_config(mcp_config_path, env_vars)
@@ -290,17 +385,9 @@ async def run_agent(
         try:
             async with client.session(server_name) as session:
                 raw_tools = await session.list_tools()
-                for tool in raw_tools.tools:
-                    sanitized = _sanitize_tool_schema(tool.inputSchema)
-                    # Shallow copy to avoid mutating the original MCP tool
-                    tool = tool.model_copy(update={"inputSchema": sanitized})
-                    lc_tool = convert_mcp_tool_to_langchain_tool(
-                        None,
-                        tool,
-                        connection=connection,
-                        server_name=server_name,
-                    )
-                    all_tools.append(lc_tool)
+                all_tools.extend(
+                    _convert_server_tools(raw_tools.tools, connection, server_name)
+                )
         except (FileNotFoundError, PermissionError) as exc:
             raise LLMMCPLaunchError(
                 _format_launch_error(
@@ -439,7 +526,6 @@ async def run_agent_stream(
         all_tools = tools
     else:
         from langchain_mcp_adapters.client import MultiServerMCPClient
-        from langchain_mcp_adapters.tools import convert_mcp_tool_to_langchain_tool
 
         server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
@@ -450,16 +536,9 @@ async def run_agent_stream(
             try:
                 async with client.session(server_name) as session:
                     raw_tools = await session.list_tools()
-                    for tool in raw_tools.tools:
-                        sanitized = _sanitize_tool_schema(tool.inputSchema)
-                        tool = tool.model_copy(update={"inputSchema": sanitized})
-                        lc_tool = convert_mcp_tool_to_langchain_tool(
-                            None,
-                            tool,
-                            connection=connection,
-                            server_name=server_name,
-                        )
-                        all_tools.append(lc_tool)
+                    all_tools.extend(
+                        _convert_server_tools(raw_tools.tools, connection, server_name)
+                    )
             except (FileNotFoundError, PermissionError) as exc:
                 raise LLMMCPLaunchError(
                     _format_launch_error(

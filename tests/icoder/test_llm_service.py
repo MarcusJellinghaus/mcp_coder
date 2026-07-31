@@ -6,6 +6,14 @@ from typing import Iterator
 
 import pytest
 
+from mcp_coder.icoder.permissions import (
+    Matcher,
+    PermissionConfig,
+    PermissionFrame,
+    Policy,
+    Rule,
+)
+from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
 from mcp_coder.icoder.services.llm_service import (
     ICODER_LLM_TIMEOUT_SECONDS,
     FakeLLMService,
@@ -389,105 +397,163 @@ def _capture_tools_stream(
     )
 
 
-def test_enforce_subset_declaration_narrows_tools(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """enforce=True + subset declaration -> only declared tool passed; excluded absent."""
-    captured: dict[str, object] = {}
-    _capture_tools_stream(monkeypatch, captured)
-    manager = _FakeMCPManager(["mcp__srv__keep", "mcp__srv__drop"])
-    service = RealLLMService(
-        provider="langchain",
-        mcp_manager=manager,  # type: ignore[arg-type]
-        enforce_skill_tools=True,
+def _never_config(server: str, tool: str) -> PermissionConfig:
+    """Build a config carrying a single unconditional ``never`` rule."""
+    return PermissionConfig(
+        rules=(
+            Rule(
+                matcher=Matcher(server=server, tool=tool),
+                policy=Policy.NEVER,
+                layer="user",
+            ),
+        )
     )
-    list(service.stream("hello", allowed_tools=("mcp__srv__keep",)))
-    assert captured["tools"] == ["mcp__srv__keep"]
-    assert "mcp__srv__drop" not in captured["tools"]
 
 
-def test_enforce_all_non_mcp_declaration_fails_closed(
+class _RecordingGateway(LangchainEnforcementGateway):
+    """Gateway subclass recording every frame passed to ``begin_turn``."""
+
+    def __init__(self, config: PermissionConfig) -> None:
+        super().__init__(config)
+        self.frames: list[PermissionFrame | None] = []
+
+    def begin_turn(self, frame: PermissionFrame | None) -> None:
+        self.frames.append(frame)
+        super().begin_turn(frame)
+
+
+def test_stream_without_gateway_forwards_all_tools(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """enforce=True + all-non-MCP declaration -> zero tools (fail-closed)."""
-    captured: dict[str, object] = {}
-    _capture_tools_stream(monkeypatch, captured)
-    manager = _FakeMCPManager(["mcp__srv__keep", "mcp__srv__drop"])
-    service = RealLLMService(
-        provider="langchain",
-        mcp_manager=manager,  # type: ignore[arg-type]
-        enforce_skill_tools=True,
-    )
-    list(service.stream("hello", allowed_tools=("Bash", "Read")))
-    assert captured["tools"] == []
-
-
-def test_enforce_without_allowed_tools_passes_full_list(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """enforce=True + no allowed_tools -> full tool list (no narrowing)."""
+    """gateway=None -> the full manager tool list reaches prompt_llm_stream."""
     captured: dict[str, object] = {}
     _capture_tools_stream(monkeypatch, captured)
     manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
     service = RealLLMService(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
-        enforce_skill_tools=True,
+        gateway=None,
+    )
+    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
+    assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
+
+
+def test_stream_with_gateway_drops_never_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A gateway whose config denies a tool drops it from the forwarded list."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__keep", "mcp__srv__drop"])
+    gateway = LangchainEnforcementGateway(_never_config("srv", "drop"))
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        gateway=gateway,
+    )
+    list(service.stream("hello"))
+    assert captured["tools"] == ["mcp__srv__keep"]
+
+
+def test_stream_enforces_with_enforce_skill_tools_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D5: a config ``never`` is enforced even when enforce_skill_tools=False."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__keep", "mcp__srv__drop"])
+    gateway = LangchainEnforcementGateway(_never_config("srv", "drop"))
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        gateway=gateway,
+        enforce_skill_tools=False,
+    )
+    list(service.stream("hello"))
+    assert captured["tools"] == ["mcp__srv__keep"]
+
+
+def test_stream_does_not_mutate_manager_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After a gateway-filtered stream, manager.tools() still returns the full set."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__keep", "mcp__srv__drop"])
+    gateway = LangchainEnforcementGateway(_never_config("srv", "drop"))
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        gateway=gateway,
+    )
+    list(service.stream("hello"))
+    assert manager.tools() == ["mcp__srv__keep", "mcp__srv__drop"]
+
+
+def test_stream_with_empty_config_forwards_all_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D2: a gateway with no config layers keeps every tool (ALWAYS default).
+
+    Pins the "no behaviour change vs today" half of the config-wiring AC: with a
+    gateway wired but an empty ``PermissionConfig``, the resolver falls back to
+    the backward-compat ``ALWAYS`` default, so the forwarded tool list is
+    identical to the gateway=None case — for a skill turn and a plain turn alike.
+    """
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        gateway=LangchainEnforcementGateway(PermissionConfig()),
     )
     list(service.stream("hello"))
     assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
-
-
-def test_enforce_disabled_passes_full_list_despite_declaration(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """enforce=False + declaration present -> full list (no narrowing)."""
-    captured: dict[str, object] = {}
-    _capture_tools_stream(monkeypatch, captured)
-    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
-    service = RealLLMService(
-        provider="langchain",
-        mcp_manager=manager,  # type: ignore[arg-type]
-        enforce_skill_tools=False,
-    )
+    # A declared-tools turn builds a frame, which must not narrow either
+    # (enforce_skill_tools=False -> base="inherit", elevation only).
     list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
     assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
 
 
-def test_enforce_wildcard_token_yields_warning_and_restricts(
+def test_stream_sets_per_turn_frame(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """enforce=True + wildcard token -> permission_warning yielded; tools restricted."""
+    """begin_turn receives a PermissionFrame with allowed_tools, None without."""
     captured: dict[str, object] = {}
     _capture_tools_stream(monkeypatch, captured)
-    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
+    manager = _FakeMCPManager(["mcp__srv__a"])
+    gateway = _RecordingGateway(PermissionConfig())
     service = RealLLMService(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
-        enforce_skill_tools=True,
+        gateway=gateway,
     )
-    events = list(service.stream("hello", allowed_tools=("mcp__srv__a", "mcp__srv__*")))
+    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
+    list(service.stream("hello", allowed_tools=None))
+    assert isinstance(gateway.frames[0], PermissionFrame)
+    assert gateway.frames[1] is None
+
+
+def test_stream_emits_permission_warning_for_malformed_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A malformed declared token -> permission_warning yielded; tool not elevated."""
+    captured: dict[str, object] = {}
+    _capture_tools_stream(monkeypatch, captured)
+    manager = _FakeMCPManager(["mcp__srv__t"])
+    gateway = LangchainEnforcementGateway(_never_config("srv", "t"))
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=manager,  # type: ignore[arg-type]
+        gateway=gateway,
+    )
+    events = list(service.stream("hello", allowed_tools=("mcp__srv__t(bad",)))
     warnings = [e for e in events if e["type"] == "permission_warning"]
     assert len(warnings) == 1
     assert isinstance(warnings[0]["message"], str)
-    # Restricted to the exact-matched tool, not the full list.
-    assert captured["tools"] == ["mcp__srv__a"]
-
-
-def test_enforce_does_not_mutate_manager_cache(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """After enforced stream, manager.tools() still returns the full list."""
-    captured: dict[str, object] = {}
-    _capture_tools_stream(monkeypatch, captured)
-    manager = _FakeMCPManager(["mcp__srv__a", "mcp__srv__b"])
-    service = RealLLMService(
-        provider="langchain",
-        mcp_manager=manager,  # type: ignore[arg-type]
-        enforce_skill_tools=True,
-    )
-    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
-    assert manager.tools() == ["mcp__srv__a", "mcp__srv__b"]
+    # The malformed token contributed no matcher, so the config ``never`` stands.
+    assert captured["tools"] == []
 
 
 def test_fake_service_records_last_allowed_tools() -> None:

@@ -27,7 +27,9 @@ def test_mcp_manager_created_for_langchain(
         lambda *_a, **_kw: fake_server_config,
     )
 
-    def tracking_init(self: object, server_config: object) -> None:
+    def tracking_init(
+        self: object, server_config: object, tool_interceptors: object = None
+    ) -> None:
         created_managers.append(self)
         # Don't start real threads — just set minimal attrs
         object.__setattr__(self, "_server_names", [])
@@ -108,7 +110,9 @@ def test_mcp_manager_closed_on_exit(
         lambda *_a, **_kw: fake_server_config,
     )
 
-    def fake_init(self: object, server_config: object) -> None:
+    def fake_init(
+        self: object, server_config: object, tool_interceptors: object = None
+    ) -> None:
         object.__setattr__(self, "_server_names", [])
         object.__setattr__(self, "_server_config", server_config)
         object.__setattr__(self, "_cached_tools", None)
@@ -148,7 +152,9 @@ def test_mcp_manager_closed_on_error(
         lambda *_a, **_kw: fake_server_config,
     )
 
-    def fake_init(self: object, server_config: object) -> None:
+    def fake_init(
+        self: object, server_config: object, tool_interceptors: object = None
+    ) -> None:
         object.__setattr__(self, "_server_names", [])
         object.__setattr__(self, "_server_config", server_config)
         object.__setattr__(self, "_cached_tools", None)
@@ -194,7 +200,9 @@ def test_mcp_manager_passed_to_llm_service(
         lambda *_a, **_kw: fake_server_config,
     )
 
-    def fake_manager_init(self: object, server_config: object) -> None:
+    def fake_manager_init(
+        self: object, server_config: object, tool_interceptors: object = None
+    ) -> None:
         object.__setattr__(self, "_server_names", [])
         object.__setattr__(self, "_server_config", server_config)
         object.__setattr__(self, "_cached_tools", None)
