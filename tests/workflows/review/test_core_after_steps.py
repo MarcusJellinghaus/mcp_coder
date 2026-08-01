@@ -531,7 +531,7 @@ def test_undeterminable_feedback_logs_warning(
     # Log-only: the round still completes normally and threads no note.
     assert result == 0
     assert len(_undeterminable_warnings(caplog)) == 1
-    assert "open PR review feedback" not in env.prompt_llm.call_args_list[0].args[0]
+    assert "PR review feedback" not in env.prompt_llm.call_args_list[0].args[0]
 
 
 def test_unknown_ci_status_logs_undeterminable_warning(

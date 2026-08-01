@@ -35,7 +35,7 @@ class ReviewConfig:
         run_after_steps: Whether after-steps (rebase + CI) run (implementation
             only).
         thread_pr_feedback: Whether each round fetches branch status and threads
-            open PR review feedback into the reviewer + supervisor
+            the PR review feedback section into the reviewer + supervisor
             (implementation only). The plan lane makes no GitHub call.
         failure_labels: Mapping of failure ``reason`` to terminal label
             ``internal_id``.
