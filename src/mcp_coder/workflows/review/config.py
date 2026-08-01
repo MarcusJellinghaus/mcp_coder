@@ -34,6 +34,9 @@ class ReviewConfig:
             to diff against (implementation only).
         run_after_steps: Whether after-steps (rebase + CI) run (implementation
             only).
+        thread_pr_feedback: Whether each round fetches branch status and threads
+            the PR review feedback section into the reviewer + supervisor
+            (implementation only). The plan lane makes no GitHub call.
         failure_labels: Mapping of failure ``reason`` to terminal label
             ``internal_id``.
     """
@@ -48,6 +51,7 @@ class ReviewConfig:
     escalate_label_id: str
     inject_base_branch: bool
     run_after_steps: bool
+    thread_pr_feedback: bool
     failure_labels: dict[str, str]
 
 
@@ -62,6 +66,7 @@ REVIEW_IMPLEMENTATION = ReviewConfig(
     escalate_label_id="code_review",
     inject_base_branch=True,
     run_after_steps=True,
+    thread_pr_feedback=True,
     failure_labels={
         "general": "code_review_failed",
         "rounds": "code_review_rounds",
@@ -83,6 +88,7 @@ REVIEW_PLAN = ReviewConfig(
     escalate_label_id="plan_review",
     inject_base_branch=False,
     run_after_steps=False,
+    thread_pr_feedback=False,
     failure_labels={
         "general": "plan_review_failed",
         "rounds": "plan_review_rounds",

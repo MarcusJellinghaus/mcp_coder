@@ -36,6 +36,7 @@ class TestReviewImplementation:
     def test_behaviour_flags(self) -> None:
         assert REVIEW_IMPLEMENTATION.inject_base_branch is True
         assert REVIEW_IMPLEMENTATION.run_after_steps is True
+        assert REVIEW_IMPLEMENTATION.thread_pr_feedback is True
 
     def test_failure_labels(self) -> None:
         assert REVIEW_IMPLEMENTATION.failure_labels == {
@@ -70,6 +71,7 @@ class TestReviewPlan:
     def test_behaviour_flags(self) -> None:
         assert REVIEW_PLAN.inject_base_branch is False
         assert REVIEW_PLAN.run_after_steps is False
+        assert REVIEW_PLAN.thread_pr_feedback is False
 
     def test_failure_labels(self) -> None:
         assert REVIEW_PLAN.failure_labels == {

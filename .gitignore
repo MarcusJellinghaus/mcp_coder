@@ -58,6 +58,7 @@ uv.lock
 # Test artifacts (cleanup safety net)
 temp_integration_test.py
 snapshot_report.html
+.mcp_coder_verify.md
 
 # Claude auto-memory files (session-local, not for version control)
 memory/
