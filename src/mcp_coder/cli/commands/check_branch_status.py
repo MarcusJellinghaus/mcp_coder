@@ -179,7 +179,8 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
     try:
         logger.info("Starting branch status check")
 
-        # Read defensively — older callers / tests may omit the flag.
+        # Read via getattr (as with wait_for_pr / ci_timeout below) so a
+        # hand-built args namespace without the flag defaults to off.
         fail_on_reviews = getattr(args, "fail_on_reviews", False)
 
         # Resolve project directory with validation

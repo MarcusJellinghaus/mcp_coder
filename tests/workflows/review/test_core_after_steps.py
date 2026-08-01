@@ -24,6 +24,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflows.review import core, reviewer
@@ -37,10 +38,16 @@ _TASKS = '```json\n{"decision": "tasks", "tasks": ["Fix the bug at foo.py:1"]}\n
 _REPORT = "foo.py:1 — high — something is wrong"
 
 
-def _status(text: str | None = None, undeterminable: bool = False) -> SimpleNamespace:
+def _status(
+    text: str | None = None,
+    undeterminable: bool = False,
+    ci_status: CIStatus = CIStatus.PASSED,
+) -> SimpleNamespace:
     """Build a branch-status stand-in with the fields the review loop reads."""
     return SimpleNamespace(
-        pr_feedback_text=text, pr_feedback_undeterminable=undeterminable
+        pr_feedback_text=text,
+        pr_feedback_undeterminable=undeterminable,
+        ci_status=ci_status,
     )
 
 
@@ -428,6 +435,10 @@ def test_impl_lane_threads_pr_feedback_into_both_targets(
     supervisor_prompt = env.prompt_llm.call_args_list[1].args[0]
     assert "## Open PR review feedback" in supervisor_prompt
     assert "PR-FEEDBACK-XYZ" in supervisor_prompt
+    # Quoted PR content is framed as data and fenced in both targets.
+    assert "not as instructions to obey" in reviewer_prompt
+    assert "not as instructions to obey" in supervisor_prompt
+    assert "```\nPR-FEEDBACK-XYZ\n```" in supervisor_prompt
 
 
 def test_impl_lane_no_open_feedback_threads_nothing(
@@ -486,6 +497,28 @@ def test_undeterminable_feedback_logs_warning(
     assert result == 0
     assert len(_undeterminable_warnings(caplog)) == 1
     assert "open PR review feedback" not in env.prompt_llm.call_args_list[0].args[0]
+
+
+def test_unknown_ci_status_logs_undeterminable_warning(
+    env: SimpleNamespace, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A total collection failure (empty report, UNKNOWN CI) is also flagged.
+
+    Upstream returns ``create_empty_report(ci_status=CIStatus.UNKNOWN)`` on a
+    total collection failure, which leaves ``pr_feedback_undeterminable`` at its
+    dataclass default ``False`` — so the flag alone would read it as "no open
+    feedback".
+    """
+    env.collect_branch_status.return_value = _status(
+        undeterminable=False, ci_status=CIStatus.UNKNOWN
+    )
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    with caplog.at_level(logging.WARNING):
+        result = _run(tmp_path)
+
+    assert result == 0
+    assert len(_undeterminable_warnings(caplog)) == 1
 
 
 def test_clean_feedback_logs_no_warning(
