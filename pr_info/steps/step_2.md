@@ -10,7 +10,10 @@ raw-frontmatter scan). Blocked-ness is decided **here** (see summary's deviation
 - **Modified:** `src/mcp_coder/icoder/permissions/model.py` (add `Base` Literal, retype `PermissionFrame.base`)
 - **New:** `src/mcp_coder/icoder/permissions/skill_frame.py`
 - **New tests:** `tests/icoder/test_skill_frame.py`
-- **Modified:** `.importlinter` (add `skill_frame` to `permissions_leaf_isolation` source_modules)
+- **Modified:** `.importlinter` (add `skill_frame` to `permissions_leaf_isolation` source_modules; the
+  `icoder.skills`/`icoder.core` `forbidden_modules` were added in Step 1, so joining source_modules now
+  makes the final AC's "permissions/ imports nothing from icoder.skills/core" genuinely enforced —
+  `skill_frame` imports only `matcher`/`model`/`skill_tools`, so it stays green)
 - **Modified:** `src/mcp_coder/icoder/permissions/gateway.py` — one-line typing touch only (annotate the
   `base` local in the still-present `build_legacy_frame` so mypy accepts the `Base` literals; the
   function itself is deleted in Step 3).
@@ -38,6 +41,8 @@ def build_frame(
     *,
     enforce_skill_tools: bool,
 ) -> SkillFrame: ...
+
+def as_base(value: str | None) -> Base: ...   # narrow the raw str|None to Base ("none" if not a member)
 ```
 
 ## HOW
@@ -70,7 +75,11 @@ if tools_block.use is not None:      # bare use: → blocked (D7b)
     return SkillFrame(PermissionFrame("none"), (), blocked_reason="declares use: <...>, unsupported until I4.1")
 allow, aw, _        = classify_all(tools_block.allow, side="allow")
 deny,  dw, d_drop   = classify_all(tools_block.deny,  side="deny")
-base: Base = "none" if d_drop else tools_block.base   # dropped deny entry → force none (fail-closed, D3)
+# tools_block.base is str|None; parse_tools_block guarantees it is "inherit"/"none"
+# here (errors/use already returned above). Narrow it to Base at this boundary — a
+# small helper `as_base(s: str | None) -> Base` (asserts membership, else "none")
+# keeps mypy-strict happy without importing Base into the string-only skill_tools.
+base: Base = "none" if d_drop else as_base(tools_block.base)   # dropped deny entry → force none (fail-closed, D3)
 warns = aw + dw + (["deny narrowed to base=none because an entry was dropped"] if d_drop else [])
 return SkillFrame(PermissionFrame(base, tuple(allow), tuple(deny)), tuple(warns),
                   blocked_reason=two_empties(base, tools_block.allow, allow))

@@ -41,9 +41,12 @@ ENFORCE_SKILL_TOOLS = False   # module-level; #1062 flips this (fail-closed enfo
   `self._gateway.begin_turn(frame)` then `filter_tools(...)` (as today, minus the build + the warning
   loop). `FakeLLMService.stream(*, frame=None)` records `self.last_frame = frame`.
 - **`app_core.py`:** store `self._skill_frames = dict(skill_frames or {})`. In `stream_llm`, look up
-  `sf = self._skill_frames.get(skill_name)`; yield one `{"type":"permission_warning","message":w}` per
-  `sf.warnings`; call `self._llm_service.stream(text, frame=sf.frame if sf else None)`. `handle_input`'s
-  `SendToLLM` branch keeps `replace(action, text=action.text or text)` (skill_name already carried).
+  `sf = self._skill_frames.get(skill_name)`; prepend one `{"type":"permission_warning","message":w}`
+  per `sf.warnings` **in front of** `self._llm_service.stream(text, frame=sf.frame if sf else None)`
+  and feed the combined stream through the **existing** `assembler.add(...)` + `emit("stream_event",
+  **event)` loop (see ALGORITHM) so warnings are logged/replayed like any other event, not dropped.
+  `handle_input`'s `SendToLLM` branch keeps `replace(action, text=action.text or text)` (skill_name
+  already carried).
 - **`ui/app.py`:** in the `SendToLLM()` case read `action.skill_name`; `_stream_llm(self, text,
   skill_name=None)` calls `self._core.stream_llm(text, skill_name)`.
 - **`cli/commands/icoder.py`:** in the langchain branch (mirroring the existing `provider=="langchain"
@@ -60,9 +63,18 @@ ENFORCE_SKILL_TOOLS = False   # module-level; #1062 flips this (fail-closed enfo
 ```
 sf = self._skill_frames.get(skill_name)
 self._event_log.emit("llm_request_start", text=text)
-for w in (sf.warnings if sf else ()): yield {"type":"permission_warning","message":w}
-for event in self._llm_service.stream(text, frame=(sf.frame if sf else None)):
-    ... existing assembler / token-usage / done handling ...
+# Route warnings through the SAME assembler + event-log path as service events so
+# they are not dropped from resume/replay logging (today the service yields them
+# inside this loop, so they are logged as stream_event — preserve that).
+def _events():
+    for w in (sf.warnings if sf else ()):
+        yield {"type": "permission_warning", "message": w}
+    yield from self._llm_service.stream(text, frame=(sf.frame if sf else None))
+for event in _events():
+    assembler.add(event)
+    if event.get("type") != "raw_line":
+        self._event_log.emit("stream_event", **event)
+    ... existing token-usage / done handling ...
     yield event
 ```
 

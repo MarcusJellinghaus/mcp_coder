@@ -8,7 +8,9 @@ semantics (those are Step 2). Parsing must be callable without `load_skills` (I5
 - **New:** `src/mcp_coder/icoder/permissions/skill_tools.py`
 - **New tests:** `tests/icoder/test_skill_tools.py`
 - **Modified:** `src/mcp_coder/icoder/skills.py` (add field + populate it)
-- **Modified:** `.importlinter` (add `skill_tools` to `permissions_leaf_isolation` source_modules)
+- **Modified:** `.importlinter` (add `skill_tools` to `permissions_leaf_isolation` source_modules,
+  **and** add `mcp_coder.icoder.skills` + `mcp_coder.icoder.core` to that contract's `forbidden_modules`
+  so the leaf's "imports nothing from skills/core" guarantee is actually enforced — see HOW)
 
 ## WHAT
 ```python
@@ -34,7 +36,11 @@ set `tools_block=parse_tools_block(meta)`.
   This keeps `permissions/` a leaf; `skills.py → permissions.skill_tools` is the only new edge (downward).
 - Frontmatter key is `tools` (`meta.get("tools")`).
 - `import`-linter: append `mcp_coder.icoder.permissions.skill_tools` to the `permissions_leaf_isolation`
-  `source_modules` list. No other contract changes this step.
+  `source_modules` list, and append `mcp_coder.icoder.skills` and `mcp_coder.icoder.core` to that
+  contract's `forbidden_modules` (which today lists only `icoder.ui`/`icoder.services`/`textual`/
+  langchain). The existing pure source modules (`model`/`matcher`/`resolver`/`loader`) and the new
+  `skill_tools` import none of `skills`/`core`, so the contract stays green while now *enforcing* the
+  leaf's independence from `icoder.skills`/`icoder.core` — the guarantee the final AC relies on.
 
 ## ALGORITHM (`parse_tools_block`)
 ```
