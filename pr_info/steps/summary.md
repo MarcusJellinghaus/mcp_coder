@@ -39,9 +39,15 @@ bare `use:`) are **only knowable at build time** — `parse_tools_block` imports
 `parse_matcher`. Splitting the decision across parse + build is both more complex and a correctness trap.
 
 **This plan decides blocked-ness in one place — `build_frame` — and carries it as
-`SkillFrame.blocked_reason: str \| None`.** All of D12's *goals* are preserved: `Command.disabled_reason`
-is still the single generic signal the autocomplete and the `handle_input` refusal read; it is simply
-populated once, at startup, from `build_frame`'s result instead of from `register_skill_commands`.
+`SkillFrame.blocked_reason: str \| None`.** To keep D12's **provider-agnostic** reach, the
+`{skill_name: SkillFrame}` map is built **unconditionally at startup for every provider** (`build_frame`
+is pure and needs no `mcp_config`), so a malformed `tools:` block sets `Command.disabled_reason`
+regardless of provider — exactly as D12's parse-time blocking did, and unlike a map gated behind
+`provider=="langchain" and mcp_config` (which would leave langchain-without-`mcp_config` and
+non-langchain skills silently unblocked). Only the gateway *enforcement* stays langchain-gated.
+`Command.disabled_reason` remains the single generic signal the autocomplete and the `handle_input`
+refusal read; it is simply populated once, at startup, from `build_frame`'s result instead of from
+`register_skill_commands`.
 
 ## Canonical `skill → frame` mapping (implemented by `build_frame`)
 
@@ -80,7 +86,7 @@ populated once, at startup, from `build_frame`'s result instead of from `registe
 - `src/mcp_coder/icoder/ui/app.py` — worker threads `skill_name`; startup notices
 - `src/mcp_coder/icoder/ui/runtime_banner.py` — startup permission-notices helper
 - `src/mcp_coder/icoder/ui/widgets/command_autocomplete.py` — mark disabled commands
-- `src/mcp_coder/cli/commands/icoder.py` — `ENFORCE_SKILL_TOOLS`; build frame map (langchain); pass to `AppCore`
+- `src/mcp_coder/cli/commands/icoder.py` — `ENFORCE_SKILL_TOOLS`; build frame map (all providers); pass to `AppCore`
 - `src/mcp_coder/llm/types.py` — document `permission_warning` StreamEvent
 - `.importlinter` — `skill_tools`/`skill_frame` join `permissions_leaf_isolation`; one `cli → skill_frame` ignore
 - Tests migrated: `test_types`, `test_skills`, `test_app_core`, `test_app_pilot`, `test_llm_service`,

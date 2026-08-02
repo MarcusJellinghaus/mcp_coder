@@ -49,11 +49,20 @@ ENFORCE_SKILL_TOOLS = False   # module-level; #1062 flips this (fail-closed enfo
   already carried).
 - **`ui/app.py`:** in the `SendToLLM()` case read `action.skill_name`; `_stream_llm(self, text,
   skill_name=None)` calls `self._core.stream_llm(text, skill_name)`.
-- **`cli/commands/icoder.py`:** in the langchain branch (mirroring the existing `provider=="langchain"
-  and mcp_config` gate) build `frame_map = {s.name: build_frame(s.tools_block, tuple(s.allowed_tools)
-  or None, enforce_skill_tools=ENFORCE_SKILL_TOOLS) for s in skills}`; pass `skill_frames=frame_map`
-  to `AppCore`. Drop `enforce_skill_tools=False` from the `RealLLMService(...)` call. Non-langchain →
-  empty map.
+- **`cli/commands/icoder.py`:** build the frame map **unconditionally, for every provider**, right
+  **after** `skills = load_skills(...)` (so `skills` is in scope) and **before** both
+  `register_skill_commands(...)` (Step 4 reads each frame's `blocked_reason`) and the outer-scope
+  `AppCore(...)` construction — mirroring Step 5's hoist of `permission_degraded` out of the
+  `provider=="langchain" and mcp_config` gate (do **not** build it inside that gate: it runs before
+  `load_skills`, so `skills` is not yet defined there):
+  `frame_map = {s.name: build_frame(s.tools_block, tuple(s.allowed_tools) or None,
+  enforce_skill_tools=ENFORCE_SKILL_TOOLS) for s in skills}`. `build_frame` is pure and needs no
+  `mcp_config`, so a malformed `tools:` block blocks its skill **regardless of provider** — this
+  restores D12's parse-time, provider-agnostic blocking (a `disabled_reason` is set for a broken skill
+  even under langchain-without-`mcp_config` or a non-langchain provider). Pass `skill_frames=frame_map`
+  to `AppCore`. Only the **gateway enforcement** stays gated on `provider=="langchain" and mcp_config`
+  (a `None` gateway simply ignores the forwarded frame). Drop `enforce_skill_tools=False` from the
+  `RealLLMService(...)` call.
 - **`llm/types.py`:** add a `permission_warning` bullet to the `StreamEvent` known-types docstring.
 - **`.importlinter`:** add `mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.skill_frame`
   to the `layered_architecture` `ignore_imports` list (cli↔icoder are the same layer; every such edge
@@ -100,7 +109,8 @@ for event in _events():
   proving a skill frame never leaks into the next turn (frames are single-turn).
 - `test_app_pilot.py`: the UI worker threads `skill_name` and renders `permission_warning`.
 - `test_cli_icoder.py`: `RealLLMService` is built **without** `enforce_skill_tools`; `AppCore` receives
-  a non-empty `skill_frames` under langchain and an empty map otherwise.
+  a `skill_frames` map built from the loaded skills **for every provider** (non-empty whenever skills
+  exist — not gated on langchain/`mcp_config`); only the gateway wiring stays langchain-gated.
 
 ## LLM PROMPT
 > Implement Step 3 of `pr_info/steps/summary.md` (see `pr_info/steps/step_3.md`). This is the atomic
@@ -111,7 +121,8 @@ for event in _events():
 > `gateway.py`; add the `skill_frames` snapshot to `AppCore` and rewrite `stream_llm(text, skill_name)`
 > to look it up, emit `SkillFrame.warnings` as `permission_warning` events, and forward the frame;
 > thread `skill_name` through `ui/app.py`; add `ENFORCE_SKILL_TOOLS` and build the `{skill_name:
-> SkillFrame}` map (langchain only) in `cli/commands/icoder.py`, passing it to `AppCore` and dropping
-> the `enforce_skill_tools` kwarg; document `permission_warning` in `llm/types.py`; and add the one
+> SkillFrame}` map **for every provider** (after `load_skills`, before `register_skill_commands` and
+> `AppCore`) in `cli/commands/icoder.py`, passing it to `AppCore` and dropping the
+> `enforce_skill_tools` kwarg; document `permission_warning` in `llm/types.py`; and add the one
 > `cli.commands.icoder -> permissions.skill_frame` line to `.importlinter`. Run pylint, mypy(strict),
 > pytest (`-n auto` unit-only exclusions) and `lint-imports` until green. One commit.

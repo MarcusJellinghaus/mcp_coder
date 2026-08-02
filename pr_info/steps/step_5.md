@@ -12,7 +12,8 @@ testability; `AppCore` exposes the two inputs; `on_mount` renders them.
 - `src/mcp_coder/cli/commands/icoder.py` — hoist a `permission_degraded` flag (default `False`) to
   outer scope and pass it to `AppCore` (see HOW; `config` is not in scope at the `AppCore(...)` call)
 - `src/mcp_coder/icoder/ui/app.py` — render the notices in `on_mount`
-- Tests: `tests/icoder/test_runtime_banner.py`, `test_app_core.py`, `test_cli_icoder.py`
+- Tests: `tests/icoder/test_runtime_banner.py`, `test_app_core.py`, `test_cli_icoder.py`,
+  `test_app_pilot.py`
 
 ## WHAT (signatures)
 ```python
@@ -69,6 +70,12 @@ return lines
   `permission_degraded` echoes the constructor flag.
 - `test_cli_icoder.py`: `AppCore` receives `permission_degraded=True` when the loaded config is
   degraded (langchain), and `False`/default otherwise.
+- `test_app_pilot.py`: drive the Textual pilot on startup with an `AppCore` whose
+  `permission_degraded` is `True` **and** whose `skill_frames` carry a `blocked_reason`, and assert the
+  output actually renders **both** notice kinds — the degraded-config line and a broken-skill line — so
+  the `on_mount` render path (not just the pure formatter + `AppCore` properties) is covered
+  ("startup surfaces both failure kinds"), analogous to the Step 3 pilot test for `permission_warning`.
+  Assert the fresh-start path renders the notices and the resume path (`resume_log_path` set) skips them.
 
 ## LLM PROMPT
 > Implement Step 5 of `pr_info/steps/summary.md` (see `pr_info/steps/step_5.md`). Using TDD, write the

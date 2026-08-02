@@ -37,9 +37,10 @@ def register_skill_commands(
 ## HOW
 - **`skills.py`:** when building each `Command`, set `disabled_reason=(disabled_reasons or {}).get(skill.name)`.
   Signature-compatible: existing callers that omit the arg get `None` (claude branch unaffected).
-- **`cli/commands/icoder.py`:** langchain branch passes
-  `disabled_reasons={n: f.blocked_reason for n, f in frame_map.items()}` into `register_skill_commands`.
-  (The map already exists from Step 3.)
+- **`cli/commands/icoder.py`:** passes
+  `disabled_reasons={n: f.blocked_reason for n, f in frame_map.items()}` into `register_skill_commands`
+  **for every provider** (the map is built unconditionally in Step 3, so a malformed `tools:` block
+  blocks its skill regardless of provider — restoring D12's provider-agnostic blocking).
 - **`app_core.py` `handle_input`:** *before* dispatch, if the leading token names a registered command
   whose `disabled_reason` is set, emit `output_emitted` and return `Response((OutputText(reason),))` —
   **no dispatch, no `SendToLLM`**. Keep the existing `command_matched` / dispatch path otherwise. This
@@ -75,8 +76,9 @@ if cmd is not None and cmd.disabled_reason:
   `SendToLLM`; a non-blocked command is unaffected; an `output_emitted` event is logged.
 - `test_command_autocomplete.py`: a disabled command appears as a disabled option and
   `select_highlighted()` on it returns `None`.
-- `test_cli_icoder.py`: under langchain, a skill with a malformed `tools:` block ends up with a
-  non-`None` `disabled_reason` on its registered command.
+- `test_cli_icoder.py`: a skill with a malformed `tools:` block ends up with a non-`None`
+  `disabled_reason` on its registered command **regardless of provider** (parametrise over langchain
+  and a non-langchain provider — the blocking must not depend on the `mcp_config`/gateway gate).
 
 ## LLM PROMPT
 > Implement Step 4 of `pr_info/steps/summary.md` (see `pr_info/steps/step_4.md`). Using TDD, write the
