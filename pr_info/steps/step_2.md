@@ -102,8 +102,12 @@ warning, `blocked_reason is None`; `none` + declared allow all-dropped → `bloc
 `@ref` in `allow` dropped + warned, no model change; non-`mcp__` token ignored (no warning); `mcp__s__*`
 wildcard produces a matcher (enforced); arg-scoped `allow` token kept + warning naming `#1053`; legacy
 `base="inherit"` when `enforce_skill_tools=False` and `base="none"` when `True`; neither block →
-`frame is None`; malformed block → fail-closed `base="none"` frame + `blocked_reason`. Add a mypy-level
-check that `PermissionFrame.base` rejects a non-literal (implicit via strict run).
+`frame is None`; malformed block → fail-closed `base="none"` frame + `blocked_reason`; **both blocks
+present** (`tools_block` non-`None` *and* `allowed_tools` non-empty, e.g. legacy tokens that would
+differ from the rich block) → the rich `tools:` block **wins** (frame reflects `tools_block`, the
+`allowed_tools` list is ignored) **and** no runtime warning is emitted (`warnings == ()`) — assert both
+the precedence and the silence (D14). Add a mypy-level check that `PermissionFrame.base` rejects a
+non-literal (implicit via strict run).
 
 ## LLM PROMPT
 > Implement Step 2 of `pr_info/steps/summary.md` (see `pr_info/steps/step_2.md`). Using TDD, first

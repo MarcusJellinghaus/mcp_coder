@@ -94,6 +94,10 @@ for event in _events():
 - `test_app_core.py`: `stream_llm(text, skill_name)` looks up the injected `skill_frames`, forwards
   `sf.frame` to the service, and emits `sf.warnings` as `permission_warning` events (assert order:
   warnings precede the stream). `handle_input` preserves `skill_name` across reconstruction.
+  **Single-turn / no-leak:** invoking a skill turn (`stream_llm(text, skill_name=\"<name>\")`) forwards
+  that skill's `sf.frame`, and the immediately following plain-message turn (`stream_llm(text)` /
+  `skill_name=None`) forwards `frame=None` — asserted via `FakeLLMService.last_frame` on each call —
+  proving a skill frame never leaks into the next turn (frames are single-turn).
 - `test_app_pilot.py`: the UI worker threads `skill_name` and renders `permission_warning`.
 - `test_cli_icoder.py`: `RealLLMService` is built **without** `enforce_skill_tools`; `AppCore` receives
   a non-empty `skill_frames` under langchain and an empty map otherwise.
