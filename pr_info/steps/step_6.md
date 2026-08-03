@@ -72,6 +72,16 @@ def _route_to_human(config, project_dir, *, issue_number, update_issue_labels,
     `return _fail(...)`. (The `ci` reason sets `pending_ci_note` and keeps looping, so it is
     unaffected; the fix was already committed earlier in the round, so the flush here commits
     only the round-log write.)
+  - *tasks→resume LLM-exception* (tasks branch, the `except` around the task-application
+    `reviewer._run_reviewer(...)` resume at `core.py:387`, `return _fail(llm_failure_reason(...)`
+    → `general` / `timeout` / `mcp_unavailable`): this is a **terminal path on which a real
+    report *and* a `tasks` verdict already exist** — the reviewer crashed only while applying
+    the fixes — yet no round log is written today, so the last executed round's findings are
+    lost, contrary to the AC. Add `write_round_log(..., changes=reason, escalate_reason=reason)`
+    **and** a best-effort `_flush_round_log(project_dir)` before `return _fail(...)`, mirroring
+    the after-steps `_fail` sub-paths above. (The other in-round `_fail` exits — the fresh
+    reviewer exception, empty-report exhaustion, supervisor exception, and unparseable verdict
+    — have no completed report+verdict pair and are intentionally left as-is.)
 - Comment bodies: short, human-readable, e.g. cap → "Automated {config.name} review reached
   the round limit ({REVIEW_MAX_ROUNDS} rounds) without converging — handing off for human
   review."; escalate → include `verdict.escalate_reason`; rebase → "Branch could not be
@@ -117,6 +127,12 @@ return 0
     committed fix): run fails with the matching label (RC=1) **and** the round's log is written
     and flushed. Both prove the AC "the last executed round always appears in the committed
     review log, on every terminal path" holds for the `_fail` sub-paths too.
+  - *tasks→resume LLM-exception*: supervisor returns `tasks`, the task-application
+    `reviewer._run_reviewer(...)` resume raises (patch it to raise) → run fails with the
+    mapped label (RC=1) **and** the round's log (with the real `report` findings + the `tasks`
+    verdict) is written and flushed (assert `write_round_log` + `_flush_round_log` /
+    `commit_all_changes` invoked before `_fail`), so a crash while applying fixes still lands
+    the executed round in the committed log.
 
 ## LLM PROMPT
 > Implement Step 6 from `pr_info/steps/step_6.md` (see `pr_info/steps/summary.md`). Add
@@ -128,10 +144,11 @@ return 0
 > `pending_ci_note` is set else `_route_to_human(...)` (do NOT re-write the cap round's log —
 > it was already written; flush = commit+push only);
 > commit-failed/push-failed add a best-effort flush before `_fail`; the dismiss-branch
-> `if reason: return _fail(reason)` and tasks-branch `elif reason: return _fail(reason)`
-> after-steps-failure sub-paths (which today write no log) add `write_round_log(...)` + a
-> best-effort flush before `_fail`, so every terminal path lands its round in the committed
-> log. `_flush_round_log` must
+> `if reason: return _fail(reason)`, the tasks-branch `elif reason: return _fail(reason)`
+> after-steps-failure sub-paths, AND the tasks-branch task-application resume `except`
+> (`core.py:387`, where a report + `tasks` verdict already exist) — all of which today write
+> no log — add `write_round_log(...)` + a best-effort flush before `_fail`, so every terminal
+> path with a completed round lands it in the committed log. `_flush_round_log` must
 > check the falsy return of `commit_all_changes`/`push_changes` (they do not raise) and warn.
 > Write `test_handoff.py`
 > and update the cap/escalate/rebase tests first, then implement. Run pylint, pytest
