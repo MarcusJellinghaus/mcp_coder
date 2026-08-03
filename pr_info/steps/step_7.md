@@ -20,6 +20,14 @@ is reached; Step 5 is the guarantee for when the LLM ignores it.
 def _run_reviewer(..., round_number: int, max_rounds: int, ...) -> LLMResponseDict: ...
 def _get_verdict(..., round_number: int, max_rounds: int, ...) -> tuple[Verdict | None, str | None]: ...
 ```
+`round_number` / `max_rounds` are **required** on both. `_run_reviewer` has **two** call
+sites in `core.body()` — the fresh reviewer *and* the task-application resume — so **both**
+must pass them (the resume prompt does no round substitution, but the params are still
+supplied: `round_number=round_number, max_rounds=REVIEW_MAX_ROUNDS`). Do **not** default
+`max_rounds` to `REVIEW_MAX_ROUNDS` in `reviewer.py`: the constant lives in `core.py`, which
+already imports `reviewer`, so importing it back would be a circular import. Keeping the
+params required (values passed from `core`, which owns the constant) avoids both the cycle
+and a duplicated constant.
 
 ## HOW
 - **Reviewer prompt (fresh only):** after the existing `{issue_number}` / `{base_branch}`
@@ -31,9 +39,10 @@ def _get_verdict(..., round_number: int, max_rounds: int, ...) -> tuple[Verdict 
   `{tie_break}` (from `config.tie_break`). The header is rebuilt every turn (including
   resumed ones), so round-varying substitution needs no new session plumbing.
 - **core:** pass `round_number=round_number, max_rounds=REVIEW_MAX_ROUNDS` into the fresh
-  `_run_reviewer` call and the `_get_verdict` call (the task-application resume needs no
-  round context). Extend `_CI_NOTE` with: "Treat this CI failure as `critical` severity in
-  your structured report."
+  `_run_reviewer` call, the `_get_verdict` call, **and** the task-application resume
+  `_run_reviewer` call (the resume does no round substitution, but the params are required, so
+  it still passes them). Extend `_CI_NOTE` with: "Treat this CI failure as `critical` severity
+  in your structured report."
 - **prompts.md — §Review Supervisor**, add to the triage rules (all via placeholders):
   - Severity floor: "Findings carry a severity (`critical`/`high`/`medium`/`low`). Accept
     `critical`/`high` in any round. This is round `{round_number}` of `{max_rounds}`; from
