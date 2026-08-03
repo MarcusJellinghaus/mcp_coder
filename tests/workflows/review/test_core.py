@@ -24,7 +24,7 @@ import pytest
 from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.review import core, reviewer
+from mcp_coder.workflows.review import core, handoff, reviewer
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 
 # --- verdict payloads -------------------------------------------------------
@@ -82,12 +82,14 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(
         core, "get_current_branch_name", MagicMock(return_value="1072-review")
     )
-    monkeypatch.setattr(core, "IssueManager", MagicMock(name="IssueManager"))
+    monkeypatch.setattr(handoff, "IssueManager", MagicMock(name="IssueManager"))
 
     mocks.update_workflow_label = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "update_workflow_label", mocks.update_workflow_label)
+    monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
     mocks.handle_workflow_failure = MagicMock()
-    monkeypatch.setattr(core, "handle_workflow_failure", mocks.handle_workflow_failure)
+    monkeypatch.setattr(
+        handoff, "handle_workflow_failure", mocks.handle_workflow_failure
+    )
 
     # Present so the plan lane can assert it is never called (thread_pr_feedback
     # is False for REVIEW_PLAN); a stray call would surface as a real GitHub hit.

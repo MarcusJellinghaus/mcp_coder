@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Create `handoff.py`; relocate `_set_label` + `_fail`
-- [ ] Implementation: create `handoff.py`, move `_set_label`/`_fail` verbatim with their imports; re-import into `core.py`; repoint `env` fixtures in `test_core.py`/`test_core_after_steps.py` to patch `handoff`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `handoff.py`, move `_set_label`/`_fail` verbatim with their imports; re-import into `core.py`; repoint `env` fixtures in `test_core.py`/`test_core_after_steps.py` to patch `handoff`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (behaviour-preserving relocation; `core.py` shrank ~680→587 lines. pylint ✅ / mypy ✅ except the one pre-existing `core.py:125` `pr_feedback_undeterminable` finding on `BranchStatusReport` — E1101 + attr-defined, untouched by this diff. pytest still blocked repo-wide by the same pre-existing env issue as Steps 1–3: installed `mcp_workspace` lacks `checks.branch_status_rendering` → `__init__.py:37`, so collection yields 0 tests even for unmodified files)
+- [x] Commit message prepared
 
 ### Step 5: Severity backstop — downgrade `tasks` → `dismiss`
 - [ ] Implementation: apply severity floor transform in `core.body()` (import `max_severity`; CI-exemption + below-floor + fail-open guards; log downgrade); mocked-LLM tests first (plan lane in `test_core.py`, CI exemption in `test_core_after_steps.py`)
