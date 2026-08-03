@@ -10,7 +10,9 @@ helpers alongside them.
 import logging
 from pathlib import Path
 
+from mcp_coder.mcp_workspace_git import commit_all_changes
 from mcp_coder.mcp_workspace_github import IssueManager
+from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     format_elapsed_time,
@@ -111,3 +113,74 @@ def _fail(
         post_issue_comments=post_issue_comments,
     )
     return 1
+
+
+def _flush_round_log(project_dir: Path, message: str = "Add review round log") -> None:
+    """Commit + push the already-written round log; best-effort (never raises).
+
+    The round body always *writes* its log to the working tree; the terminal
+    paths call this to land that entry in the *committed* review log. It does
+    **not** re-write the log — the caller wrote it first — it only commits and
+    pushes what is already on disk.
+
+    Both git calls report failure by return value rather than by raising
+    (``commit_all_changes`` returns ``{"success": bool}``; ``push_changes``
+    returns ``bool``), so the falsy result is checked and warned; the push is
+    skipped when the commit did not succeed. A broad ``try/except`` additionally
+    swallows any unexpected raise so a broken-commit terminal path never recurses
+    into a second failure.
+
+    Args:
+        project_dir: Repository root; git ops target this.
+        message: Commit message for the round-log commit.
+    """
+    try:
+        result = commit_all_changes(message, project_dir)
+        if not result["success"]:
+            logger.warning(
+                "Round-log commit did not succeed: %s",
+                result.get("error") or "unknown error",
+            )
+            return
+        if not push_changes(project_dir):
+            logger.warning("Round-log push did not succeed")
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Round-log flush failed: %s", exc)
+
+
+def _route_to_human(
+    config: ReviewConfig,
+    project_dir: Path,
+    *,
+    issue_number: int | None,
+    update_issue_labels: bool,
+    post_issue_comments: bool,
+    comment_body: str,
+) -> int:
+    """Hand a converged-but-unresolved run off to a human; return ``0``.
+
+    A needs-human terminal path (escalate verdict, unresolved rebase, or the
+    rounds cap): flush the last round's log to the committed review log, post a
+    single human-readable issue comment (gated), then transition to the
+    ``escalate_label_id`` recovery label. Unlike :func:`_fail`, this is **not**
+    an error — it returns ``0`` and never touches a failure label.
+
+    Args:
+        config: The review workflow config (provides ``escalate_label_id``).
+        project_dir: Repository root.
+        issue_number: Issue to comment on, or ``None`` to skip the comment.
+        update_issue_labels: Whether to apply the escalate label transition.
+        post_issue_comments: Whether to post the handoff comment.
+        comment_body: Human-readable explanation of why the run handed off.
+
+    Returns:
+        Always ``0``.
+    """
+    _flush_round_log(project_dir)
+    if post_issue_comments and issue_number is not None:
+        try:
+            IssueManager(project_dir).add_comment(issue_number, comment_body)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("Failed to post handoff comment: %s", exc)
+    _set_label(config, project_dir, config.escalate_label_id, update_issue_labels)
+    return 0

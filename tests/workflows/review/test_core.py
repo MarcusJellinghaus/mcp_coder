@@ -84,7 +84,17 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(
         core, "get_current_branch_name", MagicMock(return_value="1072-review")
     )
-    monkeypatch.setattr(handoff, "IssueManager", MagicMock(name="IssueManager"))
+    mocks.issue_manager = MagicMock(name="IssueManager")
+    monkeypatch.setattr(handoff, "IssueManager", mocks.issue_manager)
+
+    # Terminal-path log flush (handoff._flush_round_log commit + push): mocked so
+    # the flush never touches real git; tests assert the commit fired.
+    mocks.commit_all_changes = MagicMock(
+        return_value={"success": True, "commit_hash": "FLUSHSHA"}
+    )
+    monkeypatch.setattr(handoff, "commit_all_changes", mocks.commit_all_changes)
+    mocks.flush_push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "push_changes", mocks.flush_push)
 
     mocks.update_workflow_label = MagicMock(return_value=True)
     monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
@@ -143,7 +153,11 @@ def test_dismiss_round_one_succeeds(env: SimpleNamespace, tmp_path: Path) -> Non
 def test_escalate_sets_escalate_label_and_logs_reason(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
-    """An escalate verdict returns 0, escalate label, log reason, no failure."""
+    """An escalate verdict returns 0, escalate label, log reason, no failure.
+
+    The handoff path also flushes the round log to the committed review log and
+    posts a handoff comment carrying the escalate reason.
+    """
     env.prompt_llm.side_effect = [_reviewer(), _resp(_ESCALATE)]
 
     result = _run(tmp_path)
@@ -153,6 +167,10 @@ def test_escalate_sets_escalate_label_and_logs_reason(
     from_id, to_id = _label_transition(env.update_workflow_label)
     assert from_id == REVIEW_PLAN.busy_label_id
     assert to_id == REVIEW_PLAN.escalate_label_id
+    # Handoff path: the last round's log is flushed and a comment is posted.
+    env.commit_all_changes.assert_called()
+    comment = env.issue_manager.return_value.add_comment.call_args.args[1]
+    assert "needs a human" in comment
 
     log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
     assert "needs a human" in log
@@ -263,16 +281,26 @@ def test_repair_recovers_valid_verdict(env: SimpleNamespace, tmp_path: Path) -> 
     env.handle_workflow_failure.assert_not_called()
 
 
-def test_rounds_cap_exhausted_fails(env: SimpleNamespace, tmp_path: Path) -> None:
-    """tasks every round hits the cap and fails with the rounds label."""
+def test_rounds_cap_exhausted_hands_off(env: SimpleNamespace, tmp_path: Path) -> None:
+    """tasks every round hits the cap and hands off (RC=0, escalate + comment).
+
+    The plain rounds cap is no longer a failure: it flushes the last round's log
+    to the committed review log, posts a handoff comment, transitions to the
+    escalate (plan_review) recovery label, and returns 0 — no failure label.
+    """
     per_round = [_reviewer(), _resp(_TASKS), _reviewer(session_id="rev-1")]
     env.prompt_llm.side_effect = per_round * core.REVIEW_MAX_ROUNDS
 
     result = _run(tmp_path)
 
-    assert result == 1
-    failure = env.handle_workflow_failure.call_args.args[0]
-    assert failure.category == REVIEW_PLAN.failure_labels["rounds"]
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.escalate_label_id
+    # The last round's log is flushed to the committed review log.
+    env.commit_all_changes.assert_called()
+    # A handoff comment is posted on the issue.
+    env.issue_manager.return_value.add_comment.assert_called_once()
 
 
 def test_silent_no_op_is_logged_and_loops(env: SimpleNamespace, tmp_path: Path) -> None:
@@ -283,7 +311,7 @@ def test_silent_no_op_is_logged_and_loops(env: SimpleNamespace, tmp_path: Path) 
 
     result = _run(tmp_path)
 
-    assert result == 1  # cap still reached
+    assert result == 0  # cap reached -> handoff (RC=0)
     log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
     assert "no-op" in log
 
@@ -552,9 +580,10 @@ def test_high_severity_at_strict_round_stays_tasks(
 
     result = _run(tmp_path)
 
-    assert result == 1  # never downgraded -> hits the rounds cap
-    failure = env.handle_workflow_failure.call_args.args[0]
-    assert failure.category == REVIEW_PLAN.failure_labels["rounds"]
+    assert result == 0  # never downgraded -> hits the cap -> handoff (RC=0)
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.escalate_label_id
 
 
 def test_unparseable_severity_fails_open_stays_tasks(
@@ -570,9 +599,10 @@ def test_unparseable_severity_fails_open_stays_tasks(
 
     result = _run(tmp_path)
 
-    assert result == 1  # fail open -> stays tasks -> rounds cap
-    failure = env.handle_workflow_failure.call_args.args[0]
-    assert failure.category == REVIEW_PLAN.failure_labels["rounds"]
+    assert result == 0  # fail open -> stays tasks -> cap -> handoff (RC=0)
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.escalate_label_id
 
 
 def test_low_severity_below_strict_round_stays_tasks(

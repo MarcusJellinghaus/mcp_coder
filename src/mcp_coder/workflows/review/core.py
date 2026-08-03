@@ -48,7 +48,7 @@ from mcp_coder.workflow_utils.failure_handling import (
 
 from . import reviewer
 from .config import ReviewConfig
-from .handoff import _fail, _set_label
+from .handoff import _fail, _flush_round_log, _route_to_human, _set_label
 from .review_log import next_run_number, write_round_log
 from .severity import max_severity
 from .verdict import Verdict
@@ -95,8 +95,10 @@ def run_review_workflow(
         post_issue_comments: When True, post a failure comment on the error path.
 
     Returns:
-        ``0`` on success or a needs-human handoff (escalate / rebase); ``1`` on
-        any error (unparseable verdict, timeout, MCP down, rounds cap).
+        ``0`` on success or a needs-human handoff (escalate / rebase / rounds
+        cap — all route to the escalate recovery label); ``1`` on any error
+        (unparseable verdict, timeout, MCP down, an open CI finding at the cap,
+        commit-failed, push-failed).
     """
     issue_number, base_branch = _resolve_context(config, project_dir)
     start_time = time.time()
@@ -272,14 +274,32 @@ def run_review_workflow(
                         changes="rebase-needed",
                         escalate_reason="rebase",
                     )
-                    _set_label(
+                    return _route_to_human(
                         config,
                         project_dir,
-                        config.escalate_label_id,
-                        update_issue_labels,
+                        issue_number=issue_number,
+                        update_issue_labels=update_issue_labels,
+                        post_issue_comments=post_issue_comments,
+                        comment_body=(
+                            "Branch could not be rebased cleanly — handing off."
+                        ),
                     )
-                    return 0
                 if reason:
+                    # Terminal after-steps failure on the dismiss gate (e.g. a
+                    # red final CI → `ci`, or `timeout` / `general` /
+                    # `mcp_unavailable`): write + flush the round so the last
+                    # executed round lands in the committed log before failing.
+                    write_round_log(
+                        project_dir,
+                        config,
+                        run_number,
+                        round_number,
+                        findings=report,
+                        decisions=str(verdict),
+                        changes=reason,
+                        escalate_reason=reason,
+                    )
+                    _flush_round_log(project_dir)
                     return _fail(
                         config,
                         project_dir,
@@ -299,6 +319,7 @@ def run_review_workflow(
                     decisions=str(verdict),
                     changes="dismiss",
                 )
+                _flush_round_log(project_dir)
                 _set_label(
                     config, project_dir, config.success_label_id, update_issue_labels
                 )
@@ -315,10 +336,17 @@ def run_review_workflow(
                     changes="escalate",
                     escalate_reason=verdict.escalate_reason,
                 )
-                _set_label(
-                    config, project_dir, config.escalate_label_id, update_issue_labels
+                return _route_to_human(
+                    config,
+                    project_dir,
+                    issue_number=issue_number,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    comment_body=(
+                        f"{config.name} review escalated to a human: "
+                        f"{verdict.escalate_reason}"
+                    ),
                 )
-                return 0
 
             # decision == "tasks": resume the reviewer to apply the fixes.
             logger.info(
@@ -341,10 +369,26 @@ def run_review_workflow(
                     ci_note=None,
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
+                # A real report + `tasks` verdict already exist; the reviewer
+                # crashed only while applying the fixes. Land the executed round
+                # in the committed log before failing (mirrors the after-steps
+                # `_fail` sub-paths below).
+                reason = llm_failure_reason(exc) or "general"
+                write_round_log(
+                    project_dir,
+                    config,
+                    run_number,
+                    round_number,
+                    findings=report,
+                    decisions=str(verdict),
+                    changes=reason,
+                    escalate_reason=reason,
+                )
+                _flush_round_log(project_dir)
                 return _fail(
                     config,
                     project_dir,
-                    llm_failure_reason(exc) or "general",
+                    reason,
                     update_issue_labels=update_issue_labels,
                     post_issue_comments=post_issue_comments,
                     round_number=round_number,
@@ -372,6 +416,10 @@ def run_review_workflow(
                     changes="commit-failed",
                     escalate_reason="commit-failed",
                 )
+                # Committing is what is broken, so the flush is best-effort by
+                # design; it still lands the round log when only the LLM commit
+                # step failed.
+                _flush_round_log(project_dir)
                 return _fail(
                     config,
                     project_dir,
@@ -393,6 +441,8 @@ def run_review_workflow(
                     changes="push-failed",
                     escalate_reason="push-failed",
                 )
+                # Pushing is what is broken, so this flush is best-effort too.
+                _flush_round_log(project_dir)
                 return _fail(
                     config,
                     project_dir,
@@ -424,16 +474,34 @@ def run_review_workflow(
                     changes="rebase-needed",
                     escalate_reason="rebase",
                 )
-                _set_label(
-                    config, project_dir, config.escalate_label_id, update_issue_labels
+                return _route_to_human(
+                    config,
+                    project_dir,
+                    issue_number=issue_number,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    comment_body=("Branch could not be rebased cleanly — handing off."),
                 )
-                return 0
             if reason == "ci":
                 # Mid-loop red CI is a finding, not a terminal failure: carry it
                 # into the next fresh reviewer prompt and keep looping (the
                 # supervisor triages it within the rounds cap).
                 pending_ci_note = _CI_NOTE
             elif reason:
+                # Terminal after-steps failure (`timeout` / `general` /
+                # `mcp_unavailable`) after a committed fix: write + flush the
+                # round so it lands in the committed log before failing.
+                write_round_log(
+                    project_dir,
+                    config,
+                    run_number,
+                    round_number,
+                    findings=report,
+                    decisions=str(verdict),
+                    changes=reason,
+                    escalate_reason=reason,
+                )
+                _flush_round_log(project_dir)
                 return _fail(
                     config,
                     project_dir,
@@ -464,18 +532,38 @@ def run_review_workflow(
                 changes="applied" if changed else "no-op",
             )
 
-        # Rounds cap: a still-open CI finding wins over the plain rounds reason
-        # so the terminal label is `17f-ci` rather than `17f-rounds`.
-        cap_reason = "ci" if pending_ci_note else "rounds"
-        return _fail(
+        # Rounds cap. The last `tasks` round already wrote its log at the end of
+        # the loop body, so do NOT write again here — only commit+push it.
+        if pending_ci_note:
+            # A still-open CI finding keeps the cap terminal (17f-ci): flush the
+            # last round's log (best-effort, mirroring the commit/push-failed
+            # paths) then fail, so the round still lands in the committed log.
+            _flush_round_log(project_dir)
+            return _fail(
+                config,
+                project_dir,
+                "ci",
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+                round_number=REVIEW_MAX_ROUNDS,
+                verdict=last_verdict,
+                elapsed=time.time() - start_time,
+            )
+        # A plain rounds cap now hands off to a human (escalate label, RC=0)
+        # rather than failing: the loop is converging toward the same recovery
+        # label the escalate verdict routes to. `_route_to_human` flushes the
+        # last round's log internally.
+        return _route_to_human(
             config,
             project_dir,
-            cap_reason,
+            issue_number=issue_number,
             update_issue_labels=update_issue_labels,
             post_issue_comments=post_issue_comments,
-            round_number=REVIEW_MAX_ROUNDS,
-            verdict=last_verdict,
-            elapsed=time.time() - start_time,
+            comment_body=(
+                f"Automated {config.name} review reached the round limit "
+                f"({REVIEW_MAX_ROUNDS} rounds) without converging — handing off "
+                f"for human review."
+            ),
         )
 
     return run_guarded(
