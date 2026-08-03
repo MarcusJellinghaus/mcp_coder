@@ -9,7 +9,8 @@ raw-frontmatter scan). Blocked-ness is decided **here** (see summary's deviation
 ## WHERE
 - **Modified:** `src/mcp_coder/icoder/permissions/model.py` (add `Base` Literal, retype `PermissionFrame.base`)
 - **New:** `src/mcp_coder/icoder/permissions/skill_frame.py`
-- **New tests:** `tests/icoder/test_skill_frame.py`
+- **New tests:** `tests/icoder/test_permissions_skill_frame.py` (matching the existing
+  `test_permissions_<module>.py` convention used for every other `permissions/` module)
 - **Modified:** `.importlinter` (add `skill_frame` to `permissions_leaf_isolation` source_modules; the
   `icoder.skills`/`icoder.core` `forbidden_modules` were added in Step 1, so joining source_modules now
   makes the final AC's "permissions/ imports nothing from icoder.skills/core" genuinely enforced —
@@ -52,14 +53,25 @@ def as_base(value: str | None) -> Base: ...   # narrow the raw str|None to Base 
 - Internal helper classifies one token per D5 (below); reused for both `allow` and `deny` sides.
 
 ## ALGORITHM
-Token classifier `classify(token, *, side) -> (matchers, warning|None, dropped: bool)`:
+Token classifier `classify(token, *, side) -> (matchers, warning|None, dropped: str | None)` —
+`dropped` is the **token itself** when it was discarded (else `None`), so the caller can name it in a
+warning/reason. `classify_all(tokens, *, side) -> (matchers, warnings, dropped: tuple[str, ...])`
+accumulates them; a **non-empty** `dropped` tuple is what drives D3's `base` forcing below.
 ```
-if token.startswith("@"):            return ([], warn(@ref unsupported, I4.1), dropped=True)
-if not token.startswith("mcp__"):    return ([], None, dropped=False)     # non-mcp → ignored (silent)
+if token.startswith("@"):            return ([], warn(@ref unsupported, I4.1), dropped=token)
+if not token.startswith("mcp__"):    return ([], None, dropped=None)      # non-mcp → ignored (silent)
 ms, errs = parse_matcher(token)
-if errs:                             return ([], warn(unparseable), dropped=True)
-if any(m.arg is not None for m in ms): warn(arg-scoped elevates whole tool until #1053)
-return (ms, that_warning_or_None, dropped=False)
+if errs:                             return ([], warn(unparseable), dropped=token)
+if any(m.arg is not None for m in ms):
+    # `side` selects the wording — the same fact has opposite consequences per side:
+    #   allow → the arg predicate is ignored, so the token elevates the WHOLE tool
+    #           (the accepted #1053 over-grant);
+    #   deny  → it denies the WHOLE tool (over-deny, safe).
+    # Never say "elevates the whole tool" on the deny side.
+    warn("allow: arg predicate not enforced until #1053 — elevates the whole tool"
+         if side == "allow" else
+         "deny: arg predicate not enforced until #1053 — denies the whole tool")
+return (ms, that_warning_or_None, dropped=None)
 ```
 `build_frame`:
 ```
@@ -68,10 +80,11 @@ if tools_block is None:              # legacy path
     allow, warns, _ = classify_all(allowed_tools, side="allow")
     base: Base = "none" if enforce_skill_tools else "inherit"
     return SkillFrame(PermissionFrame(base, tuple(allow)), tuple(warns),
-                      blocked_reason=two_empties(base, allowed_tools, allow, deny_forced=False))
+                      blocked_reason=two_empties(base, allowed_tools, allow, deny_dropped=()))
 # rich path
 if tools_block.errors:               # malformed → fail-closed frame, blocked
-    return SkillFrame(PermissionFrame("none"), tuple(tools_block.errors), blocked_reason="; ".join(errors))
+    return SkillFrame(PermissionFrame("none"), tuple(tools_block.errors),
+                      blocked_reason="; ".join(tools_block.errors))
 if tools_block.use is not None:      # bare use: → blocked (D7b)
     return SkillFrame(PermissionFrame("none"), (), blocked_reason="declares use: <...>, unsupported until I4.1")
 allow, aw, _        = classify_all(tools_block.allow, side="allow")
@@ -81,21 +94,24 @@ deny,  dw, d_drop   = classify_all(tools_block.deny,  side="deny")
 # small helper `as_base(s: str | None) -> Base` (asserts membership, else "none")
 # keeps mypy-strict happy without importing Base into the string-only skill_tools.
 base: Base = "none" if d_drop else as_base(tools_block.base)   # dropped deny entry → force none (fail-closed, D3)
-warns = aw + dw + (["deny narrowed to base=none because an entry was dropped"] if d_drop else [])
+warns = aw + dw + ([f"deny narrowed to base=none because an entry was dropped ({', '.join(d_drop)})"]
+                   if d_drop else [])
 return SkillFrame(PermissionFrame(base, tuple(allow), tuple(deny)), tuple(warns),
-                  blocked_reason=two_empties(base, tools_block.allow, allow, deny_forced=d_drop))
+                  blocked_reason=two_empties(base, tools_block.allow, allow, deny_dropped=d_drop))
 ```
-`two_empties(base, declared, parsed, *, deny_forced) -> reason|None`: return a reason **iff**
-`base == "none" and declared and not parsed` (D8 — absorbs "declared but nothing survived"); else `None`.
+`two_empties(base, declared, parsed, *, deny_dropped: tuple[str, ...]) -> reason|None`: return a
+reason **iff** `base == "none" and declared and not parsed` (D8 — absorbs "declared but nothing
+survived"); else `None`. It takes the dropped **tokens**, not a bool, because the deny-caused reason
+below has to name the offending entry.
 
 **The predicate reads the *forced* base** (post-D3), so a dropped `deny` entry that narrows
 `base: inherit` → `"none"` **can** block a skill whose `allow` also filtered to empty. That is
 deliberate (D7 — never burn a turn on a zero-tool skill), **but the reason must name the real
 cause**, so `two_empties` returns one of **two distinct strings**:
-- `deny_forced=False` → the empty-`allow` reason, e.g.
+- `deny_dropped == ()` → the empty-`allow` reason, e.g.
   `"base: none but no declared allow token survived parsing"`.
-- `deny_forced=True` → the deny-caused reason, e.g.
-  `"base forced to none because a deny entry could not be resolved (<token>), and no allow token survived"`.
+- `deny_dropped` non-empty → the deny-caused reason, **naming the dropped token(s)**, e.g.
+  `"base forced to none because a deny entry could not be resolved (@x), and no allow token survived"`.
 Never report an empty `allow` list as the cause when the block was triggered by the dropped `deny`.
 
 ## DATA
@@ -115,7 +131,9 @@ warning, `blocked_reason is None`; `none` + declared allow all-dropped → `bloc
 set and its text names the dropped `deny` entry, **not** the empty `allow` list — assert the two
 `two_empties` reason strings are distinct and that this case yields the deny-caused one;
 `@ref` in `allow` dropped + warned, no model change; non-`mcp__` token ignored (no warning); `mcp__s__*`
-wildcard produces a matcher (enforced); arg-scoped `allow` token kept + warning naming `#1053`; legacy
+wildcard produces a matcher (enforced); arg-scoped `allow` token kept + warning naming `#1053` **and
+saying "elevates"**, while an arg-scoped `deny` token's warning names `#1053` **and says "denies"**
+(the `side`-selected wording — asserting the deny text never claims elevation); legacy
 `base="inherit"` when `enforce_skill_tools=False` and `base="none"` when `True`; neither block →
 `frame is None`; malformed block → fail-closed `base="none"` frame + `blocked_reason`; **both blocks
 present** (`tools_block` non-`None` *and* `allowed_tools` non-empty, e.g. legacy tokens that would
@@ -126,11 +144,12 @@ non-literal (implicit via strict run).
 
 ## LLM PROMPT
 > Implement Step 2 of `pr_info/steps/summary.md` (see `pr_info/steps/step_2.md`). Using TDD, first
-> write `tests/icoder/test_skill_frame.py` with one test per row of the summary's mapping table and per
+> write `tests/icoder/test_permissions_skill_frame.py` with one test per row of the summary's mapping table and per
 > acceptance criterion. Then add `Base = Literal["inherit","none"]` to `permissions/model.py` and
 > retype `PermissionFrame.base`; create the pure `permissions/skill_frame.py` (`SkillFrame` +
 > `build_frame` with the token classifier and the two-empties/deny-asymmetry rules, including the
-> **two distinct `two_empties` reason strings** so a deny-caused block never reports an empty
+> **two distinct `two_empties` reason strings** (it takes the dropped deny **tokens**, not a bool, so
+> a deny-caused block names the offending entry and never reports an empty
 > `allow`); and add `skill_frame` to `permissions_leaf_isolation` in `.importlinter`. `gateway.py`
 > needs no change (`build_legacy_frame` has no `base` local; do not delete it yet). Run pylint, mypy
 > (strict), pytest (`-n auto` with the unit-only `-m "not ..."` exclusions) and `lint-imports` until

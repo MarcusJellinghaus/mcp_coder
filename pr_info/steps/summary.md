@@ -87,8 +87,8 @@ one for the plain empty-`allow` case and one naming the dropped `deny` entry. Re
 **Created**
 - `src/mcp_coder/icoder/permissions/skill_tools.py` — `SkillToolsBlock` + `parse_tools_block`
 - `src/mcp_coder/icoder/permissions/skill_frame.py` — `SkillFrame` + `build_frame`
-- `tests/icoder/test_skill_tools.py`
-- `tests/icoder/test_skill_frame.py`
+- `tests/icoder/test_permissions_skill_tools.py`
+- `tests/icoder/test_permissions_skill_frame.py`
 
 **Modified**
 - `src/mcp_coder/icoder/permissions/model.py` — `Base` Literal; retype `PermissionFrame.base`

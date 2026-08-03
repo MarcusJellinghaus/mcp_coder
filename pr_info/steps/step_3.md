@@ -62,11 +62,13 @@ ENFORCE_SKILL_TOOLS = False   # module-level; #1062 flips this (fail-closed enfo
   (`Bash(...)`/`gh`/`git` tokens are real permissions there), so once #1062 flips the constant to
   `True` a bare flag would give every shell-only skill `base="none"` + nothing-survived →
   `blocked_reason`, and Step 4 would refuse it **under the claude provider**, where it works fine.
-  Only `tools_block.errors`-driven blocking is provider-agnostic (D12); the legacy path never blocks
-  outside langchain. `build_frame` is pure and needs no
-  `mcp_config`, so a malformed `tools:` block blocks its skill **regardless of provider** — this
-  restores D12's parse-time, provider-agnostic blocking (a `disabled_reason` is set for a broken skill
-  even under langchain-without-`mcp_config` or a non-langchain provider). Pass `skill_frames=frame_map`
+  Only `tools_block`-driven blocking is provider-agnostic (D12) — not just the `errors` cases: a
+  well-formed rich block also blocks via D8 (`base: none`, nothing survived) and via bare `use:`
+  (D7b), neither of which sets `errors`. The legacy path never blocks outside langchain.
+  `build_frame` is pure and needs no `mcp_config`, so a malformed `tools:` block blocks its skill
+  **regardless of provider** — this restores D12's parse-time, provider-agnostic blocking (a
+  `disabled_reason` is set for a broken skill even under langchain-without-`mcp_config` or a
+  non-langchain provider). Pass `skill_frames=frame_map`
   to `AppCore`. Only the **gateway enforcement** stays gated on `provider=="langchain" and mcp_config`
   (a `None` gateway simply ignores the forwarded frame). Drop `enforce_skill_tools=False` from the
   `RealLLMService(...)` call.
@@ -103,7 +105,7 @@ for event in _events():
 - `test_types.py`: `SendToLLM.skill_name` defaults `None` and round-trips.
 - `test_skills.py`: langchain handler yields `SendToLLM(skill_name="<name>")`.
 - `test_permissions_gateway.py`: delete the `build_legacy_frame` tests (behaviour now lives in
-  `test_skill_frame.py`); keep filter/interceptor tests.
+  `test_permissions_skill_frame.py`); keep filter/interceptor tests.
 - `test_llm_service.py`: `stream(frame=<PermissionFrame>)` installs it via `begin_turn` and filters;
   `stream(frame=None)` installs `None`; `FakeLLMService.last_frame` records the frame; remove
   `enforce_skill_tools` usages.

@@ -19,7 +19,7 @@ testability; `AppCore` exposes the two inputs; `on_mount` renders them.
 ```python
 # runtime_banner.py  (pure, no Textual)
 def format_startup_permission_notices(
-    broken_skills: Mapping[str, str],   # command/skill name -> reason
+    broken_skills: Mapping[str, str],   # RAW skill name -> reason (lower-cased for display)
     degraded: bool,
 ) -> list[str]: ...
 
@@ -55,19 +55,27 @@ lines = []
 if degraded:
     lines.append("⚠ Permission config is degraded — all MCP tool calls are denied. See logs.")
 for name in sorted(broken_skills):
-    lines.append(f"⚠ /{name} is disabled: {broken_skills[name]}")
+    # `.lower()` mirrors register_skill_commands (`skills.py:194`: command_name =
+    # "/" + skill.name.lower()). broken_skills is keyed by the RAW skill name from the
+    # {skill_name: SkillFrame} map, so a mixed-case skill directory would otherwise be
+    # listed as a command the user cannot type — and would not match the command Step 4's
+    # refusal guard matches on (`handle_input` lower-cases the leading token).
+    lines.append(f"⚠ /{name.lower()} is disabled: {broken_skills[name]}")
 return lines
 ```
 
 ## DATA
 - Returns `[]` when nothing is wrong (no line rendered — no noise for healthy startups).
-- Broken-skill names are sorted for determinism; the reason is the same `blocked_reason` string the
-  invocation refusal (Step 4) prints, so the two surfaces agree.
+- Broken-skill names are sorted for determinism and rendered **lower-cased**, matching the registered
+  command name (`register_skill_commands` builds `"/" + skill.name.lower()`); the reason is the same
+  `blocked_reason` string the invocation refusal (Step 4) prints, so the two surfaces agree.
 
 ## TESTS (write first)
 - `test_banner.py` (existing file): `format_startup_permission_notices({}, False) == []`;
   degraded-only yields one line mentioning "degraded"; broken-only yields one sorted line per skill;
-  both present yields the degraded line first, then the skills.
+  both present yields the degraded line first, then the skills. Also: a **mixed-case** skill name
+  (e.g. `"My-Skill"`) is rendered as `/my-skill`, i.e. the command name the user can actually type
+  and the one Step 4's refusal matches.
 - `test_app_core.py`: `broken_skills` reflects only frames with a `blocked_reason`;
   `permission_degraded` echoes the constructor flag.
 - `test_cli_icoder.py`: `AppCore` receives `permission_degraded=True` when the loaded config is
@@ -83,7 +91,8 @@ return lines
 
 ## LLM PROMPT
 > Implement Step 5 of `pr_info/steps/summary.md` (see `pr_info/steps/step_5.md`). Using TDD, write the
-> listed tests first, then: add the pure `format_startup_permission_notices` to `runtime_banner.py`;
+> listed tests first, then: add the pure `format_startup_permission_notices` to `runtime_banner.py`
+> (lower-case each skill name for display, matching the registered `"/" + skill.name.lower()` command);
 > expose `broken_skills` and `permission_degraded` on `AppCore` (derive `broken_skills` from the
 > existing `skill_frames` snapshot, add the degraded flag to `__init__`); pass
 > `permission_degraded=config.degraded` from `cli/commands/icoder.py` (langchain branch); and render

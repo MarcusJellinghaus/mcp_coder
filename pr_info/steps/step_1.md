@@ -6,7 +6,8 @@ semantics (those are Step 2). Parsing must be callable without `load_skills` (I5
 
 ## WHERE
 - **New:** `src/mcp_coder/icoder/permissions/skill_tools.py`
-- **New tests:** `tests/icoder/test_skill_tools.py`
+- **New tests:** `tests/icoder/test_permissions_skill_tools.py` (matching the existing
+  `test_permissions_<module>.py` convention used for every other `permissions/` module)
 - **Modified:** `src/mcp_coder/icoder/skills.py` (add field + populate it)
 - **Modified:** `.importlinter` (add `skill_tools` to `permissions_leaf_isolation` source_modules,
   **and** add `mcp_coder.icoder.skills` + `mcp_coder.icoder.core` to that contract's `forbidden_modules`
@@ -92,7 +93,7 @@ when the block is absent (and `allowed_tools` remains parsed as before).
 
 ## LLM PROMPT
 > Implement Step 1 of `pr_info/steps/summary.md` (see `pr_info/steps/step_1.md`). Using TDD, first
-> write `tests/icoder/test_skill_tools.py` covering the malformed-vs-absent parametrisation
+> write `tests/icoder/test_permissions_skill_tools.py` covering the malformed-vs-absent parametrisation
 > (including `{"tools": None}` — present-but-null — as a **malformed** case distinct from both an
 > absent key and `{"tools": {}}`), the bare-`use:` case, and the `advisories` lint, plus a
 > `load_skills` test asserting
