@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: `ReviewConfig` — add `strict_from_round` and `tie_break`
-- [ ] Implementation: add two fields (defaults) to frozen dataclass; set explicit values on `REVIEW_PLAN` / `REVIEW_IMPLEMENTATION`; update docstring; tests first in `test_config.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add two fields (defaults) to frozen dataclass; set explicit values on `REVIEW_PLAN` / `REVIEW_IMPLEMENTATION`; update docstring; tests first in `test_config.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (pylint ✅, mypy ✅; pytest blocked repo-wide by the same pre-existing env issue as Steps 1–2: installed `mcp_workspace` lacks `checks.branch_status_rendering`, imported at `src/mcp_coder/checks/branch_status.py:17` → `__init__.py:37`, so collection yields 0 tests even for unmodified files)
+- [x] Commit message prepared
 
 ### Step 4: Create `handoff.py`; relocate `_set_label` + `_fail`
 - [ ] Implementation: create `handoff.py`, move `_set_label`/`_fail` verbatim with their imports; re-import into `core.py`; repoint `env` fixtures in `test_core.py`/`test_core_after_steps.py` to patch `handoff`
