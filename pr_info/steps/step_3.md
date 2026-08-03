@@ -37,9 +37,17 @@ ENFORCE_SKILL_TOOLS = False   # module-level; #1062 flips this (fail-closed enfo
 - **`skills.py` handler:** `_make_langchain_handler` emits `SendToLLM(text=expanded, skill_name=skill.name)`
   (no token tuple). Claude handler unchanged.
 - **`gateway.py`:** delete `build_legacy_frame` and its imports; gateway is enforcement-only now.
+  **Also rewrite the module docstring's third paragraph** (the one beginning ":func:`build_legacy_frame`
+  translates the declared-tool tokens…"), which otherwise documents a deleted function. Neither ruff
+  nor pylint flags stale prose, so it has to be called out here.
 - **`services/llm_service.py`:** `RealLLMService.stream` receives the already-built `frame`, calls
   `self._gateway.begin_turn(frame)` then `filter_tools(...)` (as today, minus the build + the warning
   loop). `FakeLLMService.stream(*, frame=None)` records `self.last_frame = frame`.
+  **Rewrite `RealLLMService.stream`'s docstring too:** drop the `allowed_tools` `Args:` entry (the
+  param is gone), replace it with `frame`, and rewrite the paragraph + the `Yields:` note that
+  describe building the frame via `build_legacy_frame` and yielding a `permission_warning` per
+  malformed token — both behaviours move to `AppCore` in this step. Same reason as the gateway
+  docstring: stale prose passes ruff and pylint.
 - **`app_core.py`:** store `self._skill_frames = dict(skill_frames or {})`. In `stream_llm`, look up
   `sf = self._skill_frames.get(skill_name)`; prepend one `{"type":"permission_warning","message":w}`
   per `sf.warnings` **in front of** `self._llm_service.stream(text, frame=sf.frame if sf else None)`
@@ -138,5 +146,9 @@ for event in _events():
 > `enforce_skill_tools=ENFORCE_SKILL_TOOLS if provider == "langchain" else False` — then pass it to
 > `AppCore` and drop the
 > `enforce_skill_tools` kwarg; document `permission_warning` in `llm/types.py`; and add the one
-> `cli.commands.icoder -> permissions.skill_frame` line to `.importlinter`. Run pylint, mypy(strict),
-> pytest (`-n auto` unit-only exclusions) and `lint-imports` until green. One commit.
+> `cli.commands.icoder -> permissions.skill_frame` line to `.importlinter`. Also update the two
+> docstrings that describe the deleted code: `gateway.py`'s module docstring paragraph on
+> `build_legacy_frame`, and `RealLLMService.stream`'s docstring (`allowed_tools` `Args:` entry plus
+> the `permission_warning`/`build_legacy_frame` paragraph and `Yields:` note). Run pylint,
+> mypy(strict), pytest (`-n auto` unit-only exclusions), **ruff** (CI enforces `D`/`DOC`) and
+> `lint-imports` until green. One commit.

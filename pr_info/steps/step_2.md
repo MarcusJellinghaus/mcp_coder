@@ -152,5 +152,6 @@ non-literal (implicit via strict run).
 > a deny-caused block names the offending entry and never reports an empty
 > `allow`); and add `skill_frame` to `permissions_leaf_isolation` in `.importlinter`. `gateway.py`
 > needs no change (`build_legacy_frame` has no `base` local; do not delete it yet). Run pylint, mypy
-> (strict), pytest (`-n auto` with the unit-only `-m "not ..."` exclusions) and `lint-imports` until
-> green. One commit.
+> (strict), pytest (`-n auto` with the unit-only `-m "not ..."` exclusions), **ruff** (CI enforces
+> `D`/`DOC`; `build_frame`, `as_base` and `two_empties` each need a `Returns:` section) and
+> `lint-imports` until green. One commit.

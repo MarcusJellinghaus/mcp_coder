@@ -42,12 +42,16 @@ def permission_degraded(self) -> bool: ...
   inside it (right after `config = load_permission_config(project_dir)`), then pass the hoisted
   `permission_degraded` flag to `AppCore`. Non-langchain keeps the `False` default.
 - **`ui/app.py` `on_mount`:** build `notices = format_startup_permission_notices(
-  self._core.broken_skills, self._core.permission_degraded)`; if non-empty,
+  self._core.broken_skills, self._core.permission_degraded)`; if non-empty, bind the log **inside this
+  block** — `output = self.query_one(OutputLog)` — then
   `output.append_text("\n".join(notices), style=STYLE_CANCELLED)` (the same attention style used for
   `permission_warning`). Render it **after** the dim runtime banner but **outside** the existing
   `elif self._core.runtime_info:` branch — gated **only** on `self._resume_log_path is None`.
   Putting it inside that `elif` would silently drop the degraded-config line whenever
   `runtime_info` is `None`, which is exactly the invisible-failure this step exists to fix.
+  **The re-query is load-bearing:** today `output` is bound *only* inside that `elif`
+  (`ui/app.py:152`), so reusing it from the un-nested notices block raises `UnboundLocalError` in
+  precisely the `runtime_info is None` case the `test_app_pilot` assertion below covers.
 
 ## ALGORITHM (`format_startup_permission_notices`)
 ```
@@ -97,8 +101,12 @@ return lines
 > existing `skill_frames` snapshot, add the degraded flag to `__init__`); pass
 > `permission_degraded=config.degraded` from `cli/commands/icoder.py` (langchain branch); and render
 > the notices in `ui/app.py`'s `on_mount` after the dim banner but **outside** the
-> `elif self._core.runtime_info:` branch (gated only on `resume_log_path is None`), using the
+> `elif self._core.runtime_info:` branch (gated only on `resume_log_path is None`), binding
+> `output = self.query_one(OutputLog)` **inside** the notices block (the existing `output` local lives
+> in the `elif` and would be unbound there), using the
 > attention style. Put the formatter tests in the existing `tests/icoder/test_banner.py`.
-> Run pylint, mypy(strict), pytest (`-n auto` unit-only exclusions) and `lint-imports` until
+> Run pylint, mypy(strict), pytest (`-n auto` unit-only exclusions), **ruff** (CI enforces `D`/`DOC`;
+> `format_startup_permission_notices` and `AppCore.broken_skills` each need a `Returns:` section) and
+> `lint-imports` until
 > green. One commit. This completes issue #1061 — verify every acceptance criterion in the issue is
 > covered by a test across Steps 1–5.

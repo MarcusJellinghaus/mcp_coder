@@ -68,3 +68,51 @@ applied — `step_1.md` (test filename in WHERE + LLM PROMPT), `step_2.md` (drop
 
 **Status**: all six findings applied; plan consistent across `summary.md`, `Decisions.md` and
 steps 1–5. No source files touched. Ready for implementation.
+
+## Round 3 — 2026-08-03
+**Findings**:
+`summary.md:120` (+ the five LLM PROMPTs at `step_1.md:103`, `step_2.md:154`, `step_3.md:141`,
+`step_4.md:105`, `step_5.md:102`) — medium — the per-step verification loop is pylint + pytest +
+mypy + `lint-imports`, omitting **ruff**, yet the final AC requires "ruff-docstrings clean" and CI
+runs `ruff check src tests` with `select = ["D","DOC"]` and `preview = true`. Every new public
+function returns a value (`parse_tools_block`, `build_frame`, `as_base`, `two_empties`,
+`format_startup_permission_notices`, `CommandRegistry.get`, `AppCore.broken_skills`), so a missing
+`Returns:` section trips DOC201 and every step as written can land CI-red. (`lint-imports` is *not*
+in CI — the plan being stricter there is intentional and stays.)
+`step_5.md:46` — low — the HOW snippet calls `output.append_text(...)`, but `output` is bound only
+inside `on_mount`'s `elif self._core.runtime_info:` branch (`ui/app.py:152`) and R2-8 deliberately
+renders the notices *outside* that branch, so the literal implementation raises `UnboundLocalError`
+in exactly the `runtime_info is None` case Step 5's own `test_app_pilot` assertion covers.
+`step_3.md:39,41` — low — Step 3 deletes `build_legacy_frame` but never mentions the prose that
+documents it: `gateway.py`'s module-docstring third paragraph and `RealLLMService.stream`'s docstring
+(its `allowed_tools` `Args:` entry plus the `permission_warning`/`build_legacy_frame` paragraph and
+`Yields:` note) would be left describing deleted code and a removed parameter. Neither ruff nor
+pylint catches stale prose.
+
+Re-verified against source this round: `skills.py:194`, `app_core.py`'s `replace(action, text=…)`
+hop, `app.py:415`, `gateway.py`'s inline-ternary `base` (R2-4 holds), `parse_matcher`'s
+all-or-nothing error contract (so Step 2's `dropped=token` classifier is sound),
+`select_highlighted()` returning `None` on `disabled=True` options (R2-3 holds), and — new this
+round — that **every** `PermissionFrame(base=…)` construction in `src/` and `tests/` uses a string
+literal, so D15's `Base` retype is safe under CI's `mypy --strict src tests` with no `gateway.py`
+or `resolver.py` change. Step 3's test-migration list is complete: every file in `tests/` matching
+`allowed_tools`/`enforce_skill_tools`/`build_legacy_frame` is listed. All 18 acceptance criteria and
+D1–D15 map to a step and an enumerated test; the 15 prior fixes are correctly and consistently
+applied across `summary.md`, `Decisions.md` and steps 1–5.
+
+**Decisions**:
+All three accepted by the coordinator; no design questions, no user escalation. Recorded as
+R2-16 … R2-18 in `pr_info/steps/Decisions.md`. `lint-imports` explicitly stays in the loop despite
+being absent from CI. While rewriting Step 1's check clause, its tool prefix was corrected from
+`mcp__tools-py__*` to `mcp__mcp-tools-py__*` (the other four steps name the checks in prose).
+
+**Changes**:
+applied — `summary.md` (ruff in the footer + why), `step_1.md` … `step_5.md` (ruff in each LLM
+PROMPT), `step_3.md` (HOW: rewrite the gateway module docstring and `RealLLMService.stream`'s
+docstring), `step_5.md` (HOW + LLM PROMPT: bind `output = self.query_one(OutputLog)` inside the
+notices block), `Decisions.md` (R2-16 … R2-18).
+
+**Status**: all three findings applied; consistency sweep over `pr_info/` confirms the
+verification-loop wording, the `output.append_text` call site and the `build_legacy_frame` docstring
+references now agree across `summary.md`, `Decisions.md` and steps 1–5. No source files touched.
+Ready for implementation.

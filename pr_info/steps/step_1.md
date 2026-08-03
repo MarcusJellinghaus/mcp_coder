@@ -101,8 +101,9 @@ when the block is absent (and `allowed_tools` remains parsed as before).
 > (`SkillToolsBlock` + `parse_tools_block`, imports nothing project-side), add the `tools_block`
 > field to `ClaudeSkill` and populate it in `load_skills` (leaving `allowed_tools` untouched), and add
 > `skill_tools` to the `permissions_leaf_isolation` contract in `.importlinter`. Run
-> `mcp__tools-py__run_pylint_check`, `mcp__tools-py__run_mypy_check`,
-> `mcp__tools-py__run_pytest_check` (`extra_args=["-n","auto","-m","not git_integration and not
+> `mcp__mcp-tools-py__run_pylint_check`, `mcp__mcp-tools-py__run_mypy_check`,
+> `mcp__mcp-tools-py__run_pytest_check` (`extra_args=["-n","auto","-m","not git_integration and not
 > claude_cli_integration and not claude_api_integration and not formatter_integration and not
-> github_integration and not langchain_integration"]`) and `mcp__tools-py__run_lint_imports_check`
-> until all pass. One commit.
+> github_integration and not langchain_integration"]`), `mcp__mcp-tools-py__run_ruff_check` (CI
+> enforces `D`/`DOC` — `parse_tools_block` needs a `Returns:` section) and
+> `mcp__mcp-tools-py__run_lint_imports_check` until all pass. One commit.

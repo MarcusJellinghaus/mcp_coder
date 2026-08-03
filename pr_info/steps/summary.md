@@ -92,7 +92,7 @@ one for the plain empty-`allow` case and one naming the dropped `deny` entry. Re
 
 **Modified**
 - `src/mcp_coder/icoder/permissions/model.py` — `Base` Literal; retype `PermissionFrame.base`
-- `src/mcp_coder/icoder/permissions/gateway.py` — delete `build_legacy_frame`
+- `src/mcp_coder/icoder/permissions/gateway.py` — delete `build_legacy_frame` (+ the module-docstring paragraph describing it)
 - `src/mcp_coder/icoder/skills.py` — `ClaudeSkill.tools_block`; `skill_name` in handler; `disabled_reasons` param
 - `src/mcp_coder/icoder/core/types.py` — `SendToLLM.skill_name`; `Command.disabled_reason`
 - `src/mcp_coder/icoder/core/app_core.py` — frame-map snapshot; `stream_llm`; blocked refusal; startup properties
@@ -113,9 +113,16 @@ one for the plain empty-`allow` case and one naming the dropped `deny` entry. Re
 1. **Parse** — `SkillToolsBlock` + `parse_tools_block`; store `ClaudeSkill.tools_block`.
 2. **Build** — `Base` Literal; `SkillFrame` + `build_frame` (the full mapping table).
 3. **Transport** — carrier swap `allowed_tools → skill_name`; frame-map snapshot in `AppCore`;
-   `stream(*, frame=...)`; delete `build_legacy_frame`; warnings via `AppCore`; docstring.
+   `stream(*, frame=...)`; delete `build_legacy_frame`; warnings via `AppCore`; docstrings
+   (`permission_warning` in `llm/types.py`, plus the two that described the deleted code).
 4. **Blocked-skill handling** — `Command.disabled_reason`; invocation refusal; autocomplete marking.
 5. **Startup feedback** — list broken skills by name + a loud degraded-config line.
 
 Each step: write tests first, implement, then run pylint + pytest (`-n auto`, unit-only exclusions) +
-mypy(strict) + `lint-imports` until green. `permission_warning` is undocumented today — Step 3 adds it.
+mypy(strict) + **ruff** + `lint-imports` until green. **Ruff is part of the gate** because CI runs
+`ruff check src tests` with `select = ["D","DOC"]` and `preview = true`, and every new public function
+here returns a value (`parse_tools_block`, `build_frame`, `as_base`, `two_empties`,
+`format_startup_permission_notices`, `CommandRegistry.get`, `AppCore.broken_skills`) — without a
+`Returns:` section DOC201 lands the commit CI-red, and the final AC requires "ruff-docstrings clean".
+`lint-imports` stays in the loop even though CI does not run it (the plan is deliberately stricter).
+`permission_warning` is undocumented today — Step 3 adds it.

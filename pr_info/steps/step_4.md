@@ -103,4 +103,5 @@ if cmd is not None and cmd.disabled_reason:
 > add the pre-dispatch refusal guard to `AppCore.handle_input` (emit `command_matched` +
 > `output_emitted`, return `OutputText(reason)`, dispatch nothing); and mark disabled commands in
 > `command_autocomplete.update_matches` — label-only, the `Option` stays **enabled**. Run pylint,
-> mypy(strict), pytest (`-n auto` unit-only exclusions) and `lint-imports` until green. One commit.
+> mypy(strict), pytest (`-n auto` unit-only exclusions), **ruff** (CI enforces `D`/`DOC`;
+> `CommandRegistry.get` needs a `Returns:` section) and `lint-imports` until green. One commit.
