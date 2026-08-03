@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Relocate PR-feedback note helpers into `reviewer.py`
-- [ ] Implementation: move `_QUOTE_FENCE`, `_quote_pr_feedback`, `_pr_feedback_note` from `core.py` to `reviewer.py`; update `core.py` call sites; add/relocate unit tests in `test_reviewer.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `_QUOTE_FENCE`, `_quote_pr_feedback`, `_pr_feedback_note` from `core.py` to `reviewer.py`; update `core.py` call sites; add/relocate unit tests in `test_reviewer.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (relocation is behaviour-preserving; only pre-existing findings remain: `core.py:129` `pr_feedback_undeterminable` attr on `BranchStatusReport` — pylint E1101 + mypy, untouched by this diff; W1404 in Step 1's `test_severity.py`. pytest still blocked repo-wide by the same env issue as Step 1: installed `mcp_workspace` lacks `checks.branch_status_rendering`, imported at `src/mcp_coder/checks/branch_status.py:17` → `__init__.py:37`, so collection yields 0 tests)
+- [x] Commit message prepared
 
 ### Step 3: `ReviewConfig` — add `strict_from_round` and `tie_break`
 - [ ] Implementation: add two fields (defaults) to frozen dataclass; set explicit values on `REVIEW_PLAN` / `REVIEW_IMPLEMENTATION`; update docstring; tests first in `test_config.py`
