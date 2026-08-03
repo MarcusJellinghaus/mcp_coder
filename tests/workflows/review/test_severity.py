@@ -31,7 +31,7 @@ class TestMixedReport:
     """The highest severity present wins regardless of order."""
 
     def test_low_and_high(self) -> None:
-        report = "`src/a.py:1` — low — nit\n" "`src/b.py:2` — high — leak\n"
+        report = "`src/a.py:1` — low — nit\n`src/b.py:2` — high — leak\n"
         assert max_severity(report) == "high"
 
     def test_all_levels(self) -> None:
@@ -89,7 +89,7 @@ class TestFormattingTolerance:
     def test_hyphen_all_low_downgrades(self) -> None:
         # A hyphen-separated all-low/medium report must return the finding max,
         # never None — proving the Step 5 backstop still downgrades to dismiss.
-        report = "`a:1` - low - nit\n" "`b:2` - medium - smell\n"
+        report = "`a:1` - low - nit\n`b:2` - medium - smell\n"
         assert max_severity(report) == "medium"
 
 
