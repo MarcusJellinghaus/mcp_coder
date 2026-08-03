@@ -67,7 +67,8 @@ EMPTY_REPORT_RETRIES = 3
 _CI_NOTE = (
     "NOTE — open CI finding: the most recent CI run on this branch is red and "
     "could not be auto-fixed. Treat this as a finding: investigate the CI "
-    "failure yourself and include it in your structured report."
+    "failure yourself and include it in your structured report. Treat this CI "
+    "failure as `critical` severity in your structured report."
 )
 
 
@@ -165,6 +166,8 @@ def run_review_workflow(
                         execution_dir,
                         issue_number,
                         base_branch,
+                        round_number=round_number,
+                        max_rounds=REVIEW_MAX_ROUNDS,
                         session_id=None,
                         tasks=None,
                         ci_note=pending_ci_note,
@@ -217,6 +220,8 @@ def run_review_workflow(
                     execution_dir,
                     supervisor_sid,
                     supervisor_report,
+                    round_number=round_number,
+                    max_rounds=REVIEW_MAX_ROUNDS,
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 return _fail(
@@ -364,6 +369,8 @@ def run_review_workflow(
                     execution_dir,
                     issue_number,
                     base_branch,
+                    round_number=round_number,
+                    max_rounds=REVIEW_MAX_ROUNDS,
                     session_id=reviewer_sid,
                     tasks=verdict.tasks,
                     ci_note=None,

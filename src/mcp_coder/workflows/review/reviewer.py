@@ -86,6 +86,8 @@ def _run_reviewer(
     execution_dir: Path | None,
     issue_number: int | None,
     base_branch: str | None,
+    round_number: int,
+    max_rounds: int,
     session_id: str | None,
     tasks: list[str] | None,
     ci_note: str | None = None,
@@ -94,9 +96,12 @@ def _run_reviewer(
     """Run one reviewer turn — a fresh review, or a resume that applies tasks.
 
     When ``tasks`` is ``None`` this is the fresh per-round review: the reviewer
-    prompt header is loaded and its ``{issue_number}`` / ``{base_branch}``
+    prompt header is loaded and its ``{issue_number}`` / ``{base_branch}`` and
+    round-context (``{round_number}`` / ``{max_rounds}`` / ``{strict_from_round}``)
     placeholders substituted. When ``tasks`` is provided, the existing reviewer
-    session (``session_id``) is resumed with the concrete fix instructions.
+    session (``session_id``) is resumed with the concrete fix instructions and no
+    round substitution happens (``round_number`` / ``max_rounds`` are still
+    required so the caller need not branch).
 
     Args:
         config: The review workflow config.
@@ -107,6 +112,10 @@ def _run_reviewer(
         execution_dir: Optional LLM subprocess working directory.
         issue_number: Issue number injected into the reviewer prompt.
         base_branch: Base branch injected into the reviewer prompt (impl only).
+        round_number: Current 1-based round, substituted into the fresh prompt.
+        max_rounds: Round cap, substituted into the fresh prompt. Required (no
+            default): the constant lives in ``core``, which imports this module,
+            so importing it back would cycle — ``core`` passes it in instead.
         session_id: ``None`` for a fresh review, else the reviewer session to
             resume for task application.
         tasks: Fix instructions to apply, or ``None`` for a fresh review.
@@ -128,6 +137,9 @@ def _run_reviewer(
             "{issue_number}", str(issue_number) if issue_number is not None else "?"
         )
         prompt = prompt.replace("{base_branch}", base_branch or "")
+        prompt = prompt.replace("{round_number}", str(round_number))
+        prompt = prompt.replace("{max_rounds}", str(max_rounds))
+        prompt = prompt.replace("{strict_from_round}", str(config.strict_from_round))
         if ci_note:
             prompt = f"{prompt}\n\n{ci_note}"
         if pr_note:
@@ -161,6 +173,8 @@ def _get_verdict(
     execution_dir: Path | None,
     supervisor_sid: str | None,
     report: str,
+    round_number: int,
+    max_rounds: int,
 ) -> tuple[Verdict | None, str | None]:
     """Ask the supervisor to triage the report, repairing an unparseable verdict.
 
@@ -168,6 +182,12 @@ def _get_verdict(
     ``supervisor_sid`` and its returned session id is re-captured for the next
     turn. A ``None`` parse is repaired up to :data:`VERDICT_REPAIR_RETRIES`
     times before giving up.
+
+    The header is rebuilt every turn (including resumed ones), so the round-
+    varying ``{round_number}`` / ``{max_rounds}`` / ``{strict_from_round}`` /
+    ``{tie_break}`` substitution needs no new session plumbing. The stated
+    ``{strict_from_round}`` is drawn from the same ``ReviewConfig`` field the
+    severity backstop enforces, so the two cannot drift.
 
     Args:
         config: The review workflow config.
@@ -178,6 +198,9 @@ def _get_verdict(
         execution_dir: Optional LLM subprocess working directory.
         supervisor_sid: Supervisor session id to resume, or ``None`` on round 1.
         report: The reviewer's structured findings text.
+        round_number: Current 1-based round, substituted into the header.
+        max_rounds: Round cap, substituted into the header. Required (no
+            default): see :func:`_run_reviewer`.
 
     Returns:
         ``(verdict, next_supervisor_sid)`` where ``verdict`` is ``None`` if it
@@ -187,6 +210,10 @@ def _get_verdict(
     cwd = str(execution_dir) if execution_dir else str(project_dir)
 
     header = get_prompt(str(PROMPTS_FILE_PATH), config.supervisor_prompt_header)
+    header = header.replace("{round_number}", str(round_number))
+    header = header.replace("{max_rounds}", str(max_rounds))
+    header = header.replace("{strict_from_round}", str(config.strict_from_round))
+    header = header.replace("{tie_break}", config.tie_break)
     prompt = f"{header}\n\n## Reviewer report\n\n{report}"
 
     current_sid = supervisor_sid
