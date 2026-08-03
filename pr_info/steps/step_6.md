@@ -37,6 +37,12 @@ def _route_to_human(config, project_dir, *, issue_number, update_issue_labels,
   comment_body)` (best-effort) → `_set_label(config, project_dir,
   config.escalate_label_id, update_issue_labels)` → `return 0`.
 - **core rewiring:**
+  - *docstring*: update the `run_review_workflow` docstring's `Returns:` clause — it
+    currently reads ``1` on any error (unparseable verdict, timeout, MCP down, rounds cap)`,
+    but the plain `rounds` cap now hands off via `_route_to_human` and returns `0`. Correct it
+    so the rounds cap is listed as a needs-human handoff (RC=0) alongside escalate/rebase, and
+    only `ci` / `timeout` / `mcp_unavailable` / unparseable-verdict / commit-failed /
+    push-failed remain RC=1 (matches AC8's exit-code change).
   - *dismiss (success)*: after `write_round_log(..., "dismiss")`, call
     `_flush_round_log(project_dir)` before `_set_label(success)` — so the terminal dismiss
     log is committed.
