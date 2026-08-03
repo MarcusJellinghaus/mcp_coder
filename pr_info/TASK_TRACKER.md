@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: `severity.py` — pure severity parser
-- [ ] Implementation: create `severity.py` with `max_severity` (tests first in `test_severity.py`; anchored `<sep>SEVERITY<sep>` regex tolerating em-dash/hyphen + backticks; optional `__init__.py` export)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `severity.py` with `max_severity` (tests first in `test_severity.py`; anchored `<sep>SEVERITY<sep>` regex tolerating em-dash/hyphen + backticks; optional `__init__.py` export)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (pylint ✅, mypy ✅; pytest blocked repo-wide by pre-existing env issue: installed `mcp_workspace` lacks `branch_status_rendering`, imported at `src/mcp_coder/__init__.py:37` — even unmodified `test_verdict.py` collects 0 tests)
+- [x] Commit message prepared
 
 ### Step 2: Relocate PR-feedback note helpers into `reviewer.py`
 - [ ] Implementation: move `_QUOTE_FENCE`, `_quote_pr_feedback`, `_pr_feedback_note` from `core.py` to `reviewer.py`; update `core.py` call sites; add/relocate unit tests in `test_reviewer.py`
