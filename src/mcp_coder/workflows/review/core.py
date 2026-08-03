@@ -50,6 +50,7 @@ from . import reviewer
 from .config import ReviewConfig
 from .handoff import _fail, _set_label
 from .review_log import next_run_number, write_round_log
+from .severity import max_severity
 from .verdict import Verdict
 
 logger = logging.getLogger(__name__)
@@ -238,6 +239,15 @@ def run_review_workflow(
                     elapsed=time.time() - start_time,
                 )
             last_verdict = verdict
+
+            # Severity backstop (Step 5): at/after the lane's strict round a
+            # `tasks` verdict with no critical/high finding is rewritten to
+            # `dismiss` so the existing dismiss branch converges the loop
+            # (deterministic guarantee for when the supervisor ignores the
+            # advisory prompt rule).
+            verdict = _apply_severity_floor(
+                verdict, report, round_number, config, pending_ci_note
+            )
 
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
 
@@ -478,6 +488,55 @@ def run_review_workflow(
         post_issue_comments=post_issue_comments,
         issue_number=issue_number,
     )
+
+
+def _apply_severity_floor(
+    verdict: Verdict,
+    report: str,
+    round_number: int,
+    config: ReviewConfig,
+    pending_ci_note: str | None,
+) -> Verdict:
+    """Downgrade a low-severity ``tasks`` verdict to ``dismiss`` at the floor.
+
+    The deterministic backstop for the advisory severity prompt rule: from
+    ``config.strict_from_round`` onward, a ``tasks`` verdict whose reviewer
+    report carries no ``critical``/``high`` finding is rewritten to
+    ``Verdict("dismiss")`` so the loop stops burning rounds on nitpicks. Two
+    guards keep it conservative: it **fails open** (leaves the verdict
+    unchanged) on an unparseable report, and it is **skipped entirely** while a
+    CI finding is pending — red CI is a must-fix, exempt from the floor.
+
+    Args:
+        verdict: The freshly parsed supervisor verdict.
+        report: The fresh reviewer report (not the supervisor text) whose
+            anchored finding lines carry the severities.
+        round_number: The current 1-based round number.
+        config: The review workflow config (supplies ``strict_from_round``).
+        pending_ci_note: The carried CI-as-finding note, or ``None``. When set,
+            the round is exempt and never downgraded.
+
+    Returns:
+        ``Verdict("dismiss")`` when the floor applies, else ``verdict``
+        unchanged.
+    """
+    if verdict.decision != "tasks":
+        return verdict
+    if pending_ci_note is not None:
+        return verdict
+    if round_number < config.strict_from_round:
+        return verdict
+    top = max_severity(report)
+    if top is None:
+        return verdict
+    if top in ("critical", "high"):
+        return verdict
+    logger.info(
+        "Round %d: severity floor: downgrading tasks -> dismiss (max=%s)",
+        round_number,
+        top,
+    )
+    return Verdict(decision="dismiss")
 
 
 def _resolve_context(

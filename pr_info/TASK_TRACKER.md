@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: Severity backstop — downgrade `tasks` → `dismiss`
-- [ ] Implementation: apply severity floor transform in `core.body()` (import `max_severity`; CI-exemption + below-floor + fail-open guards; log downgrade); mocked-LLM tests first (plan lane in `test_core.py`, CI exemption in `test_core_after_steps.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: apply severity floor transform in `core.body()` (import `max_severity`; CI-exemption + below-floor + fail-open guards; log downgrade); mocked-LLM tests first (plan lane in `test_core.py`, CI exemption in `test_core_after_steps.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (added `_apply_severity_floor` helper + inline transform after `last_verdict = verdict`; 5 plan-lane tests in `test_core.py`, 1 CI-exemption test in `test_core_after_steps.py`. pylint ✅ / mypy ✅ except the one pre-existing `core.py:126` `pr_feedback_undeterminable` finding on `BranchStatusReport` — E1101 + attr-defined, untouched by this diff. pytest still blocked repo-wide by the same pre-existing env issue as Steps 1–4: installed `mcp_workspace` lacks `checks.branch_status_rendering`, imported at `src/mcp_coder/checks/branch_status.py:17` → `__init__.py`, so collection yields 0 tests even for the unmodified `test_severity.py`)
+- [x] Commit message prepared
 
 ### Step 6: Handoff wiring — cap → escalate, flush every terminal path
 - [ ] Implementation: add `_flush_round_log` + `_route_to_human` to `handoff.py`; rewire `core.body()` terminal branches (dismiss/escalate/rebase/cap/commit-failed/push-failed + `_fail` sub-paths); update docstring; `test_handoff.py` + cap/escalate/rebase tests first

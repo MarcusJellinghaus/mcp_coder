@@ -36,6 +36,7 @@ _DISMISS = '```json\n{"decision": "dismiss"}\n```'
 _TASKS = '```json\n{"decision": "tasks", "tasks": ["Fix the bug at foo.py:1"]}\n```'
 
 _REPORT = "foo.py:1 — high — something is wrong"
+_REPORT_MEDIUM = "foo.py:1 — medium — a moderate concern"
 
 
 def _status(
@@ -570,3 +571,46 @@ def test_clean_feedback_logs_no_warning(
 
     assert result == 0
     assert _undeterminable_warnings(caplog) == []
+
+
+# --- Step 5: severity floor CI exemption (implementation lane) --------------
+
+
+def test_pending_ci_note_exempts_round_from_severity_floor(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A round carrying a pending CI note is never severity-downgraded.
+
+    Red CI on rounds 1-2 sets the carried finding note, so round 3 (>= the
+    strict round) with an all-``medium`` report is exempt from the floor: it
+    still issues fix tasks rather than being rewritten to dismiss. CI then goes
+    green, and round 4 dismisses to success.
+    """
+    env.check_and_fix_ci.side_effect = [False, False, True, True]
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 1 (CI red -> note set)
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 2 (CI red -> note carried)
+        _reviewer(_REPORT_MEDIUM),
+        _resp(_TASKS),  # round 3: medium + note -> exempt from the floor
+        _reviewer(session_id="rev-1"),  # round 3 apply-tasks (proves not downgraded)
+        _reviewer(),
+        _resp(_DISMISS),  # round 4 -> dismiss -> success
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
+    # Round 3 was NOT downgraded: it ran its apply-tasks resume (call index 8)
+    # and the loop continued to round 4. A downgrade would have ended the run at
+    # round 3 (8 calls, dismiss). 11 calls proves the CI exemption held.
+    assert env.prompt_llm.call_count == 11
+    apply_call = env.prompt_llm.call_args_list[8]
+    assert apply_call.kwargs["session_id"] == "rev-1"
+    assert "Fix the bug at foo.py:1" in apply_call.args[0]
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_IMPLEMENTATION.success_label_id

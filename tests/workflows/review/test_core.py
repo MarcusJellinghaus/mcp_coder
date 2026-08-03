@@ -35,6 +35,8 @@ _ESCALATE = '```json\n{"decision": "escalate", "escalate_reason": "needs a human
 _GARBAGE = "no verdict here, just prose"
 
 _REPORT = "foo.py:1 — high — something is wrong"
+_REPORT_LOW = "foo.py:1 — low — a minor nit"
+_REPORT_NO_SEVERITY = "general prose about the code with no finding lines"
 
 
 def _resp(text: str, session_id: str = "sup-1") -> dict[str, Any]:
@@ -506,3 +508,94 @@ def test_plan_lane_skips_pr_feedback(env: SimpleNamespace, tmp_path: Path) -> No
     assert "PR review feedback" not in env.prompt_llm.call_args_list[0].args[0]
     # ...and the supervisor got the bare reviewer report.
     assert "## PR review feedback" not in env.prompt_llm.call_args_list[1].args[0]
+
+
+# --- Step 5: severity floor backstop (plan lane) ---------------------------
+
+
+def test_low_severity_at_strict_round_downgrades_to_dismiss(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """At strict_from_round a tasks verdict with only low findings -> dismiss.
+
+    Rounds 1-2 carry a ``high`` finding so they are not downgraded; round 3's
+    report is all ``low``, so the backstop rewrites the tasks verdict to dismiss
+    and the run converges to the success label (terminal, not a skip).
+    """
+    env.prompt_llm.side_effect = [
+        _reviewer(_REPORT),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 1 (high -> stays tasks)
+        _reviewer(_REPORT),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 2 (high -> stays tasks)
+        _reviewer(_REPORT_LOW),
+        _resp(_TASKS),  # round 3 (all-low -> downgraded to dismiss)
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.success_label_id
+    # The loop stopped at round 3: no round-3 apply-tasks resume was issued.
+    assert env.prompt_llm.call_count == 8
+
+
+def test_high_severity_at_strict_round_stays_tasks(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A high finding at the strict round is not downgraded (loop continues)."""
+    per_round = [_reviewer(_REPORT), _resp(_TASKS), _reviewer(session_id="rev-1")]
+    env.prompt_llm.side_effect = per_round * core.REVIEW_MAX_ROUNDS
+
+    result = _run(tmp_path)
+
+    assert result == 1  # never downgraded -> hits the rounds cap
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["rounds"]
+
+
+def test_unparseable_severity_fails_open_stays_tasks(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A report with no severity token is never downgraded (fail open)."""
+    per_round = [
+        _reviewer(_REPORT_NO_SEVERITY),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+    env.prompt_llm.side_effect = per_round * core.REVIEW_MAX_ROUNDS
+
+    result = _run(tmp_path)
+
+    assert result == 1  # fail open -> stays tasks -> rounds cap
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["rounds"]
+
+
+def test_low_severity_below_strict_round_stays_tasks(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """An all-low report before the strict round is not downgraded early."""
+    env.prompt_llm.side_effect = [
+        _reviewer(_REPORT_LOW),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 1 (below floor)
+        _reviewer(_REPORT_LOW),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 2 (below floor -> not downgraded)
+        _reviewer(_REPORT_LOW),
+        _resp(_TASKS),  # round 3 (>= floor -> downgraded to dismiss)
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    # Rounds 1-2 (below strict_from_round=3) each ran a full apply-tasks resume;
+    # only round 3 was downgraded. 3 + 3 + 2 = 8 calls proves the loop was not
+    # cut short at round 2.
+    assert env.prompt_llm.call_count == 8
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.success_label_id
