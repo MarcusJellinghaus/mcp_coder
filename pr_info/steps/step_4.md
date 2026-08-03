@@ -40,14 +40,23 @@ def register_skill_commands(
 - **`cli/commands/icoder.py`:** passes
   `disabled_reasons={n: f.blocked_reason for n, f in frame_map.items()}` into `register_skill_commands`
   **for every provider** (the map is built unconditionally in Step 3, so a malformed `tools:` block
-  blocks its skill regardless of provider — restoring D12's provider-agnostic blocking).
+  blocks its skill regardless of provider — restoring D12's provider-agnostic blocking). Note the
+  asymmetry set up in Step 3: only `tools_block`-driven blocking is provider-agnostic; the legacy
+  `allowed-tools` path passes `enforce_skill_tools=False` outside langchain, so it never blocks a
+  Claude-native shell-only skill even after #1062.
 - **`app_core.py` `handle_input`:** *before* dispatch, if the leading token names a registered command
-  whose `disabled_reason` is set, emit `output_emitted` and return `Response((OutputText(reason),))` —
+  whose `disabled_reason` is set, emit `command_matched` + `output_emitted` and return
+  `Response((OutputText(reason),))` —
   **no dispatch, no `SendToLLM`**. Keep the existing `command_matched` / dispatch path otherwise. This
   reuses the same hop that already rewrites `SendToLLM`.
 - **`command_autocomplete.py`:** in `update_matches`, render a disabled command as
-  `Option(f"{cmd.name} - {cmd.description}  (disabled: {cmd.disabled_reason})", id=cmd.name, disabled=True)`
-  so it shows but cannot be selected (`select_highlighted` already returns `None` for disabled options).
+  `Option(f"{cmd.name} — {cmd.description}  (disabled: {cmd.disabled_reason})", id=cmd.name)` —
+  same em-dash separator as the existing enabled row. **Keep the `Option` enabled** (do *not* pass
+  `disabled=True`): the AC only requires blocked commands to be *marked* in the `/` dropdown, and
+  D7/D9(1) require that *invoking* one prints its reason. A `disabled=True` row makes
+  `select_highlighted()` return `None` (and Textual's `validate_highlighted` does not skip disabled
+  rows), so Tab would silently do nothing and the refusal below could never be reached from the
+  dropdown. The command must stay selectable; the `handle_input` guard is what refuses it.
 
 ## ALGORITHM (`handle_input`, new guard near the top of the command path)
 ```
@@ -57,6 +66,9 @@ self._event_log.emit("input_received", text=text)
 lead = text.split()[0].lower()
 cmd = self._registry.get(lead)
 if cmd is not None and cmd.disabled_reason:
+    # Emit command_matched too, so a blocked command's event log is shaped like
+    # every other command's (the dispatch path below emits it) — no replay asymmetry.
+    self._event_log.emit("command_matched", command=lead)
     self._event_log.emit("output_emitted", text=cmd.disabled_reason)
     return Response((OutputText(cmd.disabled_reason),))
 # ... existing dispatch as before ...
@@ -73,9 +85,12 @@ if cmd is not None and cmd.disabled_reason:
 - `test_skills.py`: `register_skill_commands(..., disabled_reasons={"foo":"broken"})` yields a `Command`
   with `disabled_reason == "broken"`; the command is still registered/visible.
 - `test_app_core.py`: invoking a blocked command returns a single `OutputText(reason)` and **no**
-  `SendToLLM`; a non-blocked command is unaffected; an `output_emitted` event is logged.
-- `test_command_autocomplete.py`: a disabled command appears as a disabled option and
-  `select_highlighted()` on it returns `None`.
+  `SendToLLM`; a non-blocked command is unaffected; `command_matched` **and** `output_emitted` events
+  are logged (same event shape as a normal command).
+- `test_command_autocomplete.py`: a blocked command appears in the dropdown with its
+  `(disabled: <reason>)` marker in the label **and stays selectable** — `select_highlighted()` on it
+  returns the command name (not `None`), so it can be tab-completed and then refused by
+  `handle_input`.
 - `test_cli_icoder.py`: a skill with a malformed `tools:` block ends up with a non-`None`
   `disabled_reason` on its registered command **regardless of provider** (parametrise over langchain
   and a non-langchain provider — the blocking must not depend on the `mcp_config`/gateway gate).
@@ -85,6 +100,7 @@ if cmd is not None and cmd.disabled_reason:
 > listed tests first, then: add `Command.disabled_reason`; add `CommandRegistry.get`; give
 > `register_skill_commands` an optional `disabled_reasons` mapping and set `disabled_reason` at Command
 > creation; in `cli/commands/icoder.py` pass `{name: SkillFrame.blocked_reason}` from the frame map;
-> add the pre-dispatch refusal guard to `AppCore.handle_input` (return `OutputText(reason)`, dispatch
-> nothing); and mark disabled commands in `command_autocomplete.update_matches`. Run pylint,
+> add the pre-dispatch refusal guard to `AppCore.handle_input` (emit `command_matched` +
+> `output_emitted`, return `OutputText(reason)`, dispatch nothing); and mark disabled commands in
+> `command_autocomplete.update_matches` — label-only, the `Option` stays **enabled**. Run pylint,
 > mypy(strict), pytest (`-n auto` unit-only exclusions) and `lint-imports` until green. One commit.

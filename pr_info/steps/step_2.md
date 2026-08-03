@@ -14,9 +14,10 @@ raw-frontmatter scan). Blocked-ness is decided **here** (see summary's deviation
   `icoder.skills`/`icoder.core` `forbidden_modules` were added in Step 1, so joining source_modules now
   makes the final AC's "permissions/ imports nothing from icoder.skills/core" genuinely enforced —
   `skill_frame` imports only `matcher`/`model`/`skill_tools`, so it stays green)
-- **Modified:** `src/mcp_coder/icoder/permissions/gateway.py` — one-line typing touch only (annotate the
-  `base` local in the still-present `build_legacy_frame` so mypy accepts the `Base` literals; the
-  function itself is deleted in Step 3).
+
+`gateway.py` needs **no** change here: `build_legacy_frame` has no `base` local — it passes an inline
+ternary as `PermissionFrame(base="none" if enforce_skill_tools else "inherit", ...)`, which mypy
+resolves from the argument's `Base` type context. (The function is deleted in Step 3.)
 
 ## WHAT
 ```python
@@ -67,7 +68,7 @@ if tools_block is None:              # legacy path
     allow, warns, _ = classify_all(allowed_tools, side="allow")
     base: Base = "none" if enforce_skill_tools else "inherit"
     return SkillFrame(PermissionFrame(base, tuple(allow)), tuple(warns),
-                      blocked_reason=two_empties(base, allowed_tools, allow))
+                      blocked_reason=two_empties(base, allowed_tools, allow, deny_forced=False))
 # rich path
 if tools_block.errors:               # malformed → fail-closed frame, blocked
     return SkillFrame(PermissionFrame("none"), tuple(tools_block.errors), blocked_reason="; ".join(errors))
@@ -82,10 +83,20 @@ deny,  dw, d_drop   = classify_all(tools_block.deny,  side="deny")
 base: Base = "none" if d_drop else as_base(tools_block.base)   # dropped deny entry → force none (fail-closed, D3)
 warns = aw + dw + (["deny narrowed to base=none because an entry was dropped"] if d_drop else [])
 return SkillFrame(PermissionFrame(base, tuple(allow), tuple(deny)), tuple(warns),
-                  blocked_reason=two_empties(base, tools_block.allow, allow))
+                  blocked_reason=two_empties(base, tools_block.allow, allow, deny_forced=d_drop))
 ```
-`two_empties(base, declared, parsed) -> reason|None`: return a reason **iff**
+`two_empties(base, declared, parsed, *, deny_forced) -> reason|None`: return a reason **iff**
 `base == "none" and declared and not parsed` (D8 — absorbs "declared but nothing survived"); else `None`.
+
+**The predicate reads the *forced* base** (post-D3), so a dropped `deny` entry that narrows
+`base: inherit` → `"none"` **can** block a skill whose `allow` also filtered to empty. That is
+deliberate (D7 — never burn a turn on a zero-tool skill), **but the reason must name the real
+cause**, so `two_empties` returns one of **two distinct strings**:
+- `deny_forced=False` → the empty-`allow` reason, e.g.
+  `"base: none but no declared allow token survived parsing"`.
+- `deny_forced=True` → the deny-caused reason, e.g.
+  `"base forced to none because a deny entry could not be resolved (<token>), and no allow token survived"`.
+Never report an empty `allow` list as the cause when the block was triggered by the dropped `deny`.
 
 ## DATA
 - `SkillFrame.frame is None` **only** for "no declaration at all". A legacy Bash-only skill with the
@@ -99,6 +110,10 @@ Model A (`inherit`+`allow`), B (`inherit`+`deny`), C (`none`+`allow`); `none, al
 warning, `blocked_reason is None`; `none` + declared allow all-dropped → `blocked_reason` set; bare
 `use:` → blocked; `inherit` all-dropped → runs, `frame.allow == ()`, `frame.deny == ()`; **dropped
 `deny` entry forces `base="none"`** asserted for both a `@ref` and an unparseable `mcp__` token;
+**deny-caused block names the deny cause**: `{base: inherit, allow: ["Bash(...)"], deny: ["@x"]}`
+(deny drop forces `base="none"` *and* the declared `allow` filters to empty) → `blocked_reason` is
+set and its text names the dropped `deny` entry, **not** the empty `allow` list — assert the two
+`two_empties` reason strings are distinct and that this case yields the deny-caused one;
 `@ref` in `allow` dropped + warned, no model change; non-`mcp__` token ignored (no warning); `mcp__s__*`
 wildcard produces a matcher (enforced); arg-scoped `allow` token kept + warning naming `#1053`; legacy
 `base="inherit"` when `enforce_skill_tools=False` and `base="none"` when `True`; neither block →
@@ -114,8 +129,9 @@ non-literal (implicit via strict run).
 > write `tests/icoder/test_skill_frame.py` with one test per row of the summary's mapping table and per
 > acceptance criterion. Then add `Base = Literal["inherit","none"]` to `permissions/model.py` and
 > retype `PermissionFrame.base`; create the pure `permissions/skill_frame.py` (`SkillFrame` +
-> `build_frame` with the token classifier and the two-empties/deny-asymmetry rules); add `skill_frame`
-> to `permissions_leaf_isolation` in `.importlinter`; and annotate the `base` local in `gateway.py`'s
-> `build_legacy_frame` so it type-checks against `Base` (do not delete it yet). Run pylint, mypy
+> `build_frame` with the token classifier and the two-empties/deny-asymmetry rules, including the
+> **two distinct `two_empties` reason strings** so a deny-caused block never reports an empty
+> `allow`); and add `skill_frame` to `permissions_leaf_isolation` in `.importlinter`. `gateway.py`
+> needs no change (`build_legacy_frame` has no `base` local; do not delete it yet). Run pylint, mypy
 > (strict), pytest (`-n auto` with the unit-only `-m "not ..."` exclusions) and `lint-imports` until
 > green. One commit.

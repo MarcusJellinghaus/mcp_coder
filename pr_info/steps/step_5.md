@@ -12,8 +12,8 @@ testability; `AppCore` exposes the two inputs; `on_mount` renders them.
 - `src/mcp_coder/cli/commands/icoder.py` — hoist a `permission_degraded` flag (default `False`) to
   outer scope and pass it to `AppCore` (see HOW; `config` is not in scope at the `AppCore(...)` call)
 - `src/mcp_coder/icoder/ui/app.py` — render the notices in `on_mount`
-- Tests: `tests/icoder/test_runtime_banner.py`, `test_app_core.py`, `test_cli_icoder.py`,
-  `test_app_pilot.py`
+- Tests: `tests/icoder/test_banner.py` (the existing `runtime_banner.py` test file — do **not** create
+  a second `test_runtime_banner.py`), `test_app_core.py`, `test_cli_icoder.py`, `test_app_pilot.py`
 
 ## WHAT (signatures)
 ```python
@@ -41,11 +41,13 @@ def permission_degraded(self) -> bool: ...
   `permission_degraded = False` **before** that gate and set `permission_degraded = config.degraded`
   inside it (right after `config = load_permission_config(project_dir)`), then pass the hoisted
   `permission_degraded` flag to `AppCore`. Non-langchain keeps the `False` default.
-- **`ui/app.py` `on_mount`:** after the existing dim runtime banner, build
-  `notices = format_startup_permission_notices(self._core.broken_skills,
-  self._core.permission_degraded)`; if non-empty, `output.append_text("\n".join(notices),
-  style=STYLE_CANCELLED)` (the same attention style used for `permission_warning`). Skip on the
-  resume path (mirrors the existing `if self._resume_log_path` guard).
+- **`ui/app.py` `on_mount`:** build `notices = format_startup_permission_notices(
+  self._core.broken_skills, self._core.permission_degraded)`; if non-empty,
+  `output.append_text("\n".join(notices), style=STYLE_CANCELLED)` (the same attention style used for
+  `permission_warning`). Render it **after** the dim runtime banner but **outside** the existing
+  `elif self._core.runtime_info:` branch — gated **only** on `self._resume_log_path is None`.
+  Putting it inside that `elif` would silently drop the degraded-config line whenever
+  `runtime_info` is `None`, which is exactly the invisible-failure this step exists to fix.
 
 ## ALGORITHM (`format_startup_permission_notices`)
 ```
@@ -63,7 +65,7 @@ return lines
   invocation refusal (Step 4) prints, so the two surfaces agree.
 
 ## TESTS (write first)
-- `test_runtime_banner.py`: `format_startup_permission_notices({}, False) == []`;
+- `test_banner.py` (existing file): `format_startup_permission_notices({}, False) == []`;
   degraded-only yields one line mentioning "degraded"; broken-only yields one sorted line per skill;
   both present yields the degraded line first, then the skills.
 - `test_app_core.py`: `broken_skills` reflects only frames with a `blocked_reason`;
@@ -76,6 +78,8 @@ return lines
   the `on_mount` render path (not just the pure formatter + `AppCore` properties) is covered
   ("startup surfaces both failure kinds"), analogous to the Step 3 pilot test for `permission_warning`.
   Assert the fresh-start path renders the notices and the resume path (`resume_log_path` set) skips them.
+  Also assert the notices still render when `runtime_info is None` (proving they are not nested inside
+  the `elif self._core.runtime_info:` banner branch).
 
 ## LLM PROMPT
 > Implement Step 5 of `pr_info/steps/summary.md` (see `pr_info/steps/step_5.md`). Using TDD, write the
@@ -83,7 +87,9 @@ return lines
 > expose `broken_skills` and `permission_degraded` on `AppCore` (derive `broken_skills` from the
 > existing `skill_frames` snapshot, add the degraded flag to `__init__`); pass
 > `permission_degraded=config.degraded` from `cli/commands/icoder.py` (langchain branch); and render
-> the notices in `ui/app.py`'s `on_mount` after the dim banner, using the attention style, skipped on
-> resume. Run pylint, mypy(strict), pytest (`-n auto` unit-only exclusions) and `lint-imports` until
+> the notices in `ui/app.py`'s `on_mount` after the dim banner but **outside** the
+> `elif self._core.runtime_info:` branch (gated only on `resume_log_path is None`), using the
+> attention style. Put the formatter tests in the existing `tests/icoder/test_banner.py`.
+> Run pylint, mypy(strict), pytest (`-n auto` unit-only exclusions) and `lint-imports` until
 > green. One commit. This completes issue #1061 — verify every acceptance criterion in the issue is
 > covered by a test across Steps 1–5.

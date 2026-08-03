@@ -49,12 +49,27 @@ non-langchain skills silently unblocked). Only the gateway *enforcement* stays l
 refusal read; it is simply populated once, at startup, from `build_frame`'s result instead of from
 `register_skill_commands`.
 
+**Scope limit on the provider-agnostic map (plan-review run 2).** Only `tools_block`-driven blocking
+is provider-agnostic. The **legacy `allowed-tools` path** receives
+`enforce_skill_tools=ENFORCE_SKILL_TOOLS if provider == "langchain" else False`, because
+`allowed-tools` is Claude-provider-**native**: without the gate, #1062 flipping the constant would
+block every shell-only skill under the claude provider too. See Step 3.
+
+### Decision: the D8 two-empties predicate reads the *forced* base, with a cause-specific reason
+
+`build_frame` evaluates D8's "declared but nothing survived" predicate against the **post-D3** base,
+so a dropped `deny` entry that forces `base="none"` **can** block a skill whose `allow` also filtered
+to empty. D7 wins over D3's "run + warn" here: never burn an LLM turn on a zero-tool skill.
+**But the `blocked_reason` must name the real cause** — `two_empties` returns two distinct strings,
+one for the plain empty-`allow` case and one naming the dropped `deny` entry. Reporting an empty
+`allow` list when the block was actually triggered by an unresolvable `deny` token is a defect.
+
 ## Canonical `skill → frame` mapping (implemented by `build_frame`)
 
 | Input | Result |
 |---|---|
 | Rich `tools:` block, valid | `PermissionFrame(base=<stated>, allow=<parsed>, deny=<parsed>)` (A/B/C emergent) |
-| Rich block malformed (non-mapping, null/empty, missing/invalid `base`, scalar `allow`/`deny`, non-string item, `use:`+inline) | recorded in `errors` → **BLOCKED**; builder still returns a fail-closed `base="none"` frame (for I5.1); runtime never reaches it |
+| Rich block malformed (non-mapping, **present-but-null**, empty, missing/invalid `base`, scalar `allow`/`deny`, non-string item, `use:`+inline) | recorded in `errors` → **BLOCKED**; builder still returns a fail-closed `base="none"` frame (for I5.1); runtime never reaches it. *Absent = the `tools` key is missing entirely; a present-but-null `tools:` is malformed, so `parse_tools_block` must test key membership, not `meta.get`* |
 | `base: none, allow: []` | valid zero-tool sandbox — **runs**, no warning |
 | `base: none`, declared `allow` non-empty but nothing survived parse | **BLOCKED** (D8) |
 | bare `tools: { use: name }` | **BLOCKED** (D7b — unexpandable until I4.1) |
@@ -63,7 +78,7 @@ refusal read; it is simply populated once, at startup, from `build_frame`'s resu
 | arg-scoped token in `allow` (`mcp__s__t(a=v)`) | kept, elevates the whole tool, + `#1053` warning (D5.4) |
 | `mcp__srv__*` wildcard | enforced (supersedes I1.1's "not enforced" warning) |
 | non-`mcp__` token (`Bash(...)`, `gh`) | ignored — advisory in a rich block, silent in a legacy list (D5.2) |
-| legacy `allowed-tools` only | `base = "none" if ENFORCE_SKILL_TOOLS else "inherit"`, `allow=<parsed>`, `deny=()` (D4) |
+| legacy `allowed-tools` only | `base = "none" if <enforce> else "inherit"`, `allow=<parsed>`, `deny=()` (D4); `<enforce>` is `ENFORCE_SKILL_TOOLS` on langchain, always `False` on other providers |
 | both blocks present | rich wins; legacy kept for Claude/adapter; **silent** (D14) |
 | neither block | `SkillFrame(frame=None)` — inherit-everything status quo |
 
@@ -85,12 +100,12 @@ refusal read; it is simply populated once, at startup, from `build_frame`'s resu
 - `src/mcp_coder/icoder/services/llm_service.py` — `stream(*, frame=...)`; drop `enforce_skill_tools`; `Fake.last_frame`
 - `src/mcp_coder/icoder/ui/app.py` — worker threads `skill_name`; startup notices
 - `src/mcp_coder/icoder/ui/runtime_banner.py` — startup permission-notices helper
-- `src/mcp_coder/icoder/ui/widgets/command_autocomplete.py` — mark disabled commands
-- `src/mcp_coder/cli/commands/icoder.py` — `ENFORCE_SKILL_TOOLS`; build frame map (all providers); pass to `AppCore`
+- `src/mcp_coder/icoder/ui/widgets/command_autocomplete.py` — mark disabled commands in the label (row stays selectable)
+- `src/mcp_coder/cli/commands/icoder.py` — `ENFORCE_SKILL_TOOLS`; build frame map (all providers, langchain-only enforcement); pass to `AppCore`
 - `src/mcp_coder/llm/types.py` — document `permission_warning` StreamEvent
 - `.importlinter` — `skill_tools`/`skill_frame` join `permissions_leaf_isolation`; one `cli → skill_frame` ignore
 - Tests migrated: `test_types`, `test_skills`, `test_app_core`, `test_app_pilot`, `test_llm_service`,
-  `test_permissions_gateway`, `test_cli_icoder`, `test_command_registry`, `test_runtime_banner`,
+  `test_permissions_gateway`, `test_cli_icoder`, `test_command_registry`, `test_banner`,
   `test_command_autocomplete`
 
 ## Steps (one commit each, TDD)

@@ -30,7 +30,7 @@ def __init__(self, ..., skill_frames: Mapping[str, SkillFrame] | None = None) ->
 def stream_llm(self, text: str, skill_name: str | None = None) -> Iterator[StreamEvent]: ...
 
 # cli/commands/icoder.py
-ENFORCE_SKILL_TOOLS = False   # module-level; #1062 flips this (fail-closed enforcement for everyone)
+ENFORCE_SKILL_TOOLS = False   # module-level; #1062 flips this (fail-closed enforcement on langchain)
 ```
 
 ## HOW
@@ -56,7 +56,14 @@ ENFORCE_SKILL_TOOLS = False   # module-level; #1062 flips this (fail-closed enfo
   `provider=="langchain" and mcp_config` gate (do **not** build it inside that gate: it runs before
   `load_skills`, so `skills` is not yet defined there):
   `frame_map = {s.name: build_frame(s.tools_block, tuple(s.allowed_tools) or None,
-  enforce_skill_tools=ENFORCE_SKILL_TOOLS) for s in skills}`. `build_frame` is pure and needs no
+  enforce_skill_tools=ENFORCE_SKILL_TOOLS if provider == "langchain" else False) for s in skills}`.
+  **The enforcement flag is langchain-only — do not simplify it back to a bare
+  `ENFORCE_SKILL_TOOLS`.** Rationale: the legacy `allowed-tools` path is Claude-provider-**native**
+  (`Bash(...)`/`gh`/`git` tokens are real permissions there), so once #1062 flips the constant to
+  `True` a bare flag would give every shell-only skill `base="none"` + nothing-survived →
+  `blocked_reason`, and Step 4 would refuse it **under the claude provider**, where it works fine.
+  Only `tools_block.errors`-driven blocking is provider-agnostic (D12); the legacy path never blocks
+  outside langchain. `build_frame` is pure and needs no
   `mcp_config`, so a malformed `tools:` block blocks its skill **regardless of provider** — this
   restores D12's parse-time, provider-agnostic blocking (a `disabled_reason` is set for a broken skill
   even under langchain-without-`mcp_config` or a non-langchain provider). Pass `skill_frames=frame_map`
@@ -110,7 +117,10 @@ for event in _events():
 - `test_app_pilot.py`: the UI worker threads `skill_name` and renders `permission_warning`.
 - `test_cli_icoder.py`: `RealLLMService` is built **without** `enforce_skill_tools`; `AppCore` receives
   a `skill_frames` map built from the loaded skills **for every provider** (non-empty whenever skills
-  exist — not gated on langchain/`mcp_config`); only the gateway wiring stays langchain-gated.
+  exist — not gated on langchain/`mcp_config`); only the gateway wiring stays langchain-gated. Also:
+  `build_frame` is called with `enforce_skill_tools=False` for a non-langchain provider even when
+  `ENFORCE_SKILL_TOOLS` is patched `True` (guards the #1062 flip against blocking Claude-native
+  shell-only skills), and with the constant's value for langchain.
 
 ## LLM PROMPT
 > Implement Step 3 of `pr_info/steps/summary.md` (see `pr_info/steps/step_3.md`). This is the atomic
@@ -122,7 +132,9 @@ for event in _events():
 > to look it up, emit `SkillFrame.warnings` as `permission_warning` events, and forward the frame;
 > thread `skill_name` through `ui/app.py`; add `ENFORCE_SKILL_TOOLS` and build the `{skill_name:
 > SkillFrame}` map **for every provider** (after `load_skills`, before `register_skill_commands` and
-> `AppCore`) in `cli/commands/icoder.py`, passing it to `AppCore` and dropping the
+> `AppCore`) in `cli/commands/icoder.py` — passing
+> `enforce_skill_tools=ENFORCE_SKILL_TOOLS if provider == "langchain" else False` — then pass it to
+> `AppCore` and drop the
 > `enforce_skill_tools` kwarg; document `permission_warning` in `llm/types.py`; and add the one
 > `cli.commands.icoder -> permissions.skill_frame` line to `.importlinter`. Run pylint, mypy(strict),
 > pytest (`-n auto` unit-only exclusions) and `lint-imports` until green. One commit.
