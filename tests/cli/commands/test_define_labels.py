@@ -134,12 +134,10 @@ class TestWorkflowLabelsFromConfig:
             "status-17:code-review-bot",
             "status-17i:code-reviewing",
             "status-14f:plan-review-failed",
-            "status-14f-rounds:plan-review-rounds-exhausted",
             "status-14f-timeout:plan-review-llm-timeout",
             "status-14f-mcp:plan-review-mcp-unavailable",
             "status-17f:code-review-failed",
             "status-17f-ci:code-review-ci-fix-needed",
-            "status-17f-rounds:code-review-rounds-exhausted",
             "status-17f-timeout:code-review-llm-timeout",
             "status-17f-mcp:code-review-mcp-unavailable",
         ]

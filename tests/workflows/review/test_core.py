@@ -24,7 +24,7 @@ import pytest
 from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.review import core, handoff, reviewer
+from mcp_coder.workflows.review import core, handoff, reviewer, steps
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 
 # --- verdict payloads -------------------------------------------------------
@@ -82,7 +82,7 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
     monkeypatch.setattr(
-        core, "get_current_branch_name", MagicMock(return_value="1072-review")
+        steps, "get_current_branch_name", MagicMock(return_value="1072-review")
     )
     mocks.issue_manager = MagicMock(name="IssueManager")
     monkeypatch.setattr(handoff, "IssueManager", mocks.issue_manager)

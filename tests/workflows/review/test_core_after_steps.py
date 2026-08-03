@@ -27,7 +27,7 @@ import pytest
 from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.review import core, handoff, reviewer
+from mcp_coder.workflows.review import core, handoff, reviewer, steps
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION, REVIEW_PLAN
 
 # --- verdict payloads -------------------------------------------------------
@@ -95,7 +95,7 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
     monkeypatch.setattr(
-        core, "get_current_branch_name", MagicMock(return_value="1072-review")
+        steps, "get_current_branch_name", MagicMock(return_value="1072-review")
     )
     mocks.issue_manager = MagicMock(name="IssueManager")
     monkeypatch.setattr(handoff, "IssueManager", mocks.issue_manager)
@@ -118,11 +118,13 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 
     # After-steps externals: default to a clean rebase + green CI + a base branch.
     mocks.detect_base_branch = MagicMock(return_value="main")
-    monkeypatch.setattr(core, "detect_base_branch", mocks.detect_base_branch)
+    monkeypatch.setattr(steps, "detect_base_branch", mocks.detect_base_branch)
     mocks.attempt_rebase_and_push = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "_attempt_rebase_and_push", mocks.attempt_rebase_and_push)
+    monkeypatch.setattr(
+        steps, "_attempt_rebase_and_push", mocks.attempt_rebase_and_push
+    )
     mocks.check_and_fix_ci = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "check_and_fix_ci", mocks.check_and_fix_ci)
+    monkeypatch.setattr(steps, "check_and_fix_ci", mocks.check_and_fix_ci)
 
     # PR-feedback fetch (implementation lane): default to a report with no open
     # feedback so existing tests see no note; individual tests override the

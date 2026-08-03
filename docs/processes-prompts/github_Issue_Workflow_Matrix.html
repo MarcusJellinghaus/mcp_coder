@@ -225,12 +225,10 @@
         .status-code-review-bot { --label-color: #fbbf24; }
         .status-code-reviewing { --label-color: #fed7aa; }
         .status-plan-review-failed { --label-color: #b60205; }
-        .status-plan-review-rounds { --label-color: #b60205; }
         .status-plan-review-timeout { --label-color: #e99695; }
         .status-plan-review-mcp { --label-color: #e99695; }
         .status-code-review-failed { --label-color: #b60205; }
         .status-code-review-ci { --label-color: #d93f0b; }
-        .status-code-review-rounds { --label-color: #b60205; }
         .status-code-review-timeout { --label-color: #e99695; }
         .status-code-review-mcp { --label-color: #e99695; }
         
@@ -522,12 +520,6 @@
                     <div class="label-description">General failure / unparseable verdict</div>
                     <div class="status-badge badge-failed">Failed</div>
                 </div>
-                <div class="label-card highlight-red status-plan-review-rounds">
-                    <div class="step-number">14f-r</div>
-                    <div class="label-name">status-14f-rounds:plan-review-rounds-exhausted</div>
-                    <div class="label-description">Rounds cap (5) hit without converging</div>
-                    <div class="status-badge badge-failed">Rounds</div>
-                </div>
                 <div class="label-card highlight-red status-plan-review-timeout">
                     <div class="step-number">14f-t</div>
                     <div class="label-name">status-14f-timeout:plan-review-llm-timeout</div>
@@ -587,12 +579,6 @@
                     <div class="label-name">status-17f-ci:code-review-ci-fix-needed</div>
                     <div class="label-description">CI still red at the rounds cap</div>
                     <div class="status-badge badge-failed">CI Failed</div>
-                </div>
-                <div class="label-card highlight-red status-code-review-rounds">
-                    <div class="step-number">17f-r</div>
-                    <div class="label-name">status-17f-rounds:code-review-rounds-exhausted</div>
-                    <div class="label-description">Rounds cap (5) hit without converging</div>
-                    <div class="status-badge badge-failed">Rounds</div>
                 </div>
                 <div class="label-card highlight-red status-code-review-timeout">
                     <div class="step-number">17f-t</div>

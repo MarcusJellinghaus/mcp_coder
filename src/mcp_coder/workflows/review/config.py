@@ -76,7 +76,6 @@ REVIEW_IMPLEMENTATION = ReviewConfig(
     thread_pr_feedback=True,
     failure_labels={
         "general": "code_review_failed",
-        "rounds": "code_review_rounds",
         "timeout": "code_review_timeout",
         "mcp_unavailable": "code_review_mcp",
         "ci": "code_review_ci",
@@ -100,7 +99,6 @@ REVIEW_PLAN = ReviewConfig(
     thread_pr_feedback=False,
     failure_labels={
         "general": "plan_review_failed",
-        "rounds": "plan_review_rounds",
         "timeout": "plan_review_timeout",
         "mcp_unavailable": "plan_review_mcp",
     },

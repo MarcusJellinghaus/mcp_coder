@@ -346,21 +346,6 @@
       }
     },
     {
-      "internal_id": "plan_review_rounds",
-      "name": "status-14f-rounds:plan-review-rounds-exhausted",
-      "color": "b60205",
-      "description": "Automated plan review exhausted its round limit",
-      "category": "human_action",
-      "failure": true,
-      "vscodeclaude": {
-        "emoji": "🔄",
-        "display_name": "PLAN REVIEW ROUNDS EXHAUSTED",
-        "stage_short": "plan-review-rounds",
-        "commands": ["/check_branch_status"],
-        "color": "red"
-      }
-    },
-    {
       "internal_id": "plan_review_timeout",
       "name": "status-14f-timeout:plan-review-llm-timeout",
       "color": "e99695",
@@ -416,21 +401,6 @@
         "emoji": "🔧",
         "display_name": "CODE REVIEW CI FIX NEEDED",
         "stage_short": "code-review-ci-fail",
-        "commands": ["/check_branch_status"],
-        "color": "red"
-      }
-    },
-    {
-      "internal_id": "code_review_rounds",
-      "name": "status-17f-rounds:code-review-rounds-exhausted",
-      "color": "b60205",
-      "description": "Automated code review exhausted its round limit",
-      "category": "human_action",
-      "failure": true,
-      "vscodeclaude": {
-        "emoji": "🔄",
-        "display_name": "CODE REVIEW ROUNDS EXHAUSTED",
-        "stage_short": "code-review-rounds",
         "commands": ["/check_branch_status"],
         "color": "red"
       }

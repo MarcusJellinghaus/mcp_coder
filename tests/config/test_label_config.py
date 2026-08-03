@@ -204,11 +204,6 @@ REVIEW_LABELS = [
     ("code_reviewing", "status-17i:code-reviewing", "bot_busy"),
     ("plan_review_failed", "status-14f:plan-review-failed", "human_action"),
     (
-        "plan_review_rounds",
-        "status-14f-rounds:plan-review-rounds-exhausted",
-        "human_action",
-    ),
-    (
         "plan_review_timeout",
         "status-14f-timeout:plan-review-llm-timeout",
         "human_action",
@@ -216,11 +211,6 @@ REVIEW_LABELS = [
     ("plan_review_mcp", "status-14f-mcp:plan-review-mcp-unavailable", "human_action"),
     ("code_review_failed", "status-17f:code-review-failed", "human_action"),
     ("code_review_ci", "status-17f-ci:code-review-ci-fix-needed", "human_action"),
-    (
-        "code_review_rounds",
-        "status-17f-rounds:code-review-rounds-exhausted",
-        "human_action",
-    ),
     (
         "code_review_timeout",
         "status-17f-timeout:code-review-llm-timeout",
@@ -231,12 +221,10 @@ REVIEW_LABELS = [
 
 REVIEW_FAILURE_IDS = [
     "plan_review_failed",
-    "plan_review_rounds",
     "plan_review_timeout",
     "plan_review_mcp",
     "code_review_failed",
     "code_review_ci",
-    "code_review_rounds",
     "code_review_timeout",
     "code_review_mcp",
 ]
