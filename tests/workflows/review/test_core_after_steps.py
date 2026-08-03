@@ -234,7 +234,7 @@ def test_dismiss_rebase_conflict_routes_to_needs_human(
 
 def test_rebase_slot_references_issue_1066(env: SimpleNamespace) -> None:
     """The needs-human rebase slot carries the #1066 NotYetImplemented marker."""
-    source = inspect.getsource(core._after_steps)
+    source = inspect.getsource(steps._after_steps)
     assert "#1066" in source
     assert "NotYetImplemented" in source
 
