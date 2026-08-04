@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Build the frame (`skill_frame.py`) + `Base` Literal
 
-- [ ] Implementation: write `tests/icoder/test_permissions_skill_frame.py` (one test per mapping-table row / AC), add `Base` Literal + retype `PermissionFrame.base` in `model.py`, create pure `permissions/skill_frame.py` (`SkillFrame` + `build_frame` + `as_base` + `two_empties` with token classifier and deny-asymmetry rules), update `.importlinter`
-- [ ] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write `tests/icoder/test_permissions_skill_frame.py` (one test per mapping-table row / AC), add `Base` Literal + retype `PermissionFrame.base` in `model.py`, create pure `permissions/skill_frame.py` (`SkillFrame` + `build_frame` + `as_base` + `two_empties` with token classifier and deny-asymmetry rules), update `.importlinter`
+- [x] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues (pylint/ruff/mypy(strict)/lint-imports green; pytest could not execute — same pre-existing env break as Step 1: `mcp_workspace.checks.branch_status_rendering` missing, fails at conftest import identically on unmodified tests)
+- [x] Commit message prepared
 
 ### Step 3: Transport — swap carrier, wire frame-map snapshot, delete `build_legacy_frame`
 

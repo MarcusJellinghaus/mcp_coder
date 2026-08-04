@@ -14,9 +14,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Mapping, NamedTuple
+from typing import Literal, Mapping, NamedTuple
 
 WILDCARD = "*"
+
+Base = Literal["inherit", "none"]
 
 
 class Policy(Enum):
@@ -80,7 +82,7 @@ class Matcher:
 class PermissionFrame:
     """A permission frame layered above config rules."""
 
-    base: str  # "inherit" | "none"
+    base: Base  # "inherit" | "none"
     allow: tuple[Matcher, ...] = ()
     deny: tuple[Matcher, ...] = ()
 
