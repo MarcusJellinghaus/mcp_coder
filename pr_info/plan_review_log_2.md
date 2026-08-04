@@ -116,3 +116,50 @@ notices block), `Decisions.md` (R2-16 … R2-18).
 verification-loop wording, the `output.append_text` call site and the `build_legacy_frame` docstring
 references now agree across `summary.md`, `Decisions.md` and steps 1–5. No source files touched.
 Ready for implementation.
+
+## Round 4 — 2026-08-03
+**Findings**: None. A fourth independent engineer re-verified the plan end-to-end against issue #1061
+(D1–D15, 18 ACs), the linked epic #1038 and design ref #1037, and the real source tree.
+
+Re-verified as correct: all round-3 fixes (ruff in the summary footer and all five step prompts, the
+`output = self.query_one(OutputLog)` binding in step 5's un-nested notices block, step 3's two stale
+docstrings); no stale references survive from rounds 1–2 (`test_skill_tools.py`/`test_skill_frame.py`,
+`deny_forced`, `dropped: bool`, `test_runtime_banner.py`, `tool_permissions` all absent). Plan claims
+checked against source: `skills.py:194` lower-casing, `gateway.py:79` inline ternary, `app.py:150/415`,
+the `config` local's scope, `select_highlighted()` on a disabled Option, `parse_matcher`'s signature,
+`resolver._resolve_frame` (D11 — no resolver change needed), all 23 `PermissionFrame(base=…)` sites
+being string literals (D15 safe under `mypy --strict src tests`), the `permissions_leaf_isolation`
+extension, and step 3's seven-file test-migration list being exactly complete.
+
+**Decisions**: No action. Loop terminates.
+**Changes**: None.
+**Status**: no changes needed
+
+## Final Status
+
+**Rounds run:** 4 (rounds 1–3 produced plan changes; round 4 produced none, closing the loop).
+**Findings triaged:** 18 accepted and applied — 17 handled autonomously as mechanical plan fixes,
+1 escalated to the user.
+
+**User decision:** the conflict between D8's block predicate and D3's forced `base="none"` — a dropped
+`deny` entry can force `base="none"` and thereby trip D8 on a skill the author wrote as `base: inherit`.
+Options offered: (A) predicate reads the *declared* base, so D3's "runs on a narrowed frame + warning"
+stands; (B) keep the forced base, block anything that ends up zero-tool; (C) block, but with a distinct
+reason string naming the dropped `deny` entry as the real cause. **User chose C** — recorded as R2-6.
+
+**Commits produced:**
+| SHA | Scope |
+|---|---|
+| `e9e7f0b` | Round 1 — nine findings (R2-1…R2-9), incl. the critical present-but-null `tools:` fail-open fix |
+| `14e21da` | Round 2 — six findings (R2-10…R2-15) |
+| `c2491af` | Round 3 — three findings (R2-16…R2-18) |
+
+**Most material fixes:** present-but-null `tools:` reclassified MALFORMED (closing a fail-open hole on
+the issue's own primary risk boundary); `enforce_skill_tools` gated to the langchain provider so #1062's
+flip cannot block legacy skills under the Claude provider; blocked autocomplete rows kept selectable so
+D7's "invoking it prints the reason" is reachable; ruff added to every step gate (the new public
+functions would otherwise have landed CI-red on DOC201).
+
+**Verdict:** all 18 acceptance criteria and D1–D15 map to a step with an enumerated test; plan claims
+verified line-for-line against the source; step sizing conforms to `planning_principles.md`; no scope
+drift into I4.1 / I5.1 / I5.4 / #1062. **The plan is ready for approval.**
