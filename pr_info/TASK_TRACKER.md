@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Delete the dead `TaskTrackerStatus` enum
 
-- [ ] Implementation: delete `TaskTrackerStatus` class + `from enum import Enum` in `task_tracker.py`, remove it from `__init__.py` import block and `__all__`, and remove it from the test import block plus delete `TestTaskTrackerStatusEnum` (do NOT touch the five `test_check_branch_status*.py` files)
-- [ ] Quality checks: pylint, pytest (fast unit subset), mypy — fix all issues; then search repo for `TaskTrackerStatus` (only the five upstream-importing test files may remain)
-- [ ] Commit message prepared
+- [x] Implementation: delete `TaskTrackerStatus` class + `from enum import Enum` in `task_tracker.py`, remove it from `__init__.py` import block and `__all__`, and remove it from the test import block plus delete `TestTaskTrackerStatusEnum` (do NOT touch the five `test_check_branch_status*.py` files)
+- [x] Quality checks: pylint, pytest (fast unit subset), mypy — fix all issues; then search repo for `TaskTrackerStatus` (only the five upstream-importing test files may remain)
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -11,7 +11,6 @@ from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerError,
     TaskTrackerFileNotFoundError,
     TaskTrackerSectionNotFoundError,
-    TaskTrackerStatus,
     _find_implementation_section,
     _get_incomplete_tasks,
     _normalize_task_name,
@@ -1674,28 +1673,6 @@ class TestTaskTrackerTemplate:
 
             # Call validate_task_tracker() - should not raise
             validate_task_tracker(temp_dir)
-
-
-# ============================================================================
-# TaskTrackerStatus enum tests
-# ============================================================================
-
-
-class TestTaskTrackerStatusEnum:
-    """Tests for the TaskTrackerStatus enum."""
-
-    def test_task_tracker_status_enum_values(self) -> None:
-        """Verify all 4 enum values exist and are strings."""
-        assert TaskTrackerStatus.COMPLETE == "COMPLETE"
-        assert TaskTrackerStatus.INCOMPLETE == "INCOMPLETE"
-        assert TaskTrackerStatus.N_A.value == "N/A"
-        assert TaskTrackerStatus.ERROR == "ERROR"
-        assert len(TaskTrackerStatus) == 4
-
-    def test_task_tracker_status_is_str(self) -> None:
-        """Verify TaskTrackerStatus members are strings."""
-        for status in TaskTrackerStatus:
-            assert isinstance(status, str)
 
 
 # ============================================================================

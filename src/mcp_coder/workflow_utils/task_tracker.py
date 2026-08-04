@@ -7,7 +7,6 @@ checkboxes and extract incomplete implementation tasks for automated workflow ma
 import logging
 import re
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 from typing import Tuple
 
@@ -68,15 +67,6 @@ class TaskInfo:
     is_complete: bool
     line_number: int
     indentation_level: int
-
-
-class TaskTrackerStatus(str, Enum):
-    """Status of the task tracker."""
-
-    COMPLETE = "COMPLETE"
-    INCOMPLETE = "INCOMPLETE"
-    N_A = "N/A"
-    ERROR = "ERROR"
 
 
 class TaskTrackerError(Exception):
