@@ -1,0 +1,77 @@
+# Step 3 — Tier B (pause): dual-timeout defeat via pending counter
+
+**Commit:** `spike(i3.1): Tier B pause — pending counter defeats both timeouts`
+
+Read `pr_info/steps/summary.md` first. This step demonstrates the **pause** mechanism (D1) that
+lets a legitimately paused turn survive both the inactivity `q.get(timeout=…)` and the
+`_AGENT_OVERALL_TIMEOUT` wall-clock cap (gotcha **#4**). It reuses the Tier B setup (fake model +
+blocking tool) but with a **pause-aware** copy of the consumer. Keepalives are recorded as the
+**rejected** alternative — demonstrated, not implemented.
+
+## WHERE
+
+- Create `spikes/i3-1-approval/tier_b_pause.py` (self-contained; carries its own bridge copy +
+  fake model + blocking tool, or a trimmed inline restatement — no import from `tier_b_cancel.py`
+  so the step stays independent).
+
+## WHAT — functions / signatures
+
+```python
+class PendingCounter:
+    """Thread-safe pending-approval counter (Lock-guarded int)."""
+    def incr(self) -> None: ...
+    def decr(self) -> None: ...
+    @property
+    def value(self) -> int: ...
+
+# small local constants stand in for the monkeypatched production values (#4):
+INACTIVITY_TIMEOUT = 2.0      # models q.get(timeout=…), natural 300s not exercised
+OVERALL_CAP = 3.0             # models _AGENT_OVERALL_TIMEOUT, natural 3600s not exercised
+
+def run_bridge_paused(gen_factory, pending: PendingCounter) -> list:
+    """Bridge copy with pause: Empty -> re-wait while pending>0; cap uses elapsed - paused."""
+
+def scenario_pause_survives() -> None:   # tool pauses > both timeouts, turn still completes
+```
+
+## HOW — integration points
+
+- Same real `run_agent_stream` + `FakeChatModel` + `blocking_tool` as Step 2.
+- The tool (or the gate around it) calls `pending.incr()` when it begins awaiting the Future and
+  `pending.decr()` immediately after it resolves — the counter is the observation channel
+  #1045 already pinned; here it also *drives* the pause decision.
+- Configure the resolver thread to sleep **5s** (> `INACTIVITY_TIMEOUT` and > `OVERALL_CAP`)
+  before pushing `set_result`, so a non-pause consumer would raise `TimeoutError`.
+
+## ALGORITHM — pause-aware consumer (run_bridge_paused, D1)
+
+```
+start = monotonic(); paused = 0.0
+while True:
+    try: event = q.get(timeout=INACTIVITY_TIMEOUT)
+    except Empty:
+        if pending.value > 0: paused += INACTIVITY_TIMEOUT; continue   # re-wait, don't die
+        cancel.set(); raise TimeoutError(...)                          # genuine inactivity
+    if event is None: break
+    if (monotonic() - start) - paused > OVERALL_CAP:                   # cap excludes paused
+        cancel.set(); raise TimeoutError(...)
+    events.append(event)
+```
+
+## DATA
+
+- `PendingCounter` exposes `.value`; `run_bridge_paused` returns `list[StreamEvent]`.
+- Prints `PASS: pause-survives-inactivity`, `PASS: pause-survives-overall-cap`; exits 0.
+
+## Rejected alternative — record, do NOT implement (D1)
+
+Add a short module docstring / comment block stating why **keepalives** are rejected:
+the `_AGENT_OVERALL_TIMEOUT` check sits *inside* the consumer loop (`:524`), so keepalive
+events are what **arm** the cap rather than resetting it; keepalives also reach the session
+`.jsonl` (`app_core.py:198`) and replay, and add interval-tuning surface. A counter is only
+needed for pause. This text is lifted into `FINDINGS.md` in Step 6.
+
+## Definition of done
+
+- `python spikes/i3-1-approval/tier_b_pause.py` exits 0, all PASS lines, repeatable.
+- Standard `src`/`tests` fast unit suite still green.
