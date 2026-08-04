@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Startup feedback — list broken skills + loud degraded-config line
 
-- [ ] Implementation: write listed tests, add pure `format_startup_permission_notices` to `runtime_banner.py`, expose `broken_skills` + `permission_degraded` on `AppCore`, hoist + pass `permission_degraded` from `cli/commands/icoder.py`, render notices in `ui/app.py` `on_mount` (outside the `runtime_info` branch, re-query `OutputLog`); verify every issue #1061 acceptance criterion is covered across Steps 1–5
-- [ ] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write listed tests, add pure `format_startup_permission_notices` to `runtime_banner.py`, expose `broken_skills` + `permission_degraded` on `AppCore`, hoist + pass `permission_degraded` from `cli/commands/icoder.py`, render notices in `ui/app.py` `on_mount` (outside the `runtime_info` branch, re-query `OutputLog`); verify every issue #1061 acceptance criterion is covered across Steps 1–5 (AC16 startup-both-kinds covered by new `test_banner.py`/`test_app_core.py`/`test_cli_icoder.py`/`test_app_pilot.py` tests; ACs 1–15,17,18 covered by Steps 1–4 tests, spot-verified)
+- [x] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues (pylint/ruff(D/DOC preview)/mypy(strict)/lint-imports(21 kept) green for all changed src + test files; pytest could not execute — same pre-existing env break as Steps 1–4: `mcp_coder/__init__.py` fails to import the missing `mcp_workspace.checks.branch_status_rendering`, blocking all collection identically on unmodified tests)
+- [x] Commit message prepared
 
 ## Pull Request
 

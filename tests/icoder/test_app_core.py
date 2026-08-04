@@ -686,6 +686,47 @@ def test_handle_input_non_blocked_command_unaffected(app_core: AppCore) -> None:
     assert response.actions == (SendToLLM(text="run me"),)
 
 
+def test_broken_skills_reflects_only_frames_with_blocked_reason(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """broken_skills lists only frames carrying a blocked_reason (#1061)."""
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={
+            "ok": SkillFrame(frame=PermissionFrame(base="inherit")),
+            "broken": SkillFrame(
+                frame=PermissionFrame(base="none"), blocked_reason="bad tools block"
+            ),
+        },
+    )
+    assert core.broken_skills == {"broken": "bad tools block"}
+
+
+def test_broken_skills_empty_when_all_runnable(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """broken_skills is empty when no frame carries a blocked_reason."""
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={"ok": SkillFrame(frame=PermissionFrame(base="inherit"))},
+    )
+    assert core.broken_skills == {}
+
+
+def test_permission_degraded_echoes_constructor_flag(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """permission_degraded echoes the constructor flag (True and default False)."""
+    degraded = AppCore(
+        llm_service=fake_llm, event_log=event_log, permission_degraded=True
+    )
+    assert degraded.permission_degraded is True
+    default = AppCore(llm_service=fake_llm, event_log=event_log)
+    assert default.permission_degraded is False
+
+
 def test_stream_llm_forwards_skill_frame_to_service(event_log: EventLog) -> None:
     """stream_llm looks up the skill frame and forwards it to the LLM service."""
     fake_llm = FakeLLMService()

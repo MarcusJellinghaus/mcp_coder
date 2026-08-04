@@ -1394,3 +1394,87 @@ async def test_permission_warning_event_renders_message_text(
         await pilot.pause()
         output = app.query_one(OutputLog)
         assert "dropped mcp__srv__*" in output.recorded_lines
+
+
+# --- Step 5: startup permission notices (broken skills + degraded config) ---
+
+
+async def test_startup_surfaces_both_notice_kinds(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """Startup renders both a degraded-config line and a broken-skill line (#1061).
+
+    Exercises the on_mount render path (not just the pure formatter + AppCore
+    properties). ``runtime_info`` is None here, so the notices appearing proves
+    they are rendered OUTSIDE the ``elif self._core.runtime_info`` banner branch.
+    """
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={
+            "BrokenSkill": SkillFrame(
+                frame=PermissionFrame(base="none"),
+                blocked_reason="bad tools block",
+            )
+        },
+        permission_degraded=True,
+    )
+    app = ICoderApp(core)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        text = "\n".join(output.recorded_lines)
+        # Both failure kinds surfaced; the skill is lower-cased to its command.
+        assert "degraded" in text
+        assert "/brokenskill is disabled: bad tools block" in text
+
+
+async def test_startup_no_notices_when_healthy(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """A healthy startup (no degraded config, no broken skill) renders no notices."""
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={"ok": SkillFrame(frame=PermissionFrame(base="inherit"))},
+        permission_degraded=False,
+    )
+    app = ICoderApp(core)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        text = "\n".join(output.recorded_lines)
+        assert "degraded" not in text
+        assert "is disabled" not in text
+
+
+async def test_resume_path_skips_startup_notices(
+    fake_llm: FakeLLMService, event_log: EventLog, tmp_path: Path
+) -> None:
+    """The resume path skips startup permission notices (fresh-start only, #1061)."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    events = [
+        {"t": 0.0, "event": "session_start", "provider": "claude"},
+        {"t": 0.1, "event": "input_received", "text": "prior"},
+    ]
+    log_path.write_text(
+        "\n".join(json.dumps(ev) for ev in events) + "\n", encoding="utf-8"
+    )
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={
+            "brokenskill": SkillFrame(
+                frame=PermissionFrame(base="none"),
+                blocked_reason="bad tools block",
+            )
+        },
+        permission_degraded=True,
+    )
+    app = ICoderApp(core, resume_log_path=log_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        text = "\n".join(output.recorded_lines)
+        assert "degraded" not in text
+        assert "is disabled" not in text

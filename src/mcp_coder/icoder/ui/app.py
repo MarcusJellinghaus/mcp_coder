@@ -150,6 +150,18 @@ class ICoderApp(App[None]):
             output = self.query_one(OutputLog)
             lines = runtime_banner.format_runtime_info(self._core.runtime_info)
             output.append_text("\n".join(lines), style="dim")
+        # Startup permission notices (#1061): broken skills + a degraded config,
+        # as prominent (non-dim) lines. Gated only on the fresh-start path, and
+        # deliberately OUTSIDE the runtime_info branch — nesting it there drops
+        # the degraded line when runtime_info is None. Re-query OutputLog: the
+        # `output` local above lives only in the elif.
+        if self._resume_log_path is None:
+            notices = runtime_banner.format_startup_permission_notices(
+                self._core.broken_skills, self._core.permission_degraded
+            )
+            if notices:
+                output = self.query_one(OutputLog)
+                output.append_text("\n".join(notices), style=STYLE_CANCELLED)
         self._apply_prompt_border()
         self.query_one(InputArea).focus()
         self.query_one(BranchInfoBar).update_state(None)

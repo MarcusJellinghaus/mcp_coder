@@ -283,6 +283,73 @@ def test_execute_icoder_malformed_tools_block_blocks_regardless_of_provider(
     assert cmd.disabled_reason is not None
 
 
+def test_execute_icoder_permission_degraded_defaults_false_off_langchain(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """AppCore receives permission_degraded=False when no config is loaded (#1061).
+
+    The default provider here is ``claude`` (no langchain gate), so no permission
+    config is loaded and the flag keeps its ``False`` default.
+    """
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    (tmp_path / "logs").mkdir()
+    captured_app_core = _patch_all_icoder_deps(monkeypatch, tmp_path)
+
+    result = execute_icoder(make_icoder_args(tmp_path))
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    assert captured_app_core[0].permission_degraded is False
+
+
+def test_execute_icoder_passes_permission_degraded_when_config_degraded(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """AppCore receives permission_degraded=True when the langchain config is degraded.
+
+    Drives the langchain gate (``provider == "langchain" and mcp_config``) so
+    ``load_permission_config`` runs, and asserts its ``degraded`` flag reaches
+    ``AppCore`` — the input for the loud startup line (#1061).
+    """
+    import mcp_coder.cli.commands.icoder as icoder_mod
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    (tmp_path / "logs").mkdir()
+    captured_app_core = _patch_all_icoder_deps(monkeypatch, tmp_path)
+
+    # Drive the langchain gate: provider == "langchain" AND mcp_config truthy.
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_llm_method",
+        lambda _: ("langchain", None),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.parse_llm_method_from_args",
+        lambda _: "langchain",
+    )
+    mcp_config_path = tmp_path / "mcp.json"
+    mcp_config_path.write_text("{}")
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
+        lambda *a, **_kw: mcp_config_path,
+    )
+    monkeypatch.setattr(icoder_mod, "_assert_tool_interceptors_supported", lambda: None)
+    monkeypatch.setattr(icoder_mod, "_load_mcp_server_config", lambda *a, **_kw: {})
+    monkeypatch.setattr(
+        icoder_mod, "LangchainEnforcementGateway", lambda _config: MagicMock()
+    )
+    monkeypatch.setattr(icoder_mod, "MCPManager", lambda *a, **_kw: MagicMock())
+    monkeypatch.setattr(
+        icoder_mod, "load_permission_config", lambda _: MagicMock(degraded=True)
+    )
+
+    result = execute_icoder(make_icoder_args(tmp_path))
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    assert captured_app_core[0].permission_degraded is True
+
+
 def test_execute_icoder_creates_registry_with_skills(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

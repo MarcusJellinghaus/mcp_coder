@@ -116,6 +116,42 @@ def format_runtime_banner(data: Mapping[str, object]) -> list[str]:
     return lines
 
 
+def format_startup_permission_notices(
+    broken_skills: Mapping[str, str],
+    degraded: bool,
+) -> list[str]:
+    """Build the prominent startup lines for broken skills + a degraded config.
+
+    Both are otherwise-invisible failures (#1061): a broken skill is only
+    knowable by invoking it, and a degraded permission config denies every MCP
+    call while saying so only via a Textual-swallowed ``logger.error``. Each
+    skill name is lower-cased for display so it matches the registered command
+    (``register_skill_commands`` builds the command as a leading slash plus
+    ``skill.name.lower()``) — the command the user can actually type and the one
+    Step 4's refusal matches.
+
+    Args:
+        broken_skills: Raw skill name → block reason, for skills that refuse to
+            run. Names are lower-cased for display; the map is keyed by the raw
+            skill name from the ``{skill_name: SkillFrame}`` snapshot.
+        degraded: Whether the loaded permission config is degraded (fail-closed).
+
+    Returns:
+        Prominent notice lines (the degraded line first, then one sorted line
+        per broken skill); empty when nothing is wrong (no noise on healthy
+        startups).
+    """
+    lines: list[str] = []
+    if degraded:
+        lines.append(
+            "⚠ Permission config is degraded — all MCP tool calls are denied. "
+            "See logs."
+        )
+    for name in sorted(broken_skills):
+        lines.append(f"⚠ /{name.lower()} is disabled: {broken_skills[name]}")
+    return lines
+
+
 def format_runtime_info(info: RuntimeInfo) -> list[str]:
     """Build banner lines from a live ``RuntimeInfo`` object.
 

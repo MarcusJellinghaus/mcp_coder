@@ -101,9 +101,15 @@ def execute_icoder(args: argparse.Namespace) -> int:
         # shared by the interceptor (call level) and RealLLMService (turn level).
         mcp_manager: MCPManager | None = None
         gateway: LangchainEnforcementGateway | None = None
+        # Hoisted to outer scope: ``config`` only exists inside the langchain
+        # gate below, but AppCore is constructed later at outer scope, so a
+        # ``config.degraded`` reference at the call site would NameError.
+        # Non-langchain keeps this False default (no permission config loaded).
+        permission_degraded = False
         if provider == "langchain" and mcp_config:
             _assert_tool_interceptors_supported()
             config = load_permission_config(project_dir)
+            permission_degraded = config.degraded
             gateway = LangchainEnforcementGateway(config)
             server_config = _load_mcp_server_config(mcp_config, env_vars)
             mcp_manager = MCPManager(
@@ -219,6 +225,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
                     runtime_info=runtime_info,
                     tool_display=getattr(args, "tool_display", "compressed"),
                     skill_frames=frame_map,
+                    permission_degraded=permission_degraded,
                 )
                 initial_color = getattr(args, "initial_color", None)
                 if initial_color:

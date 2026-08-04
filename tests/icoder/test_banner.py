@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mcp_coder.icoder.ui.runtime_banner import format_runtime_banner
+from mcp_coder.icoder.ui.runtime_banner import (
+    format_runtime_banner,
+    format_startup_permission_notices,
+)
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
 
 
@@ -141,3 +144,43 @@ def test_status_present_but_server_missing_yields_no_suffix() -> None:
     }
     lines = format_runtime_banner(data)
     assert "srv-a 9.0" in lines
+
+
+# --- Step 5: startup permission notices (broken skills + degraded config) ---
+
+
+def test_startup_notices_empty_when_nothing_wrong() -> None:
+    """No degraded flag and no broken skills → no lines (silent healthy start)."""
+    assert format_startup_permission_notices({}, False) == []
+
+
+def test_startup_notices_degraded_only_yields_one_line() -> None:
+    """A degraded config alone yields a single line mentioning 'degraded'."""
+    lines = format_startup_permission_notices({}, True)
+    assert len(lines) == 1
+    assert "degraded" in lines[0]
+
+
+def test_startup_notices_broken_only_one_sorted_line_per_skill() -> None:
+    """Broken skills alone yield one line each, sorted by name."""
+    lines = format_startup_permission_notices(
+        {"beta": "reason-b", "alpha": "reason-a"}, False
+    )
+    assert lines == [
+        "⚠ /alpha is disabled: reason-a",
+        "⚠ /beta is disabled: reason-b",
+    ]
+
+
+def test_startup_notices_degraded_line_precedes_skills() -> None:
+    """When both are present the degraded line comes first, then the skills."""
+    lines = format_startup_permission_notices({"skill": "broken"}, True)
+    assert len(lines) == 2
+    assert "degraded" in lines[0]
+    assert lines[1] == "⚠ /skill is disabled: broken"
+
+
+def test_startup_notices_lowercase_skill_command_name() -> None:
+    """A mixed-case skill name renders as the lower-cased command the user can type."""
+    lines = format_startup_permission_notices({"My-Skill": "bad tools block"}, False)
+    assert lines == ["⚠ /my-skill is disabled: bad tools block"]

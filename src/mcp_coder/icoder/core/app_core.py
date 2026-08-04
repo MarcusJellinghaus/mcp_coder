@@ -53,6 +53,7 @@ class AppCore:
         runtime_info: RuntimeInfo | None = None,
         tool_display: Literal["oneline", "compressed"] = "compressed",
         skill_frames: Mapping[str, SkillFrame] | None = None,
+        permission_degraded: bool = False,
     ) -> None:
         """Initialize with injected dependencies.
 
@@ -66,6 +67,9 @@ class AppCore:
             skill_frames: Startup snapshot mapping each skill name to its
                 pre-built :class:`SkillFrame`, looked up per turn by
                 ``stream_llm`` (design §8.1). Empty/``None`` means no skills.
+            permission_degraded: Whether the loaded permission config is
+                degraded (fail-closed — every MCP call is denied). Surfaced as a
+                loud startup line by the UI (#1061). Defaults to ``False``.
         """
         self._llm_service = llm_service
         self._event_log = event_log
@@ -76,6 +80,7 @@ class AppCore:
         self._prompt_color: str = DEFAULT_PROMPT_COLOR
         self._tool_display: Literal["oneline", "compressed"] = tool_display
         self._skill_frames: dict[str, SkillFrame] = dict(skill_frames or {})
+        self._permission_degraded = permission_degraded
 
     def handle_input(self, text: str) -> Response:
         """Route user input to commands or typed actions for the UI.
@@ -237,6 +242,28 @@ class AppCore:
     def runtime_info(self) -> RuntimeInfo | None:
         """Runtime environment info, if provided."""
         return self._runtime_info
+
+    @property
+    def broken_skills(self) -> dict[str, str]:
+        """Skills that refuse to run, as ``{name: blocked_reason}`` (#1061).
+
+        Derived from the startup :class:`SkillFrame` snapshot: a frame with a
+        non-``None`` ``blocked_reason`` is a skill the user can see but cannot
+        run. Rendered at startup and matching the invocation-refusal reason.
+
+        Returns:
+            A ``{skill_name: reason}`` map, empty when every skill is runnable.
+        """
+        return {
+            name: sf.blocked_reason
+            for name, sf in self._skill_frames.items()
+            if sf.blocked_reason
+        }
+
+    @property
+    def permission_degraded(self) -> bool:
+        """Whether the loaded permission config is degraded (fail-closed)."""
+        return self._permission_degraded
 
     @property
     def token_usage(self) -> TokenUsage:
