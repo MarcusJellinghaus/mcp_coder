@@ -5,6 +5,9 @@ isolation with the git / GitHub externals mocked. ``_flush_round_log`` must be
 best-effort (never raise, warn on a falsy or raised result, skip the push when
 the commit did not succeed); ``_route_to_human`` must flush, post a gated
 comment, transition to the escalate label, and return ``0``.
+
+Step 4 adds ``_fail`` coverage for the optional ``details`` line, which reads
+directly beneath the ``❌`` header and is backward compatible when omitted.
 """
 
 import logging
@@ -209,3 +212,66 @@ def test_route_transitions_to_escalate_label_gated(
 
     assert result == 0
     routed.update_workflow_label.assert_not_called()
+
+
+# --- _fail (details param) -------------------------------------------------
+
+
+def _capture_fail_comment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **kwargs: object
+) -> str:
+    """Call ``_fail`` with ``handle_workflow_failure`` patched; return the body."""
+    net = MagicMock(name="handle_workflow_failure")
+    monkeypatch.setattr(handoff, "handle_workflow_failure", net)
+
+    result = handoff._fail(
+        REVIEW_PLAN,
+        tmp_path,
+        "general",
+        update_issue_labels=False,
+        post_issue_comments=False,
+        **kwargs,  # type: ignore[arg-type]
+    )
+
+    assert result == 1
+    net.assert_called_once()
+    comment_body = net.call_args.args[1]
+    assert isinstance(comment_body, str)
+    return comment_body
+
+
+def test_fail_details_appears_right_after_header(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """``details`` reads directly beneath the header, before Round/Verdict/Elapsed."""
+    body = _capture_fail_comment(
+        monkeypatch,
+        tmp_path,
+        round_number=2,
+        elapsed=3.0,
+        details="open tasks remain",
+    )
+
+    lines = body.split("\n")
+    assert lines[0].startswith("❌ ")
+    assert lines[1] == "open tasks remain"
+    # The cause line precedes the enrichment lines.
+    assert lines.index("open tasks remain") < lines.index("Round: 2")
+
+
+def test_fail_default_details_none_is_backward_compatible(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With ``details`` omitted, the body matches the pre-change output exactly."""
+    with_kw = _capture_fail_comment(
+        monkeypatch, tmp_path, round_number=2, elapsed=3.0, details=None
+    )
+    without_kw = _capture_fail_comment(
+        monkeypatch, tmp_path, round_number=2, elapsed=3.0
+    )
+
+    assert with_kw == without_kw
+    lines = with_kw.split("\n")
+    assert lines[0].startswith("❌ ")
+    # No extra/blank line was introduced between header and Round.
+    assert lines[1] == "Round: 2"

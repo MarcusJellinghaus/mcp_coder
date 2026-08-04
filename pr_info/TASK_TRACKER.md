@@ -55,9 +55,11 @@ Detail: [step_3.md](./steps/step_3.md)
 
 Detail: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation — add keyword-only `details` param to `_fail` in `handoff.py`, insert after header line; update `test_handoff.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — add keyword-only `details` param to `_fail` in `handoff.py`, insert after header line; update `test_handoff.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+  - pylint + mypy on `handoff.py` and `test_handoff.py`: clean, no issues. A fresh-env import of `handoff._fail` succeeds, confirming the source edit is valid.
+  - pytest could not collect: the test `.venv` has a stale `mcp-workspace`, and `src/mcp_coder/workflows/__init__.py` eagerly imports `create_pr`/`vscodeclaude`, whose chain reaches the missing `mcp_workspace` symbols. This breaks collection of the **entire** `tests/workflows/` subtree identically — untouched files such as `tests/workflows/review/test_verdict.py` fail the same way — so it is not introduced by this step. Same pre-existing, environmental blocker documented in Steps 1–3; fix is to reprovision the venv (`mcp-workspace` from git HEAD), outside source scope.
+- [x] Commit message prepared
 
 ### Step 5: Gate 1 — entry gate (open-tasks pre-flight)
 
