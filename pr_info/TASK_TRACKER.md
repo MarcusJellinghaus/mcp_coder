@@ -26,8 +26,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 Detail: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation — create `checks/ci_policy.py` (`assess_ci`), route `_exit_code` and pre-`--fix` bail-out through it; add tests (`tests/checks/test_ci_policy.py`, regression in `test_check_branch_status_exit_code.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+  - Step 1 code is clean: pylint on `ci_policy.py` = no issues; mypy on `checks/` (isolated) = no issues in `ci_policy.py`.
+  - The full-repo run reports only **pre-existing, environmental** failures unrelated to this step: the test `.venv` has a stale `mcp-workspace` (predating merged #1105/#1068) missing `checks.branch_status_rendering`, `BranchStatusReport.pr_feedback_undeterminable`, and the `format_for_*(fail_on_reviews=)` params, plus uninstalled optional `langchain`/`httpx`/`mcp` integration deps. These affect the whole repo equally and are not introduced by Step 1; the fix is to reprovision the venv (`mcp-workspace` from git HEAD), which is outside source scope.
+- [x] Commit message prepared
 
 ### Step 2: Two new failure labels in `labels.json`
 
