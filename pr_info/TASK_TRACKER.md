@@ -45,9 +45,11 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation — add `enforce_implementation_gates` field, set on both instances, extend `REVIEW_IMPLEMENTATION.failure_labels` with `tasks`/`ci_unknown`; update `test_config.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — add `enforce_implementation_gates` field, set on both instances, extend `REVIEW_IMPLEMENTATION.failure_labels` with `tasks`/`ci_unknown`; update `test_config.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+  - pylint + mypy on `config.py` and `test_config.py`: clean, no issues.
+  - pytest could not collect (0 tests): the test `.venv` has a stale `mcp-workspace` missing `mcp_workspace.checks.branch_status_rendering`, imported at `src/mcp_coder/checks/branch_status.py:17`, which breaks `import mcp_coder` at collection time. This is the same pre-existing, environmental blocker documented in Steps 1 & 2 and affects the whole repo; it is not introduced by this pure-dataclass change (no new imports). Fix is to reprovision the venv (`mcp-workspace` from git HEAD), which is outside source scope.
+- [x] Commit message prepared
 
 ### Step 4: `_fail` gains an optional `details` param
 

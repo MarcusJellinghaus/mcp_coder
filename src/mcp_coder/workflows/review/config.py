@@ -44,6 +44,11 @@ class ReviewConfig:
             substitution so the enforced and stated numbers match).
         tie_break: Per-lane sentence stating how the reviewer breaks ties when
             two options are otherwise equivalent.
+        enforce_implementation_gates: Whether the implementation-lane safety
+            gates run: the pre-flight open-tasks check (Gate 1) and the
+            CI-proven exit guard (Gate 2). ``True`` for ``review-implementation``
+            only. Deliberately distinct from ``run_after_steps`` (which means
+            "run rebase + CI").
     """
 
     name: str
@@ -60,6 +65,7 @@ class ReviewConfig:
     failure_labels: dict[str, str]
     strict_from_round: int = 3
     tie_break: str = ""
+    enforce_implementation_gates: bool = False
 
 
 REVIEW_IMPLEMENTATION = ReviewConfig(
@@ -79,9 +85,12 @@ REVIEW_IMPLEMENTATION = ReviewConfig(
         "timeout": "code_review_timeout",
         "mcp_unavailable": "code_review_mcp",
         "ci": "code_review_ci",
+        "tasks": "code_review_open_tasks",
+        "ci_unknown": "code_review_ci_unknown",
     },
     strict_from_round=3,
     tie_break="default to better code quality",
+    enforce_implementation_gates=True,
 )
 
 
@@ -104,4 +113,5 @@ REVIEW_PLAN = ReviewConfig(
     },
     strict_from_round=3,
     tie_break="default to simpler plans",
+    enforce_implementation_gates=False,
 )

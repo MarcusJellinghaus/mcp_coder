@@ -38,6 +38,9 @@ class TestReviewImplementation:
         assert REVIEW_IMPLEMENTATION.run_after_steps is True
         assert REVIEW_IMPLEMENTATION.thread_pr_feedback is True
 
+    def test_enforce_implementation_gates(self) -> None:
+        assert REVIEW_IMPLEMENTATION.enforce_implementation_gates is True
+
     def test_strict_from_round_and_tie_break(self) -> None:
         assert REVIEW_IMPLEMENTATION.strict_from_round == 3
         assert REVIEW_IMPLEMENTATION.tie_break == "default to better code quality"
@@ -48,10 +51,19 @@ class TestReviewImplementation:
             "timeout": "code_review_timeout",
             "mcp_unavailable": "code_review_mcp",
             "ci": "code_review_ci",
+            "tasks": "code_review_open_tasks",
+            "ci_unknown": "code_review_ci_unknown",
         }
 
     def test_has_ci_failure_key(self) -> None:
         assert REVIEW_IMPLEMENTATION.failure_labels["ci"] == "code_review_ci"
+
+    def test_has_tasks_and_ci_unknown_failure_keys(self) -> None:
+        assert REVIEW_IMPLEMENTATION.failure_labels["tasks"] == "code_review_open_tasks"
+        assert (
+            REVIEW_IMPLEMENTATION.failure_labels["ci_unknown"]
+            == "code_review_ci_unknown"
+        )
 
 
 class TestReviewPlan:
@@ -76,6 +88,9 @@ class TestReviewPlan:
         assert REVIEW_PLAN.run_after_steps is False
         assert REVIEW_PLAN.thread_pr_feedback is False
 
+    def test_enforce_implementation_gates(self) -> None:
+        assert REVIEW_PLAN.enforce_implementation_gates is False
+
     def test_strict_from_round_and_tie_break(self) -> None:
         assert REVIEW_PLAN.strict_from_round == 3
         assert REVIEW_PLAN.tie_break == "default to simpler plans"
@@ -89,6 +104,10 @@ class TestReviewPlan:
 
     def test_has_no_ci_failure_key(self) -> None:
         assert "ci" not in REVIEW_PLAN.failure_labels
+
+    def test_has_no_tasks_or_ci_unknown_failure_keys(self) -> None:
+        assert "tasks" not in REVIEW_PLAN.failure_labels
+        assert "ci_unknown" not in REVIEW_PLAN.failure_labels
 
 
 class TestReviewConfigDataclass:
