@@ -118,13 +118,13 @@ def test_execute_icoder_passes_env_vars_to_llm_service(
     return_value=None,
 )
 @patch("mcp_coder.cli.commands.icoder.setup_icoder_environment")
-def test_execute_icoder_passes_enforce_skill_tools_false(
+def test_execute_icoder_builds_llm_service_without_enforce_skill_tools(
     mock_setup: MagicMock,
     mock_llm_init: MagicMock,
     _mock_run: MagicMock,
     tmp_path: Path,
 ) -> None:
-    """RealLLMService is constructed with enforce_skill_tools=False (explicit seam)."""
+    """RealLLMService no longer receives an enforce_skill_tools kwarg."""
     from mcp_coder.cli.commands.icoder import execute_icoder
 
     mock_setup.return_value = FAKE_RUNTIME_INFO
@@ -134,7 +134,88 @@ def test_execute_icoder_passes_enforce_skill_tools_false(
     execute_icoder(args)
 
     _, kwargs = mock_llm_init.call_args
-    assert kwargs["enforce_skill_tools"] is False
+    assert "enforce_skill_tools" not in kwargs
+
+
+def test_execute_icoder_passes_skill_frames_to_app_core(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """AppCore receives a skill_frames map built for every provider (not gated).
+
+    The default provider here is ``claude`` (not langchain / no mcp_config), yet
+    the snapshot is still built for the loaded skills.
+    """
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.icoder.skills import ClaudeSkill
+
+    (tmp_path / "logs").mkdir()
+    captured_app_core = _patch_all_icoder_deps(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.load_skills",
+        lambda _: [
+            ClaudeSkill(name="my_skill", description="d", prompt_template="body")
+        ],
+    )
+
+    args = make_icoder_args(tmp_path)
+    result = execute_icoder(args)
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    assert "my_skill" in captured_app_core[0]._skill_frames
+
+
+def test_execute_icoder_build_frame_enforce_flag_is_langchain_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """build_frame's enforce flag is False off-langchain even if the constant is True.
+
+    Guards the #1062 flip against blocking Claude-native shell-only skills: a
+    non-langchain provider always passes ``enforce_skill_tools=False``, while
+    langchain passes the constant's value.
+    """
+    import mcp_coder.cli.commands.icoder as icoder_mod
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.icoder.permissions.skill_frame import SkillFrame
+    from mcp_coder.icoder.skills import ClaudeSkill
+
+    monkeypatch.setattr(icoder_mod, "ENFORCE_SKILL_TOOLS", True)
+
+    captured_flags: list[bool] = []
+
+    def fake_build_frame(
+        tools_block: object, allowed_tools: object, *, enforce_skill_tools: bool
+    ) -> SkillFrame:
+        captured_flags.append(enforce_skill_tools)
+        return SkillFrame(frame=None)
+
+    monkeypatch.setattr(icoder_mod, "build_frame", fake_build_frame)
+
+    def _run(provider: str) -> None:
+        captured_flags.clear()
+        _patch_all_icoder_deps(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.icoder.parse_llm_method_from_args",
+            lambda _: provider,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.icoder.resolve_llm_method",
+            lambda _: (provider, None),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.icoder.skills.load_skills",
+            lambda _: [ClaudeSkill(name="s", description="d", prompt_template="b")],
+        )
+
+    (tmp_path / "logs").mkdir()
+
+    _run("claude")
+    assert execute_icoder(make_icoder_args(tmp_path)) == 0
+    assert captured_flags == [False]  # off-langchain: never enforce
+
+    _run("langchain")
+    assert execute_icoder(make_icoder_args(tmp_path)) == 0
+    assert captured_flags == [True]  # langchain: the constant's value
 
 
 def test_execute_icoder_creates_registry_with_skills(

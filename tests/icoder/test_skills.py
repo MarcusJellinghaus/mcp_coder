@@ -226,8 +226,8 @@ def test_register_skill_commands_langchain_substitutes_arguments() -> None:
     assert resp.actions == (SendToLLM(text="Fix bug 123 now"),)
 
 
-def test_register_skill_commands_langchain_populates_allowed_tools() -> None:
-    """Langchain handler threads a non-empty allowed_tools into SendToLLM."""
+def test_register_skill_commands_langchain_threads_skill_name() -> None:
+    """Langchain handler threads the skill name into SendToLLM.skill_name."""
     registry = CommandRegistry()
     skill = ClaudeSkill(
         name="my_skill",
@@ -240,11 +240,11 @@ def test_register_skill_commands_langchain_populates_allowed_tools() -> None:
     assert resp is not None
     action = resp.actions[0]
     assert isinstance(action, SendToLLM)
-    assert action.allowed_tools == ("mcp__srv__a",)
+    assert action.skill_name == "my_skill"
 
 
-def test_register_skill_commands_langchain_empty_allowed_tools_is_none() -> None:
-    """Empty allowed_tools declaration → SendToLLM.allowed_tools is None."""
+def test_register_skill_commands_langchain_skill_name_regardless_of_tools() -> None:
+    """A skill with no declared tools still carries its skill_name."""
     registry = CommandRegistry()
     skill = _make_skill()  # allowed_tools defaults to []
     register_skill_commands(registry, [skill], "langchain")
@@ -252,7 +252,7 @@ def test_register_skill_commands_langchain_empty_allowed_tools_is_none() -> None
     assert resp is not None
     action = resp.actions[0]
     assert isinstance(action, SendToLLM)
-    assert action.allowed_tools is None
+    assert action.skill_name == "my_skill"
 
 
 def test_register_skill_commands_langchain_empty_arguments() -> None:

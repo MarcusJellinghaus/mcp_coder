@@ -18,6 +18,8 @@ from mcp_coder.icoder.core.types import (
     TokenUsage,
 )
 from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.icoder.permissions.model import Matcher, PermissionFrame
+from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.utils.mcp_verification import MCPServerInfo
 
@@ -590,14 +592,14 @@ def test_handle_input_resolves_empty_send_to_llm_to_input(app_core: AppCore) -> 
     assert response.actions == (SendToLLM(text="/passthrough foo bar"),)
 
 
-def test_handle_input_preserves_allowed_tools_across_reconstruction(
+def test_handle_input_preserves_skill_name_across_reconstruction(
     app_core: AppCore,
 ) -> None:
-    """SendToLLM.allowed_tools survives handle_input's reconstruction.
+    """SendToLLM.skill_name survives handle_input's reconstruction.
 
-    A skill command that yields ``SendToLLM(text="", allowed_tools=(...))``
-    must keep ``allowed_tools`` intact while ``text`` resolves to the
-    original user input.
+    A skill command that yields ``SendToLLM(text="", skill_name=...)`` must
+    keep ``skill_name`` intact while ``text`` resolves to the original user
+    input.
     """
     from mcp_coder.icoder.core.types import Command, Response
 
@@ -606,30 +608,83 @@ def test_handle_input_preserves_allowed_tools_across_reconstruction(
             name="/tooled",
             description="tooled skill",
             handler=lambda args: Response(
-                actions=(SendToLLM(text="", allowed_tools=("mcp__srv__a",)),)
+                actions=(SendToLLM(text="", skill_name="tooled"),)
             ),
         )
     )
     response = app_core.handle_input("/tooled do it")
-    assert response.actions == (
-        SendToLLM(text="/tooled do it", allowed_tools=("mcp__srv__a",)),
-    )
+    assert response.actions == (SendToLLM(text="/tooled do it", skill_name="tooled"),)
 
 
-def test_stream_llm_forwards_allowed_tools_to_service(event_log: EventLog) -> None:
-    """stream_llm forwards allowed_tools to the LLM service."""
+def test_stream_llm_forwards_skill_frame_to_service(event_log: EventLog) -> None:
+    """stream_llm looks up the skill frame and forwards it to the LLM service."""
     fake_llm = FakeLLMService()
-    core = AppCore(llm_service=fake_llm, event_log=event_log)
-    list(core.stream_llm("hello", ("mcp__srv__a",)))
-    assert fake_llm.last_allowed_tools == ("mcp__srv__a",)
+    frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={"tooled": SkillFrame(frame=frame)},
+    )
+    list(core.stream_llm("hello", "tooled"))
+    assert fake_llm.last_frame is frame
 
 
-def test_stream_llm_default_allowed_tools_is_none(event_log: EventLog) -> None:
-    """stream_llm without allowed_tools forwards None to the service."""
+def test_stream_llm_default_skill_name_forwards_no_frame(event_log: EventLog) -> None:
+    """stream_llm without a skill_name forwards frame=None to the service."""
     fake_llm = FakeLLMService()
     core = AppCore(llm_service=fake_llm, event_log=event_log)
     list(core.stream_llm("hello"))
-    assert fake_llm.last_allowed_tools is None
+    assert fake_llm.last_frame is None
+
+
+def test_stream_llm_unknown_skill_forwards_no_frame(event_log: EventLog) -> None:
+    """An unknown skill_name (not in the snapshot) forwards frame=None."""
+    fake_llm = FakeLLMService()
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={"known": SkillFrame(frame=PermissionFrame(base="none"))},
+    )
+    list(core.stream_llm("hello", "unknown"))
+    assert fake_llm.last_frame is None
+
+
+def test_stream_llm_emits_skill_warnings_before_stream(event_log: EventLog) -> None:
+    """sf.warnings are emitted as permission_warning events before the stream."""
+    fake_llm = FakeLLMService(
+        responses=[[{"type": "text_delta", "text": "hi"}, {"type": "done"}]]
+    )
+    frame = PermissionFrame(base="none")
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={
+            "tooled": SkillFrame(frame=frame, warnings=("dropped mcp__srv__x",))
+        },
+    )
+    events = list(core.stream_llm("hello", "tooled"))
+    types = [e.get("type") for e in events]
+    # Warning precedes the service stream.
+    assert types[0] == "permission_warning"
+    assert events[0]["message"] == "dropped mcp__srv__x"
+    assert types.index("permission_warning") < types.index("text_delta")
+
+
+def test_stream_llm_skill_frame_does_not_leak_into_next_turn(
+    event_log: EventLog,
+) -> None:
+    """A skill frame is single-turn: the following plain turn runs frameless."""
+    fake_llm = FakeLLMService(responses=[[{"type": "done"}], [{"type": "done"}]])
+    frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={"tooled": SkillFrame(frame=frame)},
+    )
+    list(core.stream_llm("first", "tooled"))
+    assert fake_llm.last_frame is frame
+    list(core.stream_llm("second"))
+    assert fake_llm.last_frame is None
 
 
 def test_stream_llm_passes_permission_warning_through(event_log: EventLog) -> None:

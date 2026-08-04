@@ -10,6 +10,7 @@ from ...icoder.core.log_inventory import list_icoder_logs
 from ...icoder.env_setup import setup_icoder_environment
 from ...icoder.permissions import load_permission_config
 from ...icoder.permissions.gateway import LangchainEnforcementGateway
+from ...icoder.permissions.skill_frame import build_frame
 from ...icoder.ui.widgets.session_picker import run_startup_picker
 from ...llm.providers.langchain.agent import (  # noqa: PLC2701
     _assert_tool_interceptors_supported,
@@ -27,6 +28,12 @@ from ..utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Single #1062 flip site: when True, the legacy ``allowed-tools`` path narrows to
+# ``base="none"`` (fail-closed enforcement) — but only on the langchain provider,
+# where MCP tokens are host-enforced. It stays ``False`` on other providers so a
+# Claude-native shell-only skill is never blocked. No CLI flag.
+ENFORCE_SKILL_TOOLS = False
 
 
 def execute_icoder(args: argparse.Namespace) -> int:
@@ -150,6 +157,21 @@ def execute_icoder(args: argparse.Namespace) -> int:
 
         registry = create_default_registry()
         skills = load_skills(project_dir)
+        # Build the {skill_name: SkillFrame} snapshot unconditionally, for
+        # every provider (build_frame is pure and needs no mcp_config), so a
+        # malformed tools: block blocks its skill regardless of provider (D12).
+        # The legacy allowed-tools path is Claude-native, so its enforcement
+        # flag is langchain-only — do NOT simplify to a bare ENFORCE_SKILL_TOOLS.
+        frame_map = {
+            s.name: build_frame(
+                s.tools_block,
+                tuple(s.allowed_tools) or None,
+                enforce_skill_tools=(
+                    ENFORCE_SKILL_TOOLS if provider == "langchain" else False
+                ),
+            )
+            for s in skills
+        }
         register_skill_commands(registry, skills, provider)
 
         # Create core components
@@ -166,7 +188,6 @@ def execute_icoder(args: argparse.Namespace) -> int:
             timeout=args.timeout,
             mcp_manager=mcp_manager,
             project_dir=str(project_dir),
-            enforce_skill_tools=False,
             gateway=gateway,
         )
 
@@ -187,6 +208,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
                     registry=registry,
                     runtime_info=runtime_info,
                     tool_display=getattr(args, "tool_display", "compressed"),
+                    skill_frames=frame_map,
                 )
                 initial_color = getattr(args, "initial_color", None)
                 if initial_color:

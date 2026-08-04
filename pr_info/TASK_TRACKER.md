@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Transport — swap carrier, wire frame-map snapshot, delete `build_legacy_frame`
 
-- [ ] Implementation: migrate listed tests, swap `SendToLLM.allowed_tools` → `skill_name`, `LLMService.stream(*, frame=...)` on Protocol/Real/Fake (drop `enforce_skill_tools`, add `Fake.last_frame`), delete `build_legacy_frame`, add `skill_frames` snapshot + rewrite `AppCore.stream_llm`, thread `skill_name` through `ui/app.py`, add `ENFORCE_SKILL_TOOLS` + build per-provider frame map in `cli/commands/icoder.py`, document `permission_warning` in `llm/types.py`, update stale docstrings, update `.importlinter`
-- [ ] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: migrate listed tests, swap `SendToLLM.allowed_tools` → `skill_name`, `LLMService.stream(*, frame=...)` on Protocol/Real/Fake (drop `enforce_skill_tools`, add `Fake.last_frame`), delete `build_legacy_frame`, add `skill_frames` snapshot + rewrite `AppCore.stream_llm`, thread `skill_name` through `ui/app.py`, add `ENFORCE_SKILL_TOOLS` + build per-provider frame map in `cli/commands/icoder.py`, document `permission_warning` in `llm/types.py`, update stale docstrings, update `.importlinter`
+- [x] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues (pylint/ruff(D/DOC)/mypy(strict)/lint-imports green for the changed code — only pre-existing unrelated errors remain, all from the `mcp_workspace.checks.branch_status_rendering` env break + optional-langchain imports; pytest could not execute — same pre-existing env break as Steps 1–2: `mcp_coder/__init__.py` fails to import `mcp_workspace.checks.branch_status_rendering`, blocking all collection identically on unmodified tests)
+- [x] Commit message prepared
 
 ### Step 4: Blocked-skill handling — refuse to run + mark in autocomplete
 

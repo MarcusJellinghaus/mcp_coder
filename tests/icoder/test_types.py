@@ -51,15 +51,15 @@ def test_action_value_equality() -> None:
     assert OpenPicker() == OpenPicker()
 
 
-def test_send_to_llm_allowed_tools_defaults_none() -> None:
-    """SendToLLM.allowed_tools defaults to None (no declaration)."""
-    assert SendToLLM(text="x").allowed_tools is None
+def test_send_to_llm_skill_name_defaults_none() -> None:
+    """SendToLLM.skill_name defaults to None (plain message)."""
+    assert SendToLLM(text="x").skill_name is None
 
 
-def test_send_to_llm_allowed_tools_round_trip() -> None:
-    """SendToLLM stores the provided allowed_tools tuple verbatim."""
-    action = SendToLLM(text="x", allowed_tools=("mcp__srv__a",))
-    assert action.allowed_tools == ("mcp__srv__a",)
+def test_send_to_llm_skill_name_round_trip() -> None:
+    """SendToLLM stores the provided skill_name verbatim."""
+    action = SendToLLM(text="x", skill_name="my_skill")
+    assert action.skill_name == "my_skill"
 
 
 def test_command_creation() -> None:

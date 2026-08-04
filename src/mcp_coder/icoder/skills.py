@@ -177,7 +177,7 @@ def _make_langchain_handler(skill: ClaudeSkill) -> Callable[[list[str]], Respons
             actions=(
                 SendToLLM(
                     text=expanded,
-                    allowed_tools=tuple(skill.allowed_tools) or None,
+                    skill_name=skill.name,
                 ),
             )
         )

@@ -16,6 +16,8 @@ from textual.widgets import Static
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.icoder.permissions.model import Matcher, PermissionFrame
+from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
@@ -387,7 +389,7 @@ class ErrorAfterChunksLLMService:
         self._error_msg = error_msg
 
     def stream(
-        self, question: str, allowed_tools: tuple[str, ...] | None = None
+        self, question: str, *, frame: PermissionFrame | None = None
     ) -> Iterator[StreamEvent]:
         """Yield chunks then raise RuntimeError."""
         yield from self._chunks
@@ -785,7 +787,7 @@ class SlowLLMService:
     """LLM service that yields events with delays to simulate streaming."""
 
     def stream(
-        self, question: str, allowed_tools: tuple[str, ...] | None = None
+        self, question: str, *, frame: PermissionFrame | None = None
     ) -> Iterator[StreamEvent]:
         import time
 
@@ -852,7 +854,7 @@ async def test_session_preserved_after_cancel(
             self._session_id: str | None = "test-session-123"
 
         def stream(
-            self, question: str, allowed_tools: tuple[str, ...] | None = None
+            self, question: str, *, frame: PermissionFrame | None = None
         ) -> Iterator[StreamEvent]:
             import time
 
@@ -1342,33 +1344,41 @@ async def test_resumed_divider_is_not_a_unit(
         assert output.unit_at_line(divider_line) is None
 
 
-# --- Step 5: allowed_tools threading + permission_warning render ---
+# --- Step 3: skill_name threading + permission_warning render ---
 
 
-async def test_ui_worker_threads_allowed_tools_to_service(
+async def test_ui_worker_threads_skill_name_to_service(
     event_log: EventLog,
 ) -> None:
-    """Submitting a skill command threads allowed_tools to the LLM service.
+    """Submitting a skill command threads its frame to the LLM service.
 
-    A command yielding ``SendToLLM(text="", allowed_tools=(...))`` must reach
-    ``FakeLLMService.last_allowed_tools`` via the UI worker.
+    A command yielding ``SendToLLM(text="", skill_name=...)`` must resolve the
+    skill's frame from the ``skill_frames`` snapshot and reach
+    ``FakeLLMService.last_frame`` via the UI worker.
     """
     from mcp_coder.icoder.core.types import Command, Response, SendToLLM
 
     fake = FakeLLMService(responses=[[{"type": "done"}]])
-    app = ICoderApp(AppCore(llm_service=fake, event_log=event_log))
+    frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
+    app = ICoderApp(
+        AppCore(
+            llm_service=fake,
+            event_log=event_log,
+            skill_frames={"tooled": SkillFrame(frame=frame)},
+        )
+    )
     app._core.registry.add_command(
         Command(
             name="/tooled",
             description="tooled skill",
             handler=lambda args: Response(
-                actions=(SendToLLM(text="", allowed_tools=("mcp__srv__a",)),)
+                actions=(SendToLLM(text="", skill_name="tooled"),)
             ),
         )
     )
     async with app.run_test() as pilot:
         await _submit_and_wait(app, pilot, text="/tooled")
-        assert fake.last_allowed_tools == ("mcp__srv__a",)
+        assert fake.last_frame is frame
 
 
 async def test_permission_warning_event_renders_message_text(

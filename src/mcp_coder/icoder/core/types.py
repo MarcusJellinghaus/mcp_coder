@@ -34,10 +34,15 @@ class ResetSession:
 
 @dataclass(frozen=True)
 class SendToLLM:
-    """Forward ``text`` to the LLM for streaming."""
+    """Forward ``text`` to the LLM for streaming.
+
+    ``skill_name`` carries the provenance of a skill-initiated turn so
+    ``AppCore`` can look up the pre-built ``SkillFrame`` for it; ``None`` for a
+    plain message or an unknown skill.
+    """
 
     text: str
-    allowed_tools: tuple[str, ...] | None = None
+    skill_name: str | None = None
 
 
 @dataclass(frozen=True)
