@@ -172,7 +172,17 @@ def execute_icoder(args: argparse.Namespace) -> int:
             )
             for s in skills
         }
-        register_skill_commands(registry, skills, provider)
+        # A blocked frame (malformed tools: block, bare use:, empty allow) marks
+        # its command as refusing to run — provider-agnostic, since the map is
+        # built for every provider (D12).
+        register_skill_commands(
+            registry,
+            skills,
+            provider,
+            disabled_reasons={
+                name: frame.blocked_reason for name, frame in frame_map.items()
+            },
+        )
 
         # Create core components
         from ...icoder.core.event_log import EventLog

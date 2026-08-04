@@ -307,6 +307,52 @@ def test_register_skill_commands_multiple_skills() -> None:
     assert names == {"/skill_a", "/skill_b"}
 
 
+def test_register_skill_commands_sets_disabled_reason() -> None:
+    """disabled_reasons maps a skill name to its Command.disabled_reason."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="foo")
+    register_skill_commands(
+        registry, [skill], "langchain", disabled_reasons={"foo": "broken"}
+    )
+    cmd = registry.get("/foo")
+    assert cmd is not None
+    assert cmd.disabled_reason == "broken"
+
+
+def test_register_skill_commands_disabled_skill_still_registered() -> None:
+    """A blocked skill stays registered and visible in autocomplete."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="foo")
+    register_skill_commands(
+        registry, [skill], "langchain", disabled_reasons={"foo": "broken"}
+    )
+    assert registry.has_command("/foo") is True
+    matches = registry.filter_by_input("/fo")
+    assert any(c.name == "/foo" for c in matches)
+
+
+def test_register_skill_commands_disabled_reasons_default_none() -> None:
+    """Omitting disabled_reasons leaves every Command.disabled_reason as None."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="foo")
+    register_skill_commands(registry, [skill], "langchain")
+    cmd = registry.get("/foo")
+    assert cmd is not None
+    assert cmd.disabled_reason is None
+
+
+def test_register_skill_commands_disabled_reasons_missing_key_none() -> None:
+    """A skill absent from disabled_reasons gets disabled_reason=None."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="foo")
+    register_skill_commands(
+        registry, [skill], "langchain", disabled_reasons={"other": "broken"}
+    )
+    cmd = registry.get("/foo")
+    assert cmd is not None
+    assert cmd.disabled_reason is None
+
+
 def test_register_skill_commands_normalizes_to_lowercase() -> None:
     """Mixed-case skill name is registered as lowercase command."""
     registry = CommandRegistry()

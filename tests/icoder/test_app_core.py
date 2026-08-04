@@ -616,6 +616,76 @@ def test_handle_input_preserves_skill_name_across_reconstruction(
     assert response.actions == (SendToLLM(text="/tooled do it", skill_name="tooled"),)
 
 
+def test_handle_input_blocked_command_returns_reason(app_core: AppCore) -> None:
+    """Invoking a blocked command returns a single OutputText(reason)."""
+    from mcp_coder.icoder.core.types import Command, Response
+
+    app_core.registry.add_command(
+        Command(
+            name="/broken",
+            description="broken skill",
+            handler=lambda args: Response(actions=(SendToLLM(text="should not run"),)),
+            disabled_reason="tools: block is malformed",
+        )
+    )
+    response = app_core.handle_input("/broken do it")
+    assert response.actions == (OutputText(text="tools: block is malformed"),)
+
+
+def test_handle_input_blocked_command_no_send_to_llm(app_core: AppCore) -> None:
+    """A blocked command dispatches no SendToLLM (never queries the LLM)."""
+    from mcp_coder.icoder.core.types import Command, Response
+
+    app_core.registry.add_command(
+        Command(
+            name="/broken",
+            description="broken skill",
+            handler=lambda args: Response(actions=(SendToLLM(text="should not run"),)),
+            disabled_reason="broken",
+        )
+    )
+    response = app_core.handle_input("/broken")
+    assert not any(isinstance(a, SendToLLM) for a in response.actions)
+
+
+def test_handle_input_blocked_command_emits_events(
+    app_core: AppCore, event_log: EventLog
+) -> None:
+    """A blocked command logs command_matched AND output_emitted events."""
+    from mcp_coder.icoder.core.types import Command, Response
+
+    app_core.registry.add_command(
+        Command(
+            name="/broken",
+            description="broken skill",
+            handler=lambda args: Response(),
+            disabled_reason="broken reason",
+        )
+    )
+    app_core.handle_input("/broken now")
+    events = event_log.entries
+    assert any(e.event == "input_received" for e in events)
+    matched = [e for e in events if e.event == "command_matched"]
+    assert matched and matched[0].data.get("command") == "/broken"
+    emitted = [e for e in events if e.event == "output_emitted"]
+    assert emitted and emitted[0].data.get("text") == "broken reason"
+
+
+def test_handle_input_non_blocked_command_unaffected(app_core: AppCore) -> None:
+    """A command with disabled_reason=None dispatches normally."""
+    from mcp_coder.icoder.core.types import Command, Response
+
+    app_core.registry.add_command(
+        Command(
+            name="/ok",
+            description="ok skill",
+            handler=lambda args: Response(actions=(SendToLLM(text="run me"),)),
+        )
+    )
+    response = app_core.handle_input("/ok")
+    assert response.actions == (SendToLLM(text="run me"),)
+
+
 def test_stream_llm_forwards_skill_frame_to_service(event_log: EventLog) -> None:
     """stream_llm looks up the skill frame and forwards it to the LLM service."""
     fake_llm = FakeLLMService()

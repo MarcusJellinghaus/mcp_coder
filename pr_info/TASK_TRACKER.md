@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Blocked-skill handling — refuse to run + mark in autocomplete
 
-- [ ] Implementation: write listed tests, add `Command.disabled_reason`, add `CommandRegistry.get`, give `register_skill_commands` optional `disabled_reasons`, pass `{name: blocked_reason}` from frame map in `cli/commands/icoder.py`, add pre-dispatch refusal guard to `AppCore.handle_input`, mark disabled rows (label-only, stay enabled) in `command_autocomplete.update_matches`
-- [ ] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write listed tests, add `Command.disabled_reason`, add `CommandRegistry.get`, give `register_skill_commands` optional `disabled_reasons`, pass `{name: blocked_reason}` from frame map in `cli/commands/icoder.py`, add pre-dispatch refusal guard to `AppCore.handle_input`, mark disabled rows (label-only, stay enabled) in `command_autocomplete.update_matches`
+- [x] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues (pylint/ruff(D/DOC via project config, which ignores D107)/lint-imports(21 kept) green; mypy(strict) clean for all changed files — only pre-existing unrelated errors remain in the `mcp_workspace` fork-collapse area; pytest could not execute — same pre-existing env break as Steps 1–3: `mcp_coder/__init__.py` fails to import the missing `mcp_workspace.checks.branch_status_rendering`, blocking all collection identically on unmodified tests)
+- [x] Commit message prepared
 
 ### Step 5: Startup feedback — list broken skills + loud degraded-config line
 

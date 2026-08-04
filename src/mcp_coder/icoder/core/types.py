@@ -92,6 +92,9 @@ class Command:
     description: str  # Short help text
     handler: Callable[[list[str]], Response]  # handler(args) → Response
     show_in_help: bool = True  # False hides from /help, still in autocomplete
+    # Non-None → the command exists (registered + visible) but refuses to run,
+    # printing this reason instead of dispatching (a broken skill declaration).
+    disabled_reason: str | None = None
 
 
 @dataclass(frozen=True)

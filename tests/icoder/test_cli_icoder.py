@@ -218,6 +218,71 @@ def test_execute_icoder_build_frame_enforce_flag_is_langchain_only(
     assert captured_flags == [True]  # langchain: the constant's value
 
 
+@pytest.mark.parametrize("provider", ["langchain", "claude"])
+def test_execute_icoder_malformed_tools_block_blocks_regardless_of_provider(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, provider: str
+) -> None:
+    """A malformed tools: block sets disabled_reason on the command, any provider.
+
+    The frame map is built unconditionally (D12), so a broken declaration blocks
+    its skill under both langchain (no mcp_config here) and a non-langchain
+    provider — the blocking never depends on the mcp_config/gateway gate.
+    """
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.icoder.permissions.skill_tools import SkillToolsBlock
+    from mcp_coder.icoder.skills import ClaudeSkill
+    from mcp_coder.icoder.ui.app import ICoderApp
+
+    (tmp_path / "logs").mkdir()
+
+    captured_app_core: list[AppCore] = []
+
+    def capturing_init(self: object, app_core: object, **kwargs: object) -> None:
+        captured_app_core.append(app_core)  # type: ignore[arg-type]
+
+    # Deliberately do NOT patch register_skill_commands — the real one must run
+    # so build_frame's blocked_reason reaches Command.disabled_reason.
+    monkeypatch.setattr(ICoderApp, "__init__", capturing_init)
+    monkeypatch.setattr(ICoderApp, "run", lambda self: None)
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.setup_icoder_environment",
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_llm_method",
+        lambda _: (provider, None),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.parse_llm_method_from_args",
+        lambda _: provider,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
+        lambda *a, **_kw: None,
+    )
+    malformed = ClaudeSkill(
+        name="broken_skill",
+        description="d",
+        prompt_template="body",
+        tools_block=SkillToolsBlock(
+            base=None, errors=("tools: must be a non-empty mapping",)
+        ),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.load_skills",
+        lambda _: [malformed],
+    )
+
+    args = make_icoder_args(tmp_path)
+    result = execute_icoder(args)
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    cmd = captured_app_core[0].registry.get("/broken_skill")
+    assert cmd is not None
+    assert cmd.disabled_reason is not None
+
+
 def test_execute_icoder_creates_registry_with_skills(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -240,6 +305,7 @@ def test_execute_icoder_creates_registry_with_skills(
         registry: CommandRegistry,
         skills: list[object],
         provider: str,
+        **kwargs: object,
     ) -> list[object]:
         registry.add_command(fake_skill_command)
         return []
@@ -330,7 +396,7 @@ def test_execute_icoder_passes_format_tools_to_app(
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.register_skill_commands",
-        lambda registry, skills, provider: [],
+        lambda registry, skills, provider, **kwargs: [],
     )
 
     args = make_icoder_args(tmp_path)
@@ -430,7 +496,7 @@ def _patch_all_icoder_deps(
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.register_skill_commands",
-        lambda registry, skills, provider: [],
+        lambda registry, skills, provider, **kwargs: [],
     )
     return captured_app_core
 
@@ -612,7 +678,7 @@ def test_continue_session_from_real_jsonl_passes_resume_log_path(
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.register_skill_commands",
-        lambda registry, skills, provider: [],
+        lambda registry, skills, provider, **kwargs: [],
     )
 
     args = make_icoder_args(tmp_path)
@@ -663,7 +729,7 @@ def test_continue_session_no_prior_logs_logs_message_and_runs_fresh(
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.register_skill_commands",
-        lambda registry, skills, provider: [],
+        lambda registry, skills, provider, **kwargs: [],
     )
 
     args = make_icoder_args(tmp_path)
@@ -736,7 +802,7 @@ def test_continue_session_with_prior_logs_invokes_picker(
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.register_skill_commands",
-        lambda registry, skills, provider: [],
+        lambda registry, skills, provider, **kwargs: [],
     )
 
     args = make_icoder_args(tmp_path)
@@ -800,7 +866,7 @@ def test_continue_session_picker_escape_runs_fresh(
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.register_skill_commands",
-        lambda registry, skills, provider: [],
+        lambda registry, skills, provider, **kwargs: [],
     )
 
     args = make_icoder_args(tmp_path)

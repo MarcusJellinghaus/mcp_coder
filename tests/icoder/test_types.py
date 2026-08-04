@@ -96,6 +96,23 @@ def test_command_show_in_help(kwargs: dict[str, Any], expected: bool) -> None:
     assert cmd.show_in_help == expected
 
 
+def test_command_disabled_reason_defaults_none() -> None:
+    """Command.disabled_reason defaults to None (command runs normally)."""
+    cmd = Command(name="/test", description="Test", handler=lambda args: Response())
+    assert cmd.disabled_reason is None
+
+
+def test_command_disabled_reason_round_trip() -> None:
+    """Command stores the provided disabled_reason verbatim."""
+    cmd = Command(
+        name="/test",
+        description="Test",
+        handler=lambda args: Response(),
+        disabled_reason="broken tools: block",
+    )
+    assert cmd.disabled_reason == "broken tools: block"
+
+
 # --- format_token_count tests ---
 
 

@@ -92,7 +92,7 @@ def patch_icoder_deps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.register_skill_commands",
-        lambda registry, skills, provider: [],
+        lambda registry, skills, provider, **kwargs: [],
     )
 
 

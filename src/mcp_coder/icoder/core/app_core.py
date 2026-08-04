@@ -104,6 +104,17 @@ class AppCore:
 
         self._event_log.emit("input_received", text=text)
 
+        # Blocked-skill refusal (#1061): a command whose declaration is broken
+        # is registered + visible but must refuse to run rather than burn an
+        # LLM turn. Guard BEFORE dispatch — no handler, no SendToLLM. Emit
+        # command_matched too so its event log matches every other command's.
+        lead = text.split()[0].lower()
+        blocked = self._registry.get(lead)
+        if blocked is not None and blocked.disabled_reason:
+            self._event_log.emit("command_matched", command=lead)
+            self._event_log.emit("output_emitted", text=blocked.disabled_reason)
+            return Response(actions=(OutputText(blocked.disabled_reason),))
+
         # SECURITY BOUNDARY (#1040): the ONLY production dispatch call site.
         # Reached only via on_input_area_input_submitted (human Enter keypress).
         # Model/stream output must never be routed here. A second call site
