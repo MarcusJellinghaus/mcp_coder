@@ -9,12 +9,18 @@ under its line budget.
 Gate 1 (:func:`check_open_tasks_gate`) is the pre-flight open-tasks check: it
 refuses to start ``review-implementation`` when ``pr_info/TASK_TRACKER.md`` has
 unchecked ``## Tasks`` items and points the human at ``/implementation_finalise``.
-Both gates are gated on ``config.enforce_implementation_gates`` and are a no-op
-for the plan lane.
+
+Gate 2 (:func:`check_ci_proven_gate`) is the exit guard on the final dismiss
+gate: it refuses the success label unless CI is *proven* green
+(``CIStatus.PASSED``), rather than merely "not obviously red". Both gates are
+gated on ``config.enforce_implementation_gates`` (the caller checks the flag for
+Gate 2) and are a no-op for the plan lane.
 """
 
 from pathlib import Path
 
+from mcp_coder.checks.branch_status import collect_branch_status
+from mcp_coder.checks.ci_policy import assess_ci
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     get_incomplete_tasks,
@@ -68,3 +74,39 @@ def check_open_tasks_gate(
         f"{len(tasks)} open task(s) in `pr_info/TASK_TRACKER.md`: "
         f"{listing} — run `/implementation_finalise`."
     )
+
+
+def check_ci_proven_gate(project_dir: Path) -> tuple[str | None, str | None]:
+    """Exit guard: refuse the success label unless CI is *proven* green.
+
+    Makes exactly one fresh ``collect_branch_status`` call (no retry loop — "how
+    long to wait for CI" is owned by the CI step's poll cap) and runs the
+    observed status through :func:`assess_ci` with ``require_proven=True``. Only
+    ``CIStatus.PASSED`` proves green; ``FAILED`` is the existing determinably-red
+    ``"ci"`` case, and every other status (``PENDING``, ``NOT_CONFIGURED``,
+    ``UNKNOWN``, ``UNAVAILABLE``, or any future member) is ``"ci_unknown"`` —
+    "could not tell", whose fix is to check the token / whether CI exists.
+
+    The caller gates this on ``config.enforce_implementation_gates``, so this
+    function itself takes only ``project_dir`` (kept pure and testable).
+
+    Args:
+        project_dir: Repository root; branch status is collected for this repo.
+
+    Returns:
+        ``(None, None)`` when CI is proven green (proceed to success),
+        ``("ci", <details>)`` when CI is determinably red, or
+        ``("ci_unknown", <details>)`` when it could not be proven green — where
+        ``<details>`` names the observed CI status.
+    """
+    status = collect_branch_status(project_dir).ci_status
+    verdict = assess_ci(status, require_proven=True)
+    if verdict == "ok":
+        return None, None
+    detail = (
+        f"CI status is `{status.value}` — could not prove CI ran green. "
+        f"Check the GitHub token and whether this repo has a CI workflow."
+    )
+    if verdict == "failed":
+        return "ci", detail
+    return "ci_unknown", detail

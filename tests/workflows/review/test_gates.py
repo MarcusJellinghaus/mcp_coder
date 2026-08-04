@@ -1,4 +1,4 @@
-"""Tests for the implementation-lane review gates (Step 5).
+"""Tests for the implementation-lane review gates (Steps 5 & 6).
 
 Gate 1 (:func:`check_open_tasks_gate`) is pure logic over ``get_incomplete_tasks``.
 Every case patches ``mcp_coder.workflows.review.gates.get_incomplete_tasks`` so
@@ -6,22 +6,33 @@ no real ``TASK_TRACKER.md`` is touched, and asserts the returned
 ``(reason, details)`` tuple (plus, for the plan lane, that the tracker is never
 read at all).
 
-A single ``core``-level test confirms the gate is wired at the top of ``body()``:
+Gate 2 (:func:`check_ci_proven_gate`) is pure logic over one
+``collect_branch_status`` call; every case patches
+``mcp_coder.workflows.review.gates.collect_branch_status`` and asserts the
+returned ``(reason, details)`` tuple for each observed ``CIStatus``.
+
+A single ``core``-level test confirms Gate 1 is wired at the top of ``body()``:
 a blocking gate returns ``1`` without entering the round loop.
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     TaskTrackerSectionNotFoundError,
 )
 from mcp_coder.workflows.review import core, gates, handoff, reviewer
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION, REVIEW_PLAN
-from mcp_coder.workflows.review.gates import MAX_LISTED_TASKS, check_open_tasks_gate
+from mcp_coder.workflows.review.gates import (
+    MAX_LISTED_TASKS,
+    check_ci_proven_gate,
+    check_open_tasks_gate,
+)
 
 
 class TestCheckOpenTasksGate:
@@ -156,3 +167,70 @@ class TestGateWiredIntoCore:
 
         assert result == 1
         reviewer_run.assert_not_called()
+
+
+class TestCheckCiProvenGate:
+    """The pure Gate-2 predicate over a single ``collect_branch_status`` call."""
+
+    def _patch_ci(
+        self, monkeypatch: pytest.MonkeyPatch, ci_status: CIStatus
+    ) -> MagicMock:
+        """Patch ``gates.collect_branch_status`` to report ``ci_status`` once."""
+        collect = MagicMock(
+            return_value=SimpleNamespace(ci_status=ci_status),
+            name="collect_branch_status",
+        )
+        monkeypatch.setattr(gates, "collect_branch_status", collect)
+        return collect
+
+    def test_passed_proves_green_with_single_status_call(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """PASSED -> (None, None); status is collected exactly once (no retry)."""
+        collect = self._patch_ci(monkeypatch, CIStatus.PASSED)
+
+        assert check_ci_proven_gate(Path("/repo")) == (None, None)
+        collect.assert_called_once_with(Path("/repo"))
+
+    def test_failed_is_the_existing_ci_reason(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """FAILED -> ("ci", details); the determinably-red case.
+
+        A determinably-red pipeline stays the existing ``17f-ci`` case, not
+        ``ci_unknown``.
+        """
+        self._patch_ci(monkeypatch, CIStatus.FAILED)
+
+        reason, details = check_ci_proven_gate(Path("/repo"))
+
+        assert reason == "ci"
+        assert details is not None
+        assert "FAILED" in details
+        assert "could not prove CI ran green" in details
+
+    @pytest.mark.parametrize(
+        "ci_status",
+        [
+            CIStatus.PENDING,
+            CIStatus.NOT_CONFIGURED,
+            CIStatus.UNKNOWN,
+            CIStatus.UNAVAILABLE,
+        ],
+    )
+    def test_unprovable_states_are_ci_unknown(
+        self, monkeypatch: pytest.MonkeyPatch, ci_status: CIStatus
+    ) -> None:
+        """Every non-PASSED, non-FAILED status -> ("ci_unknown", details).
+
+        The details name the observed status and point at the token / CI-exists
+        recovery rather than "fix the code".
+        """
+        self._patch_ci(monkeypatch, ci_status)
+
+        reason, details = check_ci_proven_gate(Path("/repo"))
+
+        assert reason == "ci_unknown"
+        assert details is not None
+        assert ci_status.value in details
+        assert "GitHub token" in details

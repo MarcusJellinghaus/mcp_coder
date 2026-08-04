@@ -43,7 +43,7 @@ from mcp_coder.workflow_utils.failure_handling import (
 
 from . import reviewer
 from .config import ReviewConfig
-from .gates import check_open_tasks_gate
+from .gates import check_ci_proven_gate, check_open_tasks_gate
 from .handoff import _fail, _flush_round_log, _route_to_human, _set_label
 from .review_log import next_run_number, write_round_log
 from .severity import _apply_severity_floor
@@ -280,6 +280,10 @@ def run_review_workflow(
                     execution_dir,
                     is_dismiss=True,
                 )
+                # Gate 2 (impl lane): only proven-green CI (PASSED) earns success.
+                details = None
+                if reason is None and config.enforce_implementation_gates:
+                    reason, details = check_ci_proven_gate(project_dir)
                 if reason == "rebase":
                     write_round_log(
                         project_dir,
@@ -302,10 +306,8 @@ def run_review_workflow(
                         ),
                     )
                 if reason:
-                    # Terminal after-steps failure on the dismiss gate (e.g. a
-                    # red final CI → `ci`, or `timeout` / `general` /
-                    # `mcp_unavailable`): write + flush the round so the last
-                    # executed round lands in the committed log before failing.
+                    # Terminal dismiss-gate failure (after-steps or Gate 2):
+                    # write + flush the round to the committed log before failing.
                     write_round_log(
                         project_dir,
                         config,
@@ -325,6 +327,7 @@ def run_review_workflow(
                         post_issue_comments=post_issue_comments,
                         round_number=round_number,
                         verdict=last_verdict,
+                        details=details,
                         elapsed=time.time() - start_time,
                     )
                 write_round_log(

@@ -76,9 +76,12 @@ Detail: [step_5.md](./steps/step_5.md)
 
 Detail: [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation — add `check_ci_proven_gate` to `gates.py`, wire into dismiss cascade in `core.py`; extend `test_gates.py` and core dismiss-path tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — add `check_ci_proven_gate` to `gates.py`, wire into dismiss cascade in `core.py`; extend `test_gates.py` and core dismiss-path tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+  - pylint + mypy on `gates.py` and the touched test files: clean, no issues. `review/core.py` is back **under 600 lines** (599; not in the file-size violations list) after trimming the two new call sites' comments.
+  - The only pylint E1101 / mypy attr-defined reported is the **pre-existing** `BranchStatusReport.pr_feedback_undeterminable` on **untouched** `core.py:141` — the same stale `mcp-workspace` venv issue documented in Steps 1–5, not introduced here.
+  - pytest could not collect (0 tests): the test `.venv` has a stale `mcp-workspace` missing `BranchStatusReport.pr_feedback_undeterminable` (the symbol behind the line-141 errors), which breaks `import mcp_coder` at collection time for the entire `tests/workflows/review/` subtree. Confirmed by collecting the **untouched** `tests/workflows/review/test_verdict.py`, which fails identically. Fix is to reprovision the venv (`mcp-workspace` from git HEAD), outside source scope.
+- [x] Commit message prepared
 
 ### Step 7: Documentation
 
