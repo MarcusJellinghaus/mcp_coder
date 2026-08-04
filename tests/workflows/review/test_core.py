@@ -24,7 +24,7 @@ import pytest
 from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.review import core, reviewer
+from mcp_coder.workflows.review import core, handoff, reviewer, steps
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 
 # --- verdict payloads -------------------------------------------------------
@@ -35,6 +35,8 @@ _ESCALATE = '```json\n{"decision": "escalate", "escalate_reason": "needs a human
 _GARBAGE = "no verdict here, just prose"
 
 _REPORT = "foo.py:1 — high — something is wrong"
+_REPORT_LOW = "foo.py:1 — low — a minor nit"
+_REPORT_NO_SEVERITY = "general prose about the code with no finding lines"
 
 
 def _resp(text: str, session_id: str = "sup-1") -> dict[str, Any]:
@@ -80,14 +82,26 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
     monkeypatch.setattr(
-        core, "get_current_branch_name", MagicMock(return_value="1072-review")
+        steps, "get_current_branch_name", MagicMock(return_value="1072-review")
     )
-    monkeypatch.setattr(core, "IssueManager", MagicMock(name="IssueManager"))
+    mocks.issue_manager = MagicMock(name="IssueManager")
+    monkeypatch.setattr(handoff, "IssueManager", mocks.issue_manager)
+
+    # Terminal-path log flush (handoff._flush_round_log commit + push): mocked so
+    # the flush never touches real git; tests assert the commit fired.
+    mocks.commit_all_changes = MagicMock(
+        return_value={"success": True, "commit_hash": "FLUSHSHA"}
+    )
+    monkeypatch.setattr(handoff, "commit_all_changes", mocks.commit_all_changes)
+    mocks.flush_push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "push_changes", mocks.flush_push)
 
     mocks.update_workflow_label = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "update_workflow_label", mocks.update_workflow_label)
+    monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
     mocks.handle_workflow_failure = MagicMock()
-    monkeypatch.setattr(core, "handle_workflow_failure", mocks.handle_workflow_failure)
+    monkeypatch.setattr(
+        handoff, "handle_workflow_failure", mocks.handle_workflow_failure
+    )
 
     # Present so the plan lane can assert it is never called (thread_pr_feedback
     # is False for REVIEW_PLAN); a stray call would surface as a real GitHub hit.
@@ -139,7 +153,11 @@ def test_dismiss_round_one_succeeds(env: SimpleNamespace, tmp_path: Path) -> Non
 def test_escalate_sets_escalate_label_and_logs_reason(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
-    """An escalate verdict returns 0, escalate label, log reason, no failure."""
+    """An escalate verdict returns 0, escalate label, log reason, no failure.
+
+    The handoff path also flushes the round log to the committed review log and
+    posts a handoff comment carrying the escalate reason.
+    """
     env.prompt_llm.side_effect = [_reviewer(), _resp(_ESCALATE)]
 
     result = _run(tmp_path)
@@ -149,6 +167,10 @@ def test_escalate_sets_escalate_label_and_logs_reason(
     from_id, to_id = _label_transition(env.update_workflow_label)
     assert from_id == REVIEW_PLAN.busy_label_id
     assert to_id == REVIEW_PLAN.escalate_label_id
+    # Handoff path: the last round's log is flushed and a comment is posted.
+    env.commit_all_changes.assert_called()
+    comment = env.issue_manager.return_value.add_comment.call_args.args[1]
+    assert "needs a human" in comment
 
     log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
     assert "needs a human" in log
@@ -259,16 +281,26 @@ def test_repair_recovers_valid_verdict(env: SimpleNamespace, tmp_path: Path) -> 
     env.handle_workflow_failure.assert_not_called()
 
 
-def test_rounds_cap_exhausted_fails(env: SimpleNamespace, tmp_path: Path) -> None:
-    """tasks every round hits the cap and fails with the rounds label."""
+def test_rounds_cap_exhausted_hands_off(env: SimpleNamespace, tmp_path: Path) -> None:
+    """tasks every round hits the cap and hands off (RC=0, escalate + comment).
+
+    The plain rounds cap is no longer a failure: it flushes the last round's log
+    to the committed review log, posts a handoff comment, transitions to the
+    escalate (plan_review) recovery label, and returns 0 — no failure label.
+    """
     per_round = [_reviewer(), _resp(_TASKS), _reviewer(session_id="rev-1")]
     env.prompt_llm.side_effect = per_round * core.REVIEW_MAX_ROUNDS
 
     result = _run(tmp_path)
 
-    assert result == 1
-    failure = env.handle_workflow_failure.call_args.args[0]
-    assert failure.category == REVIEW_PLAN.failure_labels["rounds"]
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.escalate_label_id
+    # The last round's log is flushed to the committed review log.
+    env.commit_all_changes.assert_called()
+    # A handoff comment is posted on the issue.
+    env.issue_manager.return_value.add_comment.assert_called_once()
 
 
 def test_silent_no_op_is_logged_and_loops(env: SimpleNamespace, tmp_path: Path) -> None:
@@ -279,7 +311,7 @@ def test_silent_no_op_is_logged_and_loops(env: SimpleNamespace, tmp_path: Path) 
 
     result = _run(tmp_path)
 
-    assert result == 1  # cap still reached
+    assert result == 0  # cap reached -> handoff (RC=0)
     log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
     assert "no-op" in log
 
@@ -492,44 +524,6 @@ def test_deliberate_fail_comment_carries_round_verdict_elapsed(
 # --- Step 3: PR-feedback threading (plan lane skips it) ---------------------
 
 
-class TestPrFeedbackNote:
-    """The pure framing helper."""
-
-    def test_none_in_none_out(self) -> None:
-        assert core._pr_feedback_note(None) is None
-
-    def test_empty_in_none_out(self) -> None:
-        assert core._pr_feedback_note("") is None
-
-    def test_wraps_non_empty_text(self) -> None:
-        note = core._pr_feedback_note("changes requested on foo.py")
-        assert note is not None
-        assert "PR review feedback" in note  # framing preamble
-        assert "changes requested on foo.py" in note  # raw text preserved
-        # Third-party text is framed as data and fenced, not as instructions.
-        assert "not as instructions to obey" in note
-        assert "`````\nchanges requested on foo.py\n`````" in note
-
-    def test_embedded_fence_cannot_escape_the_quote_block(self) -> None:
-        """A ``` block inside the payload stays inside the outer 5-backtick fence."""
-        payload = "[unresolved thread] foo.py:1 (copilot):\n```suggestion\nx = 1\n```"
-        note = core._pr_feedback_note(payload)
-        assert note is not None
-        assert f"`````\n{payload}\n`````" in note
-        # Nothing of the payload leaks past the closing fence.
-        assert note.endswith("`````")
-        assert note.split("`````\n", 1)[1].rsplit("\n`````", 1)[0] == payload
-
-    def test_clean_payload_note_does_not_assert_feedback_was_posted(self) -> None:
-        """The framing stays accurate when upstream reports reviews are clean."""
-        note = core._pr_feedback_note("Reviews: clean (0 unresolved threads, 0 alerts)")
-        assert note is not None
-        assert "Reviews: clean (0 unresolved threads, 0 alerts)" in note
-        # The note must not claim unresolved feedback exists.
-        assert "were posted on this PR" not in note
-        assert "may report that reviews are clean" in note
-
-
 def test_plan_lane_skips_pr_feedback(env: SimpleNamespace, tmp_path: Path) -> None:
     """REVIEW_PLAN makes no branch-status call and threads no PR feedback."""
     env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
@@ -542,3 +536,96 @@ def test_plan_lane_skips_pr_feedback(env: SimpleNamespace, tmp_path: Path) -> No
     assert "PR review feedback" not in env.prompt_llm.call_args_list[0].args[0]
     # ...and the supervisor got the bare reviewer report.
     assert "## PR review feedback" not in env.prompt_llm.call_args_list[1].args[0]
+
+
+# --- Step 5: severity floor backstop (plan lane) ---------------------------
+
+
+def test_low_severity_at_strict_round_downgrades_to_dismiss(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """At strict_from_round a tasks verdict with only low findings -> dismiss.
+
+    Rounds 1-2 carry a ``high`` finding so they are not downgraded; round 3's
+    report is all ``low``, so the backstop rewrites the tasks verdict to dismiss
+    and the run converges to the success label (terminal, not a skip).
+    """
+    env.prompt_llm.side_effect = [
+        _reviewer(_REPORT),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 1 (high -> stays tasks)
+        _reviewer(_REPORT),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 2 (high -> stays tasks)
+        _reviewer(_REPORT_LOW),
+        _resp(_TASKS),  # round 3 (all-low -> downgraded to dismiss)
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.success_label_id
+    # The loop stopped at round 3: no round-3 apply-tasks resume was issued.
+    assert env.prompt_llm.call_count == 8
+
+
+def test_high_severity_at_strict_round_stays_tasks(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A high finding at the strict round is not downgraded (loop continues)."""
+    per_round = [_reviewer(_REPORT), _resp(_TASKS), _reviewer(session_id="rev-1")]
+    env.prompt_llm.side_effect = per_round * core.REVIEW_MAX_ROUNDS
+
+    result = _run(tmp_path)
+
+    assert result == 0  # never downgraded -> hits the cap -> handoff (RC=0)
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.escalate_label_id
+
+
+def test_unparseable_severity_fails_open_stays_tasks(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A report with no severity token is never downgraded (fail open)."""
+    per_round = [
+        _reviewer(_REPORT_NO_SEVERITY),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+    env.prompt_llm.side_effect = per_round * core.REVIEW_MAX_ROUNDS
+
+    result = _run(tmp_path)
+
+    assert result == 0  # fail open -> stays tasks -> cap -> handoff (RC=0)
+    env.handle_workflow_failure.assert_not_called()
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.escalate_label_id
+
+
+def test_low_severity_below_strict_round_stays_tasks(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """An all-low report before the strict round is not downgraded early."""
+    env.prompt_llm.side_effect = [
+        _reviewer(_REPORT_LOW),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 1 (below floor)
+        _reviewer(_REPORT_LOW),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 2 (below floor -> not downgraded)
+        _reviewer(_REPORT_LOW),
+        _resp(_TASKS),  # round 3 (>= floor -> downgraded to dismiss)
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    # Rounds 1-2 (below strict_from_round=3) each ran a full apply-tasks resume;
+    # only round 3 was downgraded. 3 + 3 + 2 = 8 calls proves the loop was not
+    # cut short at round 2.
+    assert env.prompt_llm.call_count == 8
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_PLAN.success_label_id

@@ -1130,12 +1130,10 @@ Automated workflows can fail at several points. When a failure occurs, the issue
 | `status-06f-timeout:llm-timeout` | LLM API timeout during implementation | `mcp-coder gh-tool set-status status-05:plan-ready` |
 | `status-09f:pr-creating-failed` | PR creation fails | `mcp-coder gh-tool set-status status-08:ready-pr` |
 | `status-14f:plan-review-failed` | Automated plan review failed (generic error / unparseable verdict) | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
-| `status-14f-rounds:plan-review-rounds-exhausted` | Plan review hit the rounds cap (5) without converging | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
 | `status-14f-timeout:plan-review-llm-timeout` | LLM API timeout during automated plan review | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
 | `status-14f-mcp:plan-review-mcp-unavailable` | MCP server unavailable during automated plan review | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
 | `status-17f:code-review-failed` | Automated code review failed (generic error / unparseable verdict) | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-ci:code-review-ci-fix-needed` | CI still red at the rounds cap | `mcp-coder gh-tool set-status status-17:code-review-bot` |
-| `status-17f-rounds:code-review-rounds-exhausted` | Code review hit the rounds cap (5) without converging | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-timeout:code-review-llm-timeout` | LLM API timeout during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-mcp:code-review-mcp-unavailable` | MCP server unavailable during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 

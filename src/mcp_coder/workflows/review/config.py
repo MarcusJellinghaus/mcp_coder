@@ -39,6 +39,11 @@ class ReviewConfig:
             (implementation only). The plan lane makes no GitHub call.
         failure_labels: Mapping of failure ``reason`` to terminal label
             ``internal_id``.
+        strict_from_round: Round number from which the stricter severity floor
+            applies (shared by the severity backstop and the prompt
+            substitution so the enforced and stated numbers match).
+        tie_break: Per-lane sentence stating how the reviewer breaks ties when
+            two options are otherwise equivalent.
     """
 
     name: str
@@ -53,6 +58,8 @@ class ReviewConfig:
     run_after_steps: bool
     thread_pr_feedback: bool
     failure_labels: dict[str, str]
+    strict_from_round: int = 3
+    tie_break: str = ""
 
 
 REVIEW_IMPLEMENTATION = ReviewConfig(
@@ -69,11 +76,12 @@ REVIEW_IMPLEMENTATION = ReviewConfig(
     thread_pr_feedback=True,
     failure_labels={
         "general": "code_review_failed",
-        "rounds": "code_review_rounds",
         "timeout": "code_review_timeout",
         "mcp_unavailable": "code_review_mcp",
         "ci": "code_review_ci",
     },
+    strict_from_round=3,
+    tie_break="default to better code quality",
 )
 
 
@@ -91,8 +99,9 @@ REVIEW_PLAN = ReviewConfig(
     thread_pr_feedback=False,
     failure_labels={
         "general": "plan_review_failed",
-        "rounds": "plan_review_rounds",
         "timeout": "plan_review_timeout",
         "mcp_unavailable": "plan_review_mcp",
     },
+    strict_from_round=3,
+    tie_break="default to simpler plans",
 )

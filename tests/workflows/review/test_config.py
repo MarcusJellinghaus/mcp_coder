@@ -38,10 +38,13 @@ class TestReviewImplementation:
         assert REVIEW_IMPLEMENTATION.run_after_steps is True
         assert REVIEW_IMPLEMENTATION.thread_pr_feedback is True
 
+    def test_strict_from_round_and_tie_break(self) -> None:
+        assert REVIEW_IMPLEMENTATION.strict_from_round == 3
+        assert REVIEW_IMPLEMENTATION.tie_break == "default to better code quality"
+
     def test_failure_labels(self) -> None:
         assert REVIEW_IMPLEMENTATION.failure_labels == {
             "general": "code_review_failed",
-            "rounds": "code_review_rounds",
             "timeout": "code_review_timeout",
             "mcp_unavailable": "code_review_mcp",
             "ci": "code_review_ci",
@@ -73,10 +76,13 @@ class TestReviewPlan:
         assert REVIEW_PLAN.run_after_steps is False
         assert REVIEW_PLAN.thread_pr_feedback is False
 
+    def test_strict_from_round_and_tie_break(self) -> None:
+        assert REVIEW_PLAN.strict_from_round == 3
+        assert REVIEW_PLAN.tie_break == "default to simpler plans"
+
     def test_failure_labels(self) -> None:
         assert REVIEW_PLAN.failure_labels == {
             "general": "plan_review_failed",
-            "rounds": "plan_review_rounds",
             "timeout": "plan_review_timeout",
             "mcp_unavailable": "plan_review_mcp",
         }

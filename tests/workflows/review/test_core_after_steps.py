@@ -27,7 +27,7 @@ import pytest
 from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.review import core, reviewer
+from mcp_coder.workflows.review import core, handoff, reviewer, steps
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION, REVIEW_PLAN
 
 # --- verdict payloads -------------------------------------------------------
@@ -36,6 +36,7 @@ _DISMISS = '```json\n{"decision": "dismiss"}\n```'
 _TASKS = '```json\n{"decision": "tasks", "tasks": ["Fix the bug at foo.py:1"]}\n```'
 
 _REPORT = "foo.py:1 — high — something is wrong"
+_REPORT_MEDIUM = "foo.py:1 — medium — a moderate concern"
 
 
 def _status(
@@ -94,22 +95,36 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
 
     monkeypatch.setattr(
-        core, "get_current_branch_name", MagicMock(return_value="1072-review")
+        steps, "get_current_branch_name", MagicMock(return_value="1072-review")
     )
-    monkeypatch.setattr(core, "IssueManager", MagicMock(name="IssueManager"))
+    mocks.issue_manager = MagicMock(name="IssueManager")
+    monkeypatch.setattr(handoff, "IssueManager", mocks.issue_manager)
+
+    # Terminal-path log flush (handoff._flush_round_log commit + push): mocked so
+    # the flush never touches real git; tests assert the commit fired.
+    mocks.commit_all_changes = MagicMock(
+        return_value={"success": True, "commit_hash": "FLUSHSHA"}
+    )
+    monkeypatch.setattr(handoff, "commit_all_changes", mocks.commit_all_changes)
+    mocks.flush_push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "push_changes", mocks.flush_push)
 
     mocks.update_workflow_label = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "update_workflow_label", mocks.update_workflow_label)
+    monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
     mocks.handle_workflow_failure = MagicMock()
-    monkeypatch.setattr(core, "handle_workflow_failure", mocks.handle_workflow_failure)
+    monkeypatch.setattr(
+        handoff, "handle_workflow_failure", mocks.handle_workflow_failure
+    )
 
     # After-steps externals: default to a clean rebase + green CI + a base branch.
     mocks.detect_base_branch = MagicMock(return_value="main")
-    monkeypatch.setattr(core, "detect_base_branch", mocks.detect_base_branch)
+    monkeypatch.setattr(steps, "detect_base_branch", mocks.detect_base_branch)
     mocks.attempt_rebase_and_push = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "_attempt_rebase_and_push", mocks.attempt_rebase_and_push)
+    monkeypatch.setattr(
+        steps, "_attempt_rebase_and_push", mocks.attempt_rebase_and_push
+    )
     mocks.check_and_fix_ci = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "check_and_fix_ci", mocks.check_and_fix_ci)
+    monkeypatch.setattr(steps, "check_and_fix_ci", mocks.check_and_fix_ci)
 
     # PR-feedback fetch (implementation lane): default to a report with no open
     # feedback so existing tests see no note; individual tests override the
@@ -219,7 +234,7 @@ def test_dismiss_rebase_conflict_routes_to_needs_human(
 
 def test_rebase_slot_references_issue_1066(env: SimpleNamespace) -> None:
     """The needs-human rebase slot carries the #1066 NotYetImplemented marker."""
-    source = inspect.getsource(core._after_steps)
+    source = inspect.getsource(steps._after_steps)
     assert "#1066" in source
     assert "NotYetImplemented" in source
 
@@ -319,7 +334,11 @@ def test_tasks_ci_green_no_note_and_normal_loop(
 def test_tasks_ci_red_every_round_caps_with_ci_label(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
-    """Red CI on every tasks round hits the cap with the ci label, not rounds."""
+    """Red CI on every tasks round hits the cap with the ci label, not rounds.
+
+    CI stays terminal at the cap (RC=1), but the last round's log is still
+    flushed to the committed review log before failing.
+    """
     env.check_and_fix_ci.return_value = False
     per_round = [_reviewer(), _resp(_TASKS), _reviewer(session_id="rev-1")]
     env.prompt_llm.side_effect = per_round * core.REVIEW_MAX_ROUNDS
@@ -330,6 +349,8 @@ def test_tasks_ci_red_every_round_caps_with_ci_label(
     failure = env.handle_workflow_failure.call_args.args[0]
     # Open CI finding at the cap wins over the plain rounds reason (17f-ci).
     assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["ci"]
+    # The last round's log is flushed to the committed review log before _fail.
+    env.commit_all_changes.assert_called()
 
 
 def test_tasks_rebase_conflict_routes_to_needs_human(
@@ -568,3 +589,126 @@ def test_clean_feedback_logs_no_warning(
 
     assert result == 0
     assert _undeterminable_warnings(caplog) == []
+
+
+# --- Step 5: severity floor CI exemption (implementation lane) --------------
+
+
+def test_pending_ci_note_exempts_round_from_severity_floor(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A round carrying a pending CI note is never severity-downgraded.
+
+    Red CI on rounds 1-2 sets the carried finding note, so round 3 (>= the
+    strict round) with an all-``medium`` report is exempt from the floor: it
+    still issues fix tasks rather than being rewritten to dismiss. CI then goes
+    green, and round 4 dismisses to success.
+    """
+    env.check_and_fix_ci.side_effect = [False, False, True, True]
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 1 (CI red -> note set)
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 2 (CI red -> note carried)
+        _reviewer(_REPORT_MEDIUM),
+        _resp(_TASKS),  # round 3: medium + note -> exempt from the floor
+        _reviewer(session_id="rev-1"),  # round 3 apply-tasks (proves not downgraded)
+        _reviewer(),
+        _resp(_DISMISS),  # round 4 -> dismiss -> success
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 0
+    env.handle_workflow_failure.assert_not_called()
+    # Round 3 was NOT downgraded: it ran its apply-tasks resume (call index 8)
+    # and the loop continued to round 4. A downgrade would have ended the run at
+    # round 3 (8 calls, dismiss). 11 calls proves the CI exemption held.
+    assert env.prompt_llm.call_count == 11
+    apply_call = env.prompt_llm.call_args_list[8]
+    assert apply_call.kwargs["session_id"] == "rev-1"
+    assert "Fix the bug at foo.py:1" in apply_call.args[0]
+    _, to_id = _label_transition(env.update_workflow_label)
+    assert to_id == REVIEW_IMPLEMENTATION.success_label_id
+
+
+# --- Step 6: terminal `_fail` sub-paths now write + flush the round log ------
+
+
+def test_dismiss_ci_red_writes_and_flushes_round_log(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """dismiss + red final CI fails to ci (RC=1) AND lands the round in the log.
+
+    This sub-path previously returned ``_fail`` without writing any round log;
+    it now writes the terminal round and flushes it to the committed log first.
+    """
+    env.check_and_fix_ci.return_value = False
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["ci"]
+    log = (tmp_path / "pr_info" / "implementation_review_log_1.md").read_text(
+        encoding="utf-8"
+    )
+    assert "ci" in log
+    env.commit_all_changes.assert_called()
+
+
+def test_tasks_after_steps_general_writes_and_flushes_round_log(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A tasks round whose after-steps fail ``general`` lands the round in the log.
+
+    The fix was already committed this round; the added write + flush commit
+    only the terminal round-log entry before the run fails.
+    """
+    env.check_and_fix_ci.side_effect = RuntimeError("ci boom")
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["general"]
+    log = (tmp_path / "pr_info" / "implementation_review_log_1.md").read_text(
+        encoding="utf-8"
+    )
+    assert "general" in log
+    env.commit_all_changes.assert_called()
+
+
+def test_tasks_resume_exception_writes_and_flushes_round_log(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A crash while applying fixes still lands the executed round in the log.
+
+    A real report + a ``tasks`` verdict already exist when the apply-tasks
+    reviewer resume raises, so the round (with its real findings) is written and
+    flushed before the run fails with the mapped label.
+    """
+    env.prompt_llm.side_effect = [
+        _reviewer(),  # round 1 fresh reviewer (real findings)
+        _resp(_TASKS),  # round 1 supervisor -> tasks
+        LLMTimeoutError("slow"),  # apply-tasks resume crashes
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["timeout"]
+    log = (tmp_path / "pr_info" / "implementation_review_log_1.md").read_text(
+        encoding="utf-8"
+    )
+    assert "foo.py:1" in log  # the real reviewer findings were captured
+    env.commit_all_changes.assert_called()

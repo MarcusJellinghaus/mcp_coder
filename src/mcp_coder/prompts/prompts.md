@@ -337,6 +337,10 @@ plan files, docs, or `pr_info/`), say so explicitly and stop — there is nothin
 substantive findings (correctness, requirements gaps, design/principle violations, missing
 tests). Skip cosmetic nitpicks and speculative rewrites.
 
+**Round context:** This is round `{round_number}` of `{max_rounds}`. From round
+`{strict_from_round}` onward only `critical`/`high` findings will be acted on — spend your
+effort there rather than cataloguing new `low`/`medium` nitpicks.
+
 **STRUCTURED-REPORT CONTRACT (mandatory — this report is the ONLY thing the supervisor
 sees, and nothing downstream parses free prose):**
 - Emit every finding as a single line: `file:line` — SEVERITY — short description.
@@ -372,6 +376,10 @@ is internally consistent, follows KISS, and is buildable as a sequence of one-co
 Report only substantive findings (missing requirements, contradictions, wrong sequencing,
 untestable steps, scope creep). Skip cosmetic nitpicks and speculative rewrites.
 
+**Round context:** This is round `{round_number}` of `{max_rounds}`. From round
+`{strict_from_round}` onward only `critical`/`high` findings will be acted on — spend your
+effort there rather than cataloguing new `low`/`medium` nitpicks.
+
 **STRUCTURED-REPORT CONTRACT (mandatory — this report is the ONLY thing the supervisor
 sees, and nothing downstream parses free prose):**
 - Emit every finding as a single line: `file:line` — SEVERITY — short description
@@ -404,6 +412,15 @@ given to you.
 - Stay in scope. Do not invent improvements the reviewer did not raise.
 - Substantive-findings-only stop bar: if nothing substantive remains after triage, you are
   done — dismiss.
+- Severity floor: findings carry a severity (`critical`/`high`/`medium`/`low`). Accept
+  `critical`/`high` in any round. This is round `{round_number}` of `{max_rounds}`; from
+  round `{strict_from_round}` onward do NOT accept `medium`/`low`-only findings — if nothing
+  `critical`/`high` remains, dismiss.
+- Final round: on the final round, dismiss unless a `critical`/`high` finding remains;
+  escalate only if one does and it needs a human.
+- Re-litigation: do not re-accept a finding you already dismissed, or already had fixed, in
+  an earlier round.
+- Tie-break: when the call is borderline, {tie_break} rather than asking.
 - Escalate to a human only when you are genuinely unsure or a change needs major refactoring
   or a significant design decision. Do not escalate trivial fixes in either direction.
 
