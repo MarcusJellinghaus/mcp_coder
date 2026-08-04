@@ -87,9 +87,10 @@ Detail: [step_6.md](./steps/step_6.md)
 
 Detail: [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation — add `17f-tasks` / `17f-ci-unknown` rows to `development-process.md`, `github_Issue_Workflow_Matrix.html`, and `cli-reference.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — add `17f-tasks` / `17f-ci-unknown` rows to `development-process.md`, `github_Issue_Workflow_Matrix.html`, and `cli-reference.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+  - Docs-only change: no Python source touched (only `docs/processes-prompts/development-process.md`, `docs/processes-prompts/github_Issue_Workflow_Matrix.html`, `docs/cli-reference.md`), so pylint/pytest/mypy are trivially unaffected — no code for them to evaluate. No file-size regression.
+- [x] Commit message prepared
 
 ## Pull Request
 

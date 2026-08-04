@@ -231,6 +231,8 @@
         .status-code-review-ci { --label-color: #d93f0b; }
         .status-code-review-timeout { --label-color: #e99695; }
         .status-code-review-mcp { --label-color: #e99695; }
+        .status-code-review-tasks { --label-color: #d93f0b; }
+        .status-code-review-ci-unknown { --label-color: #d93f0b; }
         
         /* Flow arrows inline */
         .flow-cell {
@@ -591,6 +593,18 @@
                     <div class="label-name">status-17f-mcp:code-review-mcp-unavailable</div>
                     <div class="label-description">MCP server unavailable</div>
                     <div class="status-badge badge-failed">MCP</div>
+                </div>
+                <div class="label-card highlight-red status-code-review-tasks">
+                    <div class="step-number">17f-tasks</div>
+                    <div class="label-name">status-17f-tasks:code-review-open-tasks</div>
+                    <div class="label-description">TASK_TRACKER has unchecked tasks</div>
+                    <div class="status-badge badge-failed">Open Tasks</div>
+                </div>
+                <div class="label-card highlight-red status-code-review-ci-unknown">
+                    <div class="step-number">17f-ci-unknown</div>
+                    <div class="label-name">status-17f-ci-unknown:code-review-ci-undeterminable</div>
+                    <div class="label-description">CI could not be proven green</div>
+                    <div class="status-badge badge-failed">CI Unknown</div>
                 </div>
             </div>
         </div>

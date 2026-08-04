@@ -1136,10 +1136,14 @@ Automated workflows can fail at several points. When a failure occurs, the issue
 | `status-17f-ci:code-review-ci-fix-needed` | CI still red at the rounds cap | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-timeout:code-review-llm-timeout` | LLM API timeout during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-mcp:code-review-mcp-unavailable` | MCP server unavailable during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
+| `status-17f-tasks:code-review-open-tasks` | `review-implementation` refused to start because `## Tasks` in `TASK_TRACKER.md` still has unchecked items | run `/implementation_finalise`, then `mcp-coder gh-tool set-status status-17:code-review-bot` |
+| `status-17f-ci-unknown:code-review-ci-undeterminable` | The final dismiss gate could not prove CI green (status pending / not configured / unknown / unavailable) | run `/check_branch_status` (check the GitHub token / whether CI exists), then `mcp-coder gh-tool set-status status-17:code-review-bot` |
 
 To recover from a failure, investigate the root cause (logs, CI output, API errors), resolve the underlying issue, then use `mcp-coder gh-tool set-status` to transition the issue back to a retry-ready state as shown in the table above. The bot will automatically pick up the issue again from the recovery status.
 
 The `status-14f-*` / `status-17f-*` labels only occur when automated review is enabled (`auto_review_plan` / `auto_review_implementation`; see [Automated Review](#9-automated-review-optional) below). Their recovery commands re-queue the automated review; to instead hand off to the interactive supervisor, set `status-04:plan-review` or `status-07:code-review`. `status-04:plan-review` carries `/plan_review_supervisor` and `status-07:code-review` carries `/implementation_review_supervisor`, so a human review session opens automatically.
+
+Enabling `auto_review_implementation` presumes the repo has CI: the implementation lane leans on `check_and_fix_ci` for quality, and the final dismiss gate refuses the success label unless CI is *proven* green. A CI-less repo will therefore end every review on `status-17f-ci-unknown`.
 
 ### 9. Automated Review (optional)
 
