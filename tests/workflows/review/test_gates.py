@@ -207,7 +207,11 @@ class TestCheckCiProvenGate:
         assert reason == "ci"
         assert details is not None
         assert "FAILED" in details
-        assert "could not prove CI ran green" in details
+        # The determinably-red case names the failure and points at fixing the
+        # code — it must not reuse the ci_unknown "check the token" wording.
+        assert "CI ran and failed" in details
+        assert "could not prove CI ran green" not in details
+        assert "GitHub token" not in details
 
     @pytest.mark.parametrize(
         "ci_status",

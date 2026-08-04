@@ -103,10 +103,12 @@ def check_ci_proven_gate(project_dir: Path) -> tuple[str | None, str | None]:
     verdict = assess_ci(status, require_proven=True)
     if verdict == "ok":
         return None, None
-    detail = (
+    if verdict == "failed":
+        return "ci", (
+            f"CI status is `{status.value}` — CI ran and failed. "
+            f"Fix the failing code, then re-run the review."
+        )
+    return "ci_unknown", (
         f"CI status is `{status.value}` — could not prove CI ran green. "
         f"Check the GitHub token and whether this repo has a CI workflow."
     )
-    if verdict == "failed":
-        return "ci", detail
-    return "ci_unknown", detail
