@@ -11,6 +11,10 @@ import frontmatter
 
 from mcp_coder.icoder.core.command_registry import CommandRegistry
 from mcp_coder.icoder.core.types import Command, Response, SendToLLM
+from mcp_coder.icoder.permissions.skill_tools import (
+    SkillToolsBlock,
+    parse_tools_block,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +44,7 @@ class ClaudeSkill:
     hooks: dict[str, object] | None = None
     paths: list[str] | None = None
     shell: str | None = None
+    tools_block: SkillToolsBlock | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +142,7 @@ def load_skills(project_dir: Path) -> list[ClaudeSkill]:
             hooks=hooks,
             paths=paths,
             shell=shell,
+            tools_block=parse_tools_block(meta),
         )
         results.append(skill)
 

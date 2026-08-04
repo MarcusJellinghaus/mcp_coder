@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Parse the rich `tools:` block (`skill_tools.py`) + `ClaudeSkill.tools_block`
 
-- [ ] Implementation: write `tests/icoder/test_permissions_skill_tools.py` (malformed-vs-absent parametrisation incl. present-but-null, bare-`use:`, advisories, `load_skills` populates `tools_block`), create pure `permissions/skill_tools.py` (`SkillToolsBlock` + `parse_tools_block`), add + populate `ClaudeSkill.tools_block`, update `.importlinter`
-- [ ] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write `tests/icoder/test_permissions_skill_tools.py` (malformed-vs-absent parametrisation incl. present-but-null, bare-`use:`, advisories, `load_skills` populates `tools_block`), create pure `permissions/skill_tools.py` (`SkillToolsBlock` + `parse_tools_block`), add + populate `ClaudeSkill.tools_block`, update `.importlinter`
+- [x] Quality checks: pylint, pytest, mypy, ruff (D/DOC), lint-imports — fix all issues (pylint/ruff/lint-imports green; mypy clean for the new code; pytest could not execute — pre-existing env break: `mcp_workspace.checks.branch_status_rendering` missing, fails identically on unmodified tests)
+- [x] Commit message prepared
 
 ### Step 2: Build the frame (`skill_frame.py`) + `Base` Literal
 
