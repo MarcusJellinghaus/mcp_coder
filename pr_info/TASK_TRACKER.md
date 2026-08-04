@@ -21,6 +21,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Delete the dead `TaskTrackerStatus` enum
+
+- [ ] Implementation: delete `TaskTrackerStatus` class + `from enum import Enum` in `task_tracker.py`, remove it from `__init__.py` import block and `__all__`, and remove it from the test import block plus delete `TestTaskTrackerStatusEnum` (do NOT touch the five `test_check_branch_status*.py` files)
+- [ ] Quality checks: pylint, pytest (fast unit subset), mypy — fix all issues; then search repo for `TaskTrackerStatus` (only the five upstream-importing test files may remain)
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review — address review feedback
+- [ ] PR summary — write final summary
