@@ -557,7 +557,9 @@ def test_user_typed_skill_dispatches_and_invokes(app_core: AppCore) -> None:
 
     response = app_core.handle_input("/issue_update 5")
 
-    assert response.actions == (SendToLLM(text="Update issue 5"),)
+    assert response.actions == (
+        SendToLLM(text="Update issue 5", skill_name="issue_update"),
+    )
 
 
 def test_handle_input_returns_send_to_llm_with_override(app_core: AppCore) -> None:
@@ -590,14 +592,14 @@ def test_handle_input_resolves_empty_send_to_llm_to_input(app_core: AppCore) -> 
     assert response.actions == (SendToLLM(text="/passthrough foo bar"),)
 
 
-def test_handle_input_preserves_allowed_tools_across_reconstruction(
+def test_handle_input_preserves_skill_name_across_reconstruction(
     app_core: AppCore,
 ) -> None:
-    """SendToLLM.allowed_tools survives handle_input's reconstruction.
+    """SendToLLM.skill_name survives handle_input's reconstruction.
 
-    A skill command that yields ``SendToLLM(text="", allowed_tools=(...))``
-    must keep ``allowed_tools`` intact while ``text`` resolves to the
-    original user input.
+    A skill command that yields ``SendToLLM(text="", skill_name=...)`` must
+    keep ``skill_name`` intact while ``text`` resolves to the original user
+    input.
     """
     from mcp_coder.icoder.core.types import Command, Response
 
@@ -606,57 +608,12 @@ def test_handle_input_preserves_allowed_tools_across_reconstruction(
             name="/tooled",
             description="tooled skill",
             handler=lambda args: Response(
-                actions=(SendToLLM(text="", allowed_tools=("mcp__srv__a",)),)
+                actions=(SendToLLM(text="", skill_name="tooled"),)
             ),
         )
     )
     response = app_core.handle_input("/tooled do it")
-    assert response.actions == (
-        SendToLLM(text="/tooled do it", allowed_tools=("mcp__srv__a",)),
-    )
-
-
-def test_stream_llm_forwards_allowed_tools_to_service(event_log: EventLog) -> None:
-    """stream_llm forwards allowed_tools to the LLM service."""
-    fake_llm = FakeLLMService()
-    core = AppCore(llm_service=fake_llm, event_log=event_log)
-    list(core.stream_llm("hello", ("mcp__srv__a",)))
-    assert fake_llm.last_allowed_tools == ("mcp__srv__a",)
-
-
-def test_stream_llm_default_allowed_tools_is_none(event_log: EventLog) -> None:
-    """stream_llm without allowed_tools forwards None to the service."""
-    fake_llm = FakeLLMService()
-    core = AppCore(llm_service=fake_llm, event_log=event_log)
-    list(core.stream_llm("hello"))
-    assert fake_llm.last_allowed_tools is None
-
-
-def test_stream_llm_passes_permission_warning_through(event_log: EventLog) -> None:
-    """A synthetic permission_warning event passes cleanly and is logged.
-
-    The unknown event type is tolerated by ResponseAssembler.add (no error)
-    and is forwarded to the event log as a stream_event.
-    """
-    fake_llm = FakeLLMService(
-        responses=[
-            [
-                {"type": "permission_warning", "message": "dropped mcp__srv__*"},
-                {"type": "text_delta", "text": "hi"},
-                {"type": "done"},
-            ]
-        ]
-    )
-    core = AppCore(llm_service=fake_llm, event_log=event_log)
-    events = list(core.stream_llm("hello"))
-
-    # Event survived the stream unchanged.
-    assert {"type": "permission_warning", "message": "dropped mcp__srv__*"} in events
-
-    # And it reached the event log as a stream_event.
-    stream_entries = [e for e in event_log.entries if e.event == "stream_event"]
-    logged_types = [e.data.get("type") for e in stream_entries]
-    assert "permission_warning" in logged_types
+    assert response.actions == (SendToLLM(text="/tooled do it", skill_name="tooled"),)
 
 
 def test_stream_events_logged(event_log: EventLog) -> None:

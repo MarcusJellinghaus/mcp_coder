@@ -241,6 +241,32 @@ def test_has_command_returns_false_for_missing() -> None:
     assert registry.has_command("/nonexistent") is False
 
 
+def test_get_returns_command_for_existing() -> None:
+    """get returns the Command instance for a registered name."""
+    registry = create_default_registry()
+    cmd = registry.get("/help")
+    assert cmd is not None
+    assert cmd.name == "/help"
+
+
+def test_get_returns_none_for_missing() -> None:
+    """get returns None for an unregistered command name."""
+    registry = create_default_registry()
+    assert registry.get("/nonexistent") is None
+
+
+def test_get_returns_added_command() -> None:
+    """get returns a command registered via add_command."""
+    registry = CommandRegistry()
+    cmd = Command(
+        name="/skill",
+        description="A skill",
+        handler=lambda args: Response(),
+    )
+    registry.add_command(cmd)
+    assert registry.get("/skill") is cmd
+
+
 def test_has_command_after_add_command() -> None:
     """has_command returns True after add_command."""
     registry = CommandRegistry()

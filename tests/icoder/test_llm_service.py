@@ -434,7 +434,8 @@ def test_stream_without_gateway_forwards_all_tools(
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=None,
     )
-    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
+    frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
+    list(service.stream("hello", frame=frame))
     assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
 
 
@@ -455,10 +456,10 @@ def test_stream_with_gateway_drops_never_tools(
     assert captured["tools"] == ["mcp__srv__keep"]
 
 
-def test_stream_enforces_with_enforce_skill_tools_false(
+def test_stream_enforces_config_never_without_frame(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """D5: a config ``never`` is enforced even when enforce_skill_tools=False."""
+    """D5: a config ``never`` is enforced even for a frameless (plain) turn."""
     captured: dict[str, object] = {}
     _capture_tools_stream(monkeypatch, captured)
     manager = _FakeMCPManager(["mcp__srv__keep", "mcp__srv__drop"])
@@ -467,9 +468,8 @@ def test_stream_enforces_with_enforce_skill_tools_false(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=gateway,
-        enforce_skill_tools=False,
     )
-    list(service.stream("hello"))
+    list(service.stream("hello", frame=None))
     assert captured["tools"] == ["mcp__srv__keep"]
 
 
@@ -510,16 +510,16 @@ def test_stream_with_empty_config_forwards_all_tools(
     )
     list(service.stream("hello"))
     assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
-    # A declared-tools turn builds a frame, which must not narrow either
-    # (enforce_skill_tools=False -> base="inherit", elevation only).
-    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
+    # An inherit-based skill frame must not narrow either (elevation only).
+    frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
+    list(service.stream("hello", frame=frame))
     assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
 
 
 def test_stream_sets_per_turn_frame(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """begin_turn receives a PermissionFrame with allowed_tools, None without."""
+    """begin_turn receives the forwarded PermissionFrame, then None."""
     captured: dict[str, object] = {}
     _capture_tools_stream(monkeypatch, captured)
     manager = _FakeMCPManager(["mcp__srv__a"])
@@ -529,63 +529,43 @@ def test_stream_sets_per_turn_frame(
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=gateway,
     )
-    list(service.stream("hello", allowed_tools=("mcp__srv__a",)))
-    list(service.stream("hello", allowed_tools=None))
-    assert isinstance(gateway.frames[0], PermissionFrame)
+    frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
+    list(service.stream("hello", frame=frame))
+    list(service.stream("hello", frame=None))
+    assert gateway.frames[0] is frame
     assert gateway.frames[1] is None
 
 
-def test_stream_emits_permission_warning_for_malformed_token(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A malformed declared token -> permission_warning yielded; tool not elevated."""
-    captured: dict[str, object] = {}
-    _capture_tools_stream(monkeypatch, captured)
-    manager = _FakeMCPManager(["mcp__srv__t"])
-    gateway = LangchainEnforcementGateway(_never_config("srv", "t"))
-    service = RealLLMService(
-        provider="langchain",
-        mcp_manager=manager,  # type: ignore[arg-type]
-        gateway=gateway,
-    )
-    events = list(service.stream("hello", allowed_tools=("mcp__srv__t(bad",)))
-    warnings = [e for e in events if e["type"] == "permission_warning"]
-    assert len(warnings) == 1
-    assert isinstance(warnings[0]["message"], str)
-    # The malformed token contributed no matcher, so the config ``never`` stands.
-    assert captured["tools"] == []
-
-
-def test_fake_service_records_last_allowed_tools() -> None:
-    """FakeLLMService(enforce_skill_tools=True) records allowed_tools; never filters."""
-    service = FakeLLMService(enforce_skill_tools=True)
-    list(service.stream("q", allowed_tools=("x",)))
-    assert service.last_allowed_tools == ("x",)
-
-
-def test_fake_service_last_allowed_tools_initially_none() -> None:
-    """FakeLLMService.last_allowed_tools defaults to None before any stream."""
+def test_fake_service_records_last_frame() -> None:
+    """FakeLLMService records the frame passed to stream; never filters."""
     service = FakeLLMService()
-    assert service.last_allowed_tools is None
+    frame = PermissionFrame(base="none", allow=(Matcher("srv", "a"),))
+    list(service.stream("q", frame=frame))
+    assert service.last_frame is frame
 
 
-def test_fake_service_stream_ignores_allowed_tools_content() -> None:
-    """FakeLLMService.stream still yields canned responses regardless of allowed_tools."""
+def test_fake_service_last_frame_initially_none() -> None:
+    """FakeLLMService.last_frame defaults to None before any stream."""
+    service = FakeLLMService()
+    assert service.last_frame is None
+
+
+def test_fake_service_stream_ignores_frame_content() -> None:
+    """FakeLLMService.stream still yields canned responses regardless of frame."""
     responses: list[list[StreamEvent]] = [
         [{"type": "text_delta", "text": "first"}, {"type": "done"}],
     ]
     service = FakeLLMService(responses=responses)
-    events = list(service.stream("q", allowed_tools=("mcp__srv__a",)))
+    frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
+    events = list(service.stream("q", frame=frame))
     assert events[0]["text"] == "first"
-    assert service.last_allowed_tools == ("mcp__srv__a",)
+    assert service.last_frame is frame
 
 
 def test_services_satisfy_protocol_after_widening() -> None:
     """Both implementations still satisfy LLMService protocol after stream widening."""
-    assert isinstance(FakeLLMService(enforce_skill_tools=True), LLMService)
-    assert isinstance(
-        RealLLMService(provider="claude", enforce_skill_tools=True), LLMService
-    )
+    assert isinstance(FakeLLMService(), LLMService)
+    assert isinstance(RealLLMService(provider="claude"), LLMService)
 
 
 @pytest.mark.claude_cli_integration

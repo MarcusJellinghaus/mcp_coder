@@ -51,15 +51,15 @@ def test_action_value_equality() -> None:
     assert OpenPicker() == OpenPicker()
 
 
-def test_send_to_llm_allowed_tools_defaults_none() -> None:
-    """SendToLLM.allowed_tools defaults to None (no declaration)."""
-    assert SendToLLM(text="x").allowed_tools is None
+def test_send_to_llm_skill_name_defaults_none() -> None:
+    """SendToLLM.skill_name defaults to None (plain message)."""
+    assert SendToLLM(text="x").skill_name is None
 
 
-def test_send_to_llm_allowed_tools_round_trip() -> None:
-    """SendToLLM stores the provided allowed_tools tuple verbatim."""
-    action = SendToLLM(text="x", allowed_tools=("mcp__srv__a",))
-    assert action.allowed_tools == ("mcp__srv__a",)
+def test_send_to_llm_skill_name_round_trip() -> None:
+    """SendToLLM stores the provided skill_name verbatim."""
+    action = SendToLLM(text="x", skill_name="my_skill")
+    assert action.skill_name == "my_skill"
 
 
 def test_command_creation() -> None:
@@ -94,6 +94,23 @@ def test_command_show_in_help(kwargs: dict[str, Any], expected: bool) -> None:
         name="/test", description="Test", handler=lambda args: Response(), **kwargs
     )
     assert cmd.show_in_help == expected
+
+
+def test_command_disabled_reason_defaults_none() -> None:
+    """Command.disabled_reason defaults to None (command runs normally)."""
+    cmd = Command(name="/test", description="Test", handler=lambda args: Response())
+    assert cmd.disabled_reason is None
+
+
+def test_command_disabled_reason_round_trip() -> None:
+    """Command stores the provided disabled_reason verbatim."""
+    cmd = Command(
+        name="/test",
+        description="Test",
+        handler=lambda args: Response(),
+        disabled_reason="broken tools: block",
+    )
+    assert cmd.disabled_reason == "broken tools: block"
 
 
 # --- format_token_count tests ---

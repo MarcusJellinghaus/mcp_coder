@@ -16,6 +16,8 @@ from textual.widgets import Static
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.icoder.permissions.model import Matcher, PermissionFrame
+from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
@@ -387,7 +389,7 @@ class ErrorAfterChunksLLMService:
         self._error_msg = error_msg
 
     def stream(
-        self, question: str, allowed_tools: tuple[str, ...] | None = None
+        self, question: str, *, frame: PermissionFrame | None = None
     ) -> Iterator[StreamEvent]:
         """Yield chunks then raise RuntimeError."""
         yield from self._chunks
@@ -785,7 +787,7 @@ class SlowLLMService:
     """LLM service that yields events with delays to simulate streaming."""
 
     def stream(
-        self, question: str, allowed_tools: tuple[str, ...] | None = None
+        self, question: str, *, frame: PermissionFrame | None = None
     ) -> Iterator[StreamEvent]:
         import time
 
@@ -852,7 +854,7 @@ async def test_session_preserved_after_cancel(
             self._session_id: str | None = "test-session-123"
 
         def stream(
-            self, question: str, allowed_tools: tuple[str, ...] | None = None
+            self, question: str, *, frame: PermissionFrame | None = None
         ) -> Iterator[StreamEvent]:
             import time
 
@@ -1342,33 +1344,41 @@ async def test_resumed_divider_is_not_a_unit(
         assert output.unit_at_line(divider_line) is None
 
 
-# --- Step 5: allowed_tools threading + permission_warning render ---
+# --- Step 3: skill_name threading + permission_warning render ---
 
 
-async def test_ui_worker_threads_allowed_tools_to_service(
+async def test_ui_worker_threads_skill_name_to_service(
     event_log: EventLog,
 ) -> None:
-    """Submitting a skill command threads allowed_tools to the LLM service.
+    """Submitting a skill command threads its frame to the LLM service.
 
-    A command yielding ``SendToLLM(text="", allowed_tools=(...))`` must reach
-    ``FakeLLMService.last_allowed_tools`` via the UI worker.
+    A command yielding ``SendToLLM(text="", skill_name=...)`` must resolve the
+    skill's frame from the ``skill_frames`` snapshot and reach
+    ``FakeLLMService.last_frame`` via the UI worker.
     """
     from mcp_coder.icoder.core.types import Command, Response, SendToLLM
 
     fake = FakeLLMService(responses=[[{"type": "done"}]])
-    app = ICoderApp(AppCore(llm_service=fake, event_log=event_log))
+    frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
+    app = ICoderApp(
+        AppCore(
+            llm_service=fake,
+            event_log=event_log,
+            skill_frames={"tooled": SkillFrame(frame=frame)},
+        )
+    )
     app._core.registry.add_command(
         Command(
             name="/tooled",
             description="tooled skill",
             handler=lambda args: Response(
-                actions=(SendToLLM(text="", allowed_tools=("mcp__srv__a",)),)
+                actions=(SendToLLM(text="", skill_name="tooled"),)
             ),
         )
     )
     async with app.run_test() as pilot:
         await _submit_and_wait(app, pilot, text="/tooled")
-        assert fake.last_allowed_tools == ("mcp__srv__a",)
+        assert fake.last_frame is frame
 
 
 async def test_permission_warning_event_renders_message_text(
@@ -1384,3 +1394,87 @@ async def test_permission_warning_event_renders_message_text(
         await pilot.pause()
         output = app.query_one(OutputLog)
         assert "dropped mcp__srv__*" in output.recorded_lines
+
+
+# --- Step 5: startup permission notices (broken skills + degraded config) ---
+
+
+async def test_startup_surfaces_both_notice_kinds(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """Startup renders both a degraded-config line and a broken-skill line (#1061).
+
+    Exercises the on_mount render path (not just the pure formatter + AppCore
+    properties). ``runtime_info`` is None here, so the notices appearing proves
+    they are rendered OUTSIDE the ``elif self._core.runtime_info`` banner branch.
+    """
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={
+            "BrokenSkill": SkillFrame(
+                frame=PermissionFrame(base="none"),
+                blocked_reason="bad tools block",
+            )
+        },
+        permission_degraded=True,
+    )
+    app = ICoderApp(core)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        text = "\n".join(output.recorded_lines)
+        # Both failure kinds surfaced; the skill is lower-cased to its command.
+        assert "degraded" in text
+        assert "/brokenskill is disabled: bad tools block" in text
+
+
+async def test_startup_no_notices_when_healthy(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """A healthy startup (no degraded config, no broken skill) renders no notices."""
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={"ok": SkillFrame(frame=PermissionFrame(base="inherit"))},
+        permission_degraded=False,
+    )
+    app = ICoderApp(core)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        text = "\n".join(output.recorded_lines)
+        assert "degraded" not in text
+        assert "is disabled" not in text
+
+
+async def test_resume_path_skips_startup_notices(
+    fake_llm: FakeLLMService, event_log: EventLog, tmp_path: Path
+) -> None:
+    """The resume path skips startup permission notices (fresh-start only, #1061)."""
+    log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
+    events = [
+        {"t": 0.0, "event": "session_start", "provider": "claude"},
+        {"t": 0.1, "event": "input_received", "text": "prior"},
+    ]
+    log_path.write_text(
+        "\n".join(json.dumps(ev) for ev in events) + "\n", encoding="utf-8"
+    )
+    core = AppCore(
+        llm_service=fake_llm,
+        event_log=event_log,
+        skill_frames={
+            "brokenskill": SkillFrame(
+                frame=PermissionFrame(base="none"),
+                blocked_reason="bad tools block",
+            )
+        },
+        permission_degraded=True,
+    )
+    app = ICoderApp(core, resume_log_path=log_path)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        text = "\n".join(output.recorded_lines)
+        assert "degraded" not in text
+        assert "is disabled" not in text

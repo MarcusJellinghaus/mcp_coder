@@ -22,7 +22,14 @@ class CommandAutocomplete(OptionList):
             self.add_option(Option("(no matching commands)", disabled=True))
             return
         for cmd in matches:
-            self.add_option(Option(f"{cmd.name} — {cmd.description}", id=cmd.name))
+            label = f"{cmd.name} — {cmd.description}"
+            if cmd.disabled_reason:
+                # Mark blocked commands in the label only — the Option stays
+                # ENABLED so it remains tab-selectable; handle_input then
+                # refuses it with its reason (a disabled=True row would make
+                # select_highlighted() return None and Tab silently no-op).
+                label += f"  (disabled: {cmd.disabled_reason})"
+            self.add_option(Option(label, id=cmd.name))
         self.highlighted = 0
 
     def show_dropdown(self) -> None:

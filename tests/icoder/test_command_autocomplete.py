@@ -100,6 +100,44 @@ async def test_select_highlighted_returns_command_name() -> None:
 
 
 @pytest.mark.asyncio
+async def test_update_matches_marks_disabled_command() -> None:
+    """A blocked command shows its (disabled: <reason>) marker in the label."""
+    app = AutocompleteTestApp()
+    async with app.run_test():
+        dropdown = app.query_one(CommandAutocomplete)
+        cmd = Command(
+            name="/broken",
+            description="Broken skill",
+            handler=_noop,
+            disabled_reason="tools: malformed",
+        )
+        dropdown.update_matches([cmd])
+        assert dropdown.option_count == 1
+        opt = dropdown.get_option_at_index(0)
+        assert "/broken" in str(opt.prompt)
+        assert "Broken skill" in str(opt.prompt)
+        assert "(disabled: tools: malformed)" in str(opt.prompt)
+
+
+@pytest.mark.asyncio
+async def test_update_matches_disabled_command_stays_selectable() -> None:
+    """A blocked command's Option stays enabled and can be selected."""
+    app = AutocompleteTestApp()
+    async with app.run_test():
+        dropdown = app.query_one(CommandAutocomplete)
+        cmd = Command(
+            name="/broken",
+            description="Broken skill",
+            handler=_noop,
+            disabled_reason="tools: malformed",
+        )
+        dropdown.update_matches([cmd])
+        opt = dropdown.get_option_at_index(0)
+        assert opt.disabled is False
+        assert dropdown.select_highlighted() == "/broken"
+
+
+@pytest.mark.asyncio
 async def test_highlight_navigation() -> None:
     """highlight_next / highlight_previous move the highlight through the options."""
     app = AutocompleteTestApp()

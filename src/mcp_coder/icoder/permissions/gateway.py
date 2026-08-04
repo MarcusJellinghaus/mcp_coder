@@ -14,10 +14,11 @@ I2.2 loader:
   provider bridge (:func:`build_deny_tool_message`) so this module never imports
   ``langchain_core``.
 
-:func:`build_legacy_frame` translates the declared-tool tokens already flowing as
-``allowed_tools`` into a throwaway model-C :class:`PermissionFrame` (D4),
-**collecting** per-token parse failures rather than dropping them (fail-closed:
-an un-parseable token contributes no matcher, so it is never silently elevated).
+Frame *construction* lives elsewhere: the pure
+:func:`mcp_coder.icoder.permissions.skill_frame.build_frame` maps any skill
+declaration to a :class:`PermissionFrame`, and ``AppCore`` installs the resolved
+frame per turn via :meth:`LangchainEnforcementGateway.begin_turn`. This gateway
+is enforcement-only — it never parses tokens or builds frames.
 
 Adapter request/result/handler objects are annotated ``Any``: this module imports
 only the pure permission core (resolver/model/matcher) plus the provider deny
@@ -29,9 +30,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from mcp_coder.icoder.permissions.matcher import parse_matcher
 from mcp_coder.icoder.permissions.model import (
-    Matcher,
     PermissionConfig,
     PermissionFrame,
     Policy,
@@ -43,44 +42,6 @@ from mcp_coder.llm.providers.langchain.permission_bridge import (
 
 _DENY_NEVER = "This tool is disabled by permission policy."
 _DENY_ASK = "This tool requires approval — not yet available."
-
-
-def build_legacy_frame(
-    allowed_tools: tuple[str, ...] | None,
-    enforce_skill_tools: bool,
-) -> tuple[PermissionFrame | None, list[str]]:
-    """Build a throwaway model-C frame from declared tokens (D4).
-
-    Returns ``(frame, warnings)``. ``frame`` is ``None`` when there are no
-    tokens. Per-token parse failures are **collected** into ``warnings``
-    (fail-closed: the un-parseable token contributes no matcher, so it is not
-    silently elevated) — the caller surfaces them (Step 4). Do NOT drop them.
-
-    Args:
-        allowed_tools: The declared tool tokens, or ``None``.
-        enforce_skill_tools: When True the frame narrows undeclared tools to
-            NEVER (``base="none"``); otherwise it only elevates declared tools
-            (``base="inherit"``).
-
-    Returns:
-        A ``(frame, warnings)`` tuple. ``warnings`` holds every un-parseable
-        token's reason.
-    """
-    if not allowed_tools:
-        return None, []
-
-    matchers: list[Matcher] = []
-    warnings: list[str] = []
-    for tok in allowed_tools:
-        parsed, errors = parse_matcher(tok)
-        matchers.extend(parsed)
-        warnings.extend(errors)
-
-    frame = PermissionFrame(
-        base="none" if enforce_skill_tools else "inherit",
-        allow=tuple(matchers),
-    )
-    return frame, warnings
 
 
 class LangchainEnforcementGateway:

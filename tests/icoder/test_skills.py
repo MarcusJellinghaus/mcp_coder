@@ -213,7 +213,9 @@ def test_register_skill_commands_langchain_provider() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill issue 42")
     assert resp is not None
-    assert resp.actions == (SendToLLM(text="Analyse issue 42 please"),)
+    assert resp.actions == (
+        SendToLLM(text="Analyse issue 42 please", skill_name="my_skill"),
+    )
 
 
 def test_register_skill_commands_langchain_substitutes_arguments() -> None:
@@ -223,11 +225,11 @@ def test_register_skill_commands_langchain_substitutes_arguments() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill bug 123")
     assert resp is not None
-    assert resp.actions == (SendToLLM(text="Fix bug 123 now"),)
+    assert resp.actions == (SendToLLM(text="Fix bug 123 now", skill_name="my_skill"),)
 
 
-def test_register_skill_commands_langchain_populates_allowed_tools() -> None:
-    """Langchain handler threads a non-empty allowed_tools into SendToLLM."""
+def test_register_skill_commands_langchain_threads_skill_name() -> None:
+    """Langchain handler threads the skill name into SendToLLM.skill_name."""
     registry = CommandRegistry()
     skill = ClaudeSkill(
         name="my_skill",
@@ -240,11 +242,11 @@ def test_register_skill_commands_langchain_populates_allowed_tools() -> None:
     assert resp is not None
     action = resp.actions[0]
     assert isinstance(action, SendToLLM)
-    assert action.allowed_tools == ("mcp__srv__a",)
+    assert action.skill_name == "my_skill"
 
 
-def test_register_skill_commands_langchain_empty_allowed_tools_is_none() -> None:
-    """Empty allowed_tools declaration → SendToLLM.allowed_tools is None."""
+def test_register_skill_commands_langchain_skill_name_regardless_of_tools() -> None:
+    """A skill with no declared tools still carries its skill_name."""
     registry = CommandRegistry()
     skill = _make_skill()  # allowed_tools defaults to []
     register_skill_commands(registry, [skill], "langchain")
@@ -252,7 +254,7 @@ def test_register_skill_commands_langchain_empty_allowed_tools_is_none() -> None
     assert resp is not None
     action = resp.actions[0]
     assert isinstance(action, SendToLLM)
-    assert action.allowed_tools is None
+    assert action.skill_name == "my_skill"
 
 
 def test_register_skill_commands_langchain_empty_arguments() -> None:
@@ -262,7 +264,7 @@ def test_register_skill_commands_langchain_empty_arguments() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill")
     assert resp is not None
-    assert resp.actions == (SendToLLM(text="Do  stuff"),)
+    assert resp.actions == (SendToLLM(text="Do  stuff", skill_name="my_skill"),)
 
 
 def test_register_skill_commands_skips_builtin_collision(
@@ -305,6 +307,52 @@ def test_register_skill_commands_multiple_skills() -> None:
     assert len(registered) == 2
     names = {r.command_name for r in registered}
     assert names == {"/skill_a", "/skill_b"}
+
+
+def test_register_skill_commands_sets_disabled_reason() -> None:
+    """disabled_reasons maps a skill name to its Command.disabled_reason."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="foo")
+    register_skill_commands(
+        registry, [skill], "langchain", disabled_reasons={"foo": "broken"}
+    )
+    cmd = registry.get("/foo")
+    assert cmd is not None
+    assert cmd.disabled_reason == "broken"
+
+
+def test_register_skill_commands_disabled_skill_still_registered() -> None:
+    """A blocked skill stays registered and visible in autocomplete."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="foo")
+    register_skill_commands(
+        registry, [skill], "langchain", disabled_reasons={"foo": "broken"}
+    )
+    assert registry.has_command("/foo") is True
+    matches = registry.filter_by_input("/fo")
+    assert any(c.name == "/foo" for c in matches)
+
+
+def test_register_skill_commands_disabled_reasons_default_none() -> None:
+    """Omitting disabled_reasons leaves every Command.disabled_reason as None."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="foo")
+    register_skill_commands(registry, [skill], "langchain")
+    cmd = registry.get("/foo")
+    assert cmd is not None
+    assert cmd.disabled_reason is None
+
+
+def test_register_skill_commands_disabled_reasons_missing_key_none() -> None:
+    """A skill absent from disabled_reasons gets disabled_reason=None."""
+    registry = CommandRegistry()
+    skill = _make_skill(name="foo")
+    register_skill_commands(
+        registry, [skill], "langchain", disabled_reasons={"other": "broken"}
+    )
+    cmd = registry.get("/foo")
+    assert cmd is not None
+    assert cmd.disabled_reason is None
 
 
 def test_register_skill_commands_normalizes_to_lowercase() -> None:

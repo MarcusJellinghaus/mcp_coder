@@ -11,6 +11,7 @@ must consciously preserve this gate. Full threat model: I5.6 / #1056.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import Iterator, Literal
@@ -35,6 +36,7 @@ from mcp_coder.icoder.core.types import (
     TokenUsage,
 )
 from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import LLMService
 from mcp_coder.llm.storage import store_session
 from mcp_coder.llm.types import ResponseAssembler, StreamEvent
@@ -50,6 +52,8 @@ class AppCore:
         registry: CommandRegistry | None = None,
         runtime_info: RuntimeInfo | None = None,
         tool_display: Literal["oneline", "compressed"] = "compressed",
+        skill_frames: Mapping[str, SkillFrame] | None = None,
+        permission_degraded: bool = False,
     ) -> None:
         """Initialize with injected dependencies.
 
@@ -60,6 +64,12 @@ class AppCore:
             runtime_info: Optional runtime environment info from env_setup
             tool_display: Initial global tool-display tier (default
                 ``"compressed"``). Set by the ``--tool-display`` CLI flag.
+            skill_frames: Startup snapshot mapping each skill name to its
+                pre-built :class:`SkillFrame`, looked up per turn by
+                ``stream_llm`` (design §8.1). Empty/``None`` means no skills.
+            permission_degraded: Whether the loaded permission config is
+                degraded (fail-closed — every MCP call is denied). Surfaced as a
+                loud startup line by the UI (#1061). Defaults to ``False``.
         """
         self._llm_service = llm_service
         self._event_log = event_log
@@ -69,6 +79,8 @@ class AppCore:
         self._command_history = CommandHistory()
         self._prompt_color: str = DEFAULT_PROMPT_COLOR
         self._tool_display: Literal["oneline", "compressed"] = tool_display
+        self._skill_frames: dict[str, SkillFrame] = dict(skill_frames or {})
+        self._permission_degraded = permission_degraded
 
     def handle_input(self, text: str) -> Response:
         """Route user input to commands or typed actions for the UI.
@@ -96,6 +108,17 @@ class AppCore:
             return Response()
 
         self._event_log.emit("input_received", text=text)
+
+        # Blocked-skill refusal (#1061): a command whose declaration is broken
+        # is registered + visible but must refuse to run rather than burn an
+        # LLM turn. Guard BEFORE dispatch — no handler, no SendToLLM. Emit
+        # command_matched too so its event log matches every other command's.
+        lead = text.split()[0].lower()
+        blocked = self._registry.get(lead)
+        if blocked is not None and blocked.disabled_reason:
+            self._event_log.emit("command_matched", command=lead)
+            self._event_log.emit("output_emitted", text=blocked.disabled_reason)
+            return Response(actions=(OutputText(blocked.disabled_reason),))
 
         # SECURITY BOUNDARY (#1040): the ONLY production dispatch call site.
         # Reached only via on_input_area_input_submitted (human Enter keypress).
@@ -138,7 +161,7 @@ class AppCore:
         )
 
     def stream_llm(
-        self, text: str, allowed_tools: tuple[str, ...] | None = None
+        self, text: str, skill_name: str | None = None
     ) -> Iterator[StreamEvent]:
         """Stream LLM response and auto-store for session continuation.
 
@@ -146,19 +169,33 @@ class AppCore:
         Emits events for each stream phase. After streaming completes,
         stores the response so ``--continue-session`` can find it.
 
+        Looks up the pre-built :class:`SkillFrame` for ``skill_name`` in the
+        startup snapshot (``None`` for a plain message or an unknown skill),
+        prepends its ``warnings`` as ``permission_warning`` events in front of
+        the service stream, and forwards ``sf.frame`` to the service. Frames
+        are single-turn: the next message runs frameless.
+
         Args:
             text: User input to send to the LLM.
-            allowed_tools: Declared MCP tool tokens for this turn (from a
-                skill's ``SendToLLM.allowed_tools``), forwarded to the
-                service for host-side enforcement, or ``None``.
+            skill_name: Provenance of a skill-initiated turn (from
+                ``SendToLLM.skill_name``), used to look up the per-turn frame,
+                or ``None`` for a plain message.
 
         Yields:
             StreamEvent dicts for UI to render.
         """
         assembler = ResponseAssembler(self._llm_service.provider)
+        sf = self._skill_frames.get(skill_name) if skill_name is not None else None
         self._event_log.emit("llm_request_start", text=text)
 
-        for event in self._llm_service.stream(text, allowed_tools):
+        def _events() -> Iterator[StreamEvent]:
+            # Route warnings through the SAME assembler + event-log path as
+            # service events so they are logged/replayed like any other event.
+            for warning in sf.warnings if sf else ():
+                yield {"type": "permission_warning", "message": warning}
+            yield from self._llm_service.stream(text, frame=sf.frame if sf else None)
+
+        for event in _events():
             assembler.add(event)
             if event.get("type") != "raw_line":
                 self._event_log.emit("stream_event", **event)
@@ -205,6 +242,28 @@ class AppCore:
     def runtime_info(self) -> RuntimeInfo | None:
         """Runtime environment info, if provided."""
         return self._runtime_info
+
+    @property
+    def broken_skills(self) -> dict[str, str]:
+        """Skills that refuse to run, as ``{name: blocked_reason}`` (#1061).
+
+        Derived from the startup :class:`SkillFrame` snapshot: a frame with a
+        non-``None`` ``blocked_reason`` is a skill the user can see but cannot
+        run. Rendered at startup and matching the invocation-refusal reason.
+
+        Returns:
+            A ``{skill_name: reason}`` map, empty when every skill is runnable.
+        """
+        return {
+            name: sf.blocked_reason
+            for name, sf in self._skill_frames.items()
+            if sf.blocked_reason
+        }
+
+    @property
+    def permission_degraded(self) -> bool:
+        """Whether the loaded permission config is degraded (fail-closed)."""
+        return self._permission_degraded
 
     @property
     def token_usage(self) -> TokenUsage:

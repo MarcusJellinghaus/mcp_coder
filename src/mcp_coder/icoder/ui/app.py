@@ -140,16 +140,9 @@ class ICoderApp(App[None]):
 
     def on_mount(self) -> None:
         """Display startup info and focus input area."""
-        # Apply the CLI-provided initial tool-display tier before any output.
-        self.query_one(OutputLog).set_tool_display_default(
-            self._core.tool_display  # type: ignore[arg-type]
-        )
-        if self._resume_log_path is not None:
-            self.do_resume(self._resume_log_path)
-        elif self._core.runtime_info:
-            output = self.query_one(OutputLog)
-            lines = runtime_banner.format_runtime_info(self._core.runtime_info)
-            output.append_text("\n".join(lines), style="dim")
+        from mcp_coder.icoder.ui.startup import render_startup_banner
+
+        render_startup_banner(self)
         self._apply_prompt_border()
         self.query_one(InputArea).focus()
         self.query_one(BranchInfoBar).update_state(None)
@@ -188,10 +181,10 @@ class ICoderApp(App[None]):
                 case SendToLLM():
                     output.write("")
                     self.query_one(BusyIndicator).show_busy("Querying LLM...")
-                    llm_input, allowed = action.text, action.allowed_tools
+                    llm_input, skill_name = action.text, action.skill_name
                     self.run_worker(
-                        lambda llm_input=llm_input, allowed=allowed: self._stream_llm(
-                            llm_input, allowed
+                        lambda llm_input=llm_input, skill_name=skill_name: self._stream_llm(
+                            llm_input, skill_name
                         ),
                         thread=True,
                     )
@@ -280,22 +273,20 @@ class ICoderApp(App[None]):
             "content_detail_opened", unit_id=unit.id, kind=unit.kind
         )
 
-    def _stream_llm(
-        self, text: str, allowed_tools: tuple[str, ...] | None = None
-    ) -> None:
+    def _stream_llm(self, text: str, skill_name: str | None = None) -> None:
         """Worker target: stream LLM response in background thread.
 
         Uses call_from_thread() to post updates to the UI event loop.
 
         Args:
             text: User input to send to LLM.
-            allowed_tools: Declared MCP tool tokens for this turn, forwarded
-                to the core for host-side enforcement, or ``None``.
+            skill_name: Provenance of a skill-initiated turn, forwarded to the
+                core so it can look up the per-turn permission frame, or ``None``.
         """
         self._cancel_event.clear()
         _error_handled = False
         try:
-            for event in self._core.stream_llm(text, allowed_tools):
+            for event in self._core.stream_llm(text, skill_name):
                 if self._cancel_event.is_set():
                     break
                 self.call_from_thread(self._handle_stream_event, event)

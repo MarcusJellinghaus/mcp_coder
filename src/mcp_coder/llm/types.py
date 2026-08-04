@@ -93,6 +93,10 @@ StreamEvent = dict[str, object]
 - {"type": "system", "data": {...}} — the Claude CLI init/system message dict
   (carries ``mcp_servers``/``tools``); surfaced so blocking consumers can read
   ``raw_response["system"]``
+- {"type": "permission_warning", "message": "..."} — a per-invocation permission
+  note (e.g. a dropped ``deny`` entry that forced ``base=none``); emitted by
+  ``AppCore.stream_llm`` in front of the provider stream from the resolved
+  skill frame's warnings, then rendered/logged like any other stream event
 """
 
 

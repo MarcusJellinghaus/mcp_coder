@@ -10,6 +10,7 @@ from ...icoder.core.log_inventory import list_icoder_logs
 from ...icoder.env_setup import setup_icoder_environment
 from ...icoder.permissions import load_permission_config
 from ...icoder.permissions.gateway import LangchainEnforcementGateway
+from ...icoder.permissions.skill_frame import build_frame
 from ...icoder.ui.widgets.session_picker import run_startup_picker
 from ...llm.providers.langchain.agent import (  # noqa: PLC2701
     _assert_tool_interceptors_supported,
@@ -27,6 +28,12 @@ from ..utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Single #1062 flip site: when True, the legacy ``allowed-tools`` path narrows to
+# ``base="none"`` (fail-closed enforcement) — but only on the langchain provider,
+# where MCP tokens are host-enforced. It stays ``False`` on other providers so a
+# Claude-native shell-only skill is never blocked. No CLI flag.
+ENFORCE_SKILL_TOOLS = False
 
 
 def execute_icoder(args: argparse.Namespace) -> int:
@@ -94,9 +101,15 @@ def execute_icoder(args: argparse.Namespace) -> int:
         # shared by the interceptor (call level) and RealLLMService (turn level).
         mcp_manager: MCPManager | None = None
         gateway: LangchainEnforcementGateway | None = None
+        # Hoisted to outer scope: ``config`` only exists inside the langchain
+        # gate below, but AppCore is constructed later at outer scope, so a
+        # ``config.degraded`` reference at the call site would NameError.
+        # Non-langchain keeps this False default (no permission config loaded).
+        permission_degraded = False
         if provider == "langchain" and mcp_config:
             _assert_tool_interceptors_supported()
             config = load_permission_config(project_dir)
+            permission_degraded = config.degraded
             gateway = LangchainEnforcementGateway(config)
             server_config = _load_mcp_server_config(mcp_config, env_vars)
             mcp_manager = MCPManager(
@@ -150,7 +163,32 @@ def execute_icoder(args: argparse.Namespace) -> int:
 
         registry = create_default_registry()
         skills = load_skills(project_dir)
-        register_skill_commands(registry, skills, provider)
+        # Build the {skill_name: SkillFrame} snapshot unconditionally, for
+        # every provider (build_frame is pure and needs no mcp_config), so a
+        # malformed tools: block blocks its skill regardless of provider (D12).
+        # The legacy allowed-tools path is Claude-native, so its enforcement
+        # flag is langchain-only — do NOT simplify to a bare ENFORCE_SKILL_TOOLS.
+        frame_map = {
+            s.name: build_frame(
+                s.tools_block,
+                tuple(s.allowed_tools) or None,
+                enforce_skill_tools=(
+                    ENFORCE_SKILL_TOOLS if provider == "langchain" else False
+                ),
+            )
+            for s in skills
+        }
+        # A blocked frame (malformed tools: block, bare use:, empty allow) marks
+        # its command as refusing to run — provider-agnostic, since the map is
+        # built for every provider (D12).
+        register_skill_commands(
+            registry,
+            skills,
+            provider,
+            disabled_reasons={
+                name: frame.blocked_reason for name, frame in frame_map.items()
+            },
+        )
 
         # Create core components
         from ...icoder.core.event_log import EventLog
@@ -166,7 +204,6 @@ def execute_icoder(args: argparse.Namespace) -> int:
             timeout=args.timeout,
             mcp_manager=mcp_manager,
             project_dir=str(project_dir),
-            enforce_skill_tools=False,
             gateway=gateway,
         )
 
@@ -187,6 +224,8 @@ def execute_icoder(args: argparse.Namespace) -> int:
                     registry=registry,
                     runtime_info=runtime_info,
                     tool_display=getattr(args, "tool_display", "compressed"),
+                    skill_frames=frame_map,
+                    permission_degraded=permission_degraded,
                 )
                 initial_color = getattr(args, "initial_color", None)
                 if initial_color:

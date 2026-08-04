@@ -1,10 +1,8 @@
 """Tests for the iCoder enforcement gateway (Step 3 of I2.3, TDD).
 
 Exercises the gateway in isolation with fake tool objects and a fake async
-handler — no live MCP server, no agent. Covers the three seams:
+handler — no live MCP server, no agent. Covers the two enforcement seams:
 
-* :func:`build_legacy_frame` — throwaway model-C frame from declared tokens,
-  collecting (never dropping) per-token parse failures.
 * :meth:`LangchainEnforcementGateway.filter_tools` — turn-level visibility:
   unconditional ``NEVER`` hidden, arg-scoped ``NEVER`` kept visible.
 * :meth:`LangchainEnforcementGateway.interceptor` — call-level enforcement:
@@ -30,7 +28,6 @@ from mcp_coder.icoder.permissions.gateway import (
     _DENY_ASK,
     _DENY_NEVER,
     LangchainEnforcementGateway,
-    build_legacy_frame,
 )
 
 
@@ -92,61 +89,6 @@ def _fake_deny_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "mcp_coder.icoder.permissions.gateway.build_deny_tool_message", _fake
     )
-
-
-# ======================================================================
-# build_legacy_frame
-# ======================================================================
-
-
-def test_build_legacy_frame_none_tokens_returns_none() -> None:
-    """``None`` tokens yield ``(None, [])`` — no frame, no warnings."""
-    assert build_legacy_frame(None, False) == (None, [])
-
-
-def test_build_legacy_frame_empty_tokens_returns_none() -> None:
-    """Empty tokens yield ``(None, [])``."""
-    assert build_legacy_frame((), True) == (None, [])
-
-
-def test_build_legacy_frame_inherit_base_when_not_enforcing() -> None:
-    """``enforce_skill_tools=False`` -> ``base='inherit'``, matchers parsed."""
-    frame, warnings = build_legacy_frame(("mcp__s__t",), False)
-
-    assert frame is not None
-    assert frame.base == "inherit"
-    assert warnings == []
-    assert len(frame.allow) == 1
-    assert frame.allow[0].server == "s"
-    assert frame.allow[0].tool == "t"
-
-
-def test_build_legacy_frame_none_base_when_enforcing() -> None:
-    """``enforce_skill_tools=True`` -> ``base='none'`` (sandbox narrowing)."""
-    frame, warnings = build_legacy_frame(("mcp__s__t",), True)
-
-    assert frame is not None
-    assert frame.base == "none"
-    assert warnings == []
-
-
-def test_build_legacy_frame_malformed_token_warns_and_does_not_elevate() -> None:
-    """A malformed token is collected as a warning and contributes no matcher."""
-    frame, warnings = build_legacy_frame(("mcp__s__t(bad",), False)
-
-    assert warnings  # non-empty: the parse failure is surfaced, not dropped
-    assert frame is not None
-    assert frame.allow == ()  # nothing silently elevated to ALWAYS
-
-
-def test_build_legacy_frame_mixes_valid_and_malformed() -> None:
-    """A valid token still parses while a malformed one is collected as a warning."""
-    frame, warnings = build_legacy_frame(("mcp__s__ok", "mcp__s__t(bad"), False)
-
-    assert frame is not None
-    assert len(frame.allow) == 1
-    assert frame.allow[0].tool == "ok"
-    assert len(warnings) == 1
 
 
 # ======================================================================

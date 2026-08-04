@@ -92,8 +92,48 @@ def patch_icoder_deps(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.register_skill_commands",
-        lambda registry, skills, provider: [],
+        lambda registry, skills, provider, **kwargs: [],
     )
+
+
+def _patch_all_icoder_deps(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> list[AppCore]:
+    """Patch deps and return list that will capture AppCore instances."""
+    from mcp_coder.icoder.ui.app import ICoderApp
+
+    captured_app_core: list[AppCore] = []
+
+    def capturing_init(self: object, app_core: object, **kwargs: object) -> None:
+        captured_app_core.append(app_core)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(ICoderApp, "__init__", capturing_init)
+    monkeypatch.setattr(ICoderApp, "run", lambda self: None)
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.setup_icoder_environment",
+        lambda *_a, **_kw: FAKE_RUNTIME_INFO,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_llm_method",
+        lambda _: ("claude", None),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.parse_llm_method_from_args",
+        lambda _: "claude",
+    )
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
+        lambda *a, **_kw: None,
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.load_skills",
+        lambda _: [],
+    )
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.register_skill_commands",
+        lambda registry, skills, provider, **kwargs: [],
+    )
+    return captured_app_core
 
 
 @pytest.fixture(autouse=True)

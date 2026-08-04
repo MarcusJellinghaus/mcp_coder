@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -11,6 +11,10 @@ import frontmatter
 
 from mcp_coder.icoder.core.command_registry import CommandRegistry
 from mcp_coder.icoder.core.types import Command, Response, SendToLLM
+from mcp_coder.icoder.permissions.skill_tools import (
+    SkillToolsBlock,
+    parse_tools_block,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +44,7 @@ class ClaudeSkill:
     hooks: dict[str, object] | None = None
     paths: list[str] | None = None
     shell: str | None = None
+    tools_block: SkillToolsBlock | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +142,7 @@ def load_skills(project_dir: Path) -> list[ClaudeSkill]:
             hooks=hooks,
             paths=paths,
             shell=shell,
+            tools_block=parse_tools_block(meta),
         )
         results.append(skill)
 
@@ -171,7 +177,7 @@ def _make_langchain_handler(skill: ClaudeSkill) -> Callable[[list[str]], Respons
             actions=(
                 SendToLLM(
                     text=expanded,
-                    allowed_tools=tuple(skill.allowed_tools) or None,
+                    skill_name=skill.name,
                 ),
             )
         )
@@ -183,12 +189,23 @@ def register_skill_commands(
     registry: CommandRegistry,
     skills: list[ClaudeSkill],
     provider: str,
+    disabled_reasons: Mapping[str, str | None] | None = None,
 ) -> list[ICoderSkillCommand]:
     """Register skills as slash commands in the registry.
+
+    Args:
+        registry: The command registry to populate.
+        skills: The parsed skills to register as slash commands.
+        provider: The active LLM provider (selects the handler flavour).
+        disabled_reasons: Optional map from skill name to a block reason;
+            a non-``None`` reason marks the command as refusing to run
+            (registered + visible) via ``Command.disabled_reason``. Skills
+            absent from the map (or an omitted map) run normally.
 
     Returns:
         List of ICoderSkillCommand for the successfully registered skills.
     """
+    reasons = disabled_reasons or {}
     registered: list[ICoderSkillCommand] = []
     for skill in skills:
         command_name = "/" + skill.name.lower()
@@ -212,6 +229,7 @@ def register_skill_commands(
                 description=skill.description,
                 handler=handler,
                 show_in_help=False,
+                disabled_reason=reasons.get(skill.name),
             )
         )
         registered.append(ICoderSkillCommand(skill=skill, command_name=command_name))

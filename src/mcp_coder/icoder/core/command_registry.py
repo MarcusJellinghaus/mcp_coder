@@ -47,6 +47,17 @@ class CommandRegistry:
         """Register a pre-built Command directly."""
         self._commands[command.name] = command
 
+    def get(self, name: str) -> Command | None:
+        """Return the registered command with ``name``, or ``None``.
+
+        Args:
+            name: The command name to look up (e.g. ``/help``).
+
+        Returns:
+            The matching :class:`Command`, or ``None`` when unregistered.
+        """
+        return self._commands.get(name)
+
     def dispatch(self, text: str) -> Response | None:
         """Parse input and dispatch to registered handler.
 

@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator, Protocol, runtime_checkable
 
-from mcp_coder.icoder.permissions.gateway import (
-    LangchainEnforcementGateway,
-    build_legacy_frame,
-)
+from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
+from mcp_coder.icoder.permissions.model import PermissionFrame
 from mcp_coder.llm.interface import prompt_llm_stream
 from mcp_coder.llm.types import StreamEvent
 
@@ -24,7 +22,8 @@ class LLMService(Protocol):
     def stream(
         self,
         question: str,
-        allowed_tools: tuple[str, ...] | None = None,
+        *,
+        frame: PermissionFrame | None = None,
     ) -> Iterator[StreamEvent]:
         """Stream LLM response events for the given input."""
 
@@ -57,7 +56,6 @@ class RealLLMService:
         timeout: int = ICODER_LLM_TIMEOUT_SECONDS,
         mcp_manager: MCPManager | None = None,
         project_dir: str | None = None,
-        enforce_skill_tools: bool = False,
         gateway: LangchainEnforcementGateway | None = None,
     ) -> None:
         self._provider = provider
@@ -69,44 +67,36 @@ class RealLLMService:
         self._timeout = timeout
         self._mcp_manager = mcp_manager
         self._project_dir = project_dir
-        self._enforce_skill_tools = enforce_skill_tools
         self._gateway = gateway
 
     def stream(
         self,
         question: str,
-        allowed_tools: tuple[str, ...] | None = None,
+        *,
+        frame: PermissionFrame | None = None,
     ) -> Iterator[StreamEvent]:
         """Call prompt_llm_stream() with stored config. Updates session_id from 'done' events.
 
-        When a ``gateway`` is present, the declared ``allowed_tools`` tokens are
-        translated into a throwaway per-turn permission frame
-        (:func:`build_legacy_frame`), the frame is installed via
-        ``gateway.begin_turn``, and the manager's tool list is filtered against
-        the resolver (``never`` tools hidden). Enforcement is config-driven and
-        runs regardless of ``enforce_skill_tools`` (the flag only chooses the
-        frame's ``base``). Filtering operates on a copy, never mutating the
+        When a ``gateway`` is present, the already-built per-turn ``frame`` is
+        installed via ``gateway.begin_turn`` and the manager's tool list is
+        filtered against the resolver (``never`` tools hidden). Enforcement is
+        config-driven; the frame is constructed upstream by ``AppCore`` from the
+        skill-frame snapshot, so this method no longer builds frames or surfaces
+        per-token warnings. Filtering operates on a copy, never mutating the
         manager's shared cache.
 
         Args:
             question: The user input to send to the LLM.
-            allowed_tools: Declared MCP tool tokens for this turn, or None.
+            frame: The per-turn permission frame installed via
+                ``gateway.begin_turn``, or ``None`` for a config-only turn.
 
         Yields:
-            StreamEvent dicts from the underlying LLM provider. A
-            ``permission_warning`` event is yielded for each malformed declared
-            token collected by :func:`build_legacy_frame` (fail-closed: the
-            token is not silently elevated), before the agent stream begins.
+            StreamEvent dicts from the underlying LLM provider.
         """
         tools = None
         if self._mcp_manager is not None:
             tools = self._mcp_manager.tools()
             if self._gateway is not None:
-                frame, warnings = build_legacy_frame(
-                    allowed_tools, self._enforce_skill_tools
-                )
-                for warning in warnings:
-                    yield {"type": "permission_warning", "message": warning}
                 self._gateway.begin_turn(frame)
                 tools = self._gateway.filter_tools(
                     tools, self._mcp_manager.canonical_name
@@ -155,29 +145,25 @@ class FakeLLMService:
         self,
         responses: list[list[StreamEvent]] | None = None,
         provider: str = "claude",
-        enforce_skill_tools: bool = False,
     ) -> None:
         """Initialize with optional canned response sequences.
 
         Each call to stream() pops the next response from the list.
         Default: single response with one text_delta + done event.
-
-        ``enforce_skill_tools`` exists for signature parity with
-        ``RealLLMService`` and is a no-op here.
         """
         self._responses: list[list[StreamEvent]] = list(responses) if responses else []
         self._provider = provider
-        self._enforce_skill_tools = enforce_skill_tools
         self._session_id: str | None = None
-        self.last_allowed_tools: tuple[str, ...] | None = None
+        self.last_frame: PermissionFrame | None = None
 
     def stream(
         self,
         question: str,
-        allowed_tools: tuple[str, ...] | None = None,
+        *,
+        frame: PermissionFrame | None = None,
     ) -> Iterator[StreamEvent]:
-        """Yield next canned response sequence, recording ``allowed_tools``."""
-        self.last_allowed_tools = allowed_tools
+        """Yield next canned response sequence, recording ``frame``."""
+        self.last_frame = frame
         if self._responses:
             events = self._responses.pop(0)
         else:
