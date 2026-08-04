@@ -65,9 +65,12 @@ Detail: [step_4.md](./steps/step_4.md)
 
 Detail: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation — create `workflows/review/gates.py` (`check_open_tasks_gate`), wire into `core.body()`; add `tests/workflows/review/test_gates.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — create `workflows/review/gates.py` (`check_open_tasks_gate`), wire into `core.body()`; add `tests/workflows/review/test_gates.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+  - pylint + mypy on `gates.py` and `test_gates.py`: clean, no issues. `review/core.py` stays under 600 lines (not in the file-size violations list).
+  - The full-repo pylint run reports only the pre-existing `BranchStatusReport.pr_feedback_undeterminable` E1101 on **untouched** `core.py` code — the same stale `mcp-workspace` venv issue documented in Steps 1–4, not introduced here.
+  - pytest could not collect (0 tests): the test `.venv` has a stale `mcp-workspace` that breaks `import mcp_coder` at collection time for the entire `tests/workflows/` subtree. Confirmed by collecting the **untouched** `tests/workflows/review/test_verdict.py`, which fails identically. Same pre-existing, environmental blocker documented in Steps 1–4; fix is to reprovision the venv (`mcp-workspace` from git HEAD), outside source scope.
+- [x] Commit message prepared
 
 ### Step 6: Gate 2 — exit guard (CI proven green)
 
