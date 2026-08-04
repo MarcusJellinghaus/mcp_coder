@@ -1,0 +1,11 @@
+# review-plan review log 1
+
+## Round 1 — 2026-08-04
+**Findings**:
+Let me get precise line numbers for the findings.`pr_info/steps/step_2.md:41` — medium — Cancellation D2/#3 part (c) is not demonstrated: the AC requires proving "the generic paths function as a backstop afterwards" (once the Future resolves), but Step 2's only scenarios are `scenario_inert` (blocked) and `scenario_direct` (direct resolve + thread death). No scenario re-arms `cancel_event`/`GeneratorExit` post-resolution to show the backstop actually fires; it is only asserted as prose in Step 6 FINDINGS §4.
+`pr_info/steps/step_5.md:57` — medium — Deny path hardcodes `ToolMessage(..., tool_call_id="", ...)`. An empty `tool_call_id` will not match the pending tool call in the AI message, which can make LangChain reject the message or wedge the turn — directly undermining `scenario_deny`'s "agent continues" (#5) assertion. The id must come from `request` (the real `build_deny_tool_message` derives it), not `""`.
+`pr_info/steps/step_4.md:63` — low — Gotcha #2 (side-channel pending-approval event) has no dedicated demonstration despite being an in-scope Loop-A DoD mechanic. Reachability from inside the interceptor is only structurally implied by opaque `object()` `q` sentinels here, and the emit/replay consequence is recorded as FINDINGS prose (Step 6 §6); no step emits an `approval_request` event through a real `q` from the interceptor.
+**Decisions**:
+Verdict(decision='tasks', tasks=['Fix the deny path at pr_info/steps/step_5.md:57: derive tool_call_id from the request (as the real build_deny_tool_message does) instead of hardcoding tool_call_id="", so the ToolMessage matches the pending tool call in the AI message and scenario_deny\'s \'agent continues\' (#5) assertion actually holds.', 'Add a Step 2 scenario that demonstrates Cancellation D2/#3 part (c): after the Future resolves, re-arm cancel_event/GeneratorExit and show the generic paths fire as a backstop, rather than only asserting it as prose in Step 6 FINDINGS §4 (pr_info/steps/step_2.md:41).', 'Add a step that emits a real approval_request event through an actual q from inside the interceptor to demonstrate Gotcha #2 (side-channel pending-approval event) end-to-end, instead of relying on opaque object() sentinels plus Step 6 §6 prose (pr_info/steps/step_4.md:63).'], escalate_reason=None)
+**Changes**:
+applied

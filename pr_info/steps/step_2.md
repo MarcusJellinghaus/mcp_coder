@@ -60,7 +60,12 @@ def scenario_backstop() -> None: # after resolve, re-armed cancel_event DOES fir
 start run_bridge in the normal way; wait until Gate.fired (tool is blocked in await)
 set cancel_event  -> no effect (astream_events checks it only BETWEEN events; none flow)
 gen.close()/GeneratorExit -> cancel.set() fires but tool still stuck; no event emitted
-assert no new events arrived and the bridge thread is still alive  # generic paths inert
+# Third generic path: the TUI _cancel_event (ui/app.py:290) is checked only AFTER an event
+# arrives from the generator (set at :243). Model a minimal UI-consumer loop that polls the
+# events list and would check a tui_cancel Event only on each new event:
+set tui_cancel_event  -> the UI-consumer never wakes (no event arrived), so it is never checked
+assert no new events arrived and the bridge thread is still alive  # all THREE generic paths inert
+# "no new events arrived" IS the proof the TUI path cannot fire: it is gated on event arrival.
 ```
 
 ## ALGORITHM — direct resolve + join (scenario_direct, D2)

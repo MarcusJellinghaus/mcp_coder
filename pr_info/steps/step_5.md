@@ -53,6 +53,14 @@ def scenario_deny() -> None:         # deny path: ToolMessage(status="error") + 
 - Inside `Gate.interceptor`, set `self.fired = True` and
   `self.loop_id = id(asyncio.get_running_loop())` **before** awaiting — this is the D6 fact on the
   *real* adapter path, and the flag is the "interceptor really fired" assertion.
+- **Capture two independent loop references for the D6 identity check (the go/no-go):**
+  - `agent_loop_id` — an **independent** reference to the agent loop, recorded *not* by the
+    interceptor (that would be circular). Have `FakeChatModel` record
+    `id(asyncio.get_running_loop())` when the agent invokes it (the model runs on the same
+    `asyncio.run(_run())` agent loop as the ToolNode await), and expose it (e.g. `model.loop_id`).
+  - `daemon_loop_id` — the MCPManager daemon-loop id, read from the manager's own loop handle
+    (`mcp_manager.py:52-59`; e.g. `id(manager._loop)`) captured after construction.
+  These give the two poles the interceptor's `loop_id` is compared against below.
 - Approve path resolves the Future from a bare thread via `call_soon_threadsafe`; deny path returns
   `ToolMessage(content=..., status="error", tool_call_id=request.tool_call_id, name=request.name)`
   — the `tool_call_id` is **derived from the request** (as `permission_bridge.build_deny_tool_message`
@@ -64,9 +72,13 @@ def scenario_deny() -> None:         # deny path: ToolMessage(status="error") + 
 
 ```
 manager = MCPManager(cfg, tool_interceptors=[gate.interceptor]); tools = manager.tools()
+daemon_loop_id = id(manager._loop)            # MCPManager daemon loop (mcp_manager.py:52-59)
 run real agent with FakeChatModel over `tools`; resolver thread approves the pending Future
 drain events to completion
 assert gate.fired is True                     # real coroutine executed (even with stub model)
+# D6 identity — the go/no-go, proven on the REAL adapter path (not just Tier A's single loop):
+assert gate.loop_id == model.loop_id          # interceptor ran on the AGENT loop (independent ref)
+assert gate.loop_id != daemon_loop_id         # ...and NOT on the MCPManager daemon loop
 assert a tool_result / final 'done' event appears   # agent proceeded PAST the gate
 ```
 
@@ -83,9 +95,9 @@ assert the agent still reaches its final message   # #5: deny does not wedge the
 
 - `build_server_config()` returns the stdio server dict (`command=sys.executable`,
   `args=[<abs path to server.py>]`, `transport="stdio"`).
-- Prints `PASS: interceptor-fired`, `PASS: resume-past-gate`, `PASS: deny-shape-and-continue`;
-  exits 0. The LLM call is stubbed/faked; only the *mechanics* are asserted (non-determinism of a
-  real model must not gate these asserts).
+- Prints `PASS: interceptor-fired`, `PASS: loop-identity-real-path`, `PASS: resume-past-gate`,
+  `PASS: deny-shape-and-continue`; exits 0. The LLM call is stubbed/faked; only the *mechanics* are
+  asserted (non-determinism of a real model must not gate these asserts).
 
 ## Notes
 

@@ -14,8 +14,12 @@ an `assert`.
 
 ## WHAT — required sections (the acceptance checklist for the doc)
 
-1. **Go/no-go verdict.** Positive if Tier C proved the interceptor coroutine runs on the agent
-   loop (D6 identity) and a cross-thread resolve unblocked it. On a **negative**, name and rank the
+1. **Go/no-go verdict.** Positive **only** when Tier C's D6 identity assertions passed on the real
+   adapter path — i.e. `gate.loop_id == model.loop_id` (interceptor ran on the agent loop, proven
+   against an *independent* agent-loop reference) **and** `gate.loop_id != daemon_loop_id`
+   (not the MCPManager daemon loop) — **and** a cross-thread resolve unblocked the awaiting Future.
+   A "fired + resumed" result **without** the identity comparison is **not** a positive verdict
+   (D6: "the resolve worked" only proves the guess was right). On a **negative**, name and rank the
    D10 fallbacks: (1) langgraph checkpointer + `interrupt()`; (2) `HumanInTheLoopMiddleware` via the
    `langchain` meta-package; (3) out-of-band approval before turn start.
 2. **Loop-handle source.** State explicitly: call `asyncio.get_running_loop()` **inside the
