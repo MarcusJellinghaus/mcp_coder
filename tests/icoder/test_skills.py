@@ -213,7 +213,9 @@ def test_register_skill_commands_langchain_provider() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill issue 42")
     assert resp is not None
-    assert resp.actions == (SendToLLM(text="Analyse issue 42 please"),)
+    assert resp.actions == (
+        SendToLLM(text="Analyse issue 42 please", skill_name="my_skill"),
+    )
 
 
 def test_register_skill_commands_langchain_substitutes_arguments() -> None:
@@ -223,7 +225,7 @@ def test_register_skill_commands_langchain_substitutes_arguments() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill bug 123")
     assert resp is not None
-    assert resp.actions == (SendToLLM(text="Fix bug 123 now"),)
+    assert resp.actions == (SendToLLM(text="Fix bug 123 now", skill_name="my_skill"),)
 
 
 def test_register_skill_commands_langchain_threads_skill_name() -> None:
@@ -262,7 +264,7 @@ def test_register_skill_commands_langchain_empty_arguments() -> None:
     register_skill_commands(registry, [skill], "langchain")
     resp = registry.dispatch("/my_skill")
     assert resp is not None
-    assert resp.actions == (SendToLLM(text="Do  stuff"),)
+    assert resp.actions == (SendToLLM(text="Do  stuff", skill_name="my_skill"),)
 
 
 def test_register_skill_commands_skips_builtin_collision(
