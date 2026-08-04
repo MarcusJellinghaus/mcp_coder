@@ -25,7 +25,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation — create `checks/ci_policy.py` (`assess_ci`), route `_exit_code` and pre-`--fix` bail-out through it; add tests (`tests/checks/test_ci_policy.py`, regression in `test_check_branch_status_exit_code.py`)
+- [x] Implementation — create `checks/ci_policy.py` (`assess_ci`), route `_exit_code` and pre-`--fix` bail-out through it; add tests (`tests/checks/test_ci_policy.py`, regression in `test_check_branch_status_exit_code.py`)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 

@@ -81,6 +81,29 @@ class TestExitCodeContract:
         assert _exit_code(_report(ci_status), False) == 0
         assert _exit_code(_report(ci_status), True) == 0
 
+    @pytest.mark.parametrize(
+        ("ci_status", "expected"),
+        [
+            (CIStatus.PASSED, 0),
+            (CIStatus.FAILED, 1),
+            (CIStatus.NOT_CONFIGURED, 0),
+            (CIStatus.PENDING, 0),
+            (CIStatus.UNAVAILABLE, 2),
+            (CIStatus.UNKNOWN, 2),
+        ],
+    )
+    @pytest.mark.parametrize("flag", [False, True])
+    def test_ci_mapping_unchanged_after_assess_ci(
+        self, ci_status: CIStatus, expected: int, flag: bool
+    ) -> None:
+        """Regression: every CIStatus member keeps its exit code post-refactor.
+
+        With no review feedback set, the code is driven solely by the CI
+        verdict now delegated to assess_ci(require_proven=False); PENDING and
+        NOT_CONFIGURED must stay clean (0) for both flags.
+        """
+        assert _exit_code(_report(ci_status), flag) == expected
+
 
 def _args(*, fail_on_reviews: bool) -> argparse.Namespace:
     """Minimal args namespace for the plain (no wait, no fix) CLI path."""
