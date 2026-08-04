@@ -61,11 +61,12 @@ def scenario_deny() -> None:         # deny path: ToolMessage(status="error") + 
   - `daemon_loop_id` — the MCPManager daemon-loop id, read from the manager's own loop handle
     (`mcp_manager.py:52-59`; e.g. `id(manager._loop)`) captured after construction.
   These give the two poles the interceptor's `loop_id` is compared against below.
-- Approve path resolves the Future from a bare thread via `call_soon_threadsafe`; deny path returns
-  `ToolMessage(content=..., status="error", tool_call_id=request.tool_call_id, name=request.name)`
-  — the `tool_call_id` is **derived from the request** (as `permission_bridge.build_deny_tool_message`
-  does), never `""`, so the `ToolMessage` matches the pending tool call in the AI message and the
-  agent can continue (a mismatched/empty id would leave the tool call unanswered and wedge the turn).
+- Approve path resolves the Future from a bare thread via `call_soon_threadsafe`; deny path reuses
+  the shipped `permission_bridge.build_deny_tool_message(text, request.name)`, which returns
+  `ToolMessage(content=text, status="error", tool_call_id="", name=name)`. The empty `tool_call_id`
+  is **deliberate**: langgraph's `ToolNode` overwrites it with the real call id downstream, so the
+  agent continues without wedging. The real interceptor `request` exposes only `.server_name`,
+  `.name`, and `.args` — there is **no** `request.tool_call_id` to derive from.
 - `close()` the manager in a `finally` to stop its daemon loop/subprocess.
 
 ## ALGORITHM — resume (scenario_resume)
@@ -85,10 +86,9 @@ assert a tool_result / final 'done' event appears   # agent proceeded PAST the g
 ## ALGORITHM — deny (scenario_deny)
 
 ```
-gate configured to DENY; run the agent
-assert the returned ToolMessage has status == "error"
-assert the returned ToolMessage.tool_call_id == request.tool_call_id   # matches the pending call
-assert the agent still reaches its final message   # #5: deny does not wedge the turn
+gate configured to DENY -> returns build_deny_tool_message(text, request.name); run the agent
+assert the returned ToolMessage has status == "error"   # shipped deny shape (tool_call_id="")
+assert the agent still reaches its final message   # #5: ToolNode fills the id; deny does not wedge
 ```
 
 ## DATA
