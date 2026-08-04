@@ -434,6 +434,36 @@
         "commands": ["/check_branch_status"],
         "color": "red"
       }
+    },
+    {
+      "internal_id": "code_review_open_tasks",
+      "name": "status-17f-tasks:code-review-open-tasks",
+      "color": "d93f0b",
+      "description": "Open implementation tasks remain — run /implementation_finalise",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "📋",
+        "display_name": "CODE REVIEW OPEN TASKS",
+        "stage_short": "code-review-open-tasks",
+        "commands": ["/implementation_finalise"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "code_review_ci_unknown",
+      "name": "status-17f-ci-unknown:code-review-ci-undeterminable",
+      "color": "d93f0b",
+      "description": "Could not prove CI ran green during automated code review",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "❓",
+        "display_name": "CODE REVIEW CI UNDETERMINABLE",
+        "stage_short": "code-review-ci-unknown",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
     }
   ],
   "ignore_labels": ["Overview", "blocked", "wait"]

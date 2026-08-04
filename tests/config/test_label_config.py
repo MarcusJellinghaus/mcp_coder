@@ -217,6 +217,16 @@ REVIEW_LABELS = [
         "human_action",
     ),
     ("code_review_mcp", "status-17f-mcp:code-review-mcp-unavailable", "human_action"),
+    (
+        "code_review_open_tasks",
+        "status-17f-tasks:code-review-open-tasks",
+        "human_action",
+    ),
+    (
+        "code_review_ci_unknown",
+        "status-17f-ci-unknown:code-review-ci-undeterminable",
+        "human_action",
+    ),
 ]
 
 REVIEW_FAILURE_IDS = [
@@ -227,12 +237,13 @@ REVIEW_FAILURE_IDS = [
     "code_review_ci",
     "code_review_timeout",
     "code_review_mcp",
+    "code_review_ci_unknown",
 ]
 
 
 @pytest.mark.parametrize("internal_id,name,category", REVIEW_LABELS)
 def test_review_labels_present(internal_id: str, name: str, category: str) -> None:
-    """Each of the 13 review labels exists with the expected name and category."""
+    """Each of the 15 review labels exists with the expected name and category."""
     config = load_labels_config(get_labels_config_path(None))
     label = next(
         (l for l in config["workflow_labels"] if l["internal_id"] == internal_id),
@@ -274,6 +285,18 @@ def test_review_failure_labels_shape(internal_id: str) -> None:
     assert label.get("failure") is True
     assert "vscodeclaude" in label
     assert label["vscodeclaude"].get("commands") == ["/check_branch_status"]
+
+
+def test_open_tasks_label_recovery_command() -> None:
+    """code_review_open_tasks is a failure label recovered via /implementation_finalise."""
+    config = load_labels_config(get_labels_config_path(None))
+    label = next(
+        l
+        for l in config["workflow_labels"]
+        if l["internal_id"] == "code_review_open_tasks"
+    )
+    assert label["failure"] is True
+    assert label["vscodeclaude"]["commands"] == ["/implementation_finalise"]
 
 
 def test_review_labels_config_validates() -> None:

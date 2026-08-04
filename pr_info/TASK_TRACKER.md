@@ -35,9 +35,11 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation — add `code_review_open_tasks` + `code_review_ci_unknown` labels to `config/labels.json`; update `test_label_config.py` and `test_define_labels.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation — add `code_review_open_tasks` + `code_review_ci_unknown` labels to `config/labels.json`; update `test_label_config.py` and `test_define_labels.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+  - pylint + mypy on the touched test files: clean, no issues.
+  - pytest could not collect: the test `.venv` has a stale `mcp-workspace` missing `mcp_workspace.checks.branch_status_rendering`, which breaks `import mcp_coder` at collection time (via `src/mcp_coder/__init__.py` → `checks/branch_status.py`). This is the same pre-existing, environmental blocker documented in Step 1 and affects the whole repo; it is not introduced by this JSON/test-list change. Fix is to reprovision the venv (`mcp-workspace` from git HEAD), which is outside source scope.
+- [x] Commit message prepared
 
 ### Step 3: `ReviewConfig.enforce_implementation_gates` + failure_labels entries
 
