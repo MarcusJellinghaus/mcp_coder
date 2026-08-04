@@ -54,8 +54,10 @@ def scenario_deny() -> None:         # deny path: ToolMessage(status="error") + 
   `self.loop_id = id(asyncio.get_running_loop())` **before** awaiting — this is the D6 fact on the
   *real* adapter path, and the flag is the "interceptor really fired" assertion.
 - Approve path resolves the Future from a bare thread via `call_soon_threadsafe`; deny path returns
-  `ToolMessage(content=..., status="error", tool_call_id="", name=request.name)` (same shape as
-  `permission_bridge.build_deny_tool_message`).
+  `ToolMessage(content=..., status="error", tool_call_id=request.tool_call_id, name=request.name)`
+  — the `tool_call_id` is **derived from the request** (as `permission_bridge.build_deny_tool_message`
+  does), never `""`, so the `ToolMessage` matches the pending tool call in the AI message and the
+  agent can continue (a mismatched/empty id would leave the tool call unanswered and wedge the turn).
 - `close()` the manager in a `finally` to stop its daemon loop/subprocess.
 
 ## ALGORITHM — resume (scenario_resume)
@@ -73,6 +75,7 @@ assert a tool_result / final 'done' event appears   # agent proceeded PAST the g
 ```
 gate configured to DENY; run the agent
 assert the returned ToolMessage has status == "error"
+assert the returned ToolMessage.tool_call_id == request.tool_call_id   # matches the pending call
 assert the agent still reaches its final message   # #5: deny does not wedge the turn
 ```
 

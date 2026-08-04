@@ -39,6 +39,7 @@ def run_bridge(gen_factory) -> tuple[list, threading.Thread]:
 
 def scenario_inert() -> None:    # generic paths do nothing while blocked
 def scenario_direct() -> None:   # direct resolve unblocks; thread.is_alive() is False
+def scenario_backstop() -> None: # after resolve, re-armed cancel_event DOES fire (backstop)
 ```
 
 ## HOW — integration points
@@ -71,12 +72,31 @@ tool returns -> fake model returns 'done' -> generator drains -> join(timeout=5)
 assert thread.is_alive() is False        # AC: thread actually terminates, not "join returned"
 ```
 
+## ALGORITHM — post-resolution backstop (scenario_backstop, D2 part (c))
+
+Proves the mirror image of `scenario_inert`: once the Future is resolved, events flow again,
+so the generic paths that were inert while blocked become **live** and function as a backstop.
+
+To make an event-boundary exist *after* the tool returns, configure `FakeChatModel` to emit a
+**second tool_call** to an instant non-blocking tool on its 2nd invoke (3rd invoke -> `'done'`),
+so `astream_events` iterates at least once more after the first tool result.
+
+```
+start bridge; wait for Gate.fired
+Gate.loop.call_soon_threadsafe(Gate.future.set_result, "resolve")   # unblock: events resume
+wait until the first tool_result event has been observed (Future resolved, blocking over)
+set cancel_event                          # now checked BETWEEN astream_events iterations (:572)
+generator stops early via the generic path -> consumer drains -> join(timeout=5)
+assert cancel was observed (stream ended before the final 'done' event)   # backstop DID fire
+assert thread.is_alive() is False         # backstop still terminates the thread
+```
+
 ## DATA
 
 - `Gate` is the cross-thread handoff (loop handle + future + fired flag).
 - `run_bridge` returns `(events: list[StreamEvent], thread: threading.Thread)`.
 - Prints `PASS: generic-paths-inert`, `PASS: direct-resolve-unblocks`,
-  `PASS: thread-terminated`; exits 0.
+  `PASS: thread-terminated`, `PASS: backstop-fires-after-resolve`; exits 0.
 
 ## Notes
 

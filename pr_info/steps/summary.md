@@ -97,13 +97,14 @@ pr_info/steps/step_1.md ... step_6.md    the plan
 1. **Tier A** — loop-identity by object (D6), cross-thread Future round-trip, resolve/deny/cancel
    semantics, registry reverse-order probe (D5).
 2. **Tier B cancel** — reconstructed real bridge + fake model + blocking tool: three generic
-   cancel paths inert while blocked; direct resolve unblocks; `thread.is_alive() is False` after
-   the real 5s join (#3, D2).
+   cancel paths inert while blocked; direct resolve unblocks; the generic paths fire as a
+   backstop once resolved; `thread.is_alive() is False` after the real 5s join (#3, D2).
 3. **Tier B pause** — reconstructed bridge with pause-aware consumer: pending counter defeats both
    the inactivity `q.get` timeout and the `_AGENT_OVERALL_TIMEOUT` cap; keepalives recorded as the
    rejected alternative (#4, D1).
 4. **D7 seam** — standalone attach/detach lifecycle across two turns, demonstrating the stale-`q`
-   failure mode; recommendation only (D7).
+   failure mode; recommendation only (D7). Also emits a real `approval_request` event through an
+   actual `queue.Queue` from inside the interceptor, proving the side channel is reachable (#2).
 5. **Tier C** — throwaway FastMCP stdio server + real `tool_interceptors=[gate]`: assert the real
    interceptor coroutine fired, resume past the gate, deny returns `ToolMessage(status="error")`
    and the agent continues (#5).
