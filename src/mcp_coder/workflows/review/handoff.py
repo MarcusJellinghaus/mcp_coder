@@ -67,6 +67,7 @@ def _fail(
     round_number: int | None = None,
     verdict: Verdict | None = None,
     elapsed: float | None = None,
+    details: str | None = None,
 ) -> int:
     """Route a terminal error through the shared failure handler; return ``1``.
 
@@ -84,6 +85,8 @@ def _fail(
         round_number: Current review round, appended to the comment when given.
         verdict: Most recent verdict, whose ``decision`` is appended when given.
         elapsed: Elapsed seconds since the run started, appended when given.
+        details: Human-readable cause line, inserted directly beneath the
+            header (before Round/Verdict/Elapsed) when given.
 
     Returns:
         Always ``1``.
@@ -97,6 +100,8 @@ def _fail(
         elapsed_time=elapsed,
     )
     comment_lines = [f"❌ {message}"]
+    if details is not None:
+        comment_lines.append(details)
     if round_number is not None:
         comment_lines.append(f"Round: {round_number}")
     if verdict is not None:

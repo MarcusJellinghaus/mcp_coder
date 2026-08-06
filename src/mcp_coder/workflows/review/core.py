@@ -43,6 +43,7 @@ from mcp_coder.workflow_utils.failure_handling import (
 
 from . import reviewer
 from .config import ReviewConfig
+from .gates import check_ci_proven_gate, check_open_tasks_gate
 from .handoff import _fail, _flush_round_log, _route_to_human, _set_label
 from .review_log import next_run_number, write_round_log
 from .severity import _apply_severity_floor
@@ -109,6 +110,21 @@ def run_review_workflow(
 
     def body() -> int:
         nonlocal supervisor_sid, pending_ci_note, last_verdict
+
+        # Gate 1 (implementation lane only): refuse to start when the tracker's
+        # ## Tasks section still has unchecked items — the human is pointed at
+        # /implementation_finalise rather than starting a doomed review round.
+        reason, details = check_open_tasks_gate(config, project_dir)
+        if reason:
+            return _fail(
+                config,
+                project_dir,
+                reason,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+                details=details,
+                elapsed=time.time() - start_time,
+            )
 
         for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
             sha_before = get_latest_commit_sha(project_dir)
@@ -264,6 +280,10 @@ def run_review_workflow(
                     execution_dir,
                     is_dismiss=True,
                 )
+                # Gate 2 (impl lane): only proven-green CI (PASSED) earns success.
+                details = None
+                if reason is None and config.enforce_implementation_gates:
+                    reason, details = check_ci_proven_gate(project_dir)
                 if reason == "rebase":
                     write_round_log(
                         project_dir,
@@ -286,10 +306,8 @@ def run_review_workflow(
                         ),
                     )
                 if reason:
-                    # Terminal after-steps failure on the dismiss gate (e.g. a
-                    # red final CI → `ci`, or `timeout` / `general` /
-                    # `mcp_unavailable`): write + flush the round so the last
-                    # executed round lands in the committed log before failing.
+                    # Terminal dismiss-gate failure (after-steps or Gate 2):
+                    # write + flush the round to the committed log before failing.
                     write_round_log(
                         project_dir,
                         config,
@@ -309,6 +327,7 @@ def run_review_workflow(
                         post_issue_comments=post_issue_comments,
                         round_number=round_number,
                         verdict=last_verdict,
+                        details=details,
                         elapsed=time.time() - start_time,
                     )
                 write_round_log(

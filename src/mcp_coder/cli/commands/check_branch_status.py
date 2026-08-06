@@ -21,6 +21,7 @@ from ...checks.branch_status import (
     CIStatus,
     collect_branch_status,
 )
+from ...checks.ci_policy import assess_ci
 from ...mcp_workspace_github import (
     CIResultsManager,
     CIStatusData,
@@ -147,11 +148,12 @@ def _exit_code(report: BranchStatusReport, fail_on_reviews: bool) -> int:
         2 if CI truth or (gated) review state is undeterminable; 1 if determined
         and blocking; 0 if proven clean.
     """
-    if report.ci_status in (CIStatus.UNAVAILABLE, CIStatus.UNKNOWN):
+    verdict = assess_ci(report.ci_status, require_proven=False)
+    if verdict == "undeterminable":
         return 2
     if fail_on_reviews and report.pr_feedback_undeterminable:
         return 2
-    if report.ci_status == CIStatus.FAILED:
+    if verdict == "failed":
         return 1
     if fail_on_reviews and report.pr_feedback_blocks_merge:
         return 1
@@ -308,7 +310,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         # to fix. Hoisted above the --fix block so exit code 2 is consistent on
         # the read-only, --ci-timeout and --fix paths alike, and so no pointless
         # fix attempt runs (the partial report is already printed above).
-        if report.ci_status in (CIStatus.UNAVAILABLE, CIStatus.UNKNOWN):
+        if assess_ci(report.ci_status, require_proven=False) == "undeterminable":
             return _exit_code(report, fail_on_reviews)
 
         # Run auto-fixes if requested
