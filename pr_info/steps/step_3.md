@@ -70,9 +70,14 @@ under identical conditions proves the timeouts are genuinely armed, and substant
 "keepalives *arm* the cap" rationale.
 
 ```
-same setup: fresh Gate(), same 5s resolver think-time, same INACTIVITY_TIMEOUT / OVERALL_CAP
-drive the VERBATIM run_bridge from _common.py (no pause branch) instead of run_bridge_paused
-assert TimeoutError is raised            # the timeout mechanic really does kill the paused turn
+same setup: fresh Gate(), same 5s resolver think-time
+drive the VERBATIM run_bridge from _common.py (no pause branch) instead of run_bridge_paused,
+  passing inactivity_timeout=INACTIVITY_TIMEOUT and overall_cap=OVERALL_CAP
+run.join()
+assert isinstance(run.error, TimeoutError)   # the consumer runs on a worker thread, so the raise
+                                             # reaches the main thread only via BridgeRun.error
+                                             # (Step 2's error channel) — the timeout mechanic
+                                             # really does kill the paused turn
 ```
 
 ## DATA

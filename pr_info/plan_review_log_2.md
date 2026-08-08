@@ -22,3 +22,23 @@ Branch: `1044-i3-1-feasibility-spike-interceptor-cross-thread-future` (up to dat
 **Changes**: `step_1.md` registry-lookup resolver; `step_2.md` new `_common.py` split, per-scenario `Gate` dataclass, `FakeChatModel` records per-invoke messages, corrected line refs + "navigate by symbol"; `step_3.md` imports shared harness, per-scenario `Gate`, new `scenario_baseline_dies`; `step_4.md` two D7 frictions recorded; `step_5.md` stub-server template pointer, shared `FakeChatModel`, deny `tool_call_id` assertion + `PASS: deny-tool-call-id-filled`; `step_6.md` §5 frictions and new §10, DoD 9 → 10; `summary.md` `_common.py` in file list; `Decisions.md` created.
 
 **Status**: committed
+
+## Round 2 — 2026-08-08
+
+**Findings**:
+- `step_2.md:45` (with `:39-42`) — **high** — the shared `FakeChatModel` specifies only sync `_generate`. `BaseChatModel`'s default `_agenerate` delegates to `run_in_executor(None, self._generate, ...)`, so it runs on a thread-pool thread with **no running loop**, where `asyncio.get_running_loop()` raises `RuntimeError`. That destroys `model.loop_id` — the independent agent-loop reference `step_5.md:94-96` compares `gate.loop_id` against, and on which `step_6.md:14-20` gates the entire positive go/no-go verdict.
+- `step_3.md:73-75` vs `step_2.md:68-90` — **medium** — `scenario_baseline_dies` (F5) is unwritable as specified: `run_bridge` has no timeout parameters (and Step 2's `scenario_inert` needs a *long* one, so a hardcoded short value breaks it), and `BridgeRun` has no error channel, so the `TimeoutError` raised on the worker thread never reaches the main thread.
+- `step_2.md:80,124` — **medium** — `BridgeRun.close()` while the consumer is blocked raises `ValueError: generator already executing`; CPython refuses `gen.close()` while the frame is executing, and the worker thread in `q.get(...)` *is* executing it. `GeneratorExit` is not merely inert — it is unrequestable.
+- `step_2.md:31,148-150` — **medium** — `scenario_backstop` needs tool_call(blocking) → tool_call(instant) → `'done'`, contradicting `_common.FakeChatModel`'s documented 2-invoke script; "Configure `FakeChatModel` to …" assumes a knob the signature block does not have. Loose end from the F4 extraction.
+- `step_5.md:112` vs `:132` and `step_6.md:53-59` — **medium** — the deny-`tool_call_id` probe is a gating `assert`, but Step 6 §10 calls its failure a valid recorded finding; the run cannot both fail and be the deliverable. Not hypothetical: `BaseTool._format_output` returns `ToolOutputMixin` instances unchanged and `ToolMessage` is one, so the empty id may survive `ToolNode`.
+- `step_5.md:37-45` — **low** — `_common.Gate` and `tier_c.Gate` collide, defended only by a "never import `*`" comment; and `tier_c.Gate` declares only `fired`/`loop_id` while `:95` requires a resolver thread to approve "the pending Future".
+
+**Decisions**: all six accepted as straightforward fixes inside the existing structure — none changes scope, tiering, or a settled decision, none needs a dependency/config change, none escalated. F13 accepted in the reviewer's form (recorded probe, exit 0 either way) because it matches §10.3's "demonstrated working **or** documented-impossible with rationale"; every other Step 5 assertion stays gating. F14 accepted as a rename rather than a documented hazard (KISS).
+
+**User decisions**: none required this round.
+
+**Changes**: `step_2.md` async `_agenerate` + `responses` script + `run_bridge` timeout params + `BridgeRun.error` + `ValueError` assertion; `step_3.md` baseline control passes timeouts and asserts via the error channel; `step_5.md` `InterceptorGate` rename with `loop`/`future` fields + deny probe demoted to recorded observation with explicit DoD exception; `step_6.md` §4 "unreachable while blocked", §10 records whichever outcome occurred; `Decisions.md` F9–F14 appended. `summary.md` needed no change.
+
+**Note**: the apply agent was interrupted by an API error after F9–F12 and was resumed from its transcript to complete F13–F14; the resumed run verified F9–F12 had landed coherently and appended `Decisions.md` once, without duplicates.
+
+**Status**: committed

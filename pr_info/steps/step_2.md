@@ -28,21 +28,38 @@ from langchain_core.messages import AIMessage
 from langchain_core.tools import StructuredTool
 
 class FakeChatModel(BaseChatModel):
-    """1st invoke -> AIMessage with one tool_call; 2nd invoke -> AIMessage('done').
+    """Replays a caller-supplied script of AIMessages, one per invoke.
+
+    ``responses`` is the script; invoke N returns ``responses[N-1]``. The
+    DEFAULT script is the 2-entry one Steps 3 and 5 use: 1st invoke ->
+    AIMessage with one tool_call; 2nd invoke -> AIMessage('done').
+    ``scenario_backstop`` passes its own 3-entry script (see below) — there is
+    no separate knob, the script IS the configuration.
 
     Must be usable by ``create_react_agent`` (agent.py:549), which calls
     ``model.bind_tools(tools)`` — ``BaseChatModel.bind_tools`` raises
     ``NotImplementedError``, so override it (return ``self``, ignoring the
-    tools). ``_generate`` must return a ``ChatResult`` (a ``ChatGeneration``
-    wrapping the ``AIMessage``), never a bare ``AIMessage``.
+    tools).
 
-    Records, per invoke: ``loop_id`` = ``id(asyncio.get_running_loop())`` (the
-    independent agent-loop reference Step 5's D6 check needs) and the
-    ``messages`` list it was handed (Step 5 asserts on the post-``ToolNode``
-    ``ToolMessage`` present in the 2nd invoke's list).
+    Implement the ASYNC method ``_agenerate``, not ``_generate``. The agent
+    path is ``astream_events``, and ``BaseChatModel``'s default ``_agenerate``
+    delegates to ``run_in_executor(None, self._generate, ...)`` — a model that
+    implements only ``_generate`` therefore runs on a THREAD-POOL thread with
+    no running loop, where ``asyncio.get_running_loop()`` raises
+    ``RuntimeError`` and ``loop_id`` (below) is destroyed. ``_generate`` may
+    stay unimplemented / raising. ``_agenerate`` must return a ``ChatResult``
+    (a ``ChatGeneration`` wrapping the ``AIMessage``), never a bare
+    ``AIMessage``.
+
+    Records, per invoke (inside ``_agenerate``): ``loop_id`` =
+    ``id(asyncio.get_running_loop())`` (the independent agent-loop reference
+    Step 5's D6 check needs) and the ``messages`` list it was handed (Step 5
+    asserts on the post-``ToolNode`` ``ToolMessage`` present in the 2nd
+    invoke's list).
     """
+    def __init__(self, responses: list[AIMessage] | None = None, **kw): ...  # None -> default 2-entry script
     def bind_tools(self, tools, **kw) -> "FakeChatModel": return self
-    def _generate(self, messages, stop=None, run_manager=None, **kw): ...  # -> ChatResult
+    async def _agenerate(self, messages, stop=None, run_manager=None, **kw): ...  # -> ChatResult
     @property
     def _llm_type(self) -> str: return "fake"
 
@@ -77,16 +94,31 @@ class BridgeRun:
     """
     events: list          # filled live by the worker as events are yielded
     agent_thread: threading.Thread   # the agent asyncio.run thread (for is_alive)
-    close(self) -> None   # requests GeneratorExit on the copied consumer (the :530 path)
+    error: BaseException | None      # exception raised by the copied consumer ON THE WORKER
+                                     # THREAD, captured for the main thread. Without this there
+                                     # is no error channel at all and Step 3's negative control
+                                     # (F5) can never see the TimeoutError it must assert.
+    close(self) -> None   # ATTEMPTS gen.close() on the copied consumer (the :530 path). CPython
+                          # refuses close() while the generator frame is executing, and the worker
+                          # thread sitting in `q.get(...)` IS executing it — so this raises
+                          # ValueError("generator already executing"). Capture and expose that
+                          # outcome; do not swallow it (scenario_inert asserts on it).
     join(self, timeout: float | None = None) -> None   # wait for the worker to drain
 
-def run_bridge(gen_factory) -> BridgeRun:
+def run_bridge(gen_factory, inactivity_timeout: float = 300.0,
+               overall_cap: float = 3600.0) -> BridgeRun:
     """Start the VERBATIM copy of __init__.py:479-534 (thread+queue+join(5)).
 
     The copied consumer generator is driven on a worker thread so the main
     thread stays free to set `cancel_event`, call `.close()`, or resolve the
     Future while the tool is blocked. Returns immediately with a `BridgeRun`
     handle exposing the live events list and the agent thread.
+
+    `inactivity_timeout` feeds the copied `q.get(timeout=…)` (:515) and
+    `overall_cap` the copied `_AGENT_OVERALL_TIMEOUT` check (:524). Defaults
+    match production so `scenario_inert` — whose tool never resolves — is not
+    killed by a short hardcoded value; Step 3's negative control passes its
+    own short values instead.
     """
 ```
 
@@ -121,7 +153,11 @@ gate = Gate()                                    # fresh per scenario
 run = run_bridge(...); wait until gate.fired (tool is blocked in await)   # consumer on worker thread
 set cancel_event  -> no effect (checked only BETWEEN astream_events iterations, agent.py:569-570;
                                 no events flow while blocked)
-run.close()/GeneratorExit -> cancel.set() fires but tool still stuck; no event emitted
+run.close() -> assert it raises ValueError("generator already executing"): GeneratorExit is not
+               merely inert, it is UNREQUESTABLE from another thread. CPython refuses gen.close()
+               while the frame is executing, and the only thread that could close the generator is
+               the worker thread itself — which is stuck inside next()/q.get(). So the :530
+               GeneratorExit path (and its cancel.set()) is unreachable while blocked.
 # Third generic path: the TUI _cancel_event (ui/app.py:290) is checked only AFTER an event
 # arrives from the generator (set at :243). Model a minimal UI-consumer loop that polls the
 # events list and would check a tui_cancel Event only on each new event:
@@ -145,9 +181,12 @@ assert run.agent_thread.is_alive() is False   # AC: thread actually terminates, 
 Proves the mirror image of `scenario_inert`: once the Future is resolved, events flow again,
 so the generic paths that were inert while blocked become **live** and function as a backstop.
 
-To make an event-boundary exist *after* the tool returns, configure `FakeChatModel` to emit a
-**second tool_call** to an instant non-blocking tool on its 2nd invoke (3rd invoke -> `'done'`),
-so `astream_events` iterates at least once more after the first tool result.
+To make an event-boundary exist *after* the tool returns, this scenario passes its **own 3-entry
+script** to the shared fake — `FakeChatModel(responses=[tool_call(blocking), tool_call(instant),
+AIMessage("done")])` — so the 2nd invoke emits a **second tool_call** to an instant non-blocking
+tool and `astream_events` iterates at least once more after the first tool result. Steps 3 and 5
+keep the default 2-entry script; the scripts do not collide because each scenario constructs its
+own model.
 
 ```
 gate = Gate()                                    # fresh per scenario
@@ -165,8 +204,9 @@ assert run.agent_thread.is_alive() is False   # backstop still terminates the th
 
 - `Gate` is the cross-thread handoff (loop handle + future + fired flag), **one instance per
   scenario**, bound into the tool coroutine by `make_blocking_tool`.
-- `run_bridge` returns a `BridgeRun` handle (`.events: list[StreamEvent]`,
-  `.agent_thread: threading.Thread`, `.close()`, `.join()`); the consumer runs on a worker thread.
+- `run_bridge(gen_factory, inactivity_timeout=300.0, overall_cap=3600.0)` returns a `BridgeRun`
+  handle (`.events: list[StreamEvent]`, `.agent_thread: threading.Thread`,
+  `.error: BaseException | None`, `.close()`, `.join()`); the consumer runs on a worker thread.
 - Prints `PASS: generic-paths-inert`, `PASS: direct-resolve-unblocks`,
   `PASS: thread-terminated`, `PASS: backstop-fires-after-resolve`; exits 0.
 
@@ -174,8 +214,8 @@ assert run.agent_thread.is_alive() is False   # backstop still terminates the th
 
 - Windows: `asyncio.run` inside the bridge thread uses the default Proactor loop — fine for the
   in-process tool (no subprocess here; subprocess is Tier C).
-- If the fake model must return a plain final message after the tool result, gate it on a call
-  counter so the second invocation yields `AIMessage("done")` and the agent halts deterministically.
+- The fake's plain final message after the tool result comes from the `responses` script indexed by
+  an invoke counter — the last entry is `AIMessage("done")`, so the agent halts deterministically.
 
 ## Definition of done
 

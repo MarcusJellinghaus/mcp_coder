@@ -34,13 +34,19 @@ if __name__ == "__main__":
     mcp.run(transport="stdio")
 ```
 
-`tier_c.py` (note: this `Gate` is the **interceptor hook** — unrelated to `_common.Gate`, which is
-the blocking-tool cross-thread handoff; import only `FakeChatModel` from `_common`, never `*`):
+`tier_c.py`:
 ```python
-class Gate:
-    """Real async tool_interceptors hook: (request, handler) -> Any."""
+class InterceptorGate:
+    """Real async tool_interceptors hook: (request, handler) -> Any.
+
+    Named InterceptorGate, not Gate, so it cannot be confused with
+    `_common.Gate` (the blocking-tool cross-thread handoff) — different
+    mechanism, different file.
+    """
     fired: bool = False
     loop_id: int | None = None
+    loop: asyncio.AbstractEventLoop | None = None    # captured inside the coroutine (D6)
+    future: asyncio.Future[str] | None = None        # the pending approval the resolver thread hits
     async def interceptor(self, request, handler):
         """Record fire + loop identity; approve -> await Future -> handler; deny -> ToolMessage."""
 
@@ -59,9 +65,11 @@ def scenario_deny() -> None:         # deny path: ToolMessage(status="error") + 
   records, per invoke, both the running-loop id and the **`messages` list it was handed**; the
   second invoke's list contains the post-`ToolNode` `ToolMessage` from state, which the deny
   scenario asserts on (below).
-- Inside `Gate.interceptor`, set `self.fired = True` and
-  `self.loop_id = id(asyncio.get_running_loop())` **before** awaiting — this is the D6 fact on the
-  *real* adapter path, and the flag is the "interceptor really fired" assertion.
+- Inside `InterceptorGate.interceptor`, set `self.fired = True`,
+  `self.loop = asyncio.get_running_loop()`, `self.loop_id = id(self.loop)` and
+  `self.future = self.loop.create_future()` **before** awaiting — this is the D6 fact on the
+  *real* adapter path, the flag is the "interceptor really fired" assertion, and `loop`/`future`
+  are what the resolver thread targets with `call_soon_threadsafe`.
 - **Capture two independent loop references for the D6 identity check (the go/no-go):**
   - `agent_loop_id` — an **independent** reference to the agent loop, recorded *not* by the
     interceptor (that would be circular). Have `FakeChatModel` record
@@ -79,18 +87,27 @@ def scenario_deny() -> None:         # deny path: ToolMessage(status="error") + 
 - **But the claim that langgraph's `ToolNode` overwrites the empty id downstream is an inherited
   docstring assumption that nothing currently verifies** — and `scenario_deny` cannot notice it
   being wrong, because `FakeChatModel` never validates the `ToolMessage.tool_call_id` ↔
-  `AIMessage.tool_calls[].id` pairing that a real provider API rejects. So turn it into a
-  demonstrated fact: assert the `ToolMessage` in the fake's **second-invoke** `messages` list has
-  `tool_call_id` equal to the id of the tool_call the fake emitted on invoke 1. A failure here is
-  simultaneously a finding for I3.2 **and** a latent bug in the already-shipped I2.3 code.
+  `AIMessage.tool_calls[].id` pairing that a real provider API rejects. So turn it into an
+  **observed fact**: compare the `tool_call_id` of the `ToolMessage` in the fake's **second-invoke**
+  `messages` list against the id of the tool_call the fake emitted on invoke 1.
+- This one is a **recorded probe, not a gating assert** — the only exception in Step 5; every other
+  assertion here stays gating. Print `PASS: deny-tool-call-id-filled` when the ids match, and
+  `OBSERVED: deny-tool-call-id-empty (finding for I3.2 / latent I2.3 bug)` when they do not;
+  **exit 0 either way**. Both outcomes are valid deliverables under §10.3's "demonstrated working
+  **or** documented-impossible with rationale", and Step 6 §10 records whichever occurred — the run
+  cannot both fail and be the deliverable. A negative is not hypothetical:
+  `langchain_core.BaseTool._format_output` returns `ToolOutputMixin` instances unchanged and
+  `ToolMessage` **is** a `ToolOutputMixin`, so the empty id may well survive `ToolNode`.
 - `close()` the manager in a `finally` to stop its daemon loop/subprocess.
 
 ## ALGORITHM — resume (scenario_resume)
 
 ```
+gate = InterceptorGate()
 manager = MCPManager(cfg, tool_interceptors=[gate.interceptor]); tools = manager.tools()
 daemon_loop_id = id(manager._loop)            # MCPManager daemon loop (mcp_manager.py:52-59)
-run real agent with FakeChatModel over `tools`; resolver thread approves the pending Future
+run real agent with FakeChatModel over `tools`; resolver thread approves the pending Future via
+  gate.loop.call_soon_threadsafe(gate.future.set_result, "approve")
 drain events to completion
 assert gate.fired is True                     # real coroutine executed (even with stub model)
 # D6 identity — the go/no-go, proven on the REAL adapter path (not just Tier A's single loop):
@@ -105,11 +122,15 @@ assert a tool_result / final 'done' event appears   # agent proceeded PAST the g
 gate configured to DENY -> returns build_deny_tool_message(text, request.name); run the agent
 assert the returned ToolMessage has status == "error"   # shipped deny shape (tool_call_id="")
 assert the agent still reaches its final message   # #5: deny does not wedge
-# Prove (don't assume) that ToolNode filled the empty id — the fake never validates the pairing
-# a real provider API would reject, so without this the assumption stays untested:
+# RECORDED PROBE (not a gating assert — the only one in this step): observe whether ToolNode
+# filled the empty id. The fake never validates the pairing a real provider API would reject,
+# so without this the assumption stays untested; but a negative is a valid recorded finding,
+# not a run failure (Step 6 §10 writes up whichever occurred).
 emitted_id = id of the tool_call FakeChatModel emitted on invoke 1
 tm = the ToolMessage in FakeChatModel's SECOND-invoke messages list (post-ToolNode, from state)
-assert tm.tool_call_id == emitted_id     # ToolNode really does overwrite tool_call_id=""
+if tm.tool_call_id == emitted_id: print("PASS: deny-tool-call-id-filled")
+else: print("OBSERVED: deny-tool-call-id-empty (finding for I3.2 / latent I2.3 bug)")
+# no raise, no non-zero exit, either way
 ```
 
 ## DATA
@@ -117,9 +138,10 @@ assert tm.tool_call_id == emitted_id     # ToolNode really does overwrite tool_c
 - `build_server_config()` returns the stdio server dict (`command=sys.executable`,
   `args=[<abs path to server.py>]`, `transport="stdio"`).
 - Prints `PASS: interceptor-fired`, `PASS: loop-identity-real-path`, `PASS: resume-past-gate`,
-  `PASS: deny-shape-and-continue`, `PASS: deny-tool-call-id-filled`; exits 0. The LLM call is
-  stubbed/faked; only the *mechanics* are asserted (non-determinism of a real model must not gate
-  these asserts).
+  `PASS: deny-shape-and-continue`; then **either** `PASS: deny-tool-call-id-filled` **or**
+  `OBSERVED: deny-tool-call-id-empty (finding for I3.2 / latent I2.3 bug)`. Exits 0 in both cases.
+  The LLM call is stubbed/faked; only the *mechanics* are asserted (non-determinism of a real model
+  must not gate these asserts).
 
 ## Notes
 
@@ -131,4 +153,9 @@ assert tm.tool_call_id == emitted_id     # ToolNode really does overwrite tool_c
 
 - `python spikes/i3-1-approval/tier_c.py` exits 0, all PASS lines, repeatable (mechanic asserts
   deterministic; only real-LLM latency/output — if ever swapped in — is best-effort).
+- **Explicit exception to "all PASS lines":** the deny-`tool_call_id` probe is a *recorded* probe,
+  not a gating assert. A run that prints `OBSERVED: deny-tool-call-id-empty (finding for I3.2 /
+  latent I2.3 bug)` instead of `PASS: deny-tool-call-id-filled` still exits 0 and still satisfies
+  this DoD — that line is a recorded finding, not a failure. Every other assertion in Step 5 is
+  gating.
 - Standard `src`/`tests` fast unit suite still green.

@@ -29,8 +29,11 @@ an `assert`.
    (Step 3); keepalives rejected because they *arm* the `_AGENT_OVERALL_TIMEOUT` cap (`:524` sits
    inside the consumer loop), pollute the session `.jsonl` / replay (`app_core.py:198`), and add
    interval tuning.
-4. **Direct cancel channel (D2).** The three generic paths (`cancel_event`, TUI `_cancel_event`,
-   `GeneratorExit`) are inert while blocked; the working unblock is the UI calling the engine
+4. **Direct cancel channel (D2).** The three generic paths are unusable while blocked:
+   `cancel_event` and the TUI `_cancel_event` are inert (never reached — no events flow), and
+   `GeneratorExit` is **unreachable** — the only thread that could close the generator is the one
+   stuck inside `next()`, and CPython refuses `gen.close()` on an executing frame
+   (`ValueError: generator already executing`). The working unblock is the UI calling the engine
    **directly** to resolve/cancel the Future (pushed, not polled); generic paths work as a backstop
    afterwards. Note the real 5s `thread.join` leaves the thread dead (`is_alive()` False) only once
    the Future resolves.
@@ -55,11 +58,14 @@ an `assert`.
    (docstrings/comments), then deletes `spikes/i3-1-approval/`.
 10. **Deny-path `tool_call_id` (#5).** `build_deny_tool_message` ships `tool_call_id=""`
     (`permission_bridge.py:28`) on the assumption that langgraph's `ToolNode` overwrites it with
-    the real call id. Step 5 turns that inherited assumption into a demonstrated fact by asserting
-    the post-`ToolNode` `ToolMessage.tool_call_id` equals the id the fake model emitted. Record the
-    observed outcome: if it does **not** hold, that is simultaneously a finding for I3.2 **and** a
-    latent bug in the already-shipped I2.3 code — a real provider API rejects an unpaired
-    `ToolMessage.tool_call_id`, which `FakeChatModel` never validates.
+    the real call id. Step 5 turns that inherited assumption into an **observed** fact via a
+    *recorded probe* — not a gating assert — comparing the post-`ToolNode`
+    `ToolMessage.tool_call_id` against the id the fake model emitted; Tier C exits 0 either way.
+    Record whichever outcome the run printed: `PASS: deny-tool-call-id-filled` (the overwrite is
+    real) **or** `OBSERVED: deny-tool-call-id-empty`, which is simultaneously a finding for I3.2
+    **and** a latent bug in the already-shipped I2.3 code — a real provider API rejects an unpaired
+    `ToolMessage.tool_call_id`, which `FakeChatModel` never validates. A negative is a valid §10.3
+    outcome ("documented-impossible with rationale"), not a failed spike.
 
 ## HOW — CI-ignore confirmation (D8, confirmation only)
 
