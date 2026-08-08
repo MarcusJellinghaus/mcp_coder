@@ -11,7 +11,12 @@ call, and that deny returns `ToolMessage(status="error")` and the agent continue
 ## WHERE
 
 - Create `spikes/i3-1-approval/server.py` — minimal FastMCP stdio server, one tool.
-- Create `spikes/i3-1-approval/tier_c.py` — the driver + gate + assertions.
+  **Template: `tests/llm/providers/claude/_mcp_stub_server.py`** — an existing, working minimal
+  `mcp.server.fastmcp.FastMCP` stdio server launched via `sys.executable`, already proven on this
+  platform (and `pyproject.toml:235` already carries an `mcp.server.fastmcp` mypy override, which
+  independently confirms D4's "no new dependency"). Copy its shape; don't invent one.
+- Create `spikes/i3-1-approval/tier_c.py` — the driver + gate + assertions. Imports `FakeChatModel`
+  from `spikes/i3-1-approval/_common.py` (created in Step 2) rather than restating it.
 
 ## WHAT — functions / signatures
 
@@ -29,7 +34,8 @@ if __name__ == "__main__":
     mcp.run(transport="stdio")
 ```
 
-`tier_c.py`:
+`tier_c.py` (note: this `Gate` is the **interceptor hook** — unrelated to `_common.Gate`, which is
+the blocking-tool cross-thread handoff; import only `FakeChatModel` from `_common`, never `*`):
 ```python
 class Gate:
     """Real async tool_interceptors hook: (request, handler) -> Any."""
@@ -48,8 +54,11 @@ def scenario_deny() -> None:         # deny path: ToolMessage(status="error") + 
 - `MCPManager(build_server_config(), tool_interceptors=[gate.interceptor])` from
   `mcp_coder.llm.providers.langchain.mcp_manager`; call `.tools()` to discover the real
   interceptor-wrapped `ping`.
-- Drive with the same `FakeChatModel` pattern as Tier B (first invoke → tool_call to `ping`,
-  second → `AIMessage("done")`), via real `run_agent_stream(..., tools=manager.tools())`.
+- Drive with the shared `FakeChatModel` from `_common.py` (first invoke → tool_call to `ping`,
+  second → `AIMessage("done")`), via real `run_agent_stream(..., tools=manager.tools())`. It
+  records, per invoke, both the running-loop id and the **`messages` list it was handed**; the
+  second invoke's list contains the post-`ToolNode` `ToolMessage` from state, which the deny
+  scenario asserts on (below).
 - Inside `Gate.interceptor`, set `self.fired = True` and
   `self.loop_id = id(asyncio.get_running_loop())` **before** awaiting — this is the D6 fact on the
   *real* adapter path, and the flag is the "interceptor really fired" assertion.
@@ -63,10 +72,17 @@ def scenario_deny() -> None:         # deny path: ToolMessage(status="error") + 
   These give the two poles the interceptor's `loop_id` is compared against below.
 - Approve path resolves the Future from a bare thread via `call_soon_threadsafe`; deny path reuses
   the shipped `permission_bridge.build_deny_tool_message(text, request.name)`, which returns
-  `ToolMessage(content=text, status="error", tool_call_id="", name=name)`. The empty `tool_call_id`
-  is **deliberate**: langgraph's `ToolNode` overwrites it with the real call id downstream, so the
-  agent continues without wedging. The real interceptor `request` exposes only `.server_name`,
-  `.name`, and `.args` — there is **no** `request.tool_call_id` to derive from.
+  `ToolMessage(content=text, status="error", tool_call_id="", name=name)` — `permission_bridge.py:28`
+  really does hardcode the empty id, and the real interceptor `request` exposes only `.server_name`,
+  `.name`, and `.args`, so there is **no** `request.tool_call_id` to derive from. The shape stays
+  as shipped; the spike does not change it.
+- **But the claim that langgraph's `ToolNode` overwrites the empty id downstream is an inherited
+  docstring assumption that nothing currently verifies** — and `scenario_deny` cannot notice it
+  being wrong, because `FakeChatModel` never validates the `ToolMessage.tool_call_id` ↔
+  `AIMessage.tool_calls[].id` pairing that a real provider API rejects. So turn it into a
+  demonstrated fact: assert the `ToolMessage` in the fake's **second-invoke** `messages` list has
+  `tool_call_id` equal to the id of the tool_call the fake emitted on invoke 1. A failure here is
+  simultaneously a finding for I3.2 **and** a latent bug in the already-shipped I2.3 code.
 - `close()` the manager in a `finally` to stop its daemon loop/subprocess.
 
 ## ALGORITHM — resume (scenario_resume)
@@ -88,7 +104,12 @@ assert a tool_result / final 'done' event appears   # agent proceeded PAST the g
 ```
 gate configured to DENY -> returns build_deny_tool_message(text, request.name); run the agent
 assert the returned ToolMessage has status == "error"   # shipped deny shape (tool_call_id="")
-assert the agent still reaches its final message   # #5: ToolNode fills the id; deny does not wedge
+assert the agent still reaches its final message   # #5: deny does not wedge
+# Prove (don't assume) that ToolNode filled the empty id — the fake never validates the pairing
+# a real provider API would reject, so without this the assumption stays untested:
+emitted_id = id of the tool_call FakeChatModel emitted on invoke 1
+tm = the ToolMessage in FakeChatModel's SECOND-invoke messages list (post-ToolNode, from state)
+assert tm.tool_call_id == emitted_id     # ToolNode really does overwrite tool_call_id=""
 ```
 
 ## DATA
@@ -96,8 +117,9 @@ assert the agent still reaches its final message   # #5: ToolNode fills the id; 
 - `build_server_config()` returns the stdio server dict (`command=sys.executable`,
   `args=[<abs path to server.py>]`, `transport="stdio"`).
 - Prints `PASS: interceptor-fired`, `PASS: loop-identity-real-path`, `PASS: resume-past-gate`,
-  `PASS: deny-shape-and-continue`; exits 0. The LLM call is stubbed/faked; only the *mechanics* are
-  asserted (non-determinism of a real model must not gate these asserts).
+  `PASS: deny-shape-and-continue`, `PASS: deny-tool-call-id-filled`; exits 0. The LLM call is
+  stubbed/faked; only the *mechanics* are asserted (non-determinism of a real model must not gate
+  these asserts).
 
 ## Notes
 

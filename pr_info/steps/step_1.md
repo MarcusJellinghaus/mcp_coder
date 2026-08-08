@@ -26,9 +26,17 @@ Registry = dict[str, Approval]          # approval_id -> Approval
 async def interceptor(approval_id: str, registry: Registry) -> str:
     """Record the running-loop identity, then await the cross-thread Future."""
 
-def resolve_from_thread(loop: asyncio.AbstractEventLoop,
-                        fut: asyncio.Future[str], decision: str) -> None:
-    """Simulated UI thread body: push a decision onto the agent loop."""
+def resolve_from_thread(loop: asyncio.AbstractEventLoop, registry: Registry,
+                        approval_id: str, decision: str) -> None:
+    """Simulated UI thread body: look the Future up in the REGISTRY (inside the
+    thread), then push the decision onto the agent loop.
+
+    Takes ``approval_id``, never a ``Future`` — mirroring #1045's production
+    entry point ``resolve_pending(approval_id, decision)``. Handing the Future
+    in directly would make the D5 probe pass green against a completely
+    cross-wired registry, since it would only prove that two independent
+    Futures resolve independently.
+    """
 
 async def scenario_single() -> None:      # round-trip + identity (D6, #1)
 async def scenario_deny_cancel() -> None: # deny decision + Future.cancel() path
@@ -44,7 +52,10 @@ async def main() -> None:                 # runs all scenarios, prints PASS line
 - Inside `interceptor`, capture `loop = asyncio.get_running_loop()` and store `id(loop)` in
   `registry[approval_id].loop_id` **before** awaiting — this is the D6 fact.
 - The resolver runs on a bare `threading.Thread` (configurable think-time via `time.sleep`),
-  handed the loop object and calling `loop.call_soon_threadsafe(fut.set_result, decision)`.
+  handed the loop object plus the **registry and an `approval_id`**. It does the
+  `registry[approval_id].future` lookup **inside the thread**, then calls
+  `loop.call_soon_threadsafe(fut.set_result, decision)`. The lookup-in-thread is what makes the
+  D5 probe able to catch a cross-wired registry.
 
 ## ALGORITHM — single round-trip (scenario_single)
 
@@ -52,7 +63,7 @@ async def main() -> None:                 # runs all scenarios, prints PASS line
 agent_loop = get_running_loop(); fut = agent_loop.create_future()
 registry["a"] = Approval(fut)
 task = create_task(interceptor("a", registry))     # records loop_id, awaits fut
-Thread(target=resolve_from_thread, args=(agent_loop, fut, "approve")).start()
+Thread(target=resolve_from_thread, args=(agent_loop, registry, "a", "approve")).start()
 decision = await task
 assert registry["a"].loop_id == id(agent_loop)      # D6: identity, not just success
 assert decision == "approve"                         # #1: cross-thread resolve worked
@@ -62,7 +73,11 @@ assert decision == "approve"                         # #1: cross-thread resolve 
 
 ```
 make Approval "A" and "B", each with its own future + its own interceptor task
-resolve B first, then A (REVERSE order), each from its own thread with distinct decisions
+resolve B first, then A (REVERSE order), each from its own thread with distinct decisions:
+    Thread(target=resolve_from_thread, args=(agent_loop, registry, "B", decision_B)).start()
+    ... then the same for "A"
+# each thread resolves BY approval_id — the registry lookup happens inside the thread,
+# so a cross-wired registry hands the wrong Future the wrong decision and the asserts fail
 assert task_A result == decision_A and task_B result == decision_B   # no cross-wiring
 ```
 

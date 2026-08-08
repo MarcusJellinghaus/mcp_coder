@@ -27,7 +27,9 @@ and can a bare thread resolve it?*
   copies the thread+queue+`join(timeout=5)` consumer from `llm/providers/langchain/__init__.py:479-534`
   *verbatim* so the copy owns a thread handle we can assert `is_alive()` on (§10.3:
   "reconstruct the real join rather than a re-implemented bridge"). The copy is clearly
-  labelled as a faithful reproduction of production line ranges.
+  labelled as a faithful reproduction of production line ranges (with "navigate by symbol, line
+  numbers drift"), and lives in **exactly one place** — `spikes/i3-1-approval/_common.py`, imported
+  by Steps 3 and 5. Its fidelity to production is load-bearing, so it is never duplicated.
 - **The spike is invisible to CI (D8).** `pytest` is `testpaths = ["tests"]`; CI passes
   `src tests` explicitly to black/isort/pylint/ruff/mypy. So `spikes/` is neither linted nor
   type-checked. **Consequence carried into FINDINGS:** anything I3.2 lifts into its fixtures
@@ -80,6 +82,9 @@ Run the fast unit suite once per step to confirm (2):
 spikes/                                  (new top-level dir; no prior convention)
 spikes/i3-1-approval/
 spikes/i3-1-approval/tier_a.py           Step 1 — pure-asyncio microscope
+spikes/i3-1-approval/_common.py          Step 2 — shared harness: FakeChatModel, Gate +
+                                                  blocking-tool factory, verbatim bridge copy
+                                                  (imported by Steps 3 and 5)
 spikes/i3-1-approval/tier_b_cancel.py    Step 2 — real bridge: cancel + 5s join
 spikes/i3-1-approval/tier_b_pause.py     Step 3 — real bridge: dual timeout + pause
 spikes/i3-1-approval/tier_d7_seam.py     Step 4 — D7 approval-bridge seam model
@@ -100,13 +105,14 @@ pr_info/steps/step_1.md ... step_6.md    the plan
    cancel paths inert while blocked; direct resolve unblocks; the generic paths fire as a
    backstop once resolved; `thread.is_alive() is False` after the real 5s join (#3, D2).
 3. **Tier B pause** — reconstructed bridge with pause-aware consumer: pending counter defeats both
-   the inactivity `q.get` timeout and the `_AGENT_OVERALL_TIMEOUT` cap; keepalives recorded as the
-   rejected alternative (#4, D1).
+   the inactivity `q.get` timeout and the `_AGENT_OVERALL_TIMEOUT` cap, plus a **negative control**
+   showing the verbatim (non-pause) consumer dies under identical conditions; keepalives recorded
+   as the rejected alternative (#4, D1).
 4. **D7 seam** — standalone attach/detach lifecycle across two turns, demonstrating the stale-`q`
    failure mode; recommendation only (D7). Also emits a real `approval_request` event through an
    actual `queue.Queue` from inside the interceptor, proving the side channel is reachable (#2).
 5. **Tier C** — throwaway FastMCP stdio server + real `tool_interceptors=[gate]`: assert the real
    interceptor coroutine fired, resume past the gate, deny returns `ToolMessage(status="error")`
-   and the agent continues (#5).
+   and the agent continues, and the post-`ToolNode` `tool_call_id` is really filled in (#5).
 6. **FINDINGS.md** — synthesise works/gotchas/recommendations, confirm CI ignores `spikes/` (D8),
    record go/no-go verdict and, on a negative, name+rank the D10 fallbacks.

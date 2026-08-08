@@ -37,7 +37,12 @@ an `assert`.
 5. **D7 plumbing shape.** The `ApprovalBridge` threaded
    `prompt_llm_stream → ask_langchain_stream → _ask_agent_stream`, attached/detached per stream in
    `try/finally`; parameter optional (non-iCoder CLI paths). The stale-`q` failure mode to guard
-   against.
+   against. Plus the two frictions from Step 4 — **named, not resolved** (resolution is I3.2's):
+   (a) `prompt_llm_stream` (`llm/interface.py`, `provider: str = "claude"`) is the
+   **provider-agnostic** interface and I2.3 / #1043 D1 explicitly rejected threading a
+   langchain-permissions object through it, which is exactly what D7 prescribes; (b)
+   `ask_langchain_stream` (`llm/providers/langchain/__init__.py:545`) branches to `_ask_text_stream`
+   when `mcp_config` is absent — a path the bridge parameter must cross as a no-op.
 6. **Side-channel / replay consequence.** The `approval_request` `StreamEvent` reaches the
    interceptor through the existing `q`; every non-`raw_line` event is written to the session
    `.jsonl` at `app_core.py:198` and re-rendered by `ui/replay.py` — I3.2 must account for this.
@@ -48,6 +53,13 @@ an `assert`.
    fixtures must be rewritten to survive `mypy --strict`.
 9. **D9 handoff.** I3.2 reads this file, carries the load-bearing rationale into its code
    (docstrings/comments), then deletes `spikes/i3-1-approval/`.
+10. **Deny-path `tool_call_id` (#5).** `build_deny_tool_message` ships `tool_call_id=""`
+    (`permission_bridge.py:28`) on the assumption that langgraph's `ToolNode` overwrites it with
+    the real call id. Step 5 turns that inherited assumption into a demonstrated fact by asserting
+    the post-`ToolNode` `ToolMessage.tool_call_id` equals the id the fake model emitted. Record the
+    observed outcome: if it does **not** hold, that is simultaneously a finding for I3.2 **and** a
+    latent bug in the already-shipped I2.3 code — a real provider API rejects an unpaired
+    `ToolMessage.tool_call_id`, which `FakeChatModel` never validates.
 
 ## HOW — CI-ignore confirmation (D8, confirmation only)
 
@@ -64,7 +76,7 @@ Confirm and record — no configuration change:
 
 ## Definition of done
 
-- `spikes/i3-1-approval/FINDINGS.md` exists with all 9 sections populated from the real Step 1–5
+- `spikes/i3-1-approval/FINDINGS.md` exists with all 10 sections populated from the real Step 1–5
   runs; go/no-go stated; CI-ignore confirmed by inspection.
 - All five tier scripts still exit 0 (re-run once as a final smoke check).
 - Standard `src`/`tests` fast unit suite still green.

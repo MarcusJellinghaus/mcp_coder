@@ -10,11 +10,19 @@ thread **actually terminates** after the real 5s join.
 
 ## WHERE
 
-- Create `spikes/i3-1-approval/tier_b_cancel.py` (self-contained).
+- Create `spikes/i3-1-approval/_common.py` — the **shared harness**, imported by Step 3 and Step 5:
+  `FakeChatModel`, the blocking-tool factory + per-scenario `Gate`, and the **verbatim
+  `__init__.py:479-534` bridge copy** (`run_bridge` / `BridgeRun`). One copy only: the bridge copy's
+  fidelity to production is load-bearing (§10.3) and three hand-maintained duplicates cannot stay
+  faithful. Steps stay one-commit-each and sequential, so importing does not cost independence.
+- Create `spikes/i3-1-approval/tier_b_cancel.py` — the Step 2 scenarios; imports from `_common.py`.
 
 ## WHAT — functions / signatures
 
+In `_common.py` (shared with Steps 3 and 5):
+
 ```python
+from dataclasses import dataclass
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.tools import StructuredTool
@@ -26,22 +34,36 @@ class FakeChatModel(BaseChatModel):
     ``model.bind_tools(tools)`` — ``BaseChatModel.bind_tools`` raises
     ``NotImplementedError``, so override it (return ``self``, ignoring the
     tools). ``_generate`` must return a ``ChatResult`` (a ``ChatGeneration``
-    wrapping the ``AIMessage``), never a bare ``AIMessage``. Same fake is
-    reused by Tier C (Step 5).
+    wrapping the ``AIMessage``), never a bare ``AIMessage``.
+
+    Records, per invoke: ``loop_id`` = ``id(asyncio.get_running_loop())`` (the
+    independent agent-loop reference Step 5's D6 check needs) and the
+    ``messages`` list it was handed (Step 5 asserts on the post-``ToolNode``
+    ``ToolMessage`` present in the 2nd invoke's list).
     """
     def bind_tools(self, tools, **kw) -> "FakeChatModel": return self
     def _generate(self, messages, stop=None, run_manager=None, **kw): ...  # -> ChatResult
     @property
     def _llm_type(self) -> str: return "fake"
 
-# module-level handoff the driver thread uses to reach the agent loop:
+# PER-SCENARIO handoff the driver thread uses to reach the agent loop.
+# NOT module/class-level state: `scenario_inert` deliberately never resolves, so a shared
+# `fired` flag stays True forever; the next scenario's wait-for-fired would then pass
+# immediately — possibly before the new tool coroutine has published its loop/future — and
+# resolve against the STALE loop/future. That breaks the determinism AC. One fresh instance
+# per scenario, bound into the tool by closure.
+@dataclass
 class Gate:
     loop: asyncio.AbstractEventLoop | None = None
     future: asyncio.Future[str] | None = None
     fired: bool = False
 
-async def blocking_tool(text: str) -> str:
-    """Tool coroutine: capture agent loop via get_running_loop(), publish it, await Future."""
+def make_blocking_tool(gate: Gate):
+    """Factory -> tool coroutine closed over THIS scenario's `gate`.
+
+    The coroutine captures the agent loop via get_running_loop(), publishes it plus a fresh
+    Future onto `gate`, sets `gate.fired = True`, then awaits the Future.
+    """
 
 class BridgeRun:
     """Handle for a running bridge so the main thread can poke it mid-block.
@@ -66,7 +88,11 @@ def run_bridge(gen_factory) -> BridgeRun:
     Future while the tool is blocked. Returns immediately with a `BridgeRun`
     handle exposing the live events list and the agent thread.
     """
+```
 
+In `tier_b_cancel.py` (each scenario builds its **own** `Gate` + tool via `make_blocking_tool`):
+
+```python
 def scenario_inert() -> None:    # generic paths do nothing while blocked
 def scenario_direct() -> None:   # direct resolve unblocks; thread.is_alive() is False
 def scenario_backstop() -> None: # after resolve, re-armed cancel_event DOES fire (backstop)
@@ -76,20 +102,25 @@ def scenario_backstop() -> None: # after resolve, re-armed cancel_event DOES fir
 
 - Build the agent generator with the **real** `run_agent_stream` from
   `mcp_coder.llm.providers.langchain.agent`, passing `chat_model=FakeChatModel()`,
-  `tools=[StructuredTool.from_function(coroutine=blocking_tool, name="ping", ...)]`,
+  `tools=[StructuredTool.from_function(coroutine=make_blocking_tool(gate), name="ping", ...)]`,
   `mcp_config_path=""`, a dummy `session_id`, and a real `threading.Event` as `cancel_event`.
+- Each scenario constructs a **fresh `Gate()`** and passes it to `make_blocking_tool` — no shared
+  state survives between scenarios (see the `Gate` comment above; determinism AC).
 - `run_bridge` is a **labelled verbatim reconstruction** of the production consumer, driven on a
   worker thread and returning a `BridgeRun` handle so the spike owns the agent `thread` object and
-  the main thread can poke it mid-block (§10.3). Keep the copied line range in a comment header.
-- `blocking_tool` publishes `Gate.loop = asyncio.get_running_loop()` and
-  `Gate.future = Gate.loop.create_future()`, sets `Gate.fired = True`, then `await Gate.future`.
-- The driver (main thread) resolves via `Gate.loop.call_soon_threadsafe(Gate.future.set_result, ...)`.
+  the main thread can poke it mid-block (§10.3). Keep the copied line range in a comment header,
+  and add "navigate by symbol, line numbers drift" to that header.
+- The tool coroutine publishes `gate.loop = asyncio.get_running_loop()` and
+  `gate.future = gate.loop.create_future()`, sets `gate.fired = True`, then `await gate.future`.
+- The driver (main thread) resolves via `gate.loop.call_soon_threadsafe(gate.future.set_result, ...)`.
 
 ## ALGORITHM — inert paths (scenario_inert, #3)
 
 ```
-run = run_bridge(...); wait until Gate.fired (tool is blocked in await)   # consumer on worker thread
-set cancel_event  -> no effect (astream_events checks it only BETWEEN events; none flow)
+gate = Gate()                                    # fresh per scenario
+run = run_bridge(...); wait until gate.fired (tool is blocked in await)   # consumer on worker thread
+set cancel_event  -> no effect (checked only BETWEEN astream_events iterations, agent.py:569-570;
+                                no events flow while blocked)
 run.close()/GeneratorExit -> cancel.set() fires but tool still stuck; no event emitted
 # Third generic path: the TUI _cancel_event (ui/app.py:290) is checked only AFTER an event
 # arrives from the generator (set at :243). Model a minimal UI-consumer loop that polls the
@@ -102,8 +133,9 @@ assert no new events in run.events and run.agent_thread.is_alive()  # all THREE 
 ## ALGORITHM — direct resolve + join (scenario_direct, D2)
 
 ```
-run = run_bridge(...); wait for Gate.fired
-Gate.loop.call_soon_threadsafe(Gate.future.set_result, "cancel")   # PUSH, not poll
+gate = Gate()                                    # fresh per scenario — never the inert one's
+run = run_bridge(...); wait for gate.fired
+gate.loop.call_soon_threadsafe(gate.future.set_result, "cancel")   # PUSH, not poll
 tool returns -> fake model returns 'done' -> generator drains -> join(timeout=5); run.join()
 assert run.agent_thread.is_alive() is False   # AC: thread actually terminates, not "join returned"
 ```
@@ -118,10 +150,12 @@ To make an event-boundary exist *after* the tool returns, configure `FakeChatMod
 so `astream_events` iterates at least once more after the first tool result.
 
 ```
-run = run_bridge(...); wait for Gate.fired
-Gate.loop.call_soon_threadsafe(Gate.future.set_result, "resolve")   # unblock: events resume
+gate = Gate()                                    # fresh per scenario
+run = run_bridge(...); wait for gate.fired
+gate.loop.call_soon_threadsafe(gate.future.set_result, "resolve")   # unblock: events resume
 wait until the first tool_result event has been observed (Future resolved, blocking over)
-set cancel_event                          # now checked BETWEEN astream_events iterations (:572)
+set cancel_event      # now checked BETWEEN astream_events iterations (agent.py:569-570; the
+                      # astream_events call itself is at agent.py:564)
 generator stops early via the generic path -> consumer drains -> join(timeout=5); run.join()
 assert cancel was observed (stream ended before the final 'done' event)   # backstop DID fire
 assert run.agent_thread.is_alive() is False   # backstop still terminates the thread
@@ -129,7 +163,8 @@ assert run.agent_thread.is_alive() is False   # backstop still terminates the th
 
 ## DATA
 
-- `Gate` is the cross-thread handoff (loop handle + future + fired flag).
+- `Gate` is the cross-thread handoff (loop handle + future + fired flag), **one instance per
+  scenario**, bound into the tool coroutine by `make_blocking_tool`.
 - `run_bridge` returns a `BridgeRun` handle (`.events: list[StreamEvent]`,
   `.agent_thread: threading.Thread`, `.close()`, `.join()`); the consumer runs on a worker thread.
 - Prints `PASS: generic-paths-inert`, `PASS: direct-resolve-unblocks`,

@@ -10,9 +10,10 @@ blocking tool) but with a **pause-aware** copy of the consumer. Keepalives are r
 
 ## WHERE
 
-- Create `spikes/i3-1-approval/tier_b_pause.py` (self-contained; carries its own bridge copy +
-  fake model + blocking tool, or a trimmed inline restatement — no import from `tier_b_cancel.py`
-  so the step stays independent).
+- Create `spikes/i3-1-approval/tier_b_pause.py`. It **imports** `FakeChatModel`, `Gate` /
+  `make_blocking_tool` and the verbatim bridge copy from `spikes/i3-1-approval/_common.py`
+  (created in Step 2) — one shared harness, not a third hand-maintained copy. This file adds only
+  the **pause-aware** consumer variant on top.
 
 ## WHAT — functions / signatures
 
@@ -31,12 +32,15 @@ OVERALL_CAP = 3.0             # models _AGENT_OVERALL_TIMEOUT, natural 3600s not
 def run_bridge_paused(gen_factory, pending: PendingCounter) -> list:
     """Bridge copy with pause: Empty -> re-wait while pending>0; cap uses elapsed - paused."""
 
-def scenario_pause_survives() -> None:   # tool pauses > both timeouts, turn still completes
+def scenario_pause_survives() -> None:    # tool pauses > both timeouts, turn still completes
+def scenario_baseline_dies() -> None:     # NEGATIVE CONTROL: same pause, verbatim consumer, dies
 ```
 
 ## HOW — integration points
 
-- Same real `run_agent_stream` + `FakeChatModel` + `blocking_tool` as Step 2.
+- Same real `run_agent_stream` + `FakeChatModel` + blocking tool as Step 2, imported from
+  `_common.py`. Each scenario builds its **own** `Gate()` via `make_blocking_tool(gate)` — no
+  module-level gate state shared across scenarios (Step 2's determinism rule applies here too).
 - The tool (or the gate around it) calls `pending.incr()` when it begins awaiting the Future and
   `pending.decr()` immediately after it resolves — the counter is the observation channel
   #1045 already pinned; here it also *drives* the pause decision.
@@ -58,10 +62,24 @@ while True:
     events.append(event)
 ```
 
+## ALGORITHM — negative control (scenario_baseline_dies)
+
+Without this, "pause survives" is equally compatible with "neither timeout would have fired
+anyway" — both pause assertions would be vacuous. Driving the **verbatim (non-pause)** consumer
+under identical conditions proves the timeouts are genuinely armed, and substantiates D1's
+"keepalives *arm* the cap" rationale.
+
+```
+same setup: fresh Gate(), same 5s resolver think-time, same INACTIVITY_TIMEOUT / OVERALL_CAP
+drive the VERBATIM run_bridge from _common.py (no pause branch) instead of run_bridge_paused
+assert TimeoutError is raised            # the timeout mechanic really does kill the paused turn
+```
+
 ## DATA
 
 - `PendingCounter` exposes `.value`; `run_bridge_paused` returns `list[StreamEvent]`.
-- Prints `PASS: pause-survives-inactivity`, `PASS: pause-survives-overall-cap`; exits 0.
+- Prints `PASS: pause-survives-inactivity`, `PASS: pause-survives-overall-cap`,
+  `PASS: baseline-without-pause-dies`; exits 0.
 
 ## Rejected alternative — record, do NOT implement (D1)
 

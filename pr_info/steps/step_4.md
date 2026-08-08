@@ -97,6 +97,18 @@ State the shape explicitly: an `ApprovalBridge` threaded
 by non-iCoder CLI paths that must keep working with it absent. The stale-`q` scenario is the
 failure mode I3.2 must guard against.
 
+Also record these two frictions I3.2 will otherwise hit cold. **FINDINGS content only — name them,
+do not propose a production design change or resolve them here; resolving the coupling tension
+belongs to I3.2.**
+
+- **Provider-agnostic-interface tension.** `prompt_llm_stream`
+  (`src/mcp_coder/llm/interface.py`, `provider: str = "claude"`) is the **provider-agnostic**
+  interface, and I2.3 / #1043 D1 explicitly **rejected** threading a langchain-permissions object
+  through it. D7 prescribes exactly that. The tension must be named, not papered over.
+- **The no-MCP branch the parameter must cross.** `ask_langchain_stream`
+  (`llm/providers/langchain/__init__.py:545`) branches to `_ask_text_stream` when `mcp_config` is
+  absent — so the bridge parameter has to traverse that path as a **no-op**.
+
 ## Definition of done
 
 - `python spikes/i3-1-approval/tier_d7_seam.py` exits 0, all PASS lines, repeatable.
