@@ -28,6 +28,8 @@
         "${MCP_CODER_PROJECT_DIR}",
         "--log-level",
         "INFO",
+        "--file-size-limit",
+        "750",
         "--reference-project",
         "name=mcp-workspace,path=${HOME}/Documents/GitHub/mcp-workspace,url=https://github.com/MarcusJellinghaus/mcp-workspace",
         "--reference-project",
