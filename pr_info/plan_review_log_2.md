@@ -60,3 +60,35 @@ Branch: `1044-i3-1-feasibility-spike-interceptor-cross-thread-future` (up to dat
 **Note**: the round-3 reviewer misreported HEAD as `423a17f`; actual HEAD was `e227755`. Its file-content verification was against the correct (current) files, so the findings stand.
 
 **Status**: committed
+
+## Round 4 — 2026-08-08
+
+**Findings**: none.
+
+**Decisions**: n/a.
+
+**User decisions**: none required.
+
+**Changes**: none — F15–F18 verified landed correctly and coherently. `scenario_backstop`'s single-`Gate` restructuring is consistent with `scenario_inert`, `scenario_direct`, the default 2-entry `FakeChatModel` script and Step 6 §4; no live "3-entry script" claim survives; the `daemon=True` worker, the two-outcome deny-probe wording and the marker list all check out. Load-bearing code references re-verified at HEAD (`agent.py:564/569-570/698`, `__init__.py:479/481/506/515/524/530/534/545`, `mcp_manager.py:52-59`, `permission_bridge.py:28`, `gateway.py:106`).
+
+**Status**: no changes needed
+
+## Final Status
+
+**Rounds run**: 4 (this log) — plus 2 in `plan_review_log_1.md`, six review rounds total on this plan.
+
+**Findings applied this log**: 18 (F1–F18) across three apply rounds, in commits `369b2c1`, `e227755`, `de777b8`. Round 4 produced zero findings, terminating the loop.
+
+**Escalations to the user**: none. Every finding was an implementation-detail correction inside the settled structure — no finding changed scope, tiering, or any decision in D1–D10.
+
+**Requirement changes**: none. Four independent rounds confirmed `langchain-mcp-adapters>=0.3.0`, `langgraph>=1.2.9` and (transitively) `mcp`/FastMCP are already pinned in `pyproject.toml`, and that D8's confirm-only stance holds — `testpaths = ["tests"]` and CI passing `src tests` explicitly mean `spikes/` needs no configuration work. No `pyproject.toml` or CI edit should be pulled forward into planning.
+
+**Substantive corrections made** (the ones that would otherwise have shipped a vacuous proof):
+- **F1** — the D5 registry probe resolved Futures by object, so it would have passed green against a completely cross-wired registry. Now resolves by `approval_id` lookup inside the thread.
+- **F9** — the shared `FakeChatModel` implemented only sync `_generate`; `BaseChatModel`'s default `_agenerate` would have run it on a thread-pool thread with no running loop, destroying `model.loop_id` and with it the D6 identity comparison the entire positive go/no-go verdict is gated on.
+- **F15** — the D2 part-(c) backstop scenario was racy *and* keyed on the absence of a `done` StreamEvent that `agent.py:698` emits unconditionally even after a cancel break. Restructured to a single `Gate` mirroring `scenario_inert`.
+- **F13** — the deny-`tool_call_id` probe was a gating assert whose failure Step 6 itself called a valid recorded finding; now a recorded probe (exit 0 either way), matching §10.3.
+
+**Known residual uncertainty** (by design, not a defect): the "langgraph `ToolNode` overwrites `tool_call_id`" claim inherited from I2.3's docstring cannot be verified by reading — the adapter source is in the gitignored `.venv`. F2/F13 turn it into an empirical probe with two valid outcomes; a negative is simultaneously a finding for I3.2 and a latent bug in shipped I2.3 code.
+
+**Verdict**: the plan is converged and **ready for approval**.
