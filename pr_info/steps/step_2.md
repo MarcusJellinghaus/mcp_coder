@@ -31,10 +31,13 @@ class FakeChatModel(BaseChatModel):
     """Replays a caller-supplied script of AIMessages, one per invoke.
 
     ``responses`` is the script; invoke N returns ``responses[N-1]``. The
-    DEFAULT script is the 2-entry one Steps 3 and 5 use: 1st invoke ->
-    AIMessage with one tool_call; 2nd invoke -> AIMessage('done').
-    ``scenario_backstop`` passes its own 3-entry script (see below) — there is
-    no separate knob, the script IS the configuration.
+    DEFAULT script is the 2-entry one EVERY current scenario uses (Steps 2, 3
+    and 5): 1st invoke -> AIMessage with one tool_call; 2nd invoke ->
+    AIMessage('done') — that is the assistant *text* ``'done'``, NOT the
+    ``{"type": "done"}`` StreamEvent (``agent.py:698``). The ``responses``
+    parameter stays regardless: the script IS the configuration, so a scenario
+    needing a different one passes it instead of reaching for a knob that does
+    not exist.
 
     Must be usable by ``create_react_agent`` (agent.py:549), which calls
     ``model.bind_tools(tools)`` — ``BaseChatModel.bind_tools`` raises
@@ -55,7 +58,8 @@ class FakeChatModel(BaseChatModel):
     ``id(asyncio.get_running_loop())`` (the independent agent-loop reference
     Step 5's D6 check needs) and the ``messages`` list it was handed (Step 5
     asserts on the post-``ToolNode`` ``ToolMessage`` present in the 2nd
-    invoke's list).
+    invoke's list). Also exposes ``invoke_count`` — the same counter that
+    indexes ``responses`` — which ``scenario_backstop`` asserts stayed at 1.
     """
     def __init__(self, responses: list[AIMessage] | None = None, **kw): ...  # None -> default 2-entry script
     def bind_tools(self, tools, **kw) -> "FakeChatModel": return self
@@ -111,8 +115,15 @@ def run_bridge(gen_factory, inactivity_timeout: float = 300.0,
 
     The copied consumer generator is driven on a worker thread so the main
     thread stays free to set `cancel_event`, call `.close()`, or resolve the
-    Future while the tool is blocked. Returns immediately with a `BridgeRun`
-    handle exposing the live events list and the agent thread.
+    Future while the tool is blocked. That worker thread is created
+    `daemon=True`: `scenario_inert` deliberately abandons its run (its tool
+    never resolves), so the worker stays parked in the copied
+    `q.get(timeout=inactivity_timeout)` for the full 300s default — a
+    non-daemon worker would be joined at interpreter shutdown and the script
+    would hang ~300s before exiting. (Spike-only thread with no production
+    counterpart, so no §10.3 fidelity constraint; the production *agent* thread
+    is separately `daemon=True` at `__init__.py:506`.) Returns immediately with
+    a `BridgeRun` handle exposing the live events list and the agent thread.
 
     `inactivity_timeout` feeds the copied `q.get(timeout=…)` (:515) and
     `overall_cap` the copied `_AGENT_OVERALL_TIMEOUT` check (:524). Defaults
@@ -127,7 +138,7 @@ In `tier_b_cancel.py` (each scenario builds its **own** `Gate` + tool via `make_
 ```python
 def scenario_inert() -> None:    # generic paths do nothing while blocked
 def scenario_direct() -> None:   # direct resolve unblocks; thread.is_alive() is False
-def scenario_backstop() -> None: # after resolve, re-armed cancel_event DOES fire (backstop)
+def scenario_backstop() -> None: # cancel_event set while blocked fires once resolved (backstop)
 ```
 
 ## HOW — integration points
@@ -178,25 +189,32 @@ assert run.agent_thread.is_alive() is False   # AC: thread actually terminates, 
 
 ## ALGORITHM — post-resolution backstop (scenario_backstop, D2 part (c))
 
-Proves the mirror image of `scenario_inert`: once the Future is resolved, events flow again,
-so the generic paths that were inert while blocked become **live** and function as a backstop.
+Proves the mirror image of `scenario_inert` with the **same** flag and the **same single `Gate`**:
+`cancel_event` is set *while the tool is blocked* (inert — `scenario_inert` already proved exactly
+that), and then the gate is resolved, at which point the flag becomes **live** and fires as a
+backstop. No second gate, no second tool, no invoke-count bookkeeping in the script — this scenario
+uses the shared fake's **default 2-entry script** because it never gets past invoke 1.
 
-To make an event-boundary exist *after* the tool returns, this scenario passes its **own 3-entry
-script** to the shared fake — `FakeChatModel(responses=[tool_call(blocking), tool_call(instant),
-AIMessage("done")])` — so the 2nd invoke emits a **second tool_call** to an instant non-blocking
-tool and `astream_events` iterates at least once more after the first tool result. Steps 3 and 5
-keep the default 2-entry script; the scripts do not collide because each scenario constructs its
-own model.
+Ordering matters and must not be inverted: setting the flag only *after* observing a tool result
+would be a race — with an instantly-satisfied gate the agent runs straight through to the end, so
+the flag would land after the run is over and the backstop would never fire.
 
 ```
-gate = Gate()                                    # fresh per scenario
-run = run_bridge(...); wait for gate.fired
-gate.loop.call_soon_threadsafe(gate.future.set_result, "resolve")   # unblock: events resume
-wait until the first tool_result event has been observed (Future resolved, blocking over)
-set cancel_event      # now checked BETWEEN astream_events iterations (agent.py:569-570; the
-                      # astream_events call itself is at agent.py:564)
-generator stops early via the generic path -> consumer drains -> join(timeout=5); run.join()
-assert cancel was observed (stream ended before the final 'done' event)   # backstop DID fire
+gate = Gate()                                    # fresh per scenario; default 2-entry script
+run = run_bridge(...); wait for gate.fired       # tool is blocked in `await gate.future`
+set cancel_event      # INERT right now: no events flow while blocked, and agent.py:569-570 is
+                      # only reached BETWEEN astream_events iterations (the astream_events call
+                      # itself is at agent.py:564)
+gate.loop.call_soon_threadsafe(gate.future.set_result, "resolve")   # PUSH: events resume
+# On the FIRST event after resume, the already-set cancel_event is checked and the loop breaks —
+# before the agent ever consults the model again.
+consumer drains -> join(timeout=5); run.join()
+# DISCRIMINATOR — do NOT assert the absence of the `{"type": "done"}` StreamEvent: the `break` at
+# :570 exits the `try` normally, falls through to history reconstruction, and agent.py:698 yields
+# that event UNCONDITIONALLY, so a cancelled run emits it too. Assert instead on what genuinely
+# separates a cancelled run from a completed one — the second invoke never happened:
+assert model.invoke_count == 1                # no 2nd invoke: the break came first
+assert no post-resume text_delta / final assistant content from a 2nd invoke in run.events
 assert run.agent_thread.is_alive() is False   # backstop still terminates the thread
 ```
 
@@ -215,7 +233,12 @@ assert run.agent_thread.is_alive() is False   # backstop still terminates the th
 - Windows: `asyncio.run` inside the bridge thread uses the default Proactor loop — fine for the
   in-process tool (no subprocess here; subprocess is Tier C).
 - The fake's plain final message after the tool result comes from the `responses` script indexed by
-  an invoke counter — the last entry is `AIMessage("done")`, so the agent halts deterministically.
+  an invoke counter (exposed as `invoke_count`) — the last entry is `AIMessage("done")`, so the
+  agent halts deterministically.
+- **Two different "done"s — keep them apart when writing this step.** `AIMessage("done")` is the
+  fake's final assistant *text*; the `{"type": "done", …}` **StreamEvent** at `agent.py:698` is
+  yielded unconditionally once the `astream_events` loop ends, cancelled or not. Only the former
+  distinguishes a completed run from a cancelled one.
 
 ## Definition of done
 

@@ -72,7 +72,7 @@ Because `spikes/` is outside CI (D8), a step's checks are: (1) the step's script
 completion with every `assert` green, deterministically on repeat; and (2) the standard
 `src`/`tests` checks remain green — trivially true since **no production files are touched**.
 Run the fast unit suite once per step to confirm (2):
-`run_pytest_check(extra_args=["-n","auto","-m","not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])`.
+`run_pytest_check(extra_args=["-n","auto","-m","not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])`.
 
 ## Files created / modified
 
@@ -113,6 +113,9 @@ pr_info/steps/step_1.md ... step_6.md    the plan
    actual `queue.Queue` from inside the interceptor, proving the side channel is reachable (#2).
 5. **Tier C** — throwaway FastMCP stdio server + real `tool_interceptors=[gate]`: assert the real
    interceptor coroutine fired, resume past the gate, deny returns `ToolMessage(status="error")`
-   and the agent continues, and the post-`ToolNode` `tool_call_id` is really filled in (#5).
+   and the agent continues, plus a **recorded probe** (not a gating assert) of whether `ToolNode`
+   really fills the empty post-deny `tool_call_id`: `PASS: deny-tool-call-id-filled` **or**
+   `OBSERVED: deny-tool-call-id-empty (finding for I3.2 / latent I2.3 bug)` — both are valid
+   outcomes and the run exits 0 either way (#5).
 6. **FINDINGS.md** — synthesise works/gotchas/recommendations, confirm CI ignores `spikes/` (D8),
    record go/no-go verdict and, on a negative, name+rank the D10 fallbacks.

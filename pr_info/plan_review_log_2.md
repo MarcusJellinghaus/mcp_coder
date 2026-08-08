@@ -42,3 +42,21 @@ Branch: `1044-i3-1-feasibility-spike-interceptor-cross-thread-future` (up to dat
 **Note**: the apply agent was interrupted by an API error after F9–F12 and was resumed from its transcript to complete F13–F14; the resumed run verified F9–F12 had landed coherently and appended `Decisions.md` once, without duplicates.
 
 **Status**: committed
+
+## Round 3 — 2026-08-08
+
+**Findings**:
+- `step_2.md:195-199` (`scenario_backstop`) — **high** — the D2 part-(c) backstop proof is non-deterministic *and* asserts a factually wrong discriminator. (a) "stream ended before the final 'done' event" is false: `cancel_event` breaks the loop at `agent.py:569-570`, the `break` exits the `try` normally and falls through to history reconstruction, and `agent.py:698` yields `{"type": "done", …}` **unconditionally** — a cancelled run still emits it. (b) `cancel_event` is set only after the main thread observes the first `tool_result`, by which time the agent thread has already run invoke 2 → instant tool → invoke 3 → stream end with no waits, so the flag lands after the run is over. Predictably red, not merely flaky. Risk: the implementer weakens the assertion to something equally true of `scenario_direct`, voiding the AC.
+- `step_2.md:112-122` with `:149-167` — **low** — `run_bridge`'s spike-invented worker thread is never stated to be a daemon. `scenario_inert` deliberately abandons its run, leaving the worker in the copied `q.get(timeout=300.0)` (F10's long default must stay long); a non-daemon worker is joined at interpreter shutdown, hanging `python tier_b_cancel.py` ~300s and contradicting the "exits 0, repeatable" DoD.
+- `summary.md:116` — **low, consistency** — still phrases the deny probe as a single expected outcome rather than F13's two-valid-outcomes recorded probe.
+- `summary.md:75` — **low, consistency** — the documented fast-suite marker exclusion list omits `jenkins_integration`, `copilot_cli_integration`, `llm_integration`, `textual_integration`.
+
+**Decisions**: all four accepted; none escalated. For F15 the reviewer offered two restructurings — took the **simpler** one (single `Gate`: set `cancel_event` while blocked, then resolve, break on the first event after resume) over the two-gate variant, per the "default to simpler plans" rule. It is also a tighter mirror-image of `scenario_inert`: same flag, inert while blocked, live once resolved. Mandated that the new discriminator must not be the absence of the `done` StreamEvent. Consequence: `scenario_backstop` reverts to the default 2-entry `responses` script (the `FakeChatModel(responses=…)` constructor from F12 stays — Step 5 still uses it).
+
+**User decisions**: none required this round.
+
+**Changes**: `step_2.md` single-gate `scenario_backstop` with `invoke_count`-based discriminator + explicit "do not assert absence of `done`" note + `AIMessage("done")` vs `{"type": "done"}` disambiguation + `run_bridge` worker documented `daemon=True`; `step_5.md` resume assertion no longer keys on the "final 'done' event"; `summary.md` deny-probe wording and marker list; `Decisions.md` F15–F18 appended and F12's row amended so no live "3-entry script" claim remains.
+
+**Note**: the round-3 reviewer misreported HEAD as `423a17f`; actual HEAD was `e227755`. Its file-content verification was against the correct (current) files, so the findings stand.
+
+**Status**: committed

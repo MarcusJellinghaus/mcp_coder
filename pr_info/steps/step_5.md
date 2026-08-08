@@ -113,7 +113,10 @@ assert gate.fired is True                     # real coroutine executed (even wi
 # D6 identity — the go/no-go, proven on the REAL adapter path (not just Tier A's single loop):
 assert gate.loop_id == model.loop_id          # interceptor ran on the AGENT loop (independent ref)
 assert gate.loop_id != daemon_loop_id         # ...and NOT on the MCPManager daemon loop
-assert a tool_result / final 'done' event appears   # agent proceeded PAST the gate
+assert a tool_result event AND the fake's final assistant text (the AIMessage("done") returned on
+  invoke 2) appear                            # agent proceeded PAST the gate
+# NOT the {"type": "done"} StreamEvent: agent.py:698 yields that unconditionally once the
+# astream_events loop ends, so it cannot distinguish "proceeded past the gate" from "stopped early".
 ```
 
 ## ALGORITHM — deny (scenario_deny)
