@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1 — Tier A: pure-asyncio microscope](./steps/step_1.md) — loop identity by object (D6), cross-thread Future round-trip, resolve/deny/cancel, registry reverse-order probe (D5)
+- [x] [Step 1 — Tier A: pure-asyncio microscope](./steps/step_1.md) — loop identity by object (D6), cross-thread Future round-trip, resolve/deny/cancel, registry reverse-order probe (D5)
 - [ ] [Step 2 — Tier B (cancel)](./steps/step_2.md) — reconstructed real bridge + `_common.py`; three generic cancel paths inert while blocked; direct resolve unblocks; backstop after resume; `thread.is_alive() is False` after 5s join (#3, D2)
 - [ ] [Step 3 — Tier B (pause)](./steps/step_3.md) — pending-counter pause defeats both timeouts; negative control shows verbatim consumer dies (#4, D1)
 - [ ] [Step 4 — D7 approval-bridge seam](./steps/step_4.md) — standalone attach/detach lifecycle across two turns, stale-`q` failure mode, real `approval_request` event through a real queue (#2, D7)
