@@ -86,6 +86,40 @@ nothing is stored and prior history is untouched. `asyncio.wait_for` cancellatio
 `CancelledError` (a `BaseException`), which `run_agent_stream`'s `except Exception` does
 not catch — so no spurious `error` event and no storage, for free.
 
+"Persist nothing" applies to **storage only**. The `done` event still carries
+`session_id`, `usage` and — as `result` — the text accumulated from the streamed deltas
+(`accumulated_text` survives step 4 for exactly this reason). Emitting `result: ""` there
+would mean that any failure to capture the terminal graph event silently turns the
+non-stream agent path into an empty answer, because step 5's drainer reads `final_text`
+off that key. Bounded degradation: history not stored, text still correct.
+
+### 6. `done` payload and `ResponseAssembler`
+
+The `done` event gains `messages` / `result` / `stats`, and `ResponseAssembler`
+(`src/mcp_coder/llm/types.py`) already consumes two of those key names — so it **is**
+touched, in step 4, and both effects are decided rather than inherited:
+
+* **`result` — kept, with documented semantics.** `add()` reads `done["result"]` and
+  `result()` uses it as the response text **only when no `text_delta` event was seen**
+  (`types.py:141-143`, `:186-187`). Streaming runs that emit token deltas are unaffected —
+  deltas win. Streaming agent runs that emit **no** `text_delta` (a backend or proxy that
+  never sends `on_chat_model_stream`) return empty text today and will now return the
+  agent's final answer. That is the intended contract: `done["result"]` is the
+  authoritative final text, delta accumulation is the preferred rendering. A new
+  `tests/llm/test_types.py` case covers the no-`text_delta` path; the existing
+  deltas-win cases stay unchanged.
+* **`messages` — excluded from the persisted `raw_response["events"]`.** `add()` appends
+  every non-`raw_line` event to `_raw_events`, which `result()` returns as
+  `raw_response["events"]`, and icoder persists that **per turn** via `store_session`.
+  `done["messages"]` is the *whole* serialized conversation, so leaving it in would grow
+  stored session JSON **quadratically** with turn count (turn *n* re-persists all *n*
+  turns) — not "roughly doubles". The payload exists solely for step 5's in-process
+  drainer, which reads it off the live event, so nothing needs it after assembly.
+  **Chosen behaviour:** `ResponseAssembler.add` records a shallow copy of the `done` event
+  with the `messages` key removed; the event yielded to consumers keeps it. The ndjson
+  formatter filters `done` to `session_id`/`usage`/`cost_usd`, so CLI output is unaffected
+  either way.
+
 ### Deliberate non-changes (KISS)
 
 * **`done.usage` keeps its `on_chat_model_end` accumulator** rather than being recomputed
@@ -101,11 +135,9 @@ not catch — so no spurious `error` event and no storage, for free.
   (three tests, all mocking `ainvoke`) must be rewritten in step 5 to emit
   `on_chat_model_end` events — keeping their numeric assertions verbatim as the parity
   check. Only the stream path's usage code is unchanged.
-* **`ResponseAssembler` is not touched.** It records the `done` event into
-  `raw_response["events"]`, so `messages` on `done` roughly doubles stored session JSON
-  for the streaming agent path with `--store-response`. The ndjson formatter filters
-  `done` to `session_id`/`usage`/`cost_usd`, so CLI output is unaffected. Size note only,
-  out of scope here.
+* **`ResponseAssembler`'s text-assembly rules are not touched** beyond §6 — deltas still
+  win over `done["result"]`, and the only structural change is dropping `done["messages"]`
+  from the recorded event. No new assembler state, no format version bump.
 * **`prompt` and icoder execution models are not unified** — one `chat_model.invoke()`
   vs a LangGraph ReAct loop. Only the message plumbing converges.
 
@@ -125,14 +157,16 @@ the 750-line limit, so the extraction also relieves size pressure.
 |------|---------|
 | `src/mcp_coder/llm/providers/langchain/_messages.py` | Shared `assemble_messages` + `serialize_messages` |
 | `tests/llm/providers/langchain/test_langchain_messages.py` | Unit tests for the two helpers |
-| `tests/llm/providers/langchain/test_langchain_multi_turn.py` | Multi-turn text + agent tests, single-system regression test |
+| `tests/llm/providers/langchain/test_langchain_multi_turn.py` | Multi-turn text + agent tests; single-system regression tests, incl. one end-to-end through `ask_langchain_stream` + real session-file round trip |
 
 ### Modified
 
 | Path | Change |
 |------|--------|
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Merged `SystemMessage`; `_ask_text` / `_ask_text_stream` adopt helpers; `_ask_agent` drops its store call and passes `session_id` |
-| `src/mcp_coder/llm/providers/langchain/agent.py` | `run_agent_stream` sources history from graph final messages, adopts helpers, stores once, emits `messages`/`result`/`stats` on `done`; new `_summarize_messages`; `run_agent` becomes a drainer; flatten NOTE removed |
+| `src/mcp_coder/llm/providers/langchain/agent.py` | `run_agent_stream` sources history from graph final messages, adopts helpers, stores once, emits `messages`/`result`/`stats` on `done` (`result` falls back to `accumulated_text` when there is no terminal event); new `_summarize_messages`; `run_agent` becomes a drainer; flatten NOTE removed |
+| `src/mcp_coder/llm/types.py` | **Step 4** — `ResponseAssembler.add` records the `done` event without its `messages` key (see §6) |
+| `tests/llm/test_types.py` | **Step 4** — assembler cases for the two new `done` keys: `result` used when no `text_delta`, `messages` absent from `raw_response["events"]` |
 | `tests/llm/providers/langchain/conftest.py` | New shared test helpers `graph_events()` + `async_events()` |
 | `tests/llm/providers/langchain/test_langchain_integration.py` | **Step 4** — one `langchain_integration` two-turn stream test; the real-LangGraph gate for the root-`run_id` terminal-event assumption |
 | `tests/llm/providers/langchain/test_langchain_provider_system_messages.py` | Merged-`SystemMessage` assertions |
@@ -164,7 +198,7 @@ already cover the new module).
 | 3 | [Text paths adopt the helpers](step_3.md) | `_ask_text` / `_ask_text_stream` converged; multi-turn text test |
 | 4 | [Agent stream sources graph final messages](step_4.md) | Issue 2 fixed; single storage site; cancel/error persist nothing |
 | 5 | [Collapse `run_agent` into a drainer](step_5.md) | One agent execution path; `_ask_agent` stops storing |
-| 6 | [Regression test + docs](step_6.md) | Single-system-provider regression locked in |
+| 6 | [Regression test + docs](step_6.md) | Single-system-provider regression locked in, incl. the end-to-end icoder agent flow |
 
 Each step is exactly one commit: tests + implementation + pylint / pytest / mypy green.
 

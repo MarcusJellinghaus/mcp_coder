@@ -13,6 +13,10 @@ Step 5 collapses it. The stats loop is **copied** into `_summarize_messages` her
 
 * Modify `src/mcp_coder/llm/providers/langchain/agent.py` — `run_agent_stream`
   (~lines 478–698), plus a new module-level `_summarize_messages()`
+* Modify `src/mcp_coder/llm/types.py` — `ResponseAssembler.add` (~lines 120–143): keep
+  `done["messages"]` out of the persisted `raw_response["events"]`
+  (see "`done` payload contract")
+* Modify `tests/llm/test_types.py` — assembler tests for the two new `done` keys
 * Modify `tests/llm/providers/langchain/conftest.py` — add two shared test helpers
 * Modify `tests/llm/providers/langchain/test_langchain_agent_streaming.py`
 * Modify `tests/llm/providers/langchain/test_langchain_multi_turn.py` (created in step 3)
@@ -48,10 +52,17 @@ async def async_events(items: list[dict[str, object]]) -> AsyncIterator[dict[str
 * Its deferred import block reduces to `from langgraph.prebuilt import create_react_agent`
   — `HumanMessage` / `ToolMessage` / `messages_from_dict` are no longer needed there, and
   `AIMessage` moves into `_summarize_messages`.
-* **Delete** the accumulators `accumulated_text`, `tool_calls_by_run_id`,
-  `tool_results_list`, the whole reconstruction block after the event loop, and the
-  flatten NOTE at lines 659–661. Keep `accumulated_usage` and every `yield` in the event
-  loop — user-facing streaming is unchanged.
+* **Delete** the accumulators `tool_calls_by_run_id` and `tool_results_list`, the whole
+  reconstruction block after the event loop, and the flatten NOTE at lines 659–661. Keep
+  `accumulated_usage` and every `yield` in the event loop — user-facing streaming is
+  unchanged.
+* **Keep `accumulated_text`.** It no longer feeds history reconstruction, but it is the
+  `result` fallback when no terminal graph event was captured. Without it the
+  no-terminal-event branch would emit `result: ""`, and step 5's drainer reads
+  `final_text` straight off that key — so a failed root-`run_id` capture would silently
+  turn the non-stream agent path (`_ask_agent` → `run_agent`) into an **empty-text
+  response** instead of merely skipping storage. Document in the code why the
+  accumulator survives.
 * `_summarize_messages` receives the stats loop **copied verbatim from** `run_agent`
   (`agent_steps`, `total_tool_calls`, `tool_trace`, `trace_by_id` fill from
   `ToolMessage`s) **minus** its usage accumulation — usage keeps coming from the existing
@@ -87,7 +98,7 @@ Finalization after the loop:
 ```
 if final_messages is None:            # cancelled, or no terminal event -> persist nothing
     yield {"type": "done", "session_id": session_id, "usage": accumulated_usage,
-           "messages": [], "result": "",
+           "messages": [], "result": accumulated_text,
            "stats": {"agent_steps": 0, "total_tool_calls": 0, "tool_trace": [],
                      "usage": accumulated_usage}}
     return
@@ -101,8 +112,15 @@ yield {"type": "done", "session_id": session_id, "usage": accumulated_usage,
 Both branches carry `session_id` **and** `usage` at the top level — the no-terminal-event
 branch is not a stripped-down event. The three `TestRunAgentStreamUsage` tests emit no
 terminal graph event, so they take exactly this branch, and they must keep asserting
-`done["usage"]` unchanged (see Tests, item 6). Only `messages` / `result` / `stats` are
-empty, because there is nothing safe to persist or summarize.
+`done["usage"]` unchanged (see Tests, item 6).
+
+`result` falls back to `accumulated_text` in that branch — **not** `""`. Only `messages`
+and `stats` are empty, because there is nothing safe to persist or summarize; the answer
+text, however, was already streamed and must survive. Step 5's drainer takes
+`final_text = done["result"]`, so `""` here would make `mcp-coder prompt` in agent mode
+return an empty answer whenever the root-`run_id` capture fails — a silent, user-visible
+regression on top of the (logged) history loss. Degrading to "history not stored, text
+still correct" keeps the failure mode bounded.
 
 Matching by root `run_id` (not by event name) is deliberate: `astream_events` emits one
 `on_chain_end` per node/sub-chain, and event names are version-specific LangGraph
@@ -116,8 +134,31 @@ internals.
   `stats` is nested so it cannot collide with the top-level keys, and it carries `usage`
   so step 5's drainer can hand `_ask_agent` the exact dict it builds `raw_response` from
   today.
-* Cancelled / no-terminal-event turn: `messages: []`, `result: ""`, zeroed stats, and
-  **no** storage call — but `session_id` and `usage` are still present and unchanged.
+* Cancelled / no-terminal-event turn: `messages: []`, `result: accumulated_text`, zeroed
+  stats, and **no** storage call — `session_id` and `usage` are present and unchanged.
+
+## `done` payload contract (`ResponseAssembler`)
+
+The two new `done` keys are consumed by `ResponseAssembler` (`src/mcp_coder/llm/types.py`),
+so the assembler is **not** a no-op bystander. Both effects are decided here:
+
+* **`result` — intended semantics, kept.** `ResponseAssembler.add` already reads
+  `done["result"]` and `result()` uses it as the response text **only when no `text_delta`
+  event was seen** (`types.py:141-143`, `:186-187`). Runs that stream tokens are therefore
+  unaffected (deltas win). Runs that produce no `text_delta` — a backend or proxy that
+  does not emit `on_chat_model_stream` — today yield empty text and will now yield the
+  agent's final answer. That is the intended semantics: `done["result"]` is the
+  authoritative final text, `text_delta` accumulation is the preferred rendering. Covered
+  by Tests item 10.
+* **`messages` — excluded from the persisted `raw_response["events"]`.** `add()` appends
+  every non-`raw_line` event to `_raw_events`, which `result()` returns as
+  `raw_response["events"]`; icoder persists that per turn via `store_session`. Since
+  `done["messages"]` is the *whole* conversation, leaving it in would make session JSON
+  grow **quadratically** with turn count. The payload exists solely for step 5's
+  in-process drainer, so nothing needs it after assembly: `ResponseAssembler.add` records
+  a shallow copy of the `done` event with the `messages` key removed. The live event
+  handed to the generator's consumer (and therefore to the drainer) is untouched. Covered
+  by Tests item 11.
 
 ## Tests (write first)
 
@@ -135,10 +176,27 @@ In `test_langchain_agent_streaming.py`:
 6. `test_done_event_emitted_last`, the three `TestRunAgentStreamUsage` tests and the
    tool-output tests keep passing **unchanged** (they emit no terminal event, so they
    simply store nothing — none of them asserts storage).
+8. New `test_no_terminal_event_done_carries_streamed_text` — feed `on_chat_model_stream`
+   deltas but **no** terminal graph event; assert `done["result"]` equals the accumulated
+   text (not `""`), `done["messages"] == []` and store was not called. This is the guard
+   against step 5's drainer returning an empty answer when the root-`run_id` capture
+   fails.
+9. New `test_cancel_done_carries_partial_text` — same shape as item 4, plus
+   `done["result"]` holds the text streamed before the cancel.
+
+In `tests/llm/test_types.py`:
+
+10. New `test_done_result_used_when_no_text_delta` — feed `ResponseAssembler` a `done`
+    event with `result` and no `text_delta`; assert the assembled `text` is the `result`
+    value. With a `text_delta` present, the deltas still win (existing tests cover that
+    direction — keep them unchanged).
+11. New `test_done_messages_not_recorded_in_events` — feed a `done` event carrying
+    `messages`; assert `raw_response["events"]` holds the `done` event **without** the
+    `messages` key, while `session_id` / `usage` / `result` survive.
 
 In `test_langchain_multi_turn.py`:
 
-7. `TestAgentPathMultiTurn::test_two_turns_store_no_systems_and_send_one_system` — call
+12. `TestAgentPathMultiTurn::test_two_turns_store_no_systems_and_send_one_system` — call
    `run_agent_stream` twice, feeding turn 2 the `messages` captured from turn 1's store
    call; assert turn 2's `astream_events` input has exactly one `SystemMessage` at index 0
    and the stored history has zero system entries across both turns.
@@ -186,10 +244,20 @@ message list from the terminal on_chain_end that matches the root on_chain_start
 run_id, persist serialize_messages(final_messages) once, and emit messages/result/stats
 on the done event. Add the private _summarize_messages() helper by COPYING run_agent's
 stats loop (leave run_agent's own copy in place — step 5 deletes it). Delete the delta
-reconstruction block, the three now-dead accumulators, and the flatten NOTE at
-agent.py:659-661.
+reconstruction block, the two now-dead accumulators (tool_calls_by_run_id,
+tool_results_list) and the flatten NOTE at agent.py:659-661.
+
+KEEP accumulated_text: when no terminal graph event is captured, the done event must
+carry it as `result` (never ""), otherwise step 5's drainer silently returns an empty
+answer on the non-stream agent path.
 
 A cancelled or errored turn must store NOTHING and leave prior history untouched.
+
+Also update ResponseAssembler.add in src/mcp_coder/llm/types.py so the recorded done
+event drops its `messages` key (the whole conversation would otherwise be persisted into
+raw_response["events"] every icoder turn, growing session JSON quadratically); the event
+yielded to consumers keeps the key. Add the tests/llm/test_types.py cases from the step
+file for both new done keys.
 
 Add graph_events() and async_events() to tests/llm/providers/langchain/conftest.py and
 use them from the streaming tests. Write the tests listed in the step file first. Also add

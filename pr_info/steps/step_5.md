@@ -70,6 +70,11 @@ async def _drain():
 return await asyncio.wait_for(_drain(), timeout=float(timeout))
 ```
 
+`final_text` comes straight off `done["result"]`, which step 4 guarantees is non-empty
+whenever the model produced text — including the no-terminal-graph-event case, where it
+falls back to the streamed `accumulated_text`. That is what keeps a failed root-`run_id`
+capture a history-loss (logged) rather than a silent empty answer on this path.
+
 `wait_for` still raises `asyncio.TimeoutError` on expiry. Its cancellation raises
 `CancelledError`, a `BaseException`, so `run_agent_stream`'s `except Exception` does not
 catch it — no spurious `error` event and nothing persisted, which is exactly the required
