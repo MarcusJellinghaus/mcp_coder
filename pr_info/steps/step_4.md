@@ -13,10 +13,11 @@ Step 5 collapses it. The stats loop is **copied** into `_summarize_messages` her
 
 * Modify `src/mcp_coder/llm/providers/langchain/agent.py` — `run_agent_stream`
   (~lines 478–698), plus a new module-level `_summarize_messages()`
-* Modify `src/mcp_coder/llm/types.py` — `ResponseAssembler.add` (~lines 120–143): keep
-  `done["messages"]` out of the persisted `raw_response["events"]`
-  (see "`done` payload contract")
-* Modify `tests/llm/test_types.py` — assembler tests for the two new `done` keys
+* Modify `src/mcp_coder/llm/providers/langchain/__init__.py` — `_ask_agent_stream`
+  (~lines 438–540): strip `messages` from the `done` event before queueing it
+  (see "`done` payload contract"). `src/mcp_coder/llm/types.py` and
+  `src/mcp_coder/icoder/core/app_core.py` are **not** touched.
+* Modify `tests/llm/test_types.py` — assembler test for the new `done["result"]` key
 * Modify `tests/llm/providers/langchain/conftest.py` — add two shared test helpers
 * Modify `tests/llm/providers/langchain/test_langchain_agent_streaming.py`
 * Modify `tests/llm/providers/langchain/test_langchain_multi_turn.py` (created in step 3)
@@ -137,10 +138,10 @@ internals.
 * Cancelled / no-terminal-event turn: `messages: []`, `result: accumulated_text`, zeroed
   stats, and **no** storage call — `session_id` and `usage` are present and unchanged.
 
-## `done` payload contract (`ResponseAssembler`)
+## `done` payload contract (consumers)
 
-The two new `done` keys are consumed by `ResponseAssembler` (`src/mcp_coder/llm/types.py`),
-so the assembler is **not** a no-op bystander. Both effects are decided here:
+The two new `done` keys reach consumers outside this package, so neither is a no-op.
+Both effects are decided here:
 
 * **`result` — intended semantics, kept.** `ResponseAssembler.add` already reads
   `done["result"]` and `result()` uses it as the response text **only when no `text_delta`
@@ -150,15 +151,30 @@ so the assembler is **not** a no-op bystander. Both effects are decided here:
   agent's final answer. That is the intended semantics: `done["result"]` is the
   authoritative final text, `text_delta` accumulation is the preferred rendering. Covered
   by Tests item 10.
-* **`messages` — excluded from the persisted `raw_response["events"]`.** `add()` appends
-  every non-`raw_line` event to `_raw_events`, which `result()` returns as
-  `raw_response["events"]`; icoder persists that per turn via `store_session`. Since
-  `done["messages"]` is the *whole* conversation, leaving it in would make session JSON
-  grow **quadratically** with turn count. The payload exists solely for step 5's
-  in-process drainer, so nothing needs it after assembly: `ResponseAssembler.add` records
-  a shallow copy of the `done` event with the `messages` key removed. The live event
-  handed to the generator's consumer (and therefore to the drainer) is untouched. Covered
-  by Tests item 11.
+* **`messages` — stripped in `_ask_agent_stream`, the provider boundary.**
+  `done["messages"]` is the *whole* serialized conversation and it exists solely for step
+  5's in-process drainer, which consumes `run_agent_stream` **directly**. Every other
+  consumer reaches the event through `_ask_agent_stream`, and **two** of them persist it
+  per turn:
+  * `ResponseAssembler.add` appends every non-`raw_line` event to `_raw_events`, which
+    `result()` returns as `raw_response["events"]`; icoder persists that via
+    `store_session`.
+  * `AppCore.stream_llm` writes every non-`raw_line` event to the icoder event log —
+    `self._event_log.emit("stream_event", **event)` (`app_core.py:201`) — keeping it in
+    memory (`EventLog._entries`) and as a JSONL line on disk; `ui/replay.py:73-81` reads
+    those entries back and re-emits them.
+
+  Left on the event, both sinks grow **quadratically** with turn count (turn *n*
+  re-persists all *n* turns).
+
+  **Chosen behaviour — one strip site.** `_ask_agent_stream` puts a shallow copy of the
+  `done` event **without** the `messages` key on its queue; every other event is queued
+  unchanged. `run_agent_stream` still yields the key, so the step-5 drainer (which bypasses
+  the bridge) gets it. Consequence: **`types.py` and `app_core.py` need no filter** —
+  filtering them individually would be two filters in two modules that must stay in sync
+  as sinks are added, which is exactly the per-consumer drift this issue removes. The
+  ndjson formatter filters `done` to `session_id`/`usage`/`cost_usd`, so CLI output is
+  unaffected either way. Covered by Tests item 11.
 
 ## Tests (write first)
 
@@ -190,9 +206,15 @@ In `tests/llm/test_types.py`:
     event with `result` and no `text_delta`; assert the assembled `text` is the `result`
     value. With a `text_delta` present, the deltas still win (existing tests cover that
     direction — keep them unchanged).
-11. New `test_done_messages_not_recorded_in_events` — feed a `done` event carrying
-    `messages`; assert `raw_response["events"]` holds the `done` event **without** the
-    `messages` key, while `session_id` / `usage` / `result` survive.
+
+In `test_langchain_agent_streaming.py` (the strip is a langchain-boundary behaviour, so
+its test lives with the other bridge tests):
+
+11. New `test_ask_agent_stream_strips_messages_from_done` — drive `_ask_agent_stream` with
+    a patched `run_agent_stream` whose `done` carries `messages`; assert the yielded `done`
+    has **no** `messages` key while `session_id` / `usage` / `result` / `stats` survive,
+    and that non-`done` events pass through unchanged. This is what keeps the whole
+    conversation out of both `raw_response["events"]` and the icoder event log.
 
 In `test_langchain_multi_turn.py`:
 
@@ -253,11 +275,16 @@ answer on the non-stream agent path.
 
 A cancelled or errored turn must store NOTHING and leave prior history untouched.
 
-Also update ResponseAssembler.add in src/mcp_coder/llm/types.py so the recorded done
-event drops its `messages` key (the whole conversation would otherwise be persisted into
-raw_response["events"] every icoder turn, growing session JSON quadratically); the event
-yielded to consumers keeps the key. Add the tests/llm/test_types.py cases from the step
-file for both new done keys.
+Also make _ask_agent_stream in src/mcp_coder/llm/providers/langchain/__init__.py queue a
+shallow copy of the done event WITHOUT its `messages` key. That key is only for step 5's
+drainer, which consumes run_agent_stream directly; every consumer above the bridge
+persists the whole event twice per turn — into raw_response["events"] via
+ResponseAssembler/store_session, and into the icoder JSONL event log via
+AppCore.stream_llm's `self._event_log.emit("stream_event", **event)` (app_core.py:201) —
+so leaving it in grows both sinks quadratically with turn count. Strip it once at the
+boundary: do NOT add filters to src/mcp_coder/llm/types.py or
+src/mcp_coder/icoder/core/app_core.py. Add the tests/llm/test_types.py case for
+done["result"] and the boundary-strip test from the step file.
 
 Add graph_events() and async_events() to tests/llm/providers/langchain/conftest.py and
 use them from the streaming tests. Write the tests listed in the step file first. Also add

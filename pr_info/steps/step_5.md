@@ -13,6 +13,9 @@ reconstructions that happen to agree.
 * Modify `tests/llm/providers/langchain/test_langchain_agent_usage.py`
 * Modify `tests/llm/providers/langchain/test_langchain_agent_system_messages.py`
 * Modify `tests/llm/providers/langchain/test_langchain_agent_mode.py`
+* Modify `tests/llm/providers/langchain/test_langchain_integration.py` — non-empty
+  `raw_response["usage"]` assertion in `TestAgentModeIntegration::test_agent_simple_prompt`
+  (the real gate for the usage-source change)
 * Modify `tests/icoder/test_icoder_permission_wiring.py` (docstrings only)
 
 ## WHAT
@@ -133,8 +136,27 @@ accumulator. So each test must:
   `output_tokens == 200` / `500`, `cache_read_input_tokens == 100` / `300`, and
   `stats["usage"] == {}` when no message has `usage_metadata`).
 
-This is the parity check for the usage source change; if the numbers do not match after
-the rewrite, stop and report rather than relaxing the assertions.
+If the numbers do not match after the rewrite, stop and report rather than relaxing the
+assertions.
+
+**These rewritten tests are not a parity check — they only prove the arithmetic.** They
+hand-write the `on_chat_model_end` events *and* the `usage_metadata` on them, so they pass
+by construction and cannot detect the actual risk: under `astream_events` the model is
+streamed, and the aggregated chunk carries `usage_metadata` **only when the backend streams
+usage** (`stream_usage=True` / `stream_options={"include_usage": True}` for
+OpenAI-compatible backends). A backend or proxy that omits it makes `stats["usage"]` — and
+`_ask_agent`'s `raw_response["usage"]` — silently `{}` where `ainvoke` returned real
+numbers today, with a fully green suite.
+
+**Real gate (required, part of this step):** add to
+`tests/llm/providers/langchain/test_langchain_integration.py::TestAgentModeIntegration::test_agent_simple_prompt`
+(which today asserts only text and `session_id`) an assertion that
+`result["raw_response"]["usage"]` is a non-empty dict with a positive `input_tokens`, and
+run it against the real endpoint (see Checks). This is the only check that can tell
+"accumulator works" from "backend streams usage". If it fails, the configured backend does
+not stream usage: report it and record the `{}` fallback as the observed behaviour rather
+than deleting the assertion. If it **skips** (no endpoint configured), the usage-source
+change is unverified — say so explicitly, exactly as for the root-`run_id` gate.
 
 `test_langchain_agent_system_messages.py`:
 
@@ -171,7 +193,9 @@ mcp__tools-py__run_pytest_check(markers=["langchain_integration"], extra_args=["
 
 `TestAgentModeIntegration::test_agent_session_continuity` now runs a real second turn
 through the drained `run_agent`, so it is the end-to-end proof of the root-`run_id`
-terminal-event capture. A skip (no endpoint configured) is not a pass — report it.
+terminal-event capture; `::test_agent_simple_prompt` carries the new non-empty
+`raw_response["usage"]` assertion and is the proof for the usage-source change. A skip (no
+endpoint configured) is not a pass for either — report both explicitly.
 
 ## LLM Prompt
 
@@ -191,6 +215,13 @@ the parity contract; only the mock setup should change. test_langchain_agent_usa
 must feed its usage through on_chat_model_end events (see the step file), because
 run_agent no longer derives usage from the final message list. Also add the multi-step
 structural parity test.
+
+Those usage tests inject usage_metadata by hand and therefore pass by construction, so
+they cannot prove the backend actually streams usage. Add the required real gate: an
+assertion that raw_response["usage"] is a non-empty dict with a positive input_tokens in
+tests/llm/providers/langchain/test_langchain_integration.py::TestAgentModeIntegration::test_agent_simple_prompt,
+and run the langchain_integration tests. Report a skip as unverified; report a failure as
+"backend does not stream usage" rather than deleting the assertion.
 
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.
