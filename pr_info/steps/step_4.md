@@ -5,7 +5,9 @@ flattened history that includes the system messages, and instead persists the gr
 own final message list, serialized (and therefore system-stripped) by the shared helper.
 This is the single storage site for the agent path.
 
-`run_agent` is **not** touched in this step — it still works as today. Step 5 collapses it.
+`run_agent` is **not** touched in this step — it still works as today, stats loop and all.
+Step 5 collapses it. The stats loop is **copied** into `_summarize_messages` here and
+**deleted** from `run_agent` in step 5, so step 4 leaves both paths working.
 
 ## WHERE
 
@@ -14,6 +16,8 @@ This is the single storage site for the agent path.
 * Modify `tests/llm/providers/langchain/conftest.py` — add two shared test helpers
 * Modify `tests/llm/providers/langchain/test_langchain_agent_streaming.py`
 * Modify `tests/llm/providers/langchain/test_langchain_multi_turn.py` (created in step 3)
+* Modify `tests/llm/providers/langchain/test_langchain_integration.py` — one
+  `langchain_integration` two-turn stream test (see "Required validation gate")
 
 ## WHAT
 
@@ -48,11 +52,15 @@ async def async_events(items: list[dict[str, object]]) -> AsyncIterator[dict[str
   `tool_results_list`, the whole reconstruction block after the event loop, and the
   flatten NOTE at lines 659–661. Keep `accumulated_usage` and every `yield` in the event
   loop — user-facing streaming is unchanged.
-* `_summarize_messages` receives the stats loop moved verbatim out of `run_agent`
+* `_summarize_messages` receives the stats loop **copied verbatim from** `run_agent`
   (`agent_steps`, `total_tool_calls`, `tool_trace`, `trace_by_id` fill from
   `ToolMessage`s) **minus** its usage accumulation — usage keeps coming from the existing
-  `on_chat_model_end` accumulator (see summary; identical values, no code churn, and
-  usage still reported on a cancelled turn).
+  `on_chat_model_end` accumulator (see summary; identical values, and usage still reported
+  on a cancelled turn).
+  **Copy, do not move.** `run_agent` keeps its own copy of the loop through step 4 so it
+  still works and its tests stay green; step 5 deletes the original when `run_agent`
+  becomes a drainer. The temporary duplication lives for exactly one commit and is the
+  price of each step leaving the suite green.
 * `graph_events()` emits a root `on_chain_start` / `on_chain_end` pair with the same
   `run_id` (`"root"`) and `data.output == {"messages": final_messages}`; move the local
   `_async_events` out of `test_langchain_agent_streaming.py` into conftest as
@@ -78,13 +86,23 @@ Finalization after the loop:
 
 ```
 if final_messages is None:            # cancelled, or no terminal event -> persist nothing
-    yield done(messages=[], result="", stats=EMPTY); return
+    yield {"type": "done", "session_id": session_id, "usage": accumulated_usage,
+           "messages": [], "result": "",
+           "stats": {"agent_steps": 0, "total_tool_calls": 0, "tool_trace": [],
+                     "usage": accumulated_usage}}
+    return
 stored = serialize_messages(final_messages)          # strips the leading SystemMessage
 _store_history(session_id, stored)                   # the single storage site
 final_text, stats = _summarize_messages(final_messages)
-yield {"type": "done", "session_id": ..., "usage": accumulated_usage,
+yield {"type": "done", "session_id": session_id, "usage": accumulated_usage,
        "messages": stored, "result": final_text, "stats": {**stats, "usage": accumulated_usage}}
 ```
+
+Both branches carry `session_id` **and** `usage` at the top level — the no-terminal-event
+branch is not a stripped-down event. The three `TestRunAgentStreamUsage` tests emit no
+terminal graph event, so they take exactly this branch, and they must keep asserting
+`done["usage"]` unchanged (see Tests, item 6). Only `messages` / `result` / `stats` are
+empty, because there is nothing safe to persist or summarize.
 
 Matching by root `run_id` (not by event name) is deliberate: `astream_events` emits one
 `on_chain_end` per node/sub-chain, and event names are version-specific LangGraph
@@ -99,7 +117,7 @@ internals.
   so step 5's drainer can hand `_ask_agent` the exact dict it builds `raw_response` from
   today.
 * Cancelled / no-terminal-event turn: `messages: []`, `result: ""`, zeroed stats, and
-  **no** storage call.
+  **no** storage call — but `session_id` and `usage` are still present and unchanged.
 
 ## Tests (write first)
 
@@ -133,6 +151,30 @@ mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integra
 mcp__tools-py__run_mypy_check
 ```
 
+## Required validation gate — real LangGraph events
+
+Every unit test above feeds `graph_events()`, a fixture **this plan invents**. It proves
+the code reacts correctly to the assumed event shape; it cannot prove real LangGraph emits
+that shape. If the assumption is wrong the guard just logs a warning and stores nothing —
+icoder would silently lose multi-turn history with a green suite. So the assumption must
+be validated against a real graph before step 4 is considered done:
+
+```
+mcp__tools-py__run_pytest_check(markers=["langchain_integration"], extra_args=["-n", "auto", "tests/llm/providers/langchain/test_langchain_integration.py"])
+```
+
+`TestAgentModeIntegration::test_agent_simple_prompt` and
+`::test_agent_session_continuity` are the gate — the latter runs a real second turn
+against the stored history, which is exactly what the root-`run_id` capture must get
+right. They reach `run_agent` (non-stream) and therefore only exercise the new code path
+**after step 5**; in step 4, drive the same check through the stream path instead — add a
+`langchain_integration`-marked test that calls `ask_langchain_stream` with an `mcp_config`
+for two turns and asserts the stored history is non-empty and system-free after each.
+
+If no endpoint is configured these tests skip. **A skip is not a pass** — report it
+explicitly and treat the root-`run_id` assumption as unverified until step 6's manual
+run against the LiteLLM/Qwen endpoint covers it. Do not silently rely on the mocks.
+
 ## LLM Prompt
 
 ```
@@ -142,16 +184,22 @@ Implement step 4 only: in src/mcp_coder/llm/providers/langchain/agent.py, make
 run_agent_stream assemble its input via assemble_messages(), capture the graph's final
 message list from the terminal on_chain_end that matches the root on_chain_start's
 run_id, persist serialize_messages(final_messages) once, and emit messages/result/stats
-on the done event. Add the private _summarize_messages() helper. Delete the delta
+on the done event. Add the private _summarize_messages() helper by COPYING run_agent's
+stats loop (leave run_agent's own copy in place — step 5 deletes it). Delete the delta
 reconstruction block, the three now-dead accumulators, and the flatten NOTE at
 agent.py:659-661.
 
 A cancelled or errored turn must store NOTHING and leave prior history untouched.
 
 Add graph_events() and async_events() to tests/llm/providers/langchain/conftest.py and
-use them from the streaming tests. Write the tests listed in the step file first.
+use them from the streaming tests. Write the tests listed in the step file first. Also add
+the langchain_integration-marked two-turn stream test described under "Required validation
+gate" and run it — graph_events() is a fixture we invent, so it cannot on its own prove
+real LangGraph emits the terminal event we depend on. If the endpoint is unavailable the
+test skips: report the skip, do not call the assumption verified.
 
-Do NOT touch run_agent in this step — step 5 collapses it.
+Do NOT touch run_agent in this step — step 5 collapses it. Copy its stats loop into
+_summarize_messages and leave the original in place.
 
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.

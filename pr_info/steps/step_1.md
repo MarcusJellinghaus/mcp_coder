@@ -37,7 +37,8 @@ def serialize_messages(messages: list[Any]) -> list[dict[str, Any]]: ...
 assemble_messages:
     from langchain_core.messages import HumanMessage, messages_from_dict
     result: list[Any] = list(system_messages or [])   # list[Any] keeps mypy --strict happy
-    result.extend(messages_from_dict(history))
+    prior = [m for m in history if m.get("type") != "system"]
+    result.extend(messages_from_dict(prior))
     result.append(HumanMessage(content=question))
     return result
 
@@ -51,6 +52,15 @@ serialize_messages:
 
 `itertools.dropwhile` drops **leading** system messages only — that is the documented
 contract, and it is shape-agnostic: it dumps whatever list it is handed.
+
+The `history` filter in `assemble_messages` is deliberately **not** leading-only: loaded
+history may have been written by the pre-fix agent code and contain `"system"` entries
+anywhere, and leaving them in would put non-leading systems into the outgoing message list
+(where `serialize_messages` would not strip them either). Filtering the raw dicts on
+`type` — before `messages_from_dict` — keeps it a one-liner and behaves the same with the
+conftest message stubs, which map unknown types to `HumanMessage`. Document both contracts
+in the docstrings: *assemble drops history systems anywhere; serialize strips leading
+systems only*.
 
 ## DATA
 
@@ -67,6 +77,10 @@ In `tests/llm/providers/langchain/test_langchain_messages.py`:
    history next, `HumanMessage(question)` last.
 2. `test_assemble_without_systems` — `system_messages=None` → just history + question.
 3. `test_assemble_with_empty_history` — `[]` history → systems + question only.
+3b. `test_assemble_drops_system_messages_from_history` — a legacy-shaped history
+   `[{"type": "system", ...}, {"type": "human", ...}, {"type": "ai", ...}]` → the result
+   holds the fresh `system_messages` plus human + ai + question only; no rehydrated entry
+   comes from the `"system"` dict. Pins the resume path for pre-fix session files.
 4. `test_serialize_strips_leading_system_messages` — `[System, Human, AI]` → 2 entries,
    no `"system"` type.
 5. `test_serialize_keeps_non_leading_system_message` — `[Human, System, AI]` → 3 entries;

@@ -24,7 +24,7 @@ Two helpers split by concern, used by **all four** message sites:
 
 | Helper | Responsibility |
 |--------|----------------|
-| `assemble_messages(system_messages, history, question)` | `systems + messages_from_dict(history) + [HumanMessage(question)]` |
+| `assemble_messages(system_messages, history, question)` | `systems + messages_from_dict(history minus any "system" entries) + [HumanMessage(question)]` |
 | `serialize_messages(messages)` | Drop **leading** `SystemMessage`s, then dump the rest to the stored `{"type","data"}` shape |
 
 The module holds **no intra-package imports**, so it cannot reintroduce the
@@ -34,6 +34,22 @@ The module holds **no intra-package imports**, so it cannot reintroduce the
 the system message that was prepended for the call, so stripping leading systems in the
 one shared serializer is what makes stored history system-free on **every** path — no
 per-path filtering anywhere.
+
+**Pre-existing histories on resume.** Sessions written by the *current* agent code already
+contain `"system"` entries. On `--session-id` / `--continue-session` / icoder resume,
+`assemble_messages` puts the fresh merged `SystemMessage` in front of that loaded history,
+so the legacy systems end up **non-leading** — `serialize_messages` would not strip them
+on the way out, and the provider would still see >1 system message on the first resumed
+turn. `assemble_messages` therefore **drops every `SystemMessage` it finds in the loaded
+history** before appending it, not just leading ones. This is one line in the one shared
+helper, it is what makes "loaded history is system-free" true for old files as well as new
+ones, and it needs no migration script or storage-version bump. Covered by a unit test in
+step 1 (`test_assemble_drops_system_messages_from_history`).
+
+Note the asymmetry, and keep it: `assemble_messages` drops systems **anywhere** in the
+loaded history (that history is untrusted, possibly written by the old code), while
+`serialize_messages` strips only **leading** systems (it is handed a list this code just
+assembled, where the merged system is always at the front).
 
 ### 2. Single merged `SystemMessage`
 
@@ -72,10 +88,19 @@ not catch — so no spurious `error` event and no storage, for free.
 
 ### Deliberate non-changes (KISS)
 
-* **`done.usage` keeps its `on_chat_model_end` accumulator.** Values are identical in
-  practice (one `on_chat_model_end` per state `AIMessage`), no code changes, existing
-  usage tests stay green, and usage is still reported on a cancelled turn. Only text and
-  tool stats are recomputed from the final messages.
+* **`done.usage` keeps its `on_chat_model_end` accumulator** rather than being recomputed
+  from the final message list. Values are identical in practice (one
+  `on_chat_model_end` per state `AIMessage`), it needs no new code in the stream path, and
+  usage is still reported on a cancelled turn. Only text and tool stats are recomputed
+  from the final messages.
+
+  **This is not a no-op for the non-stream path.** `run_agent` today sums `usage_metadata`
+  off the `AIMessage`s in `ainvoke`'s output; after the step-5 collapse it inherits the
+  stream's `on_chat_model_end` accumulator instead. That is a real change of usage source
+  for `run_agent`, and `tests/llm/providers/langchain/test_langchain_agent_usage.py`
+  (three tests, all mocking `ainvoke`) must be rewritten in step 5 to emit
+  `on_chat_model_end` events — keeping their numeric assertions verbatim as the parity
+  check. Only the stream path's usage code is unchanged.
 * **`ResponseAssembler` is not touched.** It records the `done` event into
   `raw_response["events"]`, so `messages` on `done` roughly doubles stored session JSON
   for the streaming agent path with `--store-response`. The ndjson formatter filters
@@ -109,10 +134,12 @@ the 750-line limit, so the extraction also relieves size pressure.
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Merged `SystemMessage`; `_ask_text` / `_ask_text_stream` adopt helpers; `_ask_agent` drops its store call and passes `session_id` |
 | `src/mcp_coder/llm/providers/langchain/agent.py` | `run_agent_stream` sources history from graph final messages, adopts helpers, stores once, emits `messages`/`result`/`stats` on `done`; new `_summarize_messages`; `run_agent` becomes a drainer; flatten NOTE removed |
 | `tests/llm/providers/langchain/conftest.py` | New shared test helpers `graph_events()` + `async_events()` |
+| `tests/llm/providers/langchain/test_langchain_integration.py` | **Step 4** — one `langchain_integration` two-turn stream test; the real-LangGraph gate for the root-`run_id` terminal-event assumption |
 | `tests/llm/providers/langchain/test_langchain_provider_system_messages.py` | Merged-`SystemMessage` assertions |
 | `tests/llm/providers/langchain/test_langchain_agent_system_messages.py` | Merged assertions; `astream_events` mocks |
 | `tests/llm/providers/langchain/test_langchain_agent_streaming.py` | Terminal graph events where storage is asserted; cancel/error-persist-nothing tests |
 | `tests/llm/providers/langchain/test_langchain_agent_run.py` | `ainvoke` mocks → `astream_events` mocks; multi-step parity test |
+| `tests/llm/providers/langchain/test_langchain_agent_usage.py` | **Step 5** — `ainvoke` mocks → `astream_events` mocks; usage fed via `on_chat_model_end` events, assertions kept |
 | `tests/llm/providers/langchain/test_langchain_agent_mode.py` | `_ask_agent` no longer stores |
 | `tests/icoder/test_icoder_permission_wiring.py` | Docstring update only (site 2 no longer exists) |
 | `docs/architecture/architecture.md` | One bullet: `agent.py` / `_messages.py`, history stored system-free |
@@ -120,9 +147,11 @@ the 750-line limit, so the extraction also relieves size pressure.
 ### Verified-unchanged (no edit expected)
 
 `test_langchain_coverage_gaps.py` (mocks `run_agent` wholesale),
-`test_langchain_agent_streaming_tool_output.py`, `test_langchain_streaming.py`,
-`test_langchain_agent_usage.py`, `.importlinter` (the
-`mcp_coder.llm.providers.langchain.**` wildcards already cover the new module).
+`test_langchain_agent_streaming_tool_output.py` (imports only
+`_patch_run_agent_stream`, which stays put), `test_langchain_streaming.py`,
+`test_tool_build_helper.py` (drives `run_agent_stream` but asserts nothing about
+storage), `.importlinter` (the `mcp_coder.llm.providers.langchain.**` wildcards
+already cover the new module).
 
 ---
 

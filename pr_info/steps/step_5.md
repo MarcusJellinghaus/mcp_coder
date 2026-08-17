@@ -10,6 +10,7 @@ reconstructions that happen to agree.
 * Modify `src/mcp_coder/llm/providers/langchain/agent.py` — `run_agent` (~lines 332–475)
 * Modify `src/mcp_coder/llm/providers/langchain/__init__.py` — `_ask_agent` (~lines 373–440)
 * Modify `tests/llm/providers/langchain/test_langchain_agent_run.py`
+* Modify `tests/llm/providers/langchain/test_langchain_agent_usage.py`
 * Modify `tests/llm/providers/langchain/test_langchain_agent_system_messages.py`
 * Modify `tests/llm/providers/langchain/test_langchain_agent_mode.py`
 * Modify `tests/icoder/test_icoder_permission_wiring.py` (docstrings only)
@@ -69,10 +70,18 @@ async def _drain():
 return await asyncio.wait_for(_drain(), timeout=float(timeout))
 ```
 
-`wait_for` preserves today's timeout semantics (`asyncio.TimeoutError`). Its cancellation
-raises `CancelledError`, a `BaseException`, so `run_agent_stream`'s `except Exception`
-does not catch it — no spurious `error` event and nothing persisted, which is exactly the
-required cancel behaviour.
+`wait_for` still raises `asyncio.TimeoutError` on expiry. Its cancellation raises
+`CancelledError`, a `BaseException`, so `run_agent_stream`'s `except Exception` does not
+catch it — no spurious `error` event and nothing persisted, which is exactly the required
+cancel behaviour.
+
+**Intentional behaviour change — the timeout now also covers MCP tool discovery.** Today
+`asyncio.wait_for` wraps only `agent.ainvoke` (`agent.py:407`); the MCP client/tool
+loading loop above it runs untimed. The drainer wraps the whole `run_agent_stream`
+generator, so tool discovery counts against `timeout` too. Accept this (a hung MCP server
+should not hang the non-stream agent path forever) rather than splitting the `wait_for`
+to exclude tool loading — splitting would require re-plumbing the generator and reinstates
+the untimed hang. Note it in the `run_agent` docstring and the commit message.
 
 ## DATA
 
@@ -102,6 +111,26 @@ assertion** — they are the parity contract:
   equals the payload `run_agent_stream` stored, with all five messages present (no
   flattening).
 
+`test_langchain_agent_usage.py` — **must be rewritten in this step** (all three tests in
+`TestRunAgentUsage`). They drive `run_agent` with `mock_agent.ainvoke.return_value =
+{"messages": [...]}` and assert `stats["usage"]` summed from each `AIMessage`'s
+`usage_metadata`. After the collapse `ainvoke` is never called, and usage no longer comes
+from the final message list — it comes from `run_agent_stream`'s `on_chat_model_end`
+accumulator. So each test must:
+
+* swap the `ainvoke` mock for
+  `mock_agent.astream_events.return_value = async_events(graph_events([...], inner=[...]))`
+  and add `session_id="s1"`;
+* supply the usage through the `inner` events — one
+  `{"event": "on_chat_model_end", "data": {"output": ai_msg}}` per `AIMessage` that
+  carries `usage_metadata` — so the accumulator sees it;
+* keep the existing assertions verbatim (`input_tokens == 500` / `1300`,
+  `output_tokens == 200` / `500`, `cache_read_input_tokens == 100` / `300`, and
+  `stats["usage"] == {}` when no message has `usage_metadata`).
+
+This is the parity check for the usage source change; if the numbers do not match after
+the rewrite, stop and report rather than relaxing the assertions.
+
 `test_langchain_agent_system_messages.py`:
 
 * `test_prepends_system_messages` / `test_no_system_messages_when_none` — assert on
@@ -128,6 +157,17 @@ mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integra
 mcp__tools-py__run_mypy_check
 ```
 
+Plus the step-4 validation gate, which this step finally routes through the new code on
+the non-stream path:
+
+```
+mcp__tools-py__run_pytest_check(markers=["langchain_integration"], extra_args=["-n", "auto", "tests/llm/providers/langchain/test_langchain_integration.py"])
+```
+
+`TestAgentModeIntegration::test_agent_session_continuity` now runs a real second turn
+through the drained `run_agent`, so it is the end-to-end proof of the root-`run_id`
+terminal-event capture. A skip (no endpoint configured) is not a pass — report it.
+
 ## LLM Prompt
 
 ```
@@ -141,8 +181,11 @@ code, and drop the store_langchain_history call from _ask_agent in __init__.py.
 
 Update the tests listed in the step file first, using the graph_events() and
 async_events() helpers added to the langchain tests conftest in step 4. Keep the existing
-assertions in test_langchain_agent_run.py — they are the parity contract; only the mock
-setup should change. Also add the multi-step structural parity test.
+assertions in test_langchain_agent_run.py and test_langchain_agent_usage.py — they are
+the parity contract; only the mock setup should change. test_langchain_agent_usage.py
+must feed its usage through on_chat_model_end events (see the step file), because
+run_agent no longer derives usage from the final message list. Also add the multi-step
+structural parity test.
 
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.
