@@ -49,7 +49,13 @@ Return tuple is unchanged: `(final_text, stored_messages, stats)`.
   serialization loop. Keep `asyncio` (used by `wait_for`).
 * `_load_mcp_server_config`, `_convert_server_tools`, `_format_launch_error`,
   `LLMMCPLaunchError` and `AGENT_MAX_STEPS` stay — `run_agent_stream` and `MCPManager`
-  still use them.
+  still use them. Two comments in `agent.py` name `run_agent` as a tool-loading caller and
+  become false once its loading loop is deleted — **update both**: the
+  `_convert_server_tools` docstring at `agent.py:293` (drop `run_agent` from
+  "shared by ``run_agent``, ``run_agent_stream`` (else-branch), and
+  ``MCPManager._connect_and_discover``") and the inline comment at `agent.py:532`
+  ("Load tools with schema sanitization (inline, same as run_agent)"). Same wording-sweep
+  category as the `test_icoder_permission_wiring.py` edit below.
 * Docstring: state it is a thin drainer and that **storage happens inside
   `run_agent_stream`**, not here.
 * `_ask_agent`: pass `session_id=session_id` to `run_agent` and **delete** the
@@ -104,17 +110,51 @@ stats: dict[str, Any])`, where `stats` carries `agent_steps`, `total_tool_calls`
 
 ## Tests (update first)
 
+**Mock-class rule for this step — the mocked react agent must be a `MagicMock()`, never an
+`AsyncMock()`.** `run_agent_stream` consumes the graph with
+`async for event in agent.astream_events(...)`. An `AsyncMock` child call returns a
+*coroutine*, which `async for` rejects outright
+(`TypeError: 'async for' requires an object with __aiter__ method, got coroutine`), so the
+`ainvoke` → `astream_events` swap is **not** complete without also changing the class.
+Eleven tests currently build `mock_agent = AsyncMock()`: six in
+`test_langchain_agent_run.py` (lines 106, 134, 173, 232, 262, 320), all three in
+`test_langchain_agent_usage.py` (119, 151, 200) and two in
+`test_langchain_agent_system_messages.py` (80, 122). Change every one to `MagicMock()`.
+The step-4 helper `_patch_run_agent_stream`
+(`test_langchain_agent_streaming.py:41`) already does exactly this and is the reference
+shape; `test_timeout_raises_on_slow_agent` (`:153`) is already `MagicMock()` and needs no
+class change. Tests that never build a react-agent mock — `test_hard_fails_on_mcp_server_error`
+and `TestRunAgentLaunchErrorWrap` — are unaffected.
+
+**Surviving `ainvoke` assertions — the full list, already swept.** Only three places
+*assert* on `mock_agent.ainvoke` (as opposed to setting `.return_value`), and all three are
+named explicitly below: `test_langchain_agent_run.py:293`,
+`test_langchain_agent_system_messages.py:103` and `:138`, plus the
+`mock_agent.ainvoke = _slow_invoke` substitution at `:154`. `test_langchain_agent_usage.py`
+has none — its three `ainvoke` references are `.return_value` setup only. Nothing else in
+the tree needs hunting.
+
 `test_langchain_agent_run.py` — mechanical conversion using the step-4 conftest helper.
 `session_id="s1"` is added at **every** `run_agent(...)` call site; the tests that reach a
-terminal graph event also swap `mock_agent.ainvoke.return_value = {"messages": [...]}` for
-`mock_agent.astream_events.return_value = async_events(graph_events([...]))` and patch
+terminal graph event also swap `mock_agent = AsyncMock()` for `MagicMock()` and
+`mock_agent.ainvoke.return_value = {"messages": [...]}` for
+`mock_agent.astream_events.return_value = async_events(graph_events([...]))`, and patch
 `mcp_coder.llm.storage.session_storage.store_langchain_history`. **Keep every existing
-assertion** — they are the parity contract:
+assertion** — they are the parity contract — with the one explicit exception called out
+below, which asserts on a mock that no longer exists:
 
 * `test_returns_final_text`, `test_returns_message_history`,
   `test_returns_stats_with_tool_counts`, `test_handles_agent_response_gracefully`,
-  `test_prepends_session_history`, `test_tool_trace_in_stats` — the full treatment:
-  `session_id=`, mock swap, store patch.
+  `test_tool_trace_in_stats` — the full treatment: `session_id=`, mock swap, store patch.
+  Their assertions are untouched.
+* `test_prepends_session_history` — the full treatment **plus one assertion change**: line
+  293 reads `call_args = mock_agent.ainvoke.call_args`, and after the collapse `ainvoke` is
+  never called, so `call_args` is `None` and the test fails with `TypeError` rather than a
+  parity failure. Retarget it to `mock_agent.astream_events.call_args`; the indexing is
+  unchanged (`call_args[0][0]["messages"]`), because `run_agent_stream` calls
+  `agent.astream_events({"messages": input_messages}, version="v2", config=...)`. The
+  `mock_messages_from_dict.assert_called_once_with([...])` assertion above it stays as-is:
+  `assemble_messages` passes a filtered **copy** of the history, which compares equal.
 * `test_hard_fails_on_mcp_server_error` — tool loading fails before any event, so the
   `ConnectionError` still propagates; add `session_id=` and adjust the mock setup, but
   **no store patch** (storage is never reached).
@@ -138,7 +178,8 @@ assertion** — they are the parity contract:
 from the final message list — it comes from `run_agent_stream`'s `on_chat_model_end`
 accumulator. So each test must:
 
-* swap the `ainvoke` mock for
+* swap `mock_agent = AsyncMock()` for `MagicMock()` (mock-class rule above) and the
+  `ainvoke` mock for
   `mock_agent.astream_events.return_value = async_events(graph_events([...], inner=[...]))`,
   add `session_id="s1"` **and patch
   `mcp_coder.llm.storage.session_storage.store_langchain_history`** — storage now happens
@@ -182,11 +223,16 @@ tests, which now reach a terminal graph event, write real session JSON into the 
 `~/.mcp_coder/sessions/langchain/`). On top of that:
 
 * `test_prepends_system_messages` / `test_no_system_messages_when_none` — swap
+  `mock_agent = AsyncMock()` for `MagicMock()` (mock-class rule above) and
   `mock_agent.ainvoke.return_value` for
-  `mock_agent.astream_events.return_value = async_events(graph_events([...]))` and assert
-  on `mock_agent.astream_events.call_args` instead of `ainvoke.call_args`.
-* `test_timeout_raises_on_slow_agent` — the slow mock becomes an `astream_events`
-  async iterator that sleeps; still expects `asyncio.TimeoutError`.
+  `mock_agent.astream_events.return_value = async_events(graph_events([...]))`, and assert
+  on `mock_agent.astream_events.call_args` instead of `ainvoke.call_args` (lines 103, 138).
+  Note the merge from step 2 does not apply here: these two tests hand-build their own
+  `SystemMessage` list, so `test_prepends_system_messages` still expects **2** systems +
+  1 human in the input.
+* `test_timeout_raises_on_slow_agent` — already a `MagicMock()`, so no class change; the
+  slow mock becomes `mock_agent.astream_events = <async generator that sleeps>` instead of
+  `mock_agent.ainvoke = _slow_invoke` (line 154); still expects `asyncio.TimeoutError`.
 
 **Storage-patch rule for this step:** every test that reaches `run_agent` or
 `run_agent_stream` with real (unmocked) internals must patch
@@ -256,10 +302,31 @@ code, and drop the store_langchain_history call from _ask_agent in __init__.py.
 Update the tests listed in the step file first, using the graph_events() and
 async_events() helpers added to the langchain tests conftest in step 4. Keep the existing
 assertions in test_langchain_agent_run.py and test_langchain_agent_usage.py — they are
-the parity contract; only the mock setup should change. test_langchain_agent_usage.py
-must feed its usage through on_chat_model_end events (see the step file), because
-run_agent no longer derives usage from the final message list. Also add the multi-step
-structural parity test.
+the parity contract; only the mock setup should change, with ONE named exception (below).
+test_langchain_agent_usage.py must feed its usage through on_chat_model_end events (see
+the step file), because run_agent no longer derives usage from the final message list.
+Also add the multi-step structural parity test.
+
+MOCK CLASS: every converted test must build the react-agent mock as MagicMock(), NOT
+AsyncMock(). run_agent_stream does `async for event in agent.astream_events(...)`, and an
+AsyncMock child call returns a coroutine, which async for rejects
+("TypeError: 'async for' requires an object with __aiter__ method, got coroutine").
+Eleven call sites currently use AsyncMock(): test_langchain_agent_run.py lines
+106/134/173/232/262/320, test_langchain_agent_usage.py 119/151/200,
+test_langchain_agent_system_messages.py 80/122. Copy the shape from
+_patch_run_agent_stream in test_langchain_agent_streaming.py, which already uses
+MagicMock().
+
+THE ONE ASSERTION EXCEPTION: test_prepends_session_history in test_langchain_agent_run.py
+asserts on mock_agent.ainvoke.call_args at line 293. ainvoke is never called after the
+collapse, so that is None and the test raises TypeError. Retarget it to
+mock_agent.astream_events.call_args (same [0][0]["messages"] indexing). The step file
+lists every surviving ainvoke assertion in the tree — that one plus
+test_langchain_agent_system_messages.py:103/138/154 — so do not go hunting for more.
+
+Also update the two stale comments in agent.py that name run_agent as a tool-loading
+caller: the _convert_server_tools docstring at agent.py:293 and the inline comment at
+agent.py:532.
 
 EVERY run_agent(...) call site in the tests needs session_id="s1" — it is now a required
 parameter, so omitting it is a TypeError. That includes

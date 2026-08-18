@@ -41,6 +41,15 @@ def _reject_multiple_systems(messages: list[Any]) -> None:
   `messages` captured from turn 1's store call — patch
   `mcp_coder.llm.storage.session_storage.store_langchain_history` with the mock you read
   that from, so nothing touches the user's real session directory.
+* **Mock-class rule — applies to both agent tests in this step** (the unit-level one above
+  and the end-to-end one below). The stubbed react agent must be a
+  `MagicMock()`, **never** an `AsyncMock()` — `run_agent_stream` does
+  `async for event in agent.astream_events(...)`, and an `AsyncMock` child call returns a
+  coroutine, which `async for` rejects with
+  `TypeError: 'async for' requires an object with __aiter__ method, got coroutine`. Same
+  rule as step 4's conftest-helper note and step 5's conversions;
+  `_patch_run_agent_stream` (`test_langchain_agent_streaming.py:41`) is the reference
+  shape.
 * **Agent path (end-to-end, `test_icoder_agent_flow_...`):** the unit-level agent test
   above hand-builds `system_messages` and hand-feeds turn-2 history, so on the agent side
   neither the merge (`_build_system_messages`) nor the store→load round trip is exercised
@@ -151,6 +160,11 @@ not hand-build system_messages or hand-feed turn-2 history there. tools=[] is wh
 run_agent_stream skip _load_mcp_server_config and MultiServerMCPClient, so the only
 patches needed are _load_langchain_config, _create_chat_model,
 agent._check_agent_dependencies and langgraph.prebuilt.create_react_agent.
+
+MOCK CLASS: in both agent tests the stubbed react agent must be a MagicMock(), NOT an
+AsyncMock() — run_agent_stream does `async for event in agent.astream_events(...)`, and an
+AsyncMock child call returns a coroutine, which async for rejects ("TypeError: 'async for'
+requires an object with __aiter__ method, got coroutine").
 
 No production logic changes in this step. Run pylint, pytest and mypy via the MCP tools,
 plus one full pytest run without the marker exclusions. Then report the manual
