@@ -219,7 +219,7 @@ should be added to it.
 | `src/mcp_coder/llm/providers/langchain/_messages.py` | Shared `assemble_messages` + `serialize_messages` |
 | `tests/llm/providers/langchain/test_langchain_messages.py` | Unit tests for the two helpers (step 1, ~150 lines) |
 | `tests/llm/providers/langchain/test_langchain_multi_turn.py` | Multi-turn text + agent tests; single-system regression tests, incl. one end-to-end through `ask_langchain_stream` + real session-file round trip (steps 3, 4, 6; ~390 lines when complete) |
-| `tests/llm/providers/langchain/test_langchain_agent_stream_history.py` | **Step 4** — all seven new tests (step_4 items 3–9): `run_agent_stream` storage / no-system-messages / `done` payload / cancel / error / no-terminal-event, and the `_ask_agent_stream` boundary strip (~320 lines). A separate file because `test_langchain_agent_streaming.py` is already 656 lines against the CI-enforced 750-line gate; it imports `_patch_run_agent_stream` from that file and `graph_events` / `async_events` from the conftest |
+| `tests/llm/providers/langchain/test_langchain_agent_stream_history.py` | **Step 4** — all seven new tests (step_4 items 3–9): `run_agent_stream` storage / no-system-messages / `done` payload / cancel / error / no-terminal-event, and the `_ask_agent_stream` boundary strip (~320 lines). A separate file because `test_langchain_agent_streaming.py` is already 656 lines against the CI-enforced 750-line gate; it imports `_patch_run_agent_stream` (and `_RaisingAsyncIter`, which the error test needs because `_patch_run_agent_stream` cannot express "raises") from that file and `graph_events` / `async_events` from the conftest |
 
 ### Modified
 

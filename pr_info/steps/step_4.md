@@ -59,17 +59,29 @@ def graph_events(
 async def async_events(items: list[dict[str, object]]) -> AsyncIterator[dict[str, object]]: ...
 ```
 
-**Mock-class rule wherever these helpers are used.** The mocked react agent whose
-`astream_events` returns `async_events(...)` must be a `MagicMock()`, **never** an
-`AsyncMock()`: `run_agent_stream` does `async for event in agent.astream_events(...)`, and
+**Mock-class rule for every stubbed react agent** (not only the ones using these helpers).
+Any mocked react agent whose
+`astream_events` is consumed by `run_agent_stream` must be a `MagicMock()`, **never** an
+`AsyncMock()` — whatever that call returns (`async_events(...)`, a raising async iterator,
+anything else): `run_agent_stream` does `async for event in agent.astream_events(...)`, and
 an `AsyncMock` child call returns a *coroutine*, which `async for` rejects with
-`TypeError: 'async for' requires an object with __aiter__ method, got coroutine`.
-`_patch_run_agent_stream` (`test_langchain_agent_streaming.py:41`) already builds
-`MagicMock()` and is the reference shape — tests 1 and 3–8 below get this for free by using
-it, and test 9 is exempt because it patches `run_agent_stream` wholesale rather than
-stubbing a react agent. Any test that hand-rolls its own patch set (test 11, and the
-step-6 agent tests) must follow the rule explicitly. Step 5 restates it for the
-`ainvoke` → `astream_events` conversions.
+`TypeError: 'async for' requires an object with __aiter__ method, got coroutine`, before
+the return value is ever looked at. `_patch_run_agent_stream`
+(`test_langchain_agent_streaming.py:41`) already builds `MagicMock()` and is the reference
+shape. Test-by-test:
+
+* **Inherit the rule via `_patch_run_agent_stream`** — tests 1, 3, 4, 5, 7 and 8.
+* **Hand-roll their own patch set, so apply the rule explicitly** — test 6 and test 11
+  (plus, outside this step, the step-6 agent tests). Test 6 cannot use
+  `_patch_run_agent_stream`: that helper hard-wires
+  `mock_agent.astream_events.return_value = _async_events(events)` and yields only the
+  store mock, so it cannot express "raises". Copy the shape from `test_error_propagation`
+  (`test_langchain_agent_streaming.py:307-330`), which builds a `MagicMock()` agent with
+  `astream_events.return_value = _RaisingAsyncIter(...)`.
+* **Exempt — no react agent is stubbed at all** — test 9 (patches `run_agent_stream`
+  wholesale), test 10 (`ResponseAssembler` only) and tests 2 and 12 (no edits).
+
+Step 5 restates the rule for the `ainvoke` → `astream_events` conversions.
 
 ## HOW
 
@@ -242,10 +254,11 @@ In `test_langchain_agent_streaming.py` (edit + verify only, no new tests):
    simply store nothing — none of them asserts storage).
 
 In the **new** `tests/llm/providers/langchain/test_langchain_agent_stream_history.py`
-(~320 lines expected). It imports `_patch_run_agent_stream` from
-`tests.llm.providers.langchain.test_langchain_agent_streaming` — the same cross-file
-pattern `test_langchain_agent_streaming_tool_output.py:5` already uses — and
-`graph_events` / `async_events` from `tests.llm.providers.langchain.conftest`:
+(~320 lines expected). It imports `_patch_run_agent_stream` (and, for test 6,
+`_RaisingAsyncIter`) from `tests.llm.providers.langchain.test_langchain_agent_streaming` —
+the same cross-file pattern `test_langchain_agent_streaming_tool_output.py:5` already
+uses — and `graph_events` / `async_events` from
+`tests.llm.providers.langchain.conftest`:
 
 3. New `test_stored_history_has_no_system_messages` — final messages
    `[SystemMessage, HumanMessage, AIMessage]` → stored has 2 entries, no `"system"` type.
@@ -253,7 +266,12 @@ pattern `test_langchain_agent_streaming_tool_output.py:5` already uses — and
 5. New `test_cancel_persists_nothing` — cancel mid-stream (no terminal event) → store
    **not** called; a `done` event is still emitted.
 6. New `test_error_persists_nothing` — `astream_events` raises → store not called; the
-   existing `error`-event + re-raise behaviour is unchanged.
+   existing `error`-event + re-raise behaviour is unchanged. This one **cannot** use
+   `_patch_run_agent_stream` (it hard-wires `astream_events.return_value` to an events
+   list and so cannot express "raises"), so it hand-rolls its patch set: build the agent as
+   a `MagicMock()` with `astream_events.return_value = _RaisingAsyncIter(...)`, copying
+   `test_error_propagation` (`test_langchain_agent_streaming.py:307-330`), and patch
+   `mcp_coder.llm.storage.session_storage.store_langchain_history` yourself.
 7. New `test_no_terminal_event_done_carries_streamed_text` — feed `on_chat_model_stream`
    deltas but **no** terminal graph event; assert `done["result"]` equals the accumulated
    text (not `""`), `done["messages"] == []` and store was not called. This is the guard
@@ -371,13 +389,19 @@ case for done["result"] and the boundary-strip test from the step file.
 Add graph_events() and async_events() to tests/llm/providers/langchain/conftest.py and
 use them from the streaming tests. Write the tests listed in the step file first.
 
-MOCK CLASS: any react-agent mock whose astream_events returns async_events(...) must be a
-MagicMock(), NOT an AsyncMock() — run_agent_stream does
+MOCK CLASS: any react-agent mock whose astream_events is consumed by run_agent_stream must
+be a MagicMock(), NOT an AsyncMock() — regardless of what that call returns
+(async_events(...), a raising async iterator, anything else). run_agent_stream does
 `async for event in agent.astream_events(...)`, and an AsyncMock child call returns a
 coroutine, which async for rejects ("TypeError: 'async for' requires an object with
-__aiter__ method, got coroutine"). _patch_run_agent_stream already does this correctly, so
-the tests that use it inherit the rule; test 11 in test_langchain_multi_turn.py builds its
-own patch set and must follow it explicitly.
+__aiter__ method, got coroutine") before the return value is ever looked at.
+_patch_run_agent_stream already does this correctly, so the tests that use it inherit the
+rule. Two tests build their own patch set and must follow it explicitly: test 11 in
+test_langchain_multi_turn.py, and test 6 (test_error_persists_nothing) — that one CANNOT
+use _patch_run_agent_stream, because the helper hard-wires astream_events.return_value to
+an events list and cannot express "raises". Copy test_error_propagation
+(test_langchain_agent_streaming.py:307-330): a MagicMock() agent with
+astream_events.return_value = _RaisingAsyncIter(...).
 
 Put ALL seven new stream/storage tests in a NEW file,
 tests/llm/providers/langchain/test_langchain_agent_stream_history.py — do NOT add them to
