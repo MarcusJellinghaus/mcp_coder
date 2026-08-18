@@ -65,8 +65,14 @@ test imports for no benefit. The neutral module holds exactly the two required h
   `on_chain_start` (guarded by a `"messages" in data.output` check). Delta
   reconstruction and the `agent.py:659-661` flatten NOTE are **deleted** — the flattening
   problem disappears by deletion rather than by patching.
-* `final_text` and `agent_steps` / `total_tool_calls` / `tool_trace` are recomputed from
-  that final message list by one private helper, `_summarize_messages()`.
+* `final_text` and `agent_steps` / `total_tool_calls` / `tool_trace` / `usage` are
+  recomputed from that final message list by one private helper, `_summarize_messages()`.
+  It is **extracted once** from `run_agent`'s existing loop in step 4 and called from
+  **both** `run_agent` and `run_agent_stream` — no copy-then-delete. `run_agent_stream`
+  overrides only `usage`, with its `on_chat_model_end` accumulator
+  (`{**stats, "usage": accumulated_usage}`). Extracting rather than duplicating also keeps
+  `agent.py` near its current 698 lines after step 4 (a temporary copy would have put it
+  around 737 against the enforced 750-line limit) before step 5 removes ~100 more.
 * `run_agent` becomes a **thin drainer** of `run_agent_stream` (inside its existing
   `asyncio.wait_for` timeout). Its MCP client loading, `ainvoke` call, stats loop and
   serialization are deleted. This satisfies the "all four sites route through the shared
@@ -95,9 +101,11 @@ off that key. Bounded degradation: history not stored, text still correct.
 
 ### 6. `done` payload and `ResponseAssembler`
 
-The `done` event gains `messages` / `result` / `stats`, and `ResponseAssembler`
-(`src/mcp_coder/llm/types.py`) already consumes two of those key names — so its behaviour
-changes even though its code does not. Both effects are decided rather than inherited:
+The event `run_agent_stream` yields gains `messages` / `result` / `stats` — step 5's
+drainer needs all three. Only `result` crosses the provider boundary; `messages` and
+`stats` are stripped there. `ResponseAssembler` (`src/mcp_coder/llm/types.py`) already
+consumes the name `result`, so its behaviour changes even though its code does not. All
+three effects are decided rather than inherited:
 
 * **`result` — kept, with documented semantics.** `add()` reads `done["result"]` and
   `result()` uses it as the response text **only when no `text_delta` event was seen**
@@ -108,10 +116,11 @@ changes even though its code does not. Both effects are decided rather than inhe
   authoritative final text, delta accumulation is the preferred rendering. A new
   `tests/llm/test_types.py` case covers the no-`text_delta` path; the existing
   deltas-win cases stay unchanged.
-* **`messages` — stripped at the provider boundary, so no consumer outside the langchain
-  package ever sees it.** The key exists solely for step 5's in-process drainer, which
-  consumes `run_agent_stream` **directly**. Everything else reaches the `done` event via
-  `_ask_agent_stream`, and there are **two** sinks that persist it, not one:
+* **`messages` and `stats` — both stripped at the provider boundary, so no consumer
+  outside the langchain package ever sees either.** Both keys exist solely for step 5's
+  in-process drainer, which consumes `run_agent_stream` **directly**; nothing above the
+  boundary reads them. Everything else reaches the `done` event via `_ask_agent_stream`,
+  and there are **two** sinks that persist it, not one:
   * `ResponseAssembler.add` appends every non-`raw_line` event to `_raw_events`, which
     `result()` returns as `raw_response["events"]`; icoder persists that per turn via
     `store_session`.
@@ -122,24 +131,29 @@ changes even though its code does not. Both effects are decided rather than inhe
 
   `done["messages"]` is the *whole* serialized conversation, so leaving it on the event
   makes **both** sinks grow **quadratically** with turn count (turn *n* re-persists all
-  *n* turns) — not "roughly doubles".
+  *n* turns) — not "roughly doubles". `done["stats"]` adds a constant-factor duplication
+  on top: its `tool_trace` repeats the name/args/result of every tool call in the turn,
+  content the same sinks already hold as `tool_use_start` / `tool_result` events.
 
-  **Chosen behaviour — one strip site, at the boundary.** `_ask_agent_stream` removes the
-  `messages` key from the `done` event (shallow copy) before putting it on the queue. The
-  drainer still gets it because it bypasses that bridge; nothing above the langchain
-  provider does. Filtering the sinks individually would instead mean two filters in two
-  modules (`types.py` and `app_core.py`) that have to stay in sync as sinks are added —
-  exactly the per-consumer drift this issue exists to remove. Consequences:
-  **`src/mcp_coder/llm/types.py` needs no `messages` change** and `app_core.py` is not
-  touched. The ndjson formatter filters `done` to `session_id`/`usage`/`cost_usd`, so CLI
-  output is unaffected either way.
+  **Chosen behaviour — one strip site, at the boundary, for both keys.**
+  `_ask_agent_stream` removes the `messages` **and** `stats` keys from the `done` event
+  (one shallow copy) before putting it on the queue. The drainer still gets them because
+  it bypasses that bridge; nothing above the langchain provider does. Filtering the sinks
+  individually would instead mean two filters in two modules (`types.py` and
+  `app_core.py`) that have to stay in sync as sinks are added — exactly the per-consumer
+  drift this issue exists to remove, which is also why both keys are stripped in the same
+  place rather than one here and one there. Consequences: **`src/mcp_coder/llm/types.py`
+  needs no change** and `app_core.py` is not touched. The ndjson formatter filters `done`
+  to `session_id`/`usage`/`cost_usd`, so CLI output is unaffected either way.
 
 ### Deliberate non-changes (KISS)
 
 * **`done.usage` keeps its `on_chat_model_end` accumulator** rather than being recomputed
   from the final message list: it needs no new code in the stream path, and usage is still
-  reported on a cancelled turn. Only text and tool stats are recomputed from the final
-  messages.
+  reported on a cancelled turn. `_summarize_messages` does compute a `usage` value (it is
+  the extracted `run_agent` loop, which `run_agent` still needs in step 4), but
+  `run_agent_stream` discards it in favour of the accumulator via
+  `{**stats, "usage": accumulated_usage}`.
 
   **This is not a no-op for the non-stream path, and the two sources are not guaranteed
   equal.** `run_agent` today sums `usage_metadata` off the `AIMessage`s in `ainvoke`'s
@@ -162,8 +176,9 @@ changes even though its code does not. Both effects are decided rather than inhe
   proves the accumulator arithmetic but **cannot** prove the backend emits it, so step 5
   also gates on a real-endpoint assertion (see step_5.md).
 * **`ResponseAssembler` is not modified at all** — deltas still win over `done["result"]`,
-  and `done["messages"]` never reaches it (stripped in `_ask_agent_stream`, §6). No new
-  assembler state, no format version bump, no code change in `types.py`.
+  and neither `done["messages"]` nor `done["stats"]` reaches it (both stripped in
+  `_ask_agent_stream`, §6). No new assembler state, no format version bump, no code change
+  in `types.py`.
 * **`prompt` and icoder execution models are not unified** — one `chat_model.invoke()`
   vs a LangGraph ReAct loop. Only the message plumbing converges.
 
@@ -189,16 +204,16 @@ the 750-line limit, so the extraction also relieves size pressure.
 
 | Path | Change |
 |------|--------|
-| `src/mcp_coder/llm/providers/langchain/__init__.py` | Merged `SystemMessage`; `_ask_text` / `_ask_text_stream` adopt helpers; **step 4** — `_ask_agent_stream` strips `messages` from the `done` event before queueing it (§6); `_ask_agent` drops its store call and passes `session_id` |
-| `src/mcp_coder/llm/providers/langchain/agent.py` | `run_agent_stream` sources history from graph final messages, adopts helpers, stores once, emits `messages`/`result`/`stats` on `done` (`result` falls back to `accumulated_text` when there is no terminal event); new `_summarize_messages`; `run_agent` becomes a drainer; flatten NOTE removed |
+| `src/mcp_coder/llm/providers/langchain/__init__.py` | Merged `SystemMessage`; `_ask_text` / `_ask_text_stream` adopt helpers; **step 4** — `_ask_agent_stream` strips `messages` **and** `stats` from the `done` event before queueing it (§6); `_ask_agent` drops its store call and passes `session_id` |
+| `src/mcp_coder/llm/providers/langchain/agent.py` | `run_agent_stream` sources history from graph final messages, adopts helpers, stores once, emits `messages`/`result`/`stats` on `done` (`result` falls back to `accumulated_text` when there is no terminal event); new `_summarize_messages` extracted from `run_agent` in step 4 and called from both; `run_agent` becomes a drainer in step 5; flatten NOTE removed |
 | `tests/llm/test_types.py` | **Step 4** — one assembler case for the new `done["result"]` key: used as the text when no `text_delta` was seen |
 | `tests/llm/providers/langchain/conftest.py` | New shared test helpers `graph_events()` + `async_events()` |
 | `tests/llm/providers/langchain/test_langchain_integration.py` | **Step 4** — one `langchain_integration` two-turn stream test; the real-LangGraph gate for the root-`run_id` terminal-event assumption. **Step 5** — `TestAgentModeIntegration::test_agent_simple_prompt` gains a non-empty `raw_response["usage"]` assertion, the real gate for the usage-source change |
 | `tests/llm/providers/langchain/test_langchain_provider_system_messages.py` | Merged-`SystemMessage` assertions |
-| `tests/llm/providers/langchain/test_langchain_agent_system_messages.py` | Merged assertions; `astream_events` mocks |
+| `tests/llm/providers/langchain/test_langchain_agent_system_messages.py` | **Step 5 only** — `ainvoke` mocks → `astream_events` mocks, plus `session_id=` and a `store_langchain_history` patch on all three `run_agent` calls. Its two hand-built `SystemMessage`s are testing prepending, not the merge, so step 2 leaves it alone |
 | `tests/llm/providers/langchain/test_langchain_agent_streaming.py` | Terminal graph events where storage is asserted; cancel/error-persist-nothing tests |
-| `tests/llm/providers/langchain/test_langchain_agent_run.py` | `ainvoke` mocks → `astream_events` mocks; multi-step parity test |
-| `tests/llm/providers/langchain/test_langchain_agent_usage.py` | **Step 5** — `ainvoke` mocks → `astream_events` mocks; usage fed via `on_chat_model_end` events, assertions kept (accumulator arithmetic only — the real-endpoint gate lives in `test_langchain_integration.py`) |
+| `tests/llm/providers/langchain/test_langchain_agent_run.py` | **Step 5** — `ainvoke` mocks → `astream_events` mocks, `session_id=` + `store_langchain_history` patch; multi-step parity test |
+| `tests/llm/providers/langchain/test_langchain_agent_usage.py` | **Step 5** — `ainvoke` mocks → `astream_events` mocks, `session_id=` + `store_langchain_history` patch; usage fed via `on_chat_model_end` events, assertions kept (accumulator arithmetic only — the real-endpoint gate lives in `test_langchain_integration.py`) |
 | `tests/llm/providers/langchain/test_langchain_agent_mode.py` | `_ask_agent` no longer stores |
 | `tests/icoder/test_icoder_permission_wiring.py` | Docstring update only (site 2 no longer exists) |
 | `docs/architecture/architecture.md` | One bullet: `agent.py` / `_messages.py`, history stored system-free |
@@ -206,11 +221,14 @@ the 750-line limit, so the extraction also relieves size pressure.
 ### Verified-unchanged (no edit expected)
 
 `src/mcp_coder/llm/types.py` and `src/mcp_coder/icoder/core/app_core.py` (both would need a
-`done["messages"]` filter only if the key crossed the provider boundary — §6 strips it in
-`_ask_agent_stream` instead), `test_langchain_coverage_gaps.py` (mocks `run_agent` wholesale),
-`test_langchain_agent_streaming_tool_output.py` (imports only
+`done["messages"]` / `done["stats"]` filter only if those keys crossed the provider
+boundary — §6 strips both in `_ask_agent_stream` instead),
+`test_langchain_coverage_gaps.py` and `test_langchain_ollama_agent.py` (both mock
+`run_agent` wholesale, so the new `session_id` keyword and the dropped store call are
+invisible to them), `test_langchain_agent_streaming_tool_output.py` (imports only
 `_patch_run_agent_stream`, which stays put), `test_langchain_streaming.py`,
-`test_tool_build_helper.py` (drives `run_agent_stream` but asserts nothing about
+`test_langchain_agent_timeout.py` (drives `_ask_agent_stream` with a stubbed thread and
+queue), `test_tool_build_helper.py` (drives `run_agent_stream` but asserts nothing about
 storage), `.importlinter` (the `mcp_coder.llm.providers.langchain.**` wildcards
 already cover the new module).
 

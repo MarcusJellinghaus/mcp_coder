@@ -5,17 +5,20 @@ flattened history that includes the system messages, and instead persists the gr
 own final message list, serialized (and therefore system-stripped) by the shared helper.
 This is the single storage site for the agent path.
 
-`run_agent` is **not** touched in this step — it still works as today, stats loop and all.
-Step 5 collapses it. The stats loop is **copied** into `_summarize_messages` here and
-**deleted** from `run_agent` in step 5, so step 4 leaves both paths working.
+`run_agent` keeps its own execution path in this step — step 5 collapses it. The stats
+loop is **extracted once** into `_summarize_messages` and **called from both**
+`run_agent` and `run_agent_stream`, so step 4 leaves both paths working with no
+duplicated code. Step 5 then deletes `run_agent`'s call along with the rest of its body.
 
 ## WHERE
 
 * Modify `src/mcp_coder/llm/providers/langchain/agent.py` — `run_agent_stream`
-  (~lines 478–698), plus a new module-level `_summarize_messages()`
+  (~lines 478–698), plus a new module-level `_summarize_messages()`; `run_agent`
+  (~lines 417–462) loses its inline final-text/stats loop and **calls the new helper**
+  instead (its `ainvoke`, tool loading and serialization stay until step 5)
 * Modify `src/mcp_coder/llm/providers/langchain/__init__.py` — `_ask_agent_stream`
-  (~lines 438–540): strip `messages` from the `done` event before queueing it
-  (see "`done` payload contract"). `src/mcp_coder/llm/types.py` and
+  (~lines 438–540): strip `messages` **and** `stats` from the `done` event before
+  queueing it (see "`done` payload contract"). `src/mcp_coder/llm/types.py` and
   `src/mcp_coder/icoder/core/app_core.py` are **not** touched.
 * Modify `tests/llm/test_types.py` — assembler test for the new `done["result"]` key
 * Modify `tests/llm/providers/langchain/conftest.py` — add two shared test helpers
@@ -28,10 +31,16 @@ Step 5 collapses it. The stats loop is **copied** into `_summarize_messages` her
 
 ```python
 def _summarize_messages(messages: list[Any]) -> tuple[str, dict[str, Any]]:
-    """Derive final text and tool stats from a graph's final message list."""
+    """Derive final text and stats (incl. usage) from a graph's final message list."""
 ```
 
-`run_agent_stream`'s signature is unchanged.
+The returned `stats` dict carries `agent_steps`, `total_tool_calls`, `tool_trace` **and**
+`usage` — exactly the four keys `run_agent` builds today. `run_agent` uses the returned
+`usage` as-is; `run_agent_stream` overrides it with its own `on_chat_model_end`
+accumulator (`{**stats, "usage": accumulated_usage}`), which is also reported on a
+cancelled turn. One helper, two usage sources, no duplicated loop.
+
+`run_agent_stream`'s and `run_agent`'s signatures are unchanged.
 
 New test helpers in `tests/llm/providers/langchain/conftest.py` (plain module-level
 functions, imported as `from tests.llm.providers.langchain.conftest import ...` — the
@@ -51,8 +60,10 @@ async def async_events(items: list[dict[str, object]]) -> AsyncIterator[dict[str
 * `run_agent_stream` builds its input with
   `assemble_messages(system_messages, messages, question)`.
 * Its deferred import block reduces to `from langgraph.prebuilt import create_react_agent`
-  — `HumanMessage` / `ToolMessage` / `messages_from_dict` are no longer needed there, and
-  `AIMessage` moves into `_summarize_messages`.
+  — `HumanMessage` / `messages_from_dict` are no longer needed there, and `AIMessage` /
+  `ToolMessage` move into `_summarize_messages`'s own deferred import (it needs both:
+  `AIMessage` for the final text and tool-call counting, `ToolMessage` for the
+  `trace_by_id` result fill).
 * **Delete** the accumulators `tool_calls_by_run_id` and `tool_results_list`, the whole
   reconstruction block after the event loop, and the flatten NOTE at lines 659–661. Keep
   `accumulated_usage` and every `yield` in the event loop — user-facing streaming is
@@ -64,15 +75,20 @@ async def async_events(items: list[dict[str, object]]) -> AsyncIterator[dict[str
   turn the non-stream agent path (`_ask_agent` → `run_agent`) into an **empty-text
   response** instead of merely skipping storage. Document in the code why the
   accumulator survives.
-* `_summarize_messages` receives the stats loop **copied verbatim from** `run_agent`
-  (`agent_steps`, `total_tool_calls`, `tool_trace`, `trace_by_id` fill from
-  `ToolMessage`s) **minus** its usage accumulation — usage keeps coming from the existing
-  `on_chat_model_end` accumulator (see summary; identical values, and usage still reported
-  on a cancelled turn).
-  **Copy, do not move.** `run_agent` keeps its own copy of the loop through step 4 so it
-  still works and its tests stay green; step 5 deletes the original when `run_agent`
-  becomes a drainer. The temporary duplication lives for exactly one commit and is the
-  price of each step leaving the suite green.
+* `_summarize_messages` is the **moved** (not copied) body of `run_agent`'s final-text +
+  stats loop (`agent_steps`, `total_tool_calls`, `tool_trace`, `trace_by_id` fill from
+  `ToolMessage`s, plus the `_extract_usage` / `_sum_usage` accumulation) — `agent.py:417-462`
+  becomes `final_text, stats = _summarize_messages(output_messages)`.
+  **Extract once, call from both.** `run_agent` calls the helper in this step (so it and
+  its tests stay green), and `run_agent_stream` calls it on the graph's final messages,
+  overriding only `usage`. This keeps every step green *without* duplicating ~45 lines
+  for a commit, and it keeps the intermediate file size down: `agent.py` is 698 lines
+  against the enforced 750-line limit, so a temporary copy would land it near ~737 with
+  almost no headroom; extracting instead leaves it near ~700 after step 4, before step 5
+  removes ~100 more.
+* After the extraction `run_agent`'s deferred import block no longer uses `AIMessage` or
+  `ToolMessage` (only `HumanMessage` / `messages_from_dict` for its input assembly, which
+  step 5 removes) — drop them, or pylint's `unused-import` will fail the step.
 * `graph_events()` emits a root `on_chain_start` / `on_chain_end` pair with the same
   `run_id` (`"root"`) and `data.output == {"messages": final_messages}`; move the local
   `_async_events` out of `test_langchain_agent_streaming.py` into conftest as
@@ -137,11 +153,14 @@ internals.
   today.
 * Cancelled / no-terminal-event turn: `messages: []`, `result: accumulated_text`, zeroed
   stats, and **no** storage call — `session_id` and `usage` are present and unchanged.
+* All three keys are on the event `run_agent_stream` **yields** — step 5's drainer needs
+  all three. Only `messages` and `stats` are removed again at the `_ask_agent_stream`
+  boundary; `result` crosses it deliberately (see below).
 
 ## `done` payload contract (consumers)
 
-The two new `done` keys reach consumers outside this package, so neither is a no-op.
-Both effects are decided here:
+Of the three new `done` keys, only `result` reaches consumers outside this package, and
+that is a deliberate semantic change, not a no-op. All three effects are decided here:
 
 * **`result` — intended semantics, kept.** `ResponseAssembler.add` already reads
   `done["result"]` and `result()` uses it as the response text **only when no `text_delta`
@@ -151,11 +170,14 @@ Both effects are decided here:
   agent's final answer. That is the intended semantics: `done["result"]` is the
   authoritative final text, `text_delta` accumulation is the preferred rendering. Covered
   by Tests item 10.
-* **`messages` — stripped in `_ask_agent_stream`, the provider boundary.**
-  `done["messages"]` is the *whole* serialized conversation and it exists solely for step
-  5's in-process drainer, which consumes `run_agent_stream` **directly**. Every other
-  consumer reaches the event through `_ask_agent_stream`, and **two** of them persist it
-  per turn:
+* **`messages` and `stats` — both stripped in `_ask_agent_stream`, the provider
+  boundary.** `done["messages"]` is the *whole* serialized conversation; `done["stats"]`
+  carries `tool_trace`, i.e. the full name/args/result of every tool call in the turn.
+  Both exist solely for step 5's in-process drainer, which consumes `run_agent_stream`
+  **directly** — nothing above the provider boundary reads either key, and `tool_trace`
+  duplicates content already emitted as `tool_use_start` / `tool_result` events. Every
+  other consumer reaches the event through `_ask_agent_stream`, and **two** of them
+  persist it per turn:
   * `ResponseAssembler.add` appends every non-`raw_line` event to `_raw_events`, which
     `result()` returns as `raw_response["events"]`; icoder persists that via
     `store_session`.
@@ -164,13 +186,16 @@ Both effects are decided here:
     memory (`EventLog._entries`) and as a JSONL line on disk; `ui/replay.py:73-81` reads
     those entries back and re-emits them.
 
-  Left on the event, both sinks grow **quadratically** with turn count (turn *n*
-  re-persists all *n* turns).
+  Left on the event, `messages` makes both sinks grow **quadratically** with turn count
+  (turn *n* re-persists all *n* turns); `stats` adds a constant-factor duplication of the
+  turn's tool payloads on top.
 
-  **Chosen behaviour — one strip site.** `_ask_agent_stream` puts a shallow copy of the
-  `done` event **without** the `messages` key on its queue; every other event is queued
-  unchanged. `run_agent_stream` still yields the key, so the step-5 drainer (which bypasses
-  the bridge) gets it. Consequence: **`types.py` and `app_core.py` need no filter** —
+  **Chosen behaviour — one strip site for both keys.** `_ask_agent_stream` puts a shallow
+  copy of the `done` event **without** the `messages` and `stats` keys on its queue; every
+  other event is queued unchanged. `run_agent_stream` still yields both keys, so the
+  step-5 drainer (which bypasses the bridge) gets them. Stripping both in the same shallow
+  copy is what preserves the "no per-consumer filtering" property this issue exists to
+  establish. Consequence: **`types.py` and `app_core.py` need no filter** —
   filtering them individually would be two filters in two modules that must stay in sync
   as sinks are added, which is exactly the per-consumer drift this issue removes. The
   ndjson formatter filters `done` to `session_id`/`usage`/`cost_usd`, so CLI output is
@@ -210,18 +235,31 @@ In `tests/llm/test_types.py`:
 In `test_langchain_agent_streaming.py` (the strip is a langchain-boundary behaviour, so
 its test lives with the other bridge tests):
 
-11. New `test_ask_agent_stream_strips_messages_from_done` — drive `_ask_agent_stream` with
-    a patched `run_agent_stream` whose `done` carries `messages`; assert the yielded `done`
-    has **no** `messages` key while `session_id` / `usage` / `result` / `stats` survive,
-    and that non-`done` events pass through unchanged. This is what keeps the whole
-    conversation out of both `raw_response["events"]` and the icoder event log.
+11. New `test_ask_agent_stream_strips_messages_and_stats_from_done` — drive
+    `_ask_agent_stream` with a patched `run_agent_stream` whose `done` carries `messages`
+    and `stats`; assert the yielded `done` has **neither** key while `session_id` /
+    `usage` / `result` survive, and that non-`done` events pass through unchanged. This is
+    what keeps the whole conversation and the tool trace out of both
+    `raw_response["events"]` and the icoder event log.
 
 In `test_langchain_multi_turn.py`:
 
 12. `TestAgentPathMultiTurn::test_two_turns_store_no_systems_and_send_one_system` — call
    `run_agent_stream` twice, feeding turn 2 the `messages` captured from turn 1's store
    call; assert turn 2's `astream_events` input has exactly one `SystemMessage` at index 0
-   and the stored history has zero system entries across both turns.
+   and the stored history has zero system entries across both turns. Patch
+   `mcp_coder.llm.storage.session_storage.store_langchain_history` with a mock (as
+   `_patch_run_agent_stream` does) — `run_agent_stream` imports it lazily from that module
+   and would otherwise write into the user's real `~/.mcp_coder/sessions/langchain/`.
+
+Unchanged, and the parity contract for the extraction:
+
+13. `test_langchain_agent_run.py`, `test_langchain_agent_usage.py` and
+    `test_langchain_agent_system_messages.py` must stay green **without any edit** in this
+    step. `run_agent` still calls `ainvoke` and still returns the same
+    `(final_text, serialized, stats)` — only the loop that computes text and stats moved
+    into `_summarize_messages`. If any of them needs changing, the extraction was not
+    behaviour-preserving: stop and report. (Step 5 is where these files are rewritten.)
 
 ## Checks
 
@@ -264,10 +302,14 @@ Implement step 4 only: in src/mcp_coder/llm/providers/langchain/agent.py, make
 run_agent_stream assemble its input via assemble_messages(), capture the graph's final
 message list from the terminal on_chain_end that matches the root on_chain_start's
 run_id, persist serialize_messages(final_messages) once, and emit messages/result/stats
-on the done event. Add the private _summarize_messages() helper by COPYING run_agent's
-stats loop (leave run_agent's own copy in place — step 5 deletes it). Delete the delta
-reconstruction block, the two now-dead accumulators (tool_calls_by_run_id,
-tool_results_list) and the flatten NOTE at agent.py:659-661.
+on the done event. EXTRACT run_agent's final-text + stats loop (agent.py:417-462,
+including its usage accumulation) into a new private _summarize_messages() and call it
+from BOTH run_agent and run_agent_stream — do not copy it. run_agent uses the returned
+stats as-is; run_agent_stream overrides only usage with its on_chat_model_end accumulator
+via {**stats, "usage": accumulated_usage}. Drop AIMessage/ToolMessage from run_agent's
+now-unused deferred imports. Delete the delta reconstruction block, the two now-dead
+accumulators (tool_calls_by_run_id, tool_results_list) and the flatten NOTE at
+agent.py:659-661.
 
 KEEP accumulated_text: when no terminal graph event is captured, the done event must
 carry it as `result` (never ""), otherwise step 5's drainer silently returns an empty
@@ -276,15 +318,17 @@ answer on the non-stream agent path.
 A cancelled or errored turn must store NOTHING and leave prior history untouched.
 
 Also make _ask_agent_stream in src/mcp_coder/llm/providers/langchain/__init__.py queue a
-shallow copy of the done event WITHOUT its `messages` key. That key is only for step 5's
-drainer, which consumes run_agent_stream directly; every consumer above the bridge
-persists the whole event twice per turn — into raw_response["events"] via
-ResponseAssembler/store_session, and into the icoder JSONL event log via
-AppCore.stream_llm's `self._event_log.emit("stream_event", **event)` (app_core.py:201) —
-so leaving it in grows both sinks quadratically with turn count. Strip it once at the
-boundary: do NOT add filters to src/mcp_coder/llm/types.py or
-src/mcp_coder/icoder/core/app_core.py. Add the tests/llm/test_types.py case for
-done["result"] and the boundary-strip test from the step file.
+shallow copy of the done event WITHOUT its `messages` and `stats` keys. Both are only for
+step 5's drainer, which consumes run_agent_stream directly; nothing above the bridge reads
+either, yet every consumer above it persists the whole event twice per turn — into
+raw_response["events"] via ResponseAssembler/store_session, and into the icoder JSONL
+event log via AppCore.stream_llm's `self._event_log.emit("stream_event", **event)`
+(app_core.py:201). Leaving `messages` in grows both sinks quadratically with turn count;
+`stats["tool_trace"]` duplicates content already emitted as tool_use_start/tool_result
+events. Strip both once at the boundary: do NOT add filters to
+src/mcp_coder/llm/types.py or src/mcp_coder/icoder/core/app_core.py. `result` is NOT
+stripped — ResponseAssembler consumes it deliberately. Add the tests/llm/test_types.py
+case for done["result"] and the boundary-strip test from the step file.
 
 Add graph_events() and async_events() to tests/llm/providers/langchain/conftest.py and
 use them from the streaming tests. Write the tests listed in the step file first. Also add
@@ -293,8 +337,12 @@ gate" and run it — graph_events() is a fixture we invent, so it cannot on its 
 real LangGraph emits the terminal event we depend on. If the endpoint is unavailable the
 test skips: report the skip, do not call the assumption verified.
 
-Do NOT touch run_agent in this step — step 5 collapses it. Copy its stats loop into
-_summarize_messages and leave the original in place.
+Do NOT otherwise touch run_agent in this step — step 5 collapses it. The only change to
+run_agent here is that its stats loop becomes a call to _summarize_messages; its tool
+loading, ainvoke call and serialization stay. test_langchain_agent_run.py,
+test_langchain_agent_usage.py and test_langchain_agent_system_messages.py must stay green
+with NO edits — if they don't, the extraction was not behaviour-preserving: stop and
+report.
 
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.

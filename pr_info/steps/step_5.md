@@ -42,9 +42,10 @@ Return tuple is unchanged: `(final_text, stored_messages, stats)`.
   signature. Every caller (production `_ask_agent` and all tests) already uses keyword
   arguments, so this is safe.
 * **Delete** from `run_agent`: the deferred langchain/langgraph imports, the
-  `MultiServerMCPClient` tool-loading loop, `create_react_agent`, the `ainvoke` call, the
-  stats loop (moved to `_summarize_messages` in step 4) and the serialization loop. Keep
-  `asyncio` (used by `wait_for`).
+  `MultiServerMCPClient` tool-loading loop, `create_react_agent`, the `ainvoke` call, its
+  `_summarize_messages(...)` call (step 4 already replaced the inline stats loop with it;
+  the helper itself stays — `run_agent_stream` is now its only caller) and the
+  serialization loop. Keep `asyncio` (used by `wait_for`).
 * `_load_mcp_server_config`, `_convert_server_tools`, `_format_launch_error`,
   `LLMMCPLaunchError` and `AGENT_MAX_STEPS` stay — `run_agent_stream` and `MCPManager`
   still use them.
@@ -127,8 +128,11 @@ from the final message list — it comes from `run_agent_stream`'s `on_chat_mode
 accumulator. So each test must:
 
 * swap the `ainvoke` mock for
-  `mock_agent.astream_events.return_value = async_events(graph_events([...], inner=[...]))`
-  and add `session_id="s1"`;
+  `mock_agent.astream_events.return_value = async_events(graph_events([...], inner=[...]))`,
+  add `session_id="s1"` **and patch
+  `mcp_coder.llm.storage.session_storage.store_langchain_history`** — storage now happens
+  inside `run_agent_stream`, so an unpatched test writes real files into the user's
+  `~/.mcp_coder/sessions/langchain/`;
 * supply the usage through the `inner` events — one
   `{"event": "on_chat_model_end", "data": {"output": ai_msg}}` per `AIMessage` that
   carries `usage_metadata` — so the accumulator sees it;
@@ -158,12 +162,28 @@ not stream usage: report it and record the `{}` fallback as the observed behavio
 than deleting the assertion. If it **skips** (no endpoint configured), the usage-source
 change is unverified — say so explicitly, exactly as for the root-`run_id` gate.
 
-`test_langchain_agent_system_messages.py`:
+`test_langchain_agent_system_messages.py` — all three tests in
+`TestRunAgentSystemMessages` call `run_agent(...)` and so need the **same two mechanical
+changes as `test_langchain_agent_run.py`**: add `session_id="s1"` (it becomes a required
+parameter — omitting it is a `TypeError`) and patch
+`mcp_coder.llm.storage.session_storage.store_langchain_history` (otherwise the first two
+tests, which now reach a terminal graph event, write real session JSON into the user's
+`~/.mcp_coder/sessions/langchain/`). On top of that:
 
-* `test_prepends_system_messages` / `test_no_system_messages_when_none` — assert on
-  `mock_agent.astream_events.call_args` instead of `ainvoke.call_args`.
+* `test_prepends_system_messages` / `test_no_system_messages_when_none` — swap
+  `mock_agent.ainvoke.return_value` for
+  `mock_agent.astream_events.return_value = async_events(graph_events([...]))` and assert
+  on `mock_agent.astream_events.call_args` instead of `ainvoke.call_args`.
 * `test_timeout_raises_on_slow_agent` — the slow mock becomes an `astream_events`
   async iterator that sleeps; still expects `asyncio.TimeoutError`.
+
+**Storage-patch rule for this step:** every test that reaches `run_agent` or
+`run_agent_stream` with real (unmocked) internals must patch
+`mcp_coder.llm.storage.session_storage.store_langchain_history` — `run_agent_stream`
+imports it lazily from that module at `agent.py:692-694`, and there is no autouse fixture
+isolating the user app-data directory in `tests/conftest.py`. Tests that mock `run_agent` /
+`run_agent_stream` wholesale (`test_langchain_agent_mode.py`,
+`test_langchain_coverage_gaps.py`, `test_langchain_ollama_agent.py`) are unaffected.
 
 `test_langchain_agent_mode.py`:
 
@@ -215,6 +235,15 @@ the parity contract; only the mock setup should change. test_langchain_agent_usa
 must feed its usage through on_chat_model_end events (see the step file), because
 run_agent no longer derives usage from the final message list. Also add the multi-step
 structural parity test.
+
+EVERY run_agent(...) call site in the tests needs session_id="s1" (it is now a required
+parameter) AND a patch of
+mcp_coder.llm.storage.session_storage.store_langchain_history. That applies to all three
+files that call run_agent directly — test_langchain_agent_run.py,
+test_langchain_agent_usage.py and test_langchain_agent_system_messages.py. Storage now
+lives inside run_agent_stream, and there is no autouse fixture isolating the user app-data
+directory, so an unpatched test writes real JSON into ~/.mcp_coder/sessions/langchain/.
+Tests that mock run_agent / run_agent_stream wholesale do not need this.
 
 Those usage tests inject usage_metadata by hand and therefore pass by construction, so
 they cannot prove the backend actually streams usage. Add the required real gate: an

@@ -38,27 +38,38 @@ def _reject_multiple_systems(messages: list[Any]) -> None:
 * **Agent path (unit level):** the stub lives in the mocked react agent —
   `astream_events` calls the guard on `input["messages"]` before yielding
   `graph_events(...)`. Drive `run_agent_stream` for two turns, feeding turn 2 the
-  `messages` captured from turn 1's store call.
-* **Agent path (end-to-end, `test_icoder_agent_flow_...`):** the two tests above hand-build
-  `system_messages` and hand-feed turn-2 history, so between them they exercise neither
-  the merge (`_build_system_messages`) nor the store→load round trip — i.e. not the flow
-  icoder actually ran when the bug was reported. This third test closes that gap and is
+  `messages` captured from turn 1's store call — patch
+  `mcp_coder.llm.storage.session_storage.store_langchain_history` with the mock you read
+  that from, so nothing touches the user's real session directory.
+* **Agent path (end-to-end, `test_icoder_agent_flow_...`):** the unit-level agent test
+  above hand-builds `system_messages` and hand-feeds turn-2 history, so on the agent side
+  neither the merge (`_build_system_messages`) nor the store→load round trip is exercised
+  — i.e. not the flow icoder actually ran when the bug was reported (the text-path test
+  covers the merge, but only for `_ask_text_stream`). This third test closes that gap and is
   what makes the issue's acceptance criterion ("stub model that rejects >1
   `SystemMessage` passes across two turns **with a system + project prompt**") true for
   the agent path:
-  * Drive `ask_langchain_stream(question, session_id=sid, mcp_config="/tmp/mcp.json",
-    system_prompt="sys", project_prompt="proj")` twice with the **same** `session_id`, so
-    the call goes through `_build_system_messages` → `_ask_agent_stream` (thread+queue
-    bridge) → `run_agent_stream`, exactly as icoder does.
+  * Drive `ask_langchain_stream(question, session_id=sid, mcp_config="ignored.json",
+    tools=[], system_prompt="sys", project_prompt="proj")` twice with the **same**
+    `session_id`, so the call goes through `_build_system_messages` → `_ask_agent_stream`
+    (thread+queue bridge) → `run_agent_stream`, exactly as icoder does.
+  * **Pass `tools=[]`.** `ask_langchain_stream` forwards `tools` to `_ask_agent_stream`
+    (`__init__.py:591`) and on to `run_agent_stream` (`:494`), which short-circuits on
+    `if tools is not None` (`agent.py:525`) and skips `_load_mcp_server_config` and
+    `MultiServerMCPClient` entirely. Without it the test would fail before reaching the
+    model: `_load_mcp_server_config` reads `mcp_config` from disk and raises on a path that
+    does not exist. `mcp_config` still has to be truthy — it is what routes
+    `ask_langchain_stream` to the agent branch — but its value is never read.
   * Use the **real** `store_langchain_history` / `load_langchain_history`: patch
     `mcp_coder.llm.storage.session_storage.get_user_app_data_dir` to return `tmp_path`,
     so turn 1 writes a real JSON file and turn 2 loads it back. This also pins that the
     serialized shape survives a JSON round trip and rehydrates via `messages_from_dict`
     — something an in-memory hand-off cannot show.
-  * Patch only `_load_langchain_config`, `_create_chat_model`,
-    `agent._check_agent_dependencies` and the react agent (whose `astream_events` runs
-    the guard on `input["messages"]`, then yields `graph_events(...)` with a terminal
-    event so turn 1 really stores).
+  * With `tools=[]` the patch set is exactly four: `_load_langchain_config`,
+    `_create_chat_model`, `agent._check_agent_dependencies` and
+    `langgraph.prebuilt.create_react_agent` (whose `astream_events` runs the guard on
+    `input["messages"]`, then yields `graph_events(...)` with a terminal event so turn 1
+    really stores). No MCP patches are needed — that is the point of `tools=[]`.
   * Assert: no `ValueError` on either turn; the on-disk history after each turn has zero
     `"system"` entries; turn 2's `input["messages"]` starts with exactly one
     `SystemMessage` whose content is the merged `"sys\n\nproj"`; and turn 2's input
@@ -132,11 +143,14 @@ prompt + project prompt) to
 tests/llm/providers/langchain/test_langchain_multi_turn.py, and add the short
 architecture.md notes described in the step file.
 
-The end-to-end test must go through ask_langchain_stream(..., mcp_config=...) so it
-exercises _build_system_messages (the merge) and _ask_agent_stream, and must use the real
-store_langchain_history / load_langchain_history with
-mcp_coder.llm.storage.session_storage.get_user_app_data_dir patched to tmp_path — do not
-hand-build system_messages or hand-feed turn-2 history there.
+The end-to-end test must go through ask_langchain_stream(..., mcp_config=<any truthy
+value>, tools=[]) so it exercises _build_system_messages (the merge) and
+_ask_agent_stream, and must use the real store_langchain_history / load_langchain_history
+with mcp_coder.llm.storage.session_storage.get_user_app_data_dir patched to tmp_path — do
+not hand-build system_messages or hand-feed turn-2 history there. tools=[] is what makes
+run_agent_stream skip _load_mcp_server_config and MultiServerMCPClient, so the only
+patches needed are _load_langchain_config, _create_chat_model,
+agent._check_agent_dependencies and langgraph.prebuilt.create_react_agent.
 
 No production logic changes in this step. Run pylint, pytest and mypy via the MCP tools,
 plus one full pytest run without the marker exclusions. Then report the manual
