@@ -28,8 +28,11 @@ def serialize_messages(messages: list[Any]) -> list[dict[str, Any]]: ...
 * All `langchain_core` imports are **deferred inside the functions** (matching the
   existing style in `__init__.py` / `agent.py`) so importing the package still works
   without langchain installed.
-* Both helpers get full Google-style docstrings with an `Args:` and `Returns:` section
-  (pylint/ruff require it in this repo).
+* Both helpers get full Google-style docstrings with an `Args:` and `Returns:` section.
+  **Ruff** enforces this for `src/` — `[tool.ruff.lint]` selects `["D", "DOC"]` with
+  `convention = "google"`, and `tests/**/*.py` is exempted via per-file-ignores. Pylint
+  does **not**: its whole `C` category (including `missing-function-docstring`) is
+  disabled in `pyproject.toml`.
 
 ## ALGORITHM
 

@@ -188,6 +188,26 @@ three effects are decided rather than inherited:
 convergence" is a **net deletion**. Both files currently sit at 698 / 685 lines against
 the 750-line limit, so the extraction also relieves size pressure.
 
+### File-size sweep (750-line CI gate)
+
+The limit is enforced in CI — `.github/workflows/ci.yml` runs
+`mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist` as its
+own job — so it binds test files exactly as it binds source. Every file any step adds
+tests to was measured:
+
+| File | Now | After | Verdict |
+|------|-----|-------|---------|
+| `test_langchain_agent_streaming.py` | **656** | ~654 | **At risk** — the 7 new step-4 tests (~44 lines each) would reach ~950. Split: they go to the new `test_langchain_agent_stream_history.py`; only the `test_history_stored_before_done` edit stays |
+| `test_langchain_agent_run.py` | 493 | ~590 | OK (step 5: `session_id=` at every call site, store patch where storage is reached, plus the parity test) |
+| `tests/llm/test_types.py` | 491 | ~511 | OK (one assembler test) |
+| `tests/icoder/test_icoder_permission_wiring.py` | 452 | 452 | OK (wording only) |
+| `test_langchain_agent_usage.py` | 220 | ~290 | OK |
+| `test_langchain_agent_system_messages.py`, `test_langchain_agent_mode.py`, `test_langchain_provider_system_messages.py`, `test_langchain_integration.py`, langchain tests `conftest.py` | all < 300 | < 350 | OK |
+| New files (`test_langchain_messages.py`, `test_langchain_multi_turn.py`, `test_langchain_agent_stream_history.py`) | — | ~150 / ~390 / ~320 | OK |
+
+Only one file needed splitting. None of these are in `.large-files-allowlist`, and none
+should be added to it.
+
 ---
 
 ## Files created / modified
@@ -197,8 +217,9 @@ the 750-line limit, so the extraction also relieves size pressure.
 | Path | Purpose |
 |------|---------|
 | `src/mcp_coder/llm/providers/langchain/_messages.py` | Shared `assemble_messages` + `serialize_messages` |
-| `tests/llm/providers/langchain/test_langchain_messages.py` | Unit tests for the two helpers |
-| `tests/llm/providers/langchain/test_langchain_multi_turn.py` | Multi-turn text + agent tests; single-system regression tests, incl. one end-to-end through `ask_langchain_stream` + real session-file round trip |
+| `tests/llm/providers/langchain/test_langchain_messages.py` | Unit tests for the two helpers (step 1, ~150 lines) |
+| `tests/llm/providers/langchain/test_langchain_multi_turn.py` | Multi-turn text + agent tests; single-system regression tests, incl. one end-to-end through `ask_langchain_stream` + real session-file round trip (steps 3, 4, 6; ~390 lines when complete) |
+| `tests/llm/providers/langchain/test_langchain_agent_stream_history.py` | **Step 4** — all seven new tests (step_4 items 3–9): `run_agent_stream` storage / no-system-messages / `done` payload / cancel / error / no-terminal-event, and the `_ask_agent_stream` boundary strip (~320 lines). A separate file because `test_langchain_agent_streaming.py` is already 656 lines against the CI-enforced 750-line gate; it imports `_patch_run_agent_stream` from that file and `graph_events` / `async_events` from the conftest |
 
 ### Modified
 
@@ -211,11 +232,11 @@ the 750-line limit, so the extraction also relieves size pressure.
 | `tests/llm/providers/langchain/test_langchain_integration.py` | **Step 4** — one `langchain_integration` two-turn stream test; the real-LangGraph gate for the root-`run_id` terminal-event assumption. **Step 5** — `TestAgentModeIntegration::test_agent_simple_prompt` gains a non-empty `raw_response["usage"]` assertion, the real gate for the usage-source change |
 | `tests/llm/providers/langchain/test_langchain_provider_system_messages.py` | Merged-`SystemMessage` assertions |
 | `tests/llm/providers/langchain/test_langchain_agent_system_messages.py` | **Step 5 only** — `ainvoke` mocks → `astream_events` mocks, plus `session_id=` and a `store_langchain_history` patch on all three `run_agent` calls. Its two hand-built `SystemMessage`s are testing prepending, not the merge, so step 2 leaves it alone |
-| `tests/llm/providers/langchain/test_langchain_agent_streaming.py` | Terminal graph events where storage is asserted; cancel/error-persist-nothing tests |
-| `tests/llm/providers/langchain/test_langchain_agent_run.py` | **Step 5** — `ainvoke` mocks → `astream_events` mocks, `session_id=` + `store_langchain_history` patch; multi-step parity test |
+| `tests/llm/providers/langchain/test_langchain_agent_streaming.py` | **Step 4** — `test_history_stored_before_done` wrapped in `graph_events(...)`, and the local `_async_events` helper moved to conftest. **No new tests here** (file-size gate — they go in `test_langchain_agent_stream_history.py`) |
+| `tests/llm/providers/langchain/test_langchain_agent_run.py` | **Step 5** — `session_id=` at every `run_agent` call site (including `TestRunAgentLaunchErrorWrap`, which needs nothing else); `ainvoke` mocks → `astream_events` mocks + `store_langchain_history` patch for the tests that reach a terminal event; new multi-step parity test. 493 → ~590 lines |
 | `tests/llm/providers/langchain/test_langchain_agent_usage.py` | **Step 5** — `ainvoke` mocks → `astream_events` mocks, `session_id=` + `store_langchain_history` patch; usage fed via `on_chat_model_end` events, assertions kept (accumulator arithmetic only — the real-endpoint gate lives in `test_langchain_integration.py`) |
 | `tests/llm/providers/langchain/test_langchain_agent_mode.py` | `_ask_agent` no longer stores |
-| `tests/icoder/test_icoder_permission_wiring.py` | Docstring update only (site 2 no longer exists) |
+| `tests/icoder/test_icoder_permission_wiring.py` | **Step 5** — wording only, no behaviour change: the two "site 2" docstrings **and** the `AssertionError` message at line 298 (site 2 no longer exists) |
 | `docs/architecture/architecture.md` | One bullet: `agent.py` / `_messages.py`, history stored system-free |
 
 ### Verified-unchanged (no edit expected)

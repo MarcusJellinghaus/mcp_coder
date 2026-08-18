@@ -16,7 +16,8 @@ reconstructions that happen to agree.
 * Modify `tests/llm/providers/langchain/test_langchain_integration.py` — non-empty
   `raw_response["usage"]` assertion in `TestAgentModeIntegration::test_agent_simple_prompt`
   (the real gate for the usage-source change)
-* Modify `tests/icoder/test_icoder_permission_wiring.py` (docstrings only)
+* Modify `tests/icoder/test_icoder_permission_wiring.py` (wording only — two docstrings
+  plus the `AssertionError` message at line 298)
 
 ## WHAT
 
@@ -54,10 +55,13 @@ Return tuple is unchanged: `(final_text, stored_messages, stats)`.
 * `_ask_agent`: pass `session_id=session_id` to `run_agent` and **delete** the
   `store_langchain_history(session_id, messages)` call. `store_langchain_history` stays
   imported — the text paths still use it. `raw_response` construction is unchanged.
-* `tests/icoder/test_icoder_permission_wiring.py`: update the module docstring and
-  `test_icoder_path_is_stream_only_never_run_agent`'s docstring — "site 2" (the
-  `convert_...` call inside `run_agent`) no longer exists, so the guard is now
-  structurally trivial. Keep the test; it still pins stream-only behaviour.
+* `tests/icoder/test_icoder_permission_wiring.py`: **wording only, no behaviour change** —
+  "site 2" (the `convert_...` call inside `run_agent`) no longer exists, so the guard is
+  now structurally trivial. Update all three places the phrase appears: the module
+  docstring, `test_icoder_path_is_stream_only_never_run_agent`'s docstring, **and the
+  `AssertionError` message at line 298** (`"run_agent (site 2) must be unreachable from
+  iCoder"`) — that one is a string in the test body, not a docstring. Keep the test; it
+  still pins stream-only behaviour.
 
 ## ALGORITHM
 
@@ -101,20 +105,27 @@ stats: dict[str, Any])`, where `stats` carries `agent_steps`, `total_tool_calls`
 ## Tests (update first)
 
 `test_langchain_agent_run.py` — mechanical conversion using the step-4 conftest helper.
-Each test swaps `mock_agent.ainvoke.return_value = {"messages": [...]}` for
-`mock_agent.astream_events.return_value = async_events(graph_events([...]))`, adds
-`session_id="s1"`, and patches
+`session_id="s1"` is added at **every** `run_agent(...)` call site; the tests that reach a
+terminal graph event also swap `mock_agent.ainvoke.return_value = {"messages": [...]}` for
+`mock_agent.astream_events.return_value = async_events(graph_events([...]))` and patch
 `mcp_coder.llm.storage.session_storage.store_langchain_history`. **Keep every existing
 assertion** — they are the parity contract:
 
 * `test_returns_final_text`, `test_returns_message_history`,
   `test_returns_stats_with_tool_counts`, `test_handles_agent_response_gracefully`,
-  `test_prepends_session_history`, `test_tool_trace_in_stats`.
+  `test_prepends_session_history`, `test_tool_trace_in_stats` — the full treatment:
+  `session_id=`, mock swap, store patch.
 * `test_hard_fails_on_mcp_server_error` — tool loading fails before any event, so the
-  `ConnectionError` still propagates; only the mock setup changes.
+  `ConnectionError` still propagates; add `session_id=` and adjust the mock setup, but
+  **no store patch** (storage is never reached).
 * `TestRunAgentLaunchErrorWrap::test_run_agent_wraps_launch_errors` (both parametrized
-  cases) should pass with **no change at all** — the failure happens during tool loading
-  and the drainer propagates `LLMMCPLaunchError` identically. Verify rather than edit.
+  cases) needs **exactly one change: add `session_id="s1"`.** The call at
+  `test_langchain_agent_run.py:404` passes no `session_id`, which is now a required
+  parameter, so without it the test raises `TypeError` instead of `LLMMCPLaunchError` and
+  fails. It needs **no** `store_langchain_history` patch — tool loading raises before any
+  event is produced, so storage is never reached. Beyond that keyword the behaviour is
+  unchanged: the drainer propagates `LLMMCPLaunchError` identically, so no mock swap and
+  no assertion change.
 * New `test_multi_step_structure_matches_stream` — for a
   think→tool→think→tool→answer final message list, assert `run_agent`'s returned history
   equals the payload `run_agent_stream` stored, with all five messages present (no
@@ -183,7 +194,13 @@ tests, which now reach a terminal graph event, write real session JSON into the 
 imports it lazily from that module at `agent.py:692-694`, and there is no autouse fixture
 isolating the user app-data directory in `tests/conftest.py`. Tests that mock `run_agent` /
 `run_agent_stream` wholesale (`test_langchain_agent_mode.py`,
-`test_langchain_coverage_gaps.py`, `test_langchain_ollama_agent.py`) are unaffected.
+`test_langchain_coverage_gaps.py`, `test_langchain_ollama_agent.py`) are unaffected. So
+are the tests that raise during **tool loading**, before any event exists
+(`test_hard_fails_on_mcp_server_error`, `TestRunAgentLaunchErrorWrap`) — they never reach
+the storage call, so they need `session_id=` but no store patch.
+
+**`session_id=` is the broader rule:** it is a required parameter now, so *every*
+`run_agent(...)` call site needs it, including the ones exempt from the store patch above.
 
 `test_langchain_agent_mode.py`:
 
@@ -196,12 +213,20 @@ isolating the user app-data directory in `tests/conftest.py`. Tests that mock `r
 
 `test_langchain_coverage_gaps.py` mocks `run_agent` wholesale — expected to need no edit.
 
+**File sizes.** The biggest grower here is `test_langchain_agent_run.py`: 493 lines today,
+plus `session_id=` and a store patch at each call site and the new multi-step parity test
+≈ 590 — comfortably inside the 750-line CI gate, so no split is needed. Every other file
+this step touches is under 300 lines. Run `mcp__mcp-workspace__check_file_size` before
+committing anyway; if the parity test pushes the file past 750, split it rather than
+allowlisting.
+
 ## Checks
 
 ```
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
 mcp__tools-py__run_mypy_check
+mcp__mcp-workspace__check_file_size          # 750-line CI gate — see "File sizes" above
 ```
 
 Plus the step-4 validation gate, which this step finally routes through the new code on
@@ -236,14 +261,20 @@ must feed its usage through on_chat_model_end events (see the step file), becaus
 run_agent no longer derives usage from the final message list. Also add the multi-step
 structural parity test.
 
-EVERY run_agent(...) call site in the tests needs session_id="s1" (it is now a required
-parameter) AND a patch of
-mcp_coder.llm.storage.session_storage.store_langchain_history. That applies to all three
-files that call run_agent directly — test_langchain_agent_run.py,
-test_langchain_agent_usage.py and test_langchain_agent_system_messages.py. Storage now
-lives inside run_agent_stream, and there is no autouse fixture isolating the user app-data
-directory, so an unpatched test writes real JSON into ~/.mcp_coder/sessions/langchain/.
-Tests that mock run_agent / run_agent_stream wholesale do not need this.
+EVERY run_agent(...) call site in the tests needs session_id="s1" — it is now a required
+parameter, so omitting it is a TypeError. That includes
+TestRunAgentLaunchErrorWrap::test_run_agent_wraps_launch_errors, which the step file
+previously (and wrongly) said needed no change at all.
+
+Call sites that actually reach the storage call ALSO need a patch of
+mcp_coder.llm.storage.session_storage.store_langchain_history — storage now lives inside
+run_agent_stream and there is no autouse fixture isolating the user app-data directory, so
+an unpatched test writes real JSON into ~/.mcp_coder/sessions/langchain/. That applies
+across the three files that call run_agent directly — test_langchain_agent_run.py,
+test_langchain_agent_usage.py and test_langchain_agent_system_messages.py. Two exceptions
+need session_id but NOT the store patch, because they raise during tool loading before any
+event exists: test_hard_fails_on_mcp_server_error and TestRunAgentLaunchErrorWrap. Tests
+that mock run_agent / run_agent_stream wholesale need neither.
 
 Those usage tests inject usage_metadata by hand and therefore pass by construction, so
 they cannot prove the backend actually streams usage. Add the required real gate: an

@@ -22,7 +22,12 @@ duplicated code. Step 5 then deletes `run_agent`'s call along with the rest of i
   `src/mcp_coder/icoder/core/app_core.py` are **not** touched.
 * Modify `tests/llm/test_types.py` — assembler test for the new `done["result"]` key
 * Modify `tests/llm/providers/langchain/conftest.py` — add two shared test helpers
-* Modify `tests/llm/providers/langchain/test_langchain_agent_streaming.py`
+* **Create** `tests/llm/providers/langchain/test_langchain_agent_stream_history.py` — all
+  seven new stream/storage tests live here, **not** in
+  `test_langchain_agent_streaming.py`, which is already 656 lines against the CI-enforced
+  750-line limit (see "Tests")
+* Modify `tests/llm/providers/langchain/test_langchain_agent_streaming.py` — one existing
+  test edited; no new tests added
 * Modify `tests/llm/providers/langchain/test_langchain_multi_turn.py` (created in step 3)
 * Modify `tests/llm/providers/langchain/test_langchain_integration.py` — one
   `langchain_integration` two-turn stream test (see "Required validation gate")
@@ -88,7 +93,10 @@ async def async_events(items: list[dict[str, object]]) -> AsyncIterator[dict[str
   removes ~100 more.
 * After the extraction `run_agent`'s deferred import block no longer uses `AIMessage` or
   `ToolMessage` (only `HumanMessage` / `messages_from_dict` for its input assembly, which
-  step 5 removes) — drop them, or pylint's `unused-import` will fail the step.
+  step 5 removes) — drop them. Hygiene, not a gate: **nothing will flag them if you
+  don't.** `pyproject.toml` disables `W0611 unused-import` in
+  `[tool.pylint.messages_control]`, and ruff selects only `["D", "DOC"]`, so neither check
+  catches a leftover import. Delete them anyway rather than relying on a tool to notice.
 * `graph_events()` emits a root `on_chain_start` / `on_chain_end` pair with the same
   `run_id` (`"root"`) and `data.output == {"messages": final_messages}`; move the local
   `_async_events` out of `test_langchain_agent_streaming.py` into conftest as
@@ -199,52 +207,67 @@ that is a deliberate semantic change, not a no-op. All three effects are decided
   filtering them individually would be two filters in two modules that must stay in sync
   as sinks are added, which is exactly the per-consumer drift this issue removes. The
   ndjson formatter filters `done` to `session_id`/`usage`/`cost_usd`, so CLI output is
-  unaffected either way. Covered by Tests item 11.
+  unaffected either way. Covered by Tests item 9.
 
 ## Tests (write first)
 
-In `test_langchain_agent_streaming.py`:
+**File-size constraint — the new tests go in a new file.**
+`test_langchain_agent_streaming.py` is **656 lines** against the CI-enforced 750-line gate
+(`.github/workflows/ci.yml` runs
+`mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist`, and
+that file is **not** allowlisted). At the file's current density (~44 lines per test) the
+seven new tests below would land it near 950 lines and fail the `file-size` CI job. So
+only the edit to the existing test stays there; every new test goes into a new sibling
+file, leaving the original at ~654 lines (the `_async_events` helper moves out to
+conftest, which is a small net reduction).
+
+In `test_langchain_agent_streaming.py` (edit + verify only, no new tests):
 
 1. `test_history_stored_before_done` — wrap the events with `graph_events([...])`; assert
    the stored payload equals the serialized final messages.
-2. New `test_stored_history_has_no_system_messages` — final messages
-   `[SystemMessage, HumanMessage, AIMessage]` → stored has 2 entries, no `"system"` type.
-3. New `test_done_event_carries_messages_result_and_stats`.
-4. New `test_cancel_persists_nothing` — cancel mid-stream (no terminal event) → store
-   **not** called; a `done` event is still emitted.
-5. New `test_error_persists_nothing` — `astream_events` raises → store not called; the
-   existing `error`-event + re-raise behaviour is unchanged.
-6. `test_done_event_emitted_last`, the three `TestRunAgentStreamUsage` tests and the
+2. `test_done_event_emitted_last`, the three `TestRunAgentStreamUsage` tests and the
    tool-output tests keep passing **unchanged** (they emit no terminal event, so they
    simply store nothing — none of them asserts storage).
-8. New `test_no_terminal_event_done_carries_streamed_text` — feed `on_chat_model_stream`
+
+In the **new** `tests/llm/providers/langchain/test_langchain_agent_stream_history.py`
+(~320 lines expected). It imports `_patch_run_agent_stream` from
+`tests.llm.providers.langchain.test_langchain_agent_streaming` — the same cross-file
+pattern `test_langchain_agent_streaming_tool_output.py:5` already uses — and
+`graph_events` / `async_events` from `tests.llm.providers.langchain.conftest`:
+
+3. New `test_stored_history_has_no_system_messages` — final messages
+   `[SystemMessage, HumanMessage, AIMessage]` → stored has 2 entries, no `"system"` type.
+4. New `test_done_event_carries_messages_result_and_stats`.
+5. New `test_cancel_persists_nothing` — cancel mid-stream (no terminal event) → store
+   **not** called; a `done` event is still emitted.
+6. New `test_error_persists_nothing` — `astream_events` raises → store not called; the
+   existing `error`-event + re-raise behaviour is unchanged.
+7. New `test_no_terminal_event_done_carries_streamed_text` — feed `on_chat_model_stream`
    deltas but **no** terminal graph event; assert `done["result"]` equals the accumulated
    text (not `""`), `done["messages"] == []` and store was not called. This is the guard
    against step 5's drainer returning an empty answer when the root-`run_id` capture
    fails.
-9. New `test_cancel_done_carries_partial_text` — same shape as item 4, plus
+8. New `test_cancel_done_carries_partial_text` — same shape as item 5, plus
    `done["result"]` holds the text streamed before the cancel.
+9. New `test_ask_agent_stream_strips_messages_and_stats_from_done` — drive
+   `_ask_agent_stream` with a patched `run_agent_stream` whose `done` carries `messages`
+   and `stats`; assert the yielded `done` has **neither** key while `session_id` /
+   `usage` / `result` survive, and that non-`done` events pass through unchanged. This is
+   what keeps the whole conversation and the tool trace out of both
+   `raw_response["events"]` and the icoder event log. It drives `_ask_agent_stream` rather
+   than `run_agent_stream`, but the strip is a langchain-boundary behaviour and belongs
+   with the storage/`done`-payload tests it protects.
 
-In `tests/llm/test_types.py`:
+In `tests/llm/test_types.py` (491 lines; one ~20-line test keeps it well clear of 750):
 
 10. New `test_done_result_used_when_no_text_delta` — feed `ResponseAssembler` a `done`
     event with `result` and no `text_delta`; assert the assembled `text` is the `result`
     value. With a `text_delta` present, the deltas still win (existing tests cover that
     direction — keep them unchanged).
 
-In `test_langchain_agent_streaming.py` (the strip is a langchain-boundary behaviour, so
-its test lives with the other bridge tests):
-
-11. New `test_ask_agent_stream_strips_messages_and_stats_from_done` — drive
-    `_ask_agent_stream` with a patched `run_agent_stream` whose `done` carries `messages`
-    and `stats`; assert the yielded `done` has **neither** key while `session_id` /
-    `usage` / `result` survive, and that non-`done` events pass through unchanged. This is
-    what keeps the whole conversation and the tool trace out of both
-    `raw_response["events"]` and the icoder event log.
-
 In `test_langchain_multi_turn.py`:
 
-12. `TestAgentPathMultiTurn::test_two_turns_store_no_systems_and_send_one_system` — call
+11. `TestAgentPathMultiTurn::test_two_turns_store_no_systems_and_send_one_system` — call
    `run_agent_stream` twice, feeding turn 2 the `messages` captured from turn 1's store
    call; assert turn 2's `astream_events` input has exactly one `SystemMessage` at index 0
    and the stored history has zero system entries across both turns. Patch
@@ -254,7 +277,7 @@ In `test_langchain_multi_turn.py`:
 
 Unchanged, and the parity contract for the extraction:
 
-13. `test_langchain_agent_run.py`, `test_langchain_agent_usage.py` and
+12. `test_langchain_agent_run.py`, `test_langchain_agent_usage.py` and
     `test_langchain_agent_system_messages.py` must stay green **without any edit** in this
     step. `run_agent` still calls `ainvoke` and still returns the same
     `(final_text, serialized, stats)` — only the loop that computes text and stats moved
@@ -267,6 +290,7 @@ Unchanged, and the parity contract for the extraction:
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
 mcp__tools-py__run_mypy_check
+mcp__mcp-workspace__check_file_size          # 750-line CI gate — see "Tests"
 ```
 
 ## Required validation gate — real LangGraph events
@@ -331,7 +355,22 @@ stripped — ResponseAssembler consumes it deliberately. Add the tests/llm/test_
 case for done["result"] and the boundary-strip test from the step file.
 
 Add graph_events() and async_events() to tests/llm/providers/langchain/conftest.py and
-use them from the streaming tests. Write the tests listed in the step file first. Also add
+use them from the streaming tests. Write the tests listed in the step file first.
+
+Put ALL seven new stream/storage tests in a NEW file,
+tests/llm/providers/langchain/test_langchain_agent_stream_history.py — do NOT add them to
+test_langchain_agent_streaming.py, which is already 656 lines against the CI-enforced
+750-line file-size gate (.github/workflows/ci.yml runs `mcp-coder check file-size
+--max-lines 750 --allowlist-file .large-files-allowlist` and that file is not
+allowlisted); seven more tests there would fail CI. The new file imports
+_patch_run_agent_stream from
+tests.llm.providers.langchain.test_langchain_agent_streaming (same pattern as
+test_langchain_agent_streaming_tool_output.py) and graph_events/async_events from the
+conftest. The only change to test_langchain_agent_streaming.py is wrapping
+test_history_stored_before_done's events with graph_events(...) and moving _async_events
+out to conftest. Run mcp__mcp-workspace__check_file_size before committing.
+
+Also add
 the langchain_integration-marked two-turn stream test described under "Required validation
 gate" and run it — graph_events() is a fixture we invent, so it cannot on its own prove
 real LangGraph emits the terminal event we depend on. If the endpoint is unavailable the
