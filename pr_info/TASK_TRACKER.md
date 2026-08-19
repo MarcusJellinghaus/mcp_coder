@@ -33,8 +33,9 @@ Detail: [step_1.md](./steps/step_1.md)
   - Also: `run_ruff_check(["--preview"])` and `run_lint_imports_check` (gateway stays `langchain_core`-free)
   - Marked run `markers=["langchain_integration"]` on `tests/icoder/test_icoder_permission_wiring.py` must **pass**, not skip
   - Run `./tools/format_all.sh` before committing
-  - **BLOCKED — environment, not code.** Re-verified a third time 2026-08-19. The repo
-    `.venv` is still unusable and cannot be repaired from here (no shell tool available).
+  - **BLOCKED — environment, not code.** Re-verified a fourth time 2026-08-19, with all
+    checks re-run from scratch rather than carried over. The repo `.venv` is still
+    unusable and cannot be repaired from here (no shell tool available).
     - **Green:** `ruff --preview` (clean), `lint-imports` (21/21 contracts kept — the
       "iCoder Permissions Leaf Isolation" / "Core Purity" and "LangChain Library
       Isolation" contracts confirm the gateway stays `langchain_core`-free),
