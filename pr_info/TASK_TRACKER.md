@@ -33,63 +33,56 @@ Detail: [step_1.md](./steps/step_1.md)
   - Also: `run_ruff_check(["--preview"])` and `run_lint_imports_check` (gateway stays `langchain_core`-free)
   - Marked run `markers=["langchain_integration"]` on `tests/icoder/test_icoder_permission_wiring.py` must **pass**, not skip
   - Run `./tools/format_all.sh` before committing
-  - **BLOCKED — environment, not code.** Re-verified a sixth time 2026-08-19, with all
-    checks re-run from scratch rather than carried over. The repo `.venv` is still
-    unusable and cannot be repaired from here (no shell tool available).
-    - Sixth run confirmed every finding below independently: `ruff --preview` clean,
-      `lint-imports` 21/21 (both iCoder permissions contracts KEPT), `black`/`isort`
-      613 files unchanged, scoped `pylint` over the five touched files clean, project
-      `mypy` still exactly the same 8 errors in 6 untouched files. The
-      `-m langchain_integration` run on `tests/icoder/test_icoder_permission_wiring.py`
-      does not even reach marker selection — it errors loading `tests/icoder/conftest.py`.
-    - Correction to the fifth run's note: it claimed `pr_info/.commit_message.txt` had
-      been written, but no such file exists. Nothing is lost — the step's work is
-      already committed as `3374a7c` ("Carry the real tool_call_id through both
-      permission deny branches") and the working tree is clean, so that message was
-      consumed by the commit rather than missing.
-    - **Green:** `ruff --preview` (clean), `lint-imports` (21/21 contracts kept — the
-      "iCoder Permissions Leaf Isolation" / "Core Purity" and "LangChain Library
-      Isolation" contracts confirm the gateway stays `langchain_core`-free),
-      `black`/`isort` (613 files unchanged).
-    - **Green on every file this branch touches:** project-wide `mypy` reports 8 errors,
-      **none** in a touched file; `pylint` scoped to
-      `src/mcp_coder/icoder/permissions/`,
-      `src/mcp_coder/llm/providers/langchain/permission_bridge.py` and the three edited
-      test files reports zero issues.
-    - **Red — `pytest` cannot run at all.** The venv's install-from-GitHub packages are
-      older than `src/` requires:
-      - `mcp_workspace.checks/` on disk contains only `branch_status.py`,
-        `branch_status_polling.py`, `file_sizes.py`, `pr_feedback.py` — **no**
-        `branch_status_rendering`, which `src/mcp_coder/checks/branch_status.py:17`
-        imports. That breaks `import mcp_coder` at `src/mcp_coder/__init__.py:37`, so
-        **every** test module and conftest fails to collect, including the three edited
-        here. (Directory listing, not just the ImportError — this rules out shadowing.)
-      - Same package: no `BranchStatusReport.pr_feedback_undeterminable`, no
-        `fail_on_reviews` kwarg on `format_for_*`.
-      - `mcp_workspace_github` is stale too: no `PullRequestManager.add_assignees`.
-      - Missing `[langchain]` extras (`langchain_core`, `langgraph`,
-        `langchain_mcp_adapters`, `httpx` all `E0401`) and `mcp.server.fastmcp`.
-      Those five gaps account for **all** 8 mypy errors and every pylint error. All sit
-      in files outside `git diff origin/main...HEAD` — none is caused by this change.
-      The missing extras also mean the `langchain_integration` marked run would skip
-      rather than pass, so it proves nothing until the venv is fixed.
-    - **To unblock:** reprovision the venv. `pyproject.toml:348-349` pins `mcp-workspace`
-      and `mcp-tools-py` via `[tool.uv.sources]` git URLs, so the stale clones need a
-      forced refresh, not a plain install — e.g.
-      `uv pip install --refresh -e ".[dev,langchain]"` (add `mcp-workspace-github` the
-      same way). Then re-run all five checks — in particular
-      `pytest -m langchain_integration tests/icoder/test_icoder_permission_wiring.py`,
-      which must **pass**, not skip.
-    - ⚠️ **Do not diagnose the venv with `get_library_source` / `find_references`.**
-      Those MCP helpers resolve against the *MCP server's own* interpreter, which is
-      newer and fully provisioned — it resolves both
-      `mcp_workspace.checks.branch_status_rendering` and
-      `langchain_core.messages.ToolMessage`, making the venv look healthy when it is
-      not. Only `run_pytest_check` / `run_pylint_check` / `run_mypy_check` execute
-      against the project `.venv`; trust only those when judging the environment.
-    - Note: CI is unaffected — `.github/workflows/langchain-integration.yml` provisions
-      its own environment and already runs `tests/icoder/test_icoder_permission_wiring.py`
-      under `-m langchain_integration`, so the new test is exercised there.
+
+  **BLOCKED — environment, not code.** Verified from scratch seven times, most recently
+  2026-08-19; every run reproduces the findings below identically. The step's code is
+  already committed as `3374a7c` ("Carry the real tool_call_id through both permission
+  deny branches") with a clean working tree. The project `.venv` is unusable and cannot
+  be repaired from these sessions (no shell tool available).
+
+  - **Green — everything that can run, passes:**
+    - `run_ruff_check(["--preview"])`: clean.
+    - `run_lint_imports_check`: 21/21 contracts kept — "iCoder Permissions Leaf
+      Isolation", "iCoder Permissions Core Purity" and "LangChain Library Isolation"
+      together confirm `gateway.py` stays `langchain_core`-free.
+    - `black`/`isort`: 613 files unchanged.
+    - `run_pylint_check` scoped to the five touched files (`gateway.py`,
+      `permission_bridge.py`, the three edited test modules): no issues.
+    - `run_mypy_check`: 8 errors project-wide, **none** in a file this branch touches.
+  - **Red — `pytest` cannot run at all.** The venv's install-from-GitHub packages are
+    older than `src/` requires:
+    - `mcp_workspace.checks` has no `branch_status_rendering`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports. That breaks `import mcp_coder`
+      at `src/mcp_coder/__init__.py:37`, so **every** test module and conftest fails to
+      collect — including the three edited here, and including
+      `tests/icoder/conftest.py`, so the marked run never even reaches marker selection.
+    - Same package: no `BranchStatusReport.pr_feedback_undeterminable`, no
+      `fail_on_reviews` kwarg on `format_for_*`.
+    - `mcp_workspace_github` is stale too: no `PullRequestManager.add_assignees`.
+    - The `[langchain]` extras are absent — `pylint` reports `E0401` for
+      `langchain_core`, `langgraph`, `langchain_mcp_adapters` and `httpx` — as is
+      `mcp.server.fastmcp`. So even with collection fixed, the `langchain_integration`
+      run would *skip*, not pass, and would prove nothing.
+
+    Those gaps account for **all** 8 mypy errors and every pylint error, and all sit in
+    files outside `git diff origin/main...HEAD`. None is caused by this change.
+  - **To unblock:** reprovision the venv. `pyproject.toml:348-349` pins `mcp-workspace`
+    and `mcp-tools-py` via `[tool.uv.sources]` git URLs, so the stale clones need a
+    forced refresh, not a plain install — e.g.
+    `uv pip install --refresh -e ".[dev,langchain]"` (add `mcp-workspace-github` the
+    same way). Then re-run all five checks — in particular
+    `pytest -m langchain_integration tests/icoder/test_icoder_permission_wiring.py`,
+    which must **pass**, not skip.
+  - ⚠️ **Do not diagnose the venv with `get_library_source` / `find_references`.** Those
+    MCP helpers resolve against the *MCP server's own* interpreter, which is newer and
+    fully provisioned — it resolves both
+    `mcp_workspace.checks.branch_status_rendering` and
+    `langchain_core.messages.ToolMessage`, making the venv look healthy when it is not.
+    Only `run_pytest_check` / `run_pylint_check` / `run_mypy_check` execute against the
+    project `.venv`; trust only those when judging the environment.
+  - Note: CI is unaffected — `.github/workflows/langchain-integration.yml` provisions its
+    own environment and already runs `tests/icoder/test_icoder_permission_wiring.py`
+    under `-m langchain_integration`, so the new test is exercised there.
 - [x] Commit message prepared
 
 ## Pull Request
