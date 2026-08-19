@@ -202,12 +202,15 @@ mcp-coder implement --project-dir /path/to/project
     - `copilot_cli_streaming.py` - Streaming variant
   - `langchain/` - LangChain multi-backend integration (tests: `llm/providers/langchain/test_*.py`)
     - `__init__.py` - Entry point `ask_langchain()`, config loading, backend dispatch
+    - `agent.py` - LangGraph ReAct agent; `run_agent_stream` is the single execution and storage site, `run_agent` drains it
+    - `_messages.py` - Shared assemble/serialize helpers used by both the text and agent paths
     - `openai_backend.py` - OpenAI / Azure / Ollama backend via `ChatOpenAI`
     - `gemini_backend.py` - Google Gemini backend via `ChatGoogleGenerativeAI`
     - `anthropic_backend.py` - Anthropic backend via `ChatAnthropic`
     - **Optional install**: `pip install 'mcp-coder[langchain]'`
     - See [`docs/configuration/optional-dependencies.md`](../configuration/optional-dependencies.md) for per-provider extras (smaller footprints if you only need one backend).
     - **Session storage**: history persisted to `~/.mcp_coder/sessions/langchain/`
+      - Stored history is **system-free**: system + project prompts are merged into one `SystemMessage` and applied fresh each turn, never persisted. Otherwise they accumulate per turn and single-system providers (LiteLLM/Qwen-class) reject the conversation.
 
 ### CLI System (`src/mcp_coder/cli/`)
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)

@@ -13,18 +13,16 @@ _MOD = "mcp_coder.llm.providers.langchain"
 class TestBuildSystemMessages:
     """Tests for _build_system_messages helper."""
 
-    def test_both_prompts_produce_two_messages(self) -> None:
-        """Both system_prompt and project_prompt produce 2 SystemMessage objects."""
+    def test_both_prompts_produce_single_merged_message(self) -> None:
+        """Both prompts are merged into a single SystemMessage."""
         from langchain_core.messages import SystemMessage
 
         from mcp_coder.llm.providers.langchain import _build_system_messages
 
         msgs = _build_system_messages("system instructions", "project context")
-        assert len(msgs) == 2
+        assert len(msgs) == 1
         assert isinstance(msgs[0], SystemMessage)
-        assert isinstance(msgs[1], SystemMessage)
-        assert msgs[0].content == "system instructions"
-        assert msgs[1].content == "project context"
+        assert msgs[0].content == "system instructions\n\nproject context"
 
     def test_system_only(self) -> None:
         """Only system_prompt produces 1 SystemMessage."""
@@ -104,11 +102,9 @@ class TestAskTextPrependsSystemMessages:
 
         # Verify the message list passed to invoke
         call_args = mock_model.invoke.call_args[0][0]
-        assert len(call_args) == 3  # 2 system + 1 human
+        assert len(call_args) == 2  # 1 merged system + 1 human
         assert isinstance(call_args[0], SystemMessage)
-        assert isinstance(call_args[1], SystemMessage)
-        assert call_args[0].content == "system instructions"
-        assert call_args[1].content == "project context"
+        assert call_args[0].content == "system instructions\n\nproject context"
 
     def test_no_system_messages_when_none(self) -> None:
         """No SystemMessages prepended when prompts are None."""
@@ -182,9 +178,9 @@ class TestAskTextStreamPrependsSystemMessages:
             )
 
         call_args = mock_model.stream.call_args[0][0]
-        assert len(call_args) == 3  # 2 system + 1 human
+        assert len(call_args) == 2  # 1 merged system + 1 human
         assert isinstance(call_args[0], SystemMessage)
-        assert isinstance(call_args[1], SystemMessage)
+        assert call_args[0].content == "sys\n\nproj"
 
 
 class TestAskLangchainPassesSystemMessages:
@@ -233,4 +229,4 @@ class TestAskLangchainPassesSystemMessages:
         # Verify run_agent was called with the built system_messages
         mock_run.assert_called_once()
         system_messages = mock_run.call_args.kwargs["system_messages"]
-        assert [m.content for m in system_messages] == ["sys", "proj"]
+        assert [m.content for m in system_messages] == ["sys\n\nproj"]

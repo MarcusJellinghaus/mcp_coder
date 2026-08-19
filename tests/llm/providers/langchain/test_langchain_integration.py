@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
@@ -143,7 +144,18 @@ class TestAgentModeIntegration:
     """
 
     def test_agent_simple_prompt(self, tmp_path: Path) -> None:
-        """Agent answers a simple math question."""
+        """Agent answers a simple math question and reports token usage.
+
+        The usage assertion is the real gate for the usage-source change:
+        ``run_agent`` now drains ``run_agent_stream``, so ``raw_response.usage``
+        comes from the stream's ``on_chat_model_end`` accumulator instead of
+        ``ainvoke``'s final message list. Under ``astream_events`` the aggregated
+        chunk carries ``usage_metadata`` only when the backend *streams* usage,
+        and the unit tests inject it by hand, so they pass by construction. Only
+        a real endpoint can tell "accumulator works" from "backend streams
+        usage"; a failure here means the configured backend does not stream it
+        and ``usage`` degrades to ``{}``.
+        """
         _require_langchain_config()
         from mcp_coder.llm.providers.langchain import ask_langchain
 
@@ -158,6 +170,11 @@ class TestAgentModeIntegration:
         assert result["provider"] == "langchain"
         assert "2" in result["text"]
         assert result["session_id"] is not None
+
+        usage = result["raw_response"]["usage"]
+        assert isinstance(usage, dict)
+        assert usage, "backend did not stream usage: raw_response['usage'] is empty"
+        assert usage.get("input_tokens", 0) > 0
 
     def test_agent_session_continuity(self, tmp_path: Path) -> None:
         """Agent remembers context across continued session."""
@@ -182,6 +199,46 @@ class TestAgentModeIntegration:
 
         assert "4" in result2["text"]
         assert result2["session_id"] == session_id
+
+    def test_agent_stream_two_turns_store_system_free_history(
+        self, tmp_path: Path
+    ) -> None:
+        """Real-LangGraph gate for the root-run_id terminal-event assumption.
+
+        Every unit test feeds a hand-built ``graph_events()`` fixture, which
+        proves the code reacts to the *assumed* event shape but not that real
+        LangGraph emits it. If the assumption is wrong the guard only logs a
+        warning and stores nothing, so this drives two real streaming turns and
+        asserts the history is actually persisted, system-free, and grows.
+        """
+        _require_langchain_config()
+        from mcp_coder.llm.providers.langchain import ask_langchain_stream
+        from mcp_coder.llm.storage.session_storage import load_langchain_history
+
+        mcp_config, _ = _create_agent_mcp_config(tmp_path)
+        session_id = f"itest-stream-{uuid.uuid4()}"
+
+        histories: list[list[dict[str, object]]] = []
+        for question in (
+            "What is 1 + 1? Reply with just the number.",
+            "Multiply the result by two. Reply with just the number.",
+        ):
+            list(
+                ask_langchain_stream(
+                    question,
+                    session_id=session_id,
+                    mcp_config=mcp_config,
+                    timeout=60,
+                    system_prompt="You are a terse assistant.",
+                )
+            )
+            stored = load_langchain_history(session_id)
+            assert stored, f"no history stored after: {question}"
+            assert all(entry.get("type") != "system" for entry in stored)
+            histories.append(stored)
+
+        # Turn 2 built on turn 1's history rather than replacing it.
+        assert len(histories[1]) > len(histories[0])
 
     def test_agent_mcp_tool_discovery(self, tmp_path: Path) -> None:
         """Agent can list the MCP tools available to it."""

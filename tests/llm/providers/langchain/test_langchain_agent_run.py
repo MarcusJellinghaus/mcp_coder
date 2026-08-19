@@ -1,13 +1,30 @@
-"""Tests for run_agent execution and MCP launch error wrapping."""
+"""Tests for run_agent execution and MCP launch error wrapping.
+
+``run_agent`` is a thin drainer of ``run_agent_stream``, so the react agent is
+stubbed via ``astream_events`` (fed by the shared ``graph_events()`` /
+``async_events()`` conftest helpers), never ``ainvoke``.
+
+**Mock-class rule:** the stubbed react agent must be a ``MagicMock()``, never an
+``AsyncMock()`` — ``run_agent_stream`` does ``async for event in
+agent.astream_events(...)`` and an ``AsyncMock`` child call returns a coroutine,
+which ``async for`` rejects outright.
+
+**Storage rule:** every test that reaches a terminal graph event patches
+``mcp_coder.llm.storage.session_storage.store_langchain_history`` — storage now
+lives inside ``run_agent_stream`` and nothing isolates the user app-data
+directory. Tests that raise during tool loading never reach it.
+"""
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from mcp_coder.llm.providers.langchain.agent import run_agent
+from tests.llm.providers.langchain.conftest import async_events, graph_events
 
 # ---------------------------------------------------------------------------
 # Helpers for run_agent tests
@@ -17,6 +34,7 @@ _PATCH_MCP_CLIENT = "langchain_mcp_adapters.client.MultiServerMCPClient"
 _PATCH_CONVERT_TOOL = "langchain_mcp_adapters.tools.convert_mcp_tool_to_langchain_tool"
 _PATCH_CREATE_AGENT = "langgraph.prebuilt.create_react_agent"
 _PATCH_FROM_DICT = "langchain_core.messages.messages_from_dict"
+_PATCH_STORE = "mcp_coder.llm.storage.session_storage.store_langchain_history"
 
 
 def _make_ai_message(
@@ -90,6 +108,38 @@ def _make_mock_client() -> MagicMock:
     return mock_client
 
 
+def _make_stream_agent(final_messages: list[object]) -> MagicMock:
+    """Build the stubbed react agent whose graph ends with *final_messages*.
+
+    MagicMock (not AsyncMock) — see the module docstring's mock-class rule.
+    """
+    mock_agent = MagicMock()
+    mock_agent.astream_events.return_value = async_events(
+        graph_events(list(final_messages))
+    )
+    return mock_agent
+
+
+@contextmanager
+def _patch_run_agent(
+    mock_agent: MagicMock,
+    from_dict: Any = None,
+) -> Generator[MagicMock, None, None]:
+    """Patch everything ``run_agent`` touches; yield the storage mock."""
+    store_mock = MagicMock()
+    with (
+        patch(_PATCH_MCP_CLIENT, return_value=_make_mock_client()),
+        patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
+        patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
+        patch(
+            _PATCH_FROM_DICT,
+            from_dict if from_dict is not None else MagicMock(return_value=[]),
+        ),
+        patch(_PATCH_STORE, store_mock),
+    ):
+        yield store_mock
+
+
 class TestRunAgent:
     """Tests for run_agent() async function."""
 
@@ -101,22 +151,15 @@ class TestRunAgent:
         human_msg = _make_human_message("What is 2+2?")
         ai_msg = _make_ai_message("The answer is 4.")
 
-        mock_client = _make_mock_client()
+        mock_agent = _make_stream_agent([human_msg, ai_msg])
 
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {"messages": [human_msg, ai_msg]}
-
-        with (
-            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
-            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
-            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
-            patch(_PATCH_FROM_DICT, return_value=[]),
-        ):
+        with _patch_run_agent(mock_agent):
             text, _history, _stats = await run_agent(
                 question="What is 2+2?",
                 chat_model=MagicMock(),
                 messages=[],
                 mcp_config_path=cfg_path,
+                session_id="s1",
             )
 
         assert text == "The answer is 4."
@@ -129,22 +172,15 @@ class TestRunAgent:
         human_msg = _make_human_message("Hello")
         ai_msg = _make_ai_message("Hi there!")
 
-        mock_client = _make_mock_client()
+        mock_agent = _make_stream_agent([human_msg, ai_msg])
 
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {"messages": [human_msg, ai_msg]}
-
-        with (
-            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
-            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
-            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
-            patch(_PATCH_FROM_DICT, return_value=[]),
-        ):
+        with _patch_run_agent(mock_agent):
             _text, history, _stats = await run_agent(
                 question="Hello",
                 chat_model=MagicMock(),
                 messages=[],
                 mcp_config_path=cfg_path,
+                session_id="s1",
             )
 
         assert len(history) == 2
@@ -168,24 +204,17 @@ class TestRunAgent:
         )
         ai_final = _make_ai_message("Here is the file content.")
 
-        mock_client = _make_mock_client()
+        mock_agent = _make_stream_agent(
+            [human_msg, ai_with_tool, tool_result, ai_final]
+        )
 
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {
-            "messages": [human_msg, ai_with_tool, tool_result, ai_final]
-        }
-
-        with (
-            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
-            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
-            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
-            patch(_PATCH_FROM_DICT, return_value=[]),
-        ):
+        with _patch_run_agent(mock_agent):
             _text, _history, stats = await run_agent(
                 question="Read file",
                 chat_model=MagicMock(),
                 messages=[],
                 mcp_config_path=cfg_path,
+                session_id="s1",
             )
 
         assert stats["agent_steps"] == 1
@@ -206,6 +235,8 @@ class TestRunAgent:
         )
         mock_client.session.return_value.__aexit__ = AsyncMock(return_value=False)
 
+        # No store patch: tool loading raises before any event, so the storage
+        # call inside run_agent_stream is never reached.
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
             patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
@@ -217,6 +248,7 @@ class TestRunAgent:
                 chat_model=MagicMock(),
                 messages=[],
                 mcp_config_path=cfg_path,
+                session_id="s1",
             )
 
     @pytest.mark.asyncio
@@ -227,22 +259,15 @@ class TestRunAgent:
         human_msg = _make_human_message("Do something complex")
         partial_ai = _make_ai_message("Partial response so far...")
 
-        mock_client = _make_mock_client()
+        mock_agent = _make_stream_agent([human_msg, partial_ai])
 
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {"messages": [human_msg, partial_ai]}
-
-        with (
-            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
-            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
-            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
-            patch(_PATCH_FROM_DICT, return_value=[]),
-        ):
+        with _patch_run_agent(mock_agent):
             text, history, _stats = await run_agent(
                 question="Do something complex",
                 chat_model=MagicMock(),
                 messages=[],
                 mcp_config_path=cfg_path,
+                session_id="s1",
             )
 
         assert text == "Partial response so far..."
@@ -257,40 +282,34 @@ class TestRunAgent:
         prior_ai = _make_ai_message("Earlier answer")
         new_ai = _make_ai_message("New answer")
 
-        mock_client = _make_mock_client()
-
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {
-            "messages": [
+        mock_agent = _make_stream_agent(
+            [
                 prior_human,
                 prior_ai,
                 _make_human_message("New question"),
                 new_ai,
             ]
-        }
+        )
 
         mock_messages_from_dict = MagicMock(return_value=[prior_human, prior_ai])
 
-        with (
-            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
-            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
-            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
-            patch(_PATCH_FROM_DICT, mock_messages_from_dict),
-        ):
+        with _patch_run_agent(mock_agent, from_dict=mock_messages_from_dict):
             _text, _history, _stats = await run_agent(
                 question="New question",
                 chat_model=MagicMock(),
                 messages=[{"type": "human", "content": "Earlier question"}],
                 mcp_config_path=cfg_path,
+                session_id="s1",
             )
 
         # Verify messages_from_dict was called with the prior messages
+        # (assemble_messages passes a filtered copy, which compares equal).
         mock_messages_from_dict.assert_called_once_with(
             [{"type": "human", "content": "Earlier question"}]
         )
 
         # Verify agent received prior history + new question
-        call_args = mock_agent.ainvoke.call_args
+        call_args = mock_agent.astream_events.call_args
         input_msgs = call_args[0][0]["messages"]
         assert len(input_msgs) == 3  # 2 prior + 1 new
 
@@ -315,30 +334,23 @@ class TestRunAgent:
         )
         ai_final = _make_ai_message("Done reading files.")
 
-        mock_client = _make_mock_client()
-
-        mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {
-            "messages": [
+        mock_agent = _make_stream_agent(
+            [
                 human_msg,
                 ai_with_tools,
                 tool_result_1,
                 tool_result_2,
                 ai_final,
             ]
-        }
+        )
 
-        with (
-            patch(_PATCH_MCP_CLIENT, return_value=mock_client),
-            patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
-            patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
-            patch(_PATCH_FROM_DICT, return_value=[]),
-        ):
+        with _patch_run_agent(mock_agent):
             _text, _history, stats = await run_agent(
                 question="Read two files",
                 chat_model=MagicMock(),
                 messages=[],
                 mcp_config_path=cfg_path,
+                session_id="s1",
             )
 
         trace = stats["tool_trace"]
@@ -350,6 +362,55 @@ class TestRunAgent:
         assert trace[1]["name"] == "read_file"
         assert trace[1]["args"] == {"path": "b.py"}
         assert trace[1]["result"] == "content of b.py"
+
+    @pytest.mark.asyncio
+    async def test_multi_step_structure_matches_stream(self, tmp_path: Path) -> None:
+        """run_agent returns exactly the payload run_agent_stream stored.
+
+        A think -> tool -> think -> tool -> answer run keeps all five messages;
+        nothing is flattened on the way out of the drainer.
+        """
+        cfg_path = _write_mcp_config(tmp_path)
+
+        final_messages = [
+            _make_ai_message(
+                "thinking",
+                tool_calls=[{"name": "search", "args": {"q": "a"}, "id": "1"}],
+            ),
+            _make_tool_message("hit a", name="search", tool_call_id="1"),
+            _make_ai_message(
+                "thinking more",
+                tool_calls=[{"name": "search", "args": {"q": "b"}, "id": "2"}],
+            ),
+            _make_tool_message("hit b", name="search", tool_call_id="2"),
+            _make_ai_message("final answer"),
+        ]
+
+        mock_agent = _make_stream_agent(final_messages)
+
+        with _patch_run_agent(mock_agent) as store_mock:
+            text, history, stats = await run_agent(
+                question="Search twice",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path=cfg_path,
+                session_id="s1",
+            )
+
+        store_mock.assert_called_once()
+        stored = store_mock.call_args[0][1]
+        assert history == stored
+        assert len(history) == 5
+        assert [entry["type"] for entry in history] == [
+            "ai",
+            "tool",
+            "ai",
+            "tool",
+            "ai",
+        ]
+        assert text == "final answer"
+        assert stats["agent_steps"] == 2
+        assert stats["total_tool_calls"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -395,6 +456,8 @@ class TestRunAgentLaunchErrorWrap:
         original = exc_class(exc_message)
         mock_client = _make_launch_failing_client(original)
 
+        # No store patch: the launch failure happens during tool loading,
+        # before any event exists, so storage is never reached.
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
             patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
@@ -406,6 +469,7 @@ class TestRunAgentLaunchErrorWrap:
                 chat_model=MagicMock(),
                 messages=[],
                 mcp_config_path=str(cfg_file),
+                session_id="s1",
             )
 
         msg = str(exc_info.value)
@@ -430,7 +494,7 @@ class TestRunAgentLaunchErrorWrap:
         with (
             patch(_PATCH_MCP_CLIENT, return_value=mock_client),
             patch(_PATCH_CONVERT_TOOL, return_value=MagicMock()),
-            patch(_PATCH_CREATE_AGENT, return_value=AsyncMock()),
+            patch(_PATCH_CREATE_AGENT, return_value=MagicMock()),
             patch(_PATCH_FROM_DICT, return_value=[]),
         ):
             gen = run_agent_stream(
@@ -474,10 +538,7 @@ class TestRunAgentLaunchErrorWrap:
             patch(_PATCH_MCP_CLIENT) as mock_client_cls,
             patch(_PATCH_CREATE_AGENT, return_value=mock_agent),
             patch(_PATCH_FROM_DICT, return_value=[]),
-            patch(
-                "mcp_coder.llm.storage.session_storage.store_langchain_history",
-                MagicMock(),
-            ),
+            patch(_PATCH_STORE, MagicMock()),
         ):
             gen = run_agent_stream(
                 question="test",

@@ -402,6 +402,28 @@ def test_response_assembler_result_ignored_when_assistant_text_present() -> None
     assert result["text"] == "streamed text"
 
 
+def test_done_result_used_when_no_text_delta() -> None:
+    """A langchain agent done event without text_delta yields its result as text.
+
+    The langchain agent stream now puts the graph's final answer on
+    ``done["result"]``. Backends/proxies that never emit
+    ``on_chat_model_stream`` produce no ``text_delta``, so this key is the
+    only source of the response text for those runs.
+    """
+    assembler = ResponseAssembler(provider="langchain")
+    assembler.add(
+        {
+            "type": "done",
+            "session_id": "sess-1",
+            "usage": {"input_tokens": 10},
+            "result": "the agent's final answer",
+        }
+    )
+    result = assembler.result()
+    assert result["text"] == "the agent's final answer"
+    assert result["session_id"] == "sess-1"
+
+
 def test_response_assembler_empty_assistant_text_suppresses_fallback() -> None:
     """An empty text_delta still counts as assistant text; no result fallback."""
     assembler = ResponseAssembler(provider="claude")

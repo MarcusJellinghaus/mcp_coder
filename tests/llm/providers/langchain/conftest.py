@@ -9,10 +9,66 @@ directories that may need real langchain imports.
 """
 
 import sys
-from typing import Generator
+from collections.abc import AsyncIterator, Sequence
+from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+def graph_events(
+    final_messages: list[Any],
+    inner: Sequence[dict[str, object]] = (),
+) -> list[dict[str, object]]:
+    """Wrap *inner* events in the root on_chain_start/on_chain_end pair.
+
+    ``run_agent_stream`` captures the graph's final message list from the
+    ``on_chain_end`` whose ``run_id`` matches the first ``on_chain_start``
+    (matching by name would depend on version-specific LangGraph internals).
+    This helper reproduces that shape: both bracket events share the run id
+    ``"root"``, and the terminal one carries ``data.output.messages``.
+
+    Args:
+        final_messages: The graph's final message list, as delivered on the
+            terminal event's ``data.output.messages``.
+        inner: Events emitted between the two bracket events.
+
+    Returns:
+        The full event list to feed a stubbed ``astream_events``.
+    """
+    return [
+        {
+            "event": "on_chain_start",
+            "run_id": "root",
+            "name": "LangGraph",
+            "data": {"input": {}},
+        },
+        *inner,
+        {
+            "event": "on_chain_end",
+            "run_id": "root",
+            "name": "LangGraph",
+            "data": {"output": {"messages": list(final_messages)}},
+        },
+    ]
+
+
+async def async_events(
+    items: list[dict[str, object]],
+) -> AsyncIterator[dict[str, object]]:
+    """Create an async iterator from a list of event dicts.
+
+    Mock-class rule for the react agent that consumes this: the stubbed agent
+    must be a ``MagicMock()``, never an ``AsyncMock()``. ``run_agent_stream``
+    does ``async for event in agent.astream_events(...)``, and an ``AsyncMock``
+    child call returns a *coroutine*, which ``async for`` rejects before the
+    return value is ever looked at.
+
+    Yields:
+        Each event dict in order.
+    """
+    for item in items:
+        yield item
 
 
 @pytest.fixture(autouse=True, scope="session")

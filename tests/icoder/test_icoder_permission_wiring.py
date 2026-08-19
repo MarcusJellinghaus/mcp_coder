@@ -10,10 +10,12 @@ Three concerns are covered here:
   builds tools, so a ``<0.3.0`` adapter yields the clear ``ImportError`` rather
   than the raw ``TypeError`` at the first ``convert_...(tool_interceptors=...)``
   call.
-* **Bypass guard (Decision D1)** — iCoder can never reach either
-  un-instrumented ``convert_...`` site: site 3 (the ``run_agent_stream`` inline
-  loader) is skipped whenever tools are supplied, and site 2 (the non-stream
-  ``run_agent``) is unreachable from the stream-only iCoder path.
+* **Bypass guard (Decision D1)** — iCoder can never reach the un-instrumented
+  ``convert_...`` site: site 3 (the ``run_agent_stream`` inline loader) is
+  skipped whenever tools are supplied. The former site 2 (the non-stream
+  ``run_agent``'s own loader) no longer exists — ``run_agent`` is now a thin
+  drainer of ``run_agent_stream`` — so that half of the guard is structurally
+  trivial, but the test is kept: it still pins the stream-only iCoder path.
 
 The ``langchain_integration``-marked test drives a real
 ``convert_mcp_tool_to_langchain_tool`` + interceptor path end to end.
@@ -281,10 +283,13 @@ def test_icoder_path_is_stream_only_never_run_agent(
 ) -> None:
     """Driving ``RealLLMService.stream`` never invokes the non-stream ``run_agent``.
 
-    ``run_agent`` is the only caller of site 2's ``convert_...`` and is reachable
-    only via the non-stream ``prompt_llm`` path. iCoder streams, so its turn
-    routes ``RealLLMService.stream`` -> ``prompt_llm_stream`` ->
-    ``ask_langchain_stream`` and can never reach ``run_agent``.
+    ``run_agent`` is reachable only via the non-stream ``prompt_llm`` path.
+    iCoder streams, so its turn routes ``RealLLMService.stream`` ->
+    ``prompt_llm_stream`` -> ``ask_langchain_stream`` and can never reach
+    ``run_agent``. Now that ``run_agent`` is a thin drainer of
+    ``run_agent_stream`` it has no ``convert_...`` loader of its own, so this
+    guard is structurally trivial — it is kept as a regression pin on the
+    stream-only path.
     """
     from mcp_coder.icoder.services.llm_service import RealLLMService
 
@@ -295,7 +300,7 @@ def test_icoder_path_is_stream_only_never_run_agent(
 
     async def _boom_run_agent(*_a: Any, **_k: Any) -> Any:
         reached.append(True)
-        raise AssertionError("run_agent (site 2) must be unreachable from iCoder")
+        raise AssertionError("run_agent must be unreachable from iCoder")
 
     monkeypatch.setattr(
         "mcp_coder.llm.providers.langchain.agent.run_agent", _boom_run_agent

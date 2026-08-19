@@ -37,6 +37,7 @@ from ._exceptions import (
     raise_auth_error,
     raise_connection_error,
 )
+from ._messages import assemble_messages, serialize_messages
 from ._preflight import _ollama_preflight
 from ._usage import _extract_usage
 
@@ -50,23 +51,24 @@ logger = logging.getLogger(__name__)
 def _build_system_messages(
     system_prompt: str | None, project_prompt: str | None
 ) -> list[Any]:
-    """Build a list of SystemMessage objects from optional prompt strings.
+    r"""Merge optional prompt strings into a single SystemMessage.
+
+    Both prompts are joined with a blank line ("\n\n") so that providers
+    accepting only one system message still receive the full instructions.
 
     Args:
         system_prompt: Optional system-level prompt text.
         project_prompt: Optional project-level prompt text.
 
     Returns:
-        List of SystemMessage objects (may be empty).
+        List with at most one merged SystemMessage (may be empty).
     """
     from langchain_core.messages import SystemMessage
 
-    msgs: list[Any] = []
-    if system_prompt:
-        msgs.append(SystemMessage(content=system_prompt))
-    if project_prompt:
-        msgs.append(SystemMessage(content=project_prompt))
-    return msgs
+    parts = [p for p in (system_prompt, project_prompt) if p]
+    if not parts:
+        return []
+    return [SystemMessage(content="\n\n".join(parts))]
 
 
 # Agent streaming timeout constants (seconds)
@@ -316,13 +318,8 @@ def _ask_text(
     Raises:
         ValueError: If the model is not found on the configured backend.
     """  # Also raises LLMAuthError / LLMConnectionError via _handle_provider_error.
-    from langchain_core.messages import HumanMessage, messages_from_dict
-
     history = load_langchain_history(session_id)
-    history_messages = messages_from_dict(history)
-    lc_messages = (
-        (system_messages or []) + history_messages + [HumanMessage(content=question)]
-    )
+    lc_messages = assemble_messages(system_messages, history, question)
 
     chat_model = _create_chat_model(config, timeout=timeout)
 
@@ -343,16 +340,7 @@ def _ask_text(
         "usage": _extract_usage(ai_msg),
     }
 
-    # Serialize history using model_dump() for messages_from_dict() compatibility
-    serialized: list[dict[str, Any]] = []
-    for msg in list(history_messages) + [HumanMessage(content=question), ai_msg]:
-        if hasattr(msg, "model_dump"):
-            dump = msg.model_dump()
-        else:
-            dump = msg.dict()
-        msg_type = dump.pop("type", "unknown")
-        serialized.append({"type": msg_type, "data": dump})
-    store_langchain_history(session_id, serialized)
+    store_langchain_history(session_id, serialize_messages(lc_messages + [ai_msg]))
 
     return LLMResponseDict(
         version=LLM_RESPONSE_VERSION,
@@ -406,6 +394,7 @@ def _ask_agent(
                 chat_model=chat_model,
                 messages=history,
                 mcp_config_path=mcp_config,
+                session_id=session_id,
                 execution_dir=execution_dir,
                 env_vars=env_vars,
                 timeout=timeout,
@@ -416,8 +405,8 @@ def _ask_agent(
         _handle_provider_error(exc, agent_backend)
         raise
 
-    store_langchain_history(session_id, messages)
-
+    # No storage here: run_agent drains run_agent_stream, which is the single
+    # persistence site for the agent path.
     raw_response: dict[str, Any] = {
         "messages": messages,
         "backend": config.get("backend", ""),
@@ -433,6 +422,39 @@ def _ask_agent(
         provider="langchain",
         raw_response=raw_response,
     )
+
+
+#: ``done`` keys that exist only for the in-process drainer of
+#: ``run_agent_stream`` and must not cross the provider boundary.
+_INTERNAL_DONE_KEYS = ("messages", "stats")
+
+
+def _strip_internal_done_keys(event: StreamEvent) -> StreamEvent:
+    """Return *event* without the drainer-only ``done`` keys.
+
+    ``done["messages"]`` is the whole serialized conversation and
+    ``done["stats"]["tool_trace"]`` repeats every tool call's name/args/result.
+    Both are consumed only by the in-process drainer, which reads
+    ``run_agent_stream`` directly; every consumer above this boundary instead
+    *persists* the event — into ``raw_response["events"]`` via
+    ``ResponseAssembler`` and into the icoder JSONL event log via
+    ``AppCore.stream_llm`` — so leaving ``messages`` on would grow both sinks
+    quadratically with turn count. Stripping both here, once, is what keeps
+    those consumers free of their own filters.
+
+    ``result`` is deliberately *not* stripped: ``ResponseAssembler`` uses it as
+    the response text when no ``text_delta`` was seen.
+
+    Args:
+        event: A stream event from ``run_agent_stream``.
+
+    Returns:
+        Non-``done`` events unchanged; ``done`` events as a shallow copy
+        without the internal keys.
+    """
+    if event.get("type") != "done":
+        return event
+    return {k: v for k, v in event.items() if k not in _INTERNAL_DONE_KEYS}
 
 
 def _ask_agent_stream(
@@ -494,7 +516,7 @@ def _ask_agent_stream(
                 tools=tools,
                 system_messages=system_messages,
             ):
-                q.put(event)
+                q.put(_strip_internal_done_keys(event))
         except Exception as exc:  # pylint: disable=broad-except
             error_holder.append(exc)
         finally:
@@ -621,13 +643,10 @@ def _ask_text_stream(
         ValueError: If the model is not found (404/NOT_FOUND in error).
         TimeoutError: If no LLM output is received within the timeout period.
     """
-    from langchain_core.messages import AIMessage, HumanMessage, messages_from_dict
+    from langchain_core.messages import AIMessage
 
     history = load_langchain_history(session_id)
-    history_messages = messages_from_dict(history)
-    lc_messages = (
-        (system_messages or []) + history_messages + [HumanMessage(content=question)]
-    )
+    lc_messages = assemble_messages(system_messages, history, question)
 
     chat_model = _create_chat_model(config, timeout=timeout)
 
@@ -657,18 +676,7 @@ def _ask_text_stream(
         # Store history with the complete AI response
         full_text = "".join(all_text_parts)
         ai_msg = AIMessage(content=full_text)
-        serialized: list[dict[str, Any]] = []
-        for msg in list(history_messages) + [
-            HumanMessage(content=question),
-            ai_msg,
-        ]:
-            if hasattr(msg, "model_dump"):
-                dump = msg.model_dump()
-            else:
-                dump = msg.dict()
-            msg_type = dump.pop("type", "unknown")
-            serialized.append({"type": msg_type, "data": dump})
-        store_langchain_history(session_id, serialized)
+        store_langchain_history(session_id, serialize_messages(lc_messages + [ai_msg]))
 
         usage = _extract_usage(last_chunk_with_usage) if last_chunk_with_usage else {}
         yield {"type": "done", "session_id": session_id, "usage": usage}

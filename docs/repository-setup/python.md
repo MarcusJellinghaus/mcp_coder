@@ -56,7 +56,7 @@ claude-system-prompt-mode = "append"                   # "append" (default) or "
 
 **Provider-specific behavior:**
 
-- **Langchain:** Two `SystemMessage` objects (system prompt + project prompt) are prepended to the message list. Works in both text and agent modes.
+- **Langchain:** System prompt and project prompt are merged (joined by a blank line) into a single `SystemMessage` prepended to the message list. Works in both text and agent modes.
 - **Claude Code (append mode):** Prompts are concatenated with section headers (`## System Prompt` / `## Project Prompt`) and passed via `--append-system-prompt`. Claude Code's built-in prompt is preserved.
 - **Claude Code (replace mode):** The concatenated prompt replaces Claude Code's entire built-in system prompt via `--system-prompt`. **Use with caution** — this removes Claude Code's tool instructions and safety rules.
 

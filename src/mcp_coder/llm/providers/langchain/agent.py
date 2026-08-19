@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, cast
 from mcp_coder.llm.types import UsageInfo
 
 from ._exceptions import LLMMCPLaunchError
+from ._messages import assemble_messages, serialize_messages
 from ._usage import _extract_usage, _sum_usage
 
 if TYPE_CHECKING:
@@ -290,7 +291,7 @@ def _convert_server_tools(
     """Convert one server's raw MCP tools to LangChain tools.
 
     Single home for the ``sanitize -> model_copy -> convert`` inner loop shared
-    by ``run_agent``, ``run_agent_stream`` (else-branch), and
+    by ``run_agent_stream`` (else-branch) and
     ``MCPManager._connect_and_discover``. Optional ``tool_interceptors`` are
     forwarded verbatim to ``convert_mcp_tool_to_langchain_tool`` (the injection
     point for host-side permission enforcement, issue I2.3).
@@ -329,126 +330,54 @@ def _convert_server_tools(
     return lc_tools
 
 
-async def run_agent(
-    question: str,
-    chat_model: BaseChatModel,
-    messages: list[dict[str, Any]],
-    mcp_config_path: str,
-    execution_dir: str | None = None,  # pylint: disable=unused-argument
-    env_vars: dict[str, str] | None = None,
-    timeout: int = 30,
-    system_messages: list[Any] | None = None,
-) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
-    """Run a LangGraph ReAct agent with MCP tools.
+def _summarize_messages(messages: list[Any]) -> tuple[str, dict[str, Any]]:
+    """Derive final text and tool stats from a graph's final message list.
+
+    ``run_agent_stream`` is the sole caller — ``run_agent`` reaches it by
+    draining that generator, so both agent entry points share this summary.
+    Usage is deliberately *not* derived here: the stream owns it, accumulated
+    from ``on_chat_model_end`` events, and adds it to these stats at the
+    ``done`` yield site.
 
     Args:
-        question: The user question / prompt to send to the agent.
-        chat_model: A LangChain ``BaseChatModel`` instance (e.g. from a backend).
-        messages: Prior conversation history as a list of dicts (LangChain native
-            serialization via ``.dict()`` / ``messages_from_dict()``).
-        mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
-        execution_dir: Optional working directory (currently unused, reserved
-            for future).
-        env_vars: Optional extra environment variables for MCP server resolution.
-        timeout: Maximum time in seconds for the agent invocation.
-        system_messages: Optional list of system messages to prepend to the
-            conversation.
+        messages: The graph's final message list.
 
     Returns:
-        ``(final_text, full_message_history, stats_dict)``.
-        *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
-        ``tool_trace``.
-
-    Raises:
-        LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
-            not found or permission denied).
+        ``(final_text, stats)`` where *final_text* is the content of the last
+        ``AIMessage`` and *stats* carries ``agent_steps``, ``total_tool_calls``
+        and ``tool_trace``.
     """
-    # Deferred imports — only needed when agent mode is active
-    from langchain_core.messages import (
-        AIMessage,
-        HumanMessage,
-        ToolMessage,
-        messages_from_dict,
-    )
-    from langchain_mcp_adapters.client import MultiServerMCPClient
-    from langgraph.prebuilt import create_react_agent
-
-    server_config = _load_mcp_server_config(mcp_config_path, env_vars)
-
-    # Load tools with schema sanitization.
-    # We cannot use MultiServerMCPClient.get_tools() directly because it
-    # passes raw MCP schemas to StructuredTool, which fails on properties
-    # without a 'type' field (e.g. FastMCP Any-typed params).
-    client = MultiServerMCPClient(cast(Any, server_config))
-    all_tools = []
-    for server_name, connection in client.connections.items():
-        try:
-            async with client.session(server_name) as session:
-                raw_tools = await session.list_tools()
-                all_tools.extend(
-                    _convert_server_tools(raw_tools.tools, connection, server_name)
-                )
-        except (FileNotFoundError, PermissionError) as exc:
-            raise LLMMCPLaunchError(
-                _format_launch_error(
-                    server_name, server_config[server_name].get("command"), exc
-                )
-            ) from exc
-
-    agent = create_react_agent(chat_model, all_tools)
-
-    # Build input: system messages + prior history + new question
-    input_messages = (
-        (system_messages or [])
-        + messages_from_dict(messages)
-        + [HumanMessage(content=question)]
-    )
-
-    result = await asyncio.wait_for(
-        agent.ainvoke(
-            {"messages": input_messages},
-            config={"recursion_limit": AGENT_MAX_STEPS},
-        ),
-        timeout=float(timeout),
-    )
-
-    output_messages = result["messages"]
+    from langchain_core.messages import AIMessage, ToolMessage
 
     # Extract final text from the last AIMessage
     final_text = ""
-    for msg in reversed(output_messages):
+    for msg in reversed(messages):
         if isinstance(msg, AIMessage):
             final_text = msg.content if isinstance(msg.content, str) else ""
             break
 
-    # Compute stats
     agent_steps = 0
     total_tool_calls = 0
     tool_trace: list[dict[str, Any]] = []
     trace_by_id: dict[str, dict[str, Any]] = {}
-    accumulated_usage: UsageInfo = {}
 
-    for msg in output_messages:
-        if isinstance(msg, AIMessage):
-            msg_usage = _extract_usage(msg)
-            if msg_usage:
-                accumulated_usage = _sum_usage(accumulated_usage, msg_usage)
-            if getattr(msg, "tool_calls", None):
-                agent_steps += 1
-                for tc in msg.tool_calls:
-                    total_tool_calls += 1
-                    entry: dict[str, Any] = {
-                        "name": tc["name"],
-                        "args": tc["args"],
-                        "result": "",
-                    }
-                    tool_trace.append(entry)
-                    tc_id: str = tc.get("id") or ""
-                    if tc_id:
-                        trace_by_id[tc_id] = entry
+    for msg in messages:
+        if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+            agent_steps += 1
+            for tc in msg.tool_calls:
+                total_tool_calls += 1
+                entry: dict[str, Any] = {
+                    "name": tc["name"],
+                    "args": tc["args"],
+                    "result": "",
+                }
+                tool_trace.append(entry)
+                tc_id: str = tc.get("id") or ""
+                if tc_id:
+                    trace_by_id[tc_id] = entry
 
     # Fill tool results from ToolMessages, matched by tool_call_id
-    for msg in output_messages:
+    for msg in messages:
         if isinstance(msg, ToolMessage):
             tc_id = getattr(msg, "tool_call_id", "")
             if tc_id and tc_id in trace_by_id:
@@ -458,21 +387,83 @@ async def run_agent(
         "agent_steps": agent_steps,
         "total_tool_calls": total_tool_calls,
         "tool_trace": tool_trace,
-        "usage": accumulated_usage,
     }
+    return (final_text, stats)
 
-    # Serialize full history in the format expected by messages_from_dict:
-    # {"type": "human", "data": {"content": "...", ...}}
-    serialized: list[dict[str, Any]] = []
-    for msg in output_messages:
-        if hasattr(msg, "model_dump"):
-            dump = cast(dict[str, Any], msg.model_dump())
-        else:
-            dump = cast(dict[str, Any], msg.dict())
-        msg_type = dump.pop("type", "unknown")
-        serialized.append({"type": msg_type, "data": dump})
 
-    return (final_text, serialized, stats)
+async def run_agent(
+    question: str,
+    chat_model: BaseChatModel,
+    messages: list[dict[str, Any]],
+    mcp_config_path: str,
+    session_id: str,
+    execution_dir: str | None = None,
+    env_vars: dict[str, str] | None = None,
+    timeout: int = 30,
+    system_messages: list[Any] | None = None,
+) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+    """Run a LangGraph ReAct agent with MCP tools (non-streaming).
+
+    A thin drainer of :func:`run_agent_stream`: it consumes that generator and
+    returns what the terminal ``done`` event carries. Both agent entry points
+    therefore persist an identical multi-step structure by construction, rather
+    than via two reconstructions that happen to agree.
+
+    **Storage happens inside** :func:`run_agent_stream` — this function stores
+    nothing itself.
+
+    Args:
+        question: The user question / prompt to send to the agent.
+        chat_model: A LangChain ``BaseChatModel`` instance (e.g. from a backend).
+        messages: Prior conversation history as a list of dicts (LangChain native
+            serialization via ``.dict()`` / ``messages_from_dict()``).
+        mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
+        session_id: Session identifier; ``run_agent_stream`` stores the resulting
+            history under it.
+        execution_dir: Optional working directory (reserved for future).
+        env_vars: Optional extra environment variables for MCP server resolution.
+        timeout: Maximum time in seconds for the whole agent run. Note this now
+            also covers MCP tool discovery: the drainer wraps the entire
+            generator, whereas the previous implementation timed only the
+            ``ainvoke`` call and left tool loading untimed.
+        system_messages: Optional list of system messages to prepend to the
+            conversation.
+
+    Returns:
+        ``(final_text, stored_messages, stats_dict)``.
+        *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
+        ``tool_trace`` and ``usage`` — all but ``usage`` are omitted when the
+        run produced no terminal graph event, since they are derived from the
+        final message list that is missing in that case.
+
+    Raises:
+        LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
+            not found or permission denied).
+        asyncio.TimeoutError: If the run exceeds *timeout* seconds.
+    """  # noqa: DOC502 - both propagate: LLMMCPLaunchError from the drained
+    # generator, asyncio.TimeoutError from the asyncio.wait_for below.
+
+    async def _drain() -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+        final_text = ""
+        stored: list[dict[str, Any]] = []
+        stats: dict[str, Any] = {}
+        async for event in run_agent_stream(
+            question=question,
+            chat_model=chat_model,
+            messages=messages,
+            mcp_config_path=mcp_config_path,
+            session_id=session_id,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+            system_messages=system_messages,
+        ):
+            if event.get("type") == "done":
+                final_text = str(event.get("result", ""))
+                stored = cast(list[dict[str, Any]], event.get("messages", []))
+                stats = cast(dict[str, Any], event.get("stats", {}))
+        return (final_text, stored, stats)
+
+    return await asyncio.wait_for(_drain(), timeout=float(timeout))
 
 
 async def run_agent_stream(
@@ -508,18 +499,20 @@ async def run_agent_stream(
 
     Yields:
         ``StreamEvent`` dicts: ``text_delta``, ``tool_use_start``,
-        ``tool_result``, ``raw_line``, ``error``, and ``done``.
+        ``tool_result``, ``raw_line``, ``error``, and ``done``. The ``done``
+        event carries ``session_id``, ``usage``, the stored (system-free)
+        ``messages``, the final ``result`` text and nested ``stats``.
+        ``messages`` and ``stats`` are for in-process drainers only —
+        ``_ask_agent_stream`` strips them at the provider boundary.
+        Without a terminal graph event (cancelled turn, or no ``on_chain_end``
+        matching the root ``run_id``) ``stats`` carries ``usage`` alone: the
+        tool stats come from the final message list, so they are omitted
+        rather than reported as zeros.
 
     Raises:
         LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
             not found or permission denied).
     """
-    from langchain_core.messages import (
-        AIMessage,
-        HumanMessage,
-        ToolMessage,
-        messages_from_dict,
-    )
     from langgraph.prebuilt import create_react_agent
 
     if tools is not None:
@@ -529,7 +522,10 @@ async def run_agent_stream(
 
         server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
-        # Load tools with schema sanitization (inline, same as run_agent)
+        # Load tools with schema sanitization.
+        # We cannot use MultiServerMCPClient.get_tools() directly because it
+        # passes raw MCP schemas to StructuredTool, which fails on properties
+        # without a 'type' field (e.g. FastMCP Any-typed params).
         client = MultiServerMCPClient(cast(Any, server_config))
         all_tools = []
         for server_name, connection in client.connections.items():
@@ -548,17 +544,18 @@ async def run_agent_stream(
 
     agent = create_react_agent(chat_model, all_tools)
 
-    input_messages = (
-        (system_messages or [])
-        + messages_from_dict(messages)
-        + [HumanMessage(content=question)]
-    )
+    input_messages = assemble_messages(system_messages, messages, question)
 
-    # Accumulators for history reconstruction
+    # `accumulated_text` no longer feeds history reconstruction, but it is the
+    # `result` fallback when no terminal graph event is captured. Without it
+    # that branch would emit `result: ""`, and the non-stream agent path (which
+    # drains this generator and reads `final_text` off that key) would return an
+    # empty answer instead of merely skipping storage.
     accumulated_text = ""
-    tool_calls_by_run_id: dict[str, dict[str, Any]] = {}
-    tool_results_list: list[dict[str, Any]] = []
     accumulated_usage: UsageInfo = {}
+    root_run_id: str | None = None
+    terminal_event_seen = False
+    final_messages: list[Any] | None = None
 
     try:
         async for event in agent.astream_events(
@@ -591,7 +588,6 @@ async def run_agent_stream(
                 run_id = event.get("run_id", "")
                 input_data = event.get("data", {}).get("input", {})
                 name = event.get("name", "")
-                tool_calls_by_run_id[run_id] = {"name": name, "args": input_data}
                 yield {
                     "type": "tool_use_start",
                     "name": name,
@@ -632,17 +628,9 @@ async def run_agent_stream(
 
                 # A ToolMessage with status == "error" signals a failed tool.
                 # Surface tool errors via is_error so the stream continues
-                # and history reconstruction still sees the tool.
+                # rather than aborting the turn.
                 is_error = getattr(output, "status", None) == "error"
 
-                tool_results_list.append(
-                    {
-                        "name": name,
-                        "output": result_text,
-                        "tool_call_id": tool_call_id,
-                        "run_id": run_id,
-                    }
-                )
                 yield {
                     "type": "tool_result",
                     "name": name,
@@ -651,48 +639,82 @@ async def run_agent_stream(
                     "is_error": is_error,
                 }
 
+            elif event_kind == "on_chain_start":
+                if root_run_id is None:
+                    # The first on_chain_start is the outermost graph run.
+                    root_run_id = event.get("run_id")
+
+            elif (
+                event_kind == "on_chain_end"
+                and root_run_id is not None
+                and event.get("run_id") == root_run_id
+            ):
+                # Matching by root run_id rather than by event name:
+                # astream_events emits one on_chain_end per node/sub-chain, and
+                # the names are version-specific LangGraph internals.
+                terminal_event_seen = True
+                chain_output = event.get("data", {}).get("output")
+                if isinstance(chain_output, dict) and "messages" in chain_output:
+                    final_messages = list(chain_output["messages"])
+                else:
+                    logger.warning(
+                        "Terminal graph event carried no 'messages'; "
+                        "history not stored"
+                    )
+
     except Exception as exc:
         yield {"type": "error", "message": str(exc)}
         raise
 
-    # Reconstruct and store conversation history
-    # NOTE: History is flattened into a single AIMessage + ToolMessages.
-    # Multi-turn agents (think→tool→think→tool→answer) produce a simplified
-    # structure. Acceptable for now; see run_agent() for the full structure.
-    ai_tool_calls = []
-    for run_id, tc_info in tool_calls_by_run_id.items():
-        result_entry = next(
-            (r for r in tool_results_list if r["run_id"] == run_id), None
-        )
-        tc_id = result_entry["tool_call_id"] if result_entry else run_id
-        ai_tool_calls.append(
-            {"name": tc_info["name"], "args": tc_info["args"], "id": tc_id}
-        )
+    if final_messages is None:
+        # Cancelled, or no terminal graph event: there is no clean final
+        # message list, so persist nothing and leave prior history untouched.
+        # The streamed answer text still survives on `result`.
+        if not terminal_event_seen and not (cancel_event and cancel_event.is_set()):
+            # Not a cancel, and the malformed-output warning above did not fire
+            # either: no on_chain_end ever matched the root run_id. Losing the
+            # turn silently would look like an agent that forgets everything,
+            # so make it visible.
+            logger.warning(
+                "No terminal graph event matched the root run_id for session "
+                "%s; history not stored (the turn is not recorded)",
+                session_id,
+            )
+        # Tool stats are derived from the final message list, which is exactly
+        # what is missing here. Reporting zeros would claim "no tools ran" for a
+        # turn that may have made several calls, so the three tool-stat keys are
+        # omitted entirely and only `usage` — which the stream accumulated
+        # itself and therefore does know — is reported.
+        yield {
+            "type": "done",
+            "session_id": session_id,
+            "usage": accumulated_usage,
+            "messages": [],
+            "result": accumulated_text,
+            "stats": {"usage": accumulated_usage},
+        }
+        return
 
-    history_messages = list(input_messages)
-    if accumulated_text or ai_tool_calls:
-        ai_kwargs: dict[str, Any] = {"content": accumulated_text}
-        if ai_tool_calls:
-            ai_kwargs["tool_calls"] = ai_tool_calls
-        history_messages.append(AIMessage(**ai_kwargs))
-    for tr in tool_results_list:
-        history_messages.append(
-            ToolMessage(content=tr["output"], tool_call_id=tr["tool_call_id"])
-        )
-
-    serialized: list[dict[str, Any]] = []
-    for msg in history_messages:
-        if hasattr(msg, "model_dump"):
-            dump = cast(dict[str, Any], msg.model_dump())
-        else:
-            dump = cast(dict[str, Any], msg.dict())
-        msg_type = dump.pop("type", "unknown")
-        serialized.append({"type": msg_type, "data": dump})
+    # The graph's own final message list is the persisted history; the shared
+    # serializer strips the leading SystemMessage(s) that were prepended for
+    # this call. This is the single storage site for the agent path.
+    stored = serialize_messages(final_messages)
 
     from mcp_coder.llm.storage.session_storage import (
         store_langchain_history as _store_history,
     )
 
-    _store_history(session_id, serialized)
+    _store_history(session_id, stored)
 
-    yield {"type": "done", "session_id": session_id, "usage": accumulated_usage}
+    final_text, stats = _summarize_messages(final_messages)
+
+    yield {
+        "type": "done",
+        "session_id": session_id,
+        "usage": accumulated_usage,
+        "messages": stored,
+        "result": final_text,
+        # Usage is the stream's own on_chat_model_end accumulator;
+        # _summarize_messages covers only text and tool stats.
+        "stats": {**stats, "usage": accumulated_usage},
+    }
