@@ -34,7 +34,7 @@ Detail: [step_1.md](./steps/step_1.md)
   - Marked run `markers=["langchain_integration"]` on `tests/icoder/test_icoder_permission_wiring.py` must **pass**, not skip
   - Run `./tools/format_all.sh` before committing
 
-  **BLOCKED — environment, not code.** Verified from scratch seven times, most recently
+  **BLOCKED — environment, not code.** Verified from scratch eight times, most recently
   2026-08-19; every run reproduces the findings below identically. The step's code is
   already committed as `3374a7c` ("Carry the real tool_call_id through both permission
   deny branches") with a clean working tree. The project `.venv` is unusable and cannot
@@ -80,9 +80,16 @@ Detail: [step_1.md](./steps/step_1.md)
     `langchain_core.messages.ToolMessage`, making the venv look healthy when it is not.
     Only `run_pytest_check` / `run_pylint_check` / `run_mypy_check` execute against the
     project `.venv`; trust only those when judging the environment.
-  - Note: CI is unaffected — `.github/workflows/langchain-integration.yml` provisions its
-    own environment and already runs `tests/icoder/test_icoder_permission_wiring.py`
-    under `-m langchain_integration`, so the new test is exercised there.
+  - Note: CI is unaffected, but **has not yet exercised the new test on this branch.**
+    `.github/workflows/langchain-integration.yml` triggers only on `push` to `main`,
+    `pull_request` targeting `main`, and `workflow_dispatch` — and no PR exists yet
+    (`check_branch_status`: `PR=NOT_FOUND`), so that workflow has not run here. The
+    branch's `CI=PASSED` refers to the other workflows only. Once a PR is opened the
+    workflow provisions its own environment (`uv pip install ... ".[dev,langchain]"`)
+    and runs `tests/icoder/test_icoder_permission_wiring.py -m langchain_integration`.
+    Both marked tests gate on `importorskip` for `langchain_mcp_adapters` / `langgraph` /
+    `mcp` and need no API credentials, so with the `[langchain]` extras present they
+    should run rather than skip there.
 - [x] Commit message prepared
 
 ## Pull Request
