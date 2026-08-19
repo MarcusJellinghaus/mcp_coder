@@ -33,17 +33,20 @@ Detail: [step_1.md](./steps/step_1.md)
   - Also: `run_ruff_check(["--preview"])` and `run_lint_imports_check` (gateway stays `langchain_core`-free)
   - Marked run `markers=["langchain_integration"]` on `tests/icoder/test_icoder_permission_wiring.py` must **pass**, not skip
   - Run `./tools/format_all.sh` before committing
-  - **BLOCKED — environment, not code.** Re-verified a fifth time 2026-08-19, with all
+  - **BLOCKED — environment, not code.** Re-verified a sixth time 2026-08-19, with all
     checks re-run from scratch rather than carried over. The repo `.venv` is still
     unusable and cannot be repaired from here (no shell tool available).
-    - Fifth run confirmed every finding below independently: `ruff --preview` clean,
+    - Sixth run confirmed every finding below independently: `ruff --preview` clean,
       `lint-imports` 21/21 (both iCoder permissions contracts KEPT), `black`/`isort`
       613 files unchanged, scoped `pylint` over the five touched files clean, project
       `mypy` still exactly the same 8 errors in 6 untouched files. The
       `-m langchain_integration` run on `tests/icoder/test_icoder_permission_wiring.py`
       does not even reach marker selection — it errors loading `tests/icoder/conftest.py`.
-    - Also fixed this run: `pr_info/.commit_message.txt` was ticked as prepared but the
-      file did not exist; it has now been written.
+    - Correction to the fifth run's note: it claimed `pr_info/.commit_message.txt` had
+      been written, but no such file exists. Nothing is lost — the step's work is
+      already committed as `3374a7c` ("Carry the real tool_call_id through both
+      permission deny branches") and the working tree is clean, so that message was
+      consumed by the commit rather than missing.
     - **Green:** `ruff --preview` (clean), `lint-imports` (21/21 contracts kept — the
       "iCoder Permissions Leaf Isolation" / "Core Purity" and "LangChain Library
       Isolation" contracts confirm the gateway stays `langchain_core`-free),
@@ -70,9 +73,11 @@ Detail: [step_1.md](./steps/step_1.md)
       in files outside `git diff origin/main...HEAD` — none is caused by this change.
       The missing extras also mean the `langchain_integration` marked run would skip
       rather than pass, so it proves nothing until the venv is fixed.
-    - **To unblock:** reprovision the venv (`uv pip install "...[dev,langchain]"` plus
-      the install-from-GitHub packages `mcp-workspace` and `mcp-workspace-github` at the
-      revisions `src/` expects), then re-run all five checks — in particular
+    - **To unblock:** reprovision the venv. `pyproject.toml:348-349` pins `mcp-workspace`
+      and `mcp-tools-py` via `[tool.uv.sources]` git URLs, so the stale clones need a
+      forced refresh, not a plain install — e.g.
+      `uv pip install --refresh -e ".[dev,langchain]"` (add `mcp-workspace-github` the
+      same way). Then re-run all five checks — in particular
       `pytest -m langchain_integration tests/icoder/test_icoder_permission_wiring.py`,
       which must **pass**, not skip.
     - ⚠️ **Do not diagnose the venv with `get_library_source` / `find_references`.**
