@@ -57,9 +57,19 @@ def _canonical_of(tool: Any) -> str | None:
     return tool.canonical  # type: ignore[no-any-return]
 
 
-def _request(server_name: str, name: str, args: dict[str, Any] | None = None) -> Any:
-    """Build a fake adapter request object."""
-    return SimpleNamespace(server_name=server_name, name=name, args=args or {})
+def _request(
+    server_name: str,
+    name: str,
+    args: dict[str, Any] | None = None,
+    tool_call_id: str = "call_1",
+) -> Any:
+    """Build a fake adapter request, incl. the langgraph runtime ToolNode injects."""
+    return SimpleNamespace(
+        server_name=server_name,
+        name=name,
+        args=args or {},
+        runtime=SimpleNamespace(tool_call_id=tool_call_id),
+    )
 
 
 class _Handler:
@@ -79,12 +89,18 @@ def _fake_deny_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stub the langchain deny bridge so gateway tests need no ``langchain_core``.
 
     The real ``ToolMessage`` shape is covered by the provider bridge test; here
-    we only need the gateway to hand the bridge the correct text, so a plain
-    namespace mirroring the deny shape suffices.
+    we only need the gateway to hand the bridge the correct text **and**
+    tool_call id, so a plain namespace mirroring the deny shape suffices.
     """
 
-    def _fake(text: str, name: str) -> Any:
-        return SimpleNamespace(content=text, status="error", name=name, type="tool")
+    def _fake(text: str, name: str, tool_call_id: str) -> Any:
+        return SimpleNamespace(
+            content=text,
+            status="error",
+            name=name,
+            tool_call_id=tool_call_id,
+            type="tool",
+        )
 
     monkeypatch.setattr(
         "mcp_coder.icoder.permissions.gateway.build_deny_tool_message", _fake
@@ -229,6 +245,50 @@ async def test_interceptor_skill_elevated_never_stays_callable() -> None:
 
     assert handler.awaited
     assert result is sentinel
+
+
+@pytest.mark.asyncio
+async def test_interceptor_never_carries_tool_call_id() -> None:
+    """A ``never`` denial carries the emitted tool_call id (history stays paired)."""
+    config = PermissionConfig(rules=(_rule("s", "t", Policy.NEVER),))
+    gateway = LangchainEnforcementGateway(config)
+    handler = _Handler(object())
+
+    result = await gateway.interceptor(
+        _request("s", "t", tool_call_id="call_7"), handler
+    )
+
+    assert result.content == _DENY_NEVER
+    assert result.tool_call_id == "call_7"
+
+
+@pytest.mark.asyncio
+async def test_interceptor_ask_carries_tool_call_id() -> None:
+    """An ``ask`` denial carries the emitted id too (same shared bridge call)."""
+    config = PermissionConfig(rules=(_rule("s", "t", Policy.AFTER_APPROVAL),))
+    gateway = LangchainEnforcementGateway(config)
+    handler = _Handler(object())
+
+    result = await gateway.interceptor(
+        _request("s", "t", tool_call_id="call_7"), handler
+    )
+
+    assert result.content == _DENY_ASK
+    assert result.tool_call_id == "call_7"
+
+
+@pytest.mark.asyncio
+async def test_interceptor_deny_without_runtime_uses_empty_id() -> None:
+    """No ``runtime`` on the request (outside a graph) -> the id falls back to ``""``."""
+    config = PermissionConfig(rules=(_rule("s", "t", Policy.NEVER),))
+    gateway = LangchainEnforcementGateway(config)
+    handler = _Handler(object())
+    request = SimpleNamespace(server_name="s", name="t", args={})
+
+    result = await gateway.interceptor(request, handler)
+
+    assert result.content == _DENY_NEVER
+    assert result.tool_call_id == ""
 
 
 @pytest.mark.asyncio

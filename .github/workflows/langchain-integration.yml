@@ -55,6 +55,7 @@ jobs:
       - name: Run LangChain integration tests
         run: |
           pytest tests/llm/providers/langchain/test_langchain_integration.py \
+            tests/icoder/test_icoder_permission_wiring.py \
             -m langchain_integration \
             -v -s \
             --junitxml=langchain-integration-tests.xml
