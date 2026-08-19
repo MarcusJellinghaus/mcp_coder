@@ -29,6 +29,5 @@ On top of that process:
 
 The working directory is already correct — do not use `cd` or `git -C`.
 
-Runs with `bypassPermissions`; see
-[`docs/repository-setup/agent-permissions.md`](../../docs/repository-setup/agent-permissions.md)
-for the rationale and its limits.
+Runs with `bypassPermissions`. Rationale and limits:
+`docs/repository-setup/agent-permissions.md` in the mcp-coder repository.

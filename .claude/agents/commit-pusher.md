@@ -1,6 +1,6 @@
 ---
 name: commit-pusher
-description: Commits and pushes changes. Launched by the review/finalise supervisor skills after they have verified scope.
+description: Commits and pushes changes. Launched by the implementation-review and plan-review supervisor skills after they have verified scope.
 tools:
   - Bash
   - mcp__mcp-workspace__git
@@ -31,6 +31,5 @@ On top of that process:
 
 The working directory is already correct — do not use `cd` or `git -C`.
 
-Runs with `bypassPermissions`; see
-[`docs/repository-setup/agent-permissions.md`](../../docs/repository-setup/agent-permissions.md)
-for the rationale and its limits.
+Runs with `bypassPermissions`. Rationale and limits:
+`docs/repository-setup/agent-permissions.md` in the mcp-coder repository.

@@ -21,9 +21,20 @@ apply, the skill stays the single source of truth, and the skills remain user-on
 
 Consequence to be aware of: the path is load-bearing at runtime. Renaming or moving a
 `SKILL.md` breaks the agent loudly at launch rather than letting a duplicated copy drift
-silently — the better failure mode, but a real coupling.
+silently — the better failure mode, but a real coupling. The coupling runs the other way too:
+editing a `SKILL.md` for the user-typed path changes unattended agent behaviour, which is why
+each agent names its deltas explicitly ("ignore its frontmatter", "ignore its opening step")
+instead of assuming the skill reads well unattended.
 
-`issue-approver` needs none of this: it targets no skill and inlines its own procedure.
+`issue-approver` follows the same pattern against `.claude/skills/issue_approve/SKILL.md`. It
+stayed inlined longer than the other two and had already drifted: the agent had grown the
+post-approval sleep and assignee steps, while the skill held the issue-number resolution the
+agent lacked. The procedure now lives in the skill, the unattended deltas in the agent.
+
+`mcp-coder init` deploys `skills/`, `knowledge_base/` and `agents/` — not `docs/`. An
+adopting repo gets the agents and the skills they read, but not this file, so the agents name
+this document by path rather than linking to it; a relative link would be dead in every
+downstream repo.
 
 ## What `permissionMode: bypassPermissions` does
 
@@ -42,15 +53,41 @@ Do not treat any of the following as enforced:
 - **`Bash` is all-or-nothing.** Agent `tools:` takes bare tool names, so the git/gh-only
   limits stated in the agent bodies are prose. Under `bypassPermissions`, *every* shell
   command is auto-approved.
-- **Scoped skill grants would not help.** `allowed-tools` entries such as
+- **Scoped `allowed-tools` would not constrain *these agents*.** Entries such as
   `Bash(git add *)` are a **pre-approval list, not a restriction** — non-matching commands
   still go through the normal permission flow rather than being refused — and the whole
-  mechanism is moot under `bypassPermissions`.
+  mechanism is moot under `bypassPermissions`. This is a statement about the agents only; on
+  the supervisor skills the same field is a real alternative, covered below.
 - **A "refuse unless launched by a supervisor" instruction would not help either.** The
   agent sees only its launch prompt, which the caller writes, so the claim is
   unverifiable self-attestation.
 - **The allow-list itself is bypassed by a permissive session permission mode**, which is
   how direct commits from a main session can succeed despite the omitted entries.
+
+## The alternative this does not rule out
+
+On a *skill*, `allowed-tools` grants the listed tools for the turn that invokes the skill, so
+they run without prompting; the grant clears at the user's next message. Combined with
+`disable-model-invocation`, that is a genuinely user-gated privileged tier: only a typed
+`/<name>` opens it, the scope is a command pattern rather than all of `Bash`, and it expires
+on its own. Putting `Bash(git add *) Bash(git commit *) Bash(git push *)` on the three
+supervisor skills would retire these agents.
+
+Two things stand in the way today:
+
+- **The grant does not reach subagents.** A spawned agent's permission layers are built fresh
+  — a `model` layer plus an optional `effort` layer — with no copy of the parent's. The grant
+  is an `allowed_tools` layer, so it is simply absent. (`context: fork` skills are the
+  exception: that path merges the parent's layers explicitly.) The grant therefore only helps
+  if a supervisor runs `git` itself instead of delegating to `commit-pusher` — not a large
+  step, since `implementation_review_supervisor` already runs `run_vulture_check` and
+  `run_lint_imports_check` itself.
+- **The grant dies at every escalation.** It covers one turn, and the supervisors stop to ask
+  the user about major refactorings and import-contract violations. The user's reply starts a
+  new turn, and the rest of the run prompts again.
+
+Net trade: the agents survive escalations but carry an unrestricted `Bash`; a supervisor-level
+grant is tightly scoped and self-expiring but breaks whenever the user is consulted.
 
 ## What actually constrains these agents
 
