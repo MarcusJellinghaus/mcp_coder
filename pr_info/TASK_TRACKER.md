@@ -57,9 +57,9 @@ Detail: [step_4.md](./steps/step_4.md)
 
 Detail: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: `run_agent` becomes a thin drainer of `run_agent_stream` (new required `session_id`, `asyncio.wait_for` kept, stores nothing); delete its tool loading / `ainvoke` / serialization; `_ask_agent` drops its store call; refresh the two stale `agent.py` comments and the `test_icoder_permission_wiring.py` wording. Tests updated first across `test_langchain_agent_run.py` (incl. multi-step parity test), `_usage.py`, `_system_messages.py`, `_mode.py` — `MagicMock()` react agents, `session_id=` at every call site, store patches where storage is reached. Add the non-empty `raw_response["usage"]` assertion to the integration gate and run it; report skip/failure honestly. Also run `check_file_size`.
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `run_agent` becomes a thin drainer of `run_agent_stream` (new required `session_id`, `asyncio.wait_for` kept, stores nothing); delete its tool loading / `ainvoke` / serialization; `_ask_agent` drops its store call; refresh the two stale `agent.py` comments and the `test_icoder_permission_wiring.py` wording. Tests updated first across `test_langchain_agent_run.py` (incl. multi-step parity test), `_usage.py`, `_system_messages.py`, `_mode.py` — `MagicMock()` react agents, `session_id=` at every call site, store patches where storage is reached. Add the non-empty `raw_response["usage"]` assertion to the integration gate and run it; report skip/failure honestly. Also run `check_file_size`. (**Integration gate SKIPPED — 7/7 skipped, no endpoint configured, so the usage-source change and step 4's root-`run_id` assumption both remain unverified against a real backend**, see note in [step_5.md](./steps/step_5.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (`check_file_size` passed; unit tests run via the same throwaway shim as steps 3–4 — see note in [step_5.md](./steps/step_5.md))
+- [x] Commit message prepared
 
 ### Step 6: Single-system-provider regression test + docs
 

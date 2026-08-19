@@ -291,7 +291,7 @@ def _convert_server_tools(
     """Convert one server's raw MCP tools to LangChain tools.
 
     Single home for the ``sanitize -> model_copy -> convert`` inner loop shared
-    by ``run_agent``, ``run_agent_stream`` (else-branch), and
+    by ``run_agent_stream`` (else-branch) and
     ``MCPManager._connect_and_discover``. Optional ``tool_interceptors`` are
     forwarded verbatim to ``convert_mcp_tool_to_langchain_tool`` (the injection
     point for host-side permission enforcement, issue I2.3).
@@ -401,12 +401,21 @@ async def run_agent(
     chat_model: BaseChatModel,
     messages: list[dict[str, Any]],
     mcp_config_path: str,
-    execution_dir: str | None = None,  # pylint: disable=unused-argument
+    session_id: str,
+    execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
     system_messages: list[Any] | None = None,
 ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
-    """Run a LangGraph ReAct agent with MCP tools.
+    """Run a LangGraph ReAct agent with MCP tools (non-streaming).
+
+    A thin drainer of :func:`run_agent_stream`: it consumes that generator and
+    returns what the terminal ``done`` event carries. Both agent entry points
+    therefore persist an identical multi-step structure by construction, rather
+    than via two reconstructions that happen to agree.
+
+    **Storage happens inside** :func:`run_agent_stream` — this function stores
+    nothing itself.
 
     Args:
         question: The user question / prompt to send to the agent.
@@ -414,82 +423,49 @@ async def run_agent(
         messages: Prior conversation history as a list of dicts (LangChain native
             serialization via ``.dict()`` / ``messages_from_dict()``).
         mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
-        execution_dir: Optional working directory (currently unused, reserved
-            for future).
+        session_id: Session identifier; ``run_agent_stream`` stores the resulting
+            history under it.
+        execution_dir: Optional working directory (reserved for future).
         env_vars: Optional extra environment variables for MCP server resolution.
-        timeout: Maximum time in seconds for the agent invocation.
+        timeout: Maximum time in seconds for the whole agent run. Note this now
+            also covers MCP tool discovery: the drainer wraps the entire
+            generator, whereas the previous implementation timed only the
+            ``ainvoke`` call and left tool loading untimed.
         system_messages: Optional list of system messages to prepend to the
             conversation.
 
     Returns:
-        ``(final_text, full_message_history, stats_dict)``.
+        ``(final_text, stored_messages, stats_dict)``.
         *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
-        ``tool_trace``.
+        ``tool_trace`` and ``usage``.
 
     Raises:
         LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
             not found or permission denied).
+        asyncio.TimeoutError: If the run exceeds *timeout* seconds.
     """
-    # Deferred imports — only needed when agent mode is active
-    from langchain_core.messages import HumanMessage, messages_from_dict
-    from langchain_mcp_adapters.client import MultiServerMCPClient
-    from langgraph.prebuilt import create_react_agent
 
-    server_config = _load_mcp_server_config(mcp_config_path, env_vars)
+    async def _drain() -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+        final_text = ""
+        stored: list[dict[str, Any]] = []
+        stats: dict[str, Any] = {}
+        async for event in run_agent_stream(
+            question=question,
+            chat_model=chat_model,
+            messages=messages,
+            mcp_config_path=mcp_config_path,
+            session_id=session_id,
+            execution_dir=execution_dir,
+            env_vars=env_vars,
+            system_messages=system_messages,
+        ):
+            if event.get("type") == "done":
+                final_text = str(event.get("result", ""))
+                stored = cast(list[dict[str, Any]], event.get("messages", []))
+                stats = cast(dict[str, Any], event.get("stats", {}))
+        return (final_text, stored, stats)
 
-    # Load tools with schema sanitization.
-    # We cannot use MultiServerMCPClient.get_tools() directly because it
-    # passes raw MCP schemas to StructuredTool, which fails on properties
-    # without a 'type' field (e.g. FastMCP Any-typed params).
-    client = MultiServerMCPClient(cast(Any, server_config))
-    all_tools = []
-    for server_name, connection in client.connections.items():
-        try:
-            async with client.session(server_name) as session:
-                raw_tools = await session.list_tools()
-                all_tools.extend(
-                    _convert_server_tools(raw_tools.tools, connection, server_name)
-                )
-        except (FileNotFoundError, PermissionError) as exc:
-            raise LLMMCPLaunchError(
-                _format_launch_error(
-                    server_name, server_config[server_name].get("command"), exc
-                )
-            ) from exc
-
-    agent = create_react_agent(chat_model, all_tools)
-
-    # Build input: system messages + prior history + new question
-    input_messages = (
-        (system_messages or [])
-        + messages_from_dict(messages)
-        + [HumanMessage(content=question)]
-    )
-
-    result = await asyncio.wait_for(
-        agent.ainvoke(
-            {"messages": input_messages},
-            config={"recursion_limit": AGENT_MAX_STEPS},
-        ),
-        timeout=float(timeout),
-    )
-
-    output_messages = result["messages"]
-
-    final_text, stats = _summarize_messages(output_messages)
-
-    # Serialize full history in the format expected by messages_from_dict:
-    # {"type": "human", "data": {"content": "...", ...}}
-    serialized: list[dict[str, Any]] = []
-    for msg in output_messages:
-        if hasattr(msg, "model_dump"):
-            dump = cast(dict[str, Any], msg.model_dump())
-        else:
-            dump = cast(dict[str, Any], msg.dict())
-        msg_type = dump.pop("type", "unknown")
-        serialized.append({"type": msg_type, "data": dump})
-
-    return (final_text, serialized, stats)
+    return await asyncio.wait_for(_drain(), timeout=float(timeout))
 
 
 async def run_agent_stream(
@@ -544,7 +520,10 @@ async def run_agent_stream(
 
         server_config = _load_mcp_server_config(mcp_config_path, env_vars)
 
-        # Load tools with schema sanitization (inline, same as run_agent)
+        # Load tools with schema sanitization.
+        # We cannot use MultiServerMCPClient.get_tools() directly because it
+        # passes raw MCP schemas to StructuredTool, which fails on properties
+        # without a 'type' field (e.g. FastMCP Any-typed params).
         client = MultiServerMCPClient(cast(Any, server_config))
         all_tools = []
         for server_name, connection in client.connections.items():

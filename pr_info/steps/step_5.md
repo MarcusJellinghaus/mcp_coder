@@ -353,3 +353,86 @@ and run the langchain_integration tests. Report a skip as unverified; report a f
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.
 ```
+
+---
+
+## Outcome (implementation notes)
+
+### ⚠️ Validation gate SKIPPED — usage source still unverified
+
+`mcp__tools-py__run_pytest_check(markers=["langchain_integration"], ...)` on
+`test_langchain_integration.py` collected **7 tests and skipped all 7** —
+`_require_langchain_config()` found no configured backend/credentials in this
+environment. Therefore:
+
+* The new non-empty `raw_response["usage"]` assertion in
+  `TestAgentModeIntegration::test_agent_simple_prompt` **never ran**. Whether the
+  configured backend actually streams usage (`stream_usage=True` /
+  `stream_options={"include_usage": True}`) is **unknown**. The three rewritten
+  unit tests in `test_langchain_agent_usage.py` inject `usage_metadata` by hand
+  and pass by construction, so they cannot substitute for this.
+* `TestAgentModeIntegration::test_agent_session_continuity` — which would have
+  been the end-to-end proof of step 4's root-`run_id` terminal-event capture now
+  that it routes through the drained `run_agent` — also never ran. Step 4's
+  assumption remains unvalidated.
+
+**A skip is not a pass.** Both must be cleared by step 6's manual run against the
+LiteLLM/Qwen endpoint before either is treated as validated.
+
+### Implementation
+
+* `run_agent` is now a `_drain()` coroutine inside the existing
+  `asyncio.wait_for`; its imports, tool-loading loop, `create_react_agent`,
+  `ainvoke`, `_summarize_messages` call and serialization loop are deleted.
+  `agent.py` went from 727 to **706 lines** (~90 lines of logic removed, partly
+  offset by the larger drainer docstring).
+* `_ask_agent` passes `session_id=` and no longer stores.
+* Both stale comments refreshed. The `get_tools()` rationale that lived only in
+  `run_agent`'s deleted loader was moved onto `run_agent_stream`'s inline loader
+  comment rather than dropped.
+
+### Tests
+
+* One deviation from the plan, for a pylint reason:
+  `test_timeout_raises_on_slow_agent` uses a module-level `_SlowAsyncIter` class
+  assigned to `mock_agent.astream_events.return_value`, **not** an async-generator
+  function assigned to `mock_agent.astream_events` itself. Assigning a plain
+  function to that attribute made astroid infer `.astream_events` as that
+  function project-wide, producing four new
+  `E1101: Function '_slow_events' has no 'call_args' member` errors — including
+  in `test_langchain_multi_turn.py`, which this step does not touch. Keeping the
+  attribute a `MagicMock` avoids that entirely; behaviour (a run that outlives
+  the 1s timeout) is identical.
+* `test_langchain_agent_run.py` is **554 lines** after the conversion (under the
+  750-line gate; the plan estimated ~590, so no split was needed).
+
+### Checks
+
+* **`check_file_size`**: passed — all 813 files within 750 lines.
+* **pylint** (`src` + `tests`): no issues attributable to this change. What
+  remains is the pre-existing stale-`mcp-workspace` skew (`E0401`/`E0611` on
+  `mcp_workspace.checks.branch_status_rendering`, `E1101`/`E1123` on
+  `pr_feedback_undeterminable` / `fail_on_reviews` / `add_assignees`) and the
+  `langchain_core` / `httpx` / `mcp.server.fastmcp` optional-import errors that
+  predate the step.
+* **mypy** (`src` + `tests`): 8 errors, **all pre-existing** — the same
+  mcp-workspace skew plus `tests/llm/providers/claude/_mcp_stub_server.py`'s
+  untyped decorator. None in any file this step touched.
+* **pytest**: the step-1..4 environment breakage is still present (the venv's
+  `mcp-workspace` has no `mcp_workspace.checks.branch_status_rendering`, which
+  `src/mcp_coder/checks/branch_status.py:17` imports at `import mcp_coder` time,
+  so every test module fails at collection). The same throwaway root
+  `conftest.py` shim was used and **deleted afterwards — it is not part of this
+  commit**. Results with the shim:
+  * `tests/llm/providers/langchain/` + `tests/icoder/test_icoder_permission_wiring.py`:
+    green except the pre-existing `httpx`-absent
+    `test_connection_errors_contains_httpx_connect_error`.
+  * `tests/llm` + `tests/icoder`: additionally the pre-existing copilot CLI
+    subprocess integration failures and `tests/icoder/test_snapshots.py`
+    (`snap_compare` fixture not installed).
+  * `tests/cli` + `tests/workflows` + `tests/utils`: only the pre-existing
+    `AttributeError: NOT_CONFIGURED` / `UNAVAILABLE` branch-status failures from
+    the same mcp-workspace skew (the shim unmasks them; without it they fail at
+    collection). Unrelated to this change.
+  * A single full-suite run without path arguments exceeds the tool's 300s
+    timeout, so it was run in three directory batches instead.

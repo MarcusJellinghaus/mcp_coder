@@ -394,6 +394,7 @@ def _ask_agent(
                 chat_model=chat_model,
                 messages=history,
                 mcp_config_path=mcp_config,
+                session_id=session_id,
                 execution_dir=execution_dir,
                 env_vars=env_vars,
                 timeout=timeout,
@@ -404,8 +405,8 @@ def _ask_agent(
         _handle_provider_error(exc, agent_backend)
         raise
 
-    store_langchain_history(session_id, messages)
-
+    # No storage here: run_agent drains run_agent_stream, which is the single
+    # persistence site for the agent path.
     raw_response: dict[str, Any] = {
         "messages": messages,
         "backend": config.get("backend", ""),

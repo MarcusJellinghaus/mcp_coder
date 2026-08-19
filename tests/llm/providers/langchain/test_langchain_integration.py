@@ -144,7 +144,18 @@ class TestAgentModeIntegration:
     """
 
     def test_agent_simple_prompt(self, tmp_path: Path) -> None:
-        """Agent answers a simple math question."""
+        """Agent answers a simple math question and reports token usage.
+
+        The usage assertion is the real gate for the usage-source change:
+        ``run_agent`` now drains ``run_agent_stream``, so ``raw_response.usage``
+        comes from the stream's ``on_chat_model_end`` accumulator instead of
+        ``ainvoke``'s final message list. Under ``astream_events`` the aggregated
+        chunk carries ``usage_metadata`` only when the backend *streams* usage,
+        and the unit tests inject it by hand, so they pass by construction. Only
+        a real endpoint can tell "accumulator works" from "backend streams
+        usage"; a failure here means the configured backend does not stream it
+        and ``usage`` degrades to ``{}``.
+        """
         _require_langchain_config()
         from mcp_coder.llm.providers.langchain import ask_langchain
 
@@ -159,6 +170,11 @@ class TestAgentModeIntegration:
         assert result["provider"] == "langchain"
         assert "2" in result["text"]
         assert result["session_id"] is not None
+
+        usage = result["raw_response"]["usage"]
+        assert isinstance(usage, dict)
+        assert usage, "backend did not stream usage: raw_response['usage'] is empty"
+        assert usage.get("input_tokens", 0) > 0
 
     def test_agent_session_continuity(self, tmp_path: Path) -> None:
         """Agent remembers context across continued session."""
