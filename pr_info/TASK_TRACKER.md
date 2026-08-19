@@ -33,8 +33,8 @@ Detail: [step_1.md](./steps/step_1.md)
   - Also: `run_ruff_check(["--preview"])` and `run_lint_imports_check` (gateway stays `langchain_core`-free)
   - Marked run `markers=["langchain_integration"]` on `tests/icoder/test_icoder_permission_wiring.py` must **pass**, not skip
   - Run `./tools/format_all.sh` before committing
-  - **BLOCKED — environment, not code.** Re-verified; the workspace `.venv` is still
-    unusable and cannot be repaired from here (no shell tool available).
+  - **BLOCKED — environment, not code.** Re-verified again 2026-08-19; the workspace
+    `.venv` is still unusable and cannot be repaired from here (no shell tool available).
     - **Passing:** `ruff --preview` (clean), `lint-imports` (21/21 contracts kept —
       the "iCoder Permissions Leaf Isolation"/"Core Purity" and "LangChain Library
       Isolation" contracts confirm the gateway stays `langchain_core`-free),
@@ -58,6 +58,16 @@ Detail: [step_1.md](./steps/step_1.md)
       the `install-from-github` packages), then re-run all five checks — in particular
       `pytest -m langchain_integration tests/icoder/test_icoder_permission_wiring.py`,
       which must pass rather than skip.
+    - ⚠️ **Do not diagnose the venv with `get_library_source` / `find_references`.**
+      Those MCP helpers resolve against the *MCP server's own* interpreter, which is
+      newer and fully provisioned — it resolves both
+      `mcp_workspace.checks.branch_status_rendering` and
+      `langchain_core.messages.ToolMessage`, making the venv look healthy when it is
+      not. Only `run_pytest_check` / `run_pylint_check` / `run_mypy_check` execute
+      against the project `.venv`; trust only those when judging the environment.
+    - Note: CI is unaffected — `.github/workflows/langchain-integration.yml` provisions
+      its own environment and already runs `tests/icoder/test_icoder_permission_wiring.py`
+      under `-m langchain_integration`, so the new test is exercised there.
 - [x] Commit message prepared
 
 ## Pull Request
