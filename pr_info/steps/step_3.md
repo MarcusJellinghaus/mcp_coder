@@ -109,3 +109,52 @@ that means the serialized output is no longer byte-identical.
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.
 ```
+
+---
+
+## Implementation note (step 3 run)
+
+**The step-1/2 environment breakage is still present**, but this time the new tests
+**were** executed and **passed** via a throwaway shim.
+
+The venv's `mcp-workspace` install is still stale: `src/mcp_coder/checks/branch_status.py:17`
+imports `mcp_workspace.checks.branch_status_rendering`, which the installed version does not
+have (its `CIStatus` still lives in `mcp_workspace.checks.branch_status`). That import runs at
+`import mcp_coder` time (`src/mcp_coder/__init__.py:37`), so the mandated full-suite run still
+fails at collection for every module that imports `mcp_coder` — pre-existing, unrelated to this
+change, and unfixable here (no shell to reinstall the dependency).
+
+**Workaround used for verification (temporary, not committed).** A throwaway test module
+that sorts first alphabetically injected a `mcp_workspace.checks.branch_status_rendering`
+stand-in into `sys.modules` (re-exporting `CIStatus` from `mcp_workspace.checks.branch_status`)
+before any other module imported `mcp_coder`. With that shim in place the **entire**
+`tests/llm/providers/langchain/` directory ran against the real production code. The file was
+deleted afterwards; no shim is part of this commit.
+
+Results:
+
+* **New `test_langchain_multi_turn.py` test: PASSED.**
+* **Step 1's 8 `test_langchain_messages.py` tests: PASSED** (previously unverified — this
+  clears the step-1 caveat).
+* **All existing text-path tests passed unmodified** — `test_langchain_provider.py`,
+  `test_langchain_streaming.py`, `test_langchain_provider_system_messages.py`,
+  `test_langchain_404_hints.py`, `test_langchain_coverage_gaps.py`,
+  `test_langchain_provider_usage.py`. This is the byte-identical-serializer proof the step
+  asked for; **no existing test needed changing**.
+* One pre-existing failure, unrelated to this change:
+  `test_langchain_exceptions.py::TestErrorTuples::test_connection_errors_contains_httpx_connect_error`
+  — `httpx` is absent, so the conftest injects a `MagicMock` and the assertion
+  `httpx.ConnectError in CONNECTION_ERRORS` cannot hold. Fails identically without this commit.
+
+Other checks (run normally, no shim):
+
+* **mypy --strict** on `src/mcp_coder/llm/providers/langchain` + `tests/llm/providers/langchain`:
+  clean. Project-wide mypy shows the same 8 pre-existing errors as step 1 (all from the
+  `mcp-workspace` skew plus one claude test stub); none in langchain code.
+* **pylint**: only `E0401` for the deferred optional-dependency imports (the project-wide
+  baseline — langchain/httpx are not installed in the lint env) plus the pre-existing
+  `mcp-workspace` skew errors. Nothing new.
+* **ruff** (`D`/`DOC`, preview): clean. Fixed one **pre-existing** `D301` introduced by step 2 —
+  `_build_system_messages`'s docstring contains `\n\n`, so it is now a raw docstring (`r"""`).
+  Docstring text only, no behaviour change.
+* **black / isort**: no changes. **file-size gate** (750 lines): passes.

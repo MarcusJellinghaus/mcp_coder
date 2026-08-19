@@ -41,9 +41,9 @@ Detail: [step_2.md](./steps/step_2.md)
 
 Detail: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: `_ask_text` and `_ask_text_stream` use `assemble_messages()` / `serialize_messages()`; create `tests/llm/providers/langchain/test_langchain_multi_turn.py` with the multi-turn streaming text-path test (written first). Existing text-path tests must stay green unmodified — if one needs changing, stop and report.
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_ask_text` and `_ask_text_stream` use `assemble_messages()` / `serialize_messages()`; create `tests/llm/providers/langchain/test_langchain_multi_turn.py` with the multi-turn streaming text-path test (written first). Existing text-path tests must stay green unmodified — if one needs changing, stop and report.
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (mandated full-suite pytest still blocked by the pre-existing environment breakage; verified via a temporary shim — see note in [step_3.md](./steps/step_3.md))
+- [x] Commit message prepared
 
 ### Step 4: Agent stream sources persisted history from the graph's final messages
 
