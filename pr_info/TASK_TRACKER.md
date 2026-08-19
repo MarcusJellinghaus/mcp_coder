@@ -33,31 +33,39 @@ Detail: [step_1.md](./steps/step_1.md)
   - Also: `run_ruff_check(["--preview"])` and `run_lint_imports_check` (gateway stays `langchain_core`-free)
   - Marked run `markers=["langchain_integration"]` on `tests/icoder/test_icoder_permission_wiring.py` must **pass**, not skip
   - Run `./tools/format_all.sh` before committing
-  - **BLOCKED — environment, not code.** Re-verified again 2026-08-19; the workspace
+  - **BLOCKED — environment, not code.** Re-verified a third time 2026-08-19. The repo
     `.venv` is still unusable and cannot be repaired from here (no shell tool available).
-    - **Passing:** `ruff --preview` (clean), `lint-imports` (21/21 contracts kept —
-      the "iCoder Permissions Leaf Isolation"/"Core Purity" and "LangChain Library
+    - **Green:** `ruff --preview` (clean), `lint-imports` (21/21 contracts kept — the
+      "iCoder Permissions Leaf Isolation" / "Core Purity" and "LangChain Library
       Isolation" contracts confirm the gateway stays `langchain_core`-free),
       `black`/`isort` (613 files unchanged).
-    - **Scoped to the files this change touches, both pass:** `pylint` and `mypy` over
-      `src/mcp_coder/icoder/permissions/` + `src/mcp_coder/llm/providers/langchain/permission_bridge.py`
-      report zero issues.
-    - **Cannot be evaluated project-wide:** the repo `.venv` has an *older*
-      `mcp-workspace` than `src/` requires — no `mcp_workspace.checks.branch_status_rendering`
-      (imported by `src/mcp_coder/checks/branch_status.py:17`), no
-      `BranchStatusReport.pr_feedback_undeterminable`, no `fail_on_reviews` kwarg on
-      `format_for_*`. That breaks `import mcp_coder` at `src/mcp_coder/__init__.py:37`
-      and therefore **all** pytest collection, including the three test files edited
-      here. The same 3 attr/call mismatches plus `mcp.server.fastmcp` account for all
-      8 mypy errors and every pylint error outside the langchain extras — all in files
-      this change does not touch.
-    - The venv is also missing the `[langchain]` extras (`langchain_core`, `langgraph`,
-      `langchain_mcp_adapters` and `httpx` all `E0401`), so the `langchain_integration`
-      marked run would skip rather than pass.
+    - **Green on every file this branch touches:** project-wide `mypy` reports 8 errors,
+      **none** in a touched file; `pylint` scoped to
+      `src/mcp_coder/icoder/permissions/`,
+      `src/mcp_coder/llm/providers/langchain/permission_bridge.py` and the three edited
+      test files reports zero issues.
+    - **Red — `pytest` cannot run at all.** The venv's install-from-GitHub packages are
+      older than `src/` requires:
+      - `mcp_workspace.checks/` on disk contains only `branch_status.py`,
+        `branch_status_polling.py`, `file_sizes.py`, `pr_feedback.py` — **no**
+        `branch_status_rendering`, which `src/mcp_coder/checks/branch_status.py:17`
+        imports. That breaks `import mcp_coder` at `src/mcp_coder/__init__.py:37`, so
+        **every** test module and conftest fails to collect, including the three edited
+        here. (Directory listing, not just the ImportError — this rules out shadowing.)
+      - Same package: no `BranchStatusReport.pr_feedback_undeterminable`, no
+        `fail_on_reviews` kwarg on `format_for_*`.
+      - `mcp_workspace_github` is stale too: no `PullRequestManager.add_assignees`.
+      - Missing `[langchain]` extras (`langchain_core`, `langgraph`,
+        `langchain_mcp_adapters`, `httpx` all `E0401`) and `mcp.server.fastmcp`.
+      Those five gaps account for **all** 8 mypy errors and every pylint error. All sit
+      in files outside `git diff origin/main...HEAD` — none is caused by this change.
+      The missing extras also mean the `langchain_integration` marked run would skip
+      rather than pass, so it proves nothing until the venv is fixed.
     - **To unblock:** reprovision the venv (`uv pip install "...[dev,langchain]"` plus
-      the `install-from-github` packages), then re-run all five checks — in particular
+      the install-from-GitHub packages `mcp-workspace` and `mcp-workspace-github` at the
+      revisions `src/` expects), then re-run all five checks — in particular
       `pytest -m langchain_integration tests/icoder/test_icoder_permission_wiring.py`,
-      which must pass rather than skip.
+      which must **pass**, not skip.
     - ⚠️ **Do not diagnose the venv with `get_library_source` / `find_references`.**
       Those MCP helpers resolve against the *MCP server's own* interpreter, which is
       newer and fully provisioned — it resolves both
