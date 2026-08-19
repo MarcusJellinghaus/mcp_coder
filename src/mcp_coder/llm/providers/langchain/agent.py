@@ -432,13 +432,16 @@ async def run_agent(
     Returns:
         ``(final_text, stored_messages, stats_dict)``.
         *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
-        ``tool_trace`` and ``usage``.
+        ``tool_trace`` and ``usage`` — all but ``usage`` are omitted when the
+        run produced no terminal graph event, since they are derived from the
+        final message list that is missing in that case.
 
     Raises:
         LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
             not found or permission denied).
         asyncio.TimeoutError: If the run exceeds *timeout* seconds.
-    """
+    """  # noqa: DOC502 - both propagate: LLMMCPLaunchError from the drained
+    # generator, asyncio.TimeoutError from the asyncio.wait_for below.
 
     async def _drain() -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
         final_text = ""
@@ -501,6 +504,10 @@ async def run_agent_stream(
         ``messages``, the final ``result`` text and nested ``stats``.
         ``messages`` and ``stats`` are for in-process drainers only —
         ``_ask_agent_stream`` strips them at the provider boundary.
+        Without a terminal graph event (cancelled turn, or no ``on_chain_end``
+        matching the root ``run_id``) ``stats`` carries ``usage`` alone: the
+        tool stats come from the final message list, so they are omitted
+        rather than reported as zeros.
 
     Raises:
         LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
@@ -673,18 +680,18 @@ async def run_agent_stream(
                 "%s; history not stored (the turn is not recorded)",
                 session_id,
             )
+        # Tool stats are derived from the final message list, which is exactly
+        # what is missing here. Reporting zeros would claim "no tools ran" for a
+        # turn that may have made several calls, so the three tool-stat keys are
+        # omitted entirely and only `usage` — which the stream accumulated
+        # itself and therefore does know — is reported.
         yield {
             "type": "done",
             "session_id": session_id,
             "usage": accumulated_usage,
             "messages": [],
             "result": accumulated_text,
-            "stats": {
-                "agent_steps": 0,
-                "total_tool_calls": 0,
-                "tool_trace": [],
-                "usage": accumulated_usage,
-            },
+            "stats": {"usage": accumulated_usage},
         }
         return
 

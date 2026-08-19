@@ -238,12 +238,10 @@ class TestRunAgentStreamHistory:
         done = [e for e in result if e["type"] == "done"][-1]
         assert done["result"] == "streamed answer"
         assert done["messages"] == []
-        assert done["stats"] == {
-            "agent_steps": 0,
-            "total_tool_calls": 0,
-            "tool_trace": [],
-            "usage": {},
-        }
+        # Tool stats are derived from the final message list, so without one
+        # they are omitted rather than reported as zeros — a zeroed trace would
+        # claim "no tools ran" for a turn that may have called several.
+        assert done["stats"] == {"usage": {}}
 
 
 class TestAskAgentStreamBoundary:
