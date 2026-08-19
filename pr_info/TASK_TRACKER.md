@@ -33,9 +33,17 @@ Detail: [step_1.md](./steps/step_1.md)
   - Also: `run_ruff_check(["--preview"])` and `run_lint_imports_check` (gateway stays `langchain_core`-free)
   - Marked run `markers=["langchain_integration"]` on `tests/icoder/test_icoder_permission_wiring.py` must **pass**, not skip
   - Run `./tools/format_all.sh` before committing
-  - **BLOCKED — environment, not code.** Re-verified a fourth time 2026-08-19, with all
+  - **BLOCKED — environment, not code.** Re-verified a fifth time 2026-08-19, with all
     checks re-run from scratch rather than carried over. The repo `.venv` is still
     unusable and cannot be repaired from here (no shell tool available).
+    - Fifth run confirmed every finding below independently: `ruff --preview` clean,
+      `lint-imports` 21/21 (both iCoder permissions contracts KEPT), `black`/`isort`
+      613 files unchanged, scoped `pylint` over the five touched files clean, project
+      `mypy` still exactly the same 8 errors in 6 untouched files. The
+      `-m langchain_integration` run on `tests/icoder/test_icoder_permission_wiring.py`
+      does not even reach marker selection — it errors loading `tests/icoder/conftest.py`.
+    - Also fixed this run: `pr_info/.commit_message.txt` was ticked as prepared but the
+      file did not exist; it has now been written.
     - **Green:** `ruff --preview` (clean), `lint-imports` (21/21 contracts kept — the
       "iCoder Permissions Leaf Isolation" / "Core Purity" and "LangChain Library
       Isolation" contracts confirm the gateway stays `langchain_core`-free),
