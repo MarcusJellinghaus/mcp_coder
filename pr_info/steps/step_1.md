@@ -203,10 +203,17 @@ async def test_denied_call_keeps_history_paired_and_agent_continues() -> None: .
 
 * A local scripted model inside the test (~15 lines). Both overrides carry
   `# type: ignore[no-untyped-def]` (or full annotations) — `run_mypy_check` runs strict and
-  rejects untyped defs in `tests/`; this mirrors `spikes/i3-1-approval/_common.py:91`:
+  rejects untyped defs in `tests/`; this mirrors `spikes/i3-1-approval/_common.py:91`.
+  The **class statement itself** additionally needs `# type: ignore[misc]`: `pyproject.toml`
+  sets `follow_imports = "skip"` for `langchain_core.*`, so `BaseChatModel` resolves to
+  `Any` and strict mypy's `disallow_subclassing_any` errors with
+  *Class cannot subclass "BaseChatModel" (has type "Any")* `[misc]`. Without it the
+  required `run_mypy_check` fails on the class line even when both methods are annotated.
+  (`spikes/` is outside the mypy target dirs, which is why `_common.py` carries no such
+  ignore.)
 
 ```python
-    class _ScriptedModel(BaseChatModel):
+    class _ScriptedModel(BaseChatModel):  # type: ignore[misc]
         invoke_count: int = 0
 
         def bind_tools(self, tools: Any, **kw: Any) -> "_ScriptedModel":
@@ -391,7 +398,10 @@ committing.
 > assert the deny text (`_DENY_NEVER`) and the captured interceptor request, not only
 > `status`/`tool_call_id` — a `ToolNode` error message would satisfy those alone. Annotate
 > the scripted model's `_generate`/`_agenerate` or carry
-> `# type: ignore[no-untyped-def]` so strict mypy passes. Assert on the state returned by
+> `# type: ignore[no-untyped-def]`, **and** put `# type: ignore[misc]` on the
+> `class _ScriptedModel(BaseChatModel):` line — `langchain_core.*` is
+> `follow_imports = "skip"`, so `BaseChatModel` is `Any` and strict mypy's
+> `disallow_subclassing_any` rejects the subclass otherwise. Assert on the state returned by
 > `await agent.ainvoke(...)`, never on stream events. Delete the false "ToolNode overwrites
 > it downstream" claim from both the bridge docstring and the bridge test-module docstring.
 > Do not edit `spikes/i3-1-approval/FINDINGS.md`.
