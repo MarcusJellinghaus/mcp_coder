@@ -173,3 +173,77 @@ of claiming the acceptance criteria are met.
 
 Produce exactly one commit.
 ```
+
+---
+
+## Implementation note (step 6 run)
+
+### What was added
+
+`tests/llm/providers/langchain/test_langchain_multi_turn.py` (185 → 407 lines, under the
+750-line gate) gained the shared `_reject_multiple_systems()` guard, a
+`_guarded_react_agent()` factory (a `MagicMock()`, per the mock-class rule) and
+`TestSingleSystemProviderRejection` with all three tests. `docs/architecture/architecture.md`
+gained the `agent.py` / `_messages.py` bullets and the system-free-history note on the
+session-storage bullet. **No production code was touched** — `git status` shows exactly two
+modified files.
+
+### The tests are not vacuous — mutation-checked
+
+Tightening the guard's threshold from `> 1` to `> 0` made **all three** tests fail with
+`ValueError: system messages must be at the beginning`, proving the guard is actually
+reached on each path and that the exception propagates out of `ask_langchain_stream` /
+`run_agent_stream` rather than being swallowed. The threshold was restored afterwards and
+all 5 tests in the file pass.
+
+### Full-suite run — done in chunks, not one invocation
+
+The MCP pytest tool hard-caps a run at 300s; the mandated no-exclusions full-suite run
+exceeds that (it timed out at 300s even *with* the marker exclusions). The suite was
+therefore covered in five chunks that between them span every directory under `tests/`.
+**The langchain directory is fully green apart from one pre-existing failure** (see below).
+
+### Environment caveat — same pre-existing breakage as steps 1–5
+
+The venv's `mcp-workspace` install is still stale: `src/mcp_coder/checks/branch_status.py:17`
+imports `mcp_workspace.checks.branch_status_rendering`, which the installed package does not
+have, and its `CIStatus` lacks the `UNAVAILABLE` / `UNKNOWN` members. That import runs at
+`import mcp_coder` time, so every test module fails at import without a workaround. Proven
+independently by `tests/cli/test_main.py::TestFaulthandlerSafetyNet::test_faulthandler_enabled_on_import`,
+which shells out to a fresh interpreter and gets the same `ModuleNotFoundError`.
+
+Verification used the same throwaway shim as steps 3–5 (a `sys.modules` stand-in prepended
+to `tests/conftest.py`, re-exporting `CIStatus` / `GITHUB_TOKEN_HINT` from
+`mcp_workspace.checks.branch_status`). **It was removed before finishing** — `git status`
+confirms `tests/conftest.py` is unmodified.
+
+Failures observed across the sweep, all pre-existing and none in code this step touches:
+
+* the `mcp_workspace` skew — `tests/checks/`, `tests/cli/commands/test_check_branch_status*`,
+  `tests/workflows/review/`, `tests/utils/test_crash_logging.py`;
+* missing optional deps — `test_langchain_exceptions.py::test_connection_errors_contains_httpx_connect_error`
+  (`httpx` absent, conftest substitutes a `MagicMock`; the one langchain-directory failure,
+  identical before this commit) and `tests/icoder/test_snapshots.py` (`snap_compare` fixture,
+  `pytest-textual-snapshot` not installed);
+* no credentials — `tests/llm/providers/copilot/test_copilot_integration.py`.
+
+Other checks: **mypy --strict** clean on `src/mcp_coder/llm/providers/langchain` +
+`tests/llm/providers/langchain`; **pylint** shows only the project-wide `E0401` baseline for
+the deferred optional-dependency imports; **black / isort** no changes; **`check_file_size`**
+passes (all 812 files within 750 lines).
+
+### Manual verification — NOT PERFORMED, acceptance criteria NOT confirmed against a real backend
+
+Neither manual step was run:
+
+1. `mcp-coder prompt "hello" --add-system-prompts` — **not run**.
+2. A 2+ turn icoder session — **not run**.
+
+There is no LiteLLM/Qwen endpoint configured for this environment, langchain is not installed
+in the test venv (the directory conftest substitutes stub message classes, which is why the
+unit tests run at all), and this session has no shell with which to invoke the CLI. The
+regression is therefore locked in **against a stub** that reproduces LiteLLM's rejection
+behaviour, not against the real provider. Together with the still-open gates from steps 4
+(root-`run_id` terminal-event assumption vs. real LangGraph) and 5 (`usage` sourced from
+`on_chat_model_end` vs. `ainvoke`), the issue's acceptance criteria remain **unverified
+end-to-end** and should be exercised manually before merge.

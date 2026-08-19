@@ -65,9 +65,9 @@ Detail: [step_5.md](./steps/step_5.md)
 
 Detail: [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: add `TestSingleSystemProviderRejection` (text path, agent path, and end-to-end icoder agent flow through `ask_langchain_stream(..., mcp_config=<truthy>, tools=[])` with real storage under `tmp_path`) to `test_langchain_multi_turn.py`, plus the `docs/architecture/architecture.md` notes. No production logic changes. Run the full suite once without marker exclusions, and report the manual LiteLLM/Qwen verification outcome honestly (say so if no endpoint is available).
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `TestSingleSystemProviderRejection` (text path, agent path, and end-to-end icoder agent flow through `ask_langchain_stream(..., mcp_config=<truthy>, tools=[])` with real storage under `tmp_path`) to `test_langchain_multi_turn.py`, plus the `docs/architecture/architecture.md` notes. No production logic changes. Run the full suite once without marker exclusions, and report the manual LiteLLM/Qwen verification outcome honestly (say so if no endpoint is available). (**Manual LiteLLM/Qwen verification NOT PERFORMED — no endpoint configured, langchain not installed, no shell; acceptance criteria remain unverified against a real backend.** Full suite covered in chunks: the 300s tool cap makes a single no-exclusions run impossible — see note in [step_6.md](./steps/step_6.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (unit tests run via the same throwaway shim as steps 3–5, removed before finishing; `check_file_size` passed — see note in [step_6.md](./steps/step_6.md))
+- [x] Commit message prepared
 
 ## Pull Request
 
