@@ -12,7 +12,11 @@ substitutes lightweight real classes when langchain is not installed, so
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from tests.llm.providers.langchain.conftest import async_events, graph_events
+
 _MOD = "mcp_coder.llm.providers.langchain"
+_AGENT_MOD = "mcp_coder.llm.providers.langchain.agent"
+_STORAGE_MOD = "mcp_coder.llm.storage.session_storage"
 
 
 def _make_config(backend: str = "openai") -> dict[str, str | None]:
@@ -105,6 +109,81 @@ class TestTextPathMultiTurn:
 
         # Turn 2 really reloaded turn 1's exchange — so "no systems" is not vacuous.
         second_sent = mock_model.stream.call_args_list[1][0][0]
+        assert [m.content for m in second_sent] == [
+            "sys\n\nproj",
+            "first question",
+            "answer one",
+            "second question",
+        ]
+
+
+class TestAgentPathMultiTurn:
+    """Two agent turns on one session must not accumulate system messages."""
+
+    async def test_two_turns_store_no_systems_and_send_one_system(self) -> None:
+        """Turn 2 sends one leading system; neither turn stores a system."""
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+        # The graph returns the *whole* conversation, systems included — that
+        # is exactly what serialize_messages has to strip on the way out.
+        turn_one_final: list[Any] = [
+            SystemMessage(content="sys\n\nproj"),
+            HumanMessage(content="first question"),
+            AIMessage(content="answer one"),
+        ]
+        turn_two_final: list[Any] = turn_one_final + [
+            HumanMessage(content="second question"),
+            AIMessage(content="answer two"),
+        ]
+
+        # Mock-class rule: the react agent is a MagicMock(), never an
+        # AsyncMock() — run_agent_stream does `async for` over the return
+        # value of astream_events(), and an AsyncMock call returns a coroutine.
+        mock_agent = MagicMock()
+        mock_agent.astream_events.side_effect = [
+            async_events(graph_events(turn_one_final)),
+            async_events(graph_events(turn_two_final)),
+        ]
+        store_mock = MagicMock()
+
+        with (
+            patch(f"{_AGENT_MOD}._load_mcp_server_config", return_value={}),
+            patch("langchain_mcp_adapters.client.MultiServerMCPClient", MagicMock()),
+            patch("langgraph.prebuilt.create_react_agent", return_value=mock_agent),
+            # run_agent_stream lazily imports store_langchain_history from the
+            # storage module; without this patch the test writes into the
+            # user's real ~/.mcp_coder/sessions/langchain/.
+            patch(f"{_STORAGE_MOD}.store_langchain_history", store_mock),
+        ):
+            from mcp_coder.llm.providers.langchain.agent import run_agent_stream
+
+            history: list[dict[str, Any]] = []
+            for question in ("first question", "second question"):
+                async for _ in run_agent_stream(
+                    question=question,
+                    chat_model=MagicMock(),
+                    messages=history,
+                    mcp_config_path="/tmp/mcp.json",
+                    session_id="sess-agent",
+                    system_messages=[SystemMessage(content="sys\n\nproj")],
+                ):
+                    pass
+                history = list(store_mock.call_args[0][1])
+
+        # Both turns persisted; no system entry in either stored history.
+        assert store_mock.call_count == 2
+        for call in store_mock.call_args_list:
+            stored = call[0][1]
+            assert stored
+            assert all(entry["type"] != "system" for entry in stored)
+
+        # Turn 2 sends exactly one SystemMessage, at index 0.
+        second_sent = mock_agent.astream_events.call_args_list[1][0][0]["messages"]
+        systems = [m for m in second_sent if isinstance(m, SystemMessage)]
+        assert len(systems) == 1
+        assert isinstance(second_sent[0], SystemMessage)
+
+        # Turn 2 really reloaded turn 1's exchange — "no systems" is not vacuous.
         assert [m.content for m in second_sent] == [
             "sys\n\nproj",
             "first question",

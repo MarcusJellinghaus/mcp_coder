@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
@@ -182,6 +183,46 @@ class TestAgentModeIntegration:
 
         assert "4" in result2["text"]
         assert result2["session_id"] == session_id
+
+    def test_agent_stream_two_turns_store_system_free_history(
+        self, tmp_path: Path
+    ) -> None:
+        """Real-LangGraph gate for the root-run_id terminal-event assumption.
+
+        Every unit test feeds a hand-built ``graph_events()`` fixture, which
+        proves the code reacts to the *assumed* event shape but not that real
+        LangGraph emits it. If the assumption is wrong the guard only logs a
+        warning and stores nothing, so this drives two real streaming turns and
+        asserts the history is actually persisted, system-free, and grows.
+        """
+        _require_langchain_config()
+        from mcp_coder.llm.providers.langchain import ask_langchain_stream
+        from mcp_coder.llm.storage.session_storage import load_langchain_history
+
+        mcp_config, _ = _create_agent_mcp_config(tmp_path)
+        session_id = f"itest-stream-{uuid.uuid4()}"
+
+        histories: list[list[dict[str, object]]] = []
+        for question in (
+            "What is 1 + 1? Reply with just the number.",
+            "Multiply the result by two. Reply with just the number.",
+        ):
+            list(
+                ask_langchain_stream(
+                    question,
+                    session_id=session_id,
+                    mcp_config=mcp_config,
+                    timeout=60,
+                    system_prompt="You are a terse assistant.",
+                )
+            )
+            stored = load_langchain_history(session_id)
+            assert stored, f"no history stored after: {question}"
+            assert all(entry.get("type") != "system" for entry in stored)
+            histories.append(stored)
+
+        # Turn 2 built on turn 1's history rather than replacing it.
+        assert len(histories[1]) > len(histories[0])
 
     def test_agent_mcp_tool_discovery(self, tmp_path: Path) -> None:
         """Agent can list the MCP tools available to it."""

@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.llm.providers.langchain.conftest import async_events, graph_events
+
 _AGENT_MOD_PATH = "mcp_coder.llm.providers.langchain.agent"
 _STORAGE_MOD_PATH = "mcp_coder.llm.storage.session_storage"
 
@@ -24,14 +26,6 @@ class _RaisingAsyncIter:
         raise self._exc
 
 
-async def _async_events(
-    items: list[dict[str, object]],
-) -> AsyncIterator[dict[str, object]]:
-    """Create an async iterator from a list of event dicts."""
-    for item in items:
-        yield item
-
-
 @contextmanager
 def _patch_run_agent_stream(
     events: list[dict[str, object]],
@@ -39,7 +33,7 @@ def _patch_run_agent_stream(
 ) -> Generator[MagicMock, None, None]:
     """Context manager with all patches needed for run_agent_stream tests."""
     mock_agent = MagicMock()
-    mock_agent.astream_events.return_value = _async_events(events)
+    mock_agent.astream_events.return_value = async_events(events)
 
     mock_client_cls = MagicMock()
     mock_client_cls.return_value.connections = {}
@@ -274,16 +268,25 @@ class TestRunAgentStream:
 
     async def test_history_stored_before_done(self) -> None:
         """store_langchain_history called before done event is yielded."""
+        from langchain_core.messages import AIMessage, HumanMessage
+
         chunk = MagicMock()
         chunk.content = "response"
-        events: list[dict[str, object]] = [
-            {
-                "event": "on_chat_model_stream",
-                "data": {"chunk": chunk},
-                "run_id": "r1",
-                "name": "model",
-            },
+        final_messages = [
+            HumanMessage(content="Hi"),
+            AIMessage(content="response"),
         ]
+        events: list[dict[str, object]] = graph_events(
+            final_messages,
+            inner=[
+                {
+                    "event": "on_chat_model_stream",
+                    "data": {"chunk": chunk},
+                    "run_id": "r1",
+                    "name": "model",
+                },
+            ],
+        )
         store_mock = MagicMock()
         with _patch_run_agent_stream(events, store_mock=store_mock):
             from mcp_coder.llm.providers.langchain.agent import run_agent_stream
@@ -298,9 +301,12 @@ class TestRunAgentStream:
                     session_id="s1",
                 )
             ]
+        from mcp_coder.llm.providers.langchain._messages import serialize_messages
+
         store_mock.assert_called_once()
         call_args = store_mock.call_args[0]
         assert call_args[0] == "s1"  # session_id
+        assert call_args[1] == serialize_messages(final_messages)
         done_events = [e for e in result if e["type"] == "done"]
         assert len(done_events) == 1
 
@@ -423,7 +429,7 @@ class TestRunAgentStream:
         mock_agent = MagicMock()
         chunk = MagicMock()
         chunk.content = "response"
-        mock_agent.astream_events.return_value = _async_events(
+        mock_agent.astream_events.return_value = async_events(
             [
                 {
                     "event": "on_chat_model_stream",
@@ -500,7 +506,7 @@ class TestRunAgentStream:
             patch(
                 "langgraph.prebuilt.create_react_agent",
                 return_value=MagicMock(
-                    astream_events=MagicMock(return_value=_async_events(events))
+                    astream_events=MagicMock(return_value=async_events(events))
                 ),
             ),
             patch(f"{_STORAGE_MOD_PATH}.store_langchain_history"),

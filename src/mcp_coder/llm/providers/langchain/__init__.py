@@ -423,6 +423,39 @@ def _ask_agent(
     )
 
 
+#: ``done`` keys that exist only for the in-process drainer of
+#: ``run_agent_stream`` and must not cross the provider boundary.
+_INTERNAL_DONE_KEYS = ("messages", "stats")
+
+
+def _strip_internal_done_keys(event: StreamEvent) -> StreamEvent:
+    """Return *event* without the drainer-only ``done`` keys.
+
+    ``done["messages"]`` is the whole serialized conversation and
+    ``done["stats"]["tool_trace"]`` repeats every tool call's name/args/result.
+    Both are consumed only by the in-process drainer, which reads
+    ``run_agent_stream`` directly; every consumer above this boundary instead
+    *persists* the event — into ``raw_response["events"]`` via
+    ``ResponseAssembler`` and into the icoder JSONL event log via
+    ``AppCore.stream_llm`` — so leaving ``messages`` on would grow both sinks
+    quadratically with turn count. Stripping both here, once, is what keeps
+    those consumers free of their own filters.
+
+    ``result`` is deliberately *not* stripped: ``ResponseAssembler`` uses it as
+    the response text when no ``text_delta`` was seen.
+
+    Args:
+        event: A stream event from ``run_agent_stream``.
+
+    Returns:
+        Non-``done`` events unchanged; ``done`` events as a shallow copy
+        without the internal keys.
+    """
+    if event.get("type") != "done":
+        return event
+    return {k: v for k, v in event.items() if k not in _INTERNAL_DONE_KEYS}
+
+
 def _ask_agent_stream(
     question: str,
     config: dict[str, str | None],
@@ -482,7 +515,7 @@ def _ask_agent_stream(
                 tools=tools,
                 system_messages=system_messages,
             ):
-                q.put(event)
+                q.put(_strip_internal_done_keys(event))
         except Exception as exc:  # pylint: disable=broad-except
             error_holder.append(exc)
         finally:

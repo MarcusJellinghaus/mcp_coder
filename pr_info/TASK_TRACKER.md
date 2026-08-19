@@ -49,9 +49,9 @@ Detail: [step_3.md](./steps/step_3.md)
 
 Detail: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: `run_agent_stream` assembles via `assemble_messages()`, captures the graph's final messages from the root-`run_id` terminal `on_chain_end`, stores `serialize_messages(...)` once, and emits `messages`/`result`/`stats` on `done` (`result` falls back to `accumulated_text`); extract `_summarize_messages()` from `run_agent` and call it from both; delete the reconstruction block, dead accumulators and flatten NOTE; `_ask_agent_stream` strips `messages` + `stats` at the boundary. Tests first: new `test_langchain_agent_stream_history.py` (7 tests), conftest `graph_events()`/`async_events()`, `test_types.py` assembler case, multi-turn agent test, plus the `langchain_integration` two-turn stream gate. Also run `check_file_size` (750-line gate). Report an integration-test skip as unverified — a skip is not a pass.
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `run_agent_stream` assembles via `assemble_messages()`, captures the graph's final messages from the root-`run_id` terminal `on_chain_end`, stores `serialize_messages(...)` once, and emits `messages`/`result`/`stats` on `done` (`result` falls back to `accumulated_text`); extract `_summarize_messages()` from `run_agent` and call it from both; delete the reconstruction block, dead accumulators and flatten NOTE; `_ask_agent_stream` strips `messages` + `stats` at the boundary. Tests first: new `test_langchain_agent_stream_history.py` (7 tests), conftest `graph_events()`/`async_events()`, `test_types.py` assembler case, multi-turn agent test, plus the `langchain_integration` two-turn stream gate. Also run `check_file_size` (750-line gate). Report an integration-test skip as unverified — a skip is not a pass. (**Validation gate SKIPPED — root-`run_id` assumption remains unverified against real LangGraph**, see note in [step_4.md](./steps/step_4.md))
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (`check_file_size` passed; unit tests run via the same throwaway shim as step 3 — see note in [step_4.md](./steps/step_4.md))
+- [x] Commit message prepared
 
 ### Step 5: Collapse `run_agent` into a thin drainer; `_ask_agent` stops storing
 

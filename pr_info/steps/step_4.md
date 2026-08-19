@@ -432,3 +432,67 @@ report.
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.
 ```
+
+---
+
+## Implementation note (step 4 run)
+
+### Required validation gate: **SKIPPED — assumption UNVERIFIED**
+
+```
+pytest -m langchain_integration tests/llm/providers/langchain/test_langchain_integration.py
+→ 7 collected, 7 SKIPPED, 0 passed
+```
+
+All `langchain_integration` tests skip in this environment (`_require_langchain_config`
+finds no configured/credentialed backend), **including the new
+`TestAgentModeIntegration::test_agent_stream_two_turns_store_system_free_history`**.
+
+**A skip is not a pass.** The root-`run_id` terminal-`on_chain_end` assumption is
+therefore **unverified against real LangGraph**. Every unit test below feeds
+`graph_events()`, a fixture this plan invents, so they prove only that the code reacts
+correctly to the *assumed* shape. If the assumption is wrong, the guard logs a warning and
+stores nothing — a silent multi-turn history loss with a green suite. This must be cleared
+by step 6's manual run against the LiteLLM/Qwen endpoint (or by running the new
+integration test once an endpoint is configured) before the assumption is treated as
+validated.
+
+### Unit tests
+
+**The step-1/2/3 environment breakage is still present**, and the same throwaway shim was
+used again: the venv's `mcp-workspace` install has no
+`mcp_workspace.checks.branch_status_rendering`, which
+`src/mcp_coder/checks/branch_status.py:17` imports at `import mcp_coder` time, so every
+test module fails at collection. A temporary root `conftest.py` injected a stand-in module
+into `sys.modules`; it was **deleted afterwards and is not part of this commit**.
+
+Results with the shim in place:
+
+* **New `test_langchain_agent_stream_history.py` (7 tests): PASSED.**
+* **New `TestAgentPathMultiTurn` test in `test_langchain_multi_turn.py`: PASSED.**
+* **New `test_done_result_used_when_no_text_delta` in `tests/llm/test_types.py`: PASSED.**
+* **Edited `test_history_stored_before_done`: PASSED** (now asserts the stored payload
+  equals `serialize_messages(final_messages)`).
+* **Parity contract held**: `test_langchain_agent_run.py`,
+  `test_langchain_agent_usage.py` and `test_langchain_agent_system_messages.py` are green
+  **with no edits** — the `_summarize_messages` extraction was behaviour-preserving.
+* `tests/llm` + `tests/icoder`: green apart from pre-existing, unrelated failures — the
+  copilot CLI integration tests (real `copilot` subprocess), the `httpx`-absent
+  `test_connection_errors_contains_httpx_connect_error`, and `tests/icoder/test_snapshots.py`
+  (`snap_compare` fixture not installed).
+* `tests/cli` + `tests/workflows`: the only failures are `check_branch_status` / review-gate
+  tests failing with `AttributeError: UNAVAILABLE` — the same stale `mcp-workspace` skew
+  (`CIStatus.UNAVAILABLE` missing from the installed enum). The shim *unmasks* these; they
+  fail at collection without it. Unrelated to this change.
+
+### Other checks
+
+* **`check_file_size`**: passed — all 813 files within 750 lines. `agent.py` is 727 lines
+  after the step (the extraction kept it under the gate as planned; step 5 removes ~100
+  more), and the new tests went into their own file, leaving
+  `test_langchain_agent_streaming.py` at ~669.
+* **mypy** on `src/mcp_coder/llm` + `tests/llm`: only the pre-existing
+  `tests/llm/providers/claude/_mcp_stub_server.py` untyped-decorator error.
+* **pylint**: only the project-wide `E0401`/`E0611` baseline for optional deps not
+  installed in the lint env (langchain, httpx, fastmcp). No new categories.
+* **ruff** and **black/isort**: clean.
