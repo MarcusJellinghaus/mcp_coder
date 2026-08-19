@@ -17,19 +17,15 @@ which triggers a GitHub Action to promote the issue status.
 **Do not invoke `/issue_approve`** — it is `disable-model-invocation`, so the Skill tool will
 refuse. Instead read `.claude/skills/issue_approve/SKILL.md` with
 `mcp__mcp-workspace__read_file` and follow its numbered instructions. Ignore its frontmatter
-and its "Resolve Issue Number" section — your issue number comes from your launch prompt.
+and its "Resolve Issue Number" section — your issue number, and any `--repo owner/repo` flag,
+come from your launch prompt. Everything else in that file applies to you unchanged,
+including the post-approval wait and assignment.
 
 On top of that process:
 
 - **Scope** — the issue number must match your launch prompt, and the prompt must confirm
-  that no open questions remain. If either check fails, stop and report back without
-  approving.
-- **Cross-repo** — if your launch prompt carries a `--repo owner/repo` flag, append it to
-  every `gh` command, and fetch the issue with `gh issue view` via Bash instead of
-  `mcp__mcp-workspace__github_issue_view`.
-- **After approving** — wait 5 seconds (`mcp__mcp-tools-py__sleep`, `seconds: 5`) to let the
-  GitHub Action process the label transition, then assign the issue to the current user:
-  `gh issue edit <issue_number> --add-assignee "$(gh api user --jq .login)"`
+  that no open questions remain. This replaces the skill's step 2, which assumes a human
+  judging a conversation. If either check fails, stop and report back without approving.
 - **Shell** — `gh` commands only.
 - **Report** the issue number, the approval result, and the assignee.
 

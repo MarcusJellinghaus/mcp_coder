@@ -27,9 +27,14 @@ each agent names its deltas explicitly ("ignore its frontmatter", "ignore its op
 instead of assuming the skill reads well unattended.
 
 `issue-approver` follows the same pattern against `.claude/skills/issue_approve/SKILL.md`. It
-stayed inlined longer than the other two and had already drifted: the agent had grown the
-post-approval sleep and assignee steps, while the skill held the issue-number resolution the
-agent lacked. The procedure now lives in the skill, the unattended deltas in the agent.
+stayed inlined longer than the other two and had drifted in both directions: the agent had
+grown the post-approval sleep, the assignee step and cross-repo handling, while the skill held
+the issue-number resolution the agent lacked. That divergence was a live bug — a user typing
+`/issue_approve` approved the issue but never got it assigned, because `approve-command.yml`
+only moves the status label. The sleep, assignment and `--repo` handling moved into the skill,
+so both paths now do the same thing; what remains in the agent is only the two inputs that
+genuinely differ unattended — where the issue number comes from, and what counts as
+validation.
 
 `mcp-coder init` deploys `skills/`, `knowledge_base/` and `agents/` — not `docs/`. An
 adopting repo gets the agents and the skills they read, but not this file, so the agents name
