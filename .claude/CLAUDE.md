@@ -96,6 +96,18 @@ mcp-coder gh-tool set-status <label>
 
 **Commit messages:** standard format, clear and descriptive. No attribution footers.
 
+**Multi-line commit messages:** use a POSIX heredoc in the Bash tool:
+
+```bash
+git commit -F - <<'EOF'
+subject line
+
+body line
+EOF
+```
+
+PowerShell here-strings (`@'...'@`) only work in the PowerShell tool. Used in the Bash tool they silently put a literal `@` in the subject line.
+
 ## Execution directory
 
 - `execution_dir`: where Claude subprocess runs (config discovery)
