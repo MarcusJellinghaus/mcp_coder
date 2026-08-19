@@ -331,20 +331,21 @@ def _convert_server_tools(
 
 
 def _summarize_messages(messages: list[Any]) -> tuple[str, dict[str, Any]]:
-    """Derive final text and stats (incl. usage) from a graph's final messages.
+    """Derive final text and tool stats from a graph's final message list.
 
-    Single home for the summary both agent entry points need. ``run_agent``
-    uses the returned ``usage`` as-is (it sums ``usage_metadata`` off the
-    ``ainvoke`` output); ``run_agent_stream`` overrides only that key with its
-    own ``on_chat_model_end`` accumulator.
+    ``run_agent_stream`` is the sole caller — ``run_agent`` reaches it by
+    draining that generator, so both agent entry points share this summary.
+    Usage is deliberately *not* derived here: the stream owns it, accumulated
+    from ``on_chat_model_end`` events, and adds it to these stats at the
+    ``done`` yield site.
 
     Args:
         messages: The graph's final message list.
 
     Returns:
         ``(final_text, stats)`` where *final_text* is the content of the last
-        ``AIMessage`` and *stats* carries ``agent_steps``, ``total_tool_calls``,
-        ``tool_trace`` and ``usage``.
+        ``AIMessage`` and *stats* carries ``agent_steps``, ``total_tool_calls``
+        and ``tool_trace``.
     """
     from langchain_core.messages import AIMessage, ToolMessage
 
@@ -359,26 +360,21 @@ def _summarize_messages(messages: list[Any]) -> tuple[str, dict[str, Any]]:
     total_tool_calls = 0
     tool_trace: list[dict[str, Any]] = []
     trace_by_id: dict[str, dict[str, Any]] = {}
-    accumulated_usage: UsageInfo = {}
 
     for msg in messages:
-        if isinstance(msg, AIMessage):
-            msg_usage = _extract_usage(msg)
-            if msg_usage:
-                accumulated_usage = _sum_usage(accumulated_usage, msg_usage)
-            if getattr(msg, "tool_calls", None):
-                agent_steps += 1
-                for tc in msg.tool_calls:
-                    total_tool_calls += 1
-                    entry: dict[str, Any] = {
-                        "name": tc["name"],
-                        "args": tc["args"],
-                        "result": "",
-                    }
-                    tool_trace.append(entry)
-                    tc_id: str = tc.get("id") or ""
-                    if tc_id:
-                        trace_by_id[tc_id] = entry
+        if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+            agent_steps += 1
+            for tc in msg.tool_calls:
+                total_tool_calls += 1
+                entry: dict[str, Any] = {
+                    "name": tc["name"],
+                    "args": tc["args"],
+                    "result": "",
+                }
+                tool_trace.append(entry)
+                tc_id: str = tc.get("id") or ""
+                if tc_id:
+                    trace_by_id[tc_id] = entry
 
     # Fill tool results from ToolMessages, matched by tool_call_id
     for msg in messages:
@@ -391,7 +387,6 @@ def _summarize_messages(messages: list[Any]) -> tuple[str, dict[str, Any]]:
         "agent_steps": agent_steps,
         "total_tool_calls": total_tool_calls,
         "tool_trace": tool_trace,
-        "usage": accumulated_usage,
     }
     return (final_text, stats)
 
@@ -552,6 +547,7 @@ async def run_agent_stream(
     accumulated_text = ""
     accumulated_usage: UsageInfo = {}
     root_run_id: str | None = None
+    terminal_event_seen = False
     final_messages: list[Any] | None = None
 
     try:
@@ -649,6 +645,7 @@ async def run_agent_stream(
                 # Matching by root run_id rather than by event name:
                 # astream_events emits one on_chain_end per node/sub-chain, and
                 # the names are version-specific LangGraph internals.
+                terminal_event_seen = True
                 chain_output = event.get("data", {}).get("output")
                 if isinstance(chain_output, dict) and "messages" in chain_output:
                     final_messages = list(chain_output["messages"])
@@ -666,6 +663,16 @@ async def run_agent_stream(
         # Cancelled, or no terminal graph event: there is no clean final
         # message list, so persist nothing and leave prior history untouched.
         # The streamed answer text still survives on `result`.
+        if not terminal_event_seen and not (cancel_event and cancel_event.is_set()):
+            # Not a cancel, and the malformed-output warning above did not fire
+            # either: no on_chain_end ever matched the root run_id. Losing the
+            # turn silently would look like an agent that forgets everything,
+            # so make it visible.
+            logger.warning(
+                "No terminal graph event matched the root run_id for session "
+                "%s; history not stored (the turn is not recorded)",
+                session_id,
+            )
         yield {
             "type": "done",
             "session_id": session_id,
@@ -700,7 +707,7 @@ async def run_agent_stream(
         "usage": accumulated_usage,
         "messages": stored,
         "result": final_text,
-        # The streamed on_chat_model_end accumulator wins over the usage
-        # _summarize_messages derives from the final message list.
+        # Usage is the stream's own on_chat_model_end accumulator;
+        # _summarize_messages covers only text and tool stats.
         "stats": {**stats, "usage": accumulated_usage},
     }
