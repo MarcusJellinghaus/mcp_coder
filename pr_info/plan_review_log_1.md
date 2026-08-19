@@ -15,3 +15,21 @@ I'll gather context now.`pr_info/steps/step_2.md:116` — high — The graph-tes
 Verdict(decision='tasks', tasks=["Strengthen the graph test in pr_info/steps/step_2.md:116 so it proves the gateway interceptor path was exercised: assert the denied ToolMessage content equals the deny message (_DENY_NEVER) and/or capture the interceptor request, instead of relying only on status=='error', tool_call_id=='call_1', invoke_count==2 and last content 'done', which a ToolNode-generated tool-error ToolMessage would also satisfy.", "Add the mypy-strict guidance to the scripted-model sketch in pr_info/steps/step_2.md:44: annotate _generate/_agenerate or carry '# type: ignore[no-untyped-def]' as in spikes/i3-1-approval/_common.py:91, so the step's required run_mypy_check passes without the implementer rediscovering it.", "Merge step_2.md into step_1.md so the graph test is genuinely red-first: remove the manual 'revert gateway.py then restore' exit criterion (unautomatable, risks committing the reverted line) and fold the single test plus CI line into step 1, per KB planning_principles ('merge tiny or intertwined steps', 'no manual tests')."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-08-19
+**Findings**:
+I'll gather context first: knowledge base, the issue tree, and the plan files.`pr_info/steps/step_1.md:209` — medium — `class _ScriptedModel(BaseChatModel)` also trips `disallow_subclassing_any` under `--strict`: the mypy override at `pyproject.toml` sets `follow_imports = "skip"` for `langchain_core.*`, so `BaseChatModel` resolves to `Any` and the class line errors `[misc]`; the plan's guidance (step_1.md:205 and the LLM prompt at step_1.md:394) covers only `no-untyped-def`, so the required `run_mypy_check` will fail on the class statement itself — verified that mypy strict does cover `tests/` (existing `tests/llm/providers/claude/_mcp_stub_server.py:37` error).
+
+`pr_info/steps/step_1.md:177` — low — "reuses the file's existing fake-`MCPTool` + real-converter scaffolding — no new file, no duplicated setup" is inaccurate: in `tests/icoder/test_icoder_permission_wiring.py` the `fake_tool`, `_rule` and converter setup are all function-local to `test_gateway_denies_never_call_through_real_convert`, so the new test must re-declare them (step_1.md:236 indeed re-declares `fake_tool`); the plan gives no instruction on whether to hoist shared helpers to module level.
+**Decisions**:
+Verdict(decision='tasks', tasks=['Extend the mypy-strict guidance in pr_info/steps/step_1.md:205 and the LLM prompt at step_1.md:394 to also cover the `class _ScriptedModel(BaseChatModel)` line at step_1.md:209: because pyproject.toml sets `follow_imports = "skip"` for `langchain_core.*`, BaseChatModel resolves to Any and `disallow_subclassing_any` errors `[misc]` on the class statement, so the required run_mypy_check fails — instruct the implementer to add `# type: ignore[misc]` on the class line in addition to the existing no-untyped-def guidance.'], escalate_reason=None)
+**Changes**:
+applied
+
+## Round 3 — 2026-08-19
+**Findings**:
+I'll gather context now.`NO FINDINGS`
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
