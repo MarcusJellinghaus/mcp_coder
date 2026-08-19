@@ -71,5 +71,5 @@ Detail: [step_6.md](./steps/step_6.md)
 
 ## Pull Request
 
-- [ ] PR review: address review feedback and resolve open comments
+- [x] PR review: address review feedback and resolve open comments
 - [ ] PR summary: write the pull request title and description
