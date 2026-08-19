@@ -123,3 +123,42 @@ constraint explained in the summary).
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.
 ```
+
+---
+
+## Implementation note (step 1 run)
+
+**pytest could not be executed in this environment — the 8 new tests are unverified.**
+
+The venv used by the test runner
+(`C:\Jenkins\workspace\Windows-Agents\Executor\repo\.venv`) has a **stale
+`mcp-workspace`** install: `src/mcp_coder/checks/branch_status.py:17` imports
+`mcp_workspace.checks.branch_status_rendering`, which does not exist in the installed
+version. That import runs at `import mcp_coder` time (`src/mcp_coder/__init__.py:37`), so
+**every** test that imports `mcp_coder` fails — including pre-existing, untouched files
+(verified: `test_langchain_provider.py` fails 10 tests with
+`ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`
+with no changes of mine in the file). `test_langchain_messages.py` imports the helpers at
+module level, so it fails at collection (0 tests collected — confirmed with a module-level
+`raise` probe that produced no error, i.e. the module is never imported).
+
+This is a **dependency-version skew, not a code defect** — `mcp-workspace` is an unpinned
+git dependency (`pyproject.toml` `[tool.mcp-coder.install-from-github]`). Fixing it needs a
+reinstall (no shell available in this run). The same skew shows up as pre-existing failures
+in the other checkers: mypy reports `import-not-found` for that module plus 7 other
+pre-existing errors in `checks/`, `cli/`, `workflows/`; pylint reports `E0401` / `E1123` /
+`E0611` / `E1101` for it.
+
+What *was* verified for step 1:
+
+* **mypy --strict** on `_messages.py` + `test_langchain_messages.py`: clean.
+* **ruff** (incl. `--preview`, so `D` / `DOC` docstring rules) on `_messages.py`: clean.
+* **pylint**: the only messages against the two new files are `E0401 Unable to import
+  'langchain_core.messages'` — the project-wide baseline for the deferred optional-dep
+  imports (`__init__.py`, `agent.py`, `_http.py` all produce the same), because langchain
+  is not installed in the lint environment.
+* **black / isort**: no changes.
+* **file-size gate** (750 lines): passes.
+
+**Re-run `pytest tests/llm/providers/langchain/test_langchain_messages.py` once
+`mcp-workspace` is reinstalled before trusting step 1 as green.**

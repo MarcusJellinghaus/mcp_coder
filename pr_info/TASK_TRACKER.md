@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: create `src/mcp_coder/llm/providers/langchain/_messages.py` with `assemble_messages()` + `serialize_messages()` (deferred `langchain_core` imports, no intra-package imports) and `tests/llm/providers/langchain/test_langchain_messages.py` (8 tests, written first). No existing module is modified.
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `src/mcp_coder/llm/providers/langchain/_messages.py` with `assemble_messages()` + `serialize_messages()` (deferred `langchain_core` imports, no intra-package imports) and `tests/llm/providers/langchain/test_langchain_messages.py` (8 tests, written first). No existing module is modified.
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (pytest **could not run**: pre-existing environment breakage, see note in [step_1.md](./steps/step_1.md))
+- [x] Commit message prepared
 
 ### Step 2: Merge system + project prompt into a single `SystemMessage`
 
