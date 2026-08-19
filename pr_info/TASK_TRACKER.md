@@ -33,9 +33,9 @@ Detail: [step_1.md](./steps/step_1.md)
 
 Detail: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `_build_system_messages` in `langchain/__init__.py` returns at most one merged `SystemMessage` (`"\n\n"` separator); update assertions in `test_langchain_provider_system_messages.py` first. Includes the merge-safety audit (`SystemMessage` / `system_messages` search) — record its result in the commit message; stop and report if production code assumes two messages.
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_build_system_messages` in `langchain/__init__.py` returns at most one merged `SystemMessage` (`"\n\n"` separator); update assertions in `test_langchain_provider_system_messages.py` first. Includes the merge-safety audit (`SystemMessage` / `system_messages` search) — record its result in the commit message; stop and report if production code assumes two messages.
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (pytest **could not run**: same pre-existing environment breakage as step 1, see note in [step_2.md](./steps/step_2.md))
+- [x] Commit message prepared
 
 ### Step 3: Text paths adopt the shared helpers
 

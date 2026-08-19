@@ -50,23 +50,24 @@ logger = logging.getLogger(__name__)
 def _build_system_messages(
     system_prompt: str | None, project_prompt: str | None
 ) -> list[Any]:
-    """Build a list of SystemMessage objects from optional prompt strings.
+    """Merge optional prompt strings into a single SystemMessage.
+
+    Both prompts are joined with a blank line ("\\n\\n") so that providers
+    accepting only one system message still receive the full instructions.
 
     Args:
         system_prompt: Optional system-level prompt text.
         project_prompt: Optional project-level prompt text.
 
     Returns:
-        List of SystemMessage objects (may be empty).
+        List with at most one merged SystemMessage (may be empty).
     """
     from langchain_core.messages import SystemMessage
 
-    msgs: list[Any] = []
-    if system_prompt:
-        msgs.append(SystemMessage(content=system_prompt))
-    if project_prompt:
-        msgs.append(SystemMessage(content=project_prompt))
-    return msgs
+    parts = [p for p in (system_prompt, project_prompt) if p]
+    if not parts:
+        return []
+    return [SystemMessage(content="\n\n".join(parts))]
 
 
 # Agent streaming timeout constants (seconds)

@@ -108,3 +108,45 @@ message. Leave _build_system_messages in __init__.py — do not move it.
 Then run pylint, pytest and mypy via the MCP tools and fix anything they report.
 Produce exactly one commit.
 ```
+
+## Implementation note (step 2 run)
+
+**pytest still could not be executed — the updated assertions are unverified.**
+
+The `mcp-workspace` breakage recorded in [step_1.md](./step_1.md#implementation-note-step-1-run)
+is unchanged: `src/mcp_coder/checks/branch_status.py:17` imports
+`mcp_workspace.checks.branch_status_rendering`, which the test venv
+(`C:\Jenkins\workspace\Windows-Agents\Executor\repo\.venv`) does not have. That import
+runs at `import mcp_coder` time, so the whole suite fails at collection/import — the
+"tests fail first" step could not be observed for the right reason, and the post-change
+green run could not be obtained either. `pylint` and `mypy` report the same module as
+unresolvable (`E0401` / `import-not-found`), confirming it is environmental.
+
+Verified instead:
+
+* **pylint**: only the project-wide baseline `E0401` deferred optional-dep imports
+  (`langchain_core.messages`, `langchain_mcp_adapters`, `httpx`, `mcp.server.fastmcp`)
+  plus the stale-`mcp_workspace` cascade (`E1123`/`E0611`/`E1101` in `branch_status`
+  callers). Nothing new in the two files touched here.
+* **mypy**: 8 pre-existing errors, all in `branch_status` / `create_pr` / `check_branch_status`
+  callers of the stale package. None in `langchain/__init__.py` or the test file.
+* **black / isort**: no changes.
+
+**Re-run `pytest tests/llm/providers/langchain/test_langchain_provider_system_messages.py`
+once `mcp-workspace` is reinstalled before trusting step 2 as green.**
+
+### Merge-safety audit result
+
+`search_files(pattern="SystemMessage")` and `search_files(pattern="system_messages")` over
+the whole tree: **no production code assumes two system messages.** Every production
+consumer treats the list as opaque and concatenates it —
+`langchain/__init__.py:324` and `:629` (`(system_messages or []) + history + [Human]`),
+`agent.py:402` and `:552` (same shape), `_messages.py:43`
+(`result = list(system_messages or [])`). No backend module (openai/gemini/anthropic/
+ollama) reads the list at all. The only two-message expectations were in tests:
+`test_langchain_provider_system_messages.py` (updated here) and
+`test_langchain_agent_system_messages.py`, which hand-builds its own two `SystemMessage`s
+to test prepending and is deliberately untouched (Decisions.md #5).
+
+One stale **doc** line was found and corrected in the same commit:
+`docs/repository-setup/python.md:59` still described "Two `SystemMessage` objects".
