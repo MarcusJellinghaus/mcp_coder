@@ -86,8 +86,8 @@ The bug slipped because no test validated tool_call pairing at graph-state level
 | 1 | `tests/llm/providers/langchain/test_permission_bridge.py` | **modify** — 3-arg calls, new id assertion, false claim removed from the module docstring (D4) |
 | 1 | `tests/icoder/test_permissions_gateway.py` | **modify** — `_request` gains `runtime`, deny-bridge stub widened to 3 args, 3 new tests |
 | 1 | `spikes/i3-1-approval/tier_c.py` | **modify** — one-line call-site update (explicit `""`, keeps the frozen spike runnable and its recorded outcome unchanged) |
-| 2 | `tests/icoder/test_icoder_permission_wiring.py` | **modify** — one new `langchain_integration` graph test appended (reuses the file's existing fake-`MCPTool` + real-converter scaffolding) |
-| 2 | `.github/workflows/langchain-integration.yml` | **modify** — one line: also run this file under the marker, so the regression is guarded in CI |
+| 1 | `tests/icoder/test_icoder_permission_wiring.py` | **modify** — one new `langchain_integration` graph test appended (reuses the file's existing fake-`MCPTool` + real-converter scaffolding) |
+| 1 | `.github/workflows/langchain-integration.yml` | **modify** — one line: also run this file under the marker, so the regression is guarded in CI |
 
 No new folders or modules. `spikes/i3-1-approval/FINDINGS.md` is **not** edited — it is the
 frozen record of the spike run, and #1045 deletes the whole spike directory (D9).
@@ -96,14 +96,15 @@ frozen record of the spike run, and #1045 deletes the whole spike directory (D9)
 
 | Step | Scope | Commit |
 |---|---|---|
-| [step_1.md](./step_1.md) | Carry the real `tool_call_id` through both deny branches (unit tests + fix) | 1 |
-| [step_2.md](./step_2.md) | Deterministic graph-level regression test + CI wiring | 1 |
+| [step_1.md](./step_1.md) | Carry the real `tool_call_id` through both deny branches (unit + graph tests, fix, CI wiring) | 1 |
 
-Step 1 is the whole production fix: the bridge signature change and the gateway call site
-must land together, since a required third parameter breaks the caller in the same commit.
-Step 2 adds no production code — it is the graph-level proof that a denied call no longer
-wedges the agent (AC #3), which cannot be a red-first test in its own commit because the
-step-1 fix is what makes it green.
+One step, one commit. The bridge signature change and the gateway call site must land
+together (a required third parameter breaks the caller otherwise), and the graph-level
+test — the proof that a denied call no longer wedges the agent (AC #3) — is red-first
+against that same fix: today it raises `INVALID_CHAT_HISTORY`. Splitting it out would make
+it a test written *after* the code it guards, verifiable only by manually reverting the
+fix; folded in, it is an ordinary red-then-green test. The CI line that runs it rides along
+in the same commit.
 
 ## Acceptance criteria (from #1118)
 
@@ -119,9 +120,10 @@ step-1 fix is what makes it green.
 - [ ] Passes pylint / mypy(strict) / ruff / pytest; the gateway keeps its
       no-`langchain_core`-import property.
 
-## Verification (per step, all via MCP tools)
+## Verification (all via MCP tools)
 
 ```
+mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "tests/icoder/test_icoder_permission_wiring.py"], markers=["langchain_integration"])
 mcp__mcp-tools-py__run_pylint_check
 mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])
 mcp__mcp-tools-py__run_mypy_check
@@ -129,11 +131,8 @@ mcp__mcp-tools-py__run_ruff_check(extra_args=["--preview"])
 mcp__mcp-tools-py__run_lint_imports_check          # gateway stays langchain_core-free
 ```
 
-Step 2 additionally runs the new test under its marker:
-
-```
-mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "tests/icoder/test_icoder_permission_wiring.py"], markers=["langchain_integration"])
-```
+The marked run must **pass**, not skip — if it skips, the langchain extras are missing and
+the graph test proved nothing.
 
 ## Out of scope
 
