@@ -33,18 +33,31 @@ Detail: [step_1.md](./steps/step_1.md)
   - Also: `run_ruff_check(["--preview"])` and `run_lint_imports_check` (gateway stays `langchain_core`-free)
   - Marked run `markers=["langchain_integration"]` on `tests/icoder/test_icoder_permission_wiring.py` must **pass**, not skip
   - Run `./tools/format_all.sh` before committing
-  - **BLOCKED — environment, not code.** `ruff --preview` and `lint-imports` pass (21/21
-    contracts kept; gateway stays `langchain_core`-free), and black/isort report no
-    changes. `pytest`, `pylint` and `mypy` cannot be evaluated in this workspace: the
-    repo `.venv` has a stale `mcp-workspace` (no `mcp_workspace.checks.branch_status_rendering`,
-    imported by `src/mcp_coder/checks/branch_status.py:17`), which breaks `import mcp_coder`
-    and therefore **all** pytest collection; the same venv is also missing the
-    `[langchain]` extras (`langchain_core`/`langgraph`/`langchain_mcp_adapters` all
-    `E0401` under pylint), so the `langchain_integration` marked run would skip rather
-    than pass. All failures reported by pylint/mypy are in files this change does not
-    touch and are pre-existing on a clean checkout. Re-run the five checks after
-    reprovisioning the venv (`uv pip install "...[dev,langchain]"` plus the
-    `install-from-github` packages).
+  - **BLOCKED — environment, not code.** Re-verified; the workspace `.venv` is still
+    unusable and cannot be repaired from here (no shell tool available).
+    - **Passing:** `ruff --preview` (clean), `lint-imports` (21/21 contracts kept —
+      the "iCoder Permissions Leaf Isolation"/"Core Purity" and "LangChain Library
+      Isolation" contracts confirm the gateway stays `langchain_core`-free),
+      `black`/`isort` (613 files unchanged).
+    - **Scoped to the files this change touches, both pass:** `pylint` and `mypy` over
+      `src/mcp_coder/icoder/permissions/` + `src/mcp_coder/llm/providers/langchain/permission_bridge.py`
+      report zero issues.
+    - **Cannot be evaluated project-wide:** the repo `.venv` has an *older*
+      `mcp-workspace` than `src/` requires — no `mcp_workspace.checks.branch_status_rendering`
+      (imported by `src/mcp_coder/checks/branch_status.py:17`), no
+      `BranchStatusReport.pr_feedback_undeterminable`, no `fail_on_reviews` kwarg on
+      `format_for_*`. That breaks `import mcp_coder` at `src/mcp_coder/__init__.py:37`
+      and therefore **all** pytest collection, including the three test files edited
+      here. The same 3 attr/call mismatches plus `mcp.server.fastmcp` account for all
+      8 mypy errors and every pylint error outside the langchain extras — all in files
+      this change does not touch.
+    - The venv is also missing the `[langchain]` extras (`langchain_core`, `langgraph`,
+      `langchain_mcp_adapters` and `httpx` all `E0401`), so the `langchain_integration`
+      marked run would skip rather than pass.
+    - **To unblock:** reprovision the venv (`uv pip install "...[dev,langchain]"` plus
+      the `install-from-github` packages), then re-run all five checks — in particular
+      `pytest -m langchain_integration tests/icoder/test_icoder_permission_wiring.py`,
+      which must pass rather than skip.
 - [x] Commit message prepared
 
 ## Pull Request
