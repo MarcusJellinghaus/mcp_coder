@@ -19,9 +19,8 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 3. Read the knowledge base files:
    - `.claude/knowledge_base/software_engineering_principles.md`
    - `.claude/knowledge_base/planning_principles.md`
-4. Determine log location: default is `pr_info/issue_analysis_log_{n}.md`. If the issue targets a specific subfolder or the supervisor is working in a different context, choose an appropriate location. Create the directory if needed.
-5. Check for existing `issue_analysis_log_*.md` files in the log location to determine the next run number `{n}`.
-6. Create the log file with a header.
+4. **Do NOT create a branch.** Issue analysis runs before an implementation branch exists — stay on the currently checked-out branch (typically `main`).
+5. **Log:** delete any existing `pr_info/issue_analysis_log*.md`, then create a single `pr_info/issue_analysis_log.md` (no `{n}`) with a header. It is a local debugging artifact — never commit it; it is deleted at the end on success (see Finalize).
 
 **Your Role:**
 
@@ -44,12 +43,13 @@ You are a technical lead supervising a software engineer (subagent). You do not 
    - **Escalate** (scope changes, ambiguous requirements, breaking changes, dependency introductions): present to the user one question at a time with A/B/C options.
 4. Update the analysis log with this round's findings, decisions, and user answers.
 5. Accumulate all decisions, constraints, and refined requirements. Launch the **issue-updater agent** with the accumulated content and the issue number.
-6. **LOOP: If this round surfaced new questions OR a user answer changed scope, launch a fresh engineer subagent and repeat from step 1.** Only proceed to step 7 when a round produces zero new questions and zero scope changes. Do NOT stop or wait for user input between rounds — the loop is automatic.
+6. **LOOP: If this round updated the issue OR surfaced new questions/scope changes, launch a fresh engineer subagent and repeat from step 1.** Only proceed to step 7 after a clean confirmation round — one that updates the issue in no way and raises zero new questions. Do NOT stop or wait for user input between rounds — the loop is automatic.
 7. **Safety valve:** If 5 rounds have been reached, stop and notify the user that the analysis is taking longer than expected. Present remaining open items and ask how to proceed.
 8. **Finalize:**
    - Add a `## Final Status` section to the log.
    - Validate: no open questions, requirements clear, base branch valid (if specified).
-   - Launch the **issue-approver agent** with the issue number. For cross-repo issues include `--repo owner/repo`. The agent will approve, wait 5 seconds for the GitHub Action, then assign to the current GitHub user.
+   - Launch the **issue-approver agent** with the issue number. For cross-repo issues include `--repo owner/repo`. The agent will approve, wait 5 seconds for the GitHub Action, then assign to the current GitHub user. **Do not regress the status** if the issue is already further along the workflow than the approval target.
+   - On success, **delete `pr_info/issue_analysis_log.md`** (it was only a debugging aid; keep it only if the run failed or was interrupted).
    - Notify the user with a short completion message: rounds run, decisions made, issue approved and assigned.
 
 **Analysis Log Format** (each round appended to the log file):
