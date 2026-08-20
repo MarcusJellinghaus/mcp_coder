@@ -16,10 +16,11 @@ which triggers a GitHub Action to promote the issue status.
 
 **Do not invoke `/issue_approve`** — it is `disable-model-invocation`, so the Skill tool will
 refuse. Instead read `.claude/skills/issue_approve/SKILL.md` with
-`mcp__mcp-workspace__read_file` and follow its numbered instructions. Ignore its frontmatter
-and its "Resolve Issue Number" section — your issue number, and any `--repo owner/repo` flag,
-come from your launch prompt. Everything else in that file applies to you unchanged,
-including the post-approval wait and assignment.
+`mcp__mcp-workspace__read_file` and follow its numbered instructions. Ignore its frontmatter,
+its "Resolve Issue Number" section — your issue number, and any `--repo owner/repo` flag,
+come from your launch prompt — and any wording aimed at a user typing the command, including
+its closing note about `disable-model-invocation`. You are running it unattended. The rest of
+the file applies to you unchanged, including the post-approval wait and assignment.
 
 On top of that process:
 

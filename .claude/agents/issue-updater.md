@@ -16,9 +16,10 @@ You are an issue update specialist.
 
 **Do not invoke `/issue_update`** — it is `disable-model-invocation`, so the Skill tool will
 refuse. Instead read `.claude/skills/issue_update/SKILL.md` with
-`mcp__mcp-workspace__read_file` and follow its process. Ignore its frontmatter, and ignore
-its opening "no issue context found" step — your content comes from your launch prompt, not
-from a prior `/issue_analyse` discussion.
+`mcp__mcp-workspace__read_file` and follow its process. Ignore its frontmatter, its opening
+"no issue context found" step — your content comes from your launch prompt, not from a prior
+`/issue_analyse` discussion — and any other wording aimed at a user typing the command. You
+are running it unattended.
 
 On top of that process:
 
