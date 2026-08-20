@@ -81,11 +81,13 @@ When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
 git commit / add / rebase / push / checkout -b / branch
 gh issue create / edit / comment (labels only via set-status)
 gh issue view (cross-repo only — otherwise use the MCP tool)
-gh pr create · gh api (read-only)
+gh pr create
 mcp-coder gh-tool set-status <label>
 ```
 
 **Status labels:** use `mcp-coder gh-tool set-status` to change issue workflow status — never use raw `gh issue edit` with label flags.
+
+**Slash-prefixed `gh` arguments:** prefix with `MSYS_NO_PATHCONV=1` — Git Bash rewrites a leading `/` into a Windows path.
 
 **Privileged agents:** `commit-pusher`, `issue-updater` and `issue-approver` run with `bypassPermissions`, so they skip the prompts these commands normally trigger. That is an ergonomics device, not access control — any session can launch them, and `Bash` is unrestricted inside them. Rationale and limits: `docs/repository-setup/agent-permissions.md` in the mcp-coder repository.
 

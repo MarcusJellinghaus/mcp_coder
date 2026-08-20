@@ -5,7 +5,6 @@ argument-hint: "<issue-number> [--repo owner/repo]"
 allowed-tools:
   - mcp__mcp-workspace__github_issue_view
   - "Bash(gh issue view *)"
-  - "Bash(gh issue comment *)"
   - "Bash(MSYS_NO_PATHCONV=1 gh issue comment *)"
   - "Bash(gh issue edit *)"
   - mcp__mcp-tools-py__sleep

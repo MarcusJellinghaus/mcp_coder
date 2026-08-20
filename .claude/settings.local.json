@@ -3,7 +3,6 @@
     "allow": [
       "Bash(mcp-coder gh-tool:*)",
       "Bash(start docs/architecture/dependency_graph.html)",
-      "Bash(tach check:*)",
       "mcp__mcp-tools-py__find_references",
       "mcp__mcp-tools-py__get_library_source",
       "mcp__mcp-tools-py__list_symbols",
@@ -71,7 +70,6 @@
       "mcp__obsidian-wiki__remove-tags",
       "mcp__obsidian-wiki__rename-tag",
       "mcp__obsidian-wiki__search-vault",
-      "Bash(git rebase:*)",
       "mcp__mcp-tools-py__run_tach_check"
     ]
   },
