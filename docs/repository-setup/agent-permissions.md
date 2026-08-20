@@ -5,6 +5,12 @@ themselves: an agent's markdown body *is* its system prompt, loaded on every lau
 maintainer-facing notes there cost context on each run — and a section explaining that a
 constraint is unenforced reads, from inside the prompt, as permission to ignore it.
 
+**Scope: Claude Code only.** `disable-model-invocation`, `allowed-tools`, `permissionMode`
+and subagents are Claude Code mechanisms — nothing here describes another client. Worth
+stating because Copilot CLI reads `.claude/skills/*/SKILL.md` natively ([copilot.md](copilot.md))
+but has no `.claude/agents/` and no permission modes: under Copilot the skills are plain
+instructions and none of the gating below applies. Verified against **Claude Code 2.1.227**.
+
 ## Agents cannot invoke `disable-model-invocation` skills
 
 Several skills carry `disable-model-invocation: true`, reserving them for the user typing
