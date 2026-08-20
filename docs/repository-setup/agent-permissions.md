@@ -59,12 +59,13 @@ Do not treat any of the following as enforced:
   limits stated in the agent bodies are prose. Under `bypassPermissions`, *every* shell
   command is auto-approved.
 - **Scoped `allowed-tools` would not constrain *these agents*.** Entries such as
-  `Bash(git add *)` are believed to be a **pre-approval list, not a restriction** —
-  non-matching commands going through the normal permission flow rather than being refused —
-  and the whole mechanism is moot under `bypassPermissions` regardless. This is a statement
-  about the agents only; on the supervisor skills the same field is a real alternative,
-  covered below. **The pre-approval-vs-restriction reading is unverified** and the "alternative"
-  section below depends on it — test it before acting on that section.
+  `Bash(git add *)` are a **pre-approval list, not a restriction**: the official docs state it
+  "grants permission for the listed tools during the turn that invokes the skill… It does not
+  restrict which tools are available" — `disallowed-tools` is the restricting field.
+  Non-matching commands therefore go through the normal permission flow rather than being
+  refused, and the whole mechanism is moot under `bypassPermissions` anyway. This is a
+  statement about the agents only; on the supervisor skills the same field is a real
+  alternative, covered below.
 - **A "refuse unless launched by a supervisor" instruction would not help either.** The
   agent sees only its launch prompt, which the caller writes, so the claim is
   unverifiable self-attestation.
@@ -80,13 +81,14 @@ they run without prompting; the grant clears at the user's next message. Combine
 on its own. Putting `Bash(git add *) Bash(git commit *) Bash(git push *)` on the three
 supervisor skills would retire these agents.
 
-Two things stand in the way today. Both rest on Claude Code internals observed in **2.1.227
-(2026-08-19)** — re-check them against the current build before relying on them:
+Two things stand in the way today:
 
 - **The grant does not reach subagents.** A spawned agent's permission layers are built fresh
   — a `model` layer plus an optional `effort` layer — with no copy of the parent's. The grant
   is an `allowed_tools` layer, so it is simply absent. (`context: fork` skills are the
-  exception: that path merges the parent's layers explicitly.) The grant therefore only helps
+  exception: that path merges the parent's layers explicitly.) Read out of the shipped bundle
+  of **Claude Code 2.1.227**, not from the docs — re-check it against the current build before
+  relying on it. The grant therefore only helps
   if a supervisor runs `git` itself instead of delegating to `commit-pusher` — not a large
   step, since `implementation_review_supervisor` already runs `run_vulture_check` and
   `run_lint_imports_check` itself.

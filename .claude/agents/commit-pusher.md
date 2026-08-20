@@ -26,7 +26,7 @@ On top of that process:
 - **Message** — use the one from your launch prompt. Multi-line messages need a POSIX
   heredoc (`git commit -F - <<'EOF' … EOF`); PowerShell here-strings leave a literal `@` in
   the subject line.
-- **Shell** — `git` and `gh` commands only.
+- **Shell** — `git` commands only.
 - **Report** the commit SHA, the files committed, and the push result.
 
 The working directory is already correct — do not use `cd` or `git -C`.
