@@ -33,6 +33,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 |---|---|---|
 | GitHub-side: tokens, labels, actions, CI, dependabot | [github.md](github.md) | Any downstream repo |
 | Claude Code: `.claude/`, `.mcp.json`, launchers, architecture docs | [claude-code.md](claude-code.md) | Any downstream repo |
+| Agent permissions: how `.claude/agents/*.md` are wired, and what `bypassPermissions` does and does not enforce | [agent-permissions.md](agent-permissions.md) | Any downstream repo — reference only, `mcp-coder init` does not deploy `docs/` |
 | Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any downstream repo |
 | Generic repo conventions: `.gitattributes`, `.gitignore`, file size | [repo.md](repo.md) | Any downstream repo |
 | Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python downstream repos only |
@@ -52,6 +53,8 @@ The following files in this repository serve as references/templates for other p
 | `.claude/CLAUDE.md` | G | Yes | No | Project conventions, tool list, allowed commands |
 | `.claude/skills/` | G | Yes | Mostly | Repo-specific paths/commands inside individual SKILL.md files |
 | `.claude/agents/commit-pusher.md` | G | No | Yes | — |
+| `.claude/agents/issue-updater.md` | G | No | Yes | — |
+| `.claude/agents/issue-approver.md` | G | No | Yes | Requires `approve-command.yml` and the status labels |
 | `.claude/knowledge_base/planning_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/refactoring_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/software_engineering_principles.md` | G | No | Yes | — |
