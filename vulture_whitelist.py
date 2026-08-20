@@ -370,3 +370,14 @@ _.progress_callback
 # tests/icoder/test_permissions_gateway.py - Autouse fixture stubbing the
 # langchain deny bridge so gateway tests need no langchain_core.
 _._fake_deny_bridge
+
+# tests/icoder/test_icoder_permission_wiring.py - _ScriptedModel implements the
+# BaseChatModel contract for create_react_agent; langchain calls these through
+# the framework (bind_tools during agent construction, _agenerate per turn,
+# _llm_type for tracing) and passes run_manager positionally, so vulture sees
+# no direct call site.
+_.bind_tools
+_._generate
+_._agenerate
+_._llm_type
+_.run_manager

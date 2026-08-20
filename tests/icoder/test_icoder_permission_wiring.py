@@ -456,8 +456,28 @@ async def test_gateway_denies_never_call_through_real_convert() -> None:
     with_msg = await with_gate.ainvoke(tool_call)
     without_msg = await without_gate.ainvoke(tool_call)
 
+    def _without_block_ids(content: Any) -> Any:
+        """Strip langchain's per-block generated ``id`` from tool content.
+
+        ``langchain_core`` stamps a fresh ``lc_<uuid>`` on every content block at
+        invocation time, so two independent ``ainvoke`` calls never compare equal
+        raw. The id is not part of what gateway pass-through must preserve.
+        """
+        if not isinstance(content, list):
+            return content
+        return [
+            (
+                ({k: v for k, v in block.items() if k != "id"})
+                if isinstance(block, dict)
+                else block
+            )
+            for block in content
+        ]
+
     assert with_msg.status != "error"
-    assert with_msg.content == without_msg.content
+    assert _without_block_ids(with_msg.content) == _without_block_ids(
+        without_msg.content
+    )
 
 
 @pytest.mark.langchain_integration
