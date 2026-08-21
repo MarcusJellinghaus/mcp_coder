@@ -94,7 +94,7 @@ mcp-coder gh-tool set-status <label>
 
 **Bash discipline:** no `cd` prefix, no `git -C` — commands already run in the project directory. Don't chain approved with unapproved commands. Run them separately.
 
-**Commit messages:** standard format, clear and descriptive. No attribution footers.
+**Commit messages:** standard format. See Writing style for length. No attribution footers.
 
 ## Execution directory
 
@@ -120,7 +120,11 @@ This repo uses `mcp-coder-utils` for subprocess execution, logging, and redactio
 
 ## Writing style
 
-Be concise. If one line works, don't use three.
+Be concise. Shorter is better — chat, commits, PRs, docs, comments alike.
+
+Say it once. Never restate what the reader can already see: the diff, the code, the issue, or my own earlier message. Cut it; don't rephrase it.
+
+If a sentence isn't load-bearing, delete it.
 
 ## Asking questions
 
