@@ -99,7 +99,7 @@ mcp-coder gh-tool set-status <label>
 
 **Bash discipline:** no `cd` prefix, no `git -C` — commands already run in the project directory. Don't chain approved with unapproved commands. Run them separately.
 
-**Commit messages:** standard format, clear and descriptive. No attribution footers.
+**Commit messages:** standard format. See Writing style for length. No attribution footers.
 
 **Multi-line commit messages:** use a POSIX heredoc — `git commit -F - <<'EOF' … EOF`. PowerShell here-strings (`@'...'@`) work only in the PowerShell tool; in Bash they silently leave a literal `@` in the subject line.
 
@@ -127,7 +127,11 @@ This repo uses `mcp-coder-utils` for subprocess execution, logging, and redactio
 
 ## Writing style
 
-Be concise. If one line works, don't use three.
+Be concise. Shorter is better — chat, commits, PRs, docs, comments alike.
+
+Say it once. Never restate what the reader can already see: the diff, the code, the issue, or my own earlier message. Cut it; don't rephrase it.
+
+If a sentence isn't load-bearing, delete it.
 
 ## Asking questions
 
@@ -135,11 +139,19 @@ Never use the AskUserQuestion tool. Ask questions as plain text in the chat.
 
 ## Obsidian knowledge base
 
-An Obsidian vault (`obsidian-dev-wiki`) is available via the `obsidian-wiki` MCP server.
+Shared knowledge base across my repos (`obsidian-dev-wiki`), via the `obsidian-wiki` MCP server.
 
-- **Read first:** At the start of non-trivial tasks, search the vault for relevant context — repo notes, processes, known issues, prior decisions.
-- **Follow processes:** When a task matches a documented process in `Processes/`, follow those steps.
-- **Write back:** Update the vault when you learn something worth preserving for future sessions.
+**Read at the start of non-trivial work:** `Home.md` (index), the `Repos/<current repo>.md` note, and any `Processes/` note matching the task. If a process note covers the task, follow it rather than improvising.
+
+**Write only what passes all three tests:**
+
+- *durable* — still true in 6 months (not status, versions, or task state)
+- *general* — applies beyond the one issue that produced it
+- *homeless* — no better place already exists
+
+Existing homes, check before writing: code and docstrings; the repo's `docs/`; CLAUDE.md for how-I-work rules; the GitHub issue for a single defect's root cause; git history for what changed when.
+
+**Always write to `Field Notes/`**, for Marcus to promote. Only edit `Repos/`, `Processes/`, or `Plans/` when Marcus explicitly asks for it. If an existing note already covers the topic, name it in the Field Note (`Promote into [[Note Name]]`) instead of editing that note. Follow `Conventions.md` for frontmatter and naming.
 
 ## MCP server issues
 
