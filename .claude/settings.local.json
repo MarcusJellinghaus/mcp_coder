@@ -75,6 +75,7 @@
       "mcp__mcp-tools-py__run_tach_check"
     ]
   },
+  "autoMemoryEnabled": false,
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "mcp-tools-py",
