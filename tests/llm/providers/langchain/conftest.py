@@ -8,12 +8,32 @@ Uses patch.dict for automatic cleanup so mocks never leak into other test
 directories that may need real langchain imports.
 """
 
+import importlib.util
 import sys
 from collections.abc import AsyncIterator, Sequence
 from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+def _is_installed(name: str) -> bool:
+    """Return True when *name* is genuinely importable.
+
+    Membership in ``sys.modules`` is not a usable proxy: an installed package
+    that simply has not been imported yet is absent from ``sys.modules``, and
+    mocking over it makes the real package unreachable for the rest of the
+    session (this fixture is session-scoped, so its ``patch.dict`` outlives the
+    tests in this directory). That is what wedged the ``langchain-integration``
+    CI job, whose graph-level tests need the real adapter and ``langchain_core``.
+    """
+    if name in sys.modules:
+        return True
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        # Parent package missing (ModuleNotFoundError) or not a package.
+        return False
 
 
 def graph_events(
@@ -145,44 +165,44 @@ def _mock_langchain_modules() -> Generator[None, None, None]:
 
     mocks: dict[str, MagicMock] = {}
 
-    if "langchain_core" not in sys.modules:
+    if not _is_installed("langchain_core"):
         _lc_core = MagicMock()
         _lc_core.messages = _lc_messages
         mocks["langchain_core"] = _lc_core
         mocks["langchain_core.messages"] = _lc_messages
-    elif "langchain_core.messages" not in sys.modules:
+    elif not _is_installed("langchain_core.messages"):
         mocks["langchain_core.messages"] = _lc_messages
 
-    if "langchain_openai" not in sys.modules:
+    if not _is_installed("langchain_openai"):
         mocks["langchain_openai"] = MagicMock()
 
-    if "langchain_google_genai" not in sys.modules:
+    if not _is_installed("langchain_google_genai"):
         mocks["langchain_google_genai"] = MagicMock()
 
-    if "langchain_anthropic" not in sys.modules:
+    if not _is_installed("langchain_anthropic"):
         mocks["langchain_anthropic"] = MagicMock()
 
-    if "langchain_ollama" not in sys.modules:
+    if not _is_installed("langchain_ollama"):
         mocks["langchain_ollama"] = MagicMock()
 
-    if "ollama" not in sys.modules:
+    if not _is_installed("ollama"):
         mocks["ollama"] = MagicMock()
 
-    if "langchain_mcp_adapters" not in sys.modules:
+    if not _is_installed("langchain_mcp_adapters"):
         mocks["langchain_mcp_adapters"] = MagicMock()
         mocks["langchain_mcp_adapters.client"] = MagicMock()
         mocks["langchain_mcp_adapters.tools"] = MagicMock()
 
-    if "langgraph" not in sys.modules:
+    if not _is_installed("langgraph"):
         mocks["langgraph"] = MagicMock()
         mocks["langgraph.prebuilt"] = MagicMock()
 
-    if "google.genai" not in sys.modules:
-        if "google" not in sys.modules:
+    if not _is_installed("google.genai"):
+        if not _is_installed("google"):
             mocks["google"] = MagicMock()
         mocks["google.genai"] = MagicMock()
 
-    if "httpx" not in sys.modules:
+    if not _is_installed("httpx"):
         mocks["httpx"] = MagicMock()
 
     if not mocks:

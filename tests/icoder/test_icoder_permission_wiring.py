@@ -17,8 +17,11 @@ Three concerns are covered here:
   drainer of ``run_agent_stream`` — so that half of the guard is structurally
   trivial, but the test is kept: it still pins the stream-only iCoder path.
 
-The ``langchain_integration``-marked test drives a real
-``convert_mcp_tool_to_langchain_tool`` + interceptor path end to end.
+The ``langchain_integration``-marked tests drive a real
+``convert_mcp_tool_to_langchain_tool`` + interceptor path end to end, including a
+graph-level deny test: a denied call leaves the message history paired, so
+``create_react_agent`` does not raise ``INVALID_CHAT_HISTORY`` and the agent
+continues past the deny.
 """
 
 from __future__ import annotations
@@ -453,5 +456,162 @@ async def test_gateway_denies_never_call_through_real_convert() -> None:
     with_msg = await with_gate.ainvoke(tool_call)
     without_msg = await without_gate.ainvoke(tool_call)
 
+    def _without_block_ids(content: Any) -> Any:
+        """Strip langchain's per-block generated ``id`` from tool content.
+
+        ``langchain_core`` stamps a fresh ``lc_<uuid>`` on every content block at
+        invocation time, so two independent ``ainvoke`` calls never compare equal
+        raw. The id is not part of what gateway pass-through must preserve.
+        """
+        if not isinstance(content, list):
+            return content
+        return [
+            (
+                ({k: v for k, v in block.items() if k != "id"})
+                if isinstance(block, dict)
+                else block
+            )
+            for block in content
+        ]
+
     assert with_msg.status != "error"
-    assert with_msg.content == without_msg.content
+    assert _without_block_ids(with_msg.content) == _without_block_ids(
+        without_msg.content
+    )
+
+
+@pytest.mark.langchain_integration
+@pytest.mark.asyncio
+async def test_denied_call_keeps_history_paired_and_agent_continues() -> None:
+    """Graph level: a denied call stays paired, so the agent continues past it.
+
+    Drives a scripted ``BaseChatModel`` through a real ``create_react_agent`` /
+    ``ToolNode`` over a tool built by the real
+    ``convert_mcp_tool_to_langchain_tool`` with the real gateway interceptor. The
+    deny ``ToolMessage`` must carry the emitted ``tool_call_id`` — otherwise the
+    model's tool_call is unpaired and ``create_react_agent`` raises
+    ``INVALID_CHAT_HISTORY`` on the next turn, wedging the agent.
+
+    Assertions read the **graph state** returned by ``ainvoke``, never the
+    stream: ``run_agent_stream`` masks the empty id in its ``tool_result`` event
+    via ``run_id``, so a stream-only assertion passes even with the bug present.
+    The deny-text and captured-request assertions are load-bearing —
+    ``ToolNode``'s own error message is also a ``ToolMessage(status="error")``
+    with the correct id, so without them the test would pass green even if the
+    interceptor was never reached.
+    """
+    # Real adapter + langgraph + MCP SDK required: skip (not error) when absent
+    # so explicitly selecting the marker on a base install is a clean skip.
+    pytest.importorskip("langchain_mcp_adapters")
+    pytest.importorskip("langgraph")
+    pytest.importorskip("mcp")
+
+    from langchain_core.language_models.chat_models import (  # pylint: disable=import-error
+        BaseChatModel,
+    )
+    from langchain_core.messages import (  # pylint: disable=import-error
+        AIMessage,
+        HumanMessage,
+        ToolMessage,
+    )
+    from langchain_core.outputs import (  # pylint: disable=import-error
+        ChatGeneration,
+        ChatResult,
+    )
+    from langchain_mcp_adapters.tools import (  # pylint: disable=import-error
+        convert_mcp_tool_to_langchain_tool,
+    )
+    from langgraph.prebuilt import create_react_agent  # pylint: disable=import-error
+    from mcp.types import Tool as MCPTool  # pylint: disable=import-error
+
+    from mcp_coder.icoder.permissions import (
+        Matcher,
+        PermissionConfig,
+        Policy,
+        Rule,
+    )
+    from mcp_coder.icoder.permissions.gateway import (
+        _DENY_NEVER,
+        LangchainEnforcementGateway,
+    )
+
+    class _ScriptedModel(BaseChatModel):  # type: ignore[misc]
+        """Deterministic 2-step model: tool_call first, then plain text.
+
+        ``bind_tools`` must be overridden (``BaseChatModel.bind_tools`` raises
+        and ``create_react_agent`` calls it). Only the ASYNC ``_agenerate`` is
+        implemented: the agent path is async and the default ``_agenerate``
+        would hand ``_generate`` to a thread pool. ``invoke_count`` doubles as
+        the script index.
+        """
+
+        invoke_count: int = 0
+
+        def bind_tools(self, tools: Any, **kw: Any) -> "_ScriptedModel":
+            return self
+
+        def _generate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
+            raise NotImplementedError("scripted model implements _agenerate")
+
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
+            self.invoke_count += 1
+            if self.invoke_count == 1:
+                message = AIMessage(
+                    content="",
+                    tool_calls=[{"name": "do_it", "args": {}, "id": "call_1"}],
+                )
+            else:
+                message = AIMessage(content="done")
+            return ChatResult(generations=[ChatGeneration(message=message)])
+
+        @property
+        def _llm_type(self) -> str:
+            return "scripted"
+
+    # Empty-object schema so ``args={}`` passes ToolNode's schema validation,
+    # which runs BEFORE the tool coroutine and therefore before the interceptor.
+    fake_tool = MCPTool.model_validate(
+        {
+            "name": "do_it",
+            "description": "",
+            "inputSchema": {"type": "object", "properties": {}},
+        }
+    )
+    gateway = LangchainEnforcementGateway(
+        PermissionConfig(
+            rules=(
+                Rule(
+                    matcher=Matcher(server="srv", tool="do_it"),
+                    policy=Policy.NEVER,
+                    layer="user",
+                ),
+            )
+        )
+    )
+    captured: dict[str, Any] = {}
+
+    async def _capturing_interceptor(request: Any, handler: Any) -> Any:
+        captured["request"] = request
+        return await gateway.interceptor(request, handler)
+
+    tool = convert_mcp_tool_to_langchain_tool(
+        None,  # no session needed: the deny never calls the handler
+        fake_tool,
+        connection={"transport": "stdio"},
+        server_name="srv",
+        tool_interceptors=[_capturing_interceptor],
+    )
+
+    model = _ScriptedModel()
+    agent = create_react_agent(model, [tool])
+
+    result = await agent.ainvoke({"messages": [HumanMessage("go")]})
+
+    tool_msgs = [m for m in result["messages"] if isinstance(m, ToolMessage)]
+    assert len(tool_msgs) == 1
+    assert tool_msgs[0].content == _DENY_NEVER  # the GATEWAY denied it, not ToolNode
+    assert captured["request"].name == "do_it"  # the interceptor really ran
+    assert tool_msgs[0].status == "error"
+    assert tool_msgs[0].tool_call_id == "call_1"  # THE fix, at graph-state level
+    assert model.invoke_count == 2  # agent continued past the deny
+    assert result["messages"][-1].content == "done"

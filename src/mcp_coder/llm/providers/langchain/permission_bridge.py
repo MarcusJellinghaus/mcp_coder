@@ -11,18 +11,20 @@ from __future__ import annotations
 from typing import Any
 
 
-def build_deny_tool_message(text: str, name: str) -> Any:
+def build_deny_tool_message(text: str, name: str, tool_call_id: str) -> Any:
     """Return a langchain ``ToolMessage(status="error")`` for a denied MCP call.
 
     Args:
         text: The human-readable denial reason (becomes the message content).
         name: The bare tool name the denied call targeted.
+        tool_call_id: The id of the model's tool call being denied, so the deny
+            message stays paired with it in the agent's message history.
 
     Returns:
-        A ``ToolMessage`` with ``status="error"``. ``tool_call_id`` is left
-        empty because langgraph's ``ToolNode`` overwrites it with the real
-        call id downstream.
+        A ``ToolMessage`` with ``status="error"`` carrying ``tool_call_id``.
     """
     from langchain_core.messages import ToolMessage  # pylint: disable=import-error
 
-    return ToolMessage(content=text, status="error", tool_call_id="", name=name)
+    return ToolMessage(
+        content=text, status="error", tool_call_id=tool_call_id, name=name
+    )

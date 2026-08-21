@@ -115,7 +115,8 @@ class LangchainEnforcementGateway:
 
         Args:
             request: The adapter tool-call request (``.server_name``, ``.name``,
-                ``.args``).
+                ``.args``, plus ``.runtime`` carrying the emitted
+                ``tool_call_id`` inside a langgraph run).
             handler: The downstream async handler that performs the real call.
 
         Returns:
@@ -126,4 +127,7 @@ class LangchainEnforcementGateway:
         if policy is Policy.ALWAYS:
             return await handler(request)
         text = _DENY_ASK if policy is Policy.AFTER_APPROVAL else _DENY_NEVER
-        return build_deny_tool_message(text, request.name)
+        tool_call_id = (
+            getattr(getattr(request, "runtime", None), "tool_call_id", None) or ""
+        )
+        return build_deny_tool_message(text, request.name, tool_call_id)

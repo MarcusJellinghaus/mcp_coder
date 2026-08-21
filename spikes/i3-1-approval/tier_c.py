@@ -112,10 +112,9 @@ class InterceptorGate:
         self.fired = True
 
         if self.deny:
-            # Shipped deny shape: ToolMessage(status="error", tool_call_id="").
-            # request exposes only .server_name / .name / .args, so there is no
-            # tool_call_id to derive — the spike keeps the shape as shipped.
-            return build_deny_tool_message(_DENY_TEXT, request.name)
+            # Explicit "" keeps this frozen spike run byte-identical to the
+            # pre-#1118 behaviour it recorded (empty tool_call_id).
+            return build_deny_tool_message(_DENY_TEXT, request.name, "")
 
         # Approve: block until a bare thread resolves the Future, then run the
         # real MCP tool via the downstream handler.
