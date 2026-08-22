@@ -26,7 +26,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 Details: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — re-verified a 2nd time; **pytest still blocked**.
+- [ ] Quality checks: pylint, pytest, mypy — re-verified a 3rd time; **pytest still blocked**.
   - pylint: no issues in any file this step touches. All reported errors are
     `E0401`/`E0611` for uninstalled optional deps (`langchain_*`, `httpx`,
     `mcp.server.fastmcp`) plus `E1123`/`E1101` for `fail_on_reviews` /
@@ -39,17 +39,30 @@ Details: [step_1.md](./steps/step_1.md)
     `mcp-workspace` installed in `.venv`. That import runs via
     `mcp_coder/__init__.py:37`, so every test module importing `mcp_coder`
     fails at collection — `TestReadAndClearBlocked` collects 0 tests
-    (`ImportError while importing test module`, confirmed with `-n 0`).
-  - Root cause now *directly observed*, not just inferred: resolving
-    `mcp_workspace` in an up-to-date interpreter shows
-    `branch_status_rendering` present (301 lines) and `BranchStatusReport`
-    carrying both `pr_feedback_undeterminable` and
-    `format_for_human(..., fail_on_reviews=...)`. So upstream main has every
-    symbol this repo's code expects, and a single stale `.venv` copy explains
-    all five distinct error signatures above. `mcp-workspace` is installed
-    unpinned from git main (`pyproject.toml:348`), so drift is expected.
-  - Remediation (environment change — needs an explicit go-ahead; also not
-    executable from this agent, which has no shell tool):
+    (`ImportError while importing test module`).
+  - Root cause confirmed by direct filesystem evidence this run, no longer
+    inference:
+    - Listing `.venv/Lib/site-packages/mcp_workspace/checks/` returns exactly
+      `__init__.py`, `branch_status.py`, `branch_status_polling.py`,
+      `file_sizes.py`, `pr_feedback.py` — `branch_status_rendering.py` is
+      genuinely not there.
+    - Resolving `mcp_workspace.checks.branch_status_rendering` against an
+      up-to-date interpreter returns a 301-line module whose docstring states
+      it was "split out of :mod:`branch_status` to keep that module under the
+      file-size limit" and is "the canonical home of ``CIStatus``,
+      ``WaitContext`` and ``GITHUB_TOKEN_HINT``".
+    So upstream split `branch_status.py` into `branch_status.py` +
+    `branch_status_rendering.py`; the `.venv` copy predates that split. This
+    repo's shim (commit `bce0f22`, "shim onto mcp_workspace, add review gate
+    (#1105)") targets post-split upstream, which is also where
+    `pr_feedback_undeterminable` and `fail_on_reviews` come from — one stale
+    copy explains all five error signatures above.
+  - Therefore the repo code is correct and CI (fresh install) is unaffected;
+    editing `branch_status.py` to match the stale `.venv` would break CI.
+    `mcp-workspace` is installed unpinned from git main
+    (`pyproject.toml:348`), so this drift is expected and recurring.
+  - Remediation is an environment change, not a code change. It needs an
+    explicit go-ahead and is not executable from this agent (no shell tool):
     `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
     then re-run the three checks and tick this box.
   - Not ticked on purpose: this step's five new tests have never executed once,
