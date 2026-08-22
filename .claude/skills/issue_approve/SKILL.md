@@ -1,21 +1,21 @@
 ---
-description: Approve issue to transition to next workflow status, then assign it
+description: Approve issue to transition to next workflow status
 disable-model-invocation: true
 argument-hint: "<issue-number> [--repo owner/repo]"
 allowed-tools:
   - mcp__mcp-workspace__github_issue_view
   - "Bash(gh issue view *)"
   - "Bash(MSYS_NO_PATHCONV=1 gh issue comment *)"
-  - "Bash(gh issue edit *)"
   - mcp__mcp-tools-py__sleep
   - mcp__mcp-workspace__read_file
 ---
 
 # Approve Issue
 
-Approve the current issue to transition it to the next status in the workflow, then assign it
-to yourself. The GitHub Action only moves the status label — it does not assign, so step 5 is
-part of the procedure, not an optional extra.
+Approve the current issue to transition it to the next status in the workflow.
+
+This skill does not touch assignment. Nothing in the automation assigns issues — that is a
+human decision, and an issue is normally already assigned by the time it reaches approval.
 
 ## Resolve Issue Number
 
@@ -36,6 +36,8 @@ issue with `gh issue view <issue_number> --repo owner/repo` via Bash —
 1. Fetch the issue to confirm it exists:
    Call `mcp__mcp-workspace__github_issue_view` with the issue number (or `gh issue view` for cross-repo).
 
+   Note its current status label — step 5 compares against it.
+
 2. Validate that the issue is ready for approval:
    - Issue has been analyzed/discussed
    - Requirements are clear
@@ -51,15 +53,18 @@ MSYS_NO_PATHCONV=1 gh issue comment <issue_number> --body "/approve"
 
 This triggers the GitHub Action to promote the issue status (e.g., `status-01:created` → `status-02:awaiting-planning`).
 
-4. **Wait 5 seconds** — call `mcp__mcp-tools-py__sleep` with `sleep_seconds: 5` — to let the
-   GitHub Action finish applying the label transition before the next edit.
+4. **Wait 5 seconds** — call `mcp__mcp-tools-py__sleep` with `sleep_seconds: 5` — to give the
+   GitHub Action time to apply the label transition.
 
-5. **Assign the issue** to yourself:
+5. **Confirm the transition landed.** Re-fetch the issue and compare its status label against
+   what you saw in step 1. The comment in step 3 only *requests* the transition; the Action
+   performs it, and it can be slow or fail.
 
-```bash
-gh issue edit <issue_number> --add-assignee "@me"
-```
+   If the label has not changed, say so plainly — report the issue as still sitting at its old
+   status. Do not wait again or re-comment; a second `/approve` does not help and clutters the
+   issue.
 
-6. Report the issue number, the approval result, and the assignee.
+6. Report the issue number, the status transition (from → to, or "unchanged"), and the
+   assignee as it stands — read only, do not change it.
 
 **Note:** This skill has `disable-model-invocation` — it can only be run by the user typing `/issue_approve`. If you need this skill as a follow-up, tell the user: "Please run `/issue_approve` to proceed."
