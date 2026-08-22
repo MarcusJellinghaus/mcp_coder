@@ -211,7 +211,14 @@ No new source modules — every source change lands in an existing file.
 `tests/workflows/implement/test_task_processing.py`, `test_core.py`, `test_core_workflow.py`,
 `test_failure_reporting.py`, `test_finalisation.py`,
 `tests/integration/test_execution_dir_integration.py`,
-`tests/config/test_label_config.py`, `tests/cli/commands/test_define_labels.py`
+`tests/config/test_label_config.py`, `tests/cli/commands/test_define_labels.py`,
+`tests/cli/commands/test_define_labels_label_changes.py`,
+`tests/workflows/vscodeclaude/test_types.py`
+
+The last two are label **count** assertions derived from the bundled `labels.json`
+(`35` → `36` at `test_define_labels_label_changes.py:308,311`; `26` → `27` at
+`test_types.py:309`, since the new label is `category: human_action`). They are not listed
+in the issue's "five places to touch" but fail immediately without the bump.
 
 ### Modified — docs
 
@@ -228,7 +235,7 @@ No new source modules — every source change lands in an existing file.
 | 1 | `BLOCKED_FILE` + `read_and_clear_blocked()` | src + tests, unused so far |
 | 2 | `TaskOutcome` mechanical conversion | src + all test call sites; no behaviour change; splits the failure-routing tests out of `test_core_workflow.py` to stay under the file-size gate |
 | 3 | Blocked detection in `process_single_task` | the core fix |
-| 4 | `implementation_blocked` label definition | `labels.json` + 2 test files (name list, `ERROR_STATUS_IDS`, and the `36` → `37` count assertion) |
+| 4 | `implementation_blocked` label definition | `labels.json` + 4 test files (name list, `ERROR_STATUS_IDS`, and three count assertions: `36` → `37`, `35` → `36` twice, `26` → `27`) |
 | 5 | `core.py` routing + final-mypy cleanup | label mapping, ERROR log, detail append |
 | 6 | `RETRY_REMINDER` + `prompts.md` | remove the fabricate pressure |
 | 7 | `finalisation.py` cleanup + double-prefix fix | third commit path + live bug |
