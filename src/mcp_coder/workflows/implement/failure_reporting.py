@@ -25,6 +25,7 @@ FAILURE_LABELS: dict[str, str] = {
     "mcp_unavailable": "mcp_unavailable",
     "task_tracker_prep_failed": "task_tracker_prep_failed",
     "no_changes_after_retries": "no_changes_after_retries",
+    "blocked": "implementation_blocked",
     "ci_fix_exhausted": "ci_fix_needed",
 }
 
@@ -38,8 +39,25 @@ CATEGORY_DISPLAY: dict[str, str] = {
     "mcp_unavailable": "Mcp Unavailable",
     "task_tracker_prep_failed": "Task Tracker Prep Failed",
     "no_changes_after_retries": "No Changes After Retries",
+    "blocked": "Blocked",
     "ci_fix_exhausted": "Ci Fix Exhausted",
 }
+
+
+def append_detail(message: str, detail: str) -> str:
+    """Append an agent-reported blocked reason to a failure message.
+
+    Used where a typed LLM failure keeps its own label but a blocked marker was
+    also present: the label stays actionable while the agent's text survives.
+
+    Args:
+        message: Base failure message.
+        detail: Agent-reported reason; empty when no marker was found.
+
+    Returns:
+        ``message`` unchanged when ``detail`` is empty, else both combined.
+    """
+    return f"{message} (agent reported: {detail})" if detail else message
 
 
 @dataclass

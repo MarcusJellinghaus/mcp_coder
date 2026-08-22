@@ -39,12 +39,18 @@ from .constants import (
     PR_INFO_DIR,
     RUN_MYPY_AFTER_EACH_TASK,
 )
-from .failure_reporting import Progress, _fail, format_failure_comment
+from .failure_reporting import (
+    Progress,
+    _fail,
+    append_detail,
+    format_failure_comment,
+)
 from .finalisation import run_finalisation
 from .prerequisites import check_git_clean, check_main_branch, check_prerequisites
 from .task_processing import (
     check_and_fix_mypy,
     process_task_with_retry,
+    read_and_clear_blocked,
 )
 from .task_tracker_prep import log_progress_summary, prepare_task_tracker
 
@@ -156,19 +162,34 @@ def run_implement_workflow(
                 if outcome.reason == "no_tasks":
                     # Legitimate completion - no more tasks
                     break
+                if outcome.reason == "blocked":
+                    # The agent reported it could not proceed - terminal, no retry.
+                    # Logged unconditionally: comment posting can be off, and the
+                    # reason text is the whole point of this exit.
+                    logger.error("Implementation blocked: %s", outcome.detail)
+                    return fail(
+                        "blocked",
+                        stage="Task implementation",
+                        message=outcome.detail,
+                    )
                 if outcome.reason == "timeout":
                     # LLM timeout during task processing
                     return fail(
                         "timeout",
                         stage="Task implementation",
-                        message="LLM timed out during task processing",
+                        message=append_detail(
+                            "LLM timed out during task processing", outcome.detail
+                        ),
                     )
                 if outcome.reason == "mcp_unavailable":
                     # A required MCP server was unavailable during task processing
                     return fail(
                         "mcp_unavailable",
                         stage="Task implementation",
-                        message="MCP servers unavailable during task processing",
+                        message=append_detail(
+                            "MCP servers unavailable during task processing",
+                            outcome.detail,
+                        ),
                     )
                 if outcome.reason == "no_changes_after_retries":
                     # Task produced no changes after all retry attempts
@@ -239,7 +260,10 @@ def run_implement_workflow(
                     message="Formatting failed after final mypy check",
                 )
 
-            # Commit mypy fixes if any changes were made
+            # Commit mypy fixes if any changes were made. check_and_fix_mypy runs
+            # its own LLM turns, so drop any marker it wrote before staging -
+            # never let a marker reach a commit.
+            read_and_clear_blocked(project_dir)
             status = get_full_status(project_dir)
             all_changes = status["staged"] + status["modified"] + status["untracked"]
 

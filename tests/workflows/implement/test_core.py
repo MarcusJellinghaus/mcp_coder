@@ -371,8 +371,10 @@ class TestRunImplementWorkflow:
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_run_implement_workflow_skips_final_formatting_when_disabled(
+    @patch("mcp_coder.workflows.implement.core.read_and_clear_blocked")
+    def test_final_mypy_clears_marker_and_skips_formatting_when_disabled(
         self,
+        mock_read_blocked: MagicMock,
         mock_check_git: MagicMock,
         mock_check_branch: MagicMock,
         mock_check_prereq: MagicMock,
@@ -388,7 +390,7 @@ class TestRunImplementWorkflow:
         mock_check_ci: MagicMock,
         mock_get_config: MagicMock,
     ) -> None:
-        """Test that format_code=False skips formatters in Step 5 while mypy still runs."""
+        """format_code=False skips formatters; the marker is cleared before staging."""
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
         mock_get_config.return_value = ImplementConfig(
@@ -402,6 +404,11 @@ class TestRunImplementWorkflow:
             TaskOutcome(True, "completed"),
             TaskOutcome(False, "no_tasks"),
         ]
+        # Order the two calls relative to each other: a marker written by the
+        # final-mypy LLM turns must be gone before get_full_status stages.
+        manager = MagicMock()
+        manager.attach_mock(mock_read_blocked, "read_blocked")
+        manager.attach_mock(mock_get_status, "get_status")
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 
@@ -410,6 +417,8 @@ class TestRunImplementWorkflow:
         mock_check_mypy.assert_called_once()
         # but formatters should NOT be called since format_code=False
         mock_run_formatters.assert_not_called()
+        call_names = [name for name, _, _ in manager.mock_calls]
+        assert call_names.index("read_blocked") < call_names.index("get_status")
 
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")

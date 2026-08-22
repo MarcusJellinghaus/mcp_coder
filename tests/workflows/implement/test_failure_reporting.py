@@ -6,9 +6,11 @@ from unittest.mock import MagicMock, patch
 
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.failure_reporting import (
+    CATEGORY_DISPLAY,
     FAILURE_LABELS,
     Progress,
     _fail,
+    append_detail,
     format_failure_comment,
 )
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
@@ -25,6 +27,26 @@ class TestFailureLabels:
         assert FAILURE_LABELS["task_tracker_prep_failed"] == "task_tracker_prep_failed"
         assert FAILURE_LABELS["no_changes_after_retries"] == "no_changes_after_retries"
         assert FAILURE_LABELS["ci_fix_exhausted"] == "ci_fix_needed"
+
+    def test_blocked_maps_to_implementation_blocked(self) -> None:
+        """The agent-reported blocked reason gets its own terminal label."""
+        assert FAILURE_LABELS["blocked"] == "implementation_blocked"
+        assert CATEGORY_DISPLAY["blocked"] == "Blocked"
+
+
+class TestAppendDetail:
+    """Tests for append_detail."""
+
+    def test_empty_detail_returns_message_unchanged(self) -> None:
+        """No marker text -> the base message is returned as-is."""
+        assert append_detail("base", "") == "base"
+
+    def test_detail_is_appended(self) -> None:
+        """Marker text is appended to the base message, keeping both."""
+        result = append_detail("base", "why")
+
+        assert "base" in result
+        assert "why" in result
 
 
 class TestFormatFailureComment:
@@ -63,6 +85,22 @@ class TestFormatFailureComment:
         )
 
         assert "**Category:** Llm Timeout" in result
+
+    def test_blocked_renders_blocked_category(self) -> None:
+        """Reason 'blocked' renders 'Blocked' with the agent's text as Error."""
+        result = format_failure_comment(
+            "blocked",
+            "Task implementation",
+            "pytest times out at 300s",
+            completed=0,
+            total=0,
+            elapsed=None,
+            build_url=None,
+            diff_stat="",
+        )
+
+        assert "**Category:** Blocked" in result
+        assert "**Error:** pytest times out at 300s" in result
 
     def test_includes_progress_when_set(self) -> None:
         """Includes progress info when total > 0."""

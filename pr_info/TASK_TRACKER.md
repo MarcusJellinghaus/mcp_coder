@@ -227,9 +227,61 @@ Details: [step_4.md](./steps/step_4.md)
 
 Details: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, mypy clean for this step; **pytest genuinely RUN
+      and green** via the same local workaround Steps 3–4 used.
+  - Scope delivered: `FAILURE_LABELS["blocked"] = "implementation_blocked"`,
+    `CATEGORY_DISPLAY["blocked"] = "Blocked"` and `append_detail()` in
+    `failure_reporting.py`; in `core.py` the `blocked` branch (directly after
+    `no_tasks`, with an **unconditional** ERROR log and `outcome.detail` as the
+    `**Error:**` line), `append_detail(...)` on the timeout / mcp_unavailable
+    messages, and `read_and_clear_blocked(project_dir)` immediately before the
+    final-mypy block's `get_full_status`. The reason chain stays an `if` chain —
+    no table refactor, as the step requires.
+  - Test-first, watched red: `test_failure_reporting.py` died at **import**
+    (`CATEGORY_DISPLAY` / `append_detail` did not exist), and
+    `test_core_failure_routing.py` **hung until the 300 s tool timeout** — the
+    Step 3 intermediate state reproduced exactly: with no `blocked` branch the
+    outcome fell through to `progress.completed += 1` and the loop re-ran
+    forever against a `return_value` mock. All green after the change.
+  - Deviation from the step's test sketch, taken deliberately: the final-mypy
+    cleanup test (#8) **extends** the existing final-mypy test rather than adding
+    a new one, and is renamed
+    `test_final_mypy_clears_marker_and_skips_formatting_when_disabled`. The step
+    permits either. A standalone test costs ~65 lines here (15 patch decorators
+    + 16-parameter signature), which would push `test_core.py` from 686 to ~751
+    and **break the CI file-size gate** the step is otherwise careful about.
+    Extending cost 10 lines (696). Ordering is pinned as the step suggests, via
+    `MagicMock.attach_mock` on both mocks before the run.
+  - pytest: `tests/workflows/implement` + `tests/workflow_steps` +
+    `tests/workflow_utils` → **399 passed**; `tests/workflows` (review dir
+    excluded, see below) → **1034 passed, 2 skipped**. Targeted run of the three
+    files this step touches → 46 passed. Re-ran after black → 153 passed.
+  - No labels.json change was needed or made: Step 4 already defines
+    `implementation_blocked`, and nothing cross-checks `FAILURE_LABELS` values
+    against `labels.json`, so no count assertions moved.
+  - Environment, unchanged from Steps 1–4: `.venv`'s `mcp-workspace` predates
+    the `branch_status_rendering` split, so `import mcp_coder` dies at
+    collection repo-wide (`ImportError` on every test module; under `-n auto`
+    the whole session aborts with 0 collected).
+  - Workaround used to obtain real pytest signal: a temporary root
+    `conftest.py` synthesising `branch_status_rendering` from the stale
+    install's names. **It has been deleted** — `git status` shows only the five
+    intended files plus this tracker. Local diagnostic, not a fix; must not be
+    committed.
+  - Still broken and NOT caused by this step: `tests/workflows/review/` (and the
+    `test_check_branch_status*` modules) fail on
+    `BranchStatusReport.pr_feedback_undeterminable` / `CIStatus`, which the shim
+    cannot supply. Clears with:
+    `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+  - pylint: no issue in any of the 5 files this step touches. Every reported
+    error is `E0401`/`E0611` for uninstalled optional deps (`langchain_*`,
+    `httpx`, `mcp.server.fastmcp`) plus `E1123`/`E1101` for `fail_on_reviews` /
+    `pr_feedback_undeterminable` — all downstream of the stale install.
+  - mypy: 8 errors, byte-identical to Steps 1–4, none in this step's files.
+  - black: reformatted `test_core_failure_routing.py` (one `with` rewrap);
+    isort no changes. File-size gate passes (823 files ≤ 750 lines).
+- [x] Commit message prepared
 
 ### Step 6: RETRY_REMINDER + prompts.md blocked exit
 
