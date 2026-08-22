@@ -116,9 +116,63 @@ Details: [step_2.md](./steps/step_2.md)
 
 Details: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, mypy clean for this step. **pytest now genuinely
+      RUN and green for this step** — the Step 1/2 environment block was worked
+      around locally; the underlying stale venv is unchanged, see below.
+  - Scope delivered: start-of-task `read_and_clear_blocked` cleanup; the Step 5
+    LLM block restructured so its three early exits assign `llm_error` instead
+    of returning (empty-response guard, both typed `except` paths), with the
+    marker read in `finally`; the three-way branch placed **before** the Step 6
+    files-changed check; `process_single_task` + `process_task_with_retry`
+    docstring reason lists updated with `'blocked'`. The empty-response guard's
+    `store_session` moved into an `else:`, as the step flagged. `core.py`,
+    `labels.json`, `RETRY_REMINDER` and `prompts.md` untouched.
+  - New `TestProcessSingleTaskBlocked` (7 tests) written first and watched fail:
+    5 of 7 failed before the change, `test_blocked_wins_over_changed_files`
+    failing with `TaskOutcome(success=True, reason='completed')` — the inverted
+    path, reproduced. All 7 pass after.
+  - One deviation from the step's test sketch, forced by the code: the marker
+    cannot be pre-written by the test, because the new start-of-task cleanup
+    sweeps it before the LLM call. Tests 1–4 write it from a `prompt_llm`
+    side effect instead, which is what the real agent does. Test 5
+    (`test_stale_marker_removed_at_task_start`) still pre-writes it — that is
+    exactly the behaviour it pins.
+  - pytest: `tests/workflows/implement` + `tests/workflow_steps` +
+    `tests/workflow_utils` → **391 passed**, with the standard `-n auto` marker
+    exclusions. That covers every consumer of `TaskOutcome` /
+    `process_single_task` bar `tests/integration/test_execution_dir_integration.py`,
+    which is `claude_cli_integration`-marked and excluded by the standard run.
+  - Environment, unchanged from Steps 1–2: `.venv`'s `mcp-workspace` predates
+    the `branch_status_rendering` split, so `import mcp_coder` dies at
+    collection repo-wide. Root cause confirmed directly this run by capturing
+    the traceback: `ModuleNotFoundError: No module named
+    'mcp_workspace.checks.branch_status_rendering'` via
+    `mcp_coder/__init__.py:37` → `checks/branch_status.py:17`.
+  - Workaround used to obtain real pytest signal: a temporary root
+    `conftest.py` aliasing the missing module from the installed
+    `mcp_workspace.checks.branch_status`. **It has been deleted** — `git status`
+    shows only the two intended files. It is a local diagnostic, not a fix, and
+    must not be committed.
+  - Still broken and NOT caused by this step: `tests/workflows/review/` fails on
+    `CIStatus.UNKNOWN` / `BranchStatusReport.pr_feedback_undeterminable`, which
+    the shim cannot supply because the stale install genuinely lacks them.
+    A full-suite run also exceeds the 300 s tool timeout. Both clear with:
+    `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+  - pylint: no issue in either file this step touches. Every reported error is
+    `E0401`/`E0611` for uninstalled optional deps (`langchain_*`, `httpx`,
+    `mcp.server.fastmcp`) plus `E1123`/`E1101` for `fail_on_reviews` /
+    `pr_feedback_undeterminable` — all downstream of the stale install.
+  - mypy: 8 errors, byte-identical to Steps 1 and 2, none in this step's files.
+    In particular `llm_error in ("timeout", "mcp_unavailable")` narrows
+    `str | None` → `str` cleanly, so no cast was needed.
+  - black/isort: no changes. File-size gate passes (823 files ≤ 750 lines;
+    `test_task_processing.py` is allowlisted).
+  - Intermediate state left by this commit is the one the step describes and is
+    **not** pinned by any test: `core.py:155-191` has no `else`, so a `blocked`
+    outcome falls through to `progress.completed += 1` and the loop re-runs.
+    Step 5 closes it.
+- [x] Commit message prepared
 
 ### Step 4: status-06f-blocked:implementation-blocked label
 

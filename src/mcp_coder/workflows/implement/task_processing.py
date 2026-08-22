@@ -360,14 +360,17 @@ def process_single_task(
     Returns:
         TaskOutcome where:
         - success: True if task completed successfully
-        - reason: 'completed' | 'no_tasks' | 'no_changes' | 'error' | 'timeout'
-          | 'mcp_unavailable'. The two LLM failures (inactivity timeout, MCP
-          servers unavailable) are categorized here into their reason strings so
-          the orchestrator can map them to a failure label.
-        - detail: free-text explanation; currently always empty.
+        - reason: 'completed' | 'no_tasks' | 'no_changes' | 'blocked' | 'error'
+          | 'timeout' | 'mcp_unavailable'. The two LLM failures (inactivity
+          timeout, MCP servers unavailable) are categorized here into their
+          reason strings so the orchestrator can map them to a failure label.
+        - detail: free-text explanation; carries the blocked marker text for
+          the 'blocked', 'timeout' and 'mcp_unavailable' reasons, else empty.
     """
-    # Cleanup stale commit message file from previous failed runs
+    # Cleanup stale files from previous failed runs
     _cleanup_commit_message_file(project_dir)
+    # Drop a stale blocked marker from a previous failed run
+    read_and_clear_blocked(project_dir)
 
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
@@ -399,6 +402,7 @@ def process_single_task(
 
     # Step 5: Call LLM with prompt
     logger.info("Calling LLM for implementation...")
+    llm_error: str | None = None
     try:
         # Create the full prompt by combining template with task context
         full_prompt = f"""{prompt_template}
@@ -427,36 +431,51 @@ Please implement this task step by step."""
         if not response or not response.strip():
             logger.error("LLM returned empty response")
             logger.debug(f"Response was: {repr(response)}")
-            return TaskOutcome(False, "error")
+            llm_error = "error"
+        else:
+            logger.info("LLM response received successfully")
 
-        logger.info("LLM response received successfully")
-
-        try:
-            store_session(
-                response_data=llm_response,
-                prompt=full_prompt,
-                store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
-                step_name=f"step_{step_num}",
-                branch_name=branch_name,
-            )
-        except (
-            Exception
-        ) as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            logger.warning("Failed to store implement session: %s", store_err)
+            try:
+                store_session(
+                    response_data=llm_response,
+                    prompt=full_prompt,
+                    store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
+                    step_name=f"step_{step_num}",
+                    branch_name=branch_name,
+                )
+            except (
+                Exception
+            ) as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                logger.warning("Failed to store implement session: %s", store_err)
 
     except (LLMTimeoutError, McpServersUnavailableError) as e:
         # Categorize the two typed LLM failures into stable workflow reasons
         # ("timeout" / "mcp_unavailable") so the orchestrator can map them to a
         # failure label. Fallback keeps mypy happy; both branches of
         # llm_failure_reason are non-None for these exception types.
-        reason = llm_failure_reason(e) or "error"
-        logger.error("LLM call failed (%s) for task: %s", reason, next_task)
-        return TaskOutcome(False, reason)
+        llm_error = llm_failure_reason(e) or "error"
+        logger.error("LLM call failed (%s) for task: %s", llm_error, next_task)
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error calling LLM: {e}")
-        return TaskOutcome(False, "error")
+        llm_error = "error"
+    finally:
+        # Read in `finally` so no exit path can leave the marker on disk: a
+        # stale marker breaks the next run at check_git_clean and
+        # prepare_task_tracker.
+        blocked = read_and_clear_blocked(project_dir)
+
+    # Branch once, BEFORE the files-changed check below. The marker is itself an
+    # untracked change, so checking it later would read as "files changed ->
+    # success" and commit the marker - the inverted path this exists to prevent.
+    if llm_error in ("timeout", "mcp_unavailable"):
+        return TaskOutcome(False, llm_error, blocked or "")
+    if blocked:
+        logger.error("Task blocked: %s", blocked)
+        return TaskOutcome(False, "blocked", blocked)
+    if llm_error:
+        return TaskOutcome(False, llm_error)
 
     # Step 6: Check if any files were actually changed
     try:
@@ -543,8 +562,8 @@ def process_task_with_retry(
 
     Returns:
         TaskOutcome whose reason may be:
-        - 'completed' | 'no_tasks' | 'error' | 'timeout' | 'mcp_unavailable'
-          (from process_single_task, returned unchanged)
+        - 'completed' | 'no_tasks' | 'blocked' | 'error' | 'timeout' |
+          'mcp_unavailable' (from process_single_task, returned unchanged)
         - 'no_changes_after_retries' (exhausted all retry attempts)
     """
     for attempt in range(1, MAX_NO_CHANGE_RETRIES + 1):

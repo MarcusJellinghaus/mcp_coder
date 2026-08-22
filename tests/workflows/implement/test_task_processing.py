@@ -1,10 +1,13 @@
 """Tests for implement workflow task processing."""
 
 from pathlib import Path
+from typing import Any, Callable, Optional
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
+from mcp_coder.llm.interface import LLMTimeoutError
+from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflow_steps.constants import BLOCKED_FILE
 from mcp_coder.workflows.implement.constants import (
     BLOCKED_FILE as IMPLEMENT_BLOCKED_FILE,
@@ -1021,3 +1024,213 @@ class TestProcessTaskWithRetry:
         assert outcome.success is False
         assert outcome.reason == "mcp_unavailable"
         assert mock_prompt_llm.call_count == 1
+
+
+class TestProcessSingleTaskBlocked:
+    """Test pr_info/.blocked.txt detection inside process_single_task."""
+
+    @staticmethod
+    def _write_marker(project_dir: Path, text: str) -> Path:
+        """Create the blocked marker with the given text and return its path."""
+        (project_dir / "pr_info").mkdir(exist_ok=True)
+        marker = project_dir / BLOCKED_FILE
+        marker.write_text(text, encoding="utf-8")
+        return marker
+
+    @classmethod
+    def _llm_writes_marker(
+        cls, project_dir: Path, text: str, raises: Optional[Exception] = None
+    ) -> Callable[..., dict[str, object]]:
+        """Build a prompt_llm side effect that drops the marker mid-call.
+
+        The agent writes the marker during its turn, so a marker created before
+        process_single_task runs would be swept by the start-of-task cleanup.
+        """
+
+        def _side_effect(*_args: Any, **_kwargs: Any) -> dict[str, object]:
+            cls._write_marker(project_dir, text)
+            if raises is not None:
+                raise raises
+            return _make_llm_response("Response")
+
+        return _side_effect
+
+    @patch("mcp_coder.workflows.implement.task_processing.push_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
+    @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_blocked_wins_over_changed_files(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        mock_run_formatters: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A marker plus changed files is blocked, never success.
+
+        The marker file is itself an untracked change, so if the files-changed
+        check ran first the run would commit the marker and report success -
+        the exact inversion this feature exists to prevent.
+        """
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = self._llm_writes_marker(
+            tmp_path, "pytest never finishes"
+        )
+        mock_get_status.return_value = {
+            "staged": ["f.py"],
+            "modified": [],
+            "untracked": [],
+        }
+
+        outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "blocked"
+        assert outcome.detail == "pytest never finishes"
+        mock_commit.assert_not_called()
+        mock_push.assert_not_called()
+        mock_run_formatters.assert_not_called()
+        assert not (tmp_path / BLOCKED_FILE).exists()
+
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_empty_marker_is_blocked_not_no_changes(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A whitespace-only marker still reports blocked, never no_changes."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = self._llm_writes_marker(tmp_path, "   \n\t")
+        mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
+
+        outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "blocked"
+        assert outcome.detail == BLOCKED_REASON_FALLBACK
+        assert not (tmp_path / BLOCKED_FILE).exists()
+
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_marker_plus_timeout_keeps_timeout_label(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """The typed LLM failure wins the label; the marker text rides along."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = self._llm_writes_marker(
+            tmp_path,
+            "mcp server never answered",
+            raises=LLMTimeoutError("timed out after 3600s"),
+        )
+
+        outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "timeout"
+        assert "mcp server never answered" in outcome.detail
+        assert not (tmp_path / BLOCKED_FILE).exists()
+
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_marker_plus_mcp_unavailable_keeps_mcp_label(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Same precedence for an unavailable MCP server."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = self._llm_writes_marker(
+            tmp_path,
+            "tools-py is down",
+            raises=McpServersUnavailableError(
+                "MCP servers unavailable",
+                {"mcp-tools-py": "failed"},
+            ),
+        )
+
+        outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "mcp_unavailable"
+        assert "tools-py is down" in outcome.detail
+        assert not (tmp_path / BLOCKED_FILE).exists()
+
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_stale_marker_removed_at_task_start(
+        self, mock_get_next_task: MagicMock, tmp_path: Path
+    ) -> None:
+        """A marker left by a previous run is cleared before any work starts."""
+        marker = self._write_marker(tmp_path, "left over from last run")
+        mock_get_next_task.return_value = None
+
+        outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "no_tasks"
+        assert not marker.exists()
+
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_no_marker_still_reports_no_changes(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Regression guard: without a marker, behaviour is unchanged."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+        mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
+
+        outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "no_changes"
+
+    @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
+    def test_blocked_does_not_retry(self, mock_process: MagicMock) -> None:
+        """blocked is terminal - the retry wrapper returns it untouched."""
+        mock_process.return_value = TaskOutcome(False, "blocked", "why")
+
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "blocked"
+        assert outcome.detail == "why"
+        assert mock_process.call_count == 1
