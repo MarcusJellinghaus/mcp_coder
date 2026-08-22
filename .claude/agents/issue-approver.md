@@ -28,8 +28,6 @@ On top of that process:
   that no open questions remain. This replaces the skill's step 2, which assumes a human
   judging a conversation. If either check fails, stop and report back without approving.
 - **Shell** — `gh` commands only.
-- **Never change assignment.** This agent does not assign issues; no `--add-assignee`, no
-  `gh api user`. Report the assignee as you found it.
 - **Report** the issue number, the status transition, and the assignee as found.
 
 The working directory is already correct — do not use `cd` or `git -C`.
