@@ -59,10 +59,12 @@ by both `tach.toml` (presentation → application) and the `.importlinter`
 
 ### 4. Exit-code semantics of `init`
 
-A `.gitignore` write failure (read-only file, permissions) is logged as a warning
-and does **not** abort the run — aborting mid-run over a cosmetic step would skip
-config creation. The remaining steps still execute and the command exits 1 so
-scripts see the failure. This is carried in a single local `gitignore_ok: bool`.
+A `.gitignore` read or write failure (read-only file, permissions, or a foreign
+non-UTF-8 file — `UnicodeDecodeError` is caught alongside `OSError` because it is
+a `ValueError`) is logged as a warning and does **not** abort the run — aborting
+mid-run over a cosmetic step would skip config creation. The remaining steps
+still execute and the command exits 1 so scripts see the failure. This is
+carried in a single local `gitignore_ok: bool`.
 
 The gitignore step runs after the skills deploy and before config creation, so
 the `Gitignore:` output line sits with `Skills:` rather than after the closing
@@ -97,7 +99,7 @@ config*, and `.gitignore` is project-scoped like the `.claude/` deploy.
 | File | Change |
 |------|--------|
 | `tests/workflows/vscodeclaude/test_workspace.py` | 3 new tests (fresh file, no trailing newline, byte-level line-ending preservation); return-value assertions added to 2 existing tests |
-| `tests/cli/commands/test_init.py` | 4 new tests; 3 existing `TestInitCommand` tests get `project_dir=str(tmp_path)` instead of `None` |
+| `tests/cli/commands/test_init.py` | 5 new tests; 3 existing `TestInitCommand` tests get `project_dir=str(tmp_path)` instead of `None` |
 
 ### Modified — docs
 

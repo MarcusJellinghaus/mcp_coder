@@ -12,7 +12,7 @@ aborting the rest of the run.
 | File | Action |
 |------|--------|
 | `src/mcp_coder/cli/commands/init.py` | New import, new `_write_gitignore_entries()`, 2 edits in `execute_init` |
-| `tests/cli/commands/test_init.py` | 4 new tests in `TestExecuteInitWithDeploy`; 3 existing `TestInitCommand` tests get a real `project_dir` |
+| `tests/cli/commands/test_init.py` | 5 new tests in `TestExecuteInitWithDeploy`; 3 existing `TestInitCommand` tests get a real `project_dir` |
 
 Do not modify `main.py`, the argument parser, `tach.toml`, or `.importlinter` —
 `mcp_coder.cli -> mcp_coder.workflows` is already an allowed dependency in both.
@@ -68,7 +68,7 @@ early `return 1` on config `OSError` is unchanged.
 
 ```
 try: added = update_gitignore(project_dir)
-except OSError as e: log warning, return False       # never abort init
+except (OSError, UnicodeDecodeError) as e: log warning, return False   # never abort init
 log OUTPUT "Gitignore: N entries added"              # N == 0 means up to date
 if added and no .git/ in project_dir: log warning    # init before git init is legal
 return True
@@ -78,6 +78,17 @@ The `added and` conjunction is the whole "no warning when nothing was written"
 rule. `(project_dir / ".git").exists()` covers both a real directory and the
 `.git` *file* used by worktrees.
 
+The single `try` wraps the whole `update_gitignore` call, so it covers both the
+`read_text(encoding="utf-8")` at the top of that function and the append at the
+bottom — no change is needed inside `workspace.py`. `UnicodeDecodeError` is
+caught alongside `OSError` because it is a `ValueError`, not an `OSError`: a
+foreign repo whose `.gitignore` holds non-UTF-8 bytes (a cp1252 comment, a BOM-
+less legacy file) would otherwise escape the handler and abort `mcp-coder init`
+with a traceback — before config creation — which is exactly the "a failure
+never aborts init" rule this helper exists to enforce. Such a file is left
+untouched: the entries are not written, the warning is logged, the remaining
+steps run, and init exits 1 like any other gitignore failure.
+
 ```python
 def _write_gitignore_entries(project_dir: Path) -> bool:
     """Ensure the VSCodeClaude entries are present in the project .gitignore.
@@ -86,12 +97,13 @@ def _write_gitignore_entries(project_dir: Path) -> bool:
         project_dir: Target project root.
 
     Returns:
-        True on success (including "already up to date"), False if the write
-        failed. A failure is logged and never aborts init.
+        True on success (including "already up to date"), False if the
+        .gitignore could not be read or written. A failure is logged and never
+        aborts init.
     """
     try:
         added = update_gitignore(project_dir)
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         logger.warning("Failed to update .gitignore in %s: %s", project_dir, e)
         return False
 
@@ -125,7 +137,7 @@ init writes `.gitignore` these tests would touch the real repo file. All three
 already receive `tmp_path`; change `project_dir=None` to
 `project_dir=str(tmp_path)`. No new mocks.
 
-### 4 new tests in `TestExecuteInitWithDeploy`
+### 5 new tests in `TestExecuteInitWithDeploy`
 
 **A — block appears, second run is a no-op, `.git` warning rules.** Patch
 `create_default_config` / `get_config_file_path` and `_find_claude_source_dir`
@@ -169,6 +181,27 @@ run execute_init again -> assert 0
     assert "Gitignore: 0 entries added" in caplog.text   # already up to date
 ```
 
+**E — a non-UTF-8 `.gitignore` does not abort init.** The real-file counterpart
+of C: no monkeypatching of `update_gitignore`, the failure comes from the file
+itself. Same patches as A; write the file with `write_bytes` *before* running
+init:
+
+```python
+(project / ".gitignore").write_bytes(b"\xff\xfe*.pyc\n")
+```
+
+```
+result == 1                          # a gitignore failure, same contract as C
+no exception escapes execute_init    # the assertion above only holds if it did not
+"Failed to update .gitignore" in caplog.text
+create_default_config called once    # the run continued past the failure
+.gitignore bytes are unchanged       # the undecodable file is left alone
+```
+
+`b"\xff\xfe*.pyc\n"` is not valid UTF-8, so `read_text(encoding="utf-8")` inside
+`update_gitignore` raises `UnicodeDecodeError`. Without it in the `except`
+tuple this test fails with that traceback instead of `result == 1`.
+
 ### Log capture level
 
 The `Gitignore:` line is logged at the custom `OUTPUT` level, which sits **below**
@@ -203,7 +236,7 @@ anywhere in the suite that invoke `execute_init` with `project_dir=None`.
 > `src/mcp_coder/cli/commands/init.py` via a `_write_gitignore_entries` helper,
 > exactly as specified in the step. Follow TDD: first change the three
 > `TestInitCommand` namespaces from `project_dir=None` to
-> `project_dir=str(tmp_path)`, then add the four new tests in
+> `project_dir=str(tmp_path)`, then add the five new tests in
 > `TestExecuteInitWithDeploy` (mind the `OUTPUT` capture level for the
 > `Gitignore:` assertions), watch them fail, then implement.
 >
