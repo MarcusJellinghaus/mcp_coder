@@ -26,11 +26,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 Details: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — pylint + mypy clean; **pytest blocked**:
-  the repo `.venv` has a stale `mcp-workspace` (no
-  `mcp_workspace.checks.branch_status_rendering`), so `mcp_coder/__init__.py`
-  fails to import and the whole suite collects 0 tests. Pre-existing, unrelated
-  to this step. Needs a dependency reinstall before the box can be ticked.
+- [ ] Quality checks: pylint, pytest, mypy — re-verified; **pytest still blocked**.
+  - pylint: no issues in any file this step touches. All reported errors are
+    `E0401`/`E0611` for uninstalled optional deps (`langchain_*`, `httpx`,
+    `mcp.server.fastmcp`) plus `E1123`/`E1101` for `fail_on_reviews` /
+    `pr_feedback_undeterminable` — all downstream of the same stale
+    `mcp-workspace` described below.
+  - mypy: 8 errors, none in this step's files; same two root causes
+    (stale `mcp-workspace`, missing optional deps).
+  - pytest: **blocked**. `src/mcp_coder/checks/branch_status.py:17` imports
+    `mcp_workspace.checks.branch_status_rendering`, which is absent from the
+    `mcp-workspace` installed in `.venv`. That import runs via
+    `mcp_coder/__init__.py:37`, so every test module importing `mcp_coder`
+    fails at collection — `TestReadAndClearBlocked` collects 0 tests.
+    `mcp-workspace` is installed unpinned from git main (`pyproject.toml:348`) and the
+    upstream repo *does* contain `branch_status_rendering.py`, so the `.venv`
+    copy has simply drifted behind main.
+  - Remediation (environment change — needs an explicit go-ahead, and is not
+    something this step should make on its own):
+    `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+    then re-run the three checks and tick this box.
+  - Pre-existing and unrelated to this step: the step is a pure addition and
+    touches no file that any check complains about.
 - [x] Commit message prepared
 
 ### Step 2: TaskOutcome replaces tuple[bool, str]
