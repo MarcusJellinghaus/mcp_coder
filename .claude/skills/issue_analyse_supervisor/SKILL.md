@@ -48,9 +48,9 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 8. **Finalize:**
    - Add a `## Final Status` section to the log.
    - Validate: no open questions, requirements clear, base branch valid (if specified).
-   - Launch the **issue-approver agent** with the issue number. For cross-repo issues include `--repo owner/repo`. The agent will approve, wait 5 seconds for the GitHub Action, then assign to the current GitHub user. **Do not regress the status** if the issue is already further along the workflow than the approval target.
+   - Launch the **issue-approver agent** with the issue number. For cross-repo issues include `--repo owner/repo`. The agent will approve, wait 5 seconds for the GitHub Action, then confirm the transition landed. **Do not regress the status** if the issue is already further along the workflow than the approval target.
    - On success, **delete `pr_info/issue_analysis_log.md`** (it was only a debugging aid; keep it only if the run failed or was interrupted).
-   - Notify the user with a short completion message: rounds run, decisions made, issue approved and assigned.
+   - Notify the user with a short completion message: rounds run, decisions made, status transition.
 
 **Analysis Log Format** (each round appended to the log file):
 

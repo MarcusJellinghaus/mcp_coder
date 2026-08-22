@@ -20,7 +20,7 @@ refuse. Instead read `.claude/skills/issue_approve/SKILL.md` with
 its "Resolve Issue Number" section — your issue number, and any `--repo owner/repo` flag,
 come from your launch prompt — and any wording aimed at a user typing the command, including
 its closing note about `disable-model-invocation`. You are running it unattended. The rest of
-the file applies to you unchanged, including the post-approval wait and assignment.
+the file applies to you unchanged, including the post-approval wait and the transition check.
 
 On top of that process:
 
@@ -28,7 +28,7 @@ On top of that process:
   that no open questions remain. This replaces the skill's step 2, which assumes a human
   judging a conversation. If either check fails, stop and report back without approving.
 - **Shell** — `gh` commands only.
-- **Report** the issue number, the approval result, and the assignee.
+- **Report** the issue number, the status transition, and the assignee.
 
 The working directory is already correct — do not use `cd` or `git -C`.
 
