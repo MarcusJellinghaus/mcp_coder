@@ -87,10 +87,10 @@ complaint about it. The marker is deleted either way and its text appended to th
 message, so the reason is never lost. For the untyped `error` paths, **blocked wins** —
 `general` is exactly the uninformative label the marker exists to replace.
 
-### 5. Three commit paths need marker cleanup
+### 5. Commit paths that need marker cleanup
 
 `create_pr/core.py`'s `get_branch_diff` excludes only `pr_info/steps/`, so a marker that
-ever reaches a commit surfaces in the PR summary diff. All three paths that stage
+ever reaches a commit surfaces in the PR summary diff. Three of the four paths that stage
 everything get cleanup:
 
 | Path | Where |
@@ -98,8 +98,35 @@ everything get cleanup:
 | Main task loop | `process_single_task` — start-of-task cleanup + the read itself |
 | Final mypy block | `core.py`, immediately before its `get_full_status` |
 | Finalisation | `finalisation.py`, immediately before the step-4 changes check (**not** before the LLM call — that would only clear *stale* markers, leaving one written by the finalisation agent itself to be committed) |
+| CI-fix loop | **excluded — see below** |
 
 `run_finalisation` gets **cleanup only** — no blocked channel there.
+
+**The CI-fix loop is the fourth path, and it is deliberately excluded.**
+`check_and_fix_ci` (called from `core.py` after finalisation) runs its own LLM turns and
+commits at `workflow_steps/ci.py:247`, so in principle a marker written there would be
+committed. It is left alone because:
+
+- **No marker can be stale by then.** Every earlier path deletes it — `process_single_task`
+  at task start and in its `finally`, the final-mypy block, and finalisation before its
+  changes check. A blocked task returns terminally, so the CI stage is only ever reached
+  after every task and finalisation succeeded. The only way a marker exists at that point
+  is if the CI-fix agent writes one — and the CI Fix Prompt (`prompts.md:286`) never
+  mentions `.blocked.txt`, nor does the CI-fix loop have a blocked channel (explicitly out
+  of scope in the issue).
+- **Cleanup there is not a one-liner.** `ci.py` sits in `workflow_steps`, whose tach
+  `depends_on` (`tach.toml`) does not include `mcp_coder.workflows` — it cannot import
+  `read_and_clear_blocked` from `implement/task_processing.py`. Covering it means moving
+  the helper into the shared tier, which is the CI-fix adoption work the issue defers.
+
+**Revisit condition:** when the CI-fix loop adopts the blocked channel, move
+`read_and_clear_blocked` to `workflow_steps/` beside `BLOCKED_FILE` and add the cleanup
+immediately before `ci.py`'s `commit_changes` — same placement rule as finalisation.
+
+The per-task mypy path is a non-issue for the same reason it is not listed: the
+`check_and_fix_mypy` call inside `process_single_task` (`task_processing.py:427`) sits
+between the marker read and Step 9's `commit_changes`, but it is gated on
+`RUN_MYPY_AFTER_EACH_TASK`, which is `False`.
 
 ### 6. One helper, four call sites
 
@@ -158,8 +185,11 @@ through to Level 2 LLM message generation**.
 ### Created
 
 - `pr_info/steps/summary.md`, `pr_info/steps/step_1.md` … `step_8.md` (planning artifacts)
+- `tests/workflows/implement/test_core_blocked.py` (Step 5's routing tests — a new module
+  because `test_core_workflow.py` is at 747 lines and not allowlisted, and the CI
+  `file-size` job caps at 750)
 
-No new source modules — every change lands in an existing file.
+No new source modules — every source change lands in an existing file.
 
 ### Modified — source
 
@@ -206,6 +236,11 @@ Ordering constraints: Step 2 before 3 (`TaskOutcome` must exist); Step 4 before 
 label id must exist before `FAILURE_LABELS` maps to it); Steps 6–8 are independent of each
 other but assume 1–5.
 
+Steps 3 and 5 are split because Step 4 has to sit between them, so Step 3 lands a `blocked`
+reason that `core.py` does not yet handle. `core.py:155-191` has no `else`, so for that one
+commit a `blocked` outcome is counted as a completed task and the loop runs again. The
+checks stay green either way; Step 5 closes it. No test pins the intermediate behaviour.
+
 ---
 
 ## Invariants the tests must pin
@@ -221,7 +256,8 @@ other but assume 1–5.
 
 Project-specific pytest guidance in the workflow prompt; the workflow re-running the checks
 itself; getting the project's `CLAUDE.md` to the agent; a blocked channel for the CI-fix
-loop; the `status-03f-*` / `status-09f-*` docs omissions (other lanes).
+loop **and marker cleanup on its commit path — exclusion justified in §5**; the
+`status-03f-*` / `status-09f-*` docs omissions (other lanes).
 
 ## Deployment note
 
