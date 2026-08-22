@@ -26,6 +26,7 @@ from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
 from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
 
 from .constants import (
+    BLOCKED_FILE,
     COMMIT_MESSAGE_FILE,
     LLM_INACTIVITY_TIMEOUT_SECONDS,
     MAX_NO_CHANGE_RETRIES,
@@ -35,6 +36,9 @@ from .constants import (
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+BLOCKED_REASON_MAX_CHARS = 500
+BLOCKED_REASON_FALLBACK = "Agent reported being blocked but gave no reason"
 
 RETRY_REMINDER = (
     "\n\n⚠️ Previous attempt produced NO file changes. "
@@ -273,6 +277,38 @@ def check_and_fix_mypy(
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error during mypy check and fix: {e}")
         return False
+
+
+def read_and_clear_blocked(project_dir: Path) -> Optional[str]:
+    """Read the blocked marker and delete it.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        None if no marker exists. Otherwise the stripped marker text (truncated
+        to BLOCKED_REASON_MAX_CHARS), or BLOCKED_REASON_FALLBACK when the marker
+        is empty or whitespace only - an empty marker still means blocked.
+        The file is deleted in every case where it exists.
+    """
+    blocked_path = project_dir / BLOCKED_FILE
+    if not blocked_path.exists():
+        return None
+
+    try:
+        text = blocked_path.read_text(encoding="utf-8").strip()
+    except OSError as e:
+        logger.warning(f"Could not read blocked marker: {e}")
+        text = ""
+    finally:
+        # Delete even if the read failed - a stale marker breaks the next run.
+        blocked_path.unlink(missing_ok=True)
+
+    if not text:
+        return BLOCKED_REASON_FALLBACK
+    if len(text) > BLOCKED_REASON_MAX_CHARS:
+        return text[:BLOCKED_REASON_MAX_CHARS] + "..."
+    return text
 
 
 def _cleanup_commit_message_file(project_dir: Path) -> None:

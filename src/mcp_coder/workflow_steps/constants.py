@@ -11,6 +11,8 @@ from __future__ import annotations
 # Directory paths
 PR_INFO_DIR = "pr_info"
 COMMIT_MESSAGE_FILE = f"{PR_INFO_DIR}/.commit_message.txt"
+# Marker an agent writes to declare itself blocked; read + deleted by the workflow.
+BLOCKED_FILE = f"{PR_INFO_DIR}/.blocked.txt"
 
 # LLM timeout settings (in seconds)
 #
