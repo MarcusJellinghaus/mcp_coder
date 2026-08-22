@@ -399,9 +399,63 @@ Details: [step_7.md](./steps/step_7.md)
 
 Details: [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation (docs only)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (docs only)
+- [x] Quality checks: pylint, mypy clean for this step; **pytest genuinely RUN
+      and green** via the same local workaround Steps 3–7 used.
+  - Scope delivered, docs only — no source or test file touched:
+    (A) four rows appended to the `development-process.md` failure-label table
+    directly after `status-06f-timeout`, in the order the step gives
+    (`-prep`, `-mcp`, `-nochange`, `-blocked`), all four with the
+    `set-status status-05:plan-ready` recovery the surrounding 06f rows use;
+    (B) four `--label-color` CSS rules beside the existing failure colours plus
+    four cards appended to the stage-6 `failed-stack`, following the existing
+    card markup exactly; (C) one **Blocked channel** bullet under
+    `workflows/implement/` in `architecture.md`, verbatim from the step.
+  - Colour check by eye, against `labels.json` rather than the step text:
+    `task_tracker_prep_failed` → `b60205`, `mcp_unavailable` → `e99695`,
+    `no_changes_after_retries` → `d93f0b`, `implementation_blocked` → `d93f0b`.
+    All four match the CSS `--label-color` values character for character.
+  - Scope discipline held: `development-process.md` still omits
+    `status-03f-timeout`, `status-03f-mcp`, `status-03f-prereq`,
+    `status-09f-timeout` and `status-09f-mcp`. Those are other lanes and were
+    deliberately left alone, per the step's HOW section.
+  - Confirmed by grep that no generator or test reads these files:
+    `development-process.md` / `github_Issue_Workflow_Matrix` /`architecture.md`
+    return **zero** matches across `src/` and `tests/`. Both tables are
+    hand-maintained, as the step states. Also checked the HTML has no label
+    count, legend or summary block elsewhere that the four new cards would
+    contradict — the only other `06f` occurrences are the three pre-existing
+    cards.
+  - pytest: `tests/workflows/implement` + `tests/workflow_steps` +
+    `tests/workflow_utils` + `tests/prompts` + `tests/config` → **499 passed**,
+    with the standard `-n auto` marker exclusions. A docs-only change cannot
+    move these, and it did not; run as a regression guard, not as evidence for
+    the change.
+  - Environment, unchanged from Steps 1–7: `.venv`'s `mcp-workspace` predates
+    the `branch_status_rendering` split, so `import mcp_coder` dies at
+    collection repo-wide. Observed again this run before the shim was in place —
+    `ModuleNotFoundError: No module named
+    'mcp_workspace.checks.branch_status_rendering'` via
+    `mcp_coder/__init__.py:37` → `checks/branch_status.py:17`, on every
+    collected module.
+  - Workaround used to obtain real pytest signal: a temporary root `conftest.py`
+    synthesising `branch_status_rendering` from the stale install's names.
+    **It has been deleted** — `git status` shows only the three intended docs
+    files plus this tracker. Local diagnostic, not a fix; must not be committed.
+  - Still broken and NOT caused by this step: `tests/workflows/review/` and the
+    `test_check_branch_status*` modules fail on
+    `BranchStatusReport.pr_feedback_undeterminable` / `CIStatus`, which the shim
+    cannot supply. Clears with:
+    `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+  - pylint: unchanged — it does not read `.md` or `.html`, and no Python file
+    was touched. Every reported error is `E0401`/`E0611` for uninstalled
+    optional deps (`langchain_*`, `httpx`, `mcp.server.fastmcp`) plus
+    `E1123`/`E1101` for `fail_on_reviews` / `pr_feedback_undeterminable` — all
+    downstream of the stale install.
+  - mypy: 8 errors, byte-identical to Steps 1–7, none related to this step.
+  - black/isort: no changes (614 files unchanged). File-size gate passes
+    (822 files ≤ 750 lines).
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -1128,6 +1128,10 @@ Automated workflows can fail at several points. When a failure occurs, the issue
 | `status-06f:implementing-failed` | General implementation failure | `mcp-coder gh-tool set-status status-05:plan-ready` |
 | `status-06f-ci:ci-fix-needed` | CI exhausted 3 fix attempts | `mcp-coder gh-tool set-status status-05:plan-ready` |
 | `status-06f-timeout:llm-timeout` | LLM API timeout during implementation | `mcp-coder gh-tool set-status status-05:plan-ready` |
+| `status-06f-prep:task-tracker-prep-failed` | Task tracker preparation failed | `mcp-coder gh-tool set-status status-05:plan-ready` |
+| `status-06f-mcp:mcp-unavailable` | MCP server unavailable during implementation | `mcp-coder gh-tool set-status status-05:plan-ready` |
+| `status-06f-nochange:no-changes-after-retries` | LLM produced no file changes after 3 retry attempts | `mcp-coder gh-tool set-status status-05:plan-ready` |
+| `status-06f-blocked:implementation-blocked` | Agent wrote `pr_info/.blocked.txt` — it could not verify the work and refused to claim it | `mcp-coder gh-tool set-status status-05:plan-ready` |
 | `status-09f:pr-creating-failed` | PR creation fails | `mcp-coder gh-tool set-status status-08:ready-pr` |
 | `status-14f:plan-review-failed` | Automated plan review failed (generic error / unparseable verdict) | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
 | `status-14f-timeout:plan-review-llm-timeout` | LLM API timeout during automated plan review | `mcp-coder gh-tool set-status status-14:plan-review-bot` |
