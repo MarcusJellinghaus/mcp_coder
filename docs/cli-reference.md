@@ -91,7 +91,7 @@ mcp-coder help                         # Show comprehensive help with examples (
 
 ### init
 
-Initialize a project for MCP Coder: create the user config file (if missing) and deploy the bundled Claude Code resources (skills, knowledge base, and agents) into the project.
+Initialize a project for MCP Coder: create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base, and agents) into the project, and add the VSCodeClaude entries to the project's `.gitignore`.
 
 ```bash
 mcp-coder init [OPTIONS]
@@ -102,6 +102,8 @@ mcp-coder init [OPTIONS]
 - `--just-skills` - Deploy the bundled resources only (skills, knowledge base, and agents, despite the name), skip config creation
 
 **Description:** Bootstraps a project so the automated workflows and interactive tools can run: writes a starter user configuration and installs the bundled Claude Code resources into `.claude/` — `.claude/skills/`, `.claude/knowledge_base/`, and `.claude/agents/`. Use `--just-skills` to refresh only the deployed resources (all three sets, despite the name) without touching config.
+
+Init also appends any missing VSCodeClaude session-file entries to `<project_dir>/.gitignore` so they can be committed once instead of dirtying every session folder. This runs in both modes — `--just-skills` skips only the user config, not the project-scoped `.gitignore` — and is idempotent: entries already present are left alone. If the file cannot be read or written the step is logged as a warning and the remaining steps still run, but the command exits with code 1.
 
 **Examples:**
 ```bash
