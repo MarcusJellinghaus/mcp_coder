@@ -339,9 +339,61 @@ Details: [step_6.md](./steps/step_6.md)
 
 Details: [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, mypy clean for this step; **pytest genuinely RUN
+      and green** via the same local workaround Steps 3–6 used.
+  - Scope delivered: in `finalisation.py`, the existing `prompt_llm` call wrapped
+    in `try` / `finally` with `read_and_clear_blocked(project_dir)` in the
+    `finally` (return value discarded — `run_finalisation` gets **no** blocked
+    outcome, per the step), and the `commit_message_path` substitution changed
+    from `f"{PR_INFO_DIR}/{COMMIT_MESSAGE_FILE}"` to bare `COMMIT_MESSAGE_FILE`.
+    The `finally` is attached to the `prompt_llm` call **only**, not the function
+    body, so cleanup runs before `commit_all_changes`, not after.
+  - Test-first, watched red: all three new tests in
+    `TestFinalisationBlockedMarkerCleanup` failed before the change. The
+    double-prefix test failed by printing the rendered prompt verbatim —
+    `Write commit message to pr_info/pr_info/.commit_message.txt.` — reproducing
+    the live §9 bug end-to-end rather than inferring it. All three pass after.
+  - Deviation from the step's test sketch, taken deliberately: tests 1 and 2
+    write the marker from a `prompt_llm` **side effect** rather than pre-writing
+    it under `tmp_path`. Pre-writing would also pass with the cleanup placed
+    *before* the LLM call, which is precisely the placement the step rejects;
+    writing it mid-turn is what a real blocked agent does and pins "after the
+    LLM turn". Test 2 (empty response) independently pins the `finally` — a bare
+    call above the changes check fails it.
+  - No existing test changed behaviour. The step warned that the Level-1
+    commit-message tests might start passing differently; they do not, because
+    the read at `:121` uses `project_dir / COMMIT_MESSAGE_FILE` and was already
+    correct. The bug was **prompt-side only** — the agent was told a path that
+    does not exist, so it wrote nowhere useful and Level 1 found nothing.
+    Nothing else in `src/` or `tests/` references `commit_message_path`.
+  - pytest: `tests/workflows/implement` + `tests/workflow_steps` +
+    `tests/workflow_utils` + `tests/prompts` → **427 passed**;
+    `tests/workflows` (review dir excluded, see below) → **1039 passed,
+    2 skipped**. `test_finalisation.py` itself: 14 passed.
+  - Environment, unchanged from Steps 1–6: `.venv`'s `mcp-workspace` predates the
+    `branch_status_rendering` split, so `import mcp_coder` dies at collection
+    repo-wide — observed again as a silent **0 tests collected** before the shim
+    was in place.
+  - Workaround used to obtain real pytest signal: a temporary root `conftest.py`
+    synthesising `branch_status_rendering` from the stale install's names.
+    **It has been deleted** — `git status` shows only the two intended files
+    plus this tracker. Local diagnostic, not a fix; must not be committed.
+  - Still broken and NOT caused by this step: `tests/workflows/review/` and the
+    `test_check_branch_status*` modules fail on
+    `BranchStatusReport.pr_feedback_undeterminable` / `CIStatus`, which the shim
+    cannot supply. Clears with:
+    `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+  - pylint: no issue in either file this step touches. Every reported error is
+    `E0401`/`E0611` for uninstalled optional deps (`langchain_*`, `httpx`,
+    `mcp.server.fastmcp`) plus `E1123`/`E1101` for `fail_on_reviews` /
+    `pr_feedback_undeterminable` — all downstream of the stale install.
+  - mypy: 8 errors, byte-identical to Steps 1–6, none in this step's files. The
+    new `from .task_processing import read_and_clear_blocked` introduces no
+    cycle — `task_processing` does not import `finalisation`.
+  - black/isort: no changes (614 files unchanged). File-size gate passes
+    (822 files ≤ 750 lines).
+- [x] Commit message prepared
 
 ### Step 8: Docs — failure-label tables, HTML matrix, architecture note
 

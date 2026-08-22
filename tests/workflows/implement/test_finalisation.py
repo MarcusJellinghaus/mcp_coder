@@ -5,6 +5,7 @@ from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerFileNotFoundError
+from mcp_coder.workflows.implement.constants import BLOCKED_FILE
 from mcp_coder.workflows.implement.finalisation import run_finalisation
 
 
@@ -371,3 +372,115 @@ class TestRunFinalisation:
         result = run_finalisation(tmp_path, "claude")
 
         assert result is True
+
+
+class TestFinalisationBlockedMarkerCleanup:
+    """Tests for blocked-marker cleanup and the commit message path substitution."""
+
+    @staticmethod
+    def _write_marker_side_effect(project_dir: Path, text: str) -> Any:
+        """Build a prompt_llm side effect that writes a blocked marker like a real agent."""
+
+        def _side_effect(*_args: Any, **_kwargs: Any) -> Dict[str, Any]:
+            marker = project_dir / BLOCKED_FILE
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.write_text("Cannot proceed - schema is ambiguous", encoding="utf-8")
+            return _make_llm_response(text)
+
+        return _side_effect
+
+    @patch("mcp_coder.workflows.implement.finalisation.push_changes")
+    @patch("mcp_coder.workflows.implement.finalisation.commit_all_changes")
+    @patch(
+        "mcp_coder.workflows.implement.finalisation.generate_commit_message_with_llm"
+    )
+    @patch("mcp_coder.workflows.implement.finalisation.get_full_status")
+    @patch("mcp_coder.workflows.implement.finalisation.store_session")
+    @patch("mcp_coder.workflows.implement.finalisation.prompt_llm")
+    @patch("mcp_coder.workflows.implement.finalisation.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.finalisation.has_incomplete_work")
+    def test_blocked_marker_removed_before_commit(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        mock_generate_commit_msg: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Marker written by the finalisation agent is cleared, commit still happens."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_prompt_llm.side_effect = self._write_marker_side_effect(
+            tmp_path, "Finalisation completed"
+        )
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": ["some_file.py"],
+            "untracked": [],
+        }
+        mock_generate_commit_msg.return_value = (True, "Generated message", None)
+        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
+        mock_push.return_value = True
+
+        result = run_finalisation(tmp_path, "claude")
+
+        assert result is True
+        assert not (tmp_path / BLOCKED_FILE).exists()
+        mock_commit.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.finalisation.store_session")
+    @patch("mcp_coder.workflows.implement.finalisation.prompt_llm")
+    @patch("mcp_coder.workflows.implement.finalisation.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.finalisation.has_incomplete_work")
+    def test_blocked_marker_removed_on_empty_response(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Empty-response early exit still clears the marker (pins the finally)."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_prompt_llm.side_effect = self._write_marker_side_effect(tmp_path, "")
+
+        result = run_finalisation(tmp_path, "claude")
+
+        assert result is False
+        assert not (tmp_path / BLOCKED_FILE).exists()
+
+    @patch("mcp_coder.workflows.implement.finalisation.get_full_status")
+    @patch("mcp_coder.workflows.implement.finalisation.store_session")
+    @patch("mcp_coder.workflows.implement.finalisation.prompt_llm")
+    @patch("mcp_coder.workflows.implement.finalisation.prepare_llm_environment")
+    @patch("mcp_coder.workflows.implement.finalisation.has_incomplete_work")
+    def test_commit_message_path_has_no_double_prefix(
+        self,
+        mock_has_incomplete: MagicMock,
+        mock_prepare_env: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_get_status: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """The finalisation prompt hands the agent the real commit message path."""
+        mock_has_incomplete.return_value = True
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(tmp_path)}
+        mock_prompt_llm.return_value = _make_llm_response("Finalisation completed")
+        mock_get_status.return_value = {
+            "staged": [],
+            "modified": [],
+            "untracked": [],
+        }
+
+        run_finalisation(tmp_path, "claude")
+
+        call_args = mock_prompt_llm.call_args
+        prompt = call_args[0][0] if call_args[0] else call_args[1].get("question", "")
+        assert "pr_info/.commit_message.txt" in prompt
+        assert "pr_info/pr_info" not in prompt
