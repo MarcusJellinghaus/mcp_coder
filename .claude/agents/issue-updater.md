@@ -5,6 +5,7 @@ tools:
   - Bash
   - mcp__mcp-workspace__github_issue_view
   - mcp__mcp-workspace__save_file
+  - mcp__mcp-workspace__edit_file
   - mcp__mcp-workspace__delete_this_file
   - mcp__mcp-workspace__read_file
 permissionMode: bypassPermissions
