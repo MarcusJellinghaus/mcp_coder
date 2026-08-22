@@ -198,6 +198,49 @@ class TestWorkspaceSetup:
         content = gitignore.read_text(encoding="utf-8")
         assert content.count(".vscodeclaude_status.txt") == 1
 
+    def test_update_gitignore_fresh_file_starts_with_header(
+        self, tmp_path: Path
+    ) -> None:
+        """A .gitignore created from scratch starts at the comment header."""
+        added = update_gitignore(tmp_path)
+
+        content = (tmp_path / ".gitignore").read_text(encoding="utf-8")
+        assert content.startswith("# VSCodeClaude session files (auto-generated)\n")
+        assert content.endswith("\n")
+        assert added == [
+            ".vscodeclaude_status.txt",
+            ".vscodeclaude_analysis.json",
+            ".vscodeclaude_session.json",
+            ".vscodeclaude_start.bat",
+            ".vscodeclaude_start.sh",
+        ]
+
+    def test_update_gitignore_no_trailing_newline(self, tmp_path: Path) -> None:
+        """Entries never get glued onto a last line that lacks its newline."""
+        gitignore = tmp_path / ".gitignore"
+        gitignore.write_text("*.pyc", encoding="utf-8")  # no trailing newline
+
+        update_gitignore(tmp_path)
+
+        content = gitignore.read_text(encoding="utf-8")
+        assert content.splitlines()[0] == "*.pyc"
+        assert "# VSCodeClaude session files (auto-generated)" in content.splitlines()
+        assert content.endswith("\n")
+
+    def test_update_gitignore_preserves_existing_line_endings(
+        self, tmp_path: Path
+    ) -> None:
+        """Existing bytes are untouched and the appended block uses LF."""
+        gitignore = tmp_path / ".gitignore"
+        gitignore.write_bytes(b"*.pyc\n")  # LF file, trailing newline present
+
+        update_gitignore(tmp_path)
+
+        raw = gitignore.read_bytes()
+        assert raw.startswith(b"*.pyc\n")  # existing bytes unchanged, still LF
+        assert b"\r\n" not in raw  # appended block uses LF too, also on Windows
+        assert raw.endswith(b"\n")
+
     def test_update_gitignore_appends_missing_entry_on_upgrade(
         self, tmp_path: Path
     ) -> None:
@@ -214,13 +257,14 @@ class TestWorkspaceSetup:
             encoding="utf-8",
         )
 
-        update_gitignore(tmp_path)
+        added = update_gitignore(tmp_path)
 
         content = gitignore.read_text(encoding="utf-8")
         # New entry now present, exactly once, without re-adding old ones.
         assert content.count(".vscodeclaude_session.json") == 1
         assert content.count(".vscodeclaude_status.txt") == 1
         assert "*.pyc" in content
+        assert added == [".vscodeclaude_session.json"]
 
     def test_update_gitignore_up_to_date_unchanged(self, tmp_path: Path) -> None:
         """A fully up-to-date .gitignore is left byte-for-byte unchanged."""
@@ -228,11 +272,12 @@ class TestWorkspaceSetup:
         gitignore = tmp_path / ".gitignore"
         before = gitignore.read_text(encoding="utf-8")
 
-        update_gitignore(tmp_path)
+        added = update_gitignore(tmp_path)
 
         after = gitignore.read_text(encoding="utf-8")
         assert after == before
         assert after.count(".vscodeclaude_session.json") == 1
+        assert added == []
 
     def test_create_workspace_file(
         self, tmp_path: Path, mock_vscodeclaude_config: None
