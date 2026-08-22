@@ -24,7 +24,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
 - [x] [Step 1](./steps/step_1.md) - `update_gitignore`: return value + foreign-file safety
-- [ ] [Step 2](./steps/step_2.md) - Wire the gitignore block into `mcp-coder init`
+- [x] [Step 2](./steps/step_2.md) - Wire the gitignore block into `mcp-coder init`
 - [ ] [Step 3](./steps/step_3.md) - Documentation
 
 ## Pull Request
