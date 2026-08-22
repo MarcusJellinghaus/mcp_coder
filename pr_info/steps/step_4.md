@@ -9,7 +9,7 @@ label's `internal_id`.
 |------|--------|
 | `src/mcp_coder/config/labels.json` | new entry in `workflow_labels` |
 | `tests/config/test_label_config.py` | add to `ERROR_STATUS_IDS` (`:176`) |
-| `tests/cli/commands/test_define_labels.py` | add to `expected_names` (`:128` area) |
+| `tests/cli/commands/test_define_labels.py` | add to `expected_names` (`:128` area) **and bump the label count `36` → `37` (`:69-72`)** |
 
 ## WHAT
 
@@ -50,6 +50,17 @@ Only `emoji` and `stage_short` are genuinely free; everything else follows the s
 same index in both `labels.json` and the expected list (i.e. after
 `"status-06f-nochange:no-changes-after-retries"`).
 
+The same file also hard-asserts the label **count** at `:69-72`:
+
+```python
+assert (
+    len(labels_config["workflow_labels"]) == 36
+), "Config should contain exactly 36 workflow labels"
+```
+
+Bump both the number and the message to `37`. Missing this leaves Step 4 red even though
+the name list matches.
+
 `blocked` already exists in `labels.json` as an *ignore* label
 (`ignore_labels: ["Overview", "blocked", "wait"]`) meaning "human says don't touch".
 `get_matching_ignore_label` matches exactly, so there is no functional collision — leave
@@ -71,7 +82,8 @@ None — declarative config.
    `test_error_statuses_have_vscodeclaude_commands` then asserts
    `commands == ["/check_branch_status"]` for it.
 2. `tests/cli/commands/test_define_labels.py` — add
-   `"status-06f-blocked:implementation-blocked"` to `expected_names` at the matching index.
+   `"status-06f-blocked:implementation-blocked"` to `expected_names` at the matching index,
+   **and** change the count assertion at `:69-72` from `36` to `37` (message text too).
 3. The existing structural tests (required keys, valid category, unique id/name, 6-char hex
    colour, `vscodeclaude` required keys) cover the rest automatically — no new test needed.
 
@@ -92,9 +104,11 @@ touch any workflow source file — wiring the reason to this label is Step 5.
 
 Work test-first: add the two test entries, watch them fail, then add the labels.json entry.
 
-Two traps:
+Three traps:
 - tests/cli/commands/test_define_labels.py compares the full name list with == and is
   order-sensitive. Insert at the same index in both places.
+- The same file also asserts len(workflow_labels) == 36 at lines 69-72. Bump it to 37
+  (and the assertion message with it), or the step lands red.
 - The top-level "color" is a 6-char hex (format-asserted); the nested
   vscodeclaude.color is the string "red". They are different fields.
 
