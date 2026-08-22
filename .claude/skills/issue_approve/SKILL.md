@@ -14,9 +14,6 @@ allowed-tools:
 
 Approve the current issue to transition it to the next status in the workflow.
 
-This skill does not touch assignment. Nothing in the automation assigns issues — that is a
-human decision, and an issue is normally already assigned by the time it reaches approval.
-
 ## Resolve Issue Number
 
 The user may provide an issue number as the argument (available as `$ARGUMENTS`).
@@ -60,11 +57,9 @@ This triggers the GitHub Action to promote the issue status (e.g., `status-01:cr
    what you saw in step 1. The comment in step 3 only *requests* the transition; the Action
    performs it, and it can be slow or fail.
 
-   If the label has not changed, say so plainly — report the issue as still sitting at its old
-   status. Do not wait again or re-comment; a second `/approve` does not help and clutters the
-   issue.
+   If the label has not changed, report the issue as still sitting at its old status.
 
 6. Report the issue number, the status transition (from → to, or "unchanged"), and the
-   assignee as it stands — read only, do not change it.
+   assignee.
 
 **Note:** This skill has `disable-model-invocation` — it can only be run by the user typing `/issue_approve`. If you need this skill as a follow-up, tell the user: "Please run `/issue_approve` to proceed."
