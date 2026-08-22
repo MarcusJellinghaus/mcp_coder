@@ -307,26 +307,34 @@ def read_and_clear_blocked(project_dir: Path) -> Optional[str]:
         None if no marker exists. Otherwise the stripped marker text (truncated
         to BLOCKED_REASON_MAX_CHARS), or BLOCKED_REASON_FALLBACK when the marker
         is empty or whitespace only - an empty marker still means blocked.
-        The file is deleted in every case where it exists.
+        The file is deleted in every case where it exists, and the reason is
+        logged before the delete so the cleanup call sites - which discard the
+        return value - still leave a trace. Never raises: callers invoke this
+        from their own `finally`, where an exception would replace the original
+        LLM failure.
     """
     blocked_path = project_dir / BLOCKED_FILE
     if not blocked_path.exists():
         return None
 
+    reason = BLOCKED_REASON_FALLBACK
     try:
         text = blocked_path.read_text(encoding="utf-8").strip()
+        if len(text) > BLOCKED_REASON_MAX_CHARS:
+            reason = text[:BLOCKED_REASON_MAX_CHARS] + "..."
+        elif text:
+            reason = text
+        logger.warning("Blocked marker found: %s", reason)
     except OSError as e:
         logger.warning(f"Could not read blocked marker: {e}")
-        text = ""
     finally:
         # Delete even if the read failed - a stale marker breaks the next run.
-        blocked_path.unlink(missing_ok=True)
+        try:
+            blocked_path.unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning(f"Could not delete blocked marker: {e}")
 
-    if not text:
-        return BLOCKED_REASON_FALLBACK
-    if len(text) > BLOCKED_REASON_MAX_CHARS:
-        return text[:BLOCKED_REASON_MAX_CHARS] + "..."
-    return text
+    return reason
 
 
 def _cleanup_commit_message_file(project_dir: Path) -> None:

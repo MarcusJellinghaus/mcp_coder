@@ -229,41 +229,45 @@ def run_implement_workflow(
             # categorize them here (the only live call site) into
             # timeout / mcp_unavailable.
             try:
-                mypy_clean = check_and_fix_mypy(
-                    project_dir,
-                    0,
-                    provider,
-                    env_vars,
-                    mcp_config,
-                    settings_file,
-                    execution_dir=execution_dir,
-                )
-            except (LLMTimeoutError, McpServersUnavailableError) as exc:
-                # Fallback keeps mypy happy; the reason is non-None for both types.
-                reason = llm_failure_reason(exc) or "general"
-                return fail(
-                    reason,
-                    stage="Final mypy check",
-                    message="LLM failure during final mypy check",
-                )
-            if not mypy_clean:
-                logger.warning(
-                    "Final mypy check found unresolved issues - continuing anyway"
-                )
+                try:
+                    mypy_clean = check_and_fix_mypy(
+                        project_dir,
+                        0,
+                        provider,
+                        env_vars,
+                        mcp_config,
+                        settings_file,
+                        execution_dir=execution_dir,
+                    )
+                except (LLMTimeoutError, McpServersUnavailableError) as exc:
+                    # Fallback keeps mypy happy; the reason is non-None for both types.
+                    reason = llm_failure_reason(exc) or "general"
+                    return fail(
+                        reason,
+                        stage="Final mypy check",
+                        message="LLM failure during final mypy check",
+                    )
+                if not mypy_clean:
+                    logger.warning(
+                        "Final mypy check found unresolved issues - continuing anyway"
+                    )
 
-            # Format code after mypy fixes
-            if implement_config.format_code and not run_formatters(project_dir):
-                logger.error("Formatting failed after final mypy check")
-                return fail(
-                    "general",
-                    stage="Post-implementation formatting",
-                    message="Formatting failed after final mypy check",
-                )
+                # Format code after mypy fixes
+                if implement_config.format_code and not run_formatters(project_dir):
+                    logger.error("Formatting failed after final mypy check")
+                    return fail(
+                        "general",
+                        stage="Post-implementation formatting",
+                        message="Formatting failed after final mypy check",
+                    )
+            finally:
+                # check_and_fix_mypy runs its own LLM turns, so drop any marker
+                # it wrote: before the staging below so it never reaches a
+                # commit, and on both early returns above so it cannot poison
+                # the next run at check_git_clean / prepare_task_tracker.
+                read_and_clear_blocked(project_dir)
 
-            # Commit mypy fixes if any changes were made. check_and_fix_mypy runs
-            # its own LLM turns, so drop any marker it wrote before staging -
-            # never let a marker reach a commit.
-            read_and_clear_blocked(project_dir)
+            # Commit mypy fixes if any changes were made.
             status = get_full_status(project_dir)
             all_changes = status["staged"] + status["modified"] + status["untracked"]
 

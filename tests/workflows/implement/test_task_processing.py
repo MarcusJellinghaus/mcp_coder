@@ -1203,6 +1203,44 @@ class TestProcessSingleTaskBlocked:
         assert "tools-py is down" in outcome.detail
         assert not (tmp_path / BLOCKED_FILE).exists()
 
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_marker_plus_empty_response_reports_blocked(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_get_status: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """For the untyped 'error' paths, blocked wins over the generic label.
+
+        The empty-response guard is a plain return inside the try body, so it
+        would bypass the marker entirely if the read were not in a `finally`.
+        'error' maps to the uninformative 'general' label the marker exists to
+        replace, hence the opposite precedence to timeout / mcp_unavailable.
+        """
+
+        def _empty_response_with_marker(
+            *_args: Any, **_kwargs: Any
+        ) -> dict[str, object]:
+            self._write_marker(tmp_path, "cannot verify - checks never return")
+            return _make_llm_response("")
+
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.side_effect = _empty_response_with_marker
+        mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
+
+        outcome = process_single_task(tmp_path, "claude")
+
+        assert outcome.success is False
+        assert outcome.reason == "blocked"
+        assert outcome.detail == "cannot verify - checks never return"
+        assert not (tmp_path / BLOCKED_FILE).exists()
+
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
     def test_stale_marker_removed_at_task_start(
         self, mock_get_next_task: MagicMock, tmp_path: Path
