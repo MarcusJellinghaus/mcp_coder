@@ -26,7 +26,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 Details: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — re-verified; **pytest still blocked**.
+- [ ] Quality checks: pylint, pytest, mypy — re-verified a 2nd time; **pytest still blocked**.
   - pylint: no issues in any file this step touches. All reported errors are
     `E0401`/`E0611` for uninstalled optional deps (`langchain_*`, `httpx`,
     `mcp.server.fastmcp`) plus `E1123`/`E1101` for `fail_on_reviews` /
@@ -38,14 +38,24 @@ Details: [step_1.md](./steps/step_1.md)
     `mcp_workspace.checks.branch_status_rendering`, which is absent from the
     `mcp-workspace` installed in `.venv`. That import runs via
     `mcp_coder/__init__.py:37`, so every test module importing `mcp_coder`
-    fails at collection — `TestReadAndClearBlocked` collects 0 tests.
-    `mcp-workspace` is installed unpinned from git main (`pyproject.toml:348`) and the
-    upstream repo *does* contain `branch_status_rendering.py`, so the `.venv`
-    copy has simply drifted behind main.
-  - Remediation (environment change — needs an explicit go-ahead, and is not
-    something this step should make on its own):
+    fails at collection — `TestReadAndClearBlocked` collects 0 tests
+    (`ImportError while importing test module`, confirmed with `-n 0`).
+  - Root cause now *directly observed*, not just inferred: resolving
+    `mcp_workspace` in an up-to-date interpreter shows
+    `branch_status_rendering` present (301 lines) and `BranchStatusReport`
+    carrying both `pr_feedback_undeterminable` and
+    `format_for_human(..., fail_on_reviews=...)`. So upstream main has every
+    symbol this repo's code expects, and a single stale `.venv` copy explains
+    all five distinct error signatures above. `mcp-workspace` is installed
+    unpinned from git main (`pyproject.toml:348`), so drift is expected.
+  - Remediation (environment change — needs an explicit go-ahead; also not
+    executable from this agent, which has no shell tool):
     `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
     then re-run the three checks and tick this box.
+  - Not ticked on purpose: this step's five new tests have never executed once,
+    so there is no green to report yet. Verified by inspection instead — the
+    helper at `task_processing.py:282-311` matches the step's ALGORITHM and
+    DATA tables exactly (delete-in-`finally`, fallback on empty, 500+`"..."`).
   - Pre-existing and unrelated to this step: the step is a pure addition and
     touches no file that any check complains about.
 - [x] Commit message prepared
