@@ -28,7 +28,7 @@ On top of that process:
   that no open questions remain. This replaces the skill's step 2, which assumes a human
   judging a conversation. If either check fails, stop and report back without approving.
 - **Shell** — `gh` commands only.
-- **Report** the issue number, the status transition, and the assignee as found.
+- **Report** the issue number, the status transition, and the assignee.
 
 The working directory is already correct — do not use `cd` or `git -C`.
 
