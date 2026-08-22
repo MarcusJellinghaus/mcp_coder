@@ -36,3 +36,22 @@ I'll gather context now.I reviewed the knowledge base, issue #1112, and all nine
 Verdict(decision='tasks', tasks=["Fix pr_info/steps/step_4.md:12 — add tests/workflows/vscodeclaude/test_types.py to Step 4's file list and specify updating the assertion at line 309 (len(human_action_labels) == 26 → 27), since the new label is category: human_action.", 'Fix pr_info/steps/step_4.md:12 — add tests/cli/commands/test_define_labels_label_changes.py to Step 4\'s file list and specify updating the assertions at lines 308 and 311 (len(result["created"]) == 35 and create_label.call_count == 35 → 36) which derive from the bundled label config.', "Fix pr_info/steps/summary.md:214 and :231 — update the 'Modified — tests' list to include tests/workflows/vscodeclaude/test_types.py and tests/cli/commands/test_define_labels_label_changes.py, and correct the Step 4 row's '2 test files' count to match the full set of test files Step 4 touches."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 4 — 2026-08-22
+**Findings**:
+I'll gather context now.`pr_info/steps/step_4.md:13` — high — the `test_define_labels_label_changes.py` row lists only `:308` and `:311`; the same file asserts `len(result["created"]) == 35` a third time at `:366` (in `test_apply_labels_dry_run_mode`), built from the same bundled `labels.json` via the `labels_config_path` fixture, so it also becomes `36` — Step 4 lands red as written. Same omission repeats at `step_4.md:69`, `:103` ("both `:308` and `:311`") and `:132` (LLM PROMPT).
+
+`pr_info/steps/summary.md:219` — high — propagates the same omission: "`35` → `36` at `test_define_labels_label_changes.py:308,311`" must also cover `:366`; the Step 4 row at `:238` ("`35` → `36` twice") must read three times.
+**Decisions**:
+Verdict(decision='tasks', tasks=['Fix pr_info/steps/step_4.md — the test_define_labels_label_changes.py entries at :13, :69, :103 and :132 list only lines 308 and 311, but the same file asserts len(result["created"]) == 35 a third time at :366 (test_apply_labels_dry_run_mode, built from the same bundled labels.json via the labels_config_path fixture). Update every one of those references to cover :308, :311 and :366 (35 → 36), including the LLM PROMPT at :132.', 'Fix pr_info/steps/summary.md — line :219 must list test_define_labels_label_changes.py:308,311,366 for the 35 → 36 change, and the Step 4 row at :238 must say the change occurs three times rather than twice.'], escalate_reason=None)
+**Changes**:
+applied
+
+## Round 5 — 2026-08-22
+**Findings**:
+I'll gather context now.`pr_info/steps/step_5.md:80` — medium — the final-mypy cleanup is a bare `read_and_clear_blocked(project_dir)` before `get_full_status`, bypassed by the two early returns above it (`core.py:220-227` typed LLM failure from `check_and_fix_mypy`, `core.py:236-240` formatting failure); Steps 3 and 7 use `finally` for exactly this bypass class, so a marker written by the mypy-fix turn can survive and poison the next run at `check_git_clean` / `prepare_task_tracker`.
+`pr_info/steps/step_7.md:145` — medium — LLM PROMPT says "write the two tests described in the step file" while the TESTS section at `:93` lists three; the third (`test_commit_message_path_has_no_double_prefix`) is the only test pinning the §9 live-bug fix, so the implementing agent can drop it and land the behavioural fix unpinned.
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
