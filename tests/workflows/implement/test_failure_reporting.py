@@ -11,6 +11,7 @@ from mcp_coder.workflows.implement.failure_reporting import (
     _fail,
     format_failure_comment,
 )
+from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
 
 class TestFailureLabels:
@@ -450,7 +451,7 @@ class TestDeliberateFailurePathsThroughWorkflow:
         mock_rebase.return_value = True
         mock_diff.return_value = ""
         mock_prepare.return_value = True
-        mock_process.return_value = (False, "timeout")
+        mock_process.return_value = TaskOutcome(False, "timeout")
 
         result = run_implement_workflow(Path("/fake"), "claude")
 

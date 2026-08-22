@@ -6,6 +6,7 @@ including LLM integration, mypy fixes, formatting, and git operations.
 
 import logging
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -46,6 +47,21 @@ RETRY_REMINDER = (
     "[ ] → [x] in pr_info/TASK_TRACKER.md — that file edit IS the deliverable. "
     "If the task genuinely needs code, do the work now."
 )
+
+
+@dataclass(frozen=True)
+class TaskOutcome:
+    """Result of one implementation task attempt.
+
+    Attributes:
+        success: True if the task completed successfully.
+        reason: Category key the orchestrator maps to a failure label.
+        detail: Free-text explanation accompanying the category, if any.
+    """
+
+    success: bool
+    reason: str
+    detail: str = ""
 
 
 def get_next_task(project_dir: Path) -> Optional[str]:
@@ -328,7 +344,7 @@ def process_single_task(
     attempt: int = 1,
     format_code: bool = False,
     check_type_hints: bool = False,
-) -> tuple[bool, str]:
+) -> TaskOutcome:
     """Process a single implementation task.
 
     Args:
@@ -342,12 +358,13 @@ def process_single_task(
         check_type_hints: If True, run mypy type checking after implementation
 
     Returns:
-        Tuple of (success, reason) where:
+        TaskOutcome where:
         - success: True if task completed successfully
         - reason: 'completed' | 'no_tasks' | 'no_changes' | 'error' | 'timeout'
           | 'mcp_unavailable'. The two LLM failures (inactivity timeout, MCP
           servers unavailable) are categorized here into their reason strings so
           the orchestrator can map them to a failure label.
+        - detail: free-text explanation; currently always empty.
     """
     # Cleanup stale commit message file from previous failed runs
     _cleanup_commit_message_file(project_dir)
@@ -362,7 +379,7 @@ def process_single_task(
     next_task = get_next_task(project_dir)
     if not next_task:
         logger.info("No incomplete tasks found")
-        return False, "no_tasks"
+        return TaskOutcome(False, "no_tasks")
 
     # Step 3: Get implementation prompt template
     logger.debug("Loading implementation prompt template...")
@@ -374,7 +391,7 @@ def process_single_task(
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error loading prompt template: {e}")
-        return False, "error"
+        return TaskOutcome(False, "error")
 
     # Step 4: Extract step number from task (needed for store_session step_name)
     step_match = re.search(r"Step (\d+)", next_task)
@@ -410,7 +427,7 @@ Please implement this task step by step."""
         if not response or not response.strip():
             logger.error("LLM returned empty response")
             logger.debug(f"Response was: {repr(response)}")
-            return False, "error"
+            return TaskOutcome(False, "error")
 
         logger.info("LLM response received successfully")
 
@@ -434,12 +451,12 @@ Please implement this task step by step."""
         # llm_failure_reason are non-None for these exception types.
         reason = llm_failure_reason(e) or "error"
         logger.error("LLM call failed (%s) for task: %s", reason, next_task)
-        return False, reason
+        return TaskOutcome(False, reason)
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error calling LLM: {e}")
-        return False, "error"
+        return TaskOutcome(False, "error")
 
     # Step 6: Check if any files were actually changed
     try:
@@ -452,12 +469,12 @@ Please implement this task step by step."""
                 "This might indicate the task is already complete or the LLM didn't make changes"
             )
             logger.info("Skipping commit/push for this task")
-            return False, "no_changes"
+            return TaskOutcome(False, "no_changes")
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking file changes: {e}")
-        return False, "error"
+        return TaskOutcome(False, "error")
 
     # Step 7: Run mypy check and fixes (each fix will be saved separately)
     if check_type_hints and RUN_MYPY_AFTER_EACH_TASK:
@@ -481,7 +498,7 @@ Please implement this task step by step."""
     # Step 8: Run formatters
     if format_code:
         if not run_formatters(project_dir):
-            return False, "error"
+            return TaskOutcome(False, "error")
 
     # Step 9: Commit changes (same session params as the step's main LLM call)
     if not commit_changes(
@@ -491,14 +508,14 @@ Please implement this task step by step."""
         execution_dir=cwd,
         settings_file=settings_file,
     ):
-        return False, "error"
+        return TaskOutcome(False, "error")
 
     # Step 10: Push changes to remote
     if not push_changes(project_dir):
-        return False, "error"
+        return TaskOutcome(False, "error")
 
     logger.info(f"Task completed successfully: {next_task}")
-    return True, "completed"
+    return TaskOutcome(True, "completed")
 
 
 def process_task_with_retry(
@@ -509,7 +526,7 @@ def process_task_with_retry(
     execution_dir: Optional[Path] = None,
     format_code: bool = False,
     check_type_hints: bool = False,
-) -> tuple[bool, str]:
+) -> TaskOutcome:
     """Process a single task with bounded retry on zero-change results.
 
     Calls process_single_task up to MAX_NO_CHANGE_RETRIES times.
@@ -525,13 +542,13 @@ def process_task_with_retry(
         check_type_hints: If True, run mypy type checking after implementation
 
     Returns:
-        Tuple of (success, reason) where reason may be:
+        TaskOutcome whose reason may be:
         - 'completed' | 'no_tasks' | 'error' | 'timeout' | 'mcp_unavailable'
-          (from process_single_task)
+          (from process_single_task, returned unchanged)
         - 'no_changes_after_retries' (exhausted all retry attempts)
     """
     for attempt in range(1, MAX_NO_CHANGE_RETRIES + 1):
-        success, reason = process_single_task(
+        outcome = process_single_task(
             project_dir,
             provider,
             mcp_config=mcp_config,
@@ -541,7 +558,7 @@ def process_task_with_retry(
             format_code=format_code,
             check_type_hints=check_type_hints,
         )
-        if reason != "no_changes":
-            return success, reason
+        if outcome.reason != "no_changes":
+            return outcome
         logger.warning(f"No changes on attempt {attempt}/{MAX_NO_CHANGE_RETRIES}")
-    return False, "no_changes_after_retries"
+    return TaskOutcome(False, "no_changes_after_retries")

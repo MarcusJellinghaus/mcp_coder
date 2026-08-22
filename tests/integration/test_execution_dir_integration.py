@@ -329,7 +329,7 @@ class TestSubprocessCwdParameter:
         # which is then converted to string and passed as cwd
         assert options.cwd == str(Path.cwd())
 
-    @patch("mcp_coder.workflows.implement.core.process_single_task")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
@@ -345,7 +345,9 @@ class TestSubprocessCwdParameter:
         tmp_path: Path,
     ) -> None:
         """Test implement workflow passes execution_dir to task processing."""
+        from mcp_coder.utils.pyproject_config import get_implement_config
         from mcp_coder.workflows.implement.core import run_implement_workflow
+        from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
         # Setup
         execution_dir = tmp_path / "execution"
@@ -360,7 +362,7 @@ class TestSubprocessCwdParameter:
         mock_check_main_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.return_value = (False, "no_tasks")  # No more tasks
+        mock_process_task.return_value = TaskOutcome(False, "no_tasks")  # No more tasks
 
         # Execute
         result = run_implement_workflow(
@@ -373,9 +375,18 @@ class TestSubprocessCwdParameter:
         mock_prepare_tracker.assert_called_once_with(
             project_dir, "claude", None, None, execution_dir
         )
-        # Check that process_single_task received execution_dir
+        # Check that process_task_with_retry received execution_dir. The config
+        # keywords are read from the real project rather than hard-coded so the
+        # assertion tracks the actual defaults.
+        cfg = get_implement_config(project_dir)
         mock_process_task.assert_called_once_with(
-            project_dir, "claude", None, None, execution_dir
+            project_dir,
+            "claude",
+            None,
+            None,
+            execution_dir,
+            format_code=cfg.format_code,
+            check_type_hints=cfg.check_type_hints,
         )
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")

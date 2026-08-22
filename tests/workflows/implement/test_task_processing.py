@@ -13,6 +13,7 @@ from mcp_coder.workflows.implement.task_processing import (
     BLOCKED_REASON_FALLBACK,
     BLOCKED_REASON_MAX_CHARS,
     RETRY_REMINDER,
+    TaskOutcome,
     _cleanup_commit_message_file,
     check_and_fix_mypy,
     get_next_task,
@@ -309,15 +310,15 @@ class TestProcessSingleTask:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        success, reason = process_single_task(
+        outcome = process_single_task(
             Path("/test/project"),
             "claude",
             format_code=True,
             check_type_hints=True,
         )
 
-        assert success is True
-        assert reason == "completed"
+        assert outcome.success is True
+        assert outcome.reason == "completed"
 
         # Verify all steps were called
         mock_get_next_task.assert_called_once()
@@ -345,10 +346,10 @@ class TestProcessSingleTask:
         """Test processing single task when no tasks available."""
         mock_get_next_task.return_value = None
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        outcome = process_single_task(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "no_tasks"
+        assert outcome.success is False
+        assert outcome.reason == "no_tasks"
 
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
@@ -359,10 +360,10 @@ class TestProcessSingleTask:
         mock_get_next_task.return_value = "Step 1: Test task"
         mock_get_prompt.side_effect = Exception("Prompt error")
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        outcome = process_single_task(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "error"
+        assert outcome.success is False
+        assert outcome.reason == "error"
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
@@ -378,10 +379,10 @@ class TestProcessSingleTask:
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = Exception("LLM error")
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        outcome = process_single_task(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "error"
+        assert outcome.success is False
+        assert outcome.reason == "error"
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
@@ -401,10 +402,10 @@ class TestProcessSingleTask:
             "LLM request timed out after 3600s"
         )
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        outcome = process_single_task(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "timeout"
+        assert outcome.success is False
+        assert outcome.reason == "timeout"
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
@@ -429,10 +430,10 @@ class TestProcessSingleTask:
             "LLM request timed out after 3600s"
         )
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        outcome = process_single_task(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "timeout"
+        assert outcome.success is False
+        assert outcome.reason == "timeout"
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
@@ -455,10 +456,10 @@ class TestProcessSingleTask:
             {"mcp-tools-py": "failed"},
         )
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        outcome = process_single_task(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "mcp_unavailable"
+        assert outcome.success is False
+        assert outcome.reason == "mcp_unavailable"
 
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
@@ -479,10 +480,10 @@ class TestProcessSingleTask:
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
 
-        success, reason = process_single_task(Path("/test/project"), "claude")
+        outcome = process_single_task(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "no_changes"
+        assert outcome.success is False
+        assert outcome.reason == "no_changes"
         # store_session still called even with no changes
         mock_store_session.assert_called_once()
         # Should not continue to formatting/commit/push when no changes
@@ -519,12 +520,12 @@ class TestProcessSingleTask:
         mock_check_mypy.return_value = True
         mock_run_formatters.return_value = False
 
-        success, reason = process_single_task(
+        outcome = process_single_task(
             Path("/test/project"), "claude", format_code=True, check_type_hints=True
         )
 
-        assert success is False
-        assert reason == "error"
+        assert outcome.success is False
+        assert outcome.reason == "error"
 
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
@@ -619,12 +620,12 @@ class TestProcessSingleTaskGating:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        success, reason = process_single_task(
+        outcome = process_single_task(
             Path("/test/project"), "claude", format_code=False
         )
 
-        assert success is True
-        assert reason == "completed"
+        assert outcome.success is True
+        assert outcome.reason == "completed"
         mock_run_formatters.assert_not_called()
 
     @patch("mcp_coder.workflows.implement.task_processing.push_changes")
@@ -661,12 +662,10 @@ class TestProcessSingleTaskGating:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        success, reason = process_single_task(
-            Path("/test/project"), "claude", format_code=True
-        )
+        outcome = process_single_task(Path("/test/project"), "claude", format_code=True)
 
-        assert success is True
-        assert reason == "completed"
+        assert outcome.success is True
+        assert outcome.reason == "completed"
         mock_run_formatters.assert_called_once_with(Path("/test/project"))
 
     @patch(
@@ -705,12 +704,12 @@ class TestProcessSingleTaskGating:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        success, reason = process_single_task(
+        outcome = process_single_task(
             Path("/test/project"), "claude", check_type_hints=False
         )
 
-        assert success is True
-        assert reason == "completed"
+        assert outcome.success is True
+        assert outcome.reason == "completed"
         mock_check_mypy.assert_not_called()
 
     @patch(
@@ -750,12 +749,12 @@ class TestProcessSingleTaskGating:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        success, reason = process_single_task(
+        outcome = process_single_task(
             Path("/test/project"), "claude", check_type_hints=True
         )
 
-        assert success is True
-        assert reason == "completed"
+        assert outcome.success is True
+        assert outcome.reason == "completed"
         mock_check_mypy.assert_called_once()
 
     @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
@@ -763,7 +762,7 @@ class TestProcessSingleTaskGating:
         self, mock_process: MagicMock
     ) -> None:
         """Verify process_task_with_retry passes format_code and check_type_hints through."""
-        mock_process.return_value = (True, "completed")
+        mock_process.return_value = TaskOutcome(True, "completed")
 
         process_task_with_retry(
             Path("/test/project"),
@@ -829,13 +828,13 @@ class TestIntegration:
         mock_push.return_value = True
 
         # Execute workflow
-        success, reason = process_single_task(
+        outcome = process_single_task(
             project_dir, "claude", format_code=True, check_type_hints=True
         )
 
         # Verify success
-        assert success is True
-        assert reason == "completed"
+        assert outcome.success is True
+        assert outcome.reason == "completed"
 
         # Verify workflow steps executed in order
         mock_get_next_task.assert_called_once_with(project_dir)
@@ -904,14 +903,14 @@ class TestProcessTaskWithRetry:
     def test_retry_succeeds_on_second_attempt(self, mock_process: MagicMock) -> None:
         """First call returns no_changes, second returns completed."""
         mock_process.side_effect = [
-            (False, "no_changes"),
-            (True, "completed"),
+            TaskOutcome(False, "no_changes"),
+            TaskOutcome(True, "completed"),
         ]
 
-        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
 
-        assert success is True
-        assert reason == "completed"
+        assert outcome.success is True
+        assert outcome.reason == "completed"
         assert mock_process.call_count == 2
         # Verify attempt numbers
         assert mock_process.call_args_list[0].kwargs["attempt"] == 1
@@ -922,56 +921,56 @@ class TestProcessTaskWithRetry:
         self, mock_process: MagicMock
     ) -> None:
         """All 3 calls return no_changes."""
-        mock_process.return_value = (False, "no_changes")
+        mock_process.return_value = TaskOutcome(False, "no_changes")
 
-        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "no_changes_after_retries"
+        assert outcome.success is False
+        assert outcome.reason == "no_changes_after_retries"
         assert mock_process.call_count == 3
 
     @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
     def test_timeout_propagates_immediately(self, mock_process: MagicMock) -> None:
         """First call returns timeout — no retry."""
-        mock_process.return_value = (False, "timeout")
+        mock_process.return_value = TaskOutcome(False, "timeout")
 
-        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "timeout"
+        assert outcome.success is False
+        assert outcome.reason == "timeout"
         assert mock_process.call_count == 1
 
     @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
     def test_error_propagates_immediately(self, mock_process: MagicMock) -> None:
         """First call returns error — no retry."""
-        mock_process.return_value = (False, "error")
+        mock_process.return_value = TaskOutcome(False, "error")
 
-        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "error"
+        assert outcome.success is False
+        assert outcome.reason == "error"
         assert mock_process.call_count == 1
 
     @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
     def test_no_tasks_propagates_immediately(self, mock_process: MagicMock) -> None:
         """First call returns no_tasks — no retry."""
-        mock_process.return_value = (False, "no_tasks")
+        mock_process.return_value = TaskOutcome(False, "no_tasks")
 
-        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "no_tasks"
+        assert outcome.success is False
+        assert outcome.reason == "no_tasks"
         assert mock_process.call_count == 1
 
     @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
     def test_success_on_first_attempt_no_retry(self, mock_process: MagicMock) -> None:
         """First call returns completed — no retry."""
-        mock_process.return_value = (True, "completed")
+        mock_process.return_value = TaskOutcome(True, "completed")
 
-        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
 
-        assert success is True
-        assert reason == "completed"
+        assert outcome.success is True
+        assert outcome.reason == "completed"
         assert mock_process.call_count == 1
 
     @patch("mcp_coder.workflows.implement.task_processing.process_single_task")
@@ -980,14 +979,14 @@ class TestProcessTaskWithRetry:
     ) -> None:
         """First call no_changes, second call timeout — propagates immediately."""
         mock_process.side_effect = [
-            (False, "no_changes"),
-            (False, "timeout"),
+            TaskOutcome(False, "no_changes"),
+            TaskOutcome(False, "timeout"),
         ]
 
-        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "timeout"
+        assert outcome.success is False
+        assert outcome.reason == "timeout"
         assert mock_process.call_count == 2
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
@@ -1017,8 +1016,8 @@ class TestProcessTaskWithRetry:
             {"mcp-tools-py": "failed"},
         )
 
-        success, reason = process_task_with_retry(Path("/test/project"), "claude")
+        outcome = process_task_with_retry(Path("/test/project"), "claude")
 
-        assert success is False
-        assert reason == "mcp_unavailable"
+        assert outcome.success is False
+        assert outcome.reason == "mcp_unavailable"
         assert mock_prompt_llm.call_count == 1

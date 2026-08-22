@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from mcp_coder.workflows.implement.core import run_implement_workflow
+from mcp_coder.workflows.implement.task_processing import TaskOutcome
 
 
 class TestRunImplementWorkflow:
@@ -53,7 +54,10 @@ class TestRunImplementWorkflow:
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
         # First call: success, second call: no tasks (completion)
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 
@@ -165,7 +169,7 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.return_value = (False, "error")
+        mock_process_task.return_value = TaskOutcome(False, "error")
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 
@@ -192,7 +196,7 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.return_value = (False, "no_tasks")
+        mock_process_task.return_value = TaskOutcome(False, "no_tasks")
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 
@@ -221,7 +225,7 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.return_value = (False, "no_tasks")
+        mock_process_task.return_value = TaskOutcome(False, "no_tasks")
 
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
@@ -282,7 +286,10 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
 
         run_implement_workflow(Path("/test/project"), "claude")
 
@@ -332,7 +339,10 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 
@@ -388,7 +398,10 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 
@@ -450,7 +463,10 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
         mock_check_mypy.side_effect = LLMTimeoutError("timed out")
 
         result = run_implement_workflow(Path("/test/project"), "claude")
@@ -515,7 +531,10 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
         mock_check_mypy.side_effect = McpServersUnavailableError(
             "MCP servers unavailable",
             {"mcp-tools-py": "failed"},
@@ -581,7 +600,10 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
         mock_check_ci.side_effect = LLMTimeoutError("timed out")
 
         result = run_implement_workflow(Path("/test/project"), "claude")
@@ -646,7 +668,10 @@ class TestRunImplementWorkflow:
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
         mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
         mock_check_ci.side_effect = McpServersUnavailableError(
             "MCP servers unavailable",
             {"mcp-tools-py": "failed"},

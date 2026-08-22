@@ -142,7 +142,7 @@ def run_implement_workflow(
 
         # Step 4: Process all incomplete tasks in a loop
         while True:
-            success, reason = process_task_with_retry(
+            outcome = process_task_with_retry(
                 project_dir,
                 provider,
                 mcp_config,
@@ -152,25 +152,25 @@ def run_implement_workflow(
                 check_type_hints=implement_config.check_type_hints,
             )
 
-            if not success:
-                if reason == "no_tasks":
+            if not outcome.success:
+                if outcome.reason == "no_tasks":
                     # Legitimate completion - no more tasks
                     break
-                if reason == "timeout":
+                if outcome.reason == "timeout":
                     # LLM timeout during task processing
                     return fail(
                         "timeout",
                         stage="Task implementation",
                         message="LLM timed out during task processing",
                     )
-                if reason == "mcp_unavailable":
+                if outcome.reason == "mcp_unavailable":
                     # A required MCP server was unavailable during task processing
                     return fail(
                         "mcp_unavailable",
                         stage="Task implementation",
                         message="MCP servers unavailable during task processing",
                     )
-                if reason == "no_changes_after_retries":
+                if outcome.reason == "no_changes_after_retries":
                     # Task produced no changes after all retry attempts
                     return fail(
                         "no_changes_after_retries",
@@ -180,7 +180,7 @@ def run_implement_workflow(
                             f" {MAX_NO_CHANGE_RETRIES} retry attempts"
                         ),
                     )
-                if reason == "error":
+                if outcome.reason == "error":
                     # Error occurred during task processing
                     return fail(
                         "general",
