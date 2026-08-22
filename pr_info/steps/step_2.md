@@ -12,7 +12,7 @@ aborting the rest of the run.
 | File | Action |
 |------|--------|
 | `src/mcp_coder/cli/commands/init.py` | New import, new `_write_gitignore_entries()`, 2 edits in `execute_init` |
-| `tests/cli/commands/test_init.py` | 3 new tests in `TestExecuteInitWithDeploy`; 3 existing `TestInitCommand` tests get a real `project_dir` |
+| `tests/cli/commands/test_init.py` | 4 new tests in `TestExecuteInitWithDeploy`; 3 existing `TestInitCommand` tests get a real `project_dir` |
 
 Do not modify `main.py`, the argument parser, `tach.toml`, or `.importlinter` —
 `mcp_coder.cli -> mcp_coder.workflows` is already an allowed dependency in both.
@@ -125,7 +125,7 @@ init writes `.gitignore` these tests would touch the real repo file. All three
 already receive `tmp_path`; change `project_dir=None` to
 `project_dir=str(tmp_path)`. No new mocks.
 
-### 3 new tests in `TestExecuteInitWithDeploy`
+### 4 new tests in `TestExecuteInitWithDeploy`
 
 **A — block appears, second run is a no-op, `.git` warning rules.** Patch
 `create_default_config` / `get_config_file_path` and `_find_claude_source_dir`
@@ -156,8 +156,36 @@ skills deployed        (step before gitignore ran)
 create_default_config called once   (step after gitignore still ran)
 ```
 
-Use `caplog.at_level(logging.WARNING, logger="mcp_coder.cli.commands.init")`,
-consistent with `test_self_deploy_is_skipped`.
+**D — init reports what it did.** Covers the issue's "Init reports what it did"
+requirement, which none of A–C assert. Same setup as A (bare `tmp_path` subdir,
+`create_default_config` / `get_config_file_path` / `_find_claude_source_dir`
+patched), run twice in one test:
+
+```
+run execute_init -> assert 0
+    assert "Gitignore: 5 entries added" in caplog.text
+caplog.clear()
+run execute_init again -> assert 0
+    assert "Gitignore: 0 entries added" in caplog.text   # already up to date
+```
+
+### Log capture level
+
+The `Gitignore:` line is logged at the custom `OUTPUT` level, which sits **below**
+`WARNING` — `caplog.at_level(logging.WARNING, ...)` would never capture it and
+the assertions in test D would silently fail. Any test asserting the report line
+must use
+
+```python
+from mcp_coder.utils.log_utils import OUTPUT
+
+with caplog.at_level(OUTPUT, logger="mcp_coder.cli.commands.init"):
+```
+
+(or `logging.INFO`, which is lower still). Tests that only assert warnings —
+A's `.git` warning and C's failure warning — may stay at
+`caplog.at_level(logging.WARNING, logger="mcp_coder.cli.commands.init")`,
+consistent with `test_self_deploy_is_skipped`; `OUTPUT` works for those too.
 
 All other tests in the file must keep passing unchanged.
 
@@ -175,8 +203,9 @@ anywhere in the suite that invoke `execute_init` with `project_dir=None`.
 > `src/mcp_coder/cli/commands/init.py` via a `_write_gitignore_entries` helper,
 > exactly as specified in the step. Follow TDD: first change the three
 > `TestInitCommand` namespaces from `project_dir=None` to
-> `project_dir=str(tmp_path)`, then add the three new tests in
-> `TestExecuteInitWithDeploy`, watch them fail, then implement.
+> `project_dir=str(tmp_path)`, then add the four new tests in
+> `TestExecuteInitWithDeploy` (mind the `OUTPUT` capture level for the
+> `Gitignore:` assertions), watch them fail, then implement.
 >
 > Keep it minimal: one helper, one import, one local `gitignore_ok` flag, one
 > changed return. Do not touch `main.py`, the parser, `tach.toml`,

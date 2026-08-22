@@ -13,7 +13,7 @@ ignoring the result.
 | File | Action |
 |------|--------|
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | Modify `update_gitignore` (currently at line ~367) |
-| `tests/workflows/vscodeclaude/test_workspace.py` | 2 new tests; 2 existing tests gain a return-value assertion |
+| `tests/workflows/vscodeclaude/test_workspace.py` | 3 new tests; 2 existing tests gain a return-value assertion |
 
 Do **not** modify `templates.py`, `session_launch.py`, or
 `workflows/vscodeclaude/__init__.py` (the `update_gitignore` re-export there
@@ -43,16 +43,24 @@ Examples:
 
 ## HOW
 
-Three edits inside the existing function body — no restructuring, no new helper.
+Four edits inside the existing function body — no restructuring, no new helper.
 
 1. `return` → `return []` at the `if not missing:` early exit.
 2. Replace the `if / else` that builds `addition` and add one guard after it.
-3. `return missing` after the `with` block writes.
+3. Add `newline=""` to the `open("a", ...)` call.
+4. `return missing` after the `with` block writes.
 
 Keep the local `from .templates import GITIGNORE_ENTRY` and the append-only
-`gitignore_path.open("a", encoding="utf-8")` exactly as they are. Append-only is
-deliberate: a read-modify-write would translate every line ending in the file on
-Windows and produce a whole-file diff.
+write. Append-only is deliberate: a read-modify-write would translate every line
+ending in the file on Windows and produce a whole-file diff.
+
+The open call gains `newline=""`:
+`gitignore_path.open("a", encoding="utf-8", newline="")`. Without it, Python's
+text-mode translation turns every written `\n` into `\r\n` on Windows — the new
+block would land CRLF inside an otherwise-LF `.gitignore`, and the
+missing-trailing-newline guard would re-terminate the last *existing* line as
+CRLF. `newline=""` writes the literal `\n` we build, on every platform, so line
+endings elsewhere in the file never change.
 
 ## ALGORITHM
 
@@ -94,7 +102,9 @@ Resulting code:
     if existing_content and not existing_content.endswith("\n"):
         addition = "\n" + addition
 
-    with gitignore_path.open("a", encoding="utf-8") as f:
+    # newline="" disables text-mode translation: the literal "\n" above is what
+    # reaches the file, so a LF .gitignore stays LF on Windows.
+    with gitignore_path.open("a", encoding="utf-8", newline="") as f:
         f.write(addition)
 
     return missing
@@ -143,6 +153,27 @@ def test_update_gitignore_no_trailing_newline(self, tmp_path: Path) -> None:
     assert content.endswith("\n")
 ```
 
+**New — existing line endings are preserved (byte level):**
+
+This is the test for the issue's "content already in the file is never
+rewritten / line endings elsewhere must not change" requirement. It must use
+`read_bytes()`: `read_text()` applies universal-newline translation and would
+turn a `\r\n` back into `\n`, masking exactly the behaviour under test.
+
+```python
+def test_update_gitignore_preserves_existing_line_endings(self, tmp_path: Path) -> None:
+    """Existing bytes are untouched and the appended block uses LF."""
+    gitignore = tmp_path / ".gitignore"
+    gitignore.write_bytes(b"*.pyc\n")  # LF file, trailing newline present
+
+    update_gitignore(tmp_path)
+
+    raw = gitignore.read_bytes()
+    assert raw.startswith(b"*.pyc\n")  # existing bytes unchanged, still LF
+    assert b"\r\n" not in raw  # appended block uses LF too, also on Windows
+    assert raw.endswith(b"\n")
+```
+
 **Amend `test_update_gitignore_appends_missing_entry_on_upgrade`** — capture the
 call and add `assert added == [".vscodeclaude_session.json"]`.
 
@@ -162,13 +193,13 @@ Run all three MCP checks; all must pass before commit.
 >
 > Implement step 1 only: give
 > `src/mcp_coder/workflows/vscodeclaude/workspace.py::update_gitignore` a
-> `list[str]` return value and the two newline guards described in the step,
-> following TDD — write the two new tests and the two test amendments in
-> `tests/workflows/vscodeclaude/test_workspace.py` first, watch them fail, then
-> change the function.
+> `list[str]` return value, the two newline guards, and the `newline=""` open
+> flag described in the step, following TDD — write the three new tests and the
+> two test amendments in `tests/workflows/vscodeclaude/test_workspace.py` first,
+> watch them fail, then change the function.
 >
 > Keep the change minimal: no restructuring of the function, no new helpers, and
-> keep the append-only `open("a")` write. Do not touch `templates.py`,
+> keep the append-only `open("a", ..., newline="")` write. Do not touch `templates.py`,
 > `session_launch.py`, `workflows/vscodeclaude/__init__.py`, or the init command
 > — those come in step 2.
 >

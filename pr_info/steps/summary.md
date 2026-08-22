@@ -26,8 +26,8 @@ date). This lets callers report honestly what happened. The existing caller in
 
 ### 2. `update_gitignore` is hardened for foreign `.gitignore` files
 
-`init` is the first caller that runs against repos we do not control. Two guards
-are added:
+`init` is the first caller that runs against repos we do not control. Three
+guards are added:
 
 - `GITIGNORE_ENTRY` starts with `\n`, so a `.gitignore` created from scratch
   would begin with a blank line. `lstrip("\n")` removes the leading newline; the
@@ -35,10 +35,16 @@ are added:
   separate from.
 - When the existing file lacks a trailing newline, a `\n` is prepended so new
   entries are never glued onto the last line.
+- The append opens with `newline=""`. Without it, Python's text-mode translation
+  turns every written `\n` into `\r\n` on Windows: the new block would land CRLF
+  inside an otherwise-LF `.gitignore`, and the guard above would re-terminate the
+  last existing line as CRLF. With it, the literal `\n` we build is what reaches
+  the file on every platform.
 
-The function stays **append-only** (`open("a")`). This is deliberate: a
-read-modify-write on Windows would translate every line ending in the file and
-produce a whole-file diff. Only the bytes being added are translated.
+The function stays **append-only** (`open("a", ..., newline="")`). This is
+deliberate: a read-modify-write on Windows would translate every line ending in
+the file and produce a whole-file diff. Now nothing is translated at all —
+existing bytes are untouched and added bytes are written verbatim.
 
 ### 3. New CLI → workflow dependency
 
@@ -71,9 +77,11 @@ config*, and `.gitignore` is project-scoped like the `.claude/` deploy.
   the existing block (#1086 declined that cosmetic change).
 - The launch-time `update_gitignore` call in `session_launch.py` stays as a
   safety net.
-- Matching the existing file's dominant line ending (LF vs CRLF) on append is
-  *not* implemented — the requirement is only that existing content is never
-  rewritten, which append-only already guarantees.
+- Detecting and matching the existing file's *dominant* line ending (appending
+  CRLF into an already-CRLF file) is not implemented. The appended block is
+  always LF, which is the `.gitignore` convention and what git normalises to;
+  the requirement — existing content is never rewritten — is satisfied by
+  append-only plus `newline=""`.
 
 ## Files created / modified
 
@@ -81,15 +89,15 @@ config*, and `.gitignore` is project-scoped like the `.claude/` deploy.
 
 | File | Change |
 |------|--------|
-| `src/mcp_coder/workflows/vscodeclaude/workspace.py` | `update_gitignore` returns `list[str]`; two newline guards for foreign files |
+| `src/mcp_coder/workflows/vscodeclaude/workspace.py` | `update_gitignore` returns `list[str]`; two newline guards for foreign files; `newline=""` on the append |
 | `src/mcp_coder/cli/commands/init.py` | New `_write_gitignore_entries()` helper; called from `execute_init`; exit code honours it |
 
 ### Modified — tests
 
 | File | Change |
 |------|--------|
-| `tests/workflows/vscodeclaude/test_workspace.py` | 2 new tests (fresh file, no trailing newline); return-value assertions added to 2 existing tests |
-| `tests/cli/commands/test_init.py` | 3 new tests; 3 existing `TestInitCommand` tests get `project_dir=str(tmp_path)` instead of `None` |
+| `tests/workflows/vscodeclaude/test_workspace.py` | 3 new tests (fresh file, no trailing newline, byte-level line-ending preservation); return-value assertions added to 2 existing tests |
+| `tests/cli/commands/test_init.py` | 4 new tests; 3 existing `TestInitCommand` tests get `project_dir=str(tmp_path)` instead of `None` |
 
 ### Modified — docs
 
