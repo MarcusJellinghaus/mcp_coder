@@ -9,12 +9,14 @@ Closes the loop: the reason produced in Step 3 now reaches the label defined in 
 | `src/mcp_coder/workflows/implement/failure_reporting.py` | `FAILURE_LABELS`, `CATEGORY_DISPLAY`, `append_detail()` |
 | `src/mcp_coder/workflows/implement/core.py` | `blocked` branch, detail on timeout/mcp messages, marker cleanup before the final-mypy commit |
 | `tests/workflows/implement/test_failure_reporting.py` | mapping assertions |
-| `tests/workflows/implement/test_core_blocked.py` | **new module** — routing tests |
+| `tests/workflows/implement/test_core_failure_routing.py` | blocked-routing tests |
 | `tests/workflows/implement/test_core.py` | final-mypy cleanup test |
 
-The routing tests go in a **new** module, not in `test_core_workflow.py`: that file is already
-747 lines and is not in `.large-files-allowlist`, so four more tests would breach the CI
-`file-size` gate (`mcp-coder check file-size --max-lines 750`, `.github/workflows/ci.yml`).
+The routing tests go in `test_core_failure_routing.py` — the module Step 2 created when it
+moved the existing failure-routing tests out of `test_core_workflow.py`. Do **not** add them
+to `test_core_workflow.py`: even after Step 2's split it is the file the CI `file-size` gate
+(`mcp-coder check file-size --max-lines 750`, `.github/workflows/ci.yml`) squeezes, and the
+sibling tests these are modelled on now live in the new module anyway.
 
 ## WHAT
 
@@ -108,9 +110,10 @@ if not outcome.success:
 2. `append_detail("base", "")  == "base"` and `append_detail("base", "why")` contains both.
 3. `format_failure_comment("blocked", ...)` renders `**Category:** Blocked`.
 
-`tests/workflows/implement/test_core_blocked.py` — a new module (see WHERE); model the mock
-setup on `test_core_workflow.py`'s `test_no_changes_after_retries_routes_to_failure` at
-`:416`, including its `_DELIBERATE_HANDLER` patch target and the seven prerequisite patches:
+`tests/workflows/implement/test_core_failure_routing.py` — the module Step 2 created (see
+WHERE); model the mock setup on the `test_no_changes_after_retries_routes_to_failure` test
+that now lives there, including its `_DELIBERATE_HANDLER` patch target and the seven
+prerequisite patches:
 4. `test_blocked_routes_to_failure` — `process_task_with_retry` returns
    `TaskOutcome(False, "blocked", "pytest times out at 300s")` → result is `1`,
    `failure_arg.category == "implementation_blocked"`, and the failure message **is** the
@@ -143,10 +146,11 @@ label defined in Step 4, and adds marker cleanup to the final-mypy commit path.
 Work test-first: write the failure_reporting, blocked-routing and core tests described in
 the step file, watch them fail, then implement.
 
-The four blocked-routing tests go in a NEW module,
-tests/workflows/implement/test_core_blocked.py. Do NOT add them to test_core_workflow.py:
-that file is at 747 lines and is not allowlisted, so it would breach the CI file-size gate
-(mcp-coder check file-size --max-lines 750).
+The four blocked-routing tests go in tests/workflows/implement/test_core_failure_routing.py,
+the module Step 2 created when it moved the existing failure-routing tests out of
+test_core_workflow.py. Do NOT add them to test_core_workflow.py — that file is the one the
+CI file-size gate squeezes (mcp-coder check file-size --max-lines 750), and the sibling
+tests you are modelling these on now live in the new module.
 
 Requirements that are easy to get wrong:
 - The ERROR log of the blocked reason is unconditional. It must NOT be gated on

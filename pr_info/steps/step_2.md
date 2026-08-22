@@ -11,11 +11,40 @@ not hide the ~40 lines that actually matter (Step 3).
 | `src/mcp_coder/workflows/implement/core.py` | 1 unpack + the reason chain |
 | `tests/workflows/implement/test_task_processing.py` | ~35 call sites |
 | `tests/workflows/implement/test_core.py` | mock return values |
-| `tests/workflows/implement/test_core_workflow.py` | mock return values |
+| `tests/workflows/implement/test_core_workflow.py` | mock return values **− the four failure-routing tests moved out (see below)** |
+| `tests/workflows/implement/test_core_failure_routing.py` | **new module** — receives those four tests |
 | `tests/workflows/implement/test_failure_reporting.py` | mock return values |
 | `tests/integration/test_execution_dir_integration.py` | mock return value **+ the broken patch target / assertion** |
 
 `src/mcp_coder/workflows/implement/__init__.py` exports names only — **no change**.
+
+### The CI file-size gate forces a split here
+
+`test_core_workflow.py` is **747 lines** and is **not** in `.large-files-allowlist`, so the
+CI `file-size` job (`mcp-coder check file-size --max-lines 750`, `.github/workflows/ci.yml`)
+leaves three lines of headroom. This step spends more than that:
+
+- `+1` for the `TaskOutcome` import;
+- `+3` at `:114`, where
+  `mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]` grows from 82
+  to 104 characters and black (line-length 88) wraps it across four lines.
+
+That lands at ~751 and breaks the gate. Rather than grandfather the file, **move the four
+failure-routing tests out of `TestRunImplementWorkflowLabelTransitions` into a new module**
+`tests/workflows/implement/test_core_failure_routing.py`:
+
+| Moved test | Current lines |
+|---|---|
+| `test_timeout_calls_handle_failure_with_llm_timeout` | `:346-380` |
+| `test_mcp_unavailable_calls_handle_failure_with_mcp_unavailable` | `:381-415` |
+| `test_no_changes_after_retries_routes_to_failure` | `:416-450` |
+| `test_error_calls_handle_failure_with_general` | `:451-478` |
+
+Move them verbatim (converting their tuple mocks to `TaskOutcome` as part of this step),
+carrying the module docstring, the `_DELIBERATE_HANDLER` / `_NET_HANDLER` constants and the
+`_make_llm_response` helper they need. `test_core_workflow.py` drops to ~614 lines, and
+Step 5's blocked-routing tests get an obvious home in the new module rather than needing
+one of their own.
 
 ## WHAT
 
@@ -79,7 +108,8 @@ None — pure type substitution.
 
 ## TESTS
 
-No new tests — convert existing ones. Two mechanical patterns:
+No new tests — convert existing ones, and relocate four of them (see "The CI file-size gate
+forces a split here"). Two mechanical patterns:
 
 ```python
 # call sites against the real function
@@ -148,6 +178,13 @@ Also fix the two pre-existing defects in
 tests/integration/test_execution_dir_integration.py described in the step file: the patch
 target names a symbol core.py does not import, and the assertion omits the format_code /
 check_type_hints keyword arguments.
+
+One thing you must not skip: tests/workflows/implement/test_core_workflow.py is 747 lines
+and is NOT in .large-files-allowlist, so it has three lines of headroom against the CI
+file-size gate (750). This step's import plus black's rewrap of line 114 spends four. Move
+the four failure-routing tests listed in the step file into a new module
+tests/workflows/implement/test_core_failure_routing.py as part of this commit, then verify
+with `mcp-coder check file-size --max-lines 750` that no file breaches the gate.
 
 Success criterion: the full test suite passes with no test asserting anything new. If a
 test starts failing for a reason other than the tuple→dataclass change, stop and report it

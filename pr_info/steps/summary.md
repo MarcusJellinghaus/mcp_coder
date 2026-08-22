@@ -97,7 +97,7 @@ everything get cleanup:
 |------|-------|
 | Main task loop | `process_single_task` — start-of-task cleanup + the read itself |
 | Final mypy block | `core.py`, immediately before its `get_full_status` |
-| Finalisation | `finalisation.py`, immediately before the step-4 changes check (**not** before the LLM call — that would only clear *stale* markers, leaving one written by the finalisation agent itself to be committed) |
+| Finalisation | `finalisation.py`, in a `finally` on its `prompt_llm` call — after the LLM turn (so the agent's own marker is caught, not just stale ones), before the step-4 changes check, and on the early exits too (the empty-response guard at `:104-106` returns `False`) |
 | CI-fix loop | **excluded — see below** |
 
 `run_finalisation` gets **cleanup only** — no blocked channel there.
@@ -108,8 +108,8 @@ commits at `workflow_steps/ci.py:247`, so in principle a marker written there wo
 committed. It is left alone because:
 
 - **No marker can be stale by then.** Every earlier path deletes it — `process_single_task`
-  at task start and in its `finally`, the final-mypy block, and finalisation before its
-  changes check. A blocked task returns terminally, so the CI stage is only ever reached
+  at task start and in its `finally`, the final-mypy block, and finalisation in its own
+  `finally`. A blocked task returns terminally, so the CI stage is only ever reached
   after every task and finalisation succeeded. The only way a marker exists at that point
   is if the CI-fix agent writes one — and the CI Fix Prompt (`prompts.md:286`) never
   mentions `.blocked.txt`, nor does the CI-fix loop have a blocked channel (explicitly out
@@ -185,9 +185,11 @@ through to Level 2 LLM message generation**.
 ### Created
 
 - `pr_info/steps/summary.md`, `pr_info/steps/step_1.md` … `step_8.md` (planning artifacts)
-- `tests/workflows/implement/test_core_blocked.py` (Step 5's routing tests — a new module
-  because `test_core_workflow.py` is at 747 lines and not allowlisted, and the CI
-  `file-size` job caps at 750)
+- `tests/workflows/implement/test_core_failure_routing.py` (created in **Step 2**, which
+  moves the four existing failure-routing tests out of `test_core_workflow.py`; Step 5's
+  blocked-routing tests join them there). `test_core_workflow.py` is at 747 lines and is
+  not in `.large-files-allowlist`, while the CI `file-size` job caps at 750 — Step 2's
+  `TaskOutcome` import plus black's rewrap of its line 114 alone would breach it.
 
 No new source modules — every source change lands in an existing file.
 
@@ -224,9 +226,9 @@ No new source modules — every source change lands in an existing file.
 | # | Step | Scope |
 |---|------|-------|
 | 1 | `BLOCKED_FILE` + `read_and_clear_blocked()` | src + tests, unused so far |
-| 2 | `TaskOutcome` mechanical conversion | src + all test call sites; no behaviour change |
+| 2 | `TaskOutcome` mechanical conversion | src + all test call sites; no behaviour change; splits the failure-routing tests out of `test_core_workflow.py` to stay under the file-size gate |
 | 3 | Blocked detection in `process_single_task` | the core fix |
-| 4 | `implementation_blocked` label definition | `labels.json` + 2 test files |
+| 4 | `implementation_blocked` label definition | `labels.json` + 2 test files (name list, `ERROR_STATUS_IDS`, and the `36` → `37` count assertion) |
 | 5 | `core.py` routing + final-mypy cleanup | label mapping, ERROR log, detail append |
 | 6 | `RETRY_REMINDER` + `prompts.md` | remove the fabricate pressure |
 | 7 | `finalisation.py` cleanup + double-prefix fix | third commit path + live bug |
@@ -250,7 +252,8 @@ checks stay green either way; Step 5 closes it. No test pins the intermediate be
 3. Marker + `LLMTimeoutError` → reason `timeout`, marker deleted, text in the message.
 4. A stale marker is removed at task start.
 5. `blocked` never retries.
-6. The marker is deleted before the finalisation commit path stages anything.
+6. The marker is deleted before the finalisation commit path stages anything — including
+   when finalisation exits early on an empty LLM response.
 
 ## Out of scope
 
