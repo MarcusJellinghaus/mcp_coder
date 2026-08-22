@@ -287,9 +287,53 @@ Details: [step_5.md](./steps/step_5.md)
 
 Details: [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, mypy clean for this step; **pytest genuinely RUN
+      and green** via the same local workaround Steps 3–5 used.
+  - Scope delivered: `RETRY_REMINDER` **replaced** wholesale (not extended) with
+    the step's verbatim three-exit text, and the `prompts.md:115` bullet
+    **conditioned in place** (`(no code changes needed)` → `and you saw its
+    checks pass`) with the blocked-exit bullet added directly after it. Grepped
+    afterwards: `"you MUST tick"` and `"no code changes needed"` now appear
+    **nowhere** in `src/` or `tests/` — the contradicting imperative this issue
+    documents is gone from both prompt sources, not merely qualified.
+    `MAX_NO_CHANGE_RETRIES` and all retry mechanics untouched.
+  - Test-first, watched red: both new assertions in the new
+    `TestBlockedExitInPrompts` failed before the text edits —
+    `test_retry_reminder_offers_blocked_exit` on the old constant and
+    `test_implementation_prompt_offers_blocked_exit` on the prompt section
+    loaded through `get_prompt(PROMPTS_FILE_PATH, ...)`, the same call
+    `process_single_task:390` makes. Both pass after.
+  - The two pre-existing tests at `test_task_processing.py:560,587` use the
+    imported `RETRY_REMINDER` symbol rather than a literal, so they needed no
+    change and still pass — confirmed in the run below.
+  - pytest: `tests/workflows/implement` + `tests/workflow_steps` +
+    `tests/workflow_utils` → **401 passed** (Step 5's 399 plus these 2), with the
+    standard `-n auto` marker exclusions. Prompt-consumer regression run —
+    `test_prompt_manager.py` + `test_prompt_parsing.py` + `test_prompt_sources.py`
+    + `tests/prompts` + `tests/workflows/create_plan` + `create_pr` + `rebase`
+    → **335 passed**. Nothing else asserts this prompt section's text.
+  - Environment, unchanged from Steps 1–5: `.venv`'s `mcp-workspace` predates the
+    `branch_status_rendering` split, so `import mcp_coder` dies at collection
+    repo-wide. Observed again this run as a silent **0 tests collected** before
+    the shim was in place.
+  - Workaround used to obtain real pytest signal: a temporary root `conftest.py`
+    synthesising `branch_status_rendering` from the stale install's names.
+    **It has been deleted** — `git status` shows only the three intended files
+    plus this tracker. Local diagnostic, not a fix; must not be committed.
+  - Still broken and NOT caused by this step: `tests/workflows/review/` and the
+    `test_check_branch_status*` modules fail on
+    `BranchStatusReport.pr_feedback_undeterminable` / `CIStatus`, which the shim
+    cannot supply. Clears with:
+    `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+  - pylint: no issue in any of the 3 files this step touches. Every reported
+    error is `E0401`/`E0611` for uninstalled optional deps (`langchain_*`,
+    `httpx`, `mcp.server.fastmcp`) plus `E1123`/`E1101` for `fail_on_reviews` /
+    `pr_feedback_undeterminable` — all downstream of the stale install.
+  - mypy: 8 errors, byte-identical to Steps 1–5, none in this step's files.
+  - black/isort: no changes (614 files unchanged). File-size gate passes
+    (823 files ≤ 750 lines).
+- [x] Commit message prepared
 
 ### Step 7: finalisation.py marker cleanup + commit_message_path fix
 

@@ -43,9 +43,11 @@ BLOCKED_REASON_FALLBACK = "Agent reported being blocked but gave no reason"
 
 RETRY_REMINDER = (
     "\n\n⚠️ Previous attempt produced NO file changes. "
-    "If the task is already complete, you MUST tick the checkbox "
-    "[ ] → [x] in pr_info/TASK_TRACKER.md — that file edit IS the deliverable. "
-    "If the task genuinely needs code, do the work now."
+    "If the task is already complete AND you saw its checks pass, tick the "
+    "checkbox [ ] → [x] in pr_info/TASK_TRACKER.md — that file edit IS the "
+    "deliverable. If the task genuinely needs code, do the work now. "
+    "If something blocks you from either, write one line to "
+    "pr_info/.blocked.txt saying what, and stop."
 )
 
 

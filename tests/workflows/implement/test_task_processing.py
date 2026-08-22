@@ -6,8 +6,10 @@ from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
+from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
+from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.workflow_steps.constants import BLOCKED_FILE
 from mcp_coder.workflows.implement.constants import (
     BLOCKED_FILE as IMPLEMENT_BLOCKED_FILE,
@@ -140,6 +142,23 @@ class TestReadAndClearBlocked:
         """BLOCKED_FILE is defined in the shared tier and re-exported."""
         assert BLOCKED_FILE == "pr_info/.blocked.txt"
         assert IMPLEMENT_BLOCKED_FILE is BLOCKED_FILE
+
+
+class TestBlockedExitInPrompts:
+    """Test that both prompt sources offer the blocked exit."""
+
+    def test_retry_reminder_offers_blocked_exit(self) -> None:
+        """The retry reminder points at the marker instead of demanding a tick."""
+        assert BLOCKED_FILE in RETRY_REMINDER
+        assert "you MUST tick" not in RETRY_REMINDER
+
+    def test_implementation_prompt_offers_blocked_exit(self) -> None:
+        """The attempt-1 prompt template also offers the blocked exit."""
+        prompt_template = get_prompt(
+            str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker"
+        )
+
+        assert BLOCKED_FILE in prompt_template
 
 
 class TestCheckAndFixMypy:

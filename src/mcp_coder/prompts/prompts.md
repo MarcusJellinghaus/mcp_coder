@@ -112,7 +112,8 @@ Implement ONE step from the task tracker.
 - ONE step per run (but complete all its sub-tasks)
 - Mark each sub-task `[x]` immediately after completing it
 - Use MCP tools for all operations
-- If a sub-task is already complete (no code changes needed), STILL tick the box `[ ]` → `[x]`. Ticking the checkbox IS the required deliverable for that sub-task.
+- If a sub-task is already complete and you saw its checks pass, STILL tick the box `[ ]` → `[x]`. Ticking the checkbox IS the required deliverable for that sub-task.
+- If something blocks you from verifying a sub-task, write one line to `pr_info/.blocked.txt` saying what blocked you, and stop. Do not tick a check you did not see pass.
 ```
 
 ### Mypy Type Fixes
