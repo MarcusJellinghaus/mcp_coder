@@ -12,6 +12,11 @@ The core fix. Everything else in this issue supports this step.
 `process_task_with_retry` needs **no** logic change — it already returns immediately for
 any reason other than `"no_changes"`, so `blocked` never retries. Pin that with a test.
 
+`core.py` is **not** touched here (Step 5 does that). Its reason chain (`core.py:155-191`)
+has no `else`, so between this commit and Step 5 a `blocked` outcome falls past every
+branch to `progress.completed += 1` and the loop runs again. Transient and accepted — the
+checks stay green — but do not pin it with a test.
+
 ## WHAT
 
 No new functions. Three edits inside `process_single_task`:
@@ -156,9 +161,15 @@ list) and pr_info/steps/step_3.md, then implement Step 3 only.
 
 This is the core fix: process_single_task learns to recognise pr_info/.blocked.txt and
 return TaskOutcome(False, "blocked", <text>). Do NOT touch core.py, labels.json,
-RETRY_REMINDER or prompts.md — those are Steps 4, 5 and 6. After this step the "blocked"
-reason reaches core.py and falls through its reason chain to the generic path; that is
-expected and is fixed in Step 5.
+RETRY_REMINDER or prompts.md — those are Steps 4, 5 and 6.
+
+Be precise about the intermediate state this leaves: core.py's reason chain
+(core.py:155-191) is a series of `if reason == ...` with NO else, so after this step an
+unhandled "blocked" reason falls past the chain to `progress.completed += 1` and re-enters
+the `while True` loop — the blocked task is counted as completed and the LLM is called
+again. That is a transient state of this one commit, closed by Step 5, which adds the
+terminal `blocked` branch. Do not write a test pinning that intermediate behaviour, and do
+not "fix" it here by editing core.py.
 
 Work test-first: write TestProcessSingleTaskBlocked as described, watch it fail, then
 implement.
