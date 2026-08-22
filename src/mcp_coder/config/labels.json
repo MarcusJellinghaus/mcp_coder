@@ -256,6 +256,21 @@
       }
     },
     {
+      "internal_id": "implementation_blocked",
+      "name": "status-06f-blocked:implementation-blocked",
+      "color": "d93f0b",
+      "description": "Agent reported it was blocked and could not verify the work",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🚧",
+        "display_name": "IMPLEMENTATION BLOCKED",
+        "stage_short": "blocked",
+        "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
       "internal_id": "pr_creating_timeout",
       "name": "status-09f-timeout:pr-creating-llm-timeout",
       "color": "e99695",

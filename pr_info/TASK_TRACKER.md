@@ -178,9 +178,50 @@ Details: [step_3.md](./steps/step_3.md)
 
 Details: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, mypy clean for this step; **pytest genuinely RUN
+      and green** via the same local workaround Step 3 used.
+  - Scope delivered: the `implementation_blocked` entry in `labels.json`,
+    inserted directly after `no_changes_after_retries` so the `status-06f-*`
+    block stays contiguous, plus all six test-side count/name updates.
+    `ignore_labels` and every workflow source file left untouched — wiring
+    `FAILURE_LABELS["blocked"]` to this `internal_id` is Step 5.
+  - Test-first, watched red: all six assertions failed before the `labels.json`
+    change — `StopIteration` for the new `ERROR_STATUS_IDS` entry, the
+    order-sensitive name-list diff at index 20, `36 == 37`, `35 == 36` twice,
+    and `26 == 27`. All pass after. Targeted run: **118 passed**.
+  - Wider regression run: `tests/cli` + `tests/config` +
+    `tests/workflows/vscodeclaude` → **1671 passed, 2 skipped** (stale-venv
+    `branch_status` files excluded, see below); `tests/workflows/implement` +
+    `create_plan` + `create_pr` + `tests/workflow_steps` + `tests/workflow_utils`
+    → **583 passed**. Grepped for further hard-coded label counts across
+    `tests/` — none beyond the four files the step names; the only other
+    `len(workflow_labels)` sites are dynamic (`test_set_status.py:126`) or
+    bound to the 5-label test fixture.
+  - Environment, unchanged from Steps 1–3: `.venv`'s `mcp-workspace` predates
+    the `branch_status_rendering` split, so `import mcp_coder` dies at
+    collection repo-wide. Diagnosed precisely this run: the stale
+    `branch_status` still carries `CIStatus` and `WaitContext` but **not**
+    `GITHUB_TOKEN_HINT`, which is why a bare module alias is not enough.
+  - Workaround used to obtain real pytest signal: a temporary root
+    `conftest.py` synthesising `branch_status_rendering` from those names and
+    supplying a placeholder `GITHUB_TOKEN_HINT`. **It has been deleted** —
+    `git status` shows only the five intended files plus this tracker. Local
+    diagnostic, not a fix; must not be committed.
+  - Still broken and NOT caused by this step: the four
+    `test_check_branch_status*.py` modules and
+    `test_main.py::TestFaulthandlerSafetyNet` fail on `CIStatus.UNAVAILABLE` /
+    `GITHUB_TOKEN_HINT`, which the shim cannot fully supply (the subprocess
+    test bypasses `conftest.py` entirely). All clear with:
+    `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+  - pylint: no issue in any of the 5 files this step touches. Every reported
+    error is `E0401`/`E0611` for uninstalled optional deps (`langchain_*`,
+    `httpx`, `mcp.server.fastmcp`) plus `E1123`/`E1101` for `fail_on_reviews` /
+    `pr_feedback_undeterminable` — all downstream of the stale install.
+  - mypy: 8 errors, byte-identical to Steps 1–3, none in this step's files.
+  - black/isort: no changes (614 files unchanged). File-size gate passes
+    (822 files ≤ 750 lines).
+- [x] Commit message prepared
 
 ### Step 5: core.py routes blocked + final-mypy cleanup
 
