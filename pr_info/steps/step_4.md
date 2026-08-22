@@ -10,7 +10,7 @@ label's `internal_id`.
 | `src/mcp_coder/config/labels.json` | new entry in `workflow_labels` |
 | `tests/config/test_label_config.py` | add to `ERROR_STATUS_IDS` (`:176`) |
 | `tests/cli/commands/test_define_labels.py` | add to `expected_names` (`:128` area) **and bump the label count `36` → `37` (`:69-72`)** |
-| `tests/cli/commands/test_define_labels_label_changes.py` | bump the two derived counts `35` → `36` (`:308`, `:311`) |
+| `tests/cli/commands/test_define_labels_label_changes.py` | bump the three derived counts `35` → `36` (`:308`, `:311`, `:366`) |
 | `tests/workflows/vscodeclaude/test_types.py` | bump the human_action count `26` → `27` (`:309`) |
 
 ## WHAT
@@ -63,13 +63,18 @@ assert (
 Bump both the number and the message to `37`. Missing this leaves Step 4 red even though
 the name list matches.
 
-**Two further counts derive from the bundled config and break the same way.** Both build
-their expectations from the real `labels.json`, so a 37th label shifts them by one:
+**Two further test files carry counts derived from the bundled config, and break the same
+way.** Both build their expectations from the real `labels.json`, so a 37th label shifts
+them by one:
 
-- `tests/cli/commands/test_define_labels_label_changes.py:308,311` —
+- `tests/cli/commands/test_define_labels_label_changes.py:308,311,366` —
   `assert len(result["created"]) == 35  # 35 new labels (36 total - 1 existing)` and
-  `assert mock_labels_manager.create_label.call_count == 35`. Both become `36`; update the
-  trailing comment's arithmetic to `37 total - 1 existing` too.
+  `assert mock_labels_manager.create_label.call_count == 35` in
+  `test_apply_labels_success_flow`, plus a third `assert len(result["created"]) == 35` in
+  `test_apply_labels_dry_run_mode` at `:366`. All three become `36`; update the trailing
+  comment's arithmetic at `:308` to `37 total - 1 existing` too. Both tests build their
+  expectation from the real `labels.json` via the `labels_config_path` fixture
+  (`tests/conftest.py`), so both break.
 - `tests/workflows/vscodeclaude/test_types.py:309` —
   `assert len(human_action_labels) == 26`. The new label is `category: human_action`, so
   this becomes `27`.
@@ -100,8 +105,8 @@ None — declarative config.
 2. `tests/cli/commands/test_define_labels.py` — add
    `"status-06f-blocked:implementation-blocked"` to `expected_names` at the matching index,
    **and** change the count assertion at `:69-72` from `36` to `37` (message text too).
-3. `tests/cli/commands/test_define_labels_label_changes.py` — change `35` to `36` at both
-   `:308` and `:311` (and the inline comment's arithmetic).
+3. `tests/cli/commands/test_define_labels_label_changes.py` — change `35` to `36` at all
+   three sites: `:308`, `:311` (and the inline comment's arithmetic) and `:366`.
 4. `tests/workflows/vscodeclaude/test_types.py` — change `26` to `27` at `:309`.
 5. The existing structural tests (required keys, valid category, unique id/name, 6-char hex
    colour, `vscodeclaude` required keys) cover the rest automatically — no new test needed.
@@ -128,10 +133,12 @@ Traps:
   order-sensitive. Insert at the same index in both places.
 - The same file also asserts len(workflow_labels) == 36 at lines 69-72. Bump it to 37
   (and the assertion message with it), or the step lands red.
-- Three more hard-coded counts derive from the bundled labels.json and break the same way:
-  tests/cli/commands/test_define_labels_label_changes.py:308 and :311 (35 -> 36, plus the
-  inline comment's arithmetic) and tests/workflows/vscodeclaude/test_types.py:309
-  (26 -> 27, because the new label is category: human_action).
+- Four more hard-coded counts derive from the bundled labels.json and break the same way:
+  tests/cli/commands/test_define_labels_label_changes.py:308, :311 and :366 (35 -> 36,
+  plus the inline comment's arithmetic at :308 — :366 is a third occurrence in
+  test_apply_labels_dry_run_mode, easy to miss) and
+  tests/workflows/vscodeclaude/test_types.py:309 (26 -> 27, because the new label is
+  category: human_action).
 - The top-level "color" is a 6-char hex (format-asserted); the nested
   vscodeclaude.color is the string "red". They are different fields.
 
