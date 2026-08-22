@@ -5,13 +5,20 @@ from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_steps.constants import BLOCKED_FILE
+from mcp_coder.workflows.implement.constants import (
+    BLOCKED_FILE as IMPLEMENT_BLOCKED_FILE,
+)
 from mcp_coder.workflows.implement.task_processing import (
+    BLOCKED_REASON_FALLBACK,
+    BLOCKED_REASON_MAX_CHARS,
     RETRY_REMINDER,
     _cleanup_commit_message_file,
     check_and_fix_mypy,
     get_next_task,
     process_single_task,
     process_task_with_retry,
+    read_and_clear_blocked,
 )
 
 
@@ -87,6 +94,48 @@ class TestCommitMessageFile:
         """Test that cleanup handles missing file gracefully."""
         # Should not raise
         _cleanup_commit_message_file(tmp_path)
+
+
+class TestReadAndClearBlocked:
+    """Test read_and_clear_blocked helper."""
+
+    def test_returns_none_when_absent(self, tmp_path: Path) -> None:
+        """No marker (and no pr_info/ dir) means 'not blocked'."""
+        assert read_and_clear_blocked(tmp_path) is None
+
+    def test_returns_text_and_deletes_file(self, tmp_path: Path) -> None:
+        """A non-empty marker returns its text and is removed."""
+        (tmp_path / "pr_info").mkdir()
+        marker = tmp_path / BLOCKED_FILE
+        marker.write_text("pytest times out", encoding="utf-8")
+
+        assert read_and_clear_blocked(tmp_path) == "pytest times out"
+        assert not marker.exists()
+
+    def test_whitespace_only_returns_fallback(self, tmp_path: Path) -> None:
+        """An empty marker still counts as blocked, never as 'no marker'."""
+        (tmp_path / "pr_info").mkdir()
+        marker = tmp_path / BLOCKED_FILE
+        marker.write_text("   \n\t", encoding="utf-8")
+
+        assert read_and_clear_blocked(tmp_path) == BLOCKED_REASON_FALLBACK
+        assert not marker.exists()
+
+    def test_long_text_truncated(self, tmp_path: Path) -> None:
+        """Overlong reasons are truncated with an ellipsis marker."""
+        (tmp_path / "pr_info").mkdir()
+        (tmp_path / BLOCKED_FILE).write_text("x" * 900, encoding="utf-8")
+
+        result = read_and_clear_blocked(tmp_path)
+
+        assert result is not None
+        assert len(result) == BLOCKED_REASON_MAX_CHARS + 3
+        assert result.endswith("...")
+
+    def test_blocked_file_constant(self) -> None:
+        """BLOCKED_FILE is defined in the shared tier and re-exported."""
+        assert BLOCKED_FILE == "pr_info/.blocked.txt"
+        assert IMPLEMENT_BLOCKED_FILE is BLOCKED_FILE
 
 
 class TestCheckAndFixMypy:

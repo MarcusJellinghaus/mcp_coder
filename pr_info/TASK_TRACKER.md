@@ -25,9 +25,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Details: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — pylint + mypy clean; **pytest blocked**:
+  the repo `.venv` has a stale `mcp-workspace` (no
+  `mcp_workspace.checks.branch_status_rendering`), so `mcp_coder/__init__.py`
+  fails to import and the whole suite collects 0 tests. Pre-existing, unrelated
+  to this step. Needs a dependency reinstall before the box can be ticked.
+- [x] Commit message prepared
 
 ### Step 2: TaskOutcome replaces tuple[bool, str]
 

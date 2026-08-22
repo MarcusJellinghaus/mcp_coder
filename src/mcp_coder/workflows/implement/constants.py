@@ -9,6 +9,7 @@ single source of truth.
 # re-exported here so existing `from .constants import …` call sites across
 # implement keep working). Redundant aliases mark these as explicit re-exports
 # for mypy.
+from mcp_coder.workflow_steps.constants import BLOCKED_FILE as BLOCKED_FILE
 from mcp_coder.workflow_steps.constants import (
     COMMIT_MESSAGE_FILE as COMMIT_MESSAGE_FILE,
 )
