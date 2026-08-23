@@ -6,6 +6,7 @@
 
 **Do NOT use native Claude Code file tools** (`Read`, `Write`, `Edit`, `Glob`, `Grep`, `Bash`) for any operation that has an MCP equivalent. Always use the `mcp__mcp-workspace__*` tools instead. This applies to all file reading, writing, editing, searching, listing, and git operations. If no MCP equivalent exists, use Bash. Check the tool mapping table below first.
 
+
 ### Tool mapping
 
 | Task | MCP tool |
@@ -35,6 +36,7 @@
 | Run bandit | `mcp__mcp-tools-py__run_bandit_check` |
 | Run tach | `mcp__mcp-tools-py__run_tach_check` |
 | Format code (black+isort) | `mcp__mcp-tools-py__run_format_code` |
+| Check a Python semantic before claiming it | scratch probe — see [Scratch probes](#scratch-probes) |
 | Get library source of installed deps (never `python -c "__file__"` + cat site-packages) | `mcp__mcp-tools-py__get_library_source` |
 | Refactoring | `mcp__mcp-tools-py__move_symbol`, `move_module`, `rename_symbol`, `list_symbols`, `find_references` |
 | Git read-only (status, diff, log, show, fetch, ls-tree, ls-files, ls-remote, rev-parse, branch list) | `mcp__mcp-workspace__git` |
@@ -72,6 +74,19 @@ mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto"], markers=["git_int
 Markers: `git_integration`, `claude_api_integration`, `claude_cli_integration`, `copilot_cli_integration`, `formatter_integration`, `github_integration`, `jenkins_integration`, `langchain_integration`, `llm_integration`, `textual_integration`.
 
 When debugging test failures, add `"-v", "-s", "--tb=short"` to extra_args.
+
+## Scratch probes
+
+Don't assert Python behaviour you haven't run. Probe it:
+
+```python
+mcp__mcp-workspace__save_file(".scratch/test_probe.py", ...)
+mcp__mcp-tools-py__run_pytest_check(extra_args=["-p", "no:cacheprovider", ".scratch/test_probe.py"])
+```
+
+A path argument scopes the run, so a probe costs seconds. Delete when done — `delete_directory(".scratch", recursive=True)`; CI blocks any PR carrying one. `.scratch/` is not gitignored: the MCP file tools refuse ignored paths.
+
+Never use `python -c` via Bash. If you reason instead of running, label the conclusion analytical.
 
 ## Git operations
 
