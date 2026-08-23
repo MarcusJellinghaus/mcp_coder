@@ -127,6 +127,50 @@ class TestReadAndClearBlocked:
         assert read_and_clear_blocked(tmp_path) == BLOCKED_REASON_FALLBACK
         assert not marker.exists()
 
+    def test_multiline_text_collapsed_to_one_line(self, tmp_path: Path) -> None:
+        """A paragraph reason arrives as one line - it becomes markdown."""
+        (tmp_path / "pr_info").mkdir()
+        marker = tmp_path / BLOCKED_FILE
+        marker.write_text(
+            "pytest times out\n\nafter 10 minutes\n\t```\n", encoding="utf-8"
+        )
+
+        assert (
+            read_and_clear_blocked(tmp_path) == "pytest times out after 10 minutes ```"
+        )
+        assert not marker.exists()
+
+    def test_collapse_happens_before_truncation(self, tmp_path: Path) -> None:
+        """The char budget is spent on content, not on newlines."""
+        (tmp_path / "pr_info").mkdir()
+        (tmp_path / BLOCKED_FILE).write_text(
+            "\n".join("x" * 10 for _ in range(60)), encoding="utf-8"
+        )
+
+        result = read_and_clear_blocked(tmp_path)
+
+        assert result is not None
+        assert "\n" not in result
+        # 60 chunks of 10 chars + 59 separators = 659 raw chars -> truncated.
+        assert len(result) == BLOCKED_REASON_MAX_CHARS + 3
+
+    def test_invalid_utf8_does_not_raise(self, tmp_path: Path) -> None:
+        """A non-UTF-8 marker still yields a reason and is deleted.
+
+        UnicodeDecodeError is a ValueError, not an OSError; escaping it from
+        here would replace the in-flight LLM failure at the `finally` callers.
+        """
+        (tmp_path / "pr_info").mkdir()
+        marker = tmp_path / BLOCKED_FILE
+        marker.write_bytes(b"pytest \xff\xfe times out")
+
+        result = read_and_clear_blocked(tmp_path)
+
+        assert result is not None
+        assert "pytest" in result
+        assert "times out" in result
+        assert not marker.exists()
+
     def test_long_text_truncated(self, tmp_path: Path) -> None:
         """Overlong reasons are truncated with an ellipsis marker."""
         (tmp_path / "pr_info").mkdir()
@@ -159,6 +203,19 @@ class TestBlockedExitInPrompts:
         )
 
         assert BLOCKED_FILE in prompt_template
+
+    def test_complete_the_step_rule_is_conditioned(self) -> None:
+        """The 'all sub-tasks [x]' gate must not contradict the blocked exit."""
+        prompt_template = get_prompt(
+            str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker"
+        )
+
+        gate = next(
+            line
+            for line in prompt_template.splitlines()
+            if "before finishing" in line and "[x]" in line
+        )
+        assert "unless something blocks you" in gate
 
 
 class TestCheckAndFixMypy:

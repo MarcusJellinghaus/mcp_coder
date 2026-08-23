@@ -304,9 +304,11 @@ def read_and_clear_blocked(project_dir: Path) -> Optional[str]:
         project_dir: Path to the project directory
 
     Returns:
-        None if no marker exists. Otherwise the stripped marker text (truncated
-        to BLOCKED_REASON_MAX_CHARS), or BLOCKED_REASON_FALLBACK when the marker
-        is empty or whitespace only - an empty marker still means blocked.
+        None if no marker exists. Otherwise the marker text collapsed to a
+        single line (truncated to BLOCKED_REASON_MAX_CHARS), or
+        BLOCKED_REASON_FALLBACK when the marker is empty or whitespace only -
+        an empty marker still means blocked. Collapsing keeps the reason from
+        breaking the markdown failure comment it is rendered into.
         The file is deleted in every case where it exists, and the reason is
         logged before the delete so the cleanup call sites - which discard the
         return value - still leave a trace. Never raises: callers invoke this
@@ -319,13 +321,16 @@ def read_and_clear_blocked(project_dir: Path) -> Optional[str]:
 
     reason = BLOCKED_REASON_FALLBACK
     try:
-        text = blocked_path.read_text(encoding="utf-8").strip()
+        raw = blocked_path.read_text(encoding="utf-8", errors="replace")
+        # Collapse before truncating: the reason becomes one markdown line in the
+        # failure comment, and the char budget should be spent on content.
+        text = " ".join(raw.split())
         if len(text) > BLOCKED_REASON_MAX_CHARS:
             reason = text[:BLOCKED_REASON_MAX_CHARS] + "..."
         elif text:
             reason = text
         logger.warning("Blocked marker found: %s", reason)
-    except OSError as e:
+    except (OSError, ValueError) as e:
         logger.warning(f"Could not read blocked marker: {e}")
     finally:
         # Delete even if the read failed - a stale marker breaks the next run.
@@ -482,7 +487,8 @@ Please implement this task step by step."""
     if llm_error in ("timeout", "mcp_unavailable"):
         return TaskOutcome(False, llm_error, blocked or "")
     if blocked:
-        logger.error("Task blocked: %s", blocked)
+        # No log here: read_and_clear_blocked already logged the reason at
+        # WARNING, and core.py logs it at ERROR when it routes the outcome.
         return TaskOutcome(False, "blocked", blocked)
     if llm_error:
         return TaskOutcome(False, llm_error)
