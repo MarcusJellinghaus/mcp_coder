@@ -459,5 +459,7 @@ Details: [step_8.md](./steps/step_8.md)
 
 ## Pull Request
 
-- [ ] PR review
+- [x] PR review — 4 rounds, see [implementation_review_log_1.md](./implementation_review_log_1.md).
+      6 findings fixed across `495e1d6` and `0cb25ff`, 3 rejected as out of scope.
+      Final round clean; vulture and lint-imports (21/21 contracts) both pass.
 - [ ] PR summary
