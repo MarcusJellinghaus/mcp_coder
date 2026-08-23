@@ -36,9 +36,14 @@ table** rather than discovered by the user at runtime:
 | `anthropic` | `model`, `api_key`¹ | — | `base_url`, `api_version` |
 | `ollama` | `model` | `base_url`, `api_key` | `api_version` |
 
-¹ or the backend env var. For `openai` this is *conditional*: an error only when
-`base_url` is unset (public OpenAI, where the diagnosis is certain); an
-exit-neutral warning when `base_url` is set (the relay may be unauthenticated).
+¹ or the backend env var. For `openai`/Azure this is **unconditional** — a
+missing key is always an error, whether or not `base_url` is set. Decision 5
+proposed an exit-neutral warning for the `base_url` case ("the relay may be
+unauthenticated"), but the installed SDK contradicts it: langchain builds
+`openai.AsyncOpenAI(api_key=None, ...)` regardless and the SDK raises
+`OpenAIError: Missing credentials`, so a keyless config cannot construct a
+client at all. Supporting a genuinely unauthenticated relay would need a
+placeholder key in `create_openai_model` — a separate change, out of scope here.
 ² checked on the **resolved** value — config `base_url` **or**
 `AZURE_OPENAI_ENDPOINT`.
 

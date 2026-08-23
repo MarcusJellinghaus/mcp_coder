@@ -28,7 +28,7 @@ Four edits to `config.md`:
    | Setup | `base_url` | `api_version` | `model` | `api_key` |
    |---|---|---|---|---|
    | Plain OpenAI | omit | omit | model name | required (key / env) |
-   | OpenAI-compatible relay (LiteLLM, vLLM) | `https://host/v1` | **omit** | relay alias | optional |
+   | OpenAI-compatible relay (LiteLLM, vLLM) | `https://host/v1` | **omit** | relay alias | required (key / env) |
    | Azure OpenAI | `https://res.openai.azure.com/` | required | deployment | key / env |
    | Gemini / Anthropic | ignored | ignored | model name | key / env |
    | Ollama | optional (host) | ignored | model name | optional |
@@ -52,6 +52,7 @@ Plus a new **Troubleshooting** section, symptom → cause:
 | `404 - {"detail":"Not Found"}` | wrong `base_url` path (include the relay's prefix, e.g. `/v1`) |
 | `Must provide one of base_url or azure_endpoint` | stray `api_version` → Azure mode without `base_url` (and no `AZURE_OPENAI_ENDPOINT`) |
 | `Ensure Authorization has Bearer prefix` | curl only (add `Bearer `); the client adds it — don't put it in `api_key` |
+| `no api_key ... and no OPENAI_API_KEY` on a relay | the OpenAI client cannot be built without credentials even for an unauthenticated relay — set any non-empty `api_key` |
 | `Invalid model name passed in` | `model` not an alias the relay/proxy exposes |
 | `verify` reports one provider but behaves like another | `MCP_CODER_LLM_PROVIDER` set in the environment, overriding `--llm-method` (fixed in 0.1.21) |
 | `verify` passes but the real command fails | `verify` before 0.1.21 sent no system/project prompt, so it did not exercise the real message shape |

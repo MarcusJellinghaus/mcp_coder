@@ -87,10 +87,24 @@ def validate(config: Mapping[str, str | None]) -> list[Finding]:
   because it describes SDK-level env redirects, not contract rules.)
 - `api_key` presence means *config value or the mode's env var* — check
   `config.get("api_key") or os.environ.get(_API_KEY_ENV[mode], "")`.
-- Two conditional rules override the table:
-  - **`openai` `api_key`** — error only when `base_url` is unset (public OpenAI);
-    when `base_url` is set the server may be unauthenticated, so missing is
-    `ok=None` (Decision 5).
+- **`openai` `api_key` is unconditionally required — no `base_url` exception.**
+  Decision 5 proposed an exit-neutral warning when `base_url` is set ("the relay
+  may be unauthenticated"), but that is **contradicted by the installed SDK**:
+  `create_openai_model` passes `api_key=None`, and langchain's
+  `validate_environment` still builds `openai.AsyncOpenAI(api_key=None, ...)`
+  unconditionally (only the *sync* client is skipped, by leaving `root_client`
+  as `None`). `AsyncOpenAI.__init__` enforces credentials and raises
+  `OpenAIError: Missing credentials. Please pass an api_key ... or set the
+  OPENAI_API_KEY ... environment variable`. So a keyless `openai` config —
+  `base_url` set or not — can never construct a client, and an `ok=None` warning
+  would be exit-neutral advice for a setup that is certainly broken, followed by
+  the opaque SDK error this issue exists to replace. The contract therefore
+  raises `ok=False` for a missing `openai`/`azure` `api_key` in every case, and
+  `_create_chat_model` fails with the actionable message instead.
+  If an unauthenticated relay ever needs supporting, that is a *separate*
+  change to `create_openai_model` (pass a placeholder key), not a softened
+  contract.
+- One conditional rule overrides the table:
   - **`azure` `base_url`** — satisfied by config `base_url` **or**
     `os.environ.get("AZURE_OPENAI_ENDPOINT")`. Consult the environment directly;
     an explicitly passed `None` bypasses langchain's `from_env` factory, so the
@@ -117,7 +131,7 @@ validate(config):
         present = _is_present(config, field, mode)        # mode-keyed; env-aware
                                                           # for api_key/base_url
         if status == "required" and not present:
-            findings.append(_required_finding(mode, field))   # ok=False, or None for openai api_key+base_url
+            findings.append(_required_finding(mode, field))   # always ok=False
         elif status == "ignored" and config.get(field):
             findings.append(warn(field, f"{field} is ignored by backend '{mode}' — remove it"))
     return findings
@@ -132,9 +146,10 @@ Example findings:
   "value": "api_version is set (Azure mode) but no base_url resolved from "
            "config or AZURE_OPENAI_ENDPOINT — set [llm.langchain] base_url to "
            "your Azure resource URL, or remove api_version for a non-Azure server"},
- {"key": "api_key", "ok": None,
-  "value": "no api_key and no OPENAI_API_KEY — fine if the server at base_url "
-           "is unauthenticated"}]
+ {"key": "api_key", "ok": False,
+  "value": "no api_key in [llm.langchain] and no OPENAI_API_KEY — set one; the "
+           "OpenAI client cannot be built without credentials, even against a "
+           "custom base_url"}]
 ```
 
 ## TDD
@@ -142,7 +157,11 @@ Example findings:
 Table-driven tests, one per contract cell plus the conditionals:
 
 1. `openai` plain, no `base_url`, no key/env → `api_key` `ok=False`.
-2. `openai` with `base_url`, no key/env → `api_key` `ok=None` (exit-neutral).
+2. `openai` **with** `base_url`, no key/env → `api_key` `ok=False` as well (no
+   `base_url` exception), and the message names both `api_key` and
+   `OPENAI_API_KEY`. Guard the SDK fact this rule rests on: with no key,
+   `_create_chat_model` raises the contract `ValueError`, never the SDK's
+   `OpenAIError: Missing credentials`.
 3. `openai` + `api_version`, no `base_url`, no `AZURE_OPENAI_ENDPOINT` →
    `base_url` `ok=False`, message names `api_version` as the cause.
 4. Same but `AZURE_OPENAI_ENDPOINT` set (monkeypatch) → **no** finding.
@@ -171,8 +190,12 @@ Table-driven tests, one per contract cell plus the conditionals:
 > `"azure": "OPENAI_API_KEY"` row — an Azure config keyed off `OPENAI_API_KEY`
 > must not produce a required-error). `mode_of()` returns `None` for any backend
 > outside `_SUPPORTED_BACKENDS`, including the literal `"azure"`, which is an
-> internal mode and not a valid config value. Include the two conditional rules: the
-> `openai` `api_key` rule keyed on `base_url`, and the Azure `base_url` rule that
+> internal mode and not a valid config value. A missing `openai`/`azure`
+> `api_key` is **always** an `ok=False` error — there is no `base_url`
+> exception: langchain builds `openai.AsyncOpenAI(api_key=None)` regardless, and
+> the SDK raises `OpenAIError: Missing credentials`, so a keyless config can
+> never construct a client and must fail with the contract message instead.
+> Include the one conditional rule: the Azure `base_url` rule that
 > consults `AZURE_OPENAI_ENDPOINT` from the environment (not the langchain
 > field). Call it from `_create_chat_model`, raising `ValueError` on the first
 > error-level finding. Write table-driven tests first (TDD).

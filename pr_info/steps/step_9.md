@@ -74,8 +74,7 @@ and uses it to build the `model` / `api_key` rows and to add `base_url` /
   ```python
   overall_ok = ... and all(f["ok"] is not False for f in findings.values())
   ```
-  `ok=None` warnings (ignored keys, unauthenticated-relay `api_key`) stay
-  exit-neutral.
+  `ok=None` warnings (ignored keys) stay exit-neutral.
 
 ## ALGORITHM
 
@@ -107,7 +106,7 @@ overall_ok = <existing clauses> and all(f["ok"] is not False for f in findings.v
 === LLM PROVIDER DETAILS ==================================================
   Backend               [OK]   openai
   Model                 [OK]   Qwen-2.5-72B
-  API key               [WARN] no api_key and no OPENAI_API_KEY — fine if the server at base_url is unauthenticated
+  API key               [ERR]  no api_key in [llm.langchain] and no OPENAI_API_KEY — set one; the OpenAI client cannot be built without credentials, even against a custom base_url
   API version           [WARN] api_version is ignored by backend 'gemini' — remove it
 ```
 
@@ -116,7 +115,9 @@ overall_ok = <existing clauses> and all(f["ok"] is not False for f in findings.v
 1. Azure mode without `base_url` → `result["base_url"]["ok"] is False` and
    `overall_ok is False`; the message names `api_version`.
 2. Public OpenAI without any key → `api_key` `ok=False`, `overall_ok is False`.
-3. `base_url` set, no key → `api_key` `ok=None`, `overall_ok` **unchanged**.
+3. `base_url` set, no key → `api_key` `ok=False` and `overall_ok is False` too
+   (no `base_url` exception — see step 5: the client cannot be constructed
+   without credentials).
 4. `gemini` + `base_url` → an `[WARN]` row, `overall_ok` unchanged.
 5. `ollama` with no key → `api_key` `ok=True` **and** `value == "not set
    (optional)"` (special case removed, rendered text preserved); assert the
