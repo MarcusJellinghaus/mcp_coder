@@ -364,15 +364,22 @@ def run_setup_commands(
         )
 
 
-def update_gitignore(folder_path: Path) -> None:
+def update_gitignore(folder_path: Path) -> list[str]:
     """Append missing vscodeclaude entries to .gitignore.
 
     Args:
         folder_path: Working folder path
 
+    Returns:
+        The pattern lines that were appended, in ``GITIGNORE_ENTRY`` order.
+        Empty when the file was already up to date. Comment lines are never
+        part of the result.
+
     Idempotent: appends only the pattern lines from ``GITIGNORE_ENTRY`` that
     are not already present, so upgrading an older gitignore block picks up
     newly added entries without duplicating existing ones.
+
+    Append-only by design: existing content is never rewritten.
     """
     from .templates import GITIGNORE_ENTRY
 
@@ -394,17 +401,27 @@ def update_gitignore(folder_path: Path) -> None:
         and line.strip() not in existing_lines
     ]
     if not missing:
-        return
+        return []
 
     # Fresh repo (no marker yet): write the full block for a clean comment
     # header. Otherwise append just the missing pattern lines.
     if ".vscodeclaude_status.txt" in existing_lines:
         addition = "\n".join(missing) + "\n"
     else:
-        addition = GITIGNORE_ENTRY
+        addition = GITIGNORE_ENTRY.lstrip("\n")
+        if existing_content:
+            addition = "\n" + addition  # blank line before the new block
 
-    with gitignore_path.open("a", encoding="utf-8") as f:
+    # Never glue onto a last line that lacks its newline.
+    if existing_content and not existing_content.endswith("\n"):
+        addition = "\n" + addition
+
+    # newline="" disables text-mode translation: the literal "\n" above is what
+    # reaches the file, so a LF .gitignore stays LF on Windows.
+    with gitignore_path.open("a", encoding="utf-8", newline="") as f:
         f.write(addition)
+
+    return missing
 
 
 def create_workspace_file(

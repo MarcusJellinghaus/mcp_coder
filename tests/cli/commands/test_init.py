@@ -52,7 +52,9 @@ class TestInitCommand:
         mock_create.return_value = True  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
         mock_find.return_value = tmp_path / "source"  # type: ignore[attr-defined]
-        args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
+        args = argparse.Namespace(
+            command="init", just_skills=False, project_dir=str(tmp_path)
+        )
 
         with caplog.at_level(logging.DEBUG):
             result = execute_init(args)
@@ -81,7 +83,9 @@ class TestInitCommand:
         mock_create.return_value = False  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
         mock_find.return_value = tmp_path / "source"  # type: ignore[attr-defined]
-        args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
+        args = argparse.Namespace(
+            command="init", just_skills=False, project_dir=str(tmp_path)
+        )
 
         with caplog.at_level(logging.DEBUG):
             result = execute_init(args)
@@ -106,7 +110,9 @@ class TestInitCommand:
         mock_create.side_effect = OSError("Permission denied")  # type: ignore[attr-defined]
         mock_path.return_value = "/fake/path/config.toml"  # type: ignore[attr-defined]
         mock_find.return_value = tmp_path / "source"  # type: ignore[attr-defined]
-        args = argparse.Namespace(command="init", just_skills=False, project_dir=None)
+        args = argparse.Namespace(
+            command="init", just_skills=False, project_dir=str(tmp_path)
+        )
 
         with caplog.at_level(logging.DEBUG):
             result = execute_init(args)

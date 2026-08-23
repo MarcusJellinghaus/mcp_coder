@@ -26,12 +26,22 @@ mcp-coder check file-size --max-lines 750
 
 ## `.gitignore` Entries
 
-Files that MCP Coder workflows expect to be gitignored. Add the following block to your project's `.gitignore`:
+Files that MCP Coder workflows expect to be gitignored:
 
 ```gitignore
 # MCP configuration files (may contain sensitive paths)
 .mcp.*.json
 
-# VSCodeClaude session status (prevents working folders from appearing "dirty")
+# VSCodeClaude session files (auto-generated)
 .vscodeclaude_status.txt
+.vscodeclaude_analysis.json
+.vscodeclaude_session.json
+.vscodeclaude_start.bat
+.vscodeclaude_start.sh
 ```
+
+- **`.vscodeclaude_*` — written automatically.** `mcp-coder init` appends any
+  missing entries to `<project_dir>/.gitignore`; commit the result. A
+  VSCodeClaude session launch re-appends them as a safety net, so an uncommitted
+  block shows up as a dirty `.gitignore` in every session folder.
+- **`.mcp.*.json` — add manually.** No tool writes this line.

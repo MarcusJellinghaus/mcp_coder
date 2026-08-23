@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ...utils.log_utils import OUTPUT
 from ...utils.user_config import create_default_config, get_config_file_path
+from ...workflows.vscodeclaude.workspace import update_gitignore
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,31 @@ def _deploy_skills(source_dir: Path, project_dir: Path) -> tuple[int, int]:
     return added, skipped
 
 
+def _write_gitignore_entries(project_dir: Path) -> bool:
+    """Ensure the VSCodeClaude entries are present in the project .gitignore.
+
+    Args:
+        project_dir: Target project root.
+
+    Returns:
+        True on success (including "already up to date"), False if the
+        .gitignore could not be read or written. A failure is logged and never
+        aborts init.
+    """
+    try:
+        added = update_gitignore(project_dir)
+    except (OSError, UnicodeDecodeError) as e:
+        logger.warning("Failed to update .gitignore in %s: %s", project_dir, e)
+        return False
+
+    logger.log(OUTPUT, "Gitignore: %d entries added", len(added))
+    if added and not (project_dir / ".git").exists():
+        logger.warning(
+            "Wrote .gitignore entries but %s has no .git/ directory", project_dir
+        )
+    return True
+
+
 def execute_init(args: argparse.Namespace) -> int:
     """Execute init command to create default configuration and deploy skills.
 
@@ -128,7 +154,10 @@ def execute_init(args: argparse.Namespace) -> int:
         added, skipped = _deploy_skills(source_dir, project_dir)
         logger.log(OUTPUT, "Skills: %d added, %d skipped", added, skipped)
 
-    # 3. Config creation (skip if --just-skills)
+    # 3. Gitignore entries (both modes: project-scoped, like the .claude/ deploy)
+    gitignore_ok = _write_gitignore_entries(project_dir)
+
+    # 4. Config creation (skip if --just-skills)
     if not args.just_skills:
         path = get_config_file_path()
         try:
@@ -152,4 +181,4 @@ def execute_init(args: argparse.Namespace) -> int:
         else:
             logger.log(OUTPUT, "Config already exists: %s", path)
 
-    return 0
+    return 0 if gitignore_ok else 1
