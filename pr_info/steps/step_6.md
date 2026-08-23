@@ -13,7 +13,10 @@ whenever that variable is exported. Shared by steps 7, 8 and 10.
 ## WHAT
 
 ```python
-_REDIRECT_ENV: dict[str, tuple[str, ...]] = {
+# Sentinel used when nothing resolves; step 8 skips the shape check on it.
+_UNSET_TARGET = "(not configured)"
+
+_REDIRECT_ENV: dict[str, tuple[str, ...]] = {   # keyed by backend, not by mode
     "openai": ("OPENAI_BASE_URL", "OPENAI_API_BASE", "AZURE_OPENAI_ENDPOINT"),
     "ollama": ("OLLAMA_HOST",),
 }
@@ -55,9 +58,11 @@ def redirect_env_in_effect(backend: str | None) -> str | None:
   `pycycle` check also guards this.
 - `resolve_target` constructs via `_create_chat_model(config, timeout=5)` —
   local, no network — inside `try/except Exception`. On failure it returns the
-  config value (or `"(not configured)"`) with `verified=False` and a source that
-  says so. Construction can fail for two legitimate reasons: the backend package
-  is not installed, or the step-5 contract is violated.
+  config value (or the `_UNSET_TARGET` sentinel) with `verified=False` and a
+  source that says so. Export `_UNSET_TARGET` as a module constant: step 8 skips
+  its shape heuristics on it, and a duplicated string literal there would drift.
+  Construction can fail for two legitimate reasons: the backend package is not
+  installed, or the step-5 contract is violated.
 - **Close both httpx clients** after inspection: `create_openai_model` builds a
   sync and an async client per call and nothing closes them. Use a `finally`
   block; `http_client.close()` and `asyncio.run(http_async_client.aclose())`,
@@ -74,7 +79,7 @@ resolve_target(config):
     backend = config["backend"]
     if backend not in ("openai", "ollama"): return ResolvedTarget("n/a", "...", True)
     try: model = _create_chat_model(config, timeout=5)
-    except Exception: return ResolvedTarget(config.get("base_url") or "(not configured)",
+    except Exception: return ResolvedTarget(config.get("base_url") or _UNSET_TARGET,
                                             "config.toml (unverified — client not constructed)", False)
     try: url = dialed_url(model) or "(unknown)"
     finally: _close_http_clients(model)

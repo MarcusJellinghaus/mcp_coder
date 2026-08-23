@@ -216,12 +216,18 @@ modules:
 | 18 | Smart-quote hint in `_format_toml_error` | config |
 | 19 | Documentation | docs |
 
-Ordering constraints: 4 before 5; 5 before 6 (same module, and 6's deferred
-import exists because of 5's wiring); 5 before 9; 6 before 7, 8 and 10;
-7 before 8 (7 introduces the single `resolve_target` call that 8 reuses);
-2 before 11 (`suggest()`); 12 before 13; 15 before 16
-(`is_prompt_configured_but_missing`). Steps 3, 14, 17, 18 are independent;
-19 (docs) is last because it describes the finished behaviour.
+Ordering constraints: **1 before 2** (the `endpoint` rename hint is untestable
+until step 1 removes `endpoint` from the schema — before that it is a *known*
+key and never reaches the unknown-key branch); **1 before 3** (step 3's
+"retired env var is set and ignored" message is false until step 1 stops
+reading `MCP_CODER_LLM_LANGCHAIN_ENDPOINT`); 4 before 5; 5 before 6 (same
+module, and 6's deferred import exists because of 5's wiring); 5 before 9;
+6 before 7, 8 and 10; 7 before 8 (7 introduces the single `resolve_target` call
+that 8 reuses); **7 before 9** (9 unpacks the 3-tuple
+`key, src, _over = _resolve_api_key(...)` that 7 introduces, so 9 does not
+compile against the step-6 tree); 2 before 11 (`suggest()`); 12 before 13;
+15 before 16 (`is_prompt_configured_but_missing`). Steps 14, 17 and 18 are
+independent; 19 (docs) is last because it describes the finished behaviour.
 
 ## Conventions for every step
 

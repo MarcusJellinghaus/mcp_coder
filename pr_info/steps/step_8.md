@@ -45,7 +45,17 @@ def _check_base_url_shape(
   heuristic would fire on a *correct* Azure config. Rebasing removes the
   config-string reason the skip was safe, so it must stay explicit:
   `if api_version: return None`.
-- Also skip when `target.url` is `"n/a"`.
+- **Also skip on the two sentinel targets**, `"n/a"` and `"(not configured)"`.
+  The second is the unverified fallback step 6 returns when the chat model could
+  not be constructed (backend package missing, or a step-5 contract violation)
+  *and* config `base_url` is unset. Without the skip the malformed-URL heuristic
+  fires on the sentinel and prints
+  `[WARN] (not configured) — malformed URL; use e.g. https://host/v1` — a
+  fabricated finding about a value that is not a URL, where today the check is
+  silent. Import the sentinel from `_config_diagnostics` (step 6 defines it
+  as a module constant) rather than re-typing the literal, so the two cannot
+  drift apart. A *configured* `base_url` still gets checked in the unverified
+  case — only the sentinel suppresses the check.
 - Append the provenance to every returned `value`:
   `f"{message} (source: {target.source})"`.
 - Stays advisory: `ok` is only `True` or `None`, never `False`, and
@@ -68,7 +78,7 @@ def _check_base_url_shape(
 
 ```
 _check_base_url_shape(target, api_version):
-    if api_version or target.url == "n/a": return None
+    if api_version or target.url in ("n/a", _UNSET_TARGET): return None
     url = target.url
     if "/completions" in url: return warn(f"{url} — contains '/completions' ... (source: ...)")
     if urlparse(url) lacks http(s) scheme or netloc: return warn(f"{url} — malformed ...")
@@ -93,6 +103,10 @@ Unchanged entry shape, rendered under the `"Base URL"` label:
 3. `api_version` set → returns `None` (Azure skip preserved), even though the
    resolved Azure URL would otherwise trip the `/v1` rule.
 4. `n/a` target (gemini) → `None`.
+4b. Unverified target with the `(not configured)` sentinel (construction failed,
+   config `base_url` unset) → `None`, i.e. **no** `base_url_shape` row at all —
+   the sentinel is never reported as a malformed URL. Same case but with a
+   configured `base_url` → the heuristics still run on the config value.
 5. The existing `/completions` and malformed-URL cases keep their wording.
 6. `base_url_shape` never sets `ok=False` and never changes `overall_ok`.
 7. `ollama` with `OLLAMA_HOST=http://localhost:11434` → **no** shape row at all
@@ -108,8 +122,10 @@ Unchanged entry shape, rendered under the `"Base URL"` label:
 > Implement step 8: change `_check_base_url_shape` in
 > `llm/providers/langchain/verification.py` to take the `ResolvedTarget` from
 > step 6 instead of the raw config string, keeping the three existing heuristics
-> verbatim, keeping the Azure skip explicit, skipping `n/a` targets, and
-> appending the source to the reported value. It stays advisory and must never
+> verbatim, keeping the Azure skip explicit, skipping both sentinel targets
+> (`n/a` and the `(not configured)` unverified fallback — import the constant
+> from `_config_diagnostics`, never re-type the literal), and appending the
+> source to the reported value. It stays advisory and must never
 > affect `overall_ok`. Pass the `target` local that `verify_langchain` already
 > binds from its single `resolve_target(config)` call (step 7) — the chat model
 > must not be constructed twice per run. Keep the call-site gate at

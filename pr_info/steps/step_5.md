@@ -30,8 +30,12 @@ _CONTRACT: dict[str, dict[str, Status]] = {
                   "base_url": "optional", "api_version": "ignored"},
 }
 
+_SUPPORTED_BACKENDS: tuple[str, ...] = ("openai", "gemini", "anthropic", "ollama")
+
+# Keyed by *mode*, not by backend — "azure" reuses OPENAI_API_KEY.
 _API_KEY_ENV: dict[str, str] = {          # reuse verification._BACKEND_ENV_VARS values
-    "openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY",
+    "openai": "OPENAI_API_KEY", "azure": "OPENAI_API_KEY",
+    "gemini": "GEMINI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY", "ollama": "OLLAMA_API_KEY",
 }
 
@@ -40,8 +44,14 @@ class Finding(TypedDict):
     ok: bool | None     # False = error, None = warning
     value: str          # human-readable message
 
-def mode_of(config: Mapping[str, str | None]) -> str:
-    """Return the contract mode: 'azure' for openai+api_version, else the backend."""
+def mode_of(config: Mapping[str, str | None]) -> str | None:
+    """Return the contract mode, or None when the backend is not supported.
+
+    'azure' for openai + api_version; otherwise the backend name itself, but
+    only when it is one of _SUPPORTED_BACKENDS. 'azure' is an internal mode,
+    not a configurable backend value, so a literal backend = "azure" returns
+    None.
+    """
 
 def validate(config: Mapping[str, str | None]) -> list[Finding]:
     """Check config against the per-backend contract. Pure; never raises."""
@@ -66,8 +76,17 @@ def validate(config: Mapping[str, str | None]) -> list[Finding]:
   `_config_diagnostics`'s module-level imports limited to stdlib and sibling
   private modules, or `import mcp_coder.llm.providers.langchain` breaks with a
   partially-initialised-module `ImportError`.
-- `api_key` presence means *config value or the backend env var* — check
-  `config.get("api_key") or os.environ.get(_API_KEY_ENV[backend])`.
+- **One key everywhere: the *mode*.** `_CONTRACT`, `_API_KEY_ENV` and
+  `_is_present()` are all keyed by the value `mode_of()` returns — never by the
+  raw `config["backend"]`. `_API_KEY_ENV` therefore carries an explicit
+  `"azure": "OPENAI_API_KEY"` row. Mixing the two namespaces would look up
+  `_API_KEY_ENV["azure"]`, miss, and report a false `api_key` required-error for
+  an Azure config whose key comes from `OPENAI_API_KEY` — which
+  `_create_chat_model` would then raise on, breaking a working setup
+  (Decision 6). (`_REDIRECT_ENV` in step 6 is the one table keyed by *backend*,
+  because it describes SDK-level env redirects, not contract rules.)
+- `api_key` presence means *config value or the mode's env var* — check
+  `config.get("api_key") or os.environ.get(_API_KEY_ENV[mode], "")`.
 - Two conditional rules override the table:
   - **`openai` `api_key`** — error only when `base_url` is unset (public OpenAI);
     when `base_url` is set the server may be unauthenticated, so missing is
@@ -76,17 +95,27 @@ def validate(config: Mapping[str, str | None]) -> list[Finding]:
     `os.environ.get("AZURE_OPENAI_ENDPOINT")`. Consult the environment directly;
     an explicitly passed `None` bypasses langchain's `from_env` factory, so the
     langchain field is unreadable for this purpose.
-- Unknown backend → single `ok=False` finding on `key="backend"` listing the
-  supported names (keeps the existing message wording).
+- Unsupported backend (`mode_of()` returns `None`) → single `ok=False` finding on
+  `key="backend"` listing the supported names (keeps the existing message
+  wording). This includes a literal `backend = "azure"`: `azure` is an internal
+  mode, so `verify` shows the unsupported-backend row (step 9) rather than
+  `Backend [OK] azure`, and `_create_chat_model` keeps raising
+  `Unsupported langchain backend: 'azure'`.
 
 ## ALGORITHM
 
 ```
+mode_of(config):
+    backend = config.get("backend")
+    if backend == "openai" and config.get("api_version"): return "azure"
+    return backend if backend in _SUPPORTED_BACKENDS else None   # "azure" → None
+
 validate(config):
     mode = mode_of(config); findings = []
-    if mode not in _CONTRACT: return [error("backend", "Unsupported ... 'openai', ...")]
+    if mode is None: return [error("backend", "Unsupported ... 'openai', ...")]
     for field, status in _CONTRACT[mode].items():
-        present = _is_present(config, field, mode)        # env-aware for api_key/base_url
+        present = _is_present(config, field, mode)        # mode-keyed; env-aware
+                                                          # for api_key/base_url
         if status == "required" and not present:
             findings.append(_required_finding(mode, field))   # ok=False, or None for openai api_key+base_url
         elif status == "ignored" and config.get(field):
@@ -117,10 +146,17 @@ Table-driven tests, one per contract cell plus the conditionals:
 3. `openai` + `api_version`, no `base_url`, no `AZURE_OPENAI_ENDPOINT` →
    `base_url` `ok=False`, message names `api_version` as the cause.
 4. Same but `AZURE_OPENAI_ENDPOINT` set (monkeypatch) → **no** finding.
+4b. Azure mode (`openai` + `api_version` + `base_url`) with **no** config
+   `api_key` but `OPENAI_API_KEY` set (monkeypatch) → **no** `api_key` finding,
+   and `_create_chat_model` does not raise (guards the mode-keyed
+   `_API_KEY_ENV["azure"]` lookup).
 5. `gemini` with `base_url` set → `ok=None` "ignored" warning; `api_version`
    likewise.
 6. `ollama` with only `model` → no findings.
-7. Unknown backend → one `ok=False` finding on `backend`.
+7. Unsupported backend (`"opnai"`) → one `ok=False` finding on `backend`.
+7b. Literal `backend = "azure"` → `mode_of()` returns `None` and the same
+   `ok=False` `backend` finding is produced (the internal mode name is not a
+   valid config value).
 8. `_create_chat_model` raises `ValueError` on the Azure-missing case, and the
    message is the contract message, not the pydantic one.
 
@@ -130,7 +166,12 @@ Table-driven tests, one per contract cell plus the conditionals:
 > Implement step 5: create
 > `llm/providers/langchain/_config_diagnostics.py` with the `_CONTRACT` table,
 > `mode_of()` and a pure, non-raising `validate()` returning `Finding` dicts
-> (`ok=False` error, `ok=None` warning). Include the two conditional rules: the
+> (`ok=False` error, `ok=None` warning). Key `_CONTRACT`, `_API_KEY_ENV` and the
+> presence check consistently by the **mode** (so `_API_KEY_ENV` needs an
+> `"azure": "OPENAI_API_KEY"` row — an Azure config keyed off `OPENAI_API_KEY`
+> must not produce a required-error). `mode_of()` returns `None` for any backend
+> outside `_SUPPORTED_BACKENDS`, including the literal `"azure"`, which is an
+> internal mode and not a valid config value. Include the two conditional rules: the
 > `openai` `api_key` rule keyed on `base_url`, and the Azure `base_url` rule that
 > consults `AZURE_OPENAI_ENDPOINT` from the environment (not the langchain
 > field). Call it from `_create_chat_model`, raising `ValueError` on the first
