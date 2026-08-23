@@ -27,6 +27,7 @@ from .constants import (
     LLM_FINALISATION_TIMEOUT_SECONDS,
     PR_INFO_DIR,
 )
+from .task_processing import read_and_clear_blocked
 
 logger = logging.getLogger(__name__)
 
@@ -73,21 +74,31 @@ def run_finalisation(
         "Finalisation Prompt",
         {
             "pr_info_dir": PR_INFO_DIR,
-            "commit_message_path": f"{PR_INFO_DIR}/{COMMIT_MESSAGE_FILE}",
+            # COMMIT_MESSAGE_FILE already carries the pr_info/ prefix.
+            "commit_message_path": COMMIT_MESSAGE_FILE,
         },
     )
 
-    llm_response = prompt_llm(
-        finalisation_prompt,
-        provider=provider,
-        # Inactivity budget (was wall-clock), kept below the CI step cap.
-        timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
-        env_vars=env_vars,
-        execution_dir=str(execution_dir) if execution_dir else None,
-        mcp_config=mcp_config,
-        settings_file=settings_file,
-        branch_name=branch_name,
-    )
+    try:
+        llm_response = prompt_llm(
+            finalisation_prompt,
+            provider=provider,
+            # Inactivity budget (was wall-clock), kept below the CI step cap.
+            timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
+            env_vars=env_vars,
+            execution_dir=str(execution_dir) if execution_dir else None,
+            mcp_config=mcp_config,
+            settings_file=settings_file,
+            branch_name=branch_name,
+        )
+    finally:
+        # Never let a marker reach a commit: commit_all_changes stages everything,
+        # and create_pr's get_branch_diff excludes only pr_info/steps/. Must run
+        # after the LLM turn (to catch a marker the agent just wrote), before the
+        # changes check below, and on the early exits too. Return value unused -
+        # run_finalisation has no blocked outcome.
+        read_and_clear_blocked(project_dir)
+
     response = llm_response["text"]
     try:
         store_session(

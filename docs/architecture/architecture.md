@@ -292,6 +292,7 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
   - `core.py` - Main workflow orchestration and task loop
   - `prerequisites.py` - Git status and prerequisite validation
   - `task_processing.py` - Individual task processing, mypy checks, formatting
+  - **Blocked channel**: an agent that cannot verify its work writes one line to `pr_info/.blocked.txt`; the workflow reads it before the files-changed check, fails the run with `status-06f-blocked` and surfaces the text. Task results travel as `TaskOutcome(success, reason, detail)`.
   - **CLI Integration**: Accessible via `cli/commands/implement.py`
 - **Automated review workflows**: `workflows/review/` - Shared engine behind `mcp-coder review-plan` and `review-implementation` (tests: `workflows/review/test_*.py`)
   - `core.py` - Multi-round review loop (fresh reviewer session per round + persistent supervisor session, rounds cap 5), 3-way outcome routing

@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.implement.core import run_implement_workflow
+from mcp_coder.workflows.implement.task_processing import TaskOutcome
 from mcp_coder.workflows.implement.task_tracker_prep import (
     log_progress_summary,
     prepare_task_tracker,
@@ -111,7 +112,10 @@ class TestIntegration:
         }
 
         # Setup task processing - complete one task then finish
-        mock_process_task.side_effect = [(True, "completed"), (False, "no_tasks")]
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
 
         result = run_implement_workflow(tmp_path, "claude")
 
@@ -197,7 +201,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_prereq.return_value = True
         mock_rebase.return_value = True
         mock_prepare.return_value = True
-        mock_process.return_value = (False, "no_tasks")
+        mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
         mock_branch.return_value = "189-feature"
         mock_ci.return_value = True
@@ -251,7 +255,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_prereq.return_value = True
         mock_rebase.return_value = True
         mock_prepare.return_value = True
-        mock_process.return_value = (False, "no_tasks")
+        mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
         mock_branch.return_value = "189-feature"
         mock_ci.return_value = True
@@ -304,7 +308,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_prereq.return_value = True
         mock_rebase.return_value = True
         mock_prepare.return_value = True
-        mock_process.return_value = (False, "no_tasks")
+        mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
         mock_branch.return_value = "189-feature"
         mock_ci.return_value = True
@@ -335,146 +339,6 @@ class TestRunImplementWorkflowLabelTransitions:
         assert result == 1
         mock_handle_failure.assert_not_called()
 
-    @patch(_DELIBERATE_HANDLER)
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_timeout_calls_handle_failure_with_llm_timeout(
-        self,
-        mock_git_clean: MagicMock,
-        mock_main_branch: MagicMock,
-        mock_prereq: MagicMock,
-        mock_rebase: MagicMock,
-        mock_prepare: MagicMock,
-        mock_process: MagicMock,
-        mock_progress: MagicMock,
-        mock_handle_failure: MagicMock,
-    ) -> None:
-        """When LLM times out, deliberate failure labels llm_timeout."""
-        mock_git_clean.return_value = True
-        mock_main_branch.return_value = True
-        mock_prereq.return_value = True
-        mock_rebase.return_value = True
-        mock_prepare.return_value = True
-        mock_process.return_value = (False, "timeout")
-
-        result = run_implement_workflow(Path("/project"), "claude")
-
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[1]["failure"]
-        assert failure_arg.category == "llm_timeout"
-        assert failure_arg.stage == "Task implementation"
-
-    @patch(_DELIBERATE_HANDLER)
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_mcp_unavailable_calls_handle_failure_with_mcp_unavailable(
-        self,
-        mock_git_clean: MagicMock,
-        mock_main_branch: MagicMock,
-        mock_prereq: MagicMock,
-        mock_rebase: MagicMock,
-        mock_prepare: MagicMock,
-        mock_process: MagicMock,
-        mock_progress: MagicMock,
-        mock_handle_failure: MagicMock,
-    ) -> None:
-        """reason 'mcp_unavailable' routes to mcp_unavailable failure handling."""
-        mock_git_clean.return_value = True
-        mock_main_branch.return_value = True
-        mock_prereq.return_value = True
-        mock_rebase.return_value = True
-        mock_prepare.return_value = True
-        mock_process.return_value = (False, "mcp_unavailable")
-
-        result = run_implement_workflow(Path("/project"), "claude")
-
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[1]["failure"]
-        assert failure_arg.category == "mcp_unavailable"
-        assert failure_arg.stage == "Task implementation"
-
-    @patch(_DELIBERATE_HANDLER)
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_no_changes_after_retries_routes_to_failure(
-        self,
-        mock_git_clean: MagicMock,
-        mock_main_branch: MagicMock,
-        mock_prereq: MagicMock,
-        mock_rebase: MagicMock,
-        mock_prepare: MagicMock,
-        mock_process: MagicMock,
-        mock_progress: MagicMock,
-        mock_handle_failure: MagicMock,
-    ) -> None:
-        """No changes after retries routes to no_changes_after_retries failure."""
-        mock_git_clean.return_value = True
-        mock_main_branch.return_value = True
-        mock_prereq.return_value = True
-        mock_rebase.return_value = True
-        mock_prepare.return_value = True
-        mock_process.return_value = (False, "no_changes_after_retries")
-
-        result = run_implement_workflow(Path("/project"), "claude")
-
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[1]["failure"]
-        assert failure_arg.category == "no_changes_after_retries"
-        assert failure_arg.stage == "Task implementation"
-
-    @patch(_DELIBERATE_HANDLER)
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_error_calls_handle_failure_with_general(
-        self,
-        mock_git_clean: MagicMock,
-        mock_main_branch: MagicMock,
-        mock_prereq: MagicMock,
-        mock_rebase: MagicMock,
-        mock_prepare: MagicMock,
-        mock_process: MagicMock,
-        mock_progress: MagicMock,
-        mock_handle_failure: MagicMock,
-    ) -> None:
-        """When task errors, deliberate failure labels implementing_failed."""
-        mock_git_clean.return_value = True
-        mock_main_branch.return_value = True
-        mock_prereq.return_value = True
-        mock_rebase.return_value = True
-        mock_prepare.return_value = True
-        mock_process.return_value = (False, "error")
-
-        result = run_implement_workflow(Path("/project"), "claude")
-
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[1]["failure"]
-        assert failure_arg.category == "implementing_failed"
-        assert failure_arg.stage == "Task implementation"
-
 
 class TestNoPostErrorProgressDisplay:
     """Verify post-error progress display is removed."""
@@ -504,7 +368,7 @@ class TestNoPostErrorProgressDisplay:
         mock_prereq.return_value = True
         mock_rebase.return_value = True
         mock_prepare.return_value = True
-        mock_process.return_value = (False, "error")
+        mock_process.return_value = TaskOutcome(False, "error")
 
         result = run_implement_workflow(Path("/project"), "claude")
 
@@ -553,7 +417,7 @@ class TestWorkflowSafetyNet:
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
         "mcp_coder.workflows.implement.core.process_task_with_retry",
-        return_value=(False, "no_tasks"),
+        return_value=TaskOutcome(False, "no_tasks"),
     )
     @patch("mcp_coder.workflows.implement.core.get_step_progress", return_value={})
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")

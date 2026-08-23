@@ -170,6 +170,7 @@ ERROR_STATUS_IDS = [
     "pr_creating_failed",
     "task_tracker_prep_failed",
     "no_changes_after_retries",
+    "implementation_blocked",
 ]
 
 

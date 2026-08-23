@@ -217,6 +217,10 @@
         .status-implementing-failed { --label-color: #b60205; }
         .status-ci-fix-needed { --label-color: #d93f0b; }
         .status-llm-timeout { --label-color: #e99695; }
+        .status-task-tracker-prep-failed { --label-color: #b60205; }
+        .status-mcp-unavailable { --label-color: #e99695; }
+        .status-no-changes-after-retries { --label-color: #d93f0b; }
+        .status-implementation-blocked { --label-color: #d93f0b; }
         .status-pr-creating-failed { --label-color: #b60205; }
 
         /* Optional automated-review lane */
@@ -417,6 +421,30 @@
                     <div class="label-name">status-06f-timeout:llm-timeout</div>
                     <div class="label-description">LLM API timeout</div>
                     <div class="status-badge badge-failed">Timeout</div>
+                </div>
+                <div class="label-card highlight-red status-task-tracker-prep-failed">
+                    <div class="step-number">6f-prep</div>
+                    <div class="label-name">status-06f-prep:task-tracker-prep-failed</div>
+                    <div class="label-description">Task tracker preparation failed</div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+                <div class="label-card highlight-red status-mcp-unavailable">
+                    <div class="step-number">6f-mcp</div>
+                    <div class="label-name">status-06f-mcp:mcp-unavailable</div>
+                    <div class="label-description">MCP server unavailable</div>
+                    <div class="status-badge badge-failed">MCP Failed</div>
+                </div>
+                <div class="label-card highlight-red status-no-changes-after-retries">
+                    <div class="step-number">6f-nc</div>
+                    <div class="label-name">status-06f-nochange:no-changes-after-retries</div>
+                    <div class="label-description">No file changes after 3 retries</div>
+                    <div class="status-badge badge-failed">No Changes</div>
+                </div>
+                <div class="label-card highlight-red status-implementation-blocked">
+                    <div class="step-number">6f-b</div>
+                    <div class="label-name">status-06f-blocked:implementation-blocked</div>
+                    <div class="label-description">Agent could not verify the work and refused to claim it</div>
+                    <div class="status-badge badge-failed">Blocked</div>
                 </div>
             </div>
         </div>
