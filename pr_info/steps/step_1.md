@@ -2,12 +2,18 @@
 
 Mechanical, user-facing rename. `endpoint` stops being a recognised config key;
 `MCP_CODER_LLM_LANGCHAIN_ENDPOINT` stops being read. No alias, no shim
-(Decision 13). Largest step (~250 matches) but atomic — it cannot be split
-without leaving the tree broken.
+(Decision 13).
+
+**Split (Decision 19 deferred):** the `endpoint_shape` *result key* and its
+`"Endpoint"` label are **not** renamed here — the issue outline itself calls that
+piece cleanly separable, and it lands in **step 8**, which reworks the same check
+anyway. This step covers the config key, the env var, the internal signatures and
+the user-facing hint strings; the result key keeps its old name between step 1
+and step 8, which leaves the tree green at both commits.
 
 ## WHERE
 
-**Source (10 files)**
+**Source (9 files)**
 
 - `src/mcp_coder/utils/user_config.py` — `_CONFIG_SCHEMA["llm.langchain"]`
 - `src/mcp_coder/llm/providers/langchain/__init__.py`
@@ -18,11 +24,12 @@ without leaving the tree broken.
 - `src/mcp_coder/llm/providers/langchain/_errors_404.py`
 - `src/mcp_coder/llm/providers/langchain/_exceptions.py`
 - `src/mcp_coder/llm/providers/langchain/verification.py`
-- `src/mcp_coder/cli/commands/verify_formatting.py`
+
+(`src/mcp_coder/cli/commands/verify_formatting.py` is **step 8** — see the split
+note above.)
 
 **Tests (~22 files)** — every `_make_config()` helper and `endpoint=` kwarg under
-`tests/llm/providers/langchain/`, plus `tests/utils/test_user_config_schema.py`
-and `tests/cli/commands/test_verify_format_pad.py`.
+`tests/llm/providers/langchain/`, plus `tests/utils/test_user_config_schema.py`.
 
 ## WHAT
 
@@ -76,11 +83,11 @@ Integration points to change, in order:
 4. In `ollama_backend.py` the parameter becomes `base_url`; rename the local
    `base_url = _resolve_ollama_host(...)` to `resolved_url` to avoid shadowing.
 5. `_preflight.py:40`, `_errors_404.py:25,82` — `config.get("base_url")`.
-6. `verification.py` — function rename, result key `endpoint_shape` →
-   `base_url_shape`, `error_type: "endpoint"` → `"base_url"`, and the hint string
-   at `:343`.
-7. `verify_formatting.py:113` — `"base_url_shape": "Base URL"` (Decision 19).
-8. User-facing hint strings that spell "endpoint":
+6. `verification.py` — function rename (`_check_endpoint_shape` →
+   `_check_base_url_shape`) and its parameter, `error_type: "endpoint"` →
+   `"base_url"`, and the hint string at `:343`. The **result key**
+   `result["endpoint_shape"]` is left alone here (step 8).
+7. User-facing hint strings that spell "endpoint":
    `__init__.py:78,82,89`, `_exceptions.py:101` (`"base_url: {hint}"`),
    `_models.py:248` (`"base_url if using a custom server"`), `:345`
    (`"base_url/OLLAMA_HOST if not localhost"`), `verification.py:343`.
@@ -113,8 +120,8 @@ key `"base_url"` in place of `"endpoint"`:
 > Implement step 1: rename the langchain `endpoint` config key to `base_url`
 > across source and tests, including the env var
 > (`MCP_CODER_LLM_LANGCHAIN_ENDPOINT` → `MCP_CODER_LLM_LANGCHAIN_BASE_URL`), all
-> backend/helper signatures, the user-facing hint strings, and the
-> `endpoint_shape` result key / `"Endpoint"` label (→ `base_url_shape` /
-> `"Base URL"`). There is **no alias** — `endpoint` is removed from the schema.
+> backend/helper signatures and the user-facing hint strings. Leave the
+> `endpoint_shape` **result key** and its `"Endpoint"` label untouched — they are
+> step 8. There is **no alias** — `endpoint` is removed from the schema.
 > Write the schema and loader tests first (TDD), then perform the rename.
 > Use MCP tools only. Run pytest (fast markers), pylint and mypy; all must pass.

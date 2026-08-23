@@ -58,6 +58,14 @@ def validate(config: Mapping[str, str | None]) -> list[Finding]:
           raise ValueError(finding["value"])
   ```
 - The validator is pure and non-raising; `verify` (step 9) renders every finding.
+- **Import direction (cycle guard).** `__init__.py` may import
+  `from ._config_diagnostics import validate` at module level *only* because
+  `_config_diagnostics` never imports the package `__init__` at module level.
+  Step 6 adds `resolve_target()`, which needs `_create_chat_model` from
+  `__init__` — that import **must be function-level** (see step 6). Keep
+  `_config_diagnostics`'s module-level imports limited to stdlib and sibling
+  private modules, or `import mcp_coder.llm.providers.langchain` breaks with a
+  partially-initialised-module `ImportError`.
 - `api_key` presence means *config value or the backend env var* — check
   `config.get("api_key") or os.environ.get(_API_KEY_ENV[backend])`.
 - Two conditional rules override the table:

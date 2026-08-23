@@ -39,6 +39,20 @@ def redirect_env_in_effect(backend: str | None) -> str | None:
 - `dialed_url` reads `chat_model.root_client.base_url` (both `ChatOpenAI` and
   `AzureChatOpenAI` expose it) and falls back to `chat_model.base_url`
   (`ChatOllama`). Returns `None` when neither exists.
+- **Deferred import — mandatory.** Step 5 has `__init__.py` import `validate`
+  from `_config_diagnostics` at module level, so `_config_diagnostics` must
+  **not** import the package `__init__` at module level: that cycle makes
+  `import mcp_coder.llm.providers.langchain` fail with a
+  partially-initialised-module `ImportError`. Put the import **inside**
+  `resolve_target`, mirroring how `verification.py` does `from . import _models`
+  inside its functions:
+  ```python
+  def resolve_target(config):
+      from . import _create_chat_model  # deferred: avoids the package cycle
+  ```
+  Cover it with a test that imports the package top-level (`import
+  mcp_coder.llm.providers.langchain`) after step 5's wiring exists; the repo's
+  `pycycle` check also guards this.
 - `resolve_target` constructs via `_create_chat_model(config, timeout=5)` —
   local, no network — inside `try/except Exception`. On failure it returns the
   config value (or `"(not configured)"`) with `verified=False` and a source that
@@ -100,6 +114,8 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 6. Both stub http clients are closed exactly once.
 7. `ollama` reads `base_url` off the model, and `OLLAMA_HOST` is reported as the
    source when set.
+8. `import mcp_coder.llm.providers.langchain` succeeds (cycle regression guard
+   for the deferred import).
 
 ## LLM prompt
 
@@ -109,6 +125,9 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 > `llm/providers/langchain/_config_diagnostics.py`. Read the URL from the
 > constructed client (never computed from config), close both httpx clients
 > afterwards, return `n/a` for gemini/anthropic, and fall back to the
-> config-derived value labelled *unverified* when construction fails.
+> config-derived value labelled *unverified* when construction fails. Import
+> `_create_chat_model` **inside** `resolve_target` (function-level) — a
+> module-level import from the package `__init__` would create an import cycle
+> with step 5's wiring and break `import mcp_coder.llm.providers.langchain`.
 > Write tests first (TDD) using a stub chat model, so no langchain install is
 > required. Use MCP tools only. Run pytest (fast markers), pylint and mypy.

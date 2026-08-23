@@ -31,11 +31,24 @@ and uses it to build the `model` / `api_key` rows and to add `base_url` /
   - `result["model"]` — `ok`/`value` from the finding when present, else
     `{"ok": True, "value": model}`.
   - `result["api_key"]` — keep the masked value and `source` from
-    `_resolve_api_key`; take `ok` from the finding when present. **Delete** the
-    hand-rolled `backend == "ollama"` special case: the contract already declares
-    `api_key` optional for ollama, so no finding is produced.
-  - Remaining findings (`base_url`, `api_version`, `backend`) become their own
-    rows.
+    `_resolve_api_key` (3-tuple after step 7); take `ok` from the finding when
+    present. **Delete** the hand-rolled `backend == "ollama"` special case: the
+    contract already declares `api_key` optional for ollama, so no finding is
+    produced. **Keep its value text**: with no key resolved, `_mask_api_key`
+    returns `None` and `_format_section` stringifies that to the literal
+    `"None"` (`verify_formatting.py:194`). The fallback value must therefore be
+    `_mask_api_key(key) or "not set (optional)"` — the row reads exactly as it
+    does today for ollama, and for any other backend whose `api_key` is optional
+    and unset.
+  - `result["backend"]` — **overwrite, do not `setdefault`.** The key is already
+    populated at `verification.py:199` with `{"ok": backend is not None, ...}`,
+    so an unsupported backend name would otherwise render `Backend [OK] opnai`
+    while `overall_ok` is False — exit 1 with no visible cause. When a `backend`
+    finding exists, its `ok`/`value` replace that entry (value = the
+    contract-violation message naming the supported backends); otherwise the
+    existing entry stands.
+  - Remaining findings (`base_url`, `api_version`) become their own rows via
+    `setdefault`, which is safe because those keys are not pre-populated.
 - `_LABEL_MAP` additions: `"base_url": "Base URL"`, `"api_version": "API version"`.
   Note `base_url` and `base_url_shape` share the `"Base URL"` label but are
   **mutually exclusive by construction**: the shape check runs only for
@@ -53,9 +66,14 @@ and uses it to build the `model` / `api_key` rows and to add `base_url` /
 ```
 findings = {f["key"]: f for f in validate(config)}
 result["model"]   = _row_from(findings.get("model"),   default_ok=True, default_value=model)
-key, src          = _resolve_api_key(backend, config_api_key)
-result["api_key"] = {**_row_from(findings.get("api_key"), True, _mask_api_key(key)), "source": src}
-for k, f in findings.items():
+key, src, _over   = _resolve_api_key(backend, config_api_key)
+result["api_key"] = {**_row_from(findings.get("api_key"), True,
+                                 _mask_api_key(key) or "not set (optional)"),
+                     "source": src}
+if "backend" in findings:                       # overwrite: the key already exists
+    result["backend"] = {"ok": findings["backend"]["ok"],
+                         "value": findings["backend"]["value"]}
+for k, f in findings.items():                   # base_url / api_version
     result.setdefault(k, {"ok": f["ok"], "value": f["value"]})
 overall_ok = <existing clauses> and all(f["ok"] is not False for f in findings.values())
 ```
@@ -77,18 +95,27 @@ overall_ok = <existing clauses> and all(f["ok"] is not False for f in findings.v
 2. Public OpenAI without any key → `api_key` `ok=False`, `overall_ok is False`.
 3. `base_url` set, no key → `api_key` `ok=None`, `overall_ok` **unchanged**.
 4. `gemini` + `base_url` → an `[WARN]` row, `overall_ok` unchanged.
-5. `ollama` with no key → `api_key` `ok=True` (special case removed, behaviour
-   preserved).
+5. `ollama` with no key → `api_key` `ok=True` **and** `value == "not set
+   (optional)"` (special case removed, rendered text preserved); assert the
+   rendered row too, so the `_mask_api_key(None)` → literal `"None"` regression
+   cannot slip through.
 6. Multiple violations → **all** are present in the result (nothing dies on the
    first).
 7. Exit code: case 1 yields exit 1 from `execute_verify`.
+8. Unsupported backend (`backend = "opnai"`) → `result["backend"]["ok"] is
+   False` and its value is the contract message listing the supported backends
+   (the pre-populated `[OK] opnai` row is **replaced**, not kept), and
+   `overall_ok is False`.
 
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_9.md`.
 > Implement step 9: call the step-5 `validate()` from `verify_langchain`, merge
 > the findings into the result dict (replacing the naive `model` / `api_key` rows
-> and deleting the hand-rolled ollama api_key special case), add the two
+> and deleting the hand-rolled ollama api_key special case while keeping its
+> `"not set (optional)"` text, and **overwriting** the pre-populated `backend`
+> row when a `backend` finding exists so an unsupported backend is explained
+> rather than silently exiting 1), add the two
 > `_LABEL_MAP` entries, and extend `overall_ok` so `ok is False` findings cause
 > exit 1 while `ok is None` warnings stay exit-neutral. Do not modify
 > `verify_exit_code.py`. `verify` must report every violation, not just the

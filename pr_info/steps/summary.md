@@ -61,6 +61,15 @@ construction fails. `gemini`/`anthropic` return an explicit `n/a`.
 Three consumers share it: the effective-config echo, the rebased base-URL shape
 check, and the connection-error message.
 
+**One call per `verify` run.** `verify_langchain` — which already loads the
+config and resolves the api key — makes the single `resolve_target(config)` call
+and binds it to a local, then hands it to `describe_effective_config()` (step 7)
+and `_check_base_url_shape()` (step 8). `_config_diagnostics` must import
+`_create_chat_model` **inside** `resolve_target` (function-level): step 5 has the
+package `__init__` importing `validate` from `_config_diagnostics`, so a
+module-level import back would be a cycle and break
+`import mcp_coder.llm.providers.langchain`.
+
 ### 3. Validation is pure, non-raising and shared
 
 `validate(config) -> list[Finding]` is a pure function. `_create_chat_model`
@@ -78,17 +87,23 @@ Findings reuse the existing verify entry shape `{"ok": True|False|None, "value":
 the contract, and the naive `model` / `api_key` rows in `verify_langchain` are
 *replaced* by contract findings rather than running beside them.
 
-### 5. The effective-config echo lives outside the result dict
+### 5. The effective-config echo is a non-dict entry
 
-`_format_section` reads `ok`/`value` from every dict-valued entry, so an echo
-sub-block would render as a warning row with an empty value. Rather than adding a
-skip-list, `describe_effective_config()` returns `list[tuple[str, str]]` and
-`verify` prints it with `_format_row(label, "", value, indent=2)` — an empty
-marker already renders without a status symbol (as `_print_environment_section`
-does today). The "excluded from exit-code logic" requirement is then structural,
-not a workaround. *(This takes the alternative the issue's Constraints section
-offers — "keep the echo out of the result dict entirely" — over Decision 11's
-sub-block wording.)*
+`_format_section` reads `ok`/`value` from every **dict-valued** entry, so an echo
+sub-block would render as a warning row with an empty value — but it `continue`s
+past anything that is not a dict (`verify_formatting.py:190-191`), and
+`_collect_install_hints` has the same guard. So `describe_effective_config()`
+returns `list[tuple[str, str]]`, `verify_langchain` stores it as the list-valued
+`result["effective_config"]`, and `verify.py` prints it with
+`_format_row(label, "", value, indent=2)` — an empty marker already renders
+without a status symbol (as `_print_environment_section` does today). Nothing in
+the formatter or the exit-code path can see it, so "rendered without status
+symbols and excluded from exit-code logic" is structural, not a workaround.
+Carrying it in the result dict also keeps `verify.py` out of the private
+llm-layer helpers (`_load_langchain_config`, `_resolve_api_key`) and avoids a
+second config load per run. *(This takes the alternative the issue's Constraints
+section offers — keep the echo out of `_format_section`'s reach — over
+Decision 11's `{ok,value}` sub-block wording.)*
 
 ### 6. Explicit arguments beat the environment
 
@@ -108,6 +123,12 @@ Only two fields need a *source*: `api_key` (already returned by
 `_resolve_api_key`) and `base_url` (returned by `resolve_target`). `backend` and
 `model` need values; `mode` is derived from `api_version`. So
 `_load_langchain_config`'s flat `dict[str, str | None]` return shape is untouched.
+
+`_resolve_api_key` does gain a third return element, `overridden: bool` (step 7):
+today it reports only the *winning* source, so an `OPENAI_API_KEY` that beats a
+configured `api_key` is indistinguishable from one that filled a gap — and the
+acceptance criterion asks for exactly that distinction. One in-repo caller
+(`verify_langchain`) plus its tests.
 
 ### 8. Module boundaries
 
@@ -148,8 +169,8 @@ modules:
 | `src/mcp_coder/llm/providers/langchain/_preflight.py` | 1 |
 | `src/mcp_coder/llm/providers/langchain/_errors_404.py` | 1 |
 | `src/mcp_coder/llm/providers/langchain/_exceptions.py` | 1 (`base_url_hint`) |
-| `src/mcp_coder/llm/providers/langchain/verification.py` | 1, 8 (shape rebase), 9 (contract rows), 10, 11 (model cross-check) |
-| `src/mcp_coder/cli/commands/verify_formatting.py` | 1 (`base_url_shape` / "Base URL"), 9 + 11 (label map entries) |
+| `src/mcp_coder/llm/providers/langchain/verification.py` | 1, 7 (single `resolve_target` call, echo rows, redirect + api_key-override rows, `_resolve_api_key` 3-tuple), 8 (shape rebase + `base_url_shape` key), 9 (contract rows), 10, 11 (model cross-check) |
+| `src/mcp_coder/cli/commands/verify_formatting.py` | 7 (`base_url_redirect`, `api_key_override` labels), 8 (`base_url_shape` / "Base URL"), 9 + 11 (label map entries) |
 | `src/mcp_coder/cli/commands/verify.py` | 3, 7, 13, 14, 16, 17 |
 | `src/mcp_coder/cli/commands/verify_exit_code.py` | 16 (`prompts_ok` param) |
 | `src/mcp_coder/llm/interface.py` | 12 (provider precedence) |
@@ -175,14 +196,14 @@ modules:
 
 | # | Step | Theme |
 |---|---|---|
-| 1 | `endpoint` → `base_url` rename | config clarity |
+| 1 | `endpoint` → `base_url` rename (config key, env var, signatures, hints) | config clarity |
 | 2 | Unknown-key hints (rename + did-you-mean) | config clarity |
 | 3 | Retired env-var warning in `verify` | config clarity |
 | 4 | `_load_langchain_config` never raises | prerequisite |
 | 5 | Per-backend contract validator (incl. Azure rule) | contract |
 | 6 | `resolve_target()` probe | truth from client |
-| 7 | Effective-config echo + redirect flag | verify |
-| 8 | Base-URL shape check rebased on the resolved target | verify |
+| 7 | Effective-config echo + redirect flag + api_key-override flag | verify |
+| 8 | Base-URL shape check rebased on the resolved target (+ `base_url_shape` key/label, split from step 1) | verify |
 | 9 | Contract findings + exit-code wiring | verify |
 | 10 | Connection errors name the dialed host | errors |
 | 11 | `--check-models` model cross-check | verify |
@@ -195,8 +216,12 @@ modules:
 | 18 | Smart-quote hint in `_format_toml_error` | config |
 | 19 | Documentation | docs |
 
-Ordering constraints: 4 before 5; 5 before 9; 6 before 7 and 8; 12 before 13.
-Everything else is independent.
+Ordering constraints: 4 before 5; 5 before 6 (same module, and 6's deferred
+import exists because of 5's wiring); 5 before 9; 6 before 7, 8 and 10;
+7 before 8 (7 introduces the single `resolve_target` call that 8 reuses);
+2 before 11 (`suggest()`); 12 before 13; 15 before 16
+(`is_prompt_configured_but_missing`). Steps 3, 14, 17, 18 are independent;
+19 (docs) is last because it describes the finished behaviour.
 
 ## Conventions for every step
 
