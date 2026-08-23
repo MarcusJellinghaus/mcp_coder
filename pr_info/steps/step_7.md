@@ -66,13 +66,26 @@ result["effective_config"] = describe_effective_config(config, target, key_sourc
   inside the existing `active_provider == "langchain"` branch (`verify.py:421`).
 - `api_key` provenance comes from `_resolve_api_key`; mask with the existing
   `_mask_api_key`. No new source resolver.
-- **Redirection flag** (Decision 18): when `redirect_env_in_effect(backend)` is
-  set *and* the resolved URL differs from what config implies (config `base_url`
-  unset, or the URL does not start with it), `verify_langchain` adds
+- **Redirection flag** (Decision 18): keyed on the variable that *actually
+  produced* the dialed URL, never on "some redirect variable is exported".
+  `verify_langchain` asks `redirect_env_in_effect(config, target.url)` (step 6),
+  which already applies both filters — mode-applicability
+  (`AZURE_OPENAI_ENDPOINT` only in Azure mode) and a value match against
+  `target.url` — and returns `None` for an exported-but-inert variable. The row
+  is added only when that returns a variable **and** the target differs from
+  what config implies (config `base_url` unset, or `target.url` does not match
+  it):
   ```python
-  result["base_url_redirect"] = {"ok": None, "value":
-      f"{env_var} overrides config.toml — requests go to {target.url}"}
+  env_var = redirect_env_in_effect(config, target.url)
+  if env_var and not _matches_config_base_url(config, target):
+      result["base_url_redirect"] = {"ok": None, "value":
+          f"{env_var} overrides config.toml — requests go to {target.url}"}
   ```
+  Without the value match the row would fabricate exactly the kind of claim this
+  issue exists to kill: a stale `AZURE_OPENAI_ENDPOINT` under a plain `openai`
+  config, or `OPENAI_API_BASE` when `OPENAI_BASE_URL` is the one the SDK used,
+  would print `X overrides config.toml — requests go to https://api.openai.com/v1/`
+  when nothing was redirected at all.
   `_format_section` renders it as `[WARN]`; `overall_ok` is composed explicitly
   (step 9), so an `ok=None` row can never change the exit code.
 - **api_key override flag** (acceptance criterion: "`verify` flags when
@@ -142,9 +155,15 @@ configurable target)`.
    (patch and count) and puts a list under `result["effective_config"]`.
 5. Rendering test: the echo appears with **no** `[OK]`/`[WARN]` symbols, is not
    rendered inside LLM PROVIDER DETAILS, and the exit code is unchanged.
-6. Redirect flag: `OPENAI_BASE_URL` set and config `base_url` unset → the
-   `base_url_redirect` row is present with `ok=None`; no redirect env set → the
-   key is absent.
+6. Redirect flag: `OPENAI_BASE_URL` set, config `base_url` unset and the target
+   reporting the env value → the `base_url_redirect` row is present with
+   `ok=None`; no redirect env set → the key is absent.
+6b. Redirect flag does **not** fire on an inert variable: plain `openai` (no
+   `api_version`), config `base_url` unset, a stale `AZURE_OPENAI_ENDPOINT`
+   exported, target resolving to the SDK default → the `base_url_redirect` key
+   is **absent** and the echo's `base_url` row reads `(SDK default)`. Same for
+   `OPENAI_API_BASE` when `OPENAI_BASE_URL` is the value the target matches:
+   only the matching variable is named, and only once.
 7. api_key override: env var **and** config `api_key` set → `overridden is True`,
    `api_key_override` row present, echo line names the override, `overall_ok`
    unchanged. Env var set with **no** config key → no row, no "overrides" text.
@@ -157,7 +176,11 @@ configurable target)`.
 > it must **not** call `resolve_target`). In `verify_langchain`, make the single
 > `resolve_target(config)` call of the run, store the rows as the list-valued
 > `result["effective_config"]`, and add the exit-neutral `base_url_redirect` and
-> `api_key_override` rows. Extend `_resolve_api_key` to return
+> `api_key_override` rows. Key the redirect row on
+> `redirect_env_in_effect(config, target.url)` — the variable whose value
+> actually produced the dialed URL — so an exported-but-inert variable (a stale
+> `AZURE_OPENAI_ENDPOINT` under plain `openai`, or `OPENAI_API_BASE` when
+> `OPENAI_BASE_URL` won) produces **no** row. Extend `_resolve_api_key` to return
 > `(key, source, overridden)` so an `OPENAI_API_KEY` that beats a configured
 > `api_key` is flagged rather than silently winning. Add the two `_LABEL_MAP`
 > entries. `cli/commands/verify.py` only *prints* the EFFECTIVE CONFIG section via

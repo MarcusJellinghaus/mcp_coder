@@ -33,8 +33,14 @@ def dialed_url(chat_model: Any) -> str | None:
 def resolve_target(config: Mapping[str, str | None]) -> ResolvedTarget:
     """Construct the chat model locally and report the URL it would dial."""
 
-def redirect_env_in_effect(backend: str | None) -> str | None:
-    """Return the first set redirect env var for *backend*, or None."""
+def redirect_env_in_effect(
+    config: Mapping[str, str | None], url: str
+) -> str | None:
+    """Return the redirect env var that actually produced *url*, or None.
+
+    A variable is only named when it is applicable to the current
+    backend/mode **and** its value matches the URL the client will dial.
+    """
 ```
 
 ## HOW
@@ -71,6 +77,26 @@ def redirect_env_in_effect(backend: str | None) -> str | None:
   configurable target", True)` without constructing anything.
 - For `ollama` the resolution happens in *our* code (`_resolve_ollama_host` does
   `os.getenv("OLLAMA_HOST") or base_url`), so the source is knowable directly.
+- **Never fabricate provenance.** "A redirect variable is exported" is *not*
+  evidence that it produced the URL. Two filters, both mandatory, before a
+  variable may be named as the source:
+  - **Applicability by mode.** `AZURE_OPENAI_ENDPOINT` only ever applies in
+    Azure mode (`openai` + `api_version`); `OPENAI_BASE_URL` / `OPENAI_API_BASE`
+    only apply outside it. A stale `AZURE_OPENAI_ENDPOINT` left over from an
+    earlier Azure attempt is inert for a plain-`openai` config.
+  - **Value match against the dialed URL.** Even an applicable variable is named
+    only when its value matches `url` (`_targets_match`). This settles the
+    `OPENAI_BASE_URL` + `OPENAI_API_BASE` both-set case without guessing the
+    SDK's precedence: whichever one the client actually used is the one whose
+    value matches.
+
+  With no applicable, matching variable and no config `base_url`, the source is
+  `"SDK default"` — which is the truth for a plain-`openai` config resolving to
+  `https://api.openai.com/v1/`, whatever else is exported.
+- `_targets_match` tolerates the two normalisations in play: a trailing slash
+  (Azure appends `openai/deployments/<deployment>/` to the configured resource
+  URL) and a missing scheme (`OLLAMA_HOST` may be a bare `host:port`, which
+  `_resolve_ollama_host` normalises to `http://host:port`).
 
 ## ALGORITHM
 
@@ -83,13 +109,31 @@ resolve_target(config):
                                             "config.toml (unverified — client not constructed)", False)
     try: url = dialed_url(model) or "(unknown)"
     finally: _close_http_clients(model)
-    return ResolvedTarget(url, _source_for(config, backend, url), True)
+    return ResolvedTarget(url, _source_for(config, url), True)
 
-_source_for(config, backend, url):
+_source_for(config, url):
     cfg = config.get("base_url")
-    if cfg and url.rstrip("/").startswith(cfg.rstrip("/")): return "config.toml [llm.langchain] base_url"
-    env = redirect_env_in_effect(backend)
+    if cfg and _targets_match(cfg, url): return "config.toml [llm.langchain] base_url"
+    env = redirect_env_in_effect(config, url)
     return f"{env} env var" if env else "SDK default"
+
+_applicable_redirect_envs(config):
+    backend = config.get("backend")
+    azure = backend == "openai" and bool(config.get("api_version"))
+    for name in _REDIRECT_ENV.get(backend or "", ()):
+        if (name == "AZURE_OPENAI_ENDPOINT") == azure:   # mode-applicable only
+            yield name
+
+redirect_env_in_effect(config, url):
+    for name in _applicable_redirect_envs(config):
+        value = os.environ.get(name)
+        if value and _targets_match(value, url): return name
+    return None                       # exported but inert → not the source
+
+_targets_match(candidate, url):
+    c, u = candidate.rstrip("/"), url.rstrip("/")
+    if "://" not in c: u = u.split("://", 1)[-1]   # OLLAMA_HOST may be host:port
+    return u.startswith(c)
 ```
 
 ## DATA
@@ -112,7 +156,18 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 1. config `base_url` set and echoed by the client → source names the config key.
 2. config unset, `OPENAI_BASE_URL` set (monkeypatch) → url is the env value,
    source names `OPENAI_BASE_URL`.
+2b. Both `OPENAI_BASE_URL` and `OPENAI_API_BASE` set to *different* values → the
+   variable named is the one whose value matches the URL the stub client
+   reports, not the first entry in `_REDIRECT_ENV`.
 3. Nothing set → url is the SDK default, source `"SDK default"`.
+3b. **Stale `AZURE_OPENAI_ENDPOINT` with plain `openai`** (no `api_version`, no
+   config `base_url`, client reports the SDK default) → source is
+   `"SDK default"` and `redirect_env_in_effect(config, url)` returns `None`.
+   The inert variable must never be named as the source.
+3c. Azure mode (`openai` + `api_version`, no config `base_url`,
+   `AZURE_OPENAI_ENDPOINT` set, client reports
+   `https://res.openai.azure.com/openai/deployments/dep/`) → source names
+   `AZURE_OPENAI_ENDPOINT` (prefix match, trailing-slash tolerant).
 4. `_create_chat_model` raises → `verified is False`, url is the config value,
    source contains `unverified`.
 5. `gemini` → `("n/a", ..., True)` and `_create_chat_model` is **not** called.
@@ -130,7 +185,13 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 > `llm/providers/langchain/_config_diagnostics.py`. Read the URL from the
 > constructed client (never computed from config), close both httpx clients
 > afterwards, return `n/a` for gemini/anthropic, and fall back to the
-> config-derived value labelled *unverified* when construction fails. Import
+> config-derived value labelled *unverified* when construction fails.
+> `redirect_env_in_effect(config, url)` takes the config **and** the resolved
+> URL: name a redirect variable only when it is applicable to the current
+> backend/mode (`AZURE_OPENAI_ENDPOINT` in Azure mode only) **and** its value
+> matches the dialed URL. A merely-exported variable is inert and must not be
+> reported as the source — a stale `AZURE_OPENAI_ENDPOINT` with a plain `openai`
+> config resolving to `https://api.openai.com/v1/` reports `SDK default`. Import
 > `_create_chat_model` **inside** `resolve_target` (function-level) — a
 > module-level import from the package `__init__` would create an import cycle
 > with step 5's wiring and break `import mcp_coder.llm.providers.langchain`.
