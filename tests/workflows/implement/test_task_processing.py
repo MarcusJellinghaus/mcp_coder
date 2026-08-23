@@ -141,18 +141,22 @@ class TestReadAndClearBlocked:
         assert not marker.exists()
 
     def test_collapse_happens_before_truncation(self, tmp_path: Path) -> None:
-        """The char budget is spent on content, not on newlines."""
+        """The char budget is spent on content, not on newlines.
+
+        60 chunks of 10 x's separated by 5 newlines each. Collapsing first
+        leaves 11-char units, so the 500-char budget retains 455 x's;
+        truncating the raw text first would leave 15-char units and only 335.
+        """
         (tmp_path / "pr_info").mkdir()
         (tmp_path / BLOCKED_FILE).write_text(
-            "\n".join("x" * 10 for _ in range(60)), encoding="utf-8"
+            ("\n" * 5).join("x" * 10 for _ in range(60)), encoding="utf-8"
         )
 
         result = read_and_clear_blocked(tmp_path)
 
         assert result is not None
         assert "\n" not in result
-        # 60 chunks of 10 chars + 59 separators = 659 raw chars -> truncated.
-        assert len(result) == BLOCKED_REASON_MAX_CHARS + 3
+        assert result.count("x") == 455
 
     def test_invalid_utf8_does_not_raise(self, tmp_path: Path) -> None:
         """A non-UTF-8 marker still yields a reason and is deleted.

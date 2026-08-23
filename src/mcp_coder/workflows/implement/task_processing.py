@@ -330,6 +330,8 @@ def read_and_clear_blocked(project_dir: Path) -> Optional[str]:
         elif text:
             reason = text
         logger.warning("Blocked marker found: %s", reason)
+    # errors="replace" is what handles bad bytes; ValueError here is belt-and-
+    # braces in case a future edit drops it - this function must never raise.
     except (OSError, ValueError) as e:
         logger.warning(f"Could not read blocked marker: {e}")
     finally:
