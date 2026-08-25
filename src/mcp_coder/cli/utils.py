@@ -355,11 +355,16 @@ def resolve_claude_settings_path(
 
 
 def find_context_claude_md(start: Path, stop_at: Path | None = None) -> list[Path]:
-    """Find the CLAUDE.md files Claude's cwd-upward walk would reach first.
+    """Find the CLAUDE.md files Claude's cwd-upward walk would load.
 
-    Walks from ``start`` upward and returns every existing candidate at the
-    NEAREST ancestor level that has any. Not a complete account of Claude's
-    memory chain: no ~/.claude/CLAUDE.md, no @import expansion.
+    Walks from ``start`` upward and returns every existing candidate at EVERY
+    ancestor level, because Claude Code loads the whole chain rather than the
+    nearest file. Stopping at the nearest level would silence the
+    outside-project_dir warning for any project that has a CLAUDE.md of its
+    own - the common case, and the one this reporting exists to police.
+
+    Not a complete account of Claude's memory chain: no ~/.claude/CLAUDE.md,
+    no @import expansion.
 
     Args:
         start: Directory to start the walk from.
@@ -369,28 +374,29 @@ def find_context_claude_md(start: Path, stop_at: Path | None = None) -> list[Pat
             above a temporary path.
 
     Returns:
-        Resolved paths at the nearest level with a hit, or [] if none exist.
+        Resolved paths, nearest level first, or [] if none exist. Within one
+        level the candidate order is a membership list, not a precedence rule.
     """
+    hits: list[Path] = []
     try:
         current = start.resolve()
         boundary = stop_at.resolve() if stop_at is not None else None
 
         while True:
-            hits = [p.resolve() for p in claude_md_paths(current) if p.exists()]
-            if hits:
-                # Every hit at this level - the candidate order is a membership
-                # list, not a precedence rule.
-                return hits
+            hits.extend(p.resolve() for p in claude_md_paths(current) if p.exists())
 
-            # After the hit check, so the boundary is examined inclusively.
+            # Checked after collecting, so the boundary is examined inclusively.
             if boundary is not None and current == boundary:
-                return []
+                break
             if current.parent == current:
-                return []
+                break
             current = current.parent
     except OSError:
-        # A permission error mid-walk must not crash a workflow.
-        return []
+        # A permission error mid-walk must not crash a workflow - report what
+        # was found below it rather than nothing.
+        pass
+
+    return hits
 
 
 def is_outside_project_dir(path: Path, project_dir: str | Path | None) -> bool:

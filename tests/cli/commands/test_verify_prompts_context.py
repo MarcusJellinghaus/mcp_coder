@@ -115,7 +115,6 @@ class TestVerifyReportsProjectInstructions:
     def test_hit_outside_project_dir_warns(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        # Deterministic without a stub: the walk from repo/ stops one level up.
         (tmp_path / "CLAUDE.md").write_text("stale rules", encoding="utf-8")
         project_dir = tmp_path / "repo"
         project_dir.mkdir()
@@ -126,6 +125,32 @@ class TestVerifyReportsProjectInstructions:
         assert str((tmp_path / "CLAUDE.md").resolve()) in row
         assert STATUS_SYMBOLS["warning"] in row
         assert "outside project directory" in row
+
+    def test_own_claude_md_does_not_mask_a_stale_ancestor(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Claude loads the whole chain, so verify reports the whole chain.
+
+        Were the walk to stop at the nearest level, a project holding its own
+        CLAUDE.md would silence the outside-project_dir warning entirely - the
+        common case, and the drift this report exists to catch.
+        """
+        stale = tmp_path / "CLAUDE.md"
+        stale.write_text("call mcp__filesystem__*", encoding="utf-8")
+        project_dir = tmp_path / "repo"
+        project_dir.mkdir()
+        own = project_dir / "CLAUDE.md"
+        own.write_text("project rules", encoding="utf-8")
+
+        section = _run_verify(project_dir, capsys)
+
+        labelled = _row(section, "Project instructions")
+        assert str(own.resolve()) in labelled
+        assert STATUS_SYMBOLS["warning"] not in labelled
+
+        stale_row = next(line for line in section if str(stale.resolve()) in line)
+        assert STATUS_SYMBOLS["warning"] in stale_row
+        assert "outside project directory" in stale_row
 
 
 class TestVerifyRedundancyRowUnmoved:

@@ -26,6 +26,48 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 > **Before Step 1:** run the pre-flight marker probe — it gates the whole implementation.
 > **After Step 7:** repeat the probe, and clean the Jenkins tool env `.claude\` (keep `.mcp.json`).
 
+### Manual acceptance evidence (requirement 1 of #1113)
+
+Requirement 1 is the only acceptance evidence that the driven project's rules actually
+reach the agent — nothing in this repo can observe Claude Code's internal memory loading,
+so the automated tests cover the checkable proxy (`cwd == project_dir`, every reported
+instructions file inside `project_dir`) and nothing more.
+
+**Recorded result: none. Neither probe has been run.**
+
+- [ ] **Pre-flight probe (was to gate Step 1) — NOT PERFORMED.** No run, no output and no
+      result is recorded in this branch: not in `pr_info/`, not in any commit message on
+      the branch, and not in the issue comments (#1113 carries only `/approve` and the
+      status-bot note). Steps 1-7 were implemented and committed without it, so the
+      "before" half of the evidence no longer exists in its intended form — the code
+      change has already landed on this branch.
+- [ ] **Post-Step-7 probe — NOT PERFORMED.** Still outstanding and still meaningful; it is
+      what confirms the marker is now *absent* and the repo's own rules present.
+- [ ] **Clean the Jenkins tool env — NOT PERFORMED.** Delete
+      `C:\Jenkins\environments\mcp-coder-dev\.claude\`, **keep `.mcp.json` there**
+      (`command_templates.py:88-89` runs `claude --mcp-config .mcp.json` from that
+      directory).
+
+**How to run either probe** (from `steps/summary.md`; both need a live Claude session, so
+neither can be automated or executed from a headless review):
+
+1. Create a scratch directory outside the repo containing a `CLAUDE.md` whose text is a
+   unique marker — e.g. an instruction to call a made-up tool `mcp__marker_probe__ping`.
+2. `cd` into that scratch directory.
+3. Run `mcp-coder prompt --project-dir <repo> "Quote verbatim any instruction you received
+   about which tools to use."`
+4. Record the verdict below.
+
+| Probe | When | Marker expected | Marker observed | Verdict |
+|---|---|---|---|---|
+| Pre-flight | before Step 1 | present | *(not run)* | *(no evidence)* |
+| Post-Step-7 | after Step 7 | absent | *(not run)* | *(no evidence)* |
+
+Fill in the "Marker observed" and "Verdict" cells when each probe is run. Until the
+post-Step-7 row is filled, the acceptance criterion "the repo's own `CLAUDE.md` is in
+effect and the tool env's is unreachable" rests on reasoning about Claude Code's memory
+loading, not on evidence.
+
 ### Step 1: `claude_md_paths()` + `is_claude_md` refactor
 
 Detail: [step_1.md](./steps/step_1.md) — shared candidate knowledge, no behaviour change.

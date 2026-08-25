@@ -29,7 +29,9 @@ class TestContextRootReporting:
         expected = tmp_path / "CLAUDE.md"
         expected.write_text("rules", encoding="utf-8")
 
-        assert find_context_claude_md(tmp_path) == [expected.resolve()]
+        assert find_context_claude_md(tmp_path, stop_at=tmp_path) == [
+            expected.resolve()
+        ]
 
     def test_finds_dot_claude_claude_md(self, tmp_path: Path) -> None:
         """A .claude/CLAUDE.md in the start directory is found."""
@@ -37,9 +39,11 @@ class TestContextRootReporting:
         expected = tmp_path / ".claude" / "CLAUDE.md"
         expected.write_text("rules", encoding="utf-8")
 
-        assert find_context_claude_md(tmp_path) == [expected.resolve()]
+        assert find_context_claude_md(tmp_path, stop_at=tmp_path) == [
+            expected.resolve()
+        ]
 
-    def test_returns_every_hit_at_the_nearest_level(self, tmp_path: Path) -> None:
+    def test_returns_every_hit_at_one_level(self, tmp_path: Path) -> None:
         """Both candidates at one level are returned - order is not precedence."""
         root_level = tmp_path / "CLAUDE.md"
         root_level.write_text("rules", encoding="utf-8")
@@ -47,20 +51,28 @@ class TestContextRootReporting:
         dot_claude = tmp_path / ".claude" / "CLAUDE.md"
         dot_claude.write_text("more rules", encoding="utf-8")
 
-        result = find_context_claude_md(tmp_path)
+        result = find_context_claude_md(tmp_path, stop_at=tmp_path)
 
         assert len(result) == 2
         assert set(result) == {root_level.resolve(), dot_claude.resolve()}
 
-    def test_nearest_level_wins(self, tmp_path: Path) -> None:
-        """A child's CLAUDE.md shadows the parent's - the walk stops at the first hit."""
-        (tmp_path / "CLAUDE.md").write_text("parent", encoding="utf-8")
+    def test_collects_hits_from_every_level(self, tmp_path: Path) -> None:
+        """A child's CLAUDE.md does not shadow the parent's - Claude loads both.
+
+        The walk must not stop at the nearest hit: an ancestor file is loaded
+        too, and silently omitting it would hide exactly the drift the
+        outside-project_dir warning exists to catch.
+        """
+        parent_file = tmp_path / "CLAUDE.md"
+        parent_file.write_text("parent", encoding="utf-8")
         child = tmp_path / "child"
         child.mkdir()
         child_file = child / "CLAUDE.md"
         child_file.write_text("child", encoding="utf-8")
 
-        assert find_context_claude_md(child) == [child_file.resolve()]
+        result = find_context_claude_md(child, stop_at=tmp_path)
+
+        assert result == [child_file.resolve(), parent_file.resolve()]
 
     def test_finds_claude_md_in_ancestor(self, tmp_path: Path) -> None:
         """The walk climbs to an ancestor when the start directory has none."""
@@ -167,7 +179,13 @@ class TestContextRootReporting:
     def test_report_warns_when_hit_is_outside_project_dir(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """The December Jenkins scenario: rules live outside the driven project."""
+        """The December Jenkins scenario: rules live outside the driven project.
+
+        The finder is stubbed because report_context_root deliberately has no
+        stop_at boundary; the real walk climbs past tmp_path into directories
+        no test controls, and a CLAUDE.md up there would add a second warning.
+        The walk itself is covered above, with stop_at.
+        """
         tool_env = tmp_path / "tool_env"
         tool_env.mkdir()
         stale = tool_env / "CLAUDE.md"
@@ -175,23 +193,63 @@ class TestContextRootReporting:
         repo = tmp_path / "repo"
         repo.mkdir()
 
-        with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-            report_context_root(tool_env, repo)
+        with patch(
+            "mcp_coder.cli.utils.find_context_claude_md",
+            return_value=[stale.resolve()],
+        ):
+            with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
+                report_context_root(tool_env, repo)
 
         warnings_logged = [r for r in caplog.records if r.levelno >= logging.WARNING]
         assert len(warnings_logged) == 1
         assert str(stale.resolve()) in warnings_logged[0].getMessage()
 
+    def test_report_warns_for_an_ancestor_hit_above_the_project(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A project with its own CLAUDE.md must not mask a stale one above it.
+
+        Claude loads both files, so both are reported and the ancestor - which
+        lies outside project_dir - still draws the warning.
+        """
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        own = repo / "CLAUDE.md"
+        own.write_text("project rules", encoding="utf-8")
+        stale = tmp_path / "CLAUDE.md"
+        stale.write_text("call mcp__filesystem__*", encoding="utf-8")
+
+        with patch(
+            "mcp_coder.cli.utils.find_context_claude_md",
+            return_value=[own.resolve(), stale.resolve()],
+        ):
+            with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
+                report_context_root(repo, repo)
+
+        warnings_logged = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings_logged) == 1
+        assert str(stale.resolve()) in warnings_logged[0].getMessage()
+        assert str(own.resolve()) in caplog.text
+
     def test_report_does_not_warn_when_hit_is_inside_project_dir(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """A CLAUDE.md inside project_dir is the expected case - no warning."""
+        """A CLAUDE.md inside project_dir is the expected case - no warning.
+
+        Stubbed for the same reason as the test above: the unbounded walk would
+        otherwise let a CLAUDE.md in a real ancestor decide the assertion.
+        """
         repo = tmp_path / "repo"
         repo.mkdir()
-        (repo / "CLAUDE.md").write_text("rules", encoding="utf-8")
+        own = repo / "CLAUDE.md"
+        own.write_text("rules", encoding="utf-8")
 
-        with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-            report_context_root(repo, repo)
+        with patch(
+            "mcp_coder.cli.utils.find_context_claude_md",
+            return_value=[own.resolve()],
+        ):
+            with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
+                report_context_root(repo, repo)
 
         assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
 
