@@ -27,7 +27,28 @@ Details: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
-      (STILL BLOCKED — confirmed a 3rd time. Root cause fully pinned; needs shell access to fix.
+      (STILL BLOCKED — confirmed a 4th time. Needs shell access; no run so far has had it.
+
+      NEW THIS RUN — three findings that change the picture:
+      1. The venv is behind on FOUR separate upstream features, not just one missing file:
+         `branch_status_rendering` (module), `GITHUB_TOKEN_HINT`, `pr_feedback_undeterminable`
+         (BranchStatusReport field), `fail_on_reviews` (format_for_llm/format_for_human kwarg)
+         and `add_assignees` (PullRequestManager method). So the reinstall must land a revision
+         carrying all five names, not merely `a1f0eac`.
+      2. An in-repo compat shim is NOT a viable workaround. Verified via `list_symbols` on
+         `.venv/.../mcp_workspace/checks/branch_status.py`: the installed copy defines `CIStatus`
+         at line 44 and `WaitContext` at line 54, but has NO `GITHUB_TOKEN_HINT` at all. A
+         try/except fallback import would therefore require back-porting that constant plus the
+         three other upstream features into mcp-coder — clearly wrong.
+      3. TRAP FOR THE NEXT RUN: `mcp__tools-py__get_library_source` resolves against the *tooling
+         server's* environment, which has a NEWER mcp_workspace than the project `.venv`. Asking
+         it for `mcp_workspace.checks.branch_status_rendering` returns the file happily and makes
+         the venv look fine. It is not. Use `mcp__workspace__list_directory` on
+         `.venv/Lib/site-packages/mcp_workspace/checks` instead — that reads the real project venv
+         and shows only 4 files. (`read_file` refuses .venv paths as gitignored; `list_directory`
+         and `list_symbols` both work.)
+
+      Root cause (unchanged):
       `mcp-workspace` is an *unpinned* git dependency (`pyproject.toml:348`), and the copy in
       `.venv` predates upstream commit `a1f0eac`, which added `checks/branch_status_rendering.py`.
       Verified directly: `.venv/Lib/site-packages/mcp_workspace/checks/` contains only
