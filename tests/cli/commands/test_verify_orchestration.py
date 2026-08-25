@@ -790,3 +790,82 @@ class TestRetiredEnvVarWarning:
         _assert_value_at_column(
             line, _expected_value_column(2, label_width=len(self._OLD))
         )
+
+
+class TestVerifySurvivesMistypedLangchainConfig:
+    """Regression: a mistyped [llm.langchain] value must not crash verify (step 4).
+
+    ``_load_langchain_config()`` runs on every ``verify`` — for claude users
+    too, via the backend-readiness warning — so the ``ValueError`` that
+    ``get_config_values`` raises on a schema type mismatch has to be swallowed.
+    The CONFIG section already reports the mismatch; ``verify`` should exit 1
+    from *that*, not from a traceback.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _mock_resolve_mcp(self) -> Any:
+        """Default: resolve_mcp_config_path returns None (no MCP config)."""
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
+            yield
+
+    @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_int_model_exits_1_from_config_error_without_traceback(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """`[llm.langchain] model = 123` completes the run and exits 1."""
+        for env_var in (
+            "MCP_CODER_LLM_LANGCHAIN_BACKEND",
+            "MCP_CODER_LLM_LANGCHAIN_MODEL",
+            "MCP_CODER_LLM_LANGCHAIN_BASE_URL",
+            "MCP_CODER_LLM_LANGCHAIN_API_VERSION",
+        ):
+            monkeypatch.delenv(env_var, raising=False)
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        with (
+            patch(
+                "mcp_coder.utils.user_config.load_config",
+                return_value={"llm": {"langchain": {"model": 123}}},
+            ),
+            patch(
+                f"{_VERIFY}.verify_config",
+                return_value={
+                    "entries": [
+                        {
+                            "label": "[llm.langchain]",
+                            "status": "error",
+                            "value": "model expected str, got int ('123')",
+                        }
+                    ],
+                    "has_error": True,
+                },
+            ),
+        ):
+            result = execute_verify(_make_args())
+
+        output = capsys.readouterr().out
+        assert result == 1
+        assert "expected str, got int" in output
+        assert "Traceback" not in output

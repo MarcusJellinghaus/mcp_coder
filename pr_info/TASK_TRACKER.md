@@ -127,9 +127,69 @@ Details: [step_3.md](./steps/step_3.md)
 
 Details: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`_load_langchain_config` now wraps `get_config_values` in
+      `try/except ValueError`, logs a warning naming `[llm.langchain]` and
+      pointing at the CONFIG section of `mcp-coder verify`, and falls back to
+      `raw = {}`. Every field read switched from `raw[key]` to `raw.get(key)`
+      so the empty-dict fallback degrades all six values to `None` via the
+      unchanged `_str_or_none()` narrowing point. Signature and return shape
+      untouched; **no validation added** (Decision 4 — that lands in step 5 at
+      the point of use). Docstring restated as "Never raises" with the
+      rationale. 3 new tests: the ValueError → all-None + warning case and a
+      non-`str` value narrowing case in
+      `tests/llm/providers/langchain/test_langchain_provider.py`, plus an
+      end-to-end regression in `tests/cli/commands/test_verify_orchestration.py`
+      driving `execute_verify` with a real `[llm.langchain] model = 123`
+      through the claude path — it reaches the loader via
+      `_print_langchain_readiness_warning` (`verify.py:470`) and now exits 1
+      from the *config* error instead of tracebacking.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in either file this step touches**: pylint and mypy
+      scoped to `llm/providers/langchain/__init__.py` +
+      `test_langchain_provider.py` + `test_verify_orchestration.py` are both
+      clean; ruff clean; black/isort leave all three unchanged. Step 4's own
+      tests pass — the 8 tests of `TestLoadLangchainConfig` +
+      `TestVerifySurvivesMistypedLangchainConfig` (2 failing before the change,
+      for exactly the intended reason: the `ValueError` escaping through
+      `verify.py:470` → `_print_langchain_readiness_warning` →
+      `_load_langchain_config`). Wider runs: `tests/cli` → 992 passed,
+      `tests/llm` + `tests/utils` clean apart from the known environmental
+      failures.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-3: the `.venv` copy of the unpinned git dependency `mcp-workspace`
+      lacks `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and
+      pytest collects zero tests. Same workaround: a throwaway
+      `.pytest_shim/sitecustomize.py` registering a stand-in
+      `mcp_workspace.checks.branch_status_rendering` (re-export `CIStatus` from
+      `mcp_workspace.checks.branch_status`, any str for `GITHUB_TOKEN_HINT`),
+      run pytest with `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the
+      directory afterwards — it is **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all
+      pre-existing, none in files this step touches. The `check_branch_status`
+      family is now **six** modules, not the four excluded in step 3:
+      `test_check_branch_status_ci_waiting.py` and
+      `test_check_branch_status_pr_waiting.py` join it (8 further failures, all
+      `assert 2 == 0`). Root cause traced this run and identical to the other
+      four: `checks/ci_policy.py:42` reads `CIStatus.UNAVAILABLE`, absent from
+      the stale enum, so the `AttributeError` hits the broad
+      `except Exception -> return 2` in `execute_check_branch_status`. Verified
+      independent of this step — `check_branch_status.py` contains no
+      `langchain` or `get_config_values` reference at all. `--ignore-glob=**/test_check_branch_status*.py`
+      gives the 992-test `tests/cli` run. Also environmental: the three
+      `tests/llm/providers/copilot/test_copilot_integration.py` tests (no
+      `copilot` CLI) and `test_langchain_exceptions.py::...httpx_connect_error`
+      (`httpx` absent → MagicMock). Project-wide mypy over `src/mcp_coder/llm` +
+      `src/mcp_coder/cli` reports exactly the 3 known `check_branch_status.py`
+      findings (1 `attr-defined`, 2 `call-arg`); the langchain-package pylint
+      run reports only `E0401` for the uninstalled optional extras.)
+- [x] Commit message prepared
 
 ### Step 5: Per-backend contract validator (Azure rule included)
 

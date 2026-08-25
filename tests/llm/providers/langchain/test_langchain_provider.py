@@ -1,5 +1,6 @@
 """Tests for mcp_coder.llm.providers.langchain.__init__."""
 
+import logging
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -115,6 +116,59 @@ class TestLoadLangchainConfig:
             cfg = _load_langchain_config()
         assert cfg["base_url"] is None
         assert "endpoint" not in cfg
+
+    def test_schema_type_mismatch_degrades_to_none(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A ValueError from get_config_values yields all-None values, not a raise.
+
+        The loader runs on every ``verify``, including for claude users, so a
+        mistyped ``[llm.langchain]`` value must not turn a clean config error
+        into a traceback.
+        """
+        with patch(
+            "mcp_coder.llm.providers.langchain.get_config_values",
+            side_effect=ValueError(
+                "Config error in [llm.langchain] model: expected str, got int"
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import _load_langchain_config
+
+            with caplog.at_level(
+                logging.WARNING, logger="mcp_coder.llm.providers.langchain"
+            ):
+                cfg = _load_langchain_config()
+
+        assert cfg == {
+            "default_provider": None,
+            "backend": None,
+            "model": None,
+            "api_key": None,
+            "base_url": None,
+            "api_version": None,
+        }
+        assert "llm.langchain" in caplog.text
+        assert "mcp-coder verify" in caplog.text
+
+    def test_non_str_values_narrow_to_none(self) -> None:
+        """Values that survive the schema but are not str still narrow to None."""
+        with patch(
+            "mcp_coder.llm.providers.langchain.get_config_values",
+            return_value={
+                ("llm", "default_provider"): "langchain",
+                ("llm.langchain", "backend"): "openai",
+                ("llm.langchain", "model"): 123,
+                ("llm.langchain", "api_key"): None,
+                ("llm.langchain", "base_url"): None,
+                ("llm.langchain", "api_version"): None,
+            },
+        ):
+            from mcp_coder.llm.providers.langchain import _load_langchain_config
+
+            cfg = _load_langchain_config()
+
+        assert cfg["backend"] == "openai"
+        assert cfg["model"] is None
 
 
 class TestAskLangchain:
