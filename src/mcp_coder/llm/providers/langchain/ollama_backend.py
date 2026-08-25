@@ -24,7 +24,7 @@ except ImportError as exc:
 def create_ollama_model(
     model: str,
     api_key: str | None,
-    endpoint: str | None = None,
+    base_url: str | None = None,
     timeout: int = 30,
 ) -> ChatOllama:
     """Create a ChatOllama chat model without invoking it.
@@ -37,9 +37,9 @@ def create_ollama_model(
         "model": model,
         "timeout": float(timeout),
     }
-    base_url = _resolve_ollama_host(endpoint)
-    if base_url:
-        kwargs["base_url"] = base_url
+    resolved_url = _resolve_ollama_host(base_url)
+    if resolved_url:
+        kwargs["base_url"] = resolved_url
     if effective_api_key:
         kwargs["client_kwargs"] = {
             "headers": {"Authorization": f"Bearer {effective_api_key}"}

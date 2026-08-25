@@ -18,7 +18,7 @@ class TestLoadLangchainConfig:
                 ("llm.langchain", "backend"): "openai",
                 ("llm.langchain", "model"): "gpt-4o",
                 ("llm.langchain", "api_key"): None,
-                ("llm.langchain", "endpoint"): None,
+                ("llm.langchain", "base_url"): None,
                 ("llm.langchain", "api_version"): None,
             },
         ):
@@ -30,7 +30,7 @@ class TestLoadLangchainConfig:
             "backend",
             "model",
             "api_key",
-            "endpoint",
+            "base_url",
             "api_version",
         }
 
@@ -51,7 +51,7 @@ class TestLoadLangchainConfig:
                 ("llm.langchain", "backend"): "gemini",
                 ("llm.langchain", "model"): "gemini-2.0-flash",
                 ("llm.langchain", "api_key"): None,
-                ("llm.langchain", "endpoint"): None,
+                ("llm.langchain", "base_url"): None,
                 ("llm.langchain", "api_version"): None,
             },
         ):
@@ -74,7 +74,7 @@ class TestLoadLangchainConfig:
                 ("llm.langchain", "backend"): "openai",
                 ("llm.langchain", "model"): "gpt-4o",
                 ("llm.langchain", "api_key"): None,
-                ("llm.langchain", "endpoint"): None,
+                ("llm.langchain", "base_url"): None,
                 ("llm.langchain", "api_version"): None,
             },
         ):
@@ -83,6 +83,38 @@ class TestLoadLangchainConfig:
             cfg = _load_langchain_config()
         assert cfg["backend"] == "openai"
         assert cfg["model"] == "gpt-4o"
+
+    def test_base_url_env_var_is_read(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """MCP_CODER_LLM_LANGCHAIN_BASE_URL lands under the 'base_url' key."""
+        monkeypatch.setenv(
+            "MCP_CODER_LLM_LANGCHAIN_BASE_URL", "https://relay.example.com/v1"
+        )
+        with patch(
+            "mcp_coder.utils.user_config.load_config",
+            return_value={},
+        ):
+            from mcp_coder.llm.providers.langchain import _load_langchain_config
+
+            cfg = _load_langchain_config()
+        assert cfg["base_url"] == "https://relay.example.com/v1"
+
+    def test_retired_endpoint_env_var_is_ignored(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MCP_CODER_LLM_LANGCHAIN_ENDPOINT is no longer read (no alias)."""
+        monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_BASE_URL", raising=False)
+        monkeypatch.setenv(
+            "MCP_CODER_LLM_LANGCHAIN_ENDPOINT", "https://retired.example.com/v1"
+        )
+        with patch(
+            "mcp_coder.utils.user_config.load_config",
+            return_value={},
+        ):
+            from mcp_coder.llm.providers.langchain import _load_langchain_config
+
+            cfg = _load_langchain_config()
+        assert cfg["base_url"] is None
+        assert "endpoint" not in cfg
 
 
 class TestAskLangchain:
@@ -94,7 +126,7 @@ class TestAskLangchain:
             "backend": backend,
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 
@@ -263,7 +295,7 @@ class TestCreateChatModel:
             )
         assert result is mock_model
         mock_create.assert_called_once_with(
-            model="gpt-4o", api_key="k", endpoint=None, api_version=None, timeout=30
+            model="gpt-4o", api_key="k", base_url=None, api_version=None, timeout=30
         )
 
     def test_dispatches_to_gemini_backend(self) -> None:
@@ -318,14 +350,14 @@ class TestCreateChatModel:
                     "backend": "ollama",
                     "model": "llama3.1",
                     "api_key": "k",
-                    "endpoint": "http://localhost:11434",
+                    "base_url": "http://localhost:11434",
                 }
             )
         assert result is mock_model
         mock_create.assert_called_once_with(
             model="llama3.1",
             api_key="k",
-            endpoint="http://localhost:11434",
+            base_url="http://localhost:11434",
             timeout=30,
         )
 
@@ -371,7 +403,7 @@ class TestAskTextConnectionError:
             "backend": backend,
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 
@@ -426,7 +458,7 @@ class TestAskTextAuthError:
             "backend": backend,
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 
@@ -488,7 +520,7 @@ class TestAskAgentConnectionError:
             "backend": backend,
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 
@@ -548,7 +580,7 @@ class TestAskAgentAuthError:
             "backend": backend,
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 

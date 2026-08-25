@@ -22,7 +22,7 @@ def _get_model_suggestions(config: dict[str, str | None]) -> str:
     """
     backend = config.get("backend")
     api_key = config.get("api_key")
-    endpoint = config.get("endpoint")
+    base_url = config.get("base_url")
 
     from ._models import (
         list_anthropic_models,
@@ -33,13 +33,13 @@ def _get_model_suggestions(config: dict[str, str | None]) -> str:
 
     models: list[str] = []
     if backend == "openai":
-        models = list_openai_models(os.getenv("OPENAI_API_KEY") or api_key, endpoint)
+        models = list_openai_models(os.getenv("OPENAI_API_KEY") or api_key, base_url)
     elif backend == "gemini":
         models = list_gemini_models(os.getenv("GEMINI_API_KEY") or api_key)
     elif backend == "anthropic":
         models = list_anthropic_models(os.getenv("ANTHROPIC_API_KEY") or api_key)
     elif backend == "ollama":
-        models = list_ollama_models(os.getenv("OLLAMA_API_KEY") or api_key, endpoint)
+        models = list_ollama_models(os.getenv("OLLAMA_API_KEY") or api_key, base_url)
 
     if models:
         return "\n\nAvailable models:\n" + "\n".join(f"  - {m}" for m in models)
@@ -65,7 +65,7 @@ def _is_404_error(exc: Exception) -> bool:
 def _format_404_hint(config: dict[str, str | None]) -> str:
     """Build the user-facing hint for a 404 / model-not-found response.
 
-    For the openai backend with a custom endpoint the likely cause is a wrong
+    For the openai backend with a custom base URL the likely cause is a wrong
     base URL, so return a base-URL hint and skip the model-listing round-trip.
     Otherwise (non-openai backends such as ollama, or Azure with api_version)
     fall back to 'model not found' plus best-effort suggestions.
@@ -79,7 +79,7 @@ def _format_404_hint(config: dict[str, str | None]) -> str:
     model = config.get("model", "")
     if (
         config.get("backend") == "openai"
-        and config.get("endpoint")
+        and config.get("base_url")
         and not config.get("api_version")
     ):
         return (

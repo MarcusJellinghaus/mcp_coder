@@ -24,7 +24,7 @@ def _make_config(backend: str = "ollama", model: str = "foo") -> dict[str, str |
         "backend": backend,
         "model": model,
         "api_key": None,
-        "endpoint": None,
+        "base_url": None,
         "api_version": None,
     }
 

@@ -75,18 +75,18 @@ def _build_system_messages(
 _AGENT_OVERALL_TIMEOUT = 3600  # 60 minutes
 
 _BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
-    # (provider_label, env_var, endpoint_hint)
+    # (provider_label, env_var, base_url_hint)
     "openai": (
         "OpenAI",
         "OPENAI_API_KEY",
-        "endpoint/base_url if using a custom server",
+        "base_url if using a custom server",
     ),
     "gemini": ("Gemini", "GEMINI_API_KEY", ""),
     "anthropic": ("Anthropic", "ANTHROPIC_API_KEY", ""),
     "ollama": (
         "Ollama",
         "OLLAMA_API_KEY",
-        "endpoint/OLLAMA_HOST if not localhost",
+        "base_url/OLLAMA_HOST if not localhost",
     ),
 }
 
@@ -117,15 +117,15 @@ def _handle_provider_error(exc: Exception, backend: str | None) -> None:
         backend: Backend name ("openai", "gemini", "anthropic", or None).
     """
     auth_errors = _auth_errors_for_backend(backend)
-    provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+    provider, env_var, base_url_hint = _BACKEND_ERROR_PARAMS.get(
         backend or "", (backend or "", "", "")
     )
     if auth_errors and isinstance(exc, auth_errors):
         if backend == "gemini" and not is_google_auth_error(exc):
-            raise_connection_error(provider, env_var, exc, endpoint_hint)
+            raise_connection_error(provider, env_var, exc, base_url_hint)
         raise_auth_error(provider, env_var, exc)
     if isinstance(exc, CONNECTION_ERRORS):
-        raise_connection_error(provider, env_var, exc, endpoint_hint)
+        raise_connection_error(provider, env_var, exc, base_url_hint)
 
 
 def _load_langchain_config() -> dict[str, str | None]:
@@ -138,7 +138,7 @@ def _load_langchain_config() -> dict[str, str | None]:
     ANTHROPIC_API_KEY) in each backend module, falling back to config.toml.
 
     Returns:
-        Dict with keys: default_provider, backend, model, api_key, endpoint, api_version.
+        Dict with keys: default_provider, backend, model, api_key, base_url, api_version.
     """
     raw = get_config_values(
         [
@@ -146,7 +146,7 @@ def _load_langchain_config() -> dict[str, str | None]:
             ("llm.langchain", "backend", None),
             ("llm.langchain", "model", None),
             ("llm.langchain", "api_key", None),
-            ("llm.langchain", "endpoint", None),
+            ("llm.langchain", "base_url", None),
             ("llm.langchain", "api_version", None),
         ]
     )
@@ -160,7 +160,7 @@ def _load_langchain_config() -> dict[str, str | None]:
         "backend": _str_or_none(raw[("llm.langchain", "backend")]),
         "model": _str_or_none(raw[("llm.langchain", "model")]),
         "api_key": _str_or_none(raw[("llm.langchain", "api_key")]),
-        "endpoint": _str_or_none(raw[("llm.langchain", "endpoint")]),
+        "base_url": _str_or_none(raw[("llm.langchain", "base_url")]),
         "api_version": _str_or_none(raw[("llm.langchain", "api_version")]),
     }
 
@@ -189,7 +189,7 @@ def _create_chat_model(
         return create_openai_model(
             model=config.get("model") or "",
             api_key=config.get("api_key"),
-            endpoint=config.get("endpoint"),
+            base_url=config.get("base_url"),
             api_version=config.get("api_version"),
             timeout=timeout,
         )
@@ -215,7 +215,7 @@ def _create_chat_model(
         return create_ollama_model(
             model=config.get("model") or "",
             api_key=config.get("api_key"),
-            endpoint=config.get("endpoint"),
+            base_url=config.get("base_url"),
             timeout=timeout,
         )
     raise ValueError(

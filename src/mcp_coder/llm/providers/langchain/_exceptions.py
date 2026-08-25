@@ -80,7 +80,7 @@ def raise_connection_error(
     provider: str,
     env_var: str,
     original: Exception,
-    endpoint_hint: str = "",
+    base_url_hint: str = "",
 ) -> NoReturn:
     """Build multi-line connection error message and raise LLMConnectionError.
 
@@ -88,7 +88,7 @@ def raise_connection_error(
         provider: Name of the LLM provider (e.g. "OpenAI").
         env_var: Environment variable name for the API key.
         original: The original exception that triggered the error.
-        endpoint_hint: Optional hint about the endpoint/base_url.
+        base_url_hint: Optional hint about the base_url.
 
     Raises:
         LLMConnectionError: Always raised with a formatted error message.
@@ -97,8 +97,8 @@ def raise_connection_error(
     item = 1
     lines.append(f"  {item}. {env_var} env var or api_key in config.toml")
     item += 1
-    if endpoint_hint:
-        lines.append(f"  {item}. endpoint/base_url: {endpoint_hint}")
+    if base_url_hint:
+        lines.append(f"  {item}. base_url: {base_url_hint}")
         item += 1
     lines.append(f"  {item}. Network/firewall/proxy settings")
     if classify_connection_error(original).startswith("ssl-error"):

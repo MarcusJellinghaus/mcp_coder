@@ -68,18 +68,18 @@ class TestListOllamaModels:
     def test_passes_normalized_host_to_client(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """endpoint without scheme gets http:// prefix before passing to Client."""
+        """base_url without scheme gets http:// prefix before passing to Client."""
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         mock_ollama = _ollama_mock()
         mock_ollama.Client.return_value.list.return_value = {"models": []}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            list_ollama_models(api_key=None, endpoint="127.0.0.1:11434")
+            list_ollama_models(api_key=None, base_url="127.0.0.1:11434")
         mock_ollama.Client.assert_called_once_with(host="http://127.0.0.1:11434")
 
-    def test_uses_default_client_when_no_endpoint(
+    def test_uses_default_client_when_no_base_url(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """No env and no endpoint → Client() called without host kwarg."""
+        """No env and no base_url → Client() called without host kwarg."""
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         mock_ollama = _ollama_mock()
         mock_ollama.Client.return_value.list.return_value = {"models": []}
@@ -87,15 +87,15 @@ class TestListOllamaModels:
             list_ollama_models(api_key=None)
         mock_ollama.Client.assert_called_once_with()
 
-    def test_ollama_host_env_overrides_endpoint(
+    def test_ollama_host_env_overrides_base_url(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """OLLAMA_HOST env var takes precedence over endpoint argument."""
+        """OLLAMA_HOST env var takes precedence over base_url argument."""
         monkeypatch.setenv("OLLAMA_HOST", "envhost:9999")
         mock_ollama = _ollama_mock()
         mock_ollama.Client.return_value.list.return_value = {"models": []}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            list_ollama_models(api_key=None, endpoint="confighost:1111")
+            list_ollama_models(api_key=None, base_url="confighost:1111")
         mock_ollama.Client.assert_called_once_with(host="http://envhost:9999")
 
     def test_returns_empty_list_when_no_models(
@@ -132,7 +132,7 @@ class TestListOllamaModels:
                 list_ollama_models(api_key=None)
         msg = str(exc_info.value)
         assert "OLLAMA_API_KEY" in msg
-        assert "OLLAMA_HOST" in msg or "endpoint" in msg.lower()
+        assert "OLLAMA_HOST" in msg or "base_url" in msg.lower()
 
     def test_import_error_when_sdk_not_installed(self) -> None:
         """list_ollama_models raises ImportError when ollama SDK missing."""
@@ -170,7 +170,7 @@ class TestCheckOllamaDaemon:
         mock_ollama = _ollama_mock_with_response_error()
         mock_ollama.Client.return_value.list.return_value = {"models": []}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            result = _check_ollama_daemon(api_key=None, endpoint=None)
+            result = _check_ollama_daemon(api_key=None, base_url=None)
         assert result["ok"] is True
         assert "reachable" in result["value"].lower()
         assert "localhost:11434" in result["value"]
@@ -184,7 +184,7 @@ class TestCheckOllamaDaemon:
             "unauthorized", status_code=401
         )
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            result = _check_ollama_daemon(api_key=None, endpoint=None)
+            result = _check_ollama_daemon(api_key=None, base_url=None)
         assert result["ok"] is False
         assert "auth required" in result["value"].lower()
         assert "OLLAMA_API_KEY" in result["value"]
@@ -198,7 +198,7 @@ class TestCheckOllamaDaemon:
             "forbidden", status_code=403
         )
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            result = _check_ollama_daemon(api_key=None, endpoint=None)
+            result = _check_ollama_daemon(api_key=None, base_url=None)
         assert result["ok"] is False
         assert "auth required" in result["value"].lower()
 
@@ -212,7 +212,7 @@ class TestCheckOllamaDaemon:
             "HTTP 401 unauthorized", status_code=None
         )
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            result = _check_ollama_daemon(api_key=None, endpoint=None)
+            result = _check_ollama_daemon(api_key=None, base_url=None)
         assert result["ok"] is False
         assert "auth required" in result["value"].lower()
 
@@ -223,7 +223,7 @@ class TestCheckOllamaDaemon:
         mock_ollama = _ollama_mock_with_response_error()
         mock_ollama.Client.return_value.list.side_effect = ConnectionError("refused")
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            result = _check_ollama_daemon(api_key=None, endpoint=None)
+            result = _check_ollama_daemon(api_key=None, base_url=None)
         assert result["ok"] is False
         assert "not reachable" in result["value"].lower()
         assert "ollama serve" in result["value"]
@@ -235,29 +235,29 @@ class TestCheckOllamaDaemon:
         mock_ollama = _ollama_mock_with_response_error()
         mock_ollama.Client.return_value.list.side_effect = TimeoutError("slow")
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            result = _check_ollama_daemon(api_key=None, endpoint=None)
+            result = _check_ollama_daemon(api_key=None, base_url=None)
         assert result["ok"] is False
         assert "not reachable" in result["value"].lower()
 
-    def test_uses_default_host_when_neither_env_nor_endpoint_set(
+    def test_uses_default_host_when_neither_env_nor_base_url_set(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         mock_ollama = _ollama_mock_with_response_error()
         mock_ollama.Client.return_value.list.return_value = {"models": []}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            _check_ollama_daemon(api_key=None, endpoint=None)
+            _check_ollama_daemon(api_key=None, base_url=None)
         _, kwargs = mock_ollama.Client.call_args
         assert kwargs["host"] == "http://localhost:11434"
 
-    def test_uses_normalized_host_from_endpoint(
+    def test_uses_normalized_host_from_base_url(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         mock_ollama = _ollama_mock_with_response_error()
         mock_ollama.Client.return_value.list.return_value = {"models": []}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            _check_ollama_daemon(api_key=None, endpoint="example.com:11434")
+            _check_ollama_daemon(api_key=None, base_url="example.com:11434")
         _, kwargs = mock_ollama.Client.call_args
         assert kwargs["host"] == "http://example.com:11434"
 
@@ -275,7 +275,7 @@ class TestCheckOllamaDaemon:
             client_mock,
         ]
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            result = _check_ollama_daemon(api_key="some-key", endpoint=None)
+            result = _check_ollama_daemon(api_key="some-key", base_url=None)
         assert result["ok"] is True
         # Second invocation used host-only kwargs
         assert mock_ollama.Client.call_count == 2
@@ -289,7 +289,7 @@ class TestCheckOllamaDaemon:
         mock_ollama = _ollama_mock_with_response_error()
         mock_ollama.Client.return_value.list.return_value = {"models": []}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            _check_ollama_daemon(api_key="my-token", endpoint=None)
+            _check_ollama_daemon(api_key="my-token", base_url=None)
         _, kwargs = mock_ollama.Client.call_args
         assert kwargs.get("headers") == {"Authorization": "Bearer my-token"}
 
@@ -307,7 +307,7 @@ class TestCheckOllamaToolCapability:
         }
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
             result = check_ollama_tool_capability(
-                model="llama3", api_key=None, endpoint=None
+                model="llama3", api_key=None, base_url=None
             )
         assert result["ok"] is True
         assert "tools" in result["value"].lower()
@@ -323,7 +323,7 @@ class TestCheckOllamaToolCapability:
         }
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
             result = check_ollama_tool_capability(
-                model="some-model", api_key=None, endpoint=None
+                model="some-model", api_key=None, base_url=None
             )
         assert result["ok"] is False
         assert "tools" in result["value"].lower()
@@ -340,7 +340,7 @@ class TestCheckOllamaToolCapability:
         mock_ollama.Client.return_value.show.return_value = {}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
             result = check_ollama_tool_capability(
-                model="llama3", api_key=None, endpoint=None
+                model="llama3", api_key=None, base_url=None
             )
         assert result["ok"] is False
 
@@ -354,7 +354,7 @@ class TestCheckOllamaToolCapability:
         )
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
             result = check_ollama_tool_capability(
-                model="llama3", api_key=None, endpoint=None
+                model="llama3", api_key=None, base_url=None
             )
         assert result["ok"] is False
         assert "model not found" in result["value"]
@@ -365,7 +365,7 @@ class TestCheckOllamaToolCapability:
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         mock_ollama = _ollama_mock()
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            result = check_ollama_tool_capability(model="", api_key=None, endpoint=None)
+            result = check_ollama_tool_capability(model="", api_key=None, base_url=None)
         assert result["ok"] is False
         # Network must not be touched when model is empty.
         mock_ollama.Client.assert_not_called()
@@ -376,18 +376,18 @@ class TestCheckOllamaToolCapability:
         mock_ollama.Client.return_value.show.return_value = {"capabilities": ["tools"]}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
             check_ollama_tool_capability(
-                model="llama3", api_key=None, endpoint="example.com:11434"
+                model="llama3", api_key=None, base_url="example.com:11434"
             )
         _, kwargs = mock_ollama.Client.call_args
         assert kwargs["host"] == "http://example.com:11434"
 
-    def test_uses_default_host_when_no_endpoint(
+    def test_uses_default_host_when_no_base_url(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         mock_ollama = _ollama_mock()
         mock_ollama.Client.return_value.show.return_value = {"capabilities": ["tools"]}
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
-            check_ollama_tool_capability(model="llama3", api_key=None, endpoint=None)
+            check_ollama_tool_capability(model="llama3", api_key=None, base_url=None)
         _, kwargs = mock_ollama.Client.call_args
         assert kwargs["host"] == "http://localhost:11434"

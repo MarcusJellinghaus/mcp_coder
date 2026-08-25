@@ -25,9 +25,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Details: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code)
+- [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+      (BLOCKED: the venv's `mcp-workspace` is outdated — `mcp_workspace.checks.branch_status_rendering`
+      is missing, so `import mcp_coder` fails and pytest cannot collect any test. pylint/mypy run and
+      report **no** issues in the files touched by this step; all their findings are pre-existing and
+      caused by the same stale dependency. Re-run after refreshing the venv.)
+- [x] Commit message prepared
 
 ### Step 2: Unknown-key hints: rename table + "did you mean"
 

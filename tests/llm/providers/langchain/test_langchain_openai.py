@@ -41,8 +41,8 @@ class TestCreateOpenaiModel:
             _, kwargs = MockChat.call_args
             assert kwargs.get("api_key") == SecretStr("config-key")
 
-    def test_passes_endpoint_as_base_url(self) -> None:
-        """endpoint is passed to ChatOpenAI as base_url."""
+    def test_passes_base_url_to_client(self) -> None:
+        """base_url is passed to ChatOpenAI as base_url."""
         with patch(
             "mcp_coder.llm.providers.langchain.openai_backend.ChatOpenAI"
         ) as MockChat:
@@ -53,7 +53,7 @@ class TestCreateOpenaiModel:
             create_openai_model(
                 model="gpt-4o",
                 api_key=None,
-                endpoint="https://custom.example.com/v1",
+                base_url="https://custom.example.com/v1",
             )
             _, kwargs = MockChat.call_args
             assert kwargs.get("base_url") == "https://custom.example.com/v1"
@@ -88,7 +88,7 @@ class TestCreateOpenaiModel:
             create_openai_model(
                 model="gpt-4o",
                 api_key="k",
-                endpoint="https://my.openai.azure.com/",
+                base_url="https://my.openai.azure.com/",
                 api_version="2024-02-01",
             )
             MockAzure.assert_called_once()
@@ -187,7 +187,7 @@ class TestCreateOpenaiModelHttpClient:
             create_openai_model(
                 model="gpt-4o",
                 api_key="k",
-                endpoint="https://my.openai.azure.com/",
+                base_url="https://my.openai.azure.com/",
                 api_version="2024-02-01",
             )
             _, kwargs = MockAzure.call_args
@@ -217,7 +217,7 @@ class TestCreateOpenaiModelHttpClient:
             create_openai_model(
                 model="gpt-4o",
                 api_key="k",
-                endpoint="https://my.openai.azure.com/",
+                base_url="https://my.openai.azure.com/",
                 api_version="2024-02-01",
             )
             _, kwargs = MockAzure.call_args

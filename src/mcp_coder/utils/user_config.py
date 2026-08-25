@@ -54,7 +54,7 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
         "backend": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_BACKEND"),
         "model": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_MODEL"),
         "api_key": FieldDef(str),
-        "endpoint": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_ENDPOINT"),
+        "base_url": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_BASE_URL"),
         "api_version": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_API_VERSION"),
     },
     "coordinator": {

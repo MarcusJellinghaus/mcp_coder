@@ -22,7 +22,7 @@ class TestAskTextModelNotFound:
             "backend": backend,
             "model": "bad-model",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 
@@ -116,10 +116,10 @@ class TestAskTextModelNotFound:
             with pytest.raises(RuntimeError, match="network timeout"):
                 ask_langchain("question")
 
-    def _make_endpoint_config(
+    def _make_base_url_config(
         self,
         backend: str = "openai",
-        endpoint: str | None = "https://h/v1",
+        base_url: str | None = "https://h/v1",
         api_version: str | None = None,
     ) -> dict[str, str | None]:
         return {
@@ -127,18 +127,18 @@ class TestAskTextModelNotFound:
             "backend": backend,
             "model": "bad-model",
             "api_key": None,
-            "endpoint": endpoint,
+            "base_url": base_url,
             "api_version": api_version,
         }
 
-    def test_openai_custom_endpoint_404_gives_base_url_hint(self) -> None:
-        """openai + custom endpoint 404 → base-URL hint, no model listing."""
+    def test_openai_custom_base_url_404_gives_base_url_hint(self) -> None:
+        """openai + custom base_url 404 → base-URL hint, no model listing."""
         mock_model = MagicMock()
         mock_model.invoke.side_effect = Exception("Error code: 404 - Not Found")
         with (
             patch(
                 f"{_MOD_LC}._load_langchain_config",
-                return_value=self._make_endpoint_config(),
+                return_value=self._make_base_url_config(),
             ),
             patch(
                 f"{_MOD_LC}.load_langchain_history",
@@ -159,14 +159,14 @@ class TestAskTextModelNotFound:
         assert "/chat/completions" in message
         mock_list.assert_not_called()
 
-    def test_openai_no_endpoint_404_takes_suggestions_path(self) -> None:
-        """openai + endpoint=None 404 → model-not-found + suggestions."""
+    def test_openai_no_base_url_404_takes_suggestions_path(self) -> None:
+        """openai + base_url=None 404 → model-not-found + suggestions."""
         mock_model = MagicMock()
         mock_model.invoke.side_effect = Exception("Error code: 404 - Not Found")
         with (
             patch(
                 f"{_MOD_LC}._load_langchain_config",
-                return_value=self._make_endpoint_config(endpoint=None),
+                return_value=self._make_base_url_config(base_url=None),
             ),
             patch(
                 f"{_MOD_LC}.load_langchain_history",
@@ -192,13 +192,13 @@ class TestAskTextModelNotFound:
         mock_suggest.assert_called_once()
 
     def test_non_openai_backend_404_keeps_default_wording(self) -> None:
-        """ollama + custom endpoint 404 → default wording, NOT base-URL hint."""
+        """ollama + custom base_url 404 → default wording, NOT base-URL hint."""
         mock_model = MagicMock()
         mock_model.invoke.side_effect = Exception("Error code: 404 - Not Found")
         with (
             patch(
                 f"{_MOD_LC}._load_langchain_config",
-                return_value=self._make_endpoint_config(backend="ollama"),
+                return_value=self._make_base_url_config(backend="ollama"),
             ),
             patch(
                 f"{_MOD_LC}.load_langchain_history",
@@ -247,9 +247,9 @@ class TestIs404Error:
         assert _is_404_error(Exception("boom")) is False
 
 
-def _make_endpoint_config(
+def _make_base_url_config(
     backend: str = "openai",
-    endpoint: str | None = "https://h/v1",
+    base_url: str | None = "https://h/v1",
     api_version: str | None = None,
 ) -> dict[str, str | None]:
     return {
@@ -257,7 +257,7 @@ def _make_endpoint_config(
         "backend": backend,
         "model": "bad-model",
         "api_key": None,
-        "endpoint": endpoint,
+        "base_url": base_url,
         "api_version": api_version,
     }
 
@@ -265,15 +265,15 @@ def _make_endpoint_config(
 class TestAskTextStream404Hint:
     """_ask_text_stream 404 handling shares _format_404_hint with _ask_text."""
 
-    def test_openai_custom_endpoint_404_yields_base_url_hint(self) -> None:
-        """openai + custom endpoint 404 → base-URL error event, no model listing."""
+    def test_openai_custom_base_url_404_yields_base_url_hint(self) -> None:
+        """openai + custom base_url 404 → base-URL error event, no model listing."""
         mock_model = MagicMock()
         mock_model.stream.side_effect = Exception("Error code: 404 - Not Found")
 
         with (
             patch(
                 f"{_MOD_LC}._load_langchain_config",
-                return_value=_make_endpoint_config(),
+                return_value=_make_base_url_config(),
             ),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
@@ -293,15 +293,15 @@ class TestAskTextStream404Hint:
         assert "base URL" in str(exc_info.value)
         mock_list.assert_not_called()
 
-    def test_openai_no_endpoint_404_yields_not_found(self) -> None:
-        """openai + endpoint=None 404 → model-not-found error event + ValueError."""
+    def test_openai_no_base_url_404_yields_not_found(self) -> None:
+        """openai + base_url=None 404 → model-not-found error event + ValueError."""
         mock_model = MagicMock()
         mock_model.stream.side_effect = Exception("Error code: 404 - Not Found")
 
         with (
             patch(
                 f"{_MOD_LC}._load_langchain_config",
-                return_value=_make_endpoint_config(endpoint=None),
+                return_value=_make_base_url_config(base_url=None),
             ),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),
@@ -324,14 +324,14 @@ class TestAskTextStream404Hint:
         assert "base URL" not in str(error_events[0]["message"])
 
     def test_non_openai_backend_404_keeps_default_wording(self) -> None:
-        """ollama + custom endpoint 404 → default wording, NOT base-URL hint."""
+        """ollama + custom base_url 404 → default wording, NOT base-URL hint."""
         mock_model = MagicMock()
         mock_model.stream.side_effect = Exception("Error code: 404 - Not Found")
 
         with (
             patch(
                 f"{_MOD_LC}._load_langchain_config",
-                return_value=_make_endpoint_config(backend="ollama"),
+                return_value=_make_base_url_config(backend="ollama"),
             ),
             patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
             patch(f"{_MOD_LC}.store_langchain_history"),

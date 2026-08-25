@@ -26,7 +26,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -56,7 +56,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": "ollama-proxy-key-1234",
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -83,7 +83,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -112,7 +112,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -139,7 +139,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -166,7 +166,7 @@ class TestVerifyLangchainOllama:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": "sk-test1234test5678",
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -189,7 +189,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -216,7 +216,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -243,7 +243,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -273,7 +273,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": "llama3",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -298,7 +298,7 @@ class TestVerifyLangchainOllama:
             "backend": "ollama",
             "model": None,
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True

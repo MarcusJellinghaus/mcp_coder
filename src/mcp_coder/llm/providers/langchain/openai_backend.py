@@ -24,7 +24,7 @@ except ImportError as exc:
 def create_openai_model(
     model: str,
     api_key: str | None,
-    endpoint: str | None = None,
+    base_url: str | None = None,
     api_version: str | None = None,
     timeout: int = 30,
 ) -> ChatOpenAI | AzureChatOpenAI:
@@ -42,7 +42,7 @@ def create_openai_model(
     if api_version:
         return AzureChatOpenAI(
             azure_deployment=model,
-            azure_endpoint=endpoint,
+            azure_endpoint=base_url,
             api_key=secret_key,
             api_version=api_version,
             timeout=timeout,
@@ -52,7 +52,7 @@ def create_openai_model(
     return ChatOpenAI(
         model=model,
         api_key=secret_key,
-        base_url=endpoint,
+        base_url=base_url,
         timeout=timeout,
         http_client=http_client,
         http_async_client=async_http_client,

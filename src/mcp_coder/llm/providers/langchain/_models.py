@@ -24,17 +24,17 @@ from ._exceptions import (
 from ._http import create_http_client
 
 
-def _resolve_ollama_host(endpoint: str | None) -> str | None:
-    """Resolve OLLAMA_HOST env > endpoint config > None, normalize to URL.
+def _resolve_ollama_host(base_url: str | None) -> str | None:
+    """Resolve OLLAMA_HOST env > base_url config > None, normalize to URL.
 
     Args:
-        endpoint: Optional endpoint from config (host:port or full URL).
+        base_url: Optional base URL from config (host:port or full URL).
 
     Returns:
         Normalized URL string (with http:// prefix if no scheme), or None
-        when neither OLLAMA_HOST nor endpoint is set.
+        when neither OLLAMA_HOST nor base_url is set.
     """
-    host = os.getenv("OLLAMA_HOST") or endpoint
+    host = os.getenv("OLLAMA_HOST") or base_url
     if host and "://" not in host:
         host = f"http://{host}"
     return host
@@ -42,16 +42,16 @@ def _resolve_ollama_host(endpoint: str | None) -> str | None:
 
 def _check_ollama_daemon(
     api_key: str | None,
-    endpoint: str | None,
+    base_url: str | None,
     timeout: float = 5.0,
 ) -> dict[str, Any]:
     """Probe the local Ollama daemon to verify reachability.
 
     Args:
         api_key: Optional bearer token for proxy-auth setups.
-        endpoint: Optional Ollama host (host:port or full URL); resolved via
+        base_url: Optional Ollama host (host:port or full URL); resolved via
             :func:`_resolve_ollama_host`.  Falls back to
-            ``http://localhost:11434`` when neither env nor endpoint is set.
+            ``http://localhost:11434`` when neither env nor base_url is set.
         timeout: Per-request timeout in seconds.
 
     Returns:
@@ -66,7 +66,7 @@ def _check_ollama_daemon(
             "value": f"ollama Python client not installed: {exc}",
         }
 
-    host = _resolve_ollama_host(endpoint) or "http://localhost:11434"
+    host = _resolve_ollama_host(base_url) or "http://localhost:11434"
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
     response_error_cls = getattr(ollama, "ResponseError", None)
 
@@ -105,7 +105,7 @@ def _check_ollama_daemon(
 def check_ollama_tool_capability(
     model: str,
     api_key: str | None,
-    endpoint: str | None,
+    base_url: str | None,
     timeout: float = 5.0,
 ) -> dict[str, Any]:
     """Probe ``/api/show`` to verify the model advertises the ``tools`` capability.
@@ -118,9 +118,9 @@ def check_ollama_tool_capability(
         model: Configured model name (e.g. ``"llama3"``).  An empty string
             short-circuits to ``ok: False`` without any network access.
         api_key: Optional bearer token for proxy-auth setups.
-        endpoint: Optional Ollama host (host:port or full URL); resolved via
+        base_url: Optional Ollama host (host:port or full URL); resolved via
             :func:`_resolve_ollama_host`.  Falls back to
-            ``http://localhost:11434`` when neither env nor endpoint is set.
+            ``http://localhost:11434`` when neither env nor base_url is set.
         timeout: Per-request timeout in seconds.
 
     Returns:
@@ -138,7 +138,7 @@ def check_ollama_tool_capability(
             "value": f"ollama Python client not installed: {exc}",
         }
 
-    host = _resolve_ollama_host(endpoint) or "http://localhost:11434"
+    host = _resolve_ollama_host(base_url) or "http://localhost:11434"
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
 
     client_kwargs: dict[str, Any] = {"host": host, "timeout": timeout}
@@ -211,12 +211,12 @@ def list_gemini_models(api_key: str | None) -> list[str]:
         raise_connection_error("Gemini", "GEMINI_API_KEY", exc)
 
 
-def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list[str]:
+def list_openai_models(api_key: str | None, base_url: str | None = None) -> list[str]:
     """Return model IDs available for the given OpenAI API key.
 
     Args:
         api_key: OpenAI API key, or None to use default credentials.
-        endpoint: Optional custom base URL for the API.
+        base_url: Optional custom base URL for the API.
 
     Returns:
         Sorted list of model ID strings.
@@ -234,7 +234,7 @@ def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list
     try:
         client = openai.OpenAI(
             api_key=api_key if api_key else None,
-            base_url=endpoint if endpoint else None,
+            base_url=base_url if base_url else None,
             http_client=create_http_client(),
         )
         return sorted(m.id for m in client.models.list())
@@ -245,7 +245,7 @@ def list_openai_models(api_key: str | None, endpoint: str | None = None) -> list
             "OpenAI",
             "OPENAI_API_KEY",
             exc,
-            endpoint_hint="endpoint/base_url if using a custom server",
+            base_url_hint="base_url if using a custom server",
         )
 
 
@@ -282,7 +282,7 @@ def list_anthropic_models(api_key: str | None) -> list[str]:
 
 def list_ollama_models(
     api_key: str | None,
-    endpoint: str | None = None,
+    base_url: str | None = None,
 ) -> list[str]:
     """Return sorted model names from the Ollama daemon's /api/tags.
 
@@ -292,7 +292,7 @@ def list_ollama_models(
             ``headers={"Authorization": f"Bearer {api_key}"}``; when ``None``,
             no ``headers`` kwarg is passed. Older ``ollama`` SDKs that don't
             accept ``headers`` fall back to a host-only client.
-        endpoint: Optional Ollama host (host:port or full URL); resolved via
+        base_url: Optional Ollama host (host:port or full URL); resolved via
             :func:`_resolve_ollama_host`.
 
     Returns:
@@ -309,7 +309,7 @@ def list_ollama_models(
             "ollama is required to list Ollama models.\n"
             "Install with: pip install 'mcp-coder[langchain]'"
         ) from exc
-    host = _resolve_ollama_host(endpoint)
+    host = _resolve_ollama_host(base_url)
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
 
     client_kwargs: dict[str, Any] = {}
@@ -342,5 +342,5 @@ def list_ollama_models(
             "Ollama",
             "OLLAMA_API_KEY",
             exc,
-            endpoint_hint="endpoint/OLLAMA_HOST if not localhost",
+            base_url_hint="base_url/OLLAMA_HOST if not localhost",
         )

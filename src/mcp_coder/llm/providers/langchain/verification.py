@@ -126,48 +126,48 @@ def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
     }
 
 
-def _check_endpoint_shape(
-    endpoint: str | None, api_version: str | None
+def _check_base_url_shape(
+    base_url: str | None, api_version: str | None
 ) -> dict[str, Any] | None:
     """Pure string heuristic for a custom OpenAI base URL (no network).
 
-    Flags an endpoint that is provably wrong (contains ``/completions``),
+    Flags a base URL that is provably wrong (contains ``/completions``),
     malformed (missing scheme or host), or missing the conventional ``/v1``
     suffix. WARN-level findings use ``ok=None`` with the guidance carried
     inside ``value``; INFO and healthy findings use ``ok=True``.
 
     Args:
-        endpoint: Custom base URL from config, or None.
+        base_url: Custom base URL from config, or None.
         api_version: Azure API version from config, or None. When set the
             backend routes to AzureChatOpenAI, so this heuristic is skipped.
 
     Returns:
         A verify-style dict with ``ok`` (``None`` | ``True``) and ``value``
         (str), or None when the check does not apply (api_version set →
-        Azure path, or no custom endpoint configured).
+        Azure path, or no custom base URL configured).
     """
-    if api_version or not endpoint:
+    if api_version or not base_url:
         return None
-    if "/completions" in endpoint:
+    if "/completions" in base_url:
         return {
             "ok": None,
             "value": (
-                f"{endpoint} — contains '/completions'; use the base URL only "
+                f"{base_url} — contains '/completions'; use the base URL only "
                 "e.g. https://host/v1 (mcp-coder appends /chat/completions)"
             ),
         }
-    parsed = urlparse(endpoint)
+    parsed = urlparse(base_url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         return {
             "ok": None,
-            "value": f"{endpoint} — malformed URL; use e.g. https://host/v1",
+            "value": f"{base_url} — malformed URL; use e.g. https://host/v1",
         }
-    if not endpoint.rstrip("/").endswith("/v1"):
+    if not base_url.rstrip("/").endswith("/v1"):
         return {
             "ok": True,
-            "value": f"{endpoint} — most relays use .../v1",
+            "value": f"{base_url} — most relays use .../v1",
         }
-    return {"ok": True, "value": endpoint}
+    return {"ok": True, "value": base_url}
 
 
 def verify_langchain(
@@ -255,10 +255,10 @@ def verify_langchain(
             "value": "no backend configured",
         }
 
-    # Endpoint-shape heuristic (openai custom base URL; advisory only, never
+    # Base-URL-shape heuristic (openai custom base URL; advisory only, never
     # contributes to overall_ok).
     if backend == "openai":
-        shape = _check_endpoint_shape(config.get("endpoint"), config.get("api_version"))
+        shape = _check_base_url_shape(config.get("base_url"), config.get("api_version"))
         if shape is not None:
             result["endpoint_shape"] = shape
 
@@ -272,17 +272,17 @@ def verify_langchain(
         from . import _models
 
         result["ollama_daemon"] = _models._check_ollama_daemon(
-            api_key, config.get("endpoint")
+            api_key, config.get("base_url")
         )
         if model:
             result["ollama_tools_capability"] = _models.check_ollama_tool_capability(
-                model, api_key, config.get("endpoint")
+                model, api_key, config.get("base_url")
             )
 
     # Check models (optional)
     if check_models and backend:
         result["available_models"] = _list_models_for_backend(
-            backend, api_key, config.get("endpoint")
+            backend, api_key, config.get("base_url")
         )
 
     # overall_ok: True when backend configured AND all required packages installed
@@ -302,14 +302,14 @@ def verify_langchain(
 
 
 def _list_models_for_backend(
-    backend: str, api_key: str | None, endpoint: str | None
+    backend: str, api_key: str | None, base_url: str | None
 ) -> dict[str, Any]:
     """List models for the given backend using existing _models.py functions.
 
     Args:
         backend: Backend name ("openai", "gemini", "anthropic", or "ollama").
         api_key: API key for the backend, or None.
-        endpoint: Optional custom endpoint URL (used by OpenAI and Ollama backends).
+        base_url: Optional custom base URL (used by OpenAI and Ollama backends).
 
     Returns:
         Dict with 'ok' (bool), 'value' (list of model names), and optionally 'error'.
@@ -318,13 +318,13 @@ def _list_models_for_backend(
         from . import _models
 
         if backend == "openai":
-            models = _models.list_openai_models(api_key, endpoint)
+            models = _models.list_openai_models(api_key, base_url)
         elif backend == "gemini":
             models = _models.list_gemini_models(api_key)
         elif backend == "anthropic":
             models = _models.list_anthropic_models(api_key)
         elif backend == "ollama":
-            models = _models.list_ollama_models(api_key, endpoint)
+            models = _models.list_ollama_models(api_key, base_url)
         else:
             return {"ok": False, "value": [], "error": f"Unknown backend: {backend}"}
         return {"ok": True, "value": models}
@@ -335,15 +335,15 @@ def _list_models_for_backend(
     except Exception as exc:  # pylint: disable=broad-exception-caught
         msg = str(exc)
         low = msg.lower()
-        if endpoint and ("404" in low or "not found" in low or "not_found" in low):
+        if base_url and ("404" in low or "not found" in low or "not_found" in low):
             return {
                 "ok": False,
                 "value": [],
                 "error": (
-                    f"{msg} — endpoint/base-URL likely wrong; use the base URL "
+                    f"{msg} — base_url likely wrong; use the base URL "
                     "e.g. …/v1 (mcp-coder appends /chat/completions)"
                 ),
-                "error_type": "endpoint",
+                "error_type": "base_url",
             }
         return {"ok": False, "value": [], "error": msg, "error_type": "unknown"}
 

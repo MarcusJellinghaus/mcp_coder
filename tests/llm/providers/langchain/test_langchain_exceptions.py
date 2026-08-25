@@ -106,26 +106,26 @@ class TestRaiseConnectionError:
             )
         assert "truststore" not in str(exc_info.value)
 
-    def test_message_contains_endpoint_hint_when_provided(self) -> None:
-        """Error message includes endpoint hint when provided."""
+    def test_message_contains_base_url_hint_when_provided(self) -> None:
+        """Error message includes base_url hint when provided."""
         with pytest.raises(LLMConnectionError) as exc_info:
             raise_connection_error(
                 provider="OpenAI",
                 env_var="OPENAI_API_KEY",
                 original=OSError("fail"),
-                endpoint_hint="https://custom.example.com",
+                base_url_hint="https://custom.example.com",
             )
         assert "https://custom.example.com" in str(exc_info.value)
 
-    def test_message_omits_endpoint_hint_when_empty(self) -> None:
-        """Error message has no endpoint line when not provided."""
+    def test_message_omits_base_url_hint_when_empty(self) -> None:
+        """Error message has no base_url line when not provided."""
         with pytest.raises(LLMConnectionError) as exc_info:
             raise_connection_error(
                 provider="OpenAI",
                 env_var="OPENAI_API_KEY",
                 original=OSError("fail"),
             )
-        assert "endpoint" not in str(exc_info.value).lower().split("check:")[0]
+        assert "base_url" not in str(exc_info.value).lower().split("check:")[0]
 
     def test_chains_original_exception(self) -> None:
         """__cause__ is set to the original exception."""

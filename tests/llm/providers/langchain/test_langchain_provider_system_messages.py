@@ -69,7 +69,7 @@ class TestAskTextPrependsSystemMessages:
             "backend": backend,
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 
@@ -143,7 +143,7 @@ class TestAskTextStreamPrependsSystemMessages:
             "backend": backend,
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 
@@ -192,7 +192,7 @@ class TestAskLangchainPassesSystemMessages:
             "backend": backend,
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 
