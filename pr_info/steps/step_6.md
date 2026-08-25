@@ -48,7 +48,7 @@ JENKINS JOBS
 ## HOW
 
 ```python
-from ...utils.jenkins_operations.client import JenkinsClient
+from ...utils.jenkins_operations.client import JenkinsClient, _get_jenkins_config
 from ...utils.jenkins_operations.diagnostics import (
     DOCS_POINTER, diagnose_403, diagnose_404, job_url_path, probe,
 )
@@ -57,10 +57,22 @@ from ...utils.user_config import load_config
 
 `mcp_coder.cli` sits above `mcp_coder.utils` in `layered_architecture`, so no exemption is needed.
 
-**Repo list source:** `load_config().get("coordinator", {}).get("repos", {})` directly. **Not**
+**Credential source: `_get_jenkins_config()` from `client.py`, not `load_config()`.** This is the
+same helper `coordinator/core.py` resolves credentials through, and it goes via
+`get_config_values`, which applies the `JENKINS_URL` / `JENKINS_USER` / `JENKINS_TOKEN` env
+overrides declared in `user_config._CONFIG_SCHEMA`. `load_config()` reads the TOML file only, so
+sourcing credentials from it would make `verify` skip the section entirely for an env-var-only
+setup, or — worse — probe a *different* server than the coordinator actually dispatches to, which
+is precisely the class of confidently-wrong report this issue exists to remove. It returns
+`{"server_url": ..., "username": ..., "api_token": ...}` with `None` for anything unset.
+
+**Repo list source:** `load_config().get("coordinator", {}).get("repos", {})` directly — there are
+no env overrides for `[coordinator.repos.*]`, so the file is the only source. **Not**
 `load_repo_config` from `coordinator/core.py` — `core.py:21` imports `JenkinsClient` and
 `core.py:14-20` the GitHub/branch-manager stack, which would pull the whole coordinator into
 verify's import graph.
+
+Both calls can raise `ValueError` on malformed TOML; contain both (see ALGORITHM).
 
 **Not reusing `_verify_wildcard_repos`** (`user_config.py:522-563`): it is a pure config parser
 rendered inside the CONFIG section, returns a different shape (`{entries, has_error}`, not the
@@ -119,10 +131,10 @@ An unconfigured `[jenkins]` already trips CONFIG's required-field check, so skip
 ## ALGORITHM
 
 ```
-try: config = load_config()
+try: creds = _get_jenkins_config()      # env overrides applied (JENKINS_URL/USER/TOKEN)
 except ValueError: return {}, {}          # malformed TOML - CONFIG already reports it
-creds = config.get("jenkins", {}); if any of url/username/api_token missing: return {}, {}
-try: client = JenkinsClient(url, username, api_token)
+if any of server_url/username/api_token is None: return {}, {}
+try: client = JenkinsClient(creds["server_url"], creds["username"], creds["api_token"])
 except ValueError: return {}, {}
 session, base = client._http, client.base_url
 
@@ -130,19 +142,22 @@ root = probe(session, base, "/api/json")
 server/authentication/overall_read rows from root.status:
    None -> server ERR (unreachable, root.error_text); other two ok=None "not checked"
    401  -> server OK; authentication ERR; overall_read ok=None
-   403  -> server OK; authentication OK; overall_read ERR with diagnose_403(...) as `error`
+   403  -> server OK; authentication OK; overall_read ERR with
+           diagnose_403(session, base, root.error_text) as `error`
    200  -> all three OK
    else -> server ERR "unexpected HTTP {status}"
 server_result["overall_ok"] = all rows not False
 
-if server_result not ok or no repos configured: return server_result, {}
+try: repos = load_config().get("coordinator", {}).get("repos", {})
+except ValueError: repos = {}             # malformed TOML - CONFIG already reports it
+if server_result not ok or not repos: return server_result, {}
 for repo_name, repo_cfg in repos.items():
     path = repo_cfg.get("executor_job_path");  skip repo if missing/not a str
     r = probe(session, base, job_url_path(path) + "/api/json")
     200 -> {"ok": True,  "value": path}
     404 -> {"ok": False, "value": path, "error": diagnose_404(session, base, path),
             "install_hint": "docs/repository-setup/jenkins.md"}
-    403 -> {"ok": False, "value": path, "error": diagnose_403(session, base),
+    403 -> {"ok": False, "value": path, "error": diagnose_403(session, base, r.error_text),
             "install_hint": "docs/repository-setup/jenkins.md"}
     else-> {"ok": False, "value": path, "error": "unexpected HTTP {status}" or transport error,
             "install_hint": ...}
@@ -177,11 +192,19 @@ def _neutral_jenkins_verify() -> Generator[None, None, None]:
 This patches the *import site* in `verify.py`. `test_verify_jenkins.py` imports from
 `mcp_coder.cli.commands.verify_jenkins` directly, so it is unaffected.
 
-`tests/cli/commands/test_verify_jenkins.py` — patch `load_config`, `JenkinsClient` and `probe`:
+`tests/cli/commands/test_verify_jenkins.py` — patch `_get_jenkins_config`, `load_config`,
+`JenkinsClient` and `probe`:
 
 - unconfigured `[jenkins]` → `({}, {})`, no client constructed
 - partially configured (`server_url` only) → `({}, {})`
-- `load_config` raising `ValueError` → `({}, {})`, exception contained
+- `_get_jenkins_config` raising `ValueError` → `({}, {})`, exception contained
+- `load_config` raising `ValueError` while credentials resolve → server section still rendered,
+  `jobs_result == {}`, exception contained
+- **env-override test**: with no `[jenkins]` section in the config file but `JENKINS_URL` /
+  `JENKINS_USER` / `JENKINS_TOKEN` set via `monkeypatch.setenv` (and `_get_jenkins_config` *not*
+  patched), the section is rendered and `JenkinsClient` is constructed with the env values. This
+  is the regression guard for sourcing credentials from `load_config()` instead of
+  `_get_jenkins_config()`.
 - all probes 200, two repos → both sections `overall_ok is True`, three server rows, two job rows
 - root probe 403 → `overall_read` `ok is False`, its `error` contains
   `"Overall/Read"` and `"docs/repository-setup/jenkins.md"`; jobs section is `{}`
@@ -216,9 +239,13 @@ Rendering and exit code:
 > both sections, including the per-repo one; `_format_mcp_section` would silently drop the
 > `install_hint` docs pointer.
 >
-> Get the repo list from `load_config()` directly, never from `coordinator/core.py` — importing it
-> would drag the whole coordinator into verify's import graph. Contain the `ValueError`
-> `load_config` raises on malformed TOML.
+> Source the **credentials** from `_get_jenkins_config()` in
+> `utils/jenkins_operations/client.py`, **not** from `load_config().get("jenkins", {})` — only the
+> former applies the `JENKINS_URL` / `JENKINS_USER` / `JENKINS_TOKEN` env overrides, so
+> `load_config()` would make verify skip or probe different credentials than the coordinator uses.
+> Get the **repo list** from `load_config()` directly (no env overrides exist for it), never from
+> `coordinator/core.py` — importing it would drag the whole coordinator into verify's import
+> graph. Contain the `ValueError` both can raise on malformed TOML.
 >
 > Run, with MCP tools only: `mcp__tools-py__run_pylint_check`, `mcp__tools-py__run_mypy_check`,
 > `mcp__tools-py__run_lint_imports_check`, `mcp__workspace__check_file_size` with

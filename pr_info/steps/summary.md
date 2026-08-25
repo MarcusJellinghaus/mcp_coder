@@ -55,14 +55,21 @@ retry adapter, honours `PYTHONHTTPSVERIFY=0` and injects `JENKINS_API_EXTRA_HEAD
 a fresh session inherits none of that and would misreport transport problems (self-signed cert,
 proxy header) as permission problems.
 
-**Auth is resolved eagerly in `__init__`, not via `_maybe_add_auth()`.** `Jenkins._session.auth`
-is populated lazily on the first request, so a probe on a fresh client would go out anonymous and
-misreport a false 401/403. Rather than guard a call to `_maybe_add_auth()` — which issues a live
+**Auth is resolved inside `_http`, not via `_maybe_add_auth()`.** `Jenkins._session.auth` is
+populated lazily on the first request, so a probe on a fresh client would go out anonymous and
+misreport a false 401/403. Rather than call `_maybe_add_auth()` — which issues a live
 `GET /api/json` when `requests_kerberos` is installed, and would therefore throw before any probe
-runs — `JenkinsClient.__init__` assigns `_session.auth = _auths[0][1]` directly. `_auths[0]` is
-unconditionally the basic-auth entry when username and password are supplied (kerberos is
-*appended* at index 1), and `JenkinsClient.__init__` already validates both are non-empty. This
-removes the hazard instead of guarding it: no network call, no kerberos special case.
+runs — the `_http` property reads `_auths[0][1]` itself when `_session.auth is None`. `_auths[0]`
+is the basic-auth entry when username and password are supplied (kerberos is *appended* at index
+1), and `JenkinsClient.__init__` already validates both are non-empty. No network call, no
+kerberos special case.
+
+The lookup is guarded (`getattr` + `try/except (TypeError, IndexError, KeyError)`) and lives in
+the property rather than in `__init__` for two reasons: only the diagnostic path needs it, and an
+unguarded subscript in `__init__` would run for every `JenkinsClient(...)` — including the tests
+that patch `client.Jenkins` with a plain `Mock`, which is not subscriptable. A probe that cannot
+resolve auth degrades to an unauthenticated request; it never crashes the error path it exists to
+explain.
 
 ### New module: `mcp_coder/cli/commands/verify_jenkins.py`
 
@@ -79,6 +86,12 @@ construct the client twice, and give tests two mock targets; one function gives 
 docs pointer. `_wrap_jenkins_error` only prefixes the call context. The alternative — a remedy
 lookup table in `client.py` — would duplicate text that the diagnosis functions already imply.
 
+`diagnose_403()` also takes the error sentence extracted from the **original** response body
+(`original_error`). The probes cannot reproduce every 403: a user with `Overall/Read` and
+`Job/Read` but not `Job/Build` gets 403 on the build POST while `/api/json` and
+`/crumbIssuer/api/json` both return 200. In that case the original sentence is the only evidence
+naming the cause, so the all-probes-succeed branch surfaces it instead of speculating.
+
 No `except JenkinsError` branch is added to the coordinator: `execute_coordinator_run` and
 `execute_coordinator_test` are independent paths sharing no error-handling helper, and
 `JenkinsClient` is the only seam both cross.
@@ -88,7 +101,7 @@ No `except JenkinsError` branch is added to the coordinator: `execute_coordinato
 | Issue says | Plan does | Why |
 |---|---|---|
 | Add 403/404 entries to `_http_error_hint` | **Omitted** | `_http_error_hint` is called only from the `except HTTPError` branch, which 403/404 provably never reach (python-jenkins converts them first). The entries would be unreachable code no test can exercise — in the file whose whole failure mode was code that looked right because nothing exercised it. The requirement (403/404 produce good messages) is met by `_wrap_jenkins_error`. |
-| Guard `_http` against `python-jenkins[kerberos]` | **Hazard removed** | Eager `_auths[0][1]` assignment in `__init__` never calls `_maybe_add_auth()`, so there is nothing to guard. |
+| Guard `_http` against `python-jenkins[kerberos]` | **Guarded differently** | `_http` reads `_auths[0][1]` itself instead of calling `_maybe_add_auth()`, so the live `GET /api/json` that method issues under kerberos never happens on the probe path. The read is wrapped in `getattr` + `try/except` so an unexpected `_auths` shape degrades to an unauthenticated probe rather than raising. (`_auth_resolved` is left alone, so python-jenkins' own first request behaves exactly as before.) |
 | `except NotFoundException` then `except JenkinsException` | One `except JenkinsException` + `isinstance` dispatch inside `_wrap_jenkins_error` | `NotFoundException` is a subclass, and the helper must isinstance-dispatch anyway to pick 404-vs-403 wording. Two clauses calling the same function is redundant. The load-bearing ordering constraint — **before** `except HTTPError` — is preserved. |
 | Shared helper "changes `get_job_status`'s behaviour" | `get_job_status` gets the `JenkinsException` branch only, **no** new `HTTPError` branch | A 409 on a queue-item lookup is not a real scenario; adding the branch adds untestable code. |
 
@@ -108,7 +121,7 @@ No `except JenkinsError` branch is added to the coordinator: `execute_coordinato
 
 | Path | Change |
 |---|---|
-| `src/mcp_coder/utils/jenkins_operations/client.py` | Eager auth in `__init__`; `base_url` + `_http` properties; `_wrap_jenkins_error`; `except JenkinsException` branch in `start_job` and `get_job_status` |
+| `src/mcp_coder/utils/jenkins_operations/client.py` | `base_url` + `_http` properties (auth resolved inside `_http`); `_wrap_jenkins_error`; `except JenkinsException` branch in `start_job` and `get_job_status` |
 | `src/mcp_coder/cli/commands/coordinator/core.py` | `:449` protected access → `jenkins_client.base_url`; reuse `job_url_path()` at `:452-456` |
 | `src/mcp_coder/cli/commands/coordinator/commands.py` | Drop `exc_info=True` at `:160` and `:329` |
 | `src/mcp_coder/cli/commands/verify.py` | Call `verify_jenkins()` after GITHUB (`:385`); print two sections; pass `jenkins_ok` |
@@ -125,7 +138,7 @@ No `except JenkinsError` branch is added to the coordinator: `execute_coordinato
 
 | # | Step | Commit scope |
 |---|---|---|
-| 1 | [step_1.md](step_1.md) | `JenkinsClient.base_url` / `_http` / eager auth |
+| 1 | [step_1.md](step_1.md) | `JenkinsClient.base_url` / `_http` (auth resolved in `_http`) |
 | 2 | [step_2.md](step_2.md) | `docs/repository-setup/jenkins.md` + README registration |
 | 3 | [step_3.md](step_3.md) | `diagnostics.py` + `.importlinter` |
 | 4 | [step_4.md](step_4.md) | `_wrap_jenkins_error` + handler wiring |

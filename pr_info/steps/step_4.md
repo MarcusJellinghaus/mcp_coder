@@ -74,7 +74,13 @@ _wrap_jenkins_error(exc, context, job_path):
         detail = diagnose_404(self._http, self.base_url, job_path) if job_path
                  else "404 - the queue item was not found (it may have expired) or is not readable"
     elif (m := _AUTH_FAIL_RE.search(str(exc))) and m.group(1) in ("401", "403"):
-        detail = diagnose_403(self._http, self.base_url)
+        # pass the sentence python-jenkins appended to the message: when every
+        # probe succeeds (e.g. Job/Build missing on the executor) it is the only
+        # evidence naming the cause, and diagnose_403 must not discard it.
+        _, _, body = str(exc).partition("\n")
+        detail = diagnose_403(
+            self._http, self.base_url, extract_jenkins_error(body) if body else None
+        )
     else:
         detail = _clean_jenkins_message(str(exc))    # 500 and everything else
     return JenkinsError(f"{context}: {detail}")
@@ -129,20 +135,25 @@ Amend `tests/utils/jenkins_operations/test_client.py`:
 5. `test_start_job_404_names_deepest_readable_ancestor` — `NotFoundException` from `build_job`,
    parent probe 200, leaf probe 404; assert both `'Windows-Agents'` and `'Executor'` appear and
    that the wording states the ambiguity (contains `"Check both"`).
-6. `test_start_job_500_has_no_html_and_no_probe` — a 500-shaped `JenkinsException`; assert the
+6. `test_start_job_403_on_build_reports_original_cause` — a 403-shaped `JenkinsException` whose
+   body says `"job_manager is missing the Job/Build permission"`, with **both** probes returning
+   200 (the real missing-`Job/Build` shape). Assert the message contains that sentence and does
+   **not** claim the permission "may have changed". Guards against the diagnosis throwing away
+   the exception body when the probes cannot reproduce the failure.
+7. `test_start_job_500_has_no_html_and_no_probe` — a 500-shaped `JenkinsException`; assert the
    extracted sentence is present, no HTML, and `session.get` was never called.
-7. `test_get_job_status_404_reports_queue_item` — no `job_path`, so the message mentions the queue
+8. `test_get_job_status_404_reports_queue_item` — no `job_path`, so the message mentions the queue
    item and does **not** attempt a path walk.
-8. `test_raw_body_logged_only_at_debug` — with `caplog.set_level(logging.DEBUG)` the raw page
+9. `test_raw_body_logged_only_at_debug` — with `caplog.set_level(logging.DEBUG)` the raw page
    appears exactly once in DEBUG records; at INFO it appears nowhere. The page carries a live CSRF
    crumb and the username.
-9. `test_probe_failure_does_not_mask_original_error` — make `session.get` raise; the resulting
-   `JenkinsError` still carries a useful message and no traceback from the probe.
+10. `test_probe_failure_does_not_mask_original_error` — make `session.get` raise; the resulting
+    `JenkinsError` still carries a useful message and no traceback from the probe.
 
 **Move the 500 case out of `TestStartJobHttpErrorMessages` (`:467-472`).** That parametrisation
 exercises 500 through the `HTTPError` branch, which is unreachable in production — python-jenkins
 converts 500 to `JenkinsException`. It passes today only because it mocks `build_job` directly.
-Keep 409 there (the genuine pass-through code); 500 is now covered by test 6 above.
+Keep 409 there (the genuine pass-through code); 500 is now covered by test 7 above.
 
 Do **not** assert zero tracebacks. `@log_function_call` always logs `ERROR ... exc_info=True` and
 is out of scope.
@@ -153,7 +164,7 @@ is out of scope.
 >
 > Implement step 4 test-first. Start by replacing the `JenkinsException("Job not found")` payload
 > at `tests/utils/jenkins_operations/test_client.py:272` with the step-3 fixture in the exact shape
-> python-jenkins produces, add the nine tests described, watch them fail, then add
+> python-jenkins produces, add the ten tests described, watch them fail, then add
 > `_clean_jenkins_message` and `JenkinsClient._wrap_jenkins_error` and wire the
 > `except JenkinsException` branch into `start_job` and `get_job_status`.
 >

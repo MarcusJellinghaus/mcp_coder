@@ -29,9 +29,15 @@ class ProbeResult:
 def job_url_path(job_path: str) -> str: ...
 def extract_jenkins_error(body: str) -> str | None: ...
 def probe(session: Session, base_url: str, path: str) -> ProbeResult: ...
-def diagnose_403(session: Session, base_url: str) -> str: ...
+def diagnose_403(
+    session: Session, base_url: str, original_error: str | None = None
+) -> str: ...
 def diagnose_404(session: Session, base_url: str, job_path: str) -> str: ...
 ```
+
+`original_error` is the error sentence already extracted from the body of the failure being
+diagnosed (`extract_jenkins_error(...)` of the exception payload, or `ProbeResult.error_text`).
+It is what the probes cannot rediscover — see the fallback in ALGORITHM.
 
 `diagnose_403` / `diagnose_404` return the **complete** operator-facing sentence — cause, remedy
 and `DOCS_POINTER`. The caller only prefixes context.
@@ -114,11 +120,26 @@ for path in ("/api/json", "/crumbIssuer/api/json"):
                                 but not authorized; Jenkins requires Overall/Read for any REST
                                 call. Grant it in the global authorization matrix (it cannot be
                                 granted per-job). {DOCS_POINTER}"
-return "the server rejected the request, but a follow-up probe succeeded - the permission may
-        have changed in the meantime. {DOCS_POINTER}"
+# every probe succeeded: the rejection was specific to the failing request, not to
+# Overall/Read. Surface what the original response said - it is the only evidence left.
+if original_error:
+    return '403 Forbidden - "{original_error}". Overall/Read is granted (both /api/json and
+            /crumbIssuer/api/json succeeded), so the missing permission is specific to the
+            request that failed - typically Job/Build on the executor job.
+            {DOCS_POINTER}'
+return "403 Forbidden, but /api/json and /crumbIssuer/api/json both succeeded, and the response
+        carried no error text. Overall/Read is granted; the missing permission is specific to the
+        failing request - check Job/Build on the executor job. {DOCS_POINTER}"
 ```
 
 where `detail` is `f' - "{r.error_text}"'` when `error_text` is set, else `""`.
+
+**The `original_error` fallback is load-bearing, not a nicety.** The concrete case: the API user
+has `Overall/Read` and `Job/Read` but not `Job/Build`. The `POST .../build` returns 403 with
+`"job_manager is missing the Job/Build permission"` in the body, while both probes return 200.
+Replacing that sentence with "the permission may have changed in the meantime" would discard the
+one piece of information that names the cause — and produce a confidently wrong diagnosis of
+exactly the `Job/Build` case the issue narrates. Never drop `original_error` on the floor.
 
 `diagnose_404` — walks ancestors deepest-first and names the deepest **readable** one, narrowing
 the search to a single path segment. It must **not** claim the path exists:
@@ -177,7 +198,12 @@ points at `localhost:8080` and the service is stopped.)
   `RequestException` gives `ProbeResult(status=None, error_text=<message>)` and **does not raise**
 - `diagnose_403` — `/api/json` 200 + `/crumbIssuer/api/json` 403 names `/crumbIssuer/api/json`
   (the regression guard for the Run-1 misdirection); `/api/json` 403 names `/api/json`; a 401
-  says authentication, not authorization; all-200 returns the neutral fallback
+  says authentication, not authorization
+- `diagnose_403` all-probes-200 **with** `original_error="job_manager is missing the Job/Build
+  permission"` → the returned message contains that exact sentence and mentions `Job/Build`.
+  **Regression guard against discarding the only evidence there is.**
+- `diagnose_403` all-probes-200 with `original_error=None` → the no-evidence fallback, which
+  still points at the failing request rather than at `Overall/Read`
 - `diagnose_404` — parent 200 / leaf 404 names both the readable folder and the unreadable segment;
   nothing readable returns the no-ancestor message; a single-segment path is handled without an
   index error
@@ -199,6 +225,10 @@ Use a `Mock(spec=Session)` with `get.side_effect` keyed by URL. No network.
 >
 > Then widen `.importlinter:334` to `mcp_coder.utils.jenkins_operations.** -> requests` and replace
 > the `quote()` block at `coordinator/core.py:452-456` with `job_url_path()`.
+>
+> `diagnose_403` takes an optional `original_error` and must surface it when every probe
+> succeeds — that is the missing-`Job/Build` case, where the exception body is the only evidence
+> naming the cause. Do not replace it with a "permission may have changed" message.
 >
 > Do not export anything from `jenkins_operations/__init__.py`. Do not wire `diagnose_*` into
 > `client.py` — that is step 4.
