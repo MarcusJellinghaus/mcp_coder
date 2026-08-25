@@ -32,6 +32,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 | Topic | File | Applies to |
 |---|---|---|
 | GitHub-side: tokens, labels, actions, CI, dependabot | [github.md](github.md) | Any downstream repo |
+| Jenkins: API user permissions, credentials, coordinator job setup | [jenkins.md](jenkins.md) | Repos dispatched by the coordinator |
 | Claude Code: `.claude/`, `.mcp.json`, launchers, architecture docs | [claude-code.md](claude-code.md) | Any downstream repo |
 | Agent permissions: how `.claude/agents/*.md` are wired, and what `bypassPermissions` does and does not enforce | [agent-permissions.md](agent-permissions.md) | Any downstream repo — reference only, `mcp-coder init` does not deploy `docs/` |
 | Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any downstream repo |

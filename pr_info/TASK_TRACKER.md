@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: `docs/repository-setup/jenkins.md` ([step_2.md](./steps/step_2.md))
 
-- [ ] Implementation: write `jenkins.md` (permission matrix, credentials, verifying, troubleshooting, fail-fast note) + register row in `docs/repository-setup/README.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write `jenkins.md` (permission matrix, credentials, verifying, troubleshooting, fail-fast note) + register row in `docs/repository-setup/README.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `jenkins_operations/diagnostics.py` ([step_3.md](./steps/step_3.md))
 
