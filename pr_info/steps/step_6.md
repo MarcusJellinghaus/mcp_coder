@@ -16,6 +16,10 @@ whenever that variable is exported. Shared by steps 7, 8 and 10.
 # Sentinel used when nothing resolves; step 8 skips the shape check on it.
 _UNSET_TARGET = "(not configured)"
 
+# What the ollama client dials when ChatOllama.base_url is None — the same
+# constant `_models._check_ollama_daemon` already falls back to.
+_OLLAMA_DEFAULT_URL = "http://localhost:11434"
+
 _REDIRECT_ENV: dict[str, tuple[str, ...]] = {   # keyed by backend, not by mode
     "openai": ("OPENAI_BASE_URL", "OPENAI_API_BASE", "AZURE_OPENAI_ENDPOINT"),
     "ollama": ("OLLAMA_HOST",),
@@ -40,6 +44,13 @@ def redirect_env_in_effect(
 
     A variable is only named when it is applicable to the current
     backend/mode **and** its value matches the URL the client will dial.
+    """
+
+def _targets_match(candidate: str, url: str) -> bool:
+    """True when *candidate* names *url*, modulo trailing slash and scheme.
+
+    Part of the module surface because step 7 needs the same predicate to tell
+    a real redirect from a config value the client happened to agree with.
     """
 ```
 
@@ -77,6 +88,20 @@ def redirect_env_in_effect(
   configurable target", True)` without constructing anything.
 - For `ollama` the resolution happens in *our* code (`_resolve_ollama_host` does
   `os.getenv("OLLAMA_HOST") or base_url`), so the source is knowable directly.
+- **`ollama` is the one backend whose client can report no URL — never print
+  `(unknown)` there.** Measured: with no config `base_url` and no `OLLAMA_HOST`
+  — the most common ollama setup — `_resolve_ollama_host(None)` returns `None`,
+  `create_ollama_model` therefore omits the kwarg (`ollama_backend.py:40-42`)
+  and `ChatOllama(model=...).base_url` is `None`, so `dialed_url()` returns
+  `None`. The truthful value is knowable and is exactly what
+  `_models._check_ollama_daemon` already assumes, so the fallback is
+  `_resolve_ollama_host(config.get("base_url")) or _OLLAMA_DEFAULT_URL`, not the
+  `(unknown)` sentinel. `_source_for` then labels it with no special case:
+  `config.toml [llm.langchain] base_url`, `OLLAMA_HOST env var`, or
+  `SDK default` for the bare-default case. Import `_resolve_ollama_host` from
+  `._models` at module level — a sibling private module that does not import the
+  package `__init__`, so it adds no cycle. `(unknown)` survives only for a
+  constructed non-ollama client that exposes no URL at all.
 - **Never fabricate provenance.** "A redirect variable is exported" is *not*
   evidence that it produced the URL. Two filters, both mandatory, before a
   variable may be named as the source:
@@ -107,9 +132,14 @@ resolve_target(config):
     try: model = _create_chat_model(config, timeout=5)
     except Exception: return ResolvedTarget(config.get("base_url") or _UNSET_TARGET,
                                             "config.toml (unverified — client not constructed)", False)
-    try: url = dialed_url(model) or "(unknown)"
+    try: url = dialed_url(model) or _fallback_url(config)
     finally: _close_http_clients(model)
     return ResolvedTarget(url, _source_for(config, url), True)
+
+_fallback_url(config):
+    if config.get("backend") == "ollama":     # ChatOllama.base_url is None when unset
+        return _resolve_ollama_host(config.get("base_url")) or _OLLAMA_DEFAULT_URL
+    return "(unknown)"
 
 _source_for(config, url):
     cfg = config.get("base_url")
@@ -146,6 +176,8 @@ ResolvedTarget(url="https://relay.internal/v1",
 ResolvedTarget(url="https://relay.internal/v1",
                source="config.toml (unverified — client not constructed)",
                verified=False)
+ResolvedTarget(url="http://localhost:11434",       # ollama, nothing configured
+               source="SDK default", verified=True)
 ```
 
 ## TDD
@@ -174,6 +206,10 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 6. Both stub http clients are closed exactly once.
 7. `ollama` reads `base_url` off the model, and `OLLAMA_HOST` is reported as the
    source when set.
+7b. `ollama` with **no** config `base_url` and **no** `OLLAMA_HOST`, stub model
+   reporting `base_url = None` → url is `http://localhost:11434` and source is
+   `"SDK default"`. Assert the result is never `"(unknown)"` — this is the most
+   common ollama setup.
 8. `import mcp_coder.llm.providers.langchain` succeeds (cycle regression guard
    for the deferred import).
 
@@ -185,7 +221,13 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 > `llm/providers/langchain/_config_diagnostics.py`. Read the URL from the
 > constructed client (never computed from config), close both httpx clients
 > afterwards, return `n/a` for gemini/anthropic, and fall back to the
-> config-derived value labelled *unverified* when construction fails.
+> config-derived value labelled *unverified* when construction fails. When a
+> **constructed** `ollama` client reports no URL — `ChatOllama.base_url` is
+> `None` whenever neither config `base_url` nor `OLLAMA_HOST` is set, the most
+> common setup — fall back to
+> `_resolve_ollama_host(config["base_url"]) or _OLLAMA_DEFAULT_URL`, never
+> `"(unknown)"`: the value is knowable and `_models._check_ollama_daemon`
+> already assumes it.
 > `redirect_env_in_effect(config, url)` takes the config **and** the resolved
 > URL: name a redirect variable only when it is applicable to the current
 > backend/mode (`AZURE_OPENAI_ENDPOINT` in Azure mode only) **and** its value

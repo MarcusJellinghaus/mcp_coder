@@ -17,8 +17,9 @@ No new public function. `verify_langchain` gains:
 ```python
 from ._config_diagnostics import mode_of, validate
 
+mode = mode_of(config)
 findings = {f["key"]: f for f in validate(config)}
-scoped = mode_of(config) is not None
+scoped = mode is not None
 ```
 
 and uses it to build the `model` / `api_key` rows and to add `base_url` /
@@ -43,10 +44,19 @@ and uses it to build the `model` / `api_key` rows and to add `base_url` /
     contract already declares `api_key` optional for ollama, so no finding is
     produced. **Keep its value text**: with no key resolved, `_mask_api_key`
     returns `None` and `_format_section` stringifies that to the literal
-    `"None"` (`verify_formatting.py:194`). The fallback value must therefore be
-    `_mask_api_key(key) or "not set (optional)"` — the row reads exactly as it
-    does today for ollama, and for any other backend whose `api_key` is optional
-    and unset.
+    `"None"` (`verify_formatting.py:194`). The fallback must therefore never be
+    a bare `_mask_api_key(key)`; `"not set (optional)"` keeps the row reading
+    exactly as it does today for ollama, and for any other backend whose
+    `api_key` is optional and unset.
+    **But `"not set (optional)"` is only true when nothing supplied a key.**
+    After step 7 re-keys `_resolve_api_key` on the **mode**, an Azure key in
+    `AZURE_OPENAI_API_KEY` or a gemini key in `GOOGLE_API_KEY` resolves normally
+    and this branch renders the masked value. The one remaining no-key,
+    no-finding case is gemini's keyless Vertex carve-out, where
+    `_resolve_api_key` returns a `source` with a `None` key; that renders
+    `f"satisfied via {source}"`, never `"not set (optional)"` — `api_key` is
+    `required` for gemini, so calling it optional would be a second false claim.
+    Pass `mode`, not `backend`, to `_resolve_api_key`.
   - **"No finding" only means "satisfied" when the contract could be applied.**
     When `mode_of(config)` returns `None` — an unset `backend`, or a typo like
     `opnai` — `validate()` short-circuits and emits *only* the `backend`
@@ -56,7 +66,7 @@ and uses it to build the `model` / `api_key` rows and to add `base_url` /
     are `[ERR]` today: a diagnosability regression in the one PR that exists to
     remove them. So the defaults are **contract-aware**:
     - mode resolvable → `default_ok=True` (the contract checked the field and
-      raised nothing), value `model` / `_mask_api_key(key) or "not set (optional)"`;
+      raised nothing), value `model` / `_api_key_default_value()` (ALGORITHM);
     - mode `None` → fall back to today's presence test, `model is not None` /
       `key is not None`, with the unset text `"not set"` (not
       `"not set (optional)"` — nothing has established that it is optional).
@@ -83,18 +93,23 @@ and uses it to build the `model` / `api_key` rows and to add `base_url` /
 ## ALGORITHM
 
 ```
+mode     = mode_of(config)
 findings = {f["key"]: f for f in validate(config)}
-scoped   = mode_of(config) is not None       # False -> contract said nothing
+scoped   = mode is not None                  # False -> contract said nothing
                                              #          about model / api_key
-key, src, _over = _resolve_api_key(backend, config_api_key)
+key, src, _over = _resolve_api_key(mode, config_api_key)   # mode, not backend
+
+def _api_key_default_value():
+    if key is not None:      return _mask_api_key(key)
+    if src is not None:      return f"satisfied via {src}"   # keyless carve-out
+    return "not set (optional)" if scoped else "not set"
 
 result["model"]   = _row_from(findings.get("model"),
                               default_ok=True if scoped else model is not None,
                               default_value=model)
 result["api_key"] = {**_row_from(findings.get("api_key"),
                                  default_ok=True if scoped else key is not None,
-                                 default_value=_mask_api_key(key)
-                                     or ("not set (optional)" if scoped else "not set")),
+                                 default_value=_api_key_default_value()),
                      "source": src}
 if "backend" in findings:                       # overwrite: the key already exists
     result["backend"] = {"ok": findings["backend"]["ok"],
@@ -134,6 +149,13 @@ overall_ok = <existing clauses> and all(f["ok"] is not False for f in findings.v
    (optional)"` (special case removed, rendered text preserved); assert the
    rendered row too, so the `_mask_api_key(None)` → literal `"None"` regression
    cannot slip through.
+5b. `"not set (optional)"` never appears on a `required` api_key row. All
+   credential vars cleared, then: Azure mode with only `AZURE_OPENAI_API_KEY` →
+   `ok=True`, `value == _mask_api_key(key)`, `source == "AZURE_OPENAI_API_KEY env
+   var"`; `gemini` with only `GOOGLE_API_KEY` → same shape; `gemini` with only
+   `GOOGLE_GENAI_USE_VERTEXAI` → `ok=True` and
+   `value == "satisfied via GOOGLE_GENAI_USE_VERTEXAI env var"`. Assert the
+   rendered rows in all three.
 6. Multiple violations → **all** are present in the result (nothing dies on the
    first).
 7. Exit code: case 1 yields exit 1 from `execute_verify`.
@@ -158,7 +180,11 @@ overall_ok = <existing clauses> and all(f["ok"] is not False for f in findings.v
 > no-finding branch shows the masked key. This replaces the naive
 > `model` / `api_key` rows,
 > deleting the hand-rolled ollama api_key special case while keeping its
-> `"not set (optional)"` text, and **overwriting** the pre-populated `backend`
+> `"not set (optional)"` text for a genuinely optional-and-unset key. Pass
+> `mode_of(config)` — not `backend` — to step 7's mode-keyed `_resolve_api_key`,
+> and render `f"satisfied via {source}"` when it reports a source with no
+> readable key (gemini's keyless Vertex carve-out): `[OK] not set (optional)` on
+> a `required` api_key row is a false claim. **Overwrite** the pre-populated `backend`
 > row when a `backend` finding exists so an unsupported backend is explained
 > rather than silently exiting 1. Make the `model` / `api_key` defaults
 > **contract-aware**: `validate()` short-circuits when `mode_of(config)` is

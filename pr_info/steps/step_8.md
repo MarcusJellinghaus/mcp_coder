@@ -79,20 +79,32 @@ def _check_base_url_shape(
 ```
 _check_base_url_shape(target, api_version):
     if api_version or target.url in ("n/a", _UNSET_TARGET): return None
-    url = target.url
-    if "/completions" in url: return warn(f"{url} — contains '/completions' ... (source: ...)")
-    if urlparse(url) lacks http(s) scheme or netloc: return warn(f"{url} — malformed ...")
-    if not url.rstrip("/").endswith("/v1"): return ok(f"{url} — most relays use .../v1")
-    return ok(f"{url} (source: {target.source})")
+    url, src = target.url, f"(source: {target.source})"     # every branch carries it
+    if "/completions" in url:
+        return warn(f"{url} — contains '/completions'; use the base URL only "
+                    f"e.g. https://host/v1 (mcp-coder appends /chat/completions) {src}")
+    if urlparse(url) lacks http(s) scheme or netloc:
+        return warn(f"{url} — malformed URL; use e.g. https://host/v1 {src}")
+    if not url.rstrip("/").endswith("/v1"):
+        return ok(f"{url} — most relays use .../v1 {src}")
+    return ok(f"{url} {src}")
 ```
+
+`warn` is `{"ok": None, ...}`, `ok` is `{"ok": True, ...}` — so only the first
+two branches render `[WARN]`. A URL that already ends in `/v1` (after
+`rstrip("/")`) falls through to the last branch and renders `[OK]`.
 
 ## DATA
 
 Unchanged entry shape, rendered under the `"Base URL"` label:
 
 ```
-  Base URL              [WARN] https://api.openai.com/v1/ — most relays use .../v1 (source: SDK default)
+  Base URL              [OK]   https://api.openai.com/v1/ (source: SDK default)
+  Base URL              [WARN] https://relay.internal/v1/chat/completions — contains '/completions'; use the base URL only e.g. https://host/v1 (mcp-coder appends /chat/completions) (source: OPENAI_BASE_URL env var)
 ```
+
+(Two separate runs, not two rows: the first is the healthy `/v1` case — a URL
+ending in `/v1` can only be `[OK]`, never `[WARN]`.)
 
 ## TDD
 
@@ -107,7 +119,12 @@ Unchanged entry shape, rendered under the `"Base URL"` label:
    config `base_url` unset) → `None`, i.e. **no** `base_url_shape` row at all —
    the sentinel is never reported as a malformed URL. Same case but with a
    configured `base_url` → the heuristics still run on the config value.
-5. The existing `/completions` and malformed-URL cases keep their wording.
+5. The existing `/completions` and malformed-URL cases keep their wording, each
+   with the `(source: …)` suffix appended — assert all four branches carry it.
+5b. `https://api.openai.com/v1/` → `ok is True` and the value has **no**
+   "most relays use .../v1" text: `rstrip("/")` leaves it ending in `/v1`, so it
+   takes the healthy branch. Guards against the heuristic's severity being
+   flipped to match a mis-stated example.
 6. `base_url_shape` never sets `ok=False` and never changes `overall_ok`.
 7. `ollama` with `OLLAMA_HOST=http://localhost:11434` → **no** shape row at all
    (gate unchanged), while step 7's `base_url_redirect` row still reports it.
@@ -124,8 +141,8 @@ Unchanged entry shape, rendered under the `"Base URL"` label:
 > step 6 instead of the raw config string, keeping the three existing heuristics
 > verbatim, keeping the Azure skip explicit, skipping both sentinel targets
 > (`n/a` and the `(not configured)` unverified fallback — import the constant
-> from `_config_diagnostics`, never re-type the literal), and appending the
-> source to the reported value. It stays advisory and must never
+> from `_config_diagnostics`, never re-type the literal), and appending
+> `(source: {target.source})` to **all four** returned values. It stays advisory and must never
 > affect `overall_ok`. Pass the `target` local that `verify_langchain` already
 > binds from its single `resolve_target(config)` call (step 7) — the chat model
 > must not be constructed twice per run. Keep the call-site gate at

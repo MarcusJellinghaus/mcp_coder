@@ -134,11 +134,16 @@ Only two fields need a *source*: `api_key` (already returned by
 `model` need values; `mode` is derived from `api_version`. So
 `_load_langchain_config`'s flat `dict[str, str | None]` return shape is untouched.
 
-`_resolve_api_key` does gain a third return element, `overridden: bool` (step 7):
-today it reports only the *winning* source, so an `OPENAI_API_KEY` that beats a
-configured `api_key` is indistinguishable from one that filled a gap — and the
-acceptance criterion asks for exactly that distinction. One in-repo caller
-(`verify_langchain`) plus its tests.
+`_resolve_api_key` does change in two ways (step 7). It gains a third return
+element, `overridden: bool`: today it reports only the *winning* source, so an
+`OPENAI_API_KEY` that beats a configured `api_key` is indistinguishable from one
+that filled a gap — and the acceptance criterion asks for exactly that
+distinction. And it is re-keyed on the **mode**, scanning step 5's
+`_API_KEY_ENV[mode]` tuple instead of the one-per-backend `_BACKEND_ENV_VARS`
+(which is deleted); otherwise an Azure key in `AZURE_OPENAI_API_KEY` satisfies
+the contract, produces no finding, and still renders `api_key (not set)` /
+`API key [OK] not set (optional)` — fabricated provenance in the block built to
+prevent it. One in-repo caller (`verify_langchain`) plus its tests.
 
 ### 8. Module boundaries
 
@@ -179,7 +184,7 @@ modules:
 | `src/mcp_coder/llm/providers/langchain/_preflight.py` | 1 |
 | `src/mcp_coder/llm/providers/langchain/_errors_404.py` | 1 |
 | `src/mcp_coder/llm/providers/langchain/_exceptions.py` | 1 (`base_url_hint`) |
-| `src/mcp_coder/llm/providers/langchain/verification.py` | 1, 7 (single `resolve_target` call, echo rows, redirect + api_key-override rows, `_resolve_api_key` 3-tuple), 8 (shape rebase + `base_url_shape` key), 9 (contract rows), 10, 11 (model cross-check) |
+| `src/mcp_coder/llm/providers/langchain/verification.py` | 1, 7 (single `resolve_target` call, echo rows, redirect + api_key-override rows, `_resolve_api_key` mode-keyed 3-tuple, `_BACKEND_ENV_VARS` deleted), 8 (shape rebase + `base_url_shape` key), 9 (contract rows), 10, 11 (model cross-check) |
 | `src/mcp_coder/cli/commands/verify_formatting.py` | 7 (`base_url_redirect`, `api_key_override` labels), 8 (`base_url_shape` / "Base URL"), 9 + 11 (label map entries) |
 | `src/mcp_coder/cli/commands/verify.py` | 3, 7, 13, 14, 16, 17 |
 | `src/mcp_coder/cli/commands/verify_exit_code.py` | 16 (`prompts_ok` param) |
