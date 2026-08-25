@@ -120,6 +120,7 @@ _LABEL_MAP: dict[str, str] = {
     "base_url_redirect": "Base URL redirect",
     "api_key_override": "API key override",
     "available_models": "Available models",
+    "model_check": "Model available",
     # MCP adapter section
     "mcp_adapters": "MCP adapters",
     "langgraph": "LangGraph",

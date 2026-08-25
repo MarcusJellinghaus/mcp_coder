@@ -748,9 +748,95 @@ Details: [step_10.md](./steps/step_10.md)
 
 Details: [step_11.md](./steps/step_11.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`_check_model_listed(model, listing)` lands in `verification.py` next to
+      `_check_base_url_shape`, and is wired in the one place the listing already
+      exists — inside `if check_models and backend:`, immediately after
+      `result["available_models"]` is populated — so it rides on that network
+      call rather than making a second one, and the key is structurally absent
+      without `--check-models`. Near-misses call
+      `utils.config_hints.suggest()` from step 2 (imported absolutely as
+      `from mcp_coder.utils.config_hints import suggest`, matching the
+      package's existing `from mcp_coder.utils.user_config import …` style;
+      lint-imports still 21/21).
+
+      **Advisory by construction, not by convention.** `ok` is only ever `True`
+      or `None`, and the call sits *below* the `overall_ok` computation's
+      inputs — `model_check` is never read there — so no exit-code wiring was
+      needed and `verify_exit_code.py` is untouched. `test_never_reports_false`
+      pins this across the cross product of four listing shapes and three model
+      values rather than trusting the three happy-path assertions.
+
+      Two ordering details are deliberate and match step_11.md's ALGORITHM: the
+      `listing["ok"]` gate runs *before* the empty-model gate (a failed listing
+      reports "could not verify" even with no model configured — the listing is
+      the thing that could not be checked), and `listing.get("value") or []`
+      treats a missing/None `value` as an empty listing, which is exactly what
+      `_list_models_for_backend` returns on every error path.
+
+      `_LABEL_MAP` gains `"model_check": "Model available"` next to
+      `available_models`, so the row renders under it.
+
+      **Test placement.** The 13 tests go in the existing
+      `tests/llm/providers/langchain/test_langchain_verification.py` as
+      step_11.md's WHERE specifies — unlike steps 7-10 that file had room
+      (543 → 700 lines, under the 750 limit). TDD cases 1-6 are all covered,
+      plus: an explicit 404 listing alongside the auth one, `model=None`, a
+      missing `value` key, the never-False cross product, and the label-map
+      entry.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in any file this step touches.** pylint scoped to
+      `verification.py`, `verify_formatting.py` and
+      `test_langchain_verification.py` reports nothing beyond the environmental
+      `E0401` (`langchain_mcp_adapters.client` not installed); mypy over
+      `src/mcp_coder/llm/providers/langchain` + `verify_formatting.py` +
+      `config_hints.py` + `tests/llm/providers/langchain` is clean; ruff clean;
+      isort clean; black reformatted the test file once and is now a no-op
+      across 624 files. lint-imports: 21 contracts kept.
+      `mcp-coder check file-size --max-lines 750` flags only the pre-existing
+      `tests/cli/commands/test_verify_orchestration.py` (871) and the tracker
+      itself; `verification.py` is at 700 and the test file at 700.
+
+      Test runs: `test_langchain_verification.py` → **50 passed**;
+      `tests/llm/providers/langchain` → **592 passed, 1 skipped** (with the
+      known `test_connection_errors_contains_httpx_connect_error` deselected);
+      the five `tests/cli/commands/test_verify*.py` modules → **117 passed**.
+
+      **Two environmental failures, both reproduced without this change:**
+      `test_langchain_exceptions.py::TestErrorTuples::…httpx_connect_error`
+      (`httpx` absent → `CONNECTION_ERRORS` falls back to `(ConnectionError,)`
+      at import time, before the conftest MagicMock lands) — the same known
+      baseline steps 2-10 recorded. And, **under `-n auto` only**,
+      `test_verify.py::TestVerifyGithubTokenSource::test_token_source_config_renders_second_line`
+      dies with `PermissionError: [WinError 32]` unlinking
+      `.mcp_coder_verify.md`: `_run_mcp_edit_smoke_test` writes that file at a
+      *fixed repo-root path*, so two xdist workers running `execute_verify`
+      collide on it. Serially the same five files are 117/117 green. Pre-existing
+      xdist race in the smoke test's fixed filename, untouched by this step.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-10: the `.venv` copy of the unpinned git dependency `mcp-workspace`
+      lacks `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and pytest
+      collects zero tests (confirmed again: the first unshimmed run collected
+      0). Same workaround — a throwaway `.pytest_shim/sitecustomize.py`
+      registering a stand-in `mcp_workspace.checks.branch_status_rendering`,
+      `env_vars={"PYTHONPATH": ".pytest_shim"}`, directory deleted afterwards
+      and **not** committed. It is also why the unscoped mypy run showed three
+      stale-API errors in `cli/commands/check_branch_status.py`
+      (`pr_feedback_undeterminable`, `fail_on_reviews`) — same dependency, not
+      this step. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Order-of-work note:** as in step 10, the production edit landed with the
+      tests rather than after a red run, so they were green on first execution.
+      They are not vacuous — every assertion matches on strings
+      (`not offered by the server`, `does not expose /models`,
+      `Model available`) that exist nowhere in the pre-change tree, and the
+      import of `_check_model_listed` would have been a collection error.)
+- [x] Commit message prepared
 
 ### Step 12: `prompt_llm` / `prompt_llm_stream` honour their `provider=` argument
 

@@ -8,6 +8,7 @@ import pytest
 
 from mcp_coder.llm.providers.langchain.verification import (
     _check_mcp_adapter_packages,
+    _check_model_listed,
     _check_package_installed,
     _mask_api_key,
     verify_langchain,
@@ -541,3 +542,174 @@ class TestListModelsForBackendErrors:
         result = _list_models_for_backend("openai", None, "https://h/v1/completions")
         assert result["ok"] is False
         assert result["error_type"] == "unknown"
+
+
+class TestCheckModelListed:
+    """Step 11 — cross-check the configured model against a model listing.
+
+    The check is advisory: ``ok`` is ``True`` or ``None``, never ``False``.
+    A relay that will not serve ``/models`` says nothing about whether the
+    config is right, and a genuinely wrong model still fails the live test
+    prompt, which already sets exit 1.
+    """
+
+    def test_model_present_in_listing(self) -> None:
+        entry = _check_model_listed(
+            "Qwen-2.5-72B", {"ok": True, "value": ["Qwen-2.5-72B", "gpt-4o"]}
+        )
+        assert entry["ok"] is True
+        assert entry["value"] == "Qwen-2.5-72B found on server"
+
+    def test_near_miss_is_suggested(self) -> None:
+        entry = _check_model_listed(
+            "Qwen-2.5-72b", {"ok": True, "value": ["Qwen-2.5-72B", "gpt-4o"]}
+        )
+        assert entry["ok"] is None
+        assert "Qwen-2.5-72b not offered by the server (2 models listed)" in str(
+            entry["value"]
+        )
+        assert "did you mean Qwen-2.5-72B?" in str(entry["value"])
+
+    def test_no_near_miss_omits_suggestion(self) -> None:
+        entry = _check_model_listed(
+            "llama3.1", {"ok": True, "value": ["gpt-4o", "text-embedding-3-small"]}
+        )
+        assert entry["ok"] is None
+        assert "llama3.1 not offered by the server (2 models listed)" in str(
+            entry["value"]
+        )
+        assert "did you mean" not in str(entry["value"])
+
+    def test_auth_failure_degrades_to_could_not_verify(self) -> None:
+        entry = _check_model_listed(
+            "gpt-4o",
+            {
+                "ok": False,
+                "value": [],
+                "error": "401 Unauthorized",
+                "error_type": "auth",
+            },
+        )
+        assert entry["ok"] is None
+        assert entry["value"] == "could not verify (server does not expose /models)"
+
+    def test_404_listing_degrades_to_could_not_verify(self) -> None:
+        entry = _check_model_listed(
+            "gpt-4o",
+            {"ok": False, "value": [], "error": "404 Not Found", "error_type": "404"},
+        )
+        assert entry["ok"] is None
+        assert entry["value"] == "could not verify (server does not expose /models)"
+
+    def test_no_model_configured(self) -> None:
+        entry = _check_model_listed(None, {"ok": True, "value": ["gpt-4o"]})
+        assert entry["ok"] is None
+        assert entry["value"] == "no model configured"
+
+    def test_missing_value_key_counts_as_empty_listing(self) -> None:
+        entry = _check_model_listed("gpt-4o", {"ok": True})
+        assert entry["ok"] is None
+        assert "0 models listed" in str(entry["value"])
+
+    def test_never_reports_false(self) -> None:
+        """No input shape may produce ok=False — that would move overall_ok."""
+        listings: list[dict[str, object]] = [
+            {"ok": True, "value": ["gpt-4o"]},
+            {"ok": True, "value": []},
+            {"ok": False, "value": []},
+            {},
+        ]
+        for listing in listings:
+            for model in ("gpt-4o", "nope", None):
+                assert _check_model_listed(model, listing)["ok"] is not False
+
+
+class TestModelCheckInVerify:
+    """Wiring of model_check into verify_langchain()."""
+
+    _CONFIG = {
+        "provider": "langchain",
+        "backend": "openai",
+        "model": "gpt-4o",
+        "api_key": "sk-test1234test5678",
+        "base_url": None,
+        "api_version": None,
+    }
+
+    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_model_check_ok_when_listed(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_list: MagicMock,
+    ) -> None:
+        mock_config.return_value = dict(self._CONFIG)
+        mock_pkg.return_value = True
+        mock_list.return_value = {"ok": True, "value": ["gpt-4o", "gpt-3.5-turbo"]}
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain(check_models=True)
+        assert result["model_check"]["ok"] is True
+        assert result["model_check"]["value"] == "gpt-4o found on server"
+
+    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_wrong_model_warns_but_keeps_overall_ok(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_list: MagicMock,
+    ) -> None:
+        mock_config.return_value = dict(self._CONFIG)
+        mock_pkg.return_value = True
+        mock_list.return_value = {"ok": True, "value": ["gpt-4p", "gpt-3.5-turbo"]}
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain(check_models=True)
+        assert result["model_check"]["ok"] is None
+        assert "not offered by the server" in result["model_check"]["value"]
+        assert result["overall_ok"] is True
+
+    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_failed_listing_keeps_overall_ok(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_list: MagicMock,
+    ) -> None:
+        mock_config.return_value = dict(self._CONFIG)
+        mock_pkg.return_value = True
+        mock_list.return_value = {
+            "ok": False,
+            "value": [],
+            "error": "boom",
+            "error_type": "unknown",
+        }
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain(check_models=True)
+        assert result["model_check"]["ok"] is None
+        assert "does not expose /models" in result["model_check"]["value"]
+        assert result["overall_ok"] is True
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_absent_without_check_models(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        mock_config.return_value = dict(self._CONFIG)
+        mock_pkg.return_value = True
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert "model_check" not in result
+
+
+class TestModelCheckLabel:
+    """Without a label entry the row renders as the raw dict key."""
+
+    def test_label_map_entry(self) -> None:
+        from mcp_coder.cli.commands.verify_formatting import _LABEL_MAP
+
+        assert _LABEL_MAP["model_check"] == "Model available"

@@ -15,6 +15,8 @@ import shutil
 from typing import Any
 from urllib.parse import urlparse
 
+from mcp_coder.utils.config_hints import suggest
+
 from . import _load_langchain_config
 from ._config_diagnostics import (
     _API_KEY_ENV,
@@ -252,6 +254,48 @@ def _check_base_url_shape(
     return {"ok": True, "value": f"{url} {src}"}
 
 
+def _check_model_listed(model: str | None, listing: dict[str, Any]) -> dict[str, Any]:
+    """Cross-check the configured model against a model listing.
+
+    Advisory only: ``ok`` is ``True`` or ``None``, never ``False``, so the
+    check cannot move ``overall_ok``. Two reasons. A listing that failed says
+    nothing about the config — plenty of LiteLLM proxies answer ``/models``
+    with an auth error or a 404 while serving chat completions perfectly —
+    and a genuinely wrong model still fails the live test prompt, which
+    already sets exit 1.
+
+    Near-misses reuse :func:`~mcp_coder.utils.config_hints.suggest`, the same
+    difflib helper the unknown-config-key path uses.
+
+    Args:
+        model: The configured model name, or None when nothing is configured.
+        listing: A :func:`_list_models_for_backend` result — ``ok`` plus a
+            ``value`` list of model names.
+
+    Returns:
+        A verify-style dict with ``ok`` (``True`` | ``None``) and ``value``
+        (str).
+    """
+    if not listing.get("ok"):
+        return {
+            "ok": None,
+            "value": "could not verify (server does not expose /models)",
+        }
+    names = listing.get("value") or []
+    if not model:
+        return {"ok": None, "value": "no model configured"}
+    if model in names:
+        return {"ok": True, "value": f"{model} found on server"}
+    near = suggest(model, names)
+    tail = f" — did you mean {near}?" if near else ""
+    return {
+        "ok": None,
+        "value": (
+            f"{model} not offered by the server ({len(names)} models listed){tail}"
+        ),
+    }
+
+
 def verify_langchain(
     check_models: bool = False,
     mcp_config_path: str | None = None,
@@ -409,11 +453,14 @@ def verify_langchain(
                 model, api_key, config.get("base_url")
             )
 
-    # Check models (optional)
+    # Check models (optional). The cross-check rides on the listing rather
+    # than making a second network call, and is exit-neutral by construction
+    # (ok is never False), so it is not folded into overall_ok below.
     if check_models and backend:
         result["available_models"] = _list_models_for_backend(
             backend, api_key, config.get("base_url")
         )
+        result["model_check"] = _check_model_listed(model, result["available_models"])
 
     # overall_ok: True when backend configured AND all required packages installed
     overall_ok = bool(
