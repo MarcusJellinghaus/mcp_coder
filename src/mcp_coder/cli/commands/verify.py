@@ -646,6 +646,8 @@ def execute_verify(args: argparse.Namespace) -> int:
     # Skipped on a malformed .mcp.json (mcp_config_ok is False): the MCP CONFIG
     # validity row above is the single upstream diagnostic, so the prompt (which
     # would fail indirectly) is short-circuited.
+    # project_dir= is what makes prompt_llm load the prompts, so the request
+    # carries the same merged system + project prompt a real run sends.
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     test_prompt_ok = True
     tools_exposed_ok: bool | None = None
@@ -659,6 +661,7 @@ def execute_verify(args: argparse.Namespace) -> int:
                 settings_file=settings_file,
                 execution_dir=str(project_dir),
                 env_vars=env_vars,
+                project_dir=str(project_dir),
             )
             print(
                 _format_row("Test prompt", symbols["success"], "responded OK", indent=2)

@@ -909,9 +909,56 @@ Details: [step_12.md](./steps/step_12.md)
 
 Details: [step_13.md](./steps/step_13.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (One kwarg: `project_dir=str(project_dir)` added to the existing
+      `"Reply with OK"` `prompt_llm(...)` call at `verify.py:648`. That is what
+      makes `prompt_llm` run `load_prompts` (`interface.py:162-165`) instead of
+      handing the provider `system_prompt=None, project_prompt=None` — the reason
+      the #1116 class of bug was invisible to `verify`. `project_dir` is the
+      already-resolved `Path(args.project_dir).resolve() or Path.cwd()` from
+      `verify.py:374`, the same value `execution_dir=` gets. No new flag, no
+      second check, no per-provider conditional; `_run_mcp_edit_smoke_test` left
+      untouched. A two-line comment above the block records why the kwarg is
+      there.
+
+      **TDD, genuinely red first.** New `TestVerifyTestPromptCarriesProjectDir`
+      with a `_test_prompt_kwargs()` helper that isolates the single
+      `"Reply with OK"` call (the smoke test also calls `prompt_llm`). All four
+      step_13 §TDD cases covered; the three new assertions failed on the
+      pre-change tree with `KeyError: 'project_dir'` (langchain-active,
+      claude-active, explicit `--project-dir`), the 4th is a regression guard.
+      3 red → 4 green, 30 passed in the module.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in either file this step touches.** pylint and mypy scoped
+      to `src/mcp_coder/cli/commands/verify.py` +
+      `tests/cli/commands/test_verify_orchestration.py` are both clean; ruff
+      clean; isort skipped 3 (unchanged); black a no-op across 624 files.
+
+      Test runs: `test_verify_orchestration.py` → **30 passed**; `tests/cli` +
+      `tests/llm/test_interface.py` → **1089 passed**; `tests/llm` → 1 failure,
+      the known `test_langchain_exceptions.py::…httpx_connect_error` baseline
+      carried since step 2.
+
+      **Environmental exclusions, all unchanged from steps 2-12 and none touched
+      by this step:** the `httpx_connect_error` baseline; `tests/checks`,
+      `tests/workflows/review` and the five `test_check_branch_status*.py`
+      modules (stale installed `mcp-workspace`: `BranchStatusReport.__init__()
+      got an unexpected keyword argument 'pr_feedback_undeterminable'`);
+      `tests/llm/test_mcp_manager.py` (`ModuleNotFoundError:
+      langchain_mcp_adapters`); the `copilot_cli_integration` marker.
+
+      **Environment note — pytest still needs the shim.** Unchanged: the `.venv`
+      copy of `mcp-workspace` lacks
+      `mcp_workspace/checks/branch_status_rendering.py`, so a bare
+      `import mcp_coder` raises at conftest import and pytest collects nothing
+      (confirmed again: the first unshimmed run died with `ImportError while
+      loading conftest`). Same workaround — a throwaway
+      `.pytest_shim/sitecustomize.py` supplying that module with a `CIStatus`
+      *enum* and `GITHUB_TOKEN_HINT`, `env_vars={"PYTHONPATH": ".pytest_shim"}`,
+      directory deleted afterwards and **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.)
+- [x] Commit message prepared
 
 ### Step 14: Surface `MCP_CODER_LLM_PROVIDER` in `verify`
 

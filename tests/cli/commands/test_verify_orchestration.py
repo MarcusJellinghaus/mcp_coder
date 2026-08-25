@@ -869,3 +869,142 @@ class TestVerifySurvivesMistypedLangchainConfig:
         assert result == 1
         assert "expected str, got int" in output
         assert "Traceback" not in output
+
+
+class TestVerifyTestPromptCarriesProjectDir:
+    """Step 13: the verify test prompt carries the real message shape.
+
+    Without ``project_dir=``, ``prompt_llm`` never calls ``load_prompts``, so the
+    provider is handed ``system_prompt=None, project_prompt=None`` and the test
+    prompt exercises a message shape no real run ever sends.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _mock_resolve_mcp(self) -> Any:
+        """Default: resolve_mcp_config_path returns None (no MCP config)."""
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
+            yield
+
+    @staticmethod
+    def _test_prompt_kwargs(mock_prompt_llm: MagicMock) -> dict[str, Any]:
+        """Return the kwargs of the single "Reply with OK" call."""
+        calls = [
+            c for c in mock_prompt_llm.call_args_list if c[0][0] == "Reply with OK"
+        ]
+        assert len(calls) == 1
+        return dict(calls[0][1])
+
+    @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_LC_VERIFY}.verify_langchain")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_langchain_active_forwards_project_dir(
+        self,
+        mock_provider: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """langchain active: the test prompt is given project_dir."""
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args(project_dir=str(tmp_path)))
+
+        kwargs = self._test_prompt_kwargs(mock_prompt_llm)
+        assert kwargs["project_dir"] == str(tmp_path.resolve())
+
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_claude_active_forwards_project_dir(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """claude active: the same kwarg, no per-provider conditional."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args(project_dir=str(tmp_path)))
+
+        kwargs = self._test_prompt_kwargs(mock_prompt_llm)
+        assert kwargs["project_dir"] == str(tmp_path.resolve())
+
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_explicit_project_dir_is_resolved_not_cwd(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """--project-dir wins over CWD and arrives resolved."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        target = tmp_path / "proj"
+        target.mkdir()
+        unresolved = str(target / ".." / "proj")
+
+        execute_verify(_make_args(project_dir=unresolved))
+
+        kwargs = self._test_prompt_kwargs(mock_prompt_llm)
+        assert kwargs["project_dir"] == str(target.resolve())
+        assert kwargs["project_dir"] != str(Path.cwd())
+
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_prompt_failure_still_exits_1_with_classified_message(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+        tmp_path: Path,
+    ) -> None:
+        """Regression: a failing test prompt is still classified and exits 1."""
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.side_effect = RuntimeError("boom")
+
+        result = execute_verify(_make_args(project_dir=str(tmp_path)))
+        output = capsys.readouterr().out
+
+        assert result == 1
+        assert "FAILED (RuntimeError: boom)" in output
