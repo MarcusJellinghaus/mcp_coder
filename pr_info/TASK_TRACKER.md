@@ -176,5 +176,11 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Pull Request
 
-- [ ] PR review — address all review comments
+- [x] PR review — address all review comments
+      - Automated implementation review, 6 rounds across
+        [log 1](./implementation_review_log_1.md) (4 rounds) and
+        [log 2](./implementation_review_log_2.md) (3 rounds; the last clean).
+        No GitHub PR exists yet, so there are no human review comments to address.
+      - Log 1's rounds ran without pytest (stale `.venv`). Log 2's ran against a green
+        5068-test suite, and re-verified log 1's applied fixes.
 - [ ] PR summary prepared
