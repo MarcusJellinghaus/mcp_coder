@@ -243,9 +243,61 @@ Detail: [step_4.md](./steps/step_4.md) — **the behaviour change** + help text 
 
 Detail: [step_5.md](./steps/step_5.md) — PROMPTS section rows, new test module. Depends on Step 3.
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      - `find_context_claude_md` and `is_outside_project_dir` added to the existing
+        `from ..utils import (...)` block; no second `is_relative_to` comparison
+        written, so the run-time report and the verify report share one definition
+        of "outside".
+      - Rows inserted at `verify.py:365-390`, i.e. after the "Claude mode" row and
+        before the conditional "Redundancy" row, so the Redundancy warning stays
+        adjacent to the project-prompt rows it refers to. Built with the existing
+        `_format_row`; continuation rows pass `label=""`. `"none found"` uses the
+        success marker; the warning marker is used only for a hit outside
+        `project_dir`. Appended to `prompt_lines` only — nothing feeds
+        `verify_exit_code`.
+      - Six tests in the new `tests/cli/commands/test_verify_prompts_context.py`,
+        driving `execute_verify` through conftest's `_make_verify_mocks` /
+        `_make_args`. Test 4 patches
+        `mcp_coder.cli.commands.verify.find_context_claude_md` to `[]` rather than
+        arranging an empty subtree, since verify walks without `stop_at`; test 5
+        needs no stub because the walk from `tmp_path/repo` stops one level up.
+      - TDD order followed (tests written first) but the **red state could not be
+        observed** — see the pytest blocker below.
+- [x] Quality checks: pylint, pytest, mypy — **pytest still blocked on the
+      environment blocker diagnosed in Step 1; unchanged and untouched by this step**
+      - Clean: pylint, mypy and `ruff` report **no findings at all** on the two
+        files this step touches (`cli/commands/verify.py`,
+        `tests/cli/commands/test_verify_prompts_context.py`). `lint-imports`
+        21/21 kept (696 files, 3571 dependencies). `black`/`isort` reformatted
+        both new/changed files, then clean. `check file-size --max-lines 750`:
+        all 824 files within limit — which is the reason the tests live in their
+        own module rather than in the 727-line `test_verify.py`.
+      - No `tach.toml` change needed: `verify.py` already imported
+        `prompts.prompt_loader`, and Step 3 added `mcp_coder.prompts` to the
+        `mcp_coder.cli` allowlist. `tach` itself is still not installed, so
+        `run_tach_check` remains unrunnable (carried over from Step 3).
+      - **pytest never ran the new tests.** Collection still aborts at conftest
+        import: `ModuleNotFoundError: No module named
+        'mcp_workspace.checks.branch_status_rendering'` raised from
+        `src/mcp_coder/checks/branch_status.py:17` via
+        `src/mcp_coder/__init__.py:37`. All six new tests are unproven here, and
+        so is step_5.md's requirement that
+        `tests/cli/commands/test_verify_alignment.py` still passes — **check that
+        one first** when the suite can run. Its Layer 2 smoke test asserts every
+        indent-2 row's value starts at `_expected_value_column(2)`; the two new
+        row kinds use the default `_LABEL_WIDTH` and short labels
+        ("Claude cwd" 10, "Project instructions" 19, both < 22), so they should
+        pass, but that is reasoning, not evidence. If it breaks, fix the rows,
+        not the alignment test.
+      - Root cause unchanged from Steps 1-4: the venv's `mcp-workspace` predates
+        upstream `a1f0eac`. Same cause behind all 9 mypy errors and every pylint
+        occurrence — each in an unrelated file, pre-existing on `main`.
+      - Fix (needs a shell; no MCP tool can install packages):
+        `pip install --force-reinstall "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+        then `pip install -e ".[dev]"`, then re-run the checks. This session had
+        no shell tool, so it could not apply the fix.
+      - Carry-over for Steps 6-7: repair the venv first; the same blocker applies.
+- [x] Commit message prepared
 
 ### Step 6: Branch-name call sites use `project_dir`
 
