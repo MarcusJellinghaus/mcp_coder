@@ -14,7 +14,7 @@ working directory, and the driven project's `CLAUDE.md` reaches the agent.
 
 | File | Line | `project_dir` source |
 |---|---|---|
-| `src/mcp_coder/cli/commands/check_branch_status.py` | 331 | `resolve_project_dir(...)` earlier in the function |
+| `src/mcp_coder/cli/commands/check_branch_status.py` | 331 | `resolve_project_dir(...)` at `:189` — **also hoist, see below** |
 | `src/mcp_coder/cli/commands/create_plan.py` | 46 | `resolve_project_dir(args.project_dir)` at `:43` |
 | `src/mcp_coder/cli/commands/create_pr.py` | 46 | same |
 | `src/mcp_coder/cli/commands/implement.py` | 46 | same |
@@ -26,6 +26,35 @@ One-line edit each:
 execution_dir = resolve_execution_dir(args.execution_dir, project_dir=project_dir)
 ```
 Pass the **resolved `Path`**, not `args.project_dir`.
+
+### `check_branch_status.py` is not purely a one-line edit — hoist the call
+
+`resolve_execution_dir` at `:331` sits **inside the `if args.fix > 0:` block** (`:317`). Since
+Step 3 wired the context report into the resolver, leaving it there means
+`mcp-coder check branch-status` **without** `--fix` emits no context report at all — requirement
+5 says "once per run", not "once per run that happens to call an LLM".
+
+Move the call up to sit directly under `project_dir = resolve_project_dir(args.project_dir)`
+(`:189`) and keep the resulting `execution_dir` in scope for the `--fix` block at `:340`:
+
+```python
+project_dir = resolve_project_dir(args.project_dir)
+execution_dir = resolve_execution_dir(args.execution_dir, project_dir=project_dir)
+```
+
+One call, one report, every run. Two consequences to accept knowingly:
+
+- **A bad `--execution-dir` now fails read-only runs too.** Today it can only raise on the
+  `--fix` path. The function has no local `except ValueError`; the raise is caught by the broad
+  `except Exception` at `:359-365`, which logs and returns **2** (technical error). That is the
+  correct classification for an unusable argument, and `--execution-dir` is deprecated — but it
+  is a behaviour change, so it needs a test (see TESTS below) rather than being discovered.
+- **`resolve_execution_dir` now runs before `get_current_branch_name` (`:196`)**, which can
+  `return 2` early. The ordering change is harmless: both resolve paths only, neither has side
+  effects beyond logging.
+
+Do **not** instead call `report_context_root` separately from this command — that would
+double-report on `--fix` runs and put back exactly the per-call-site wiring Step 3 removed.
 
 ### Source — three sites needing statement reordering
 
@@ -117,12 +146,57 @@ Step 3.
 TDD here is naturally red-first: **update the ~14+ assertions to expect `project_dir` before
 touching the call sites**, run the suite, watch them fail, then change the call sites.
 
-Add two focused tests:
+### The one test that proves the issue is fixed
+
+Updating mocked call-argument assertions proves only that an argument is passed. The issue's
+headline acceptance criterion — *"`mcp-coder implement --project-dir <repo>` launches Claude
+with cwd == `<repo>`, from any shell working directory"* — is about the value that reaches the
+**subprocess**, and it is automatable. Nothing in the plan asserted it before this section.
+
+Add to `tests/integration/test_execution_dir_integration.py`, in the class holding
+`test_prompt_command_passes_execution_dir_to_subprocess` (`:234-281`), modelled directly on
+`test_prompt_command_none_execution_dir_uses_none_as_cwd` (`:283-330`):
+
+```python
+@patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+@patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+def test_prompt_command_defaults_cwd_to_project_dir(
+    self,
+    mock_prepare_env: MagicMock,
+    mock_execute_subprocess: MagicMock,
+    require_claude_cli: None,
+    tmp_path: Path,
+) -> None:
+    """No --execution-dir: the subprocess cwd is --project-dir, not the shell's cwd."""
+```
+
+Shape it exactly like the `:283-330` test, with three differences:
+
+1. `project_dir = tmp_path / "repo"; project_dir.mkdir()` and
+   `args = argparse.Namespace(..., execution_dir=None, project_dir=str(project_dir), ...)`.
+2. `monkeypatch.chdir(tmp_path / "elsewhere")` (created, and **not** an ancestor of
+   `project_dir`) before calling `execute_prompt` — "from any shell working directory" is half
+   the criterion, and without the chdir the test passes for the wrong reason on a developer
+   machine standing in the repo.
+3. `assert options.cwd == str(project_dir)` — and, because that is the whole point,
+   `assert options.cwd != str(Path.cwd())`.
+
+**This test must fail before the call-site change and pass after.** Run it red first; if it is
+green beforehand, the `chdir` is not taking effect and the test proves nothing.
+
+It carries the `require_claude_cli` fixture like its neighbours, so it is excluded by the
+standard marker exclusions — this is the specific reason the CHECKS section below asks for one
+unfiltered run.
+
+### Three further focused tests
 
 1. In `tests/cli/commands/test_commit.py` — `execute_commit_auto` with a `project_dir` outside
    the CWD and no `--execution-dir` resolves the execution dir to that `project_dir`. Pins the
    reordered site.
-2. In `tests/cli/test_shared_args.py` — the updated verbatim `_EXECUTION_DIR_HELP` assertion,
+2. In `tests/cli/commands/test_check_branch_status.py` — with `--fix 0` (the read-only path) and
+   a nonexistent `--execution-dir`, the command returns **2**. Pins the hoist described under
+   WHERE, which is the one behaviour change it introduces.
+3. In `tests/cli/test_shared_args.py` — the updated verbatim `_EXECUTION_DIR_HELP` assertion,
    plus keep `test_canonical_help` (`:161-165`) green.
 
 `tests/integration/test_execution_dir_integration.py:234-281`
@@ -137,10 +211,13 @@ mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integra
 mcp__tools-py__run_mypy_check
 ```
 
-Because this is the behaviour-changing commit, also run the suite **without** the marker
-exclusions once (`extra_args=["-n", "auto"]`) if the environment allows it — the integration
-tests under `tests/integration/test_execution_dir_integration.py` are exactly the ones this
-step moves.
+Because this is the behaviour-changing commit, run the suite **without** the marker exclusions
+once (`extra_args=["-n", "auto"]`) — not optional here. The integration tests under
+`tests/integration/test_execution_dir_integration.py` are exactly the ones this step moves, and
+the new `test_prompt_command_defaults_cwd_to_project_dir` — the only automated proof that the
+issue is fixed — is behind `require_claude_cli` and does not run under the exclusions. If the
+environment cannot run it, say so explicitly in the commit rather than reporting the step as
+verified.
 
 Then `./tools/format_all.sh`, review the diff, commit.
 
@@ -172,13 +249,19 @@ via --settings.
 > `pr_info/steps/step_4.md`, then implement Step 4. This is the commit where behaviour actually
 > changes.
 >
-> Pass `project_dir=` to `resolve_execution_dir` at all nine call sites. Six are one-line edits
-> (`check_branch_status.py:331`, `create_plan.py:46`, `create_pr.py:46`, `implement.py:46`,
-> `rebase.py:81`, `review.py:84`) — pass the already-resolved `project_dir` `Path`, not
-> `args.project_dir`. Three need statement **reordering** because they resolve `execution_dir`
-> first: `commit.py:74`, `prompt.py:48`, `icoder.py:51`. See the table in the step file for
-> exactly where each block moves. In `commit.py`, keep `resolve_execution_dir` above
-> `validate_git_repository` so a bad `--execution-dir` still errors first.
+> Pass `project_dir=` to `resolve_execution_dir` at all nine call sites. Five are one-line edits
+> (`create_plan.py:46`, `create_pr.py:46`, `implement.py:46`, `rebase.py:81`, `review.py:84`) —
+> pass the already-resolved `project_dir` `Path`, not `args.project_dir`. Three need statement
+> **reordering** because they resolve `execution_dir` first: `commit.py:74`, `prompt.py:48`,
+> `icoder.py:51`. See the table in the step file for exactly where each block moves. In
+> `commit.py`, keep `resolve_execution_dir` above `validate_git_repository` so a bad
+> `--execution-dir` still errors first.
+>
+> `check_branch_status.py:331` is the ninth and needs a **hoist**: it currently sits inside the
+> `if args.fix > 0:` block, so with Step 3's wiring a run without `--fix` would emit no context
+> report at all. Move it up under `project_dir = resolve_project_dir(args.project_dir)` at
+> `:189` and keep `execution_dir` in scope for the `--fix` block at `:340`. Do not add a
+> separate `report_context_root` call to this command.
 >
 > Those three commands use their own `Path(args.project_dir) or Path.cwd()` rather than
 > `resolve_project_dir`. Use each command's own `project_dir` — do **not** try to unify the
@@ -193,6 +276,15 @@ via --settings.
 > suite, watch them fail, then change the call sites. The issue's list is not exhaustive — also
 > grep `tests/` for `assert_called` on `resolve_execution_dir` mocks; `test_check_branch_status.py`
 > and `test_rebase.py` patch it too.
+>
+> Mocked call-argument assertions are **not** enough on their own. Add
+> `test_prompt_command_defaults_cwd_to_project_dir` to
+> `tests/integration/test_execution_dir_integration.py` as specified under TESTS — it
+> `monkeypatch.chdir`s outside the project directory and asserts the value that reaches the
+> subprocess (`options.cwd == str(project_dir)`). That is the only automated proof of the
+> issue's headline acceptance criterion. Confirm it is **red** before the call-site change; if
+> it is green beforehand the `chdir` is not effective and it proves nothing. It is behind
+> `require_claude_cli`, so run the suite once **without** the marker exclusions to execute it.
 >
 > Add a comment (no behaviour change) at `tests/cli/commands/test_commit.py:1099`, `:1129`,
 > `:1158`, `:1183` noting they pass only because the `project_dir` default is not

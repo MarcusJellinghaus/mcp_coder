@@ -57,10 +57,16 @@ The durable half of this issue. Nothing ever reported which working directory Cl
 which `CLAUDE.md` it loaded — a wrong memory file and a right one are indistinguishable from
 outside the process, which is why this drifted silently since December.
 
-A new pair of functions in `cli/utils.py` reports, once per run at `OUTPUT` level, the Claude
-working directory and the cwd-upward `CLAUDE.md` walk, **warning when any resolved file lies
-outside `project_dir`**. That warning is the line that would have caught this in December; a
-bare resolved path is too easy to skim past.
+Three new functions in `cli/utils.py` report, once per run at `OUTPUT` level, the Claude working
+directory and the cwd-upward `CLAUDE.md` walk, **warning when any resolved file lies outside
+`project_dir`**. That warning is the line that would have caught this in December; a bare
+resolved path is too easy to skim past.
+
+`is_outside_project_dir` is the **single** definition of "outside", shared by the run-time report
+(Step 3) and the verify report (Step 5) so the two cannot drift on the one rule the issue calls
+load-bearing. `find_context_claude_md` takes an optional `stop_at` walk boundary used only by
+tests — without it, "found nothing anywhere" is unassertable, because the walk runs to the
+filesystem root and `tmp_path`'s real ancestors are outside any test's control.
 
 **Design decision (deviation from the issue, deliberate):** the issue specifies "a small
 dedicated helper called next to each `resolve_execution_dir`" — nine wiring points. Instead
@@ -185,9 +191,9 @@ misleading anyone reading the machine.
 |---|---|---|
 | 1 | [`claude_md_paths()` + `is_claude_md` refactor](step_1.md) | shared candidate knowledge, no behaviour change |
 | 2 | [`resolve_execution_dir` signature + deprecation](step_2.md) | new optional param, warning; backwards compatible |
-| 3 | [Context-root finder + reporter](step_3.md) | `find_context_claude_md`, `report_context_root`, wired into the resolver |
-| 4 | [Nine call sites default to `project_dir`](step_4.md) | **the behaviour change** + help text + 14 test updates |
-| 5 | [`verify` reports the same](step_5.md) | PROMPTS section rows |
+| 3 | [Context-root finder + reporter](step_3.md) | `find_context_claude_md`, `is_outside_project_dir`, `report_context_root`, wired into the resolver; `tach.toml` |
+| 4 | [Nine call sites default to `project_dir`](step_4.md) | **the behaviour change** + help text + 14 test updates + the end-to-end `cwd == project_dir` test |
+| 5 | [`verify` reports the same](step_5.md) | PROMPTS section rows, new test module |
 | 6 | [Branch-name call sites](step_6.md) | `task_processing.py` two lines |
 | 7 | [Docs](step_7.md) | architecture, cli-reference, environments |
 
@@ -200,17 +206,20 @@ Step 3, Step 4 and Step 4 respectively, but are independent of each other.
 
 - `pr_info/steps/summary.md`, `pr_info/steps/step_1.md` … `step_7.md` (this plan)
 
-**No new source modules.** Every change lands in an existing file — a deliberate KISS outcome
-of the two design decisions above.
+**No new source modules.** Every source change lands in an existing file — a deliberate KISS
+outcome of the two design decisions above. One new *test* module
+(`tests/cli/commands/test_verify_prompts_context.py`, Step 5) and one `tach.toml` line
+(Step 3) are the only additions.
 
 ### Modified — source (14 files)
 
 | File | Step | Change |
 |---|---|---|
 | `src/mcp_coder/prompts/prompt_loader.py` | 1 | `claude_md_paths()`; `is_claude_md` uses it |
-| `src/mcp_coder/cli/utils.py` | 2, 3 | `resolve_execution_dir` signature + deprecation; `find_context_claude_md`, `report_context_root` |
+| `src/mcp_coder/cli/utils.py` | 2, 3 | `resolve_execution_dir` signature + deprecation; `find_context_claude_md`, `is_outside_project_dir`, `report_context_root` |
+| `tach.toml` | 3 | allow `mcp_coder.cli` → `mcp_coder.prompts` |
 | `src/mcp_coder/cli/shared_args.py` | 4 | `_EXECUTION_DIR_HELP` |
-| `src/mcp_coder/cli/commands/check_branch_status.py` | 4 | pass `project_dir` (`:331`) |
+| `src/mcp_coder/cli/commands/check_branch_status.py` | 4 | **hoist out of the `--fix` block** + pass `project_dir` (`:189`, `:331`) |
 | `src/mcp_coder/cli/commands/commit.py` | 4 | **reorder** + pass `project_dir` (`:74`, `:80`) |
 | `src/mcp_coder/cli/commands/create_plan.py` | 4 | pass `project_dir` (`:46`) |
 | `src/mcp_coder/cli/commands/create_pr.py` | 4 | pass `project_dir` (`:46`) |
@@ -233,10 +242,16 @@ of the two design decisions above.
 | `tests/cli/commands/test_implement.py` | 4 |
 | `tests/cli/commands/test_create_plan.py` | 4 |
 | `tests/cli/commands/test_review.py` | 4 |
-| `tests/cli/commands/test_commit.py` | 4 (comments only) |
-| `tests/integration/test_execution_dir_integration.py` | 2, 4 |
-| `tests/cli/commands/test_verify.py` | 5 |
+| `tests/cli/commands/test_check_branch_status.py` | 4 (assertions + the `--fix 0` hoist test) |
+| `tests/cli/commands/test_commit.py` | 4 (comments + one resolver test) |
+| `tests/integration/test_execution_dir_integration.py` | 2, 4 (**incl. the end-to-end `cwd == project_dir` test**) |
 | `tests/workflows/implement/test_task_processing.py` | 6 |
+
+**Created — tests (1 file)**
+
+- `tests/cli/commands/test_verify_prompts_context.py` (Step 5). A new module rather than
+  extending `test_verify.py`, which is already 727 lines and would cross the repo's 750-line
+  guidance.
 
 `tests/cli/commands/test_check_branch_status.py` and `test_rebase.py` also patch
 `resolve_execution_dir` — they are not in the issue's list of 14, but **grep for
@@ -252,7 +267,9 @@ of the two design decisions above.
 ## Acceptance
 
 - `mcp-coder implement --project-dir <repo>` launches Claude with `cwd == <repo>` from any
-  shell working directory.
+  shell working directory. Covered automatically by
+  `test_prompt_command_defaults_cwd_to_project_dir` (Step 4), which `chdir`s outside the project
+  directory and asserts the `cwd` handed to the subprocess.
 - The subprocess `cwd` equals `project_dir`, and every reported project instructions file lies
   inside `project_dir`. That is the checkable proxy — whether the repo's `.claude/CLAUDE.md` is
   *actually* in effect is a claim about Claude Code's internal memory loading that nothing in
@@ -285,6 +302,8 @@ mcp__tools-py__run_mypy_check
 
 Steps 1 and 3 add cross-module imports (`cli/utils.py` → `prompts.prompt_loader`); also run
 `mcp__tools-py__run_lint_imports_check` and `mcp__tools-py__run_tach_check` there.
-`cli/commands/verify.py` already imports `prompt_loader`, so the direction is established.
+`cli/commands/verify.py` already imports `prompt_loader`, so the *direction* is established
+(`presentation` → `domain`) — but `mcp_coder.prompts` is **not** on the `mcp_coder.cli`
+`depends_on` allowlist in `tach.toml`, so Step 3 adds it in the same commit as the import.
 
 Run `./tools/format_all.sh` before every commit.

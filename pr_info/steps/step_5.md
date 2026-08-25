@@ -16,7 +16,7 @@ exercised the correct working directory while the workflows did not.
 ## WHERE
 
 - `src/mcp_coder/cli/commands/verify.py` — the PROMPTS section, `:338-374`
-- `tests/cli/commands/test_verify.py` — the existing PROMPTS test class (`:120`)
+- `tests/cli/commands/test_verify_prompts_context.py` — **new file** (see TESTS)
 
 ## WHAT
 
@@ -29,8 +29,10 @@ _format_row(label: str, marker: str, value: str, *, indent: int, label_width: in
 
 ## HOW
 
-- Import: add `find_context_claude_md` to the existing `from ..utils import (...)` block at
-  `verify.py:31-35`.
+- Import: add `find_context_claude_md` **and `is_outside_project_dir`** to the existing
+  `from ..utils import (...)` block at `verify.py:31-35`. Both come from Step 3. Do **not**
+  write a second `is_relative_to` comparison here — the "outside `project_dir`" rule has exactly
+  one definition, shared with the run-time report, so the two reports cannot drift.
 - Insert after the "Claude mode" row (`:355-362`) and **before** the conditional "Redundancy"
   row (`:363-373`), so the Redundancy warning stays adjacent to the project-prompt rows it
   refers to.
@@ -42,13 +44,13 @@ _format_row(label: str, marker: str, value: str, *, indent: int, label_width: in
 ## ALGORITHM
 
 ```
-hits = find_context_claude_md(project_dir)
+hits = find_context_claude_md(project_dir)            # no stop_at - production walks to root
 prompt_lines.append(_format_row("Claude cwd", symbols["success"], str(project_dir), indent=2))
 if not hits:
     prompt_lines.append(_format_row("Project instructions", symbols["success"], "none found", indent=2))
 else:
     for i, h in enumerate(hits):
-        outside = not h.is_relative_to(project_dir)
+        outside = is_outside_project_dir(h, project_dir)       # shared predicate, Step 3
         label  = "Project instructions" if i == 0 else ""      # continuation rows: empty label
         marker = symbols["warning"] if outside else symbols["success"]
         value  = f"{h} (outside project directory)" if outside else str(h)
@@ -61,6 +63,10 @@ column stays aligned (see `verify_formatting.py:57`, `:86`).
 ### Decisions to preserve
 
 - **Every hit at the nearest level**, same rule as Step 3 — never one picked by precedence.
+- **`is_outside_project_dir` is imported, not reimplemented.** It also handles the resolution
+  mismatch for free: it resolves both sides, so a hit resolved during the walk still compares
+  correctly against `project_dir` (already `.resolve()`d at `verify.py:334`, but that is the
+  caller's accident, not a contract to depend on).
 - **"none found" uses the success marker, not the warning marker.** A project legitimately may
   have no `CLAUDE.md`; the row states the fact without implying breakage. The warning marker is
   reserved for the one genuinely wrong state: a file outside `project_dir`.
@@ -75,15 +81,25 @@ reporting, not verification, so it must **not** feed `verify_exit_code`.
 
 ## TESTS (write first)
 
-In the existing PROMPTS test class in `tests/cli/commands/test_verify.py` (`:120`), following
-the pattern of the existing `"=== PROMPTS ==="` (`:154`) and `"Redundancy"` (`:230`) assertions:
+**New file: `tests/cli/commands/test_verify_prompts_context.py`.** Not the existing
+`test_verify.py` — it is already 727 lines, and six more tests would push it past the repo's
+750-line guidance (`mcp-coder check file-size --max-lines 750`, CLAUDE.md). Copy the fixture
+setup and the invocation pattern from the PROMPTS test class in `test_verify.py:120`, following
+its existing `"=== PROMPTS ==="` (`:154`) and `"Redundancy"` (`:230`) assertions.
 
 1. Output contains a "Claude cwd" row naming `project_dir`.
 2. Output contains a "Project instructions" row naming `<project_dir>/CLAUDE.md` when it exists.
 3. Both files reported when `<project_dir>/CLAUDE.md` and `<project_dir>/.claude/CLAUDE.md`
    both exist.
-4. Output contains "none found" when no `CLAUDE.md` exists anywhere up the chain.
-5. A hit outside `project_dir` (found in an ancestor) renders with the warning marker.
+4. Output contains "none found" — **patch `mcp_coder.cli.commands.verify.find_context_claude_md`
+   to return `[]`**. Do not try to arrange an empty subtree on disk: verify calls the walk
+   without a `stop_at` boundary, so it runs to the filesystem root and any `CLAUDE.md` in a real
+   ancestor of `tmp_path` would falsify the assertion. The walk itself is covered by Step 3's
+   tests 6 and 7, which *do* use `stop_at`; what this test owns is the **rendering** of the
+   empty result, so stubbing the data source is the honest boundary.
+5. A hit outside `project_dir` renders with the warning marker — create
+   `tmp_path/"CLAUDE.md"` with `project_dir = tmp_path/"repo"` (no `CLAUDE.md` of its own). This
+   is deterministic without a stub: the walk stops at `tmp_path`, one level up.
 6. The existing "Redundancy" row still appears in its established position — regression guard
    on the insertion point.
 
@@ -125,14 +141,22 @@ source is checkable before a run rather than after.
 > row at `:363-373`. Use the existing `_format_row` helper; pass `label=""` for continuation
 > rows so the value column stays aligned.
 >
+> Use `is_outside_project_dir` from `..utils` (also Step 3) to decide the warning marker. Do
+> **not** write a fresh `is_relative_to` comparison — that rule has one definition, shared with
+> the run-time report.
+>
 > Report **every** hit at the nearest ancestor level — never pick one by precedence. Use the
 > warning marker only for a file lying outside `project_dir`; "none found" uses the success
 > marker, since a project may legitimately have no CLAUDE.md. Keep the label short
 > (`_LABEL_WIDTH` is 22) and word it so it does not claim to be a complete account of Claude's
 > memory chain. These rows are reporting only — they must not affect the verify exit code.
 >
-> Follow TDD: write the six tests listed under TESTS in the existing PROMPTS test class in
-> `tests/cli/commands/test_verify.py:120` first, watch them fail, then implement.
+> Follow TDD: write the six tests listed under TESTS first, watch them fail, then implement.
+> Put them in a **new** `tests/cli/commands/test_verify_prompts_context.py`, not in
+> `test_verify.py` (already 727 lines; six more would cross the repo's 750-line guidance).
+> Test 4 patches `find_context_claude_md` to return `[]` rather than relying on an empty disk
+> subtree — verify walks to the filesystem root, so a real ancestor's `CLAUDE.md` would
+> otherwise falsify it.
 >
 > Use MCP tools for all file operations. Run `run_pylint_check`, `run_pytest_check` (with
 > `-n auto` and the integration-marker exclusions from summary.md) and `run_mypy_check`; check
