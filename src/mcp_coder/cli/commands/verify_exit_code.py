@@ -16,6 +16,7 @@ def _compute_exit_code(
     git_result: dict[str, Any] | None = None,
     tools_exposed_ok: bool | None = None,
     mcp_config_ok: bool | None = None,
+    jenkins_ok: bool | None = None,
 ) -> int:
     """Compute CLI exit code from verification results.
 
@@ -42,6 +43,10 @@ def _compute_exit_code(
         mcp_config_ok: `.mcp.json` validity. None=not checked / neutral (no
             effect), True=well-formed or empty (no effect), False=malformed
             (exit 1, provider-independent).
+        jenkins_ok: Jenkins server + job permission status. None=`[jenkins]`
+            unconfigured / not checked (no effect), True=all probes passed,
+            False=unreachable or missing permissions (exit 1,
+            provider-independent).
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
@@ -64,6 +69,10 @@ def _compute_exit_code(
 
     # Git failure always means exit 1 (provider-independent)
     if git_result is not None and not git_result.get("overall_ok"):
+        return 1
+
+    # Jenkins: only fail when [jenkins] is configured (None = unconfigured, neutral)
+    if jenkins_ok is False:
         return 1
 
     # Active provider determines primary pass/fail

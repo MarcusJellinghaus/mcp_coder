@@ -150,6 +150,20 @@ def _mock_verify_github() -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture(autouse=True)
+def _neutral_jenkins_verify() -> Generator[None, None, None]:
+    """Keep execute_verify hermetic: no live Jenkins probes in CLI command tests.
+
+    execute_verify reads the real ~/.mcp_coder/config.toml, so on a machine with
+    [jenkins] configured the JENKINS sections would issue live HTTP. Patching the
+    import site in verify.py returns the "unconfigured" tuple, which renders no
+    section and stays exit-code neutral. test_verify_jenkins.py imports from
+    mcp_coder.cli.commands.verify_jenkins directly and is unaffected.
+    """
+    with patch(f"{_VERIFY}.verify_jenkins", return_value=({}, {})):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _mock_verify_git() -> Generator[MagicMock, None, None]:
     """Auto-mock verify_git to return a default OK result.
 

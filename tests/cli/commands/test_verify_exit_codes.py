@@ -417,3 +417,46 @@ class TestMcpConfigExitCode:
             )
             == 0
         )
+
+
+class TestJenkinsExitCode:
+    """Exit-code effect of the jenkins_ok signal (gated on [jenkins] being set)."""
+
+    def test_jenkins_fail_exit_1(self) -> None:
+        """Exit 1 when jenkins_ok=False (configured and broken)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                jenkins_ok=False,
+            )
+            == 1
+        )
+
+    def test_jenkins_none_no_effect(self) -> None:
+        """Exit 0 when jenkins_ok=None ([jenkins] unconfigured -> neutral)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                jenkins_ok=None,
+            )
+            == 0
+        )
+
+    def test_jenkins_true_no_effect(self) -> None:
+        """Exit 0 when jenkins_ok=True."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                jenkins_ok=True,
+            )
+            == 0
+        )

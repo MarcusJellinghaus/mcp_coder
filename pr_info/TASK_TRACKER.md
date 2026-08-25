@@ -104,9 +104,46 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: `verify_jenkins()` and the two verify sections ([step_6.md](./steps/step_6.md))
 
-- [ ] Implementation: autouse `_neutral_jenkins_verify` fixture + `test_verify_jenkins.py`, then `verify_jenkins.py`, `verify.py` wiring after `:385`, `jenkins_ok` on `_compute_exit_code`, three `_LABEL_MAP` entries
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, file-size (750) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: autouse `_neutral_jenkins_verify` fixture + `test_verify_jenkins.py`, then `verify_jenkins.py`, `verify.py` wiring after `:385`, `jenkins_ok` on `_compute_exit_code`, three `_LABEL_MAP` entries
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, file-size (750) — fix all issues
+      - Test-first, watched fail: `test_verify_jenkins.py` failed on
+        `ModuleNotFoundError: mcp_coder.cli.commands.verify_jenkins`, and the autouse
+        fixture made 10 existing `test_verify_exit_codes.py` tests error with
+        `verify module does not have the attribute 'verify_jenkins'` — i.e. both new
+        pieces provably bit before the source existed. Green after implementation.
+      - lint-imports: **PASS** (21 contracts kept, 700 files / 3594 dependencies).
+        `verify_jenkins.py` annotates the session parameter `Any` rather than
+        `requests.Session` on purpose — `requests_library_isolation` confines that
+        import to `jenkins_operations`, and grimp counts `TYPE_CHECKING` imports too.
+      - pytest: **PASS** — `tests/utils` + `tests/cli` → 1433 passed (37 of them the new
+        `test_verify_jenkins.py` / `TestJenkinsExitCode` cases);
+        `tests/workflows` + `tests/workflow_steps` + `tests/workflow_utils` +
+        `tests/integration` + `tests/checks` + `tests/config` → 1608 passed, 5 skipped;
+        `tests/llm` + `tests/prompts` + `tests/services` + `tests/tools` pass apart from
+        the 4 pre-existing environment failures below.
+      - mypy, pylint: **PASS** — clean over `src|tests/.../cli/commands` and
+        `src|tests/.../utils/jenkins_operations`.
+      - black/isort: clean (`test_verify_jenkins.py` reformatted once, then stable).
+      - **file-size (750): now PASS (830 files).** It did *not* pass on arrival:
+        step 4 grew `tests/utils/jenkins_operations/test_client.py` from 542 to 966
+        lines. Since step 6 is the first step whose checklist gates on file size, the
+        violation is fixed here, mechanically and with no test-body edits: the shared
+        doubles/constants (`BASE_URL`, `FIXTURE_*`, `_response`, `_mock_jenkins`) moved
+        into the existing `tests/utils/jenkins_operations/conftest.py`, and the three
+        error-message classes moved verbatim into a new `test_client_errors.py`.
+        `test_client.py` is now 542 lines; the directory still collects the same 78
+        tests, all passing.
+      - **Pre-existing, unrelated to this branch** (same stale `.venv` as steps 4-5 —
+        `mcp-workspace` is an unpinned git dependency, `pyproject.toml:348`, and the
+        installed copy has no `checks/branch_status_rendering.py`): 3 mypy + 3 pylint
+        E1123 errors in `check_branch_status.py` / `test_check_branch_status_exit_code.py`;
+        3 × `test_copilot_integration.py` (copilot CLI exits 1);
+        `test_langchain_exceptions.py::test_connection_errors_contains_httpx_connect_error`
+        (`httpx` is a `MagicMock` without the extras).
+      - **Workaround used / still to do:** pytest was run with
+        `PYTHONPATH=C:/Users/Marcus/Documents/GitHub/mcp-workspace/src` to shadow the
+        stale package. `tools\reinstall_local.bat` still fixes this for good.
+- [x] Commit message prepared
 
 ### Step 7: `cli-reference.md` `--dry-run` boy-scout fix ([step_7.md](./steps/step_7.md))
 
