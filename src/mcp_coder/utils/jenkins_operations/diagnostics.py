@@ -248,3 +248,34 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
         "the path is wrong or the API user lacks Job/Read (and possibly "
         f"Overall/Read). Check both. {DOCS_POINTER}"
     )
+
+
+def diagnose_build_404(
+    session: Session, base_url: str, job_path: str, build_number: int
+) -> str:
+    """Diagnose a 404 raised while fetching build info.
+
+    ``get_build_info`` returns 404 both when the build record is gone (log
+    rotation, a deleted build) and when the job itself is unreadable, and the
+    two need opposite remedies. Probe the job before choosing: if it answers,
+    Job/Read is granted and only the build is missing, so pointing the operator
+    at the permission matrix would be the wrong turn. Otherwise the job path is
+    the problem and the ancestor walk applies.
+
+    Args:
+        session: python-jenkins' own session (see ``JenkinsClient.probe_session``).
+        base_url: Server URL without a trailing slash.
+        job_path: Job the build belongs to, e.g. "Windows-Agents/Executor".
+        build_number: Build that was requested.
+
+    Returns:
+        Complete operator-facing diagnosis.
+    """
+    result = probe(session, base_url, job_url_path(job_path) + "/api/json")
+    if result.status == 200:
+        return (
+            f"404 - build #{build_number} of '{job_path}' was not found, but the "
+            "job itself is readable, so this is the build record and not a "
+            "permission problem (builds are discarded by log rotation)"
+        )
+    return diagnose_404(session, base_url, job_path)

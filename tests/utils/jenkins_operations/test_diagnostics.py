@@ -16,6 +16,7 @@ from mcp_coder.utils.jenkins_operations.diagnostics import (
     DOCS_POINTER,
     diagnose_403,
     diagnose_404,
+    diagnose_build_404,
     extract_jenkins_error,
     job_url_path,
     probe,
@@ -298,3 +299,61 @@ class TestDiagnose404:
         assert "Check both" in message
         assert message.endswith(DOCS_POINTER)
         cast(Mock, session).get.assert_not_called()
+
+
+class TestDiagnoseBuild404:
+    """Tests for diagnose_build_404."""
+
+    def test_readable_job_blames_the_build_record(self) -> None:
+        """The job answers, so Job/Read is granted and only the build is gone."""
+        session = _session(
+            {
+                f"{BASE_URL}/job/Windows-Agents/job/Executor/api/json": _response(
+                    200, "{}"
+                )
+            }
+        )
+
+        message = diagnose_build_404(session, BASE_URL, "Windows-Agents/Executor", 42)
+
+        assert "build #42" in message
+        assert "Windows-Agents/Executor" in message
+        assert "log rotation" in message
+        # A permission remedy here would be the wrong turn.
+        assert "Job/Read" not in message
+        assert DOCS_POINTER not in message
+
+    def test_unreadable_job_delegates_to_the_ancestor_walk(self) -> None:
+        """When the job itself 404s the build number explains nothing."""
+        session = _session(
+            {
+                f"{BASE_URL}/job/Windows-Agents/job/Executor/api/json": _response(404),
+                f"{BASE_URL}/job/Windows-Agents/api/json": _response(200, "{}"),
+            }
+        )
+
+        message = diagnose_build_404(session, BASE_URL, "Windows-Agents/Executor", 42)
+
+        assert "'Windows-Agents'" in message
+        assert "'Executor'" in message
+        assert "Job/Read" in message
+        assert "build #42" not in message
+        assert message.endswith(DOCS_POINTER)
+
+    def test_transport_failure_falls_back_to_the_job_diagnosis(self) -> None:
+        """A probe that never completed must not be read as a readable job."""
+        session = _session(
+            {
+                f"{BASE_URL}/job/Windows-Agents/job/Executor/api/json": RequestException(
+                    "connection refused"
+                ),
+                f"{BASE_URL}/job/Windows-Agents/api/json": RequestException(
+                    "connection refused"
+                ),
+            }
+        )
+
+        message = diagnose_build_404(session, BASE_URL, "Windows-Agents/Executor", 42)
+
+        assert "no folder in that path is readable" in message
+        assert "build #42" not in message

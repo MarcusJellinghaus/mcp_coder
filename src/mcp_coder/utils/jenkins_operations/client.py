@@ -36,7 +36,12 @@ from requests.exceptions import HTTPError
 
 from ..log_utils import log_function_call
 from ..user_config import get_config_values
-from .diagnostics import diagnose_403, diagnose_404, extract_jenkins_error
+from .diagnostics import (
+    diagnose_403,
+    diagnose_404,
+    diagnose_build_404,
+    extract_jenkins_error,
+)
 from .models import JobStatus
 
 # Setup logger
@@ -234,7 +239,11 @@ class JenkinsClient:
         return session
 
     def _wrap_jenkins_error(
-        self, exc: JenkinsException, context: str, job_path: Optional[str] = None
+        self,
+        exc: JenkinsException,
+        context: str,
+        job_path: Optional[str] = None,
+        build_number: Optional[int] = None,
     ) -> JenkinsError:
         """Compose a clean, diagnosed JenkinsError for a python-jenkins failure.
 
@@ -247,6 +256,9 @@ class JenkinsClient:
             context: Call-context prefix, e.g. "Failed to start job 'x'".
             job_path: Job path involved, when there is one. Enables the 404
                 ancestor walk; omitted for queue-item lookups.
+            build_number: Build being fetched, when the failing call was a build
+                lookup rather than a job lookup. A build 404 has a second
+                explanation - a discarded build record - that a job 404 does not.
 
         Returns:
             JenkinsError carrying the context followed by the diagnosis.
@@ -256,14 +268,17 @@ class JenkinsClient:
 
         try:
             if isinstance(exc, NotFoundException):
-                detail = (
-                    diagnose_404(self.probe_session, self.base_url, job_path)
-                    if job_path
-                    else (
+                if job_path and build_number is not None:
+                    detail = diagnose_build_404(
+                        self.probe_session, self.base_url, job_path, build_number
+                    )
+                elif job_path:
+                    detail = diagnose_404(self.probe_session, self.base_url, job_path)
+                else:
+                    detail = (
                         "404 - the queue item was not found (it may have expired) "
                         "or is not readable"
                     )
-                )
             elif (match := _AUTH_FAIL_RE.search(str(exc))) and match.group(1) in (
                 "401",
                 "403",
@@ -365,6 +380,9 @@ class JenkinsClient:
         Raises:
             JenkinsError: For any Jenkins API errors
         """
+        # Which lookup is in flight, so a 404 can name the right thing. None
+        # until the build is known: up to that point only the queue item can 404.
+        build_lookup: Optional[tuple[str, int]] = None
         try:
             # Get queue item information
             item = self._client.get_queue_item(queue_id)
@@ -397,6 +415,7 @@ class JenkinsClient:
                     task_dict: dict[str, Any] = item.get("task", {})
                     job_path = task_dict.get("name", "")
 
+                build_lookup = (job_path, build_number)
                 build_info = self._client.get_build_info(job_path, build_number)
 
                 result = build_info.get("result")
@@ -428,10 +447,14 @@ class JenkinsClient:
                 )
 
         except JenkinsException as e:
-            # No job_path is available here, so a 404 reports the queue item
-            # rather than walking a path.
+            # Before the build is known there is no path to walk, so a 404 can
+            # only be the queue item; afterwards it is the build lookup, which
+            # has its own diagnosis.
             raise self._wrap_jenkins_error(
-                e, f"Failed to get status for queue_id {queue_id}"
+                e,
+                f"Failed to get status for queue_id {queue_id}",
+                job_path=build_lookup[0] if build_lookup else None,
+                build_number=build_lookup[1] if build_lookup else None,
             ) from None
         except (
             Exception

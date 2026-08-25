@@ -204,8 +204,13 @@ class TestJenkinsExceptionMessages:
         with pytest.raises(JenkinsError) as excinfo:
             client.start_job("Windows-Agents/Executor")
 
-        # Verify
+        # Verify - `from None` must suppress the context, not merely leave
+        # __cause__ unset: a bare `raise JenkinsError(...)` inside the except
+        # block also has __cause__ None, yet the traceback still renders the raw
+        # page as __context__ under "During handling of the above exception".
         assert excinfo.value.__cause__ is None
+        assert isinstance(excinfo.value.__context__, JenkinsException)
+        assert excinfo.value.__suppress_context__ is True
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_start_job_404_names_deepest_readable_ancestor(
@@ -372,6 +377,85 @@ class TestJenkinsExceptionMessages:
         assert "queue item" in message
         mock_client._session.get.assert_not_called()
 
+    @staticmethod
+    def _queued_build(mock_client: MagicMock) -> None:
+        """Make get_queue_item report a started build of Windows-Agents/Executor."""
+        mock_client.get_queue_item.return_value = {
+            "executable": {
+                "number": 42,
+                "url": f"{BASE_URL}/job/Windows-Agents/job/Executor/42/",
+            }
+        }
+        mock_client.get_build_info.side_effect = NotFoundException(
+            "Requested item could not be found"
+        )
+
+    @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
+    def test_get_job_status_build_404_with_readable_job_blames_the_build(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """A readable job means the build record is gone, not a permission gap.
+
+        Regression guard: this 404 comes from get_build_info, not from the queue
+        item, so reporting it as an expired queue item sends the operator to the
+        wrong place - and a Job/Read remedy would be equally wrong here.
+        """
+        # Setup - the job answers, so only the build is missing
+        mock_client = _mock_jenkins(
+            mock_jenkins_class,
+            {
+                f"{BASE_URL}/job/Windows-Agents/job/Executor/api/json": _response(
+                    200, "{}"
+                ),
+            },
+        )
+        self._queued_build(mock_client)
+
+        client = JenkinsClient(BASE_URL, "user", "token")
+
+        # Execute
+        with pytest.raises(JenkinsError) as excinfo:
+            client.get_job_status(12345)
+
+        # Verify
+        message = str(excinfo.value)
+        assert "Failed to get status for queue_id 12345" in message
+        assert "build #42" in message
+        assert "Windows-Agents/Executor" in message
+        assert "queue item" not in message
+        assert "Job/Read" not in message
+
+    @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
+    def test_get_job_status_build_404_with_unreadable_job_walks_ancestors(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """An unreadable job falls back to the ancestor walk, not to the build."""
+        # Setup - the job itself 404s too; its parent folder is readable
+        mock_client = _mock_jenkins(
+            mock_jenkins_class,
+            {
+                f"{BASE_URL}/job/Windows-Agents/job/Executor/api/json": _response(
+                    404, ""
+                ),
+                f"{BASE_URL}/job/Windows-Agents/api/json": _response(200, "{}"),
+            },
+        )
+        self._queued_build(mock_client)
+
+        client = JenkinsClient(BASE_URL, "user", "token")
+
+        # Execute
+        with pytest.raises(JenkinsError) as excinfo:
+            client.get_job_status(12345)
+
+        # Verify
+        message = str(excinfo.value)
+        assert "'Windows-Agents'" in message
+        assert "'Executor'" in message
+        assert "Job/Read" in message
+        assert "queue item" not in message
+        assert "build #42" not in message
+
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_raw_body_logged_only_at_debug(
         self, mock_jenkins_class: MagicMock, caplog: pytest.LogCaptureFixture
@@ -443,3 +527,4 @@ class TestJenkinsExceptionMessages:
         assert "<html" not in message
         assert "probe exploded" not in message
         assert excinfo.value.__cause__ is None
+        assert excinfo.value.__suppress_context__ is True

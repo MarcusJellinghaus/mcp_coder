@@ -489,3 +489,95 @@ class TestJenkinsOrchestration:
             < index("=== BASIC VERIFICATION ")
         )
         assert exit_code == 0
+
+
+def _run_verify_with_jenkins(
+    server_result: dict[str, Any], jobs_result: dict[str, Any]
+) -> int:
+    """Run ``execute_verify`` with every non-Jenkins check forced green.
+
+    Args:
+        server_result: JENKINS section dict returned by ``verify_jenkins``.
+        jobs_result: JENKINS JOBS section dict returned by ``verify_jenkins``.
+
+    Returns:
+        The exit code ``execute_verify`` produced.
+    """
+    with (
+        patch(f"{_VERIFY}.verify_jenkins", return_value=(server_result, jobs_result)),
+        patch(f"{_VERIFY}.resolve_llm_method", return_value=("claude", "default")),
+        patch(f"{_VERIFY}.verify_claude", return_value=_claude_ok()),
+        patch(f"{_VERIFY}.verify_mlflow", return_value=_mlflow_not_installed()),
+        patch(f"{_VERIFY}.prepare_llm_environment", return_value={}),
+        patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response()),
+        patch(f"{_VERIFY}.log_to_mlflow", create=True),
+        patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None),
+        patch(f"{_LC_VERIFY}.verify_mcp_servers", return_value=_mcp_servers_ok()),
+    ):
+        return execute_verify(_make_args())
+
+
+def _server_section(ok: bool) -> dict[str, Any]:
+    """Build a JENKINS section dict that passes or fails."""
+    if ok:
+        return {
+            "server": {"ok": True, "value": f"{_BASE_URL} reachable"},
+            "overall_ok": True,
+        }
+    return {
+        "server": {
+            "ok": False,
+            "value": _BASE_URL,
+            "error": "unreachable",
+            "install_hint": _DOCS,
+        },
+        "overall_ok": False,
+    }
+
+
+def _jobs_section(ok: bool) -> dict[str, Any]:
+    """Build a JENKINS JOBS section dict that passes or fails."""
+    if ok:
+        return {"my-repo": {"ok": True, "value": "Build"}, "overall_ok": True}
+    return {
+        "my-repo": {
+            "ok": False,
+            "value": "Build",
+            "error": "404 on 'Build'",
+            "install_hint": _DOCS,
+        },
+        "overall_ok": False,
+    }
+
+
+class TestJenkinsExitCodeWiring:
+    """A failing Jenkins section must make ``mcp-coder verify`` exit 1.
+
+    ``test_verify_exit_codes.py`` calls ``_compute_exit_code`` directly, which
+    cannot see the ``jenkins_ok = server_overall_ok and jobs_overall_ok``
+    composition in ``verify.py`` - dropping either half of that expression, or
+    the ``jenkins_ok=`` argument itself, leaves those unit tests green.
+    """
+
+    @pytest.mark.parametrize(
+        "server_ok,jobs_ok,expected",
+        [
+            pytest.param(True, True, 0, id="both-pass"),
+            pytest.param(False, None, 1, id="server-row-fails"),
+            pytest.param(True, False, 1, id="job-row-fails"),
+        ],
+    )
+    def test_exit_code(
+        self, server_ok: bool, jobs_ok: Optional[bool], expected: int
+    ) -> None:
+        """A failed row in either section propagates to the process exit code."""
+        # jobs_ok None mirrors verify_jenkins(): no job rows when the server fails.
+        jobs_result = {} if jobs_ok is None else _jobs_section(jobs_ok)
+
+        assert _run_verify_with_jenkins(_server_section(server_ok), jobs_result) == (
+            expected
+        )
+
+    def test_unconfigured_jenkins_is_exit_neutral(self) -> None:
+        """No [jenkins] section -> no rows, no effect on the exit code."""
+        assert _run_verify_with_jenkins({}, {}) == 0
