@@ -64,6 +64,11 @@ _RETIRED_ENV_VARS: dict[str, str] = {
     "MCP_CODER_LLM_LANGCHAIN_ENDPOINT": "MCP_CODER_LLM_LANGCHAIN_BASE_URL",
 }
 
+# Provider-selection env var, and the exact ``source`` string resolve_llm_method
+# reports when it is the one that won.
+_PROVIDER_ENV_VAR: str = "MCP_CODER_LLM_PROVIDER"
+_PROVIDER_ENV_SOURCE: str = f"env {_PROVIDER_ENV_VAR}"
+
 
 class _DropUnexpandedWarnings(logging.Filter):
     """Scoped filter that drops langchain-mcp-adapters unresolved-var warnings."""
@@ -463,6 +468,21 @@ def execute_verify(args: argparse.Namespace) -> int:
             indent=2,
         )
     )
+    # The env var no longer silently wins over --llm-method, so an exported but
+    # overridden value would otherwise leave no trace at all. When it IS the
+    # source the row above already says so — add nothing. Exit-neutral.
+    env_provider = os.environ.get(_PROVIDER_ENV_VAR)
+    if env_provider and source != _PROVIDER_ENV_SOURCE:
+        print(
+            _format_row(
+                _PROVIDER_ENV_VAR,
+                symbols["warning"],
+                f"set to '{env_provider}' but overridden by {source} "
+                f"— using '{active_provider}'",
+                indent=2,
+                label_width=max(_LABEL_WIDTH, len(_PROVIDER_ENV_VAR)),
+            )
+        )
     # 2a. Resolve MCP config for ALL providers (before provider branch)
     mcp_config_resolved = resolve_mcp_config_path(
         args.mcp_config, project_dir=args.project_dir

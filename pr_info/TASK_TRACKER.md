@@ -964,9 +964,60 @@ Details: [step_13.md](./steps/step_13.md)
 
 Details: [step_14.md](./steps/step_14.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (Twelve lines beside the existing `Active provider` row in
+      `execute_verify` (`verify.py:456-471`), plus two module constants
+      (`_PROVIDER_ENV_VAR`, `_PROVIDER_ENV_SOURCE` = `"env MCP_CODER_LLM_PROVIDER"`,
+      the exact `source` string `resolve_llm_method` reports). No new function —
+      the step's own WHAT says none is required. The row prints only when the
+      var is set AND `source != _PROVIDER_ENV_SOURCE`; it never touches a result
+      dict, so it cannot reach the exit code. `label_width=max(_LABEL_WIDTH,
+      len(_PROVIDER_ENV_VAR))` follows the `_print_retired_env_var_warning`
+      pattern at `verify.py:281` (the label is exactly 22 = `_LABEL_WIDTH`, so
+      the `max()` is currently a no-op that keeps alignment if either changes).
+
+      **TDD, genuinely red first.** New `TestProviderEnvVarVisibility` in
+      `test_verify_sections_orchestration.py`, 4 tests covering all three
+      step_14 §TDD cases + a column-alignment assertion reusing conftest's
+      `_expected_value_column`/`_assert_value_at_column`. The two new-behaviour
+      tests failed on the pre-change tree with `StopIteration` (no such row);
+      the env-is-the-source and env-unset cases are regression guards that were
+      green all along. 2 red → 4 green, 25 passed in the module.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in either file this step touches.** pylint and mypy scoped
+      to `src/mcp_coder/cli/commands/verify.py` +
+      `tests/cli/commands/test_verify_sections_orchestration.py` are both clean;
+      ruff clean; isort a no-op; black reformatted the new test class (applied,
+      re-run green).
+
+      Test runs: `test_verify_sections_orchestration.py` → **25 passed**;
+      `tests/cli` + `tests/llm/test_interface.py` (fast markers, minus the five
+      stale-dependency modules below) → **1128 passed**. The unfiltered run of
+      the same selection failed 10 tests, *all* inside
+      `test_check_branch_status_{exit_code,pr_waiting,ci_waiting}.py` and all the
+      same stale-install signature mismatch carried since step 2 — no file this
+      step touches is involved.
+
+      **Environmental exclusions, all unchanged from steps 2-13 and none touched
+      by this step:** the `httpx_connect_error` baseline; `tests/checks`,
+      `tests/workflows/review` and the five `test_check_branch_status*.py`
+      modules (stale installed `mcp-workspace`: `BranchStatusReport.__init__()
+      got an unexpected keyword argument 'pr_feedback_undeterminable'`);
+      `tests/llm/test_mcp_manager.py` (`ModuleNotFoundError:
+      langchain_mcp_adapters`); the `copilot_cli_integration` marker.
+
+      **Environment note — pytest still needs the shim.** Unchanged: the `.venv`
+      copy of `mcp-workspace` lacks
+      `mcp_workspace/checks/branch_status_rendering.py`, so a bare
+      `import mcp_coder` raises at conftest import and pytest collects nothing
+      (confirmed again: the first unshimmed run died with `ImportError while
+      loading conftest`). Same workaround — a throwaway
+      `.pytest_shim/sitecustomize.py` supplying that module with a `CIStatus`
+      *enum* and `GITHUB_TOKEN_HINT`, `env_vars={"PYTHONPATH": ".pytest_shim"}`,
+      directory deleted afterwards and **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.)
+- [x] Commit message prepared
 
 ### Step 15: Prompt path resolver + runtime WARNING on a missing configured prompt
 

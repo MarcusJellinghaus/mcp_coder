@@ -14,7 +14,9 @@ from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 from .conftest import (
     _LC_VERIFY,
     _VERIFY,
+    _assert_value_at_column,
     _claude_ok,
+    _expected_value_column,
     _github_ok_default,
     _langchain_fail,
     _langchain_ok,
@@ -626,4 +628,100 @@ class TestEffectiveConfigSection:
         override_row = next(l for l in details.splitlines() if "API key override" in l)
         assert "[WARN]" in redirect_row
         assert "[WARN]" in override_row
+        assert result == 0
+
+
+class TestProviderEnvVarVisibility:
+    """`MCP_CODER_LLM_PROVIDER` is surfaced when it did NOT decide the provider.
+
+    Step 14 / Decision 23: after step 12 the variable no longer silently wins
+    over ``--llm-method``, so a user who exported it needs to be told it was
+    seen and overridden. Exit-neutral: printed only.
+    """
+
+    _LABEL = "MCP_CODER_LLM_PROVIDER"
+
+    @pytest.fixture(autouse=True)
+    def _mock_resolve_mcp(self) -> Any:
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    def _run(
+        self,
+        resolved: tuple[str, str],
+        capsys: pytest.CaptureFixture[str],
+        **args_kwargs: Any,
+    ) -> tuple[int, str]:
+        """Run execute_verify with ``resolve_llm_method`` pinned to ``resolved``."""
+        with (
+            patch(f"{_VERIFY}.find_claude_executable", return_value=None),
+            patch(f"{_VERIFY}.log_to_mlflow", create=True),
+            patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response()),
+            patch(f"{_VERIFY}.verify_mlflow", return_value=_mlflow_not_installed()),
+            patch(f"{_VERIFY}.verify_claude", return_value=_claude_ok()),
+            patch(f"{_LC_VERIFY}.verify_langchain", return_value=_langchain_ok()),
+            patch(f"{_VERIFY}.resolve_llm_method", return_value=resolved),
+        ):
+            result = execute_verify(_make_args(**args_kwargs))
+        return result, capsys.readouterr().out
+
+    def _env_rows(self, output: str) -> list[str]:
+        return [line for line in output.splitlines() if self._LABEL in line]
+
+    def test_env_set_but_cli_flag_wins_warns(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """TDD 1: overridden by --llm-method → WARN row naming what overrode it."""
+        monkeypatch.setenv(self._LABEL, "claude")
+        result, output = self._run(
+            ("langchain", "cli argument"), capsys, llm_method="langchain"
+        )
+
+        row = next(iter(self._env_rows(output)))
+        assert "[WARN]" in row
+        assert "set to 'claude'" in row
+        assert "cli argument" in row
+        assert "using 'langchain'" in row
+        # The variable is emphatically NOT the source here.
+        assert "source" not in row
+        # Exit-neutral.
+        assert result == 0
+
+    def test_warning_row_aligns_with_active_provider_row(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The long label gets an explicit label_width so the columns line up."""
+        monkeypatch.setenv(self._LABEL, "claude")
+        _result, output = self._run(
+            ("langchain", "cli argument"), capsys, llm_method="langchain"
+        )
+
+        warn_row = next(iter(self._env_rows(output)))
+        _assert_value_at_column(
+            warn_row, _expected_value_column(2, label_width=len(self._LABEL))
+        )
+
+    def test_env_set_and_is_the_source_adds_no_row(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """TDD 2: the Active provider row already names it — nothing extra."""
+        monkeypatch.setenv(self._LABEL, "langchain")
+        result, output = self._run(("langchain", "env MCP_CODER_LLM_PROVIDER"), capsys)
+
+        active_row = next(
+            line for line in output.splitlines() if "Active provider" in line
+        )
+        assert "(from env MCP_CODER_LLM_PROVIDER)" in active_row
+        # The only mention of the variable is that existing row.
+        assert self._env_rows(output) == [active_row]
+        assert result == 0
+
+    def test_env_unset_adds_no_row(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """TDD 3: nothing exported → no extra row."""
+        monkeypatch.delenv(self._LABEL, raising=False)
+        result, output = self._run(("claude", "default"), capsys)
+
+        assert self._env_rows(output) == []
         assert result == 0
