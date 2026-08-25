@@ -39,7 +39,7 @@ _BASE_URL = "https://jenkins:8080"
 _DOCS = "docs/repository-setup/jenkins.md"
 
 _UNPATCHED = object()
-"""Sentinel: leave ``_get_jenkins_config`` in place so the real env path runs."""
+"""Sentinel: leave ``get_jenkins_config`` in place so the real env path runs."""
 
 
 def _full_creds() -> dict[str, Optional[str]]:
@@ -102,11 +102,11 @@ def _patch_env(
     """Patch the config sources and JenkinsClient used by ``verify_jenkins``.
 
     Args:
-        creds: Credential dict for ``_get_jenkins_config``; None uses a full
+        creds: Credential dict for ``get_jenkins_config``; None uses a full
             valid set, ``_UNPATCHED`` leaves the real function in place so the
             env-var override path runs.
         config: Payload for ``load_config``; defaults to an empty config.
-        creds_error: Raised by ``_get_jenkins_config`` instead of returning.
+        creds_error: Raised by ``get_jenkins_config`` instead of returning.
         config_error: Raised by ``load_config`` instead of returning.
 
     Yields:
@@ -128,9 +128,9 @@ def _patch_env(
             ),
         }
         if creds is not _UNPATCHED:
-            mocks["_get_jenkins_config"] = stack.enter_context(
+            mocks["get_jenkins_config"] = stack.enter_context(
                 patch(
-                    f"{_JENKINS}._get_jenkins_config",
+                    f"{_JENKINS}.get_jenkins_config",
                     side_effect=creds_error,
                     return_value=creds if creds is not None else _full_creds(),
                 )
@@ -173,11 +173,55 @@ class TestCredentialResolution:
         with _patch_env(creds_error=ValueError("bad TOML")):
             assert verify_jenkins() == ({}, {})
 
-    def test_invalid_credentials_value_error_contained(self) -> None:
-        """A JenkinsClient rejection is contained, not raised."""
-        with _patch_env() as mocks:
-            mocks["JenkinsClient"].side_effect = ValueError("server_url is required")
+    def test_blank_credential_values_are_treated_as_unconfigured(self) -> None:
+        """Whitespace-only fields are not configuration -> skipped, no client."""
+        creds: dict[str, Optional[str]] = {
+            "server_url": "   ",
+            "username": "job_manager",
+            "api_token": "secret-token",
+        }
+        with _patch_env(creds=creds) as mocks:
             assert verify_jenkins() == ({}, {})
+        mocks["JenkinsClient"].assert_not_called()
+
+    def test_client_construction_failure_is_reported_not_raised(self) -> None:
+        """Credentials present but unusable -> a failed Server row, never a crash."""
+        with _patch_env() as mocks:
+            mocks["JenkinsClient"].side_effect = ValueError("bad server_url")
+            server_result, jobs_result = verify_jenkins()
+
+        assert server_result["server"]["ok"] is False
+        assert server_result["authentication"]["ok"] is None
+        assert server_result["overall_ok"] is False
+        assert jobs_result == {}
+
+    def test_scheme_less_server_url_renders_failed_row(self) -> None:
+        """A URL with no scheme is reported, not allowed to abort the command.
+
+        Regression guard against catching ValueError alone:
+        "jenkins.example.com" leaves urllib3 with no scheme, so requests'
+        ``Session.mount(None, ...)`` raises ``TypeError`` inside
+        ``JenkinsClient.__init__``. Uncaught, that aborts the whole
+        ``mcp-coder verify`` run before any other section prints. The real
+        JenkinsClient is used here on purpose - a mock cannot reproduce it.
+        """
+        creds = {
+            "server_url": "jenkins.example.com",
+            "username": "job_manager",
+            "api_token": "secret-token",
+        }
+        with patch(f"{_JENKINS}.get_jenkins_config", return_value=creds):
+            server_result, jobs_result = verify_jenkins()
+
+        server_row = server_result["server"]
+        assert server_row["ok"] is False
+        assert server_row["value"] == "jenkins.example.com"
+        assert "scheme" in server_row["error"]
+        assert server_row["install_hint"] == _DOCS
+        assert server_result["authentication"]["ok"] is None
+        assert server_result["overall_read"]["ok"] is None
+        assert server_result["overall_ok"] is False
+        assert jobs_result == {}
 
     def test_credentials_come_from_env_overrides(
         self, monkeypatch: pytest.MonkeyPatch

@@ -69,7 +69,7 @@ def _mock_jenkins(
             raise entry
         return entry
 
-    # A plain MagicMock (not spec=Session): _http reads session.auth, which is
+    # A plain MagicMock (not spec=Session): probe_session reads session.auth, which is
     # an instance attribute and therefore absent from a specced Session double.
     session = MagicMock()
     session.get.side_effect = _get

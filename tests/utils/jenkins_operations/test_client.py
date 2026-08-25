@@ -17,7 +17,7 @@ from requests.auth import HTTPBasicAuth
 from mcp_coder.utils.jenkins_operations.client import (
     JenkinsClient,
     JenkinsError,
-    _get_jenkins_config,
+    get_jenkins_config,
 )
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 
@@ -25,7 +25,7 @@ from .conftest import BASE_URL, FIXTURE_HTML, FORBIDDEN_HEAD, _mock_jenkins, _re
 
 
 class TestGetJenkinsConfig:
-    """Tests for _get_jenkins_config helper."""
+    """Tests for get_jenkins_config helper."""
 
     def test_config_from_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test configuration from environment variables."""
@@ -35,7 +35,7 @@ class TestGetJenkinsConfig:
         monkeypatch.setenv("JENKINS_TOKEN", "env-token")
 
         # Execute
-        config = _get_jenkins_config()
+        config = get_jenkins_config()
 
         # Verify
         assert config["server_url"] == "http://jenkins-env:8080"
@@ -60,7 +60,7 @@ class TestGetJenkinsConfig:
         }
 
         # Execute
-        config = _get_jenkins_config()
+        config = get_jenkins_config()
 
         # Verify
         assert config["server_url"] == "http://jenkins-config:8080"
@@ -95,7 +95,7 @@ class TestGetJenkinsConfig:
         mock_config_path.return_value = config_file
 
         # Execute
-        config = _get_jenkins_config()
+        config = get_jenkins_config()
 
         # Verify - env vars win for URL and user, config for token
         assert config["server_url"] == "http://jenkins-env:8080"
@@ -120,7 +120,7 @@ class TestGetJenkinsConfig:
         }
 
         # Execute
-        config = _get_jenkins_config()
+        config = get_jenkins_config()
 
         # Verify
         assert config["server_url"] is None
@@ -194,7 +194,7 @@ class TestJenkinsClientInit:
 
 
 class TestJenkinsClientHttpAccess:
-    """Tests for the base_url / _http seam onto python-jenkins internals.
+    """Tests for the base_url / probe_session seam onto python-jenkins internals.
 
     These tests deliberately do NOT patch client.Jenkins - they exist to pin
     real python-jenkins behaviour (session ownership, lazy auth resolution),
@@ -212,13 +212,13 @@ class TestJenkinsClientHttpAccess:
         assert client.base_url == "http://jenkins:8080"
 
     def test_http_session_is_the_library_session(self) -> None:
-        """_http returns python-jenkins' own session, not a fresh one."""
+        """probe_session returns python-jenkins' own session, not a fresh one."""
         client = JenkinsClient("http://jenkins:8080", "user", "token")
 
-        assert client._http is client._client._session
+        assert client.probe_session is client._client._session
 
     def test_http_session_is_authenticated_on_first_access(self) -> None:
-        """_http resolves basic auth before any request has been issued.
+        """probe_session resolves basic auth before any request has been issued.
 
         Regression guard: this fails if a future python-jenkins reorders
         _auths or changes when session auth is populated - a diagnostic probe
@@ -226,21 +226,21 @@ class TestJenkinsClientHttpAccess:
         """
         client = JenkinsClient("http://jenkins:8080", "user", "token")
 
-        assert isinstance(client._http.auth, HTTPBasicAuth)
+        assert isinstance(client.probe_session.auth, HTTPBasicAuth)
 
     def test_auth_resolution_makes_no_network_call(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Neither construction nor reading _http touches the network."""
+        """Neither construction nor reading probe_session touches the network."""
 
         def _fail(*args: Any, **kwargs: Any) -> None:
-            raise AssertionError("_http must not issue a request")
+            raise AssertionError("probe_session must not issue a request")
 
         monkeypatch.setattr(Session, "request", _fail)
 
         client = JenkinsClient("http://jenkins:8080", "user", "token")
 
-        assert client._http.auth is not None
+        assert client.probe_session.auth is not None
 
     def test_http_tolerates_missing_auths(
         self, monkeypatch: pytest.MonkeyPatch
@@ -251,8 +251,8 @@ class TestJenkinsClientHttpAccess:
         monkeypatch.setattr(client._client, "_auths", object())
         client._client._session.auth = None
 
-        assert client._http is client._client._session
-        assert client._http.auth is None
+        assert client.probe_session is client._client._session
+        assert client.probe_session.auth is None
 
 
 class TestJenkinsClientStartJob:

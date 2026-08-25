@@ -44,9 +44,12 @@ generate an API token, and its
 [Environment Variable Overrides](../configuration/config.md#environment-variable-overrides)
 section for the override rules.
 
-Use an **API token**, never the account password — Jenkins rejects passwords for REST calls on any
-instance with CSRF protection enabled (the default). An API token in Basic Auth is also what lets
-the coordinator POST a build without fetching a crumb for the trigger itself.
+Use an **API token**, never the account password. Modern Jenkins instances reject the account
+password for REST calls, and the token is revocable on its own without disturbing the account.
+
+The token does **not** exempt the coordinator from CSRF: every dispatch first issues
+`GET /crumbIssuer/api/json` to fetch a crumb, which is why a missing `Overall/Read` shows up as a
+403 on that endpoint rather than on the job (see [Troubleshooting](#troubleshooting)).
 
 Each coordinator repository additionally names a Jenkins job and a Jenkins credentials ID via
 `executor_job_path` and `github_credentials_id` in its `[coordinator.repos.*]` section — also
@@ -126,8 +129,9 @@ the REST API as that user) can do will separate them.
 2. **`Job/Read`.** Grant it on the job, or on a folder above it, for the API user.
 
 The message narrows the search for you: everything up to the named readable folder is fine, so only
-the segment named after it is in question. If no part of the path is readable, the message says so
-instead — suspect `Overall/Read` first in that case.
+the segment named after it is in question. If no folder in the path is readable the message says so
+instead — suspect `Overall/Read` first in that case. For a top-level job there is no parent folder
+to probe, so the message says only that both the name and `Job/Read` are still open questions.
 
 ### 401 Unauthorized
 
@@ -141,11 +145,11 @@ Older versions printed the full Jenkins error page. If you still see raw HTML, t
 sentence is on the first line of the message; the raw page is logged only at `DEBUG`. Note that the
 page contains a live CSRF crumb and the username — do not paste it into an issue unredacted.
 
-## `coordinator run` Is Fail-Fast
+## The Coordinator Is Fail-Fast
 
-`mcp-coder coordinator run` stops at the **first** failing issue. It logs the error and returns
-immediately — remaining issues in that repository are not attempted, and under `--all` neither are
-the remaining repositories.
+`mcp-coder coordinator --all` (and `mcp-coder coordinator --repo NAME`) stops at the **first**
+failing issue. It logs the error and returns immediately — remaining issues in that repository are
+not attempted, and under `--all` neither are the remaining repositories.
 
 This is intentional: a Jenkins misconfiguration affects every dispatch equally, and retrying it
 once per issue per repo only multiplies the same error. It does mean a single bad issue or a single

@@ -43,25 +43,33 @@ from .models import JobStatus
 logger = logging.getLogger(__name__)
 
 # The literal message python-jenkins builds in jenkins_request() for 401/403/500
-# before it discards the response object.
-_AUTH_FAIL_RE = re.compile(r"Possibly authentication failed \[(\d+)\]")
+# before it discards the response object: it captures the status and the reason
+# but labels all three "Possibly authentication failed".
+_AUTH_FAIL_RE = re.compile(r"Possibly authentication failed \[(\d+)\](?::[ \t]*(.*))?")
 
 
 def _clean_jenkins_message(text: str) -> str:
-    """Reduce a python-jenkins message to its first line plus any error sentence.
+    """Reduce a python-jenkins message to one accurate line plus any error sentence.
 
-    python-jenkins appends the whole response body - typically a ~60-line
-    Jenkins HTML error page - to its own one-line message. Only that first line
-    and the single sentence buried in the page are worth showing.
+    Two things need removing. python-jenkins appends the whole response body -
+    typically a ~60-line Jenkins HTML error page - to its own one-line message,
+    and that message guesses "Possibly authentication failed" for every one of
+    401, 403 and 500. The guess is wrong for all three: 403 is authorization
+    and 500 is a server fault. Keep the status and the reason, drop the guess.
 
     Args:
         text: The exception message, i.e. str(JenkinsException).
 
     Returns:
-        The first line, with the extracted error sentence appended in quotes
-        when the body yields one.
+        A single line - "<status> <reason>" for the messages python-jenkins
+        builds from a response, the original first line otherwise - with the
+        error sentence extracted from the body appended in quotes when there
+        is one.
     """
     head, _sep, body = text.partition("\n")
+    if match := _AUTH_FAIL_RE.search(head):
+        reason = (match.group(2) or "").strip()
+        head = f"{match.group(1)} {reason}".strip()
     extracted = extract_jenkins_error(body) if body else None
     return f'{head} - "{extracted}"' if extracted else head
 
@@ -89,7 +97,7 @@ class JenkinsError(Exception):
     """
 
 
-def _get_jenkins_config() -> dict[str, str | None]:
+def get_jenkins_config() -> dict[str, str | None]:
     """Get Jenkins configuration from environment or config file.
 
     Priority: Environment variables > Config file > None
@@ -186,10 +194,10 @@ class JenkinsClient:
         Returns:
             Server URL without a trailing slash, e.g. "http://jenkins:8080".
         """
-        return str(self._client.server).rstrip("/")  # pylint: disable=protected-access
+        return str(self._client.server).rstrip("/")
 
     @property
-    def _http(self) -> Session:
+    def probe_session(self) -> Session:
         """python-jenkins' own requests session, with auth resolved on first access.
 
         Diagnostic probes must reuse this session rather than create their own:
@@ -197,6 +205,10 @@ class JenkinsClient:
         PYTHONHTTPSVERIFY=0 and injects JENKINS_API_EXTRA_HEADERS. A probe on a
         fresh session inherits none of that and would misreport transport
         problems (self-signed cert, proxy header) as permission problems.
+
+        This is the public probe seam: it is the one place that reaches into
+        python-jenkins' internals, so callers (``_wrap_jenkins_error``,
+        ``cli.commands.verify_jenkins``) need no protected access of their own.
 
         Returns:
             The library's session, authenticated where possible.
@@ -245,7 +257,7 @@ class JenkinsClient:
         try:
             if isinstance(exc, NotFoundException):
                 detail = (
-                    diagnose_404(self._http, self.base_url, job_path)
+                    diagnose_404(self.probe_session, self.base_url, job_path)
                     if job_path
                     else (
                         "404 - the queue item was not found (it may have expired) "
@@ -261,7 +273,7 @@ class JenkinsClient:
                 # evidence naming the cause, and diagnose_403 must not discard it.
                 _head, _sep, body = str(exc).partition("\n")
                 detail = diagnose_403(
-                    self._http,
+                    self.probe_session,
                     self.base_url,
                     extract_jenkins_error(body) if body else None,
                 )
@@ -374,8 +386,7 @@ class JenkinsClient:
                 ):
                     # Parse the job path from URL by removing base URL and build number
                     # Example: "http://server/job/Folder/job/JobName/123/" -> "Folder/JobName"
-                    base_url = self._client.server.rstrip("/")
-                    job_url_part = url.replace(base_url, "").rstrip("/")
+                    job_url_part = url.replace(self.base_url, "").rstrip("/")
                     # Remove the build number suffix (e.g., "/123")
                     job_url_part = job_url_part.rsplit("/", 1)[0]
                     # Remove "/job/" prefixes to get the path format for get_build_info

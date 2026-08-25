@@ -300,6 +300,56 @@ class TestJenkinsExceptionMessages:
         mock_client._session.get.assert_not_called()
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
+    def test_start_job_500_does_not_claim_authentication_failure(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """A 500 must not be reported as a possible authentication failure.
+
+        python-jenkins labels 401, 403 *and* 500 "Possibly authentication
+        failed". Sending an operator to check the API token for a server fault
+        is the same wrong-turn the 403 wording caused; only the status and the
+        reason survive.
+        """
+        # Setup
+        mock_client = _mock_jenkins(mock_jenkins_class)
+        mock_client.build_job.side_effect = JenkinsException(
+            SERVER_ERROR_HEAD + "\n" + SERVER_ERROR_BODY
+        )
+
+        client = JenkinsClient(BASE_URL, "user", "token")
+
+        # Execute
+        with pytest.raises(JenkinsError) as excinfo:
+            client.start_job("Windows-Agents/Executor")
+
+        # Verify
+        message = str(excinfo.value)
+        assert "authentication failed" not in message.lower()
+        assert "500 Internal Server Error" in message
+
+    @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
+    def test_get_job_status_500_does_not_claim_authentication_failure(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """The same cleaning applies on the queue-item path."""
+        # Setup
+        mock_client = _mock_jenkins(mock_jenkins_class)
+        mock_client.get_queue_item.side_effect = JenkinsException(
+            SERVER_ERROR_HEAD + "\n" + SERVER_ERROR_BODY
+        )
+
+        client = JenkinsClient(BASE_URL, "user", "token")
+
+        # Execute
+        with pytest.raises(JenkinsError) as excinfo:
+            client.get_job_status(12345)
+
+        # Verify
+        message = str(excinfo.value)
+        assert "authentication failed" not in message.lower()
+        assert "500 Internal Server Error" in message
+
+    @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_get_job_status_404_reports_queue_item(
         self, mock_jenkins_class: MagicMock
     ) -> None:

@@ -277,15 +277,24 @@ class TestDiagnose404:
 
         message = diagnose_404(session, BASE_URL, "A/B/C")
 
-        assert "no part of that path is readable" in message
+        assert "no folder in that path is readable" in message
         assert message.endswith(DOCS_POINTER)
 
-    def test_single_segment_path(self) -> None:
-        """A leaf-only path has no ancestor to probe and must not index-error."""
+    def test_single_segment_path_claims_only_what_was_probed(self) -> None:
+        """A leaf-only path has no ancestor, so nothing may be claimed about one.
+
+        Regression guard: asserting "no part of that path is readable" here
+        would be a diagnosis with zero evidence behind it - no probe ran - and
+        an unreadable-root claim is exactly the kind of confidently wrong
+        message this module exists to replace.
+        """
         session = _session({})
 
         message = diagnose_404(session, BASE_URL, "Executor")
 
-        assert "no part of that path is readable" in message
+        assert "top-level job" in message
+        assert "readable" not in message
+        assert "Job/Read" in message
+        assert "Check both" in message
         assert message.endswith(DOCS_POINTER)
         cast(Mock, session).get.assert_not_called()

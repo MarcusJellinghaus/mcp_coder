@@ -28,6 +28,13 @@ class TestVerifyEndToEndWithRealLLM:
             patch(
                 "mcp_coder.utils.mlflow_config_loader.load_mlflow_config"
             ) as mock_cfg,
+            # execute_verify reads the real ~/.mcp_coder/config.toml; without
+            # this the JENKINS sections would issue live probes against a
+            # configured server and could fail the exit-code assertion below.
+            patch(
+                "mcp_coder.cli.commands.verify.verify_jenkins",
+                return_value=({}, {}),
+            ),
             patch(
                 "mcp_coder.cli.commands.verify.verify_config",
                 return_value={

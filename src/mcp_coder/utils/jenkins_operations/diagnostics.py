@@ -17,7 +17,7 @@ requests on an injected ``requests.Session``:
   prefix their own context.
 
 The session must be the one python-jenkins itself uses (see
-``JenkinsClient._http``): a fresh session inherits neither the retry adapter
+``JenkinsClient.probe_session``): a fresh session inherits neither the retry adapter
 nor the TLS/header configuration, and would misreport transport problems as
 permission problems.
 
@@ -130,7 +130,7 @@ def probe(session: Session, base_url: str, path: str) -> ProbeResult:
     transport failures are returned as data.
 
     Args:
-        session: python-jenkins' own session (see ``JenkinsClient._http``).
+        session: python-jenkins' own session (see ``JenkinsClient.probe_session``).
         base_url: Server URL without a trailing slash.
         path: URL path starting with "/".
 
@@ -163,7 +163,7 @@ def diagnose_403(
     is the only evidence naming the cause and is surfaced verbatim.
 
     Args:
-        session: python-jenkins' own session (see ``JenkinsClient._http``).
+        session: python-jenkins' own session (see ``JenkinsClient.probe_session``).
         base_url: Server URL without a trailing slash.
         original_error: Error sentence already extracted from the body of the
             failure being diagnosed, if any.
@@ -209,10 +209,12 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
     Naming that ancestor narrows the search to a single path segment. The
     wording stays deliberately non-committal: Jenkins hides unreadable jobs
     from their parent's listing, so a wrong name and a missing Job/Read are
-    indistinguishable from outside.
+    indistinguishable from outside. Each message claims only what was actually
+    probed - a top-level job has no ancestor to probe, so nothing beyond the
+    leaf's own 404 is asserted about it.
 
     Args:
-        session: python-jenkins' own session (see ``JenkinsClient._http``).
+        session: python-jenkins' own session (see ``JenkinsClient.probe_session``).
         base_url: Server URL without a trailing slash.
         job_path: Job path that returned 404, e.g. "Windows-Agents/Executor".
 
@@ -220,6 +222,15 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
         Complete operator-facing diagnosis including remedy and docs pointer.
     """
     parts = [part for part in job_path.split("/") if part]
+
+    if len(parts) < 2:
+        # A top-level job has no ancestor: there is nothing to probe and
+        # therefore nothing to narrow down. Say only what the 404 established.
+        return (
+            f"404 on '{job_path}' - it is a top-level job, so there is no parent "
+            "folder to narrow this down with. Either the name is wrong or the API "
+            f"user lacks Job/Read on it. Check both. {DOCS_POINTER}"
+        )
 
     # Skip the leaf - it already 404'd - and walk ancestors deepest-first.
     for depth in range(len(parts) - 1, 0, -1):
@@ -233,7 +244,7 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
             )
 
     return (
-        f"404 on '{job_path}' - no part of that path is readable. Either the path "
-        "is wrong or the API user lacks Job/Read (and possibly Overall/Read). "
-        f"Check both. {DOCS_POINTER}"
+        f"404 on '{job_path}' - no folder in that path is readable either. Either "
+        "the path is wrong or the API user lacks Job/Read (and possibly "
+        f"Overall/Read). Check both. {DOCS_POINTER}"
     )
