@@ -27,8 +27,8 @@ Details: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
-      (BLOCKED on **pytest only** — environmental, not a code defect. Confirmed again on
-      2026-08-25; no run so far has had a shell tool, which is the only thing needed.
+      (BLOCKED on **pytest only** — environmental, not a code defect. Re-confirmed 2026-08-25
+      (latest run); no run so far has had a shell tool, which is the only thing needed.
 
       **The one action that unblocks this** — run in `.venv`, then re-run the three checks:
       ```
@@ -50,6 +50,11 @@ Details: [step_1.md](./steps/step_1.md)
       all of them, not merely `a1f0eac`: `branch_status_rendering` (module), `GITHUB_TOKEN_HINT`,
       `pr_feedback_undeterminable` (BranchStatusReport field), `fail_on_reviews`
       (format_for_llm/format_for_human kwarg), `add_assignees` (PullRequestManager method).
+
+      **No in-repo fix exists.** Searched for a pin that could explain the stale install: there
+      is no lock file, no `requirements*.txt`, no `constraints*.txt`, no `tools/` install script.
+      `pyproject.toml:348` is unpinned git main, so the source is correct against the *declared*
+      dependency and only the installed copy is behind. Nothing to bump or edit.
 
       **Verified green (needs no imports, so the stale venv cannot hide anything):**
       - ruff clean; black 615 files unchanged; isort clean.
