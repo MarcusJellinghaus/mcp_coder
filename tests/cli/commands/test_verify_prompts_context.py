@@ -64,7 +64,7 @@ class TestVerifyReportsClaudeCwd:
 
 
 class TestVerifyReportsProjectInstructions:
-    """Every CLAUDE.md at the nearest ancestor level is named."""
+    """Every CLAUDE.md found at any ancestor level is named."""
 
     def test_project_claude_md_reported(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

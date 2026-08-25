@@ -148,7 +148,7 @@ class TestContextRootReporting:
     def test_report_logs_every_hit(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Both files at the nearest level are named, not one picked by precedence."""
+        """Every hit the walk collects is named, not one picked by precedence."""
         root_level = tmp_path / "CLAUDE.md"
         root_level.write_text("rules", encoding="utf-8")
         (tmp_path / ".claude").mkdir()
