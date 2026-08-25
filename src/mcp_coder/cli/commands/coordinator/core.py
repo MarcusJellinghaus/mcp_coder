@@ -446,9 +446,7 @@ def dispatch_workflow(
     job_status = jenkins_client.get_job_status(queue_id)
 
     # Build Jenkins links: pipeline URL and build URL (if available)
-    jenkins_base_url = jenkins_client._client.server.rstrip(
-        "/"
-    )  # pylint: disable=protected-access  # python-jenkins has no public server URL accessor
+    jenkins_base_url = jenkins_client.base_url
     # Convert job path to URL format: "Tests/mcp-coder-test" -> "Tests/job/mcp-coder-test"
     # URL-encode each part to handle spaces and special characters
     job_path_parts = repo_config["executor_job_path"].split("/")

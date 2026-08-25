@@ -2,10 +2,13 @@
 
 import re
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from jenkins import JenkinsException
+from requests import Session
+from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 
 from mcp_coder.utils.jenkins_operations.client import (
@@ -128,7 +131,7 @@ class TestJenkinsClientInit:
     def test_init_success(self, mock_jenkins_class: MagicMock) -> None:
         """Test successful initialization."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         # Execute
@@ -186,6 +189,68 @@ class TestJenkinsClientInit:
             JenkinsClient("http://jenkins:8080", "user", "   ")
 
 
+class TestJenkinsClientHttpAccess:
+    """Tests for the base_url / _http seam onto python-jenkins internals.
+
+    These tests deliberately do NOT patch client.Jenkins - they exist to pin
+    real python-jenkins behaviour (session ownership, lazy auth resolution),
+    which a Mock would make untestable. Constructing a Jenkins object performs
+    no network I/O.
+    """
+
+    @pytest.mark.parametrize(
+        "server_url", ["http://jenkins:8080", "http://jenkins:8080/"]
+    )
+    def test_base_url_strips_trailing_slash(self, server_url: str) -> None:
+        """base_url has no trailing slash regardless of the configured URL."""
+        client = JenkinsClient(server_url, "user", "token")
+
+        assert client.base_url == "http://jenkins:8080"
+
+    def test_http_session_is_the_library_session(self) -> None:
+        """_http returns python-jenkins' own session, not a fresh one."""
+        client = JenkinsClient("http://jenkins:8080", "user", "token")
+
+        assert client._http is client._client._session
+
+    def test_http_session_is_authenticated_on_first_access(self) -> None:
+        """_http resolves basic auth before any request has been issued.
+
+        Regression guard: this fails if a future python-jenkins reorders
+        _auths or changes when session auth is populated - a diagnostic probe
+        would then go out anonymous and misreport a false 401/403.
+        """
+        client = JenkinsClient("http://jenkins:8080", "user", "token")
+
+        assert isinstance(client._http.auth, HTTPBasicAuth)
+
+    def test_auth_resolution_makes_no_network_call(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Neither construction nor reading _http touches the network."""
+
+        def _fail(*args: Any, **kwargs: Any) -> None:
+            raise AssertionError("_http must not issue a request")
+
+        monkeypatch.setattr(Session, "request", _fail)
+
+        client = JenkinsClient("http://jenkins:8080", "user", "token")
+
+        assert client._http.auth is not None
+
+    def test_http_tolerates_missing_auths(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An unexpected _auths shape degrades to an unauthenticated session."""
+        client = JenkinsClient("http://jenkins:8080", "user", "token")
+        # Simulate python-jenkins renaming/reshaping its internals
+        monkeypatch.setattr(client._client, "_auths", object())
+        client._client._session.auth = None
+
+        assert client._http is client._client._session
+        assert client._http.auth is None
+
+
 class TestJenkinsClientStartJob:
     """Tests for JenkinsClient.start_job method."""
 
@@ -193,7 +258,7 @@ class TestJenkinsClientStartJob:
     def test_start_job_success(self, mock_jenkins_class: MagicMock) -> None:
         """Test successful job start returns queue ID."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
         mock_client.build_job.return_value = 12345
 
@@ -212,7 +277,7 @@ class TestJenkinsClientStartJob:
     def test_start_job_with_params(self, mock_jenkins_class: MagicMock) -> None:
         """Test starting job with parameters."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
         mock_client.build_job.return_value = 12346
 
@@ -232,7 +297,7 @@ class TestJenkinsClientStartJob:
     def test_start_job_folder_path(self, mock_jenkins_class: MagicMock) -> None:
         """Test starting job with folder path."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
         mock_client.build_job.return_value = 12347
 
@@ -251,7 +316,7 @@ class TestJenkinsClientStartJob:
     def test_start_job_invalid_params_type(self, mock_jenkins_class: MagicMock) -> None:
         """Test starting job with invalid params type raises ValueError."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         client = JenkinsClient("http://jenkins:8080", "user", "token")
@@ -267,7 +332,7 @@ class TestJenkinsClientStartJob:
     def test_start_job_jenkins_error(self, mock_jenkins_class: MagicMock) -> None:
         """Test JenkinsException is wrapped as JenkinsError."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
         mock_client.build_job.side_effect = JenkinsException("Job not found")
 
@@ -281,7 +346,7 @@ class TestJenkinsClientStartJob:
     def test_start_job_generic_error(self, mock_jenkins_class: MagicMock) -> None:
         """Test generic exceptions are wrapped as JenkinsError."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
         mock_client.build_job.side_effect = Exception("Network error")
 
@@ -299,7 +364,7 @@ class TestJenkinsClientGetJobStatus:
     def test_get_job_status_queued(self, mock_jenkins_class: MagicMock) -> None:
         """Test job status when queued."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         # Queue item with no executable (still queued)
@@ -324,7 +389,7 @@ class TestJenkinsClientGetJobStatus:
     def test_get_job_status_running(self, mock_jenkins_class: MagicMock) -> None:
         """Test job status when running."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         # Queue item with executable (job started)
@@ -355,7 +420,7 @@ class TestJenkinsClientGetJobStatus:
     def test_get_job_status_success(self, mock_jenkins_class: MagicMock) -> None:
         """Test job status when completed successfully."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         # Queue item with executable
@@ -386,7 +451,7 @@ class TestJenkinsClientGetJobStatus:
     def test_get_job_status_failure(self, mock_jenkins_class: MagicMock) -> None:
         """Test job status when failed."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         # Queue item with executable
@@ -417,7 +482,7 @@ class TestJenkinsClientGetJobStatus:
     def test_get_job_status_aborted(self, mock_jenkins_class: MagicMock) -> None:
         """Test job status when aborted."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         # Queue item with executable
@@ -448,7 +513,7 @@ class TestJenkinsClientGetJobStatus:
     def test_get_job_status_error(self, mock_jenkins_class: MagicMock) -> None:
         """Test errors are wrapped as JenkinsError."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
         mock_client.get_queue_item.side_effect = JenkinsException("Queue item expired")
 
@@ -481,7 +546,7 @@ class TestStartJobHttpErrorMessages:
     ) -> None:
         """HTTP errors produce clean message with appropriate hint, no URL."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         mock_response = Mock()
@@ -509,7 +574,7 @@ class TestStartJobHttpErrorMessages:
     ) -> None:
         """HTTPError without response falls back to str(e)."""
         # Setup
-        mock_client = Mock()
+        mock_client = MagicMock()
         mock_jenkins_class.return_value = mock_client
 
         http_error = HTTPError("Connection failed")

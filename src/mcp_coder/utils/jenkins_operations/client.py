@@ -30,6 +30,7 @@ import logging
 from typing import Any, Optional, cast
 
 from jenkins import Jenkins
+from requests import Session
 from requests.exceptions import HTTPError
 
 from ..log_utils import log_function_call
@@ -149,6 +150,51 @@ class JenkinsClient:
         self._client = Jenkins(
             server_url, username=username, password=api_token, timeout=30
         )
+
+    @property
+    def base_url(self) -> str:
+        """Jenkins server URL with no trailing slash.
+
+        python-jenkins has no public accessor for the server URL, and always
+        appends a trailing slash to whatever was configured.
+
+        Returns:
+            Server URL without a trailing slash, e.g. "http://jenkins:8080".
+        """
+        return str(self._client.server).rstrip("/")  # pylint: disable=protected-access
+
+    @property
+    def _http(self) -> Session:
+        """python-jenkins' own requests session, with auth resolved on first access.
+
+        Diagnostic probes must reuse this session rather than create their own:
+        Jenkins.__init__ configures it with a retry adapter, honours
+        PYTHONHTTPSVERIFY=0 and injects JENKINS_API_EXTRA_HEADERS. A probe on a
+        fresh session inherits none of that and would misreport transport
+        problems (self-signed cert, proxy header) as permission problems.
+
+        Returns:
+            The library's session, authenticated where possible.
+        """
+        # pylint: disable=protected-access
+        # python-jenkins resolves auth lazily inside _maybe_add_auth() on the first
+        # request. Diagnostic probes reuse this session directly and would otherwise
+        # go out anonymous and misreport a false 401/403, so resolve it here instead.
+        # _auths[0] is the basic-auth entry when username and password are supplied
+        # (kerberos, when installed, is appended at index 1) and both are validated
+        # non-empty in __init__. Reading it here rather than calling _maybe_add_auth()
+        # also avoids the live GET /api/json that method issues when
+        # requests_kerberos is installed.
+        session: Session = self._client._session
+        if session.auth is None:
+            auths = getattr(self._client, "_auths", None)
+            try:
+                session.auth = auths[0][1]  # type: ignore[index]
+            except (TypeError, IndexError, KeyError):
+                # Unexpected python-jenkins internals: probe unauthenticated rather
+                # than turning a diagnostic into a crash.
+                logger.debug("Could not resolve python-jenkins session auth")
+        return session
 
     @log_function_call
     def start_job(

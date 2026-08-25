@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `JenkinsClient.base_url` and `_http` ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation: `TestJenkinsClientHttpAccess` tests + `base_url` / `_http` properties (auth resolved lazily in `_http`), `coordinator/core.py:449-451` uses `base_url`, 15 `Mock()` → `MagicMock()` doubles
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestJenkinsClientHttpAccess` tests + `base_url` / `_http` properties (auth resolved lazily in `_http`), `coordinator/core.py:449-451` uses `base_url`, 15 `Mock()` → `MagicMock()` doubles
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `docs/repository-setup/jenkins.md` ([step_2.md](./steps/step_2.md))
 
