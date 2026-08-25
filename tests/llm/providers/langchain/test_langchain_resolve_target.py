@@ -22,6 +22,7 @@ from mcp_coder.llm.providers.langchain._config_diagnostics import (
     _UNSET_TARGET,
     ResolvedTarget,
     _targets_match,
+    describe_effective_config,
     dialed_url,
     redirect_env_in_effect,
     resolve_target,
@@ -29,6 +30,7 @@ from mcp_coder.llm.providers.langchain._config_diagnostics import (
 
 _PACKAGE = "mcp_coder.llm.providers.langchain"
 _CREATE = f"{_PACKAGE}._create_chat_model"
+_DIAGNOSTICS = f"{_PACKAGE}._config_diagnostics"
 
 # Everything that can redirect a client, cleared before each test so a
 # developer's real environment cannot invent provenance.
@@ -408,3 +410,156 @@ class TestAsyncCloseIsAwaited:
         # counter at zero and emit a RuntimeWarning.
         assert model.http_async_client.close_calls == 1
         assert asyncio.iscoroutinefunction(model.http_async_client.aclose)
+
+
+# ---------------------------------------------------------------------------
+# describe_effective_config — pure formatting over an already-resolved target
+# ---------------------------------------------------------------------------
+
+_SDK_DEFAULT_TARGET = ResolvedTarget(_OPENAI_DEFAULT, "SDK default", True)
+_NO_TARGET = ResolvedTarget("n/a", "backend has no configurable target", True)
+
+
+def _rows(
+    config: dict[str, str | None],
+    target: ResolvedTarget = _SDK_DEFAULT_TARGET,
+    **kwargs: Any,
+) -> dict[str, str]:
+    """Return describe_effective_config's rows keyed by label."""
+    return dict(describe_effective_config(config, target, **kwargs))
+
+
+class TestDescribeEffectiveConfigRows:
+    """Case 1: five rows in a stable order, naming the real discriminator."""
+
+    def test_row_order_is_stable(self) -> None:
+        rows = describe_effective_config(_openai_config(), _SDK_DEFAULT_TARGET)
+        assert [label for label, _value in rows] == [
+            "backend",
+            "mode",
+            "model",
+            "base_url",
+            "api_key",
+        ]
+
+    def test_plain_openai_names_api_version_as_discriminator(self) -> None:
+        assert _rows(_openai_config())["mode"] == "plain openai (api_version not set)"
+
+    def test_azure_names_api_version_as_discriminator(self) -> None:
+        rows = _rows(_openai_config(api_version="2024-02-01"))
+        assert rows["mode"] == "Azure OpenAI (api_version set)"
+
+    @pytest.mark.parametrize("backend", [None, "opnai"])
+    def test_no_mode_claimed_without_a_usable_backend(
+        self, backend: str | None
+    ) -> None:
+        """A backend that mode_of() rejects has no mode to name."""
+        rows = _rows(_config(backend=backend, model="m"), _NO_TARGET)
+
+        assert rows["mode"] == "(not applicable — backend not configured)"
+        assert "None" not in rows["mode"]
+
+    def test_unset_backend_row_matches_the_mode_row(self) -> None:
+        assert _rows(_config(), _NO_TARGET)["backend"] == "(not configured)"
+
+    def test_typod_backend_row_shows_what_was_configured(self) -> None:
+        assert _rows(_config(backend="opnai"), _NO_TARGET)["backend"] == "opnai"
+
+    def test_stray_api_version_is_named_not_denied(self) -> None:
+        """A gemini config with api_version takes the non-Azure branch anyway.
+
+        Claiming 'api_version not set' here would contradict the contract
+        finding that the key is ignored by this backend.
+        """
+        rows = _rows(_config(backend="gemini", model="m", api_version="2024-02-01"))
+
+        assert rows["mode"] == "plain gemini (api_version ignored by gemini)"
+        assert "not set" not in rows["mode"]
+
+    def test_unset_model(self) -> None:
+        assert _rows(_config(backend="openai"))["model"] == "(not configured)"
+
+
+class TestDescribeEffectiveConfigBaseUrl:
+    """Case 2/3: the base_url row echoes the passed target, and only that."""
+
+    def test_source_carried_verbatim(self) -> None:
+        target = ResolvedTarget(
+            "https://relay.internal/v1", "config.toml [llm.langchain] base_url", True
+        )
+        rows = _rows(_openai_config(base_url="https://relay.internal/v1"), target)
+
+        assert (
+            rows["base_url"]
+            == "https://relay.internal/v1   (config.toml [llm.langchain] base_url)"
+        )
+
+    def test_unverified_wording_preserved(self) -> None:
+        target = ResolvedTarget(
+            "https://relay.internal/v1",
+            "config.toml (unverified — client not constructed)",
+            False,
+        )
+
+        assert "unverified" in _rows(_openai_config(), target)["base_url"]
+
+    def test_builder_never_resolves_the_target(self) -> None:
+        """Case 2: the caller owns the single resolve_target() call."""
+        with patch(f"{_DIAGNOSTICS}.resolve_target") as resolve:
+            describe_effective_config(_openai_config(), _SDK_DEFAULT_TARGET)
+
+        resolve.assert_not_called()
+
+    def test_backend_without_target(self) -> None:
+        """Case 3: gemini has nothing to dial."""
+        rows = _rows(_config(backend="gemini", model="m"), _NO_TARGET)
+
+        assert rows["base_url"] == "n/a   (backend has no configurable target)"
+
+
+class TestDescribeEffectiveConfigApiKey:
+    """Case 3b: the api_key row shows the *resolved* key under its own label."""
+
+    def test_masked_value_and_override_text(self) -> None:
+        cfg = _config(
+            backend="openai", model="gpt-4o", api_key="sk-configured-and-beaten"
+        )
+        rows = _rows(
+            cfg,
+            api_key_masked="Qwen...abcd",
+            api_key_source="OPENAI_API_KEY env var",
+            api_key_overridden=True,
+        )
+
+        assert rows["api_key"] == (
+            "Qwen...abcd   (from OPENAI_API_KEY env var "
+            "— overrides config.toml api_key)"
+        )
+        # The losing config value must never surface under the winner's label.
+        assert "sk-configured-and-beaten" not in "\n".join(rows.values())
+
+    def test_no_override_text_when_config_won(self) -> None:
+        rows = _rows(
+            _openai_config(),
+            api_key_masked="sk-a...5678",
+            api_key_source="config.toml",
+        )
+
+        assert rows["api_key"] == "sk-a...5678   (from config.toml)"
+        assert "overrides" not in rows["api_key"]
+
+    def test_source_without_readable_value(self) -> None:
+        """Gemini's keyless Vertex carve-out satisfies the credential."""
+        rows = _rows(
+            _config(backend="gemini", model="m"),
+            _NO_TARGET,
+            api_key_source="GOOGLE_GENAI_USE_VERTEXAI env var",
+        )
+
+        assert rows["api_key"] == (
+            "(not set — satisfied via GOOGLE_GENAI_USE_VERTEXAI env var)"
+        )
+
+    def test_bare_not_set_needs_both_none(self) -> None:
+        """Config carries an api_key; the builder must not read it."""
+        assert _rows(_openai_config())["api_key"] == "(not set)"

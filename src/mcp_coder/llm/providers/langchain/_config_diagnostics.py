@@ -498,3 +498,101 @@ def resolve_target(config: Mapping[str, str | None]) -> ResolvedTarget:
     finally:
         _close_http_clients(chat_model)
     return ResolvedTarget(url, _source_for(config, url), True)
+
+
+# ---------------------------------------------------------------------------
+# Effective-config echo — what the run will actually use, and from where
+# ---------------------------------------------------------------------------
+
+# Rendered for a field nothing supplied a value for.
+_NOT_CONFIGURED = "(not configured)"
+
+# The backend is unset or typo'd, so there is no mode to name. Asserting one
+# here would print "plain None (api_version not set)" next to a backend row
+# reading "(not configured)".
+_NO_MODE = "(not applicable — backend not configured)"
+
+
+def _describe_mode(config: Mapping[str, str | None]) -> str:
+    """Describe the routing mode and the key that decided it.
+
+    Args:
+        config: LangChain configuration dict.
+
+    Returns:
+        A row value naming ``api_version`` as the discriminator in both
+        directions, or the no-backend sentinel.
+    """
+    mode = mode_of(config)
+    if mode is None:
+        return _NO_MODE
+    if mode == "azure":
+        return "Azure OpenAI (api_version set)"
+    backend = config.get("backend")
+    # Only openai + api_version is Azure, so a stray api_version on another
+    # backend lands here. Say it is ignored rather than claiming it is unset —
+    # the contract reports that same key as ignored a few rows below.
+    note = (
+        f"api_version ignored by {backend}"
+        if config.get("api_version")
+        else "api_version not set"
+    )
+    return f"plain {backend} ({note})"
+
+
+def _describe_api_key(masked: str | None, source: str | None, overridden: bool) -> str:
+    """Describe the credential that will actually be used.
+
+    Args:
+        masked: The masked winning key, or None when there is none to show.
+        source: Where the winning key (or the keyless carve-out) came from.
+        overridden: True when an env var beat a configured ``api_key``.
+
+    Returns:
+        A row value that never shows one source's value under another's label.
+    """
+    if masked is None:
+        # A source with no readable key is gemini's keyless Vertex carve-out:
+        # the credential is satisfied, so this is not a bare "(not set)".
+        return f"(not set — satisfied via {source})" if source else "(not set)"
+    suffix = " — overrides config.toml api_key" if overridden else ""
+    return f"{masked}   (from {source}{suffix})"
+
+
+def describe_effective_config(
+    config: Mapping[str, str | None],
+    target: ResolvedTarget,
+    *,
+    api_key_masked: str | None = None,
+    api_key_source: str | None = None,
+    api_key_overridden: bool = False,
+) -> list[tuple[str, str]]:
+    """Return (label, value) rows describing the config that will be used.
+
+    Pure formatting: this resolves nothing and masks nothing. The three
+    ``api_key_*`` arguments travel together and all come from the same
+    ``_resolve_api_key`` call, so the printed value can never belong to a
+    different source than the printed label; ``config["api_key"]`` is
+    deliberately never read, because the winning key frequently comes from an
+    environment variable while config.toml holds a different, losing one.
+
+    Args:
+        config: LangChain configuration dict.
+        target: The already-resolved target from :func:`resolve_target`.
+        api_key_masked: Masked winning key, or None.
+        api_key_source: Provenance of the winning key, or None.
+        api_key_overridden: True when an env var beat a configured ``api_key``.
+
+    Returns:
+        Five rows in a stable order, for rendering without status symbols.
+    """
+    return [
+        ("backend", config.get("backend") or _NOT_CONFIGURED),
+        ("mode", _describe_mode(config)),
+        ("model", config.get("model") or _NOT_CONFIGURED),
+        ("base_url", f"{target.url}   ({target.source})"),
+        (
+            "api_key",
+            _describe_api_key(api_key_masked, api_key_source, api_key_overridden),
+        ),
+    ]

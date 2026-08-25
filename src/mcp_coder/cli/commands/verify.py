@@ -479,6 +479,14 @@ def execute_verify(args: argparse.Namespace) -> int:
             check_models=check_models,
             mcp_config_path=mcp_config_resolved,
         )
+        # Printing only: the rows are already built and their sources already
+        # resolved, so this layer needs no access to the private llm helpers.
+        # The empty marker is what renders the block without status symbols.
+        effective_config = langchain_result.get("effective_config")
+        if effective_config:
+            print(_pad("EFFECTIVE CONFIG"))
+            for label, value in effective_config:
+                print(_format_row(label, "", value, indent=2))
         print(_format_section("LLM PROVIDER DETAILS", langchain_result, symbols))
     else:
         print("  (uses Claude CLI — see Basic Verification above)")

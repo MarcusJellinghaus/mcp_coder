@@ -11,7 +11,6 @@ from mcp_coder.llm.providers.langchain.verification import (
     _check_mcp_adapter_packages,
     _check_package_installed,
     _mask_api_key,
-    _resolve_api_key,
     verify_langchain,
 )
 
@@ -36,52 +35,6 @@ class TestMaskApiKey:
 
     def test_empty_string(self) -> None:
         assert _mask_api_key("") is None
-
-
-class TestResolveApiKey:
-    """Tests for _resolve_api_key helper."""
-
-    def test_env_var_takes_precedence(self) -> None:
-        with patch.dict("os.environ", {"OPENAI_API_KEY": "env-key"}):
-            key, source = _resolve_api_key("openai", "config-key")
-        assert key == "env-key"
-        assert source == "OPENAI_API_KEY env var"
-
-    def test_falls_back_to_config(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            key, source = _resolve_api_key("openai", "config-key")
-        assert key == "config-key"
-        assert source == "config.toml"
-
-    def test_no_key_available(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            key, source = _resolve_api_key("openai", None)
-        assert key is None
-        assert source is None
-
-    def test_gemini_env_var(self) -> None:
-        with patch.dict("os.environ", {"GEMINI_API_KEY": "gem-key"}):
-            key, source = _resolve_api_key("gemini", None)
-        assert key == "gem-key"
-        assert source == "GEMINI_API_KEY env var"
-
-    def test_anthropic_env_var(self) -> None:
-        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "ant-key"}):
-            key, source = _resolve_api_key("anthropic", None)
-        assert key == "ant-key"
-        assert source == "ANTHROPIC_API_KEY env var"
-
-    def test_unknown_backend(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            key, source = _resolve_api_key("unknown", "config-key")
-        assert key == "config-key"
-        assert source == "config.toml"
-
-    def test_none_backend(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            key, source = _resolve_api_key(None, None)
-        assert key is None
-        assert source is None
 
 
 class TestCheckPackageInstalled:

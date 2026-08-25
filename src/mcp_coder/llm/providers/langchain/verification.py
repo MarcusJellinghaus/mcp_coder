@@ -16,17 +16,19 @@ from typing import Any
 from urllib.parse import urlparse
 
 from . import _load_langchain_config
+from ._config_diagnostics import (
+    _API_KEY_ENV,
+    _KEYLESS_ENV,
+    _targets_match,
+    describe_effective_config,
+    mode_of,
+    redirect_env_in_effect,
+    resolve_target,
+)
 from ._exceptions import LLMAuthError, LLMConnectionError
 from .agent import _load_mcp_server_config
 
 logger = logging.getLogger(__name__)
-
-_BACKEND_ENV_VARS: dict[str, str] = {
-    "openai": "OPENAI_API_KEY",
-    "gemini": "GEMINI_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY",
-    "ollama": "OLLAMA_API_KEY",
-}
 
 _BACKEND_PACKAGES: dict[str, str] = {
     "openai": "langchain_openai",
@@ -54,27 +56,45 @@ def _mask_api_key(key: str | None) -> str | None:
 
 
 def _resolve_api_key(
-    backend: str | None, config_key: str | None
-) -> tuple[str | None, str | None]:
-    """Resolve API key from environment variable or config.
+    mode: str | None, config_key: str | None
+) -> tuple[str | None, str | None, bool]:
+    """Resolve the API key the client will use, and say where it came from.
+
+    Keyed by *mode*, not backend, so an Azure setup whose key lives in
+    ``AZURE_OPENAI_API_KEY`` is named rather than reported as unset.
+
+    Resolution follows the order the *client* resolves, which is not the
+    table's order. Only ``_API_KEY_ENV[mode][0]`` is read by our own
+    ``create_*_model`` (``os.getenv(X) or api_key``), and it genuinely beats
+    config; the remaining entries are SDK fallbacks that apply only when no
+    key is passed at all, so a configured key beats them.
 
     Args:
-        backend: Backend name ("openai", "gemini", "anthropic", or None).
+        mode: Contract mode from ``mode_of()``, or None.
         config_key: API key from config.toml, or None.
 
     Returns:
-        Tuple of ``(key, source)`` where *key* is the resolved API key string
-        and *source* describes where it was found (e.g. ``"OPENAI_API_KEY env var"``
-        or ``"config.toml"``).  Both elements are None if no key is available.
+        Tuple of ``(key, source, overridden)``. *source* may be set while
+        *key* is None — gemini's keyless Vertex carve-out satisfies the
+        credential without exposing a readable value. *overridden* is True
+        only when the primary env var beat a configured ``api_key``.
     """
-    env_var = _BACKEND_ENV_VARS.get(backend or "")
-    if env_var:
-        env_value = os.environ.get(env_var)
+    env_vars = _API_KEY_ENV.get(mode or "", ())
+    primary = env_vars[0] if env_vars else None
+    if primary:
+        env_value = os.environ.get(primary)
         if env_value:
-            return env_value, f"{env_var} env var"
+            return env_value, f"{primary} env var", bool(config_key)
     if config_key:
-        return config_key, "config.toml"
-    return None, None
+        return config_key, "config.toml", False
+    for var in env_vars[1:]:
+        env_value = os.environ.get(var)
+        if env_value:
+            return env_value, f"{var} env var", False
+    keyless = _KEYLESS_ENV.get(mode or "")
+    if keyless and os.environ.get(keyless):
+        return None, f"{keyless} env var", False
+    return None, None, False
 
 
 def _check_package_installed(package_name: str) -> bool:
@@ -208,7 +228,9 @@ def verify_langchain(
     }
 
     # API key resolution
-    api_key, key_source = _resolve_api_key(backend, config_api_key)
+    api_key, key_source, key_overridden = _resolve_api_key(
+        mode_of(config), config_api_key
+    )
     if backend == "ollama" and api_key is None:
         # Ollama runs unauthenticated on plain localhost — treat missing key
         # as optional rather than a failure.
@@ -223,6 +245,20 @@ def verify_langchain(
             "value": _mask_api_key(api_key),
             "source": key_source,
         }
+
+    # Effective-config echo. This is the single resolve_target() call of the
+    # run; the ResolvedTarget it returns is shared by every consumer below, so
+    # nothing constructs a chat model twice. The rows are stored as a *list*,
+    # which _format_section, _collect_install_hints and _compute_exit_code all
+    # skip, so the echo is structurally symbol-free and exit-neutral.
+    target = resolve_target(config)
+    result["effective_config"] = describe_effective_config(
+        config,
+        target,
+        api_key_masked=_mask_api_key(api_key),
+        api_key_source=key_source,
+        api_key_overridden=key_overridden,
+    )
 
     # langchain-core package check
     lc_core_installed = _check_package_installed("langchain_core")
@@ -261,6 +297,25 @@ def verify_langchain(
         shape = _check_base_url_shape(config.get("base_url"), config.get("api_version"))
         if shape is not None:
             result["endpoint_shape"] = shape
+
+    # Exit-neutral flags: something outside config.toml won. The redirect row
+    # is keyed on the variable that actually *produced* the dialed URL, not on
+    # "some redirect variable is exported", and is suppressed when config
+    # already implied that URL — nothing was redirected in that case.
+    cfg_base = config.get("base_url")
+    env_var = redirect_env_in_effect(config, target.url)
+    if env_var and not (cfg_base and _targets_match(cfg_base, target.url)):
+        result["base_url_redirect"] = {
+            "ok": None,
+            "value": (f"{env_var} overrides config.toml — requests go to {target.url}"),
+        }
+    # Built from the api-key resolution, never from env_var above: that is a
+    # base-URL variable and is None in most runs.
+    if key_overridden:
+        result["api_key_override"] = {
+            "ok": None,
+            "value": f"{key_source} overrides [llm.langchain] api_key in config.toml",
+        }
 
     # MCP adapter packages check (always run)
     mcp_pkg_results = _check_mcp_adapter_packages()

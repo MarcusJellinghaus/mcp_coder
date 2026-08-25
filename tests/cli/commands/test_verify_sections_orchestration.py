@@ -530,3 +530,100 @@ class TestGitWiring:
             execute_verify(_make_args())
         mock_verify_git.assert_called_once()
         assert mock_verify_git.call_args.kwargs["actually_sign"] is True
+
+
+def _langchain_with_echo() -> dict[str, Any]:
+    """A langchain result carrying the list-valued effective-config echo."""
+    result = _langchain_ok()
+    result["effective_config"] = [
+        ("backend", "openai"),
+        ("mode", "plain openai (api_version not set)"),
+        ("model", "gpt-4"),
+        ("base_url", "https://api.openai.com/v1/   (SDK default)"),
+        ("api_key", "sk-ab...7x2f   (from OPENAI_API_KEY env var)"),
+    ]
+    return result
+
+
+class TestEffectiveConfigSection:
+    """The echo prints as its own symbol-free section (step 7, TDD 5)."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_resolve_mcp(self) -> Any:
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
+            yield
+
+    def _run(
+        self, lc_result: dict[str, Any], capsys: pytest.CaptureFixture[str]
+    ) -> tuple[int, str]:
+        with (
+            patch(f"{_VERIFY}.find_claude_executable", return_value=None),
+            patch(f"{_VERIFY}.log_to_mlflow", create=True),
+            patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response()),
+            patch(f"{_VERIFY}.verify_mlflow", return_value=_mlflow_not_installed()),
+            patch(f"{_LC_VERIFY}.verify_langchain", return_value=lc_result),
+            patch(
+                f"{_VERIFY}.resolve_llm_method",
+                return_value=("langchain", "config.toml"),
+            ),
+        ):
+            result = execute_verify(_make_args())
+        return result, capsys.readouterr().out
+
+    def test_echo_rendered_without_status_symbols(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        result, output = self._run(_langchain_with_echo(), capsys)
+
+        start = output.index("=== EFFECTIVE CONFIG")
+        end = output.index("=== LLM PROVIDER DETAILS")
+        block = output[start:end]
+
+        assert "plain openai (api_version not set)" in block
+        assert "https://api.openai.com/v1/   (SDK default)" in block
+        for symbol in ("[OK]", "[ERR]", "[WARN]"):
+            assert symbol not in block
+        assert result == 0
+
+    def test_echo_is_not_part_of_provider_details(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A list-valued entry is skipped by _format_section entirely."""
+        _result, output = self._run(_langchain_with_echo(), capsys)
+        details = output[output.index("=== LLM PROVIDER DETAILS") :]
+
+        assert "effective_config" not in output
+        assert "plain openai" not in details
+
+    def test_no_section_when_the_result_omits_the_echo(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _result, output = self._run(_langchain_ok(), capsys)
+
+        assert "EFFECTIVE CONFIG" not in output
+
+    def test_flag_rows_warn_without_changing_the_exit_code(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        lc_result = _langchain_with_echo()
+        lc_result["base_url_redirect"] = {
+            "ok": None,
+            "value": "OPENAI_BASE_URL overrides config.toml — requests go to https://h/v1",
+        }
+        lc_result["api_key_override"] = {
+            "ok": None,
+            "value": "OPENAI_API_KEY env var overrides [llm.langchain] api_key in config.toml",
+        }
+        result, output = self._run(lc_result, capsys)
+        details = output[output.index("=== LLM PROVIDER DETAILS") :]
+
+        redirect_row = next(l for l in details.splitlines() if "Base URL redirect" in l)
+        override_row = next(l for l in details.splitlines() if "API key override" in l)
+        assert "[WARN]" in redirect_row
+        assert "[WARN]" in override_row
+        assert result == 0

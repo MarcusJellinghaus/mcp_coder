@@ -360,9 +360,99 @@ Details: [step_6.md](./steps/step_6.md)
 
 Details: [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`_config_diagnostics.py` gains `describe_effective_config()` plus the
+      `_describe_mode` / `_describe_api_key` helpers and the `_NOT_CONFIGURED`
+      / `_NO_MODE` constants. The builder is **pure formatting**: it never calls
+      `resolve_target`, never masks, and never reads `config["api_key"]` — the
+      masked value, its source and the override flag all arrive from the one
+      `_resolve_api_key` call, so a row can never show one source's value under
+      another's label. The `mode` row is guarded on `mode_of(config) is None`
+      (`(not applicable — backend not configured)`, never
+      `plain None (…)`), and the non-Azure parenthetical is derived from the
+      config so a `gemini` config with a stray `api_version` reads
+      `plain gemini (api_version ignored by gemini)` instead of contradicting
+      step 9's `[WARN] … ignored` row.
+
+      `verification.py`: `_BACKEND_ENV_VARS` **deleted**; `_resolve_api_key` is
+      re-keyed on the *mode* (importing `_API_KEY_ENV`, `_KEYLESS_ENV`,
+      `mode_of` from `_config_diagnostics`) and returns
+      `(key, source, overridden)`. It resolves in the order the *client*
+      resolves — `_API_KEY_ENV[mode][0]` (the only variable our own
+      `create_*_model` reads, and it beats config) > config `api_key` > the
+      row's remaining variables (SDK fallbacks, reached only when no key is
+      passed at all) > `_KEYLESS_ENV` — so an Azure key in
+      `AZURE_OPENAI_API_KEY` is *named* rather than rendered `(not set)`, while
+      a configured key with only a secondary variable exported still reports
+      `config.toml`. `overridden` is set **only** in the primary-beats-config
+      case. `verify_langchain` makes the single `resolve_target(config)` call of
+      the run and shares the `ResolvedTarget`; the rows land in the
+      list-valued `result["effective_config"]`, which `_format_section`,
+      `_collect_install_hints` and `_compute_exit_code` all skip by their
+      existing isinstance guards. The `base_url_redirect` row is keyed on
+      `redirect_env_in_effect(config, target.url)` and suppressed via step 6's
+      `_targets_match` when config already implied that URL, so a stale
+      `AZURE_OPENAI_ENDPOINT` or a losing `OPENAI_BASE_URL` produces no row;
+      `api_key_override` is built from `key_source` and gated on
+      `key_overridden`, never from the `env_var` local. Two `_LABEL_MAP`
+      entries added. `verify.py` only *prints*, under its own
+      `EFFECTIVE CONFIG` header with an empty marker
+      (`_format_row(label, "", value, indent=2)`), guarded on the key being
+      present so mocked results without it render unchanged.
+
+      Tests: 21 builder tests in `test_langchain_resolve_target.py` (TDD 1, 2,
+      3, 3b) and 4 rendering tests in `test_verify_sections_orchestration.py`
+      (TDD 5, plus the two flag rows' `[WARN]` markers). The `_resolve_api_key`
+      tests moved out of `test_langchain_verification.py` (661 lines — updating
+      in place would have pushed it past the 750-line limit) into the new
+      `test_langchain_effective_config.py`, rewritten for the 3-tuple and
+      extended with TDD 3c/3d, alongside the `verify_langchain` wiring tests for
+      TDD 4, 6, 6b and 7.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in any file this step touches**: pylint scoped to the
+      six touched source/test files reports nothing; mypy over
+      `src/mcp_coder/llm/providers/langchain`, `tests/llm/providers/langchain`,
+      `verify.py`, `verify_formatting.py` and
+      `test_verify_sections_orchestration.py` is clean; ruff clean; isort
+      clean; black reformatted four files once and is now a no-op across 621
+      files. lint-imports: 21 contracts kept. Step 7's own tests pass —
+      `test_langchain_resolve_target.py` + `test_langchain_effective_config.py`
+      + `test_langchain_verification.py` + `test_langchain_contract.py` →
+      164 passed; `test_verify_sections_orchestration.py` → 21 passed. Wider
+      run: all of `tests/llm/providers/langchain` plus the four verify CLI
+      modules → clean apart from the one known environmental failure below.
+      `mcp-coder check file-size --max-lines 750` flags only the pre-existing
+      `tests/cli/commands/test_verify_orchestration.py` (871 lines, grown by
+      steps 3-4); step 7 does not touch it. `_config_diagnostics.py` is at 597
+      lines.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-6: the `.venv` copy of the unpinned git dependency `mcp-workspace`
+      lacks `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and
+      pytest collects zero tests (confirmed again this run: the first
+      unshimmed run collected 0). Same workaround: a throwaway
+      `.pytest_shim/sitecustomize.py` registering a stand-in
+      `mcp_workspace.checks.branch_status_rendering` (re-export `CIStatus` from
+      `mcp_workspace.checks.branch_status`, any str for `GITHUB_TOKEN_HINT`),
+      run pytest with `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the
+      directory afterwards — it is **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all
+      pre-existing, none in files this step touches: the six
+      `tests/cli/commands/test_check_branch_status*.py` modules (stale
+      `CIStatus.UNAVAILABLE` / `BranchStatusReport` API), excluded via
+      `--ignore-glob` for the `tests/cli` + `tests/llm` run; the three
+      `tests/llm/providers/copilot/test_copilot_integration.py` tests (no
+      working `copilot` CLI); and
+      `test_langchain_exceptions.py::…httpx_connect_error` (`httpx` absent →
+      MagicMock). Project-wide mypy over `src/mcp_coder/cli/commands` reports
+      exactly the 4 known `check_branch_status` findings; the langchain-package
+      pylint run reports only `E0401` for the uninstalled optional extras.)
+- [x] Commit message prepared
 
 ### Step 8: Rebase the base-URL shape check on the resolved target
 
