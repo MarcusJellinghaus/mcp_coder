@@ -156,8 +156,9 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
-        # Let all other exceptions bubble up with full traceback
-        logger.error(f"Unexpected error: {e}", exc_info=True)
+        # Let all other exceptions bubble up; main.py's top-level boundary logs
+        # the traceback.
+        logger.error(f"Unexpected error: {e}")
         raise
 
 
@@ -324,10 +325,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     Exception
                 ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
                     # Fail-fast: log error and exit immediately
-                    logger.error(
-                        f"Failed processing issue #{issue['number']}: {e}",
-                        exc_info=True,
-                    )
+                    logger.error(f"Failed processing issue #{issue['number']}: {e}")
                     return 1
 
             logger.info(f"Successfully processed all issues in {repo_name}")

@@ -82,9 +82,25 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Drop `exc_info=True` at both coordinator sites ([step_5.md](./steps/step_5.md))
 
-- [ ] Implementation: two `record.exc_info is None` tests, then drop `exc_info=True` at `commands.py:160` and `:329` and correct the stale comment
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: two `record.exc_info is None` tests, then drop `exc_info=True` at `commands.py:160` and `:329` and correct the stale comment
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      - Tests written first and watched fail: both failed on exactly the
+        `all(r.exc_info is None ...)` assertion (the message assertion already passed),
+        confirming they bite on the unfixed code. Green after the two deletions.
+      - pytest: **PASS** — `tests/cli/commands/coordinator` → 158 passed; whole
+        `tests/cli` → 1078 passed with the standard marker exclusions.
+      - mypy, pylint: **PASS** — clean over `src|tests/.../cli/commands/coordinator`.
+      - black/isort: clean (15 files unchanged).
+      - Same stale-`.venv` gap as step 4 (`mcp_workspace` has no
+        `checks/branch_status_rendering.py`): pytest was run with
+        `PYTHONPATH=C:/Users/Marcus/Documents/GitHub/mcp-workspace/src`, and mypy/pylint
+        were scoped to the changed directories. `tools\reinstall_local.bat` still fixes
+        this for good.
+      - **Left in place deliberately:** `main.py:377` (top-level CLI boundary, per
+        step_5.md) and a third `exc_info=True` at `commands.py:343` — the *outer*
+        `execute_coordinator_run` handler, which step_5.md does not list among its two
+        sites. Worth a look in a later step if the tracebacks there also prove noisy.
+- [x] Commit message prepared
 
 ### Step 6: `verify_jenkins()` and the two verify sections ([step_6.md](./steps/step_6.md))
 

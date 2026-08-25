@@ -19,7 +19,19 @@ from mcp_coder.cli.commands.coordinator import (
     format_job_output,
 )
 from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.utils.jenkins_operations.client import JenkinsError
 from mcp_coder.utils.jenkins_operations.models import JobStatus
+
+COMMANDS_LOGGER = "mcp_coder.cli.commands.coordinator.commands"
+
+# A realistic step-4 diagnosis: the remedy text is the payload the operator needs,
+# and it must reach the console without a traceback wrapped around it.
+JENKINS_DIAGNOSIS = (
+    "Failed to start job 'MCP/test-job': 403 Forbidden on /crumbIssuer/api/json - "
+    '"Access Denied". The API user is authenticated but not authorized; Jenkins '
+    "requires Overall/Read for any REST call. Grant it in the global authorization "
+    "matrix (it cannot be granted per-job). See docs/repository-setup/jenkins.md"
+)
 
 
 class TestFormatJobOutput:
@@ -122,6 +134,49 @@ class TestExecuteCoordinatorTest:
         # Verify output logged
         assert "Job triggered: MCP/test-job - test - queue: 12345" in caplog.text
         assert "https://jenkins:8080/queue/item/12345/" in caplog.text
+
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
+    def test_coordinator_test_error_logged_without_traceback(
+        self,
+        mock_create_config: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test the handler logs the diagnosis without attaching a traceback."""
+        # Setup
+        args = argparse.Namespace(
+            repo_name="mcp_coder", branch_name="feature-x", log_level="INFO"
+        )
+        mock_create_config.return_value = False
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_job_path": "MCP/test-job",
+            "github_credentials_id": "github-pat",
+            "executor_os": "linux",
+        }
+        mock_get_creds.return_value = ("http://jenkins:8080", "user", "token")
+
+        mock_client = MagicMock()
+        mock_jenkins_class.return_value = mock_client
+        mock_client.start_job.side_effect = JenkinsError(JENKINS_DIAGNOSIS)
+
+        # Execute - this handler re-raises after logging
+        with caplog.at_level(logging.DEBUG):
+            with pytest.raises(JenkinsError):
+                execute_coordinator_test(args)
+
+        # Verify - the remedy reached the log
+        records = [r for r in caplog.records if r.name == COMMANDS_LOGGER]
+        assert any(JENKINS_DIAGNOSIS in r.getMessage() for r in records)
+
+        # Verify - no record carries exc_info (asserting on caplog.text would pass
+        # even with exc_info=True, since the fixture does not always render it)
+        assert all(r.exc_info is None for r in records)
 
 
 class TestExecuteCoordinatorRun:
@@ -232,6 +287,81 @@ class TestExecuteCoordinatorRun:
 
         # Verify - dispatch_workflow was called twice (once for each issue)
         assert mock_dispatch_workflow.call_count == 2
+
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")
+    @patch("mcp_coder.cli.commands.coordinator.commands.JenkinsClient")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_jenkins_credentials")
+    @patch("mcp_coder.cli.commands.coordinator.commands.load_repo_config")
+    @patch("mcp_coder.cli.commands.coordinator.commands.get_cached_eligible_issues")
+    @patch("mcp_coder.cli.commands.coordinator.commands.dispatch_workflow")
+    @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
+    def test_coordinator_run_error_logged_without_traceback(
+        self,
+        mock_create_config: MagicMock,
+        mock_dispatch_workflow: MagicMock,
+        mock_get_cached_issues: MagicMock,
+        mock_load_repo: MagicMock,
+        mock_get_creds: MagicMock,
+        mock_jenkins_class: MagicMock,
+        mock_branch_mgr_class: MagicMock,
+        mock_issue_mgr_class: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test the per-issue handler logs without a traceback and fails fast."""
+        # Setup
+        args = argparse.Namespace(
+            command="coordinator",
+            repo="mcp_coder",
+            all=False,
+            log_level="INFO",
+            force_refresh=False,
+        )
+        mock_create_config.return_value = False
+        mock_load_repo.return_value = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_job_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
+        }
+        mock_get_creds.return_value = (
+            "https://jenkins.example.com",
+            "jenkins_user",
+            "jenkins_token_123",
+        )
+        mock_get_cached_issues.return_value = [
+            IssueData(
+                number=123,
+                title="Implement feature",
+                body="Plan ready",
+                state="open",
+                labels=["status-05:plan-ready"],
+                assignees=[],
+                user=None,
+                created_at=None,
+                updated_at=None,
+                url="https://github.com/user/mcp_coder/issues/123",
+                locked=False,
+            ),
+        ]
+
+        # Setup - dispatch fails with a step-4 diagnosis
+        mock_dispatch_workflow.side_effect = JenkinsError(JENKINS_DIAGNOSIS)
+
+        # Execute
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_run(args)
+
+        # Verify - fail-fast exit code
+        assert result == 1
+
+        # Verify - the remedy reached the log
+        records = [r for r in caplog.records if r.name == COMMANDS_LOGGER]
+        assert any(JENKINS_DIAGNOSIS in r.getMessage() for r in records)
+
+        # Verify - no record carries exc_info (asserting on caplog.text would pass
+        # even with exc_info=True, since the fixture does not always render it)
+        assert all(r.exc_info is None for r in records)
 
     @patch("mcp_coder.cli.commands.coordinator.commands.create_default_config")
     def test_execute_coordinator_run_creates_config_if_missing(
