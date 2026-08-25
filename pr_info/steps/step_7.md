@@ -86,6 +86,13 @@ result["effective_config"] = describe_effective_config(
   ```
   Placed immediately before `_format_section("LLM PROVIDER DETAILS", ...)`,
   inside the existing `active_provider == "langchain"` branch (`verify.py:421`).
+- **The `mode` row is guarded like the `backend` row.** When `mode_of(config)`
+  returns `None` — `backend` unset or typo'd — there is no mode to name, so the
+  row reads `(not applicable — backend not configured)`, never
+  `plain None (api_version not set)`. Same reasoning as step 6's
+  `_NO_BACKEND_TARGET`: this block must not assert a mode for a backend that does
+  not exist, and it is the row next to `backend  (not configured)` and
+  `base_url  (backend not configured)`.
 - **`_resolve_api_key` is re-keyed by *mode*, not backend.** It reads
   `_BACKEND_ENV_VARS` (`verification.py:24-29`) — one variable per *backend* —
   while step 5's contract accepts a *tuple* per *mode*, including
@@ -171,11 +178,17 @@ result["effective_config"] = describe_effective_config(
   won **and** `config_key` was non-empty. Two consequences:
   - the echo's `api_key` line reads
     `Qwen...abcd   (from OPENAI_API_KEY env var — overrides config.toml api_key)`;
-  - `verify_langchain` adds an exit-neutral row
+  - `verify_langchain` adds an exit-neutral row, built from the **api-key**
+    resolution and gated on `key_overridden` — never from `env_var`, which is
+    bound a few lines above to `redirect_env_in_effect(...)`, a *base-URL*
+    redirect variable that is `None` in most runs:
     ```python
-    result["api_key_override"] = {"ok": None, "value":
-        f"{env_var} env var overrides [llm.langchain] api_key in config.toml"}
+    if key_overridden:                       # only the primary-beats-config case
+        result["api_key_override"] = {"ok": None, "value":
+            f"{key_source} overrides [llm.langchain] api_key in config.toml"}
     ```
+    `key_source` already reads `"OPENAI_API_KEY env var"`, so no `env var`
+    suffix is appended here.
   Only in-repo caller is `verify_langchain`; update it and the existing
   `_resolve_api_key` tests for the 3-tuple.
 - `_LABEL_MAP` additions: `"base_url_redirect": "Base URL redirect"`,
@@ -186,7 +199,10 @@ result["effective_config"] = describe_effective_config(
 ```
 describe_effective_config(config, target, *, api_key_masked, api_key_source,
                           api_key_overridden):
-    mode   = "Azure OpenAI (api_version set)" if azure else "plain <backend> (api_version not set)"
+    if mode_of(config) is None:                    # backend unset or typo'd
+        mode = "(not applicable — backend not configured)"
+    else:
+        mode = "Azure OpenAI (api_version set)" if azure else "plain <backend> (api_version not set)"
     if api_key_masked is None:
         key_row = (f"(not set — satisfied via {api_key_source})"
                    if api_key_source else "(not set)")
@@ -237,7 +253,11 @@ configurable target)`.
 ## TDD
 
 1. Builder returns five rows in a stable order; `mode` names `api_version` as
-   the discriminator in both directions.
+   the discriminator in both directions. With `backend` unset, and again with
+   `backend = "opnai"` (`mode_of` → `None`), the `mode` row reads
+   `(not applicable — backend not configured)` and never contains `None` —
+   matching the `backend` row's `(not configured)` and step 6's
+   `_NO_BACKEND_TARGET` wording for the same config.
 2. `base_url` row carries the passed target's source verbatim; unverified
    targets keep the `unverified` wording. The builder never calls
    `resolve_target` itself (assert with a patched module attribute).
@@ -279,7 +299,13 @@ configurable target)`.
    only the matching variable is named, and only once.
 7. api_key override: env var **and** config `api_key` set → `overridden is True`,
    `api_key_override` row present, echo line names the override, `overall_ok`
-   unchanged. Env var set with **no** config key → no row, no "overrides" text.
+   unchanged. Assert the row's **rendered text**, not just its presence: it
+   names the api-key variable (`OPENAI_API_KEY env var overrides …`). Run the
+   same config twice — once with a base-URL redirect variable also exported
+   (`OPENAI_BASE_URL`), once with none — and assert the text is identical and
+   contains neither a redirect variable name nor `None`, pinning that the row is
+   built from `key_source` and not from `redirect_env_in_effect`. Env var set
+   with **no** config key → no row, no "overrides" text.
 
 ## LLM prompt
 
@@ -294,7 +320,12 @@ configurable target)`.
 > one source's value under another source's label). In `verify_langchain`, make the single
 > `resolve_target(config)` call of the run, store the rows as the list-valued
 > `result["effective_config"]`, and add the exit-neutral `base_url_redirect` and
-> `api_key_override` rows. Key the redirect row on
+> `api_key_override` rows. Build the `api_key_override` row's text from
+> `key_source` and gate it on `key_overridden` — **not** from the `env_var`
+> local, which holds the base-URL redirect variable and is usually `None`. Guard
+> the echo's `mode` row on `mode_of(config) is None` (`backend` unset or typo'd)
+> and render `(not applicable — backend not configured)` rather than
+> `plain None (api_version not set)`. Key the redirect row on
 > `redirect_env_in_effect(config, target.url)` — the variable whose value
 > actually produced the dialed URL — so an exported-but-inert variable (a stale
 > `AZURE_OPENAI_ENDPOINT` under plain `openai`, or `OPENAI_BASE_URL` when

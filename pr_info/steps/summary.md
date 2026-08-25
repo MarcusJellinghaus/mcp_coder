@@ -185,7 +185,7 @@ modules:
 | Path | Steps |
 |---|---|
 | `src/mcp_coder/utils/user_config.py` | 1 (schema + env var), 2 (unknown-key hints), 18 (smart-quote hint) |
-| `src/mcp_coder/llm/providers/langchain/__init__.py` | 1, 4 (raise-free loader), 5 (validator call), 10 (dialed host) |
+| `src/mcp_coder/llm/providers/langchain/__init__.py` | 1, 4 (raise-free loader), 5 (validator call), 6 (`_create_chat_model` config param widened to `Mapping`), 10 (dialed host) |
 | `src/mcp_coder/llm/providers/langchain/openai_backend.py` | 1 |
 | `src/mcp_coder/llm/providers/langchain/ollama_backend.py` | 1 |
 | `src/mcp_coder/llm/providers/langchain/_models.py` | 1 |

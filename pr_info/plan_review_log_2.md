@@ -77,3 +77,22 @@ Task tracker: empty — nothing implemented yet, so the whole plan is in scope.
 - `step_9.md`, `summary.md` §2/§7, `Decisions.md` (E corrected, I–L added) — aligned.
 
 **Status**: committed
+
+---
+
+## Round 4 — 2026-08-25
+
+**Findings** (the reviewer re-verified all round-3 changes against the installed SDK and found them correct; only three items remained):
+- `step_7.md:176` — low — the `api_key_override` row's f-string reuses `env_var`, bound 24 lines earlier to a *base-URL* redirect variable (often `None`), so it would print `OPENAI_API_BASE env var overrides … api_key` or `None env var overrides …`. TDD case 7 asserted only the row's presence, so it would not catch it.
+- `step_7.md:189` — low — the echo's `mode` row had no guard for an unset or typo'd `backend`, rendering `plain None (api_version not set)`; the `backend` and `base_url` rows both guard this case already.
+- Non-blocking type note — `resolve_target(config: Mapping[...])` calls `_create_chat_model(config: dict[...])`; strict mypy rejects that, and mypy-green is a per-step exit criterion, so step 6 would not go green as written.
+
+**Decisions**: all three accepted and delegated. Nothing escalated — no scope or design content.
+
+**Changes**:
+- `step_7.md` — override row built from `key_source` and gated on `key_overridden`; TDD 7 now runs the same config with and without `OPENAI_BASE_URL` exported and requires identical text naming no redirect variable. `mode` row renders `(not applicable — backend not configured)` when `mode_of(config) is None`; TDD 1 extended to unset and typo'd backends.
+- `step_6.md` — `_create_chat_model`'s parameter widened to `Mapping[str, str | None]` (body is read-only, all four call sites pass a `dict`, so widening the callee churns nothing); `__init__.py` added to WHERE.
+- `summary.md` — files-modified row for `__init__.py` now lists step 6.
+- `Decisions.md` — entries M–O.
+
+**Status**: committed

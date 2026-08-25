@@ -8,6 +8,8 @@ whenever that variable is exported. Shared by steps 7, 8 and 10.
 ## WHERE
 
 - `src/mcp_coder/llm/providers/langchain/_config_diagnostics.py` (extends step 5)
+- `src/mcp_coder/llm/providers/langchain/__init__.py` — one-line signature
+  widening on `_create_chat_model` (see HOW)
 - **New:** `tests/llm/providers/langchain/test_langchain_resolve_target.py`
 
 ## WHAT
@@ -77,6 +79,16 @@ def _targets_match(candidate: str, url: str) -> bool:
   Cover it with a test that imports the package top-level (`import
   mcp_coder.llm.providers.langchain`) after step 5's wiring exists; the repo's
   `pycycle` check also guards this.
+- **Widen `_create_chat_model`'s parameter to `Mapping[str, str | None]`.**
+  `resolve_target(config: Mapping[str, str | None])` passes `config` straight
+  through, but the callee is declared `config: dict[str, str | None]`
+  (`__init__.py:169`) and mypy strict — a per-step exit criterion — rejects a
+  `Mapping` argument for a `dict` parameter. Widen the **callee**, not the
+  caller: its body only does `config.get(...)`, and all four in-repo call sites
+  pass a `dict`, which is a `Mapping`, so none of them change. Add `Mapping` to
+  the existing `from collections.abc import Iterator` line. This also keeps every
+  `_config_diagnostics` entry point (`mode_of`, `validate`, `resolve_target`,
+  `describe_effective_config`) on the same `Mapping` parameter type.
 - `resolve_target` constructs via `_create_chat_model(config, timeout=5)` —
   local, no network — inside `try/except Exception`. On failure it returns the
   config value (or the `_UNSET_TARGET` sentinel) with `verified=False` and a
@@ -293,5 +305,9 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 > `_create_chat_model` **inside** `resolve_target` (function-level) — a
 > module-level import from the package `__init__` would create an import cycle
 > with step 5's wiring and break `import mcp_coder.llm.providers.langchain`.
+> Widen `_create_chat_model`'s `config` parameter from `dict[str, str | None]`
+> to `Mapping[str, str | None]` (`__init__.py:169`, plus `Mapping` on the
+> `collections.abc` import line) so mypy strict accepts the call; the four
+> existing call sites pass dicts and stay as they are.
 > Write tests first (TDD) using a stub chat model, so no langchain install is
 > required. Use MCP tools only. Run pytest (fast markers), pylint and mypy.

@@ -152,3 +152,39 @@ construction-failure fallback labelled the `(not configured)` sentinel
 `config.toml (unverified …)` even when nothing was configured — the common path,
 since construction fails exactly when the contract is violated. The source now
 names `config.toml` only when a config `base_url` supplied the value.
+
+---
+
+Resolutions applied after the run-2 round-4 review (`pr_info/plan_review_log_2.md`).
+
+## M. The `api_key_override` row is built from the api-key resolution (step 7)
+
+Directed fix. The row's f-string used `env_var`, bound 24 lines earlier to
+`redirect_env_in_effect(config, target.url)` — a *base-URL* redirect variable,
+`None` in most runs. Implemented literally it printed
+`OPENAI_API_BASE env var overrides [llm.langchain] api_key in config.toml`, or
+`None env var overrides …`: fabricated provenance inside the block built to
+prevent it. The row now reads `f"{key_source} overrides …"` and is gated on
+`key_overridden`; `key_source` already carries the `" env var"` suffix, so none
+is appended. TDD case 7 asserted only presence and would not have caught it, so
+it now asserts the rendered text names the api-key variable and is unchanged by
+an exported base-URL redirect variable.
+
+## N. The echo's `mode` row is guarded like the `backend` row (step 7)
+
+Directed fix. `"plain <backend> (api_version not set)"` had no guard for an
+unset or typo'd `backend` and rendered `plain None (api_version not set)`, while
+the `backend` row two lines below already guarded and decision L gave the
+`base_url` row honest wording for the same case. When `mode_of(config)` is
+`None` the row now reads `(not applicable — backend not configured)`. TDD case 1
+covers both `backend` unset and `backend = "opnai"`.
+
+## O. `_create_chat_model`'s `config` parameter is widened to `Mapping` (step 6)
+
+Directed fix, non-blocking type note. `resolve_target(config: Mapping[str, str |
+None])` calls `_create_chat_model(config, …)`, declared `dict[str, str | None]`
+(`__init__.py:169`); mypy strict — a per-step exit criterion — rejects that.
+Widening the callee is the smaller change: its body only does `config.get(...)`,
+its four call sites pass dicts (valid `Mapping`s) and do not churn, and it keeps
+every `_config_diagnostics` entry point on one parameter type. Requires adding
+`Mapping` to the existing `collections.abc` import line.
