@@ -277,6 +277,36 @@ class TestDiagnose403:
         assert "Job/Build" not in message
         assert message.endswith(DOCS_POINTER)
 
+    def test_server_error_body_is_reduced_to_a_sentence(self) -> None:
+        """A 5xx page reaches the diagnosis as one sentence, never as markup.
+
+        The whole point of the module is that a Jenkins error page is summarised
+        rather than pasted, and the inconclusive branch is the one path where a
+        non-200 body is quoted back to the operator.
+        """
+        body = (
+            "<!DOCTYPE html><html><head><title>Error 500</title></head><body>"
+            "<h1>HTTP ERROR 500 java.lang.NullPointerException</h1>"
+            "<table><tr><th>URI:</th><td>/api/json</td></tr></table>"
+            "</body></html>"
+        )
+        session = _session(
+            {
+                f"{BASE_URL}/api/json": _response(500, body),
+                f"{BASE_URL}/crumbIssuer/api/json": _response(500, body),
+            }
+        )
+
+        message = diagnose_403(session, BASE_URL)
+
+        assert (
+            'returned HTTP 500 - "HTTP ERROR 500 java.lang.NullPointerException"'
+            in message
+        )
+        assert "<" not in message
+        assert "could not be determined" in message
+        assert message.endswith(DOCS_POINTER)
+
     def test_transport_failure_claims_no_permission_verdict(self) -> None:
         """A probe that never completed is reported as such, not as success."""
         session = _session(
@@ -370,15 +400,43 @@ class TestDiagnose404:
 
         assert "could not be determined" in message
         assert f"returned HTTP {status}" in message
+        # The deepest unreached ancestor is the one worth naming: it is the
+        # narrowest thing the walk failed to establish.
+        assert "the probe of 'A/B'" in message
+        assert "the probe of 'A'" not in message
         assert "no folder in that path is readable" not in message
         assert "lacks Job/Read" not in message
         assert message.endswith(DOCS_POINTER)
 
-    def test_readable_ancestor_wins_over_an_unreached_deeper_one(self) -> None:
-        """A definite answer further up still narrows the search."""
+    @pytest.mark.parametrize("status", [401, 403, 404])
+    def test_readable_ancestor_names_a_denied_segment(self, status: int) -> None:
+        """A definite answer on both sides narrows the search to one segment."""
         session = _session(
             {
-                f"{BASE_URL}/job/A/job/B/api/json": _response(500, ""),
+                f"{BASE_URL}/job/A/job/B/api/json": _response(status, ""),
+                f"{BASE_URL}/job/A/api/json": _response(200, "{}"),
+            }
+        )
+
+        message = diagnose_404(session, BASE_URL, "A/B/C")
+
+        assert "the folder 'A' is readable; 'B' under it is not" in message
+        assert "lacks Job/Read" in message
+        assert "could not be determined" not in message
+
+    @pytest.mark.parametrize("status", [500, 503])
+    def test_readable_ancestor_does_not_blame_an_unreached_segment(
+        self, status: int
+    ) -> None:
+        """A 5xx on 'A/B' is no evidence that 'B' is unreadable.
+
+        Regression guard for returning as soon as any ancestor answers 200: 'A'
+        answering says nothing about 'B', whose own probe never reached a
+        verdict, yet the operator would be sent to grant Job/Read on it.
+        """
+        session = _session(
+            {
+                f"{BASE_URL}/job/A/job/B/api/json": _response(status, ""),
                 f"{BASE_URL}/job/A/api/json": _response(200, "{}"),
             }
         )
@@ -386,8 +444,31 @@ class TestDiagnose404:
         message = diagnose_404(session, BASE_URL, "A/B/C")
 
         assert "the folder 'A' is readable" in message
-        assert "'B'" in message
-        assert "could not be determined" not in message
+        assert "could not be determined" in message
+        assert "the probe of 'A/B'" in message
+        assert f"returned HTTP {status}" in message
+        assert "under it is not" not in message
+        assert "lacks Job/Read" not in message
+        assert message.endswith(DOCS_POINTER)
+
+    def test_readable_ancestor_does_not_blame_an_unreachable_segment(self) -> None:
+        """A transport failure on 'A/B' is likewise no verdict on 'B'."""
+        session = _session(
+            {
+                f"{BASE_URL}/job/A/job/B/api/json": RequestException(
+                    "connection refused"
+                ),
+                f"{BASE_URL}/job/A/api/json": _response(200, "{}"),
+            }
+        )
+
+        message = diagnose_404(session, BASE_URL, "A/B/C")
+
+        assert "the folder 'A' is readable" in message
+        assert "could not be determined" in message
+        assert "did not complete" in message
+        assert "connection refused" in message
+        assert "lacks Job/Read" not in message
 
     def test_single_segment_path_claims_only_what_was_probed(self) -> None:
         """A leaf-only path has no ancestor, so nothing may be claimed about one.

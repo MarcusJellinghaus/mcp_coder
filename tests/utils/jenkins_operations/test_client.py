@@ -21,7 +21,14 @@ from mcp_coder.utils.jenkins_operations.client import (
 )
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 
-from .conftest import BASE_URL, FIXTURE_HTML, FORBIDDEN_HEAD, _mock_jenkins, _response
+from .conftest import (
+    BASE_URL,
+    FIXTURE_ERROR,
+    FIXTURE_HTML,
+    FORBIDDEN_HEAD,
+    _mock_jenkins,
+    _response,
+)
 
 
 class TestGetJenkinsConfig:
@@ -334,11 +341,12 @@ class TestJenkinsClientStartJob:
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_start_job_jenkins_error(self, mock_jenkins_class: MagicMock) -> None:
-        """Test JenkinsException is wrapped as JenkinsError.
+        """Test JenkinsException is wrapped as JenkinsError, without the HTML.
 
         The payload is the real shape python-jenkins produces - its one-line
         message plus the raw HTML body. A one-line payload here is what let the
-        HTML bug look correct.
+        HTML bug look correct, so the message is checked for markup too: a
+        context-prefix match alone passes even when the whole page is appended.
         """
         # Setup
         mock_client = _mock_jenkins(
@@ -355,8 +363,14 @@ class TestJenkinsClientStartJob:
         client = JenkinsClient(BASE_URL, "user", "token")
 
         # Execute & Verify
-        with pytest.raises(JenkinsError, match="Failed to start job 'test-job'"):
+        with pytest.raises(
+            JenkinsError, match="Failed to start job 'test-job'"
+        ) as excinfo:
             client.start_job("test-job")
+
+        message = str(excinfo.value)
+        assert FIXTURE_ERROR in message
+        assert "<" not in message
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_start_job_generic_error(self, mock_jenkins_class: MagicMock) -> None:

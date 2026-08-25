@@ -53,6 +53,10 @@ _ERROR_PARAGRAPH_RE = re.compile(
 _HEADING_RE = re.compile(r"<h1[^>]*>(.*?)</h1>", re.DOTALL | re.IGNORECASE)
 _TAG_RE = re.compile(r"<[^>]+>")
 
+# The statuses Jenkins uses to hide or refuse an item. Only these count as a
+# probe having answered "not readable"; anything else answered nothing.
+_DENIED_STATUSES = (401, 403, 404)
+
 
 @dataclass(frozen=True)
 class ProbeResult:
@@ -248,9 +252,10 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
     from their parent's listing, so a wrong name and a missing Job/Read are
     indistinguishable from outside. Each message claims only what was actually
     probed - a top-level job has no ancestor to probe, so nothing beyond the
-    leaf's own 404 is asserted about it, and an ancestor that was never reached
+    leaf's own 404 is asserted about it; an ancestor that was never reached
     (transport failure, server error) is reported as undetermined rather than
-    counted as unreadable.
+    counted as unreadable; and a segment is called unreadable only when its own
+    probe returned 401/403/404, not merely because the folder above it answered.
 
     Args:
         session: python-jenkins' own session (see ``JenkinsClient.probe_session``).
@@ -271,21 +276,35 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
             f"user lacks Job/Read on it. Check both. {DOCS_POINTER}"
         )
 
-    # Skip the leaf - it already 404'd - and walk ancestors deepest-first.
-    # An ancestor counts as "reached and denied" only for the statuses Jenkins
-    # uses to hide or refuse an item; anything else answered nothing.
+    # Skip the leaf - it already 404'd - and walk ancestors deepest-first, so
+    # the probe of each segment is the one from the previous iteration (None on
+    # the first, where the segment is the leaf and its own 404 is the premise).
     unreached: Optional[tuple[str, ProbeResult]] = None
+    child: Optional[ProbeResult] = None
     for depth in range(len(parts) - 1, 0, -1):
         ancestor = "/".join(parts[:depth])
         result = probe(session, base_url, job_url_path(ancestor) + "/api/json")
         if result.status == 200:
+            segment = parts[depth]
+            if child is not None and child.status not in _DENIED_STATUSES:
+                # The ancestor answered, but the segment below it never did -
+                # calling it unreadable would send the operator to the
+                # authorization matrix for a question no probe asked.
+                return (
+                    f"404 on '{job_path}' - the folder '{ancestor}' is readable, "
+                    f"but whether '{segment}' under it is could not be "
+                    f"determined: the probe of '{ancestor}/{segment}' "
+                    f"{_probe_outcome(child)}. Check the server itself before "
+                    f"changing any permissions. {DOCS_POINTER}"
+                )
             return (
                 f"404 on '{job_path}' - the folder '{ancestor}' is readable; "
-                f"'{parts[depth]}' under it is not. Either the name is wrong or "
+                f"'{segment}' under it is not. Either the name is wrong or "
                 f"the API user lacks Job/Read on it. Check both. {DOCS_POINTER}"
             )
-        if unreached is None and result.status not in (401, 403, 404):
+        if unreached is None and result.status not in _DENIED_STATUSES:
             unreached = (ancestor, result)
+        child = result
 
     if unreached is not None:
         ancestor, result = unreached

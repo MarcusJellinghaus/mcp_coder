@@ -157,8 +157,11 @@ permission gap ends the whole run, and that issues already dispatched before the
 been dispatched — re-running after the fix picks up where it stopped, because dispatched issues
 have moved to their next status label.
 
-A failed run prints a traceback along with the error message. That is the normal fail-fast path,
-not a crash: read the error line above it.
+A failed run ends with a single coordinator error line — `Failed processing issue #N: ...` — and
+exit code 1. No traceback is attached to it. One may still appear just above, logged by the
+operation that raised (`start_job` logs `... FAILED` with the stack), but it no longer carries the
+Jenkins page. Read the error line; that is the diagnosis. `mcp-coder coordinator --dry-run` differs
+— it re-raises, so the CLI's top-level error boundary prints a traceback as well.
 
 ## Related Documentation
 

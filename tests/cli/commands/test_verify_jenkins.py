@@ -16,6 +16,7 @@ from typing import Any, Callable, Generator, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
+from requests import Session
 
 from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS, _format_section
@@ -195,7 +196,9 @@ class TestCredentialResolution:
         assert server_result["overall_ok"] is False
         assert jobs_result == {}
 
-    def test_scheme_less_server_url_renders_failed_row(self) -> None:
+    def test_scheme_less_server_url_renders_failed_row(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """A URL with no scheme is reported, not allowed to abort the command.
 
         Regression guard against catching ValueError alone:
@@ -203,8 +206,16 @@ class TestCredentialResolution:
         ``Session.mount(None, ...)`` raises ``TypeError`` inside
         ``JenkinsClient.__init__``. Uncaught, that aborts the whole
         ``mcp-coder verify`` run before any other section prints. The real
-        JenkinsClient is used here on purpose - a mock cannot reproduce it.
+        JenkinsClient is used here on purpose - a mock cannot reproduce it,
+        which is also why the request seam is blocked: the test must stay
+        hermetic even if construction stops raising.
         """
+
+        def _fail(*_args: Any, **_kwargs: Any) -> None:
+            raise AssertionError("this test must not issue a request")
+
+        monkeypatch.setattr(Session, "request", _fail)
+
         creds = {
             "server_url": "jenkins.example.com",
             "username": "job_manager",
@@ -290,20 +301,34 @@ class TestServerSection:
         assert jobs_result == {}
 
     def test_401_fails_authentication_only(self) -> None:
-        """401 -> authentication fails; Overall/Read is unknown, not a hard fail."""
-        with _patch_env(), _patch_probes(lambda _p: _result(401, "bad credentials")):
+        """401 -> authentication fails; Overall/Read is unknown, not a hard fail.
+
+        A repo is configured on purpose: without one, ``jobs_result == {}``
+        holds whether or not the failed server section actually skips the jobs
+        probe.
+        """
+        config = _repos(**{"my-repo": "Windows-Agents/Executor"})
+        with (
+            _patch_env(config=config),
+            _patch_probes(lambda _p: _result(401, "bad credentials")),
+        ):
             server_result, jobs_result = verify_jenkins()
 
         assert server_result["server"]["ok"] is True
         assert server_result["authentication"]["ok"] is False
         assert server_result["overall_read"]["ok"] is None
         assert server_result["overall_ok"] is False
+        # Every job row would just repeat the same upstream cause.
         assert jobs_result == {}
 
     def test_transport_failure_fails_server_row(self) -> None:
         """A probe that never completed -> server row carries the transport error."""
         message = "HTTPSConnectionPool: Name or service not known"
-        with _patch_env(), _patch_probes(lambda _p: _result(None, message)):
+        config = _repos(**{"my-repo": "Windows-Agents/Executor"})
+        with (
+            _patch_env(config=config),
+            _patch_probes(lambda _p: _result(None, message)),
+        ):
             server_result, jobs_result = verify_jenkins()
 
         assert server_result["server"]["ok"] is False
@@ -353,11 +378,20 @@ class TestJobsSection:
         assert row["install_hint"] == _DOCS
         assert jobs_result["overall_ok"] is False
 
-    def test_job_403_uses_diagnosis(self) -> None:
-        """A 403 on the job probe reports the permission diagnosis."""
+    def test_job_403_uses_diagnosis_with_the_original_error(self) -> None:
+        """A 403 job row carries the sentence from the response that was refused.
+
+        The probes cannot reproduce every 403, so that sentence is the only
+        evidence naming the cause - and asserting only the docs pointer would
+        pass even if ``diagnose_404`` were called or ``result.error_text`` were
+        dropped, since every diagnosis ends with the pointer.
+        """
+        original = "job_manager is missing the Job/Build permission"
 
         def responder(path: str) -> ProbeResult:
-            return _result(200) if path == "/api/json" else _result(403)
+            if path in ("/api/json", "/crumbIssuer/api/json"):
+                return _result(200)
+            return _result(403, original)
 
         config = _repos(**{"my-repo": "Windows-Agents/Executor"})
         with _patch_env(config=config), _patch_probes(responder):
@@ -365,8 +399,74 @@ class TestJobsSection:
 
         row = jobs_result["my-repo"]
         assert row["ok"] is False
+        assert original in row["error"]
+        assert "403 Forbidden" in row["error"]
         assert _DOCS in row["error"]
         assert row["install_hint"] == _DOCS
+
+    def test_job_transport_failure_reports_the_transport_error(self) -> None:
+        """A job probe that never completed renders one failed row, not a crash."""
+
+        def responder(path: str) -> ProbeResult:
+            if path == "/api/json":
+                return _result(200)
+            return _result(None, "HTTPSConnectionPool: connection refused")
+
+        config = _repos(**{"my-repo": "Windows-Agents/Executor"})
+        with _patch_env(config=config), _patch_probes(responder):
+            server_result, jobs_result = verify_jenkins()
+
+        assert server_result["overall_ok"] is True
+        assert set(jobs_result) == {"my-repo", "overall_ok"}
+        row = jobs_result["my-repo"]
+        assert row["ok"] is False
+        assert "connection refused" in row["error"]
+        assert jobs_result["overall_ok"] is False
+
+    def test_job_unexpected_status_is_reported_not_passed(self) -> None:
+        """An unmodelled status on the job probe fails the row, saying which."""
+
+        def responder(path: str) -> ProbeResult:
+            return _result(200) if path == "/api/json" else _result(500)
+
+        config = _repos(**{"my-repo": "Windows-Agents/Executor"})
+        with _patch_env(config=config), _patch_probes(responder):
+            _server_result, jobs_result = verify_jenkins()
+
+        assert set(jobs_result) == {"my-repo", "overall_ok"}
+        row = jobs_result["my-repo"]
+        assert row["ok"] is False
+        assert "500" in row["error"]
+        assert jobs_result["overall_ok"] is False
+
+    def test_repos_without_any_job_path_skip_the_section(self) -> None:
+        """Repos exist but none names a job -> no section, not an empty one.
+
+        Regression guard for returning ``{"overall_ok": True}`` here: verify
+        would print a bare ``=== JENKINS JOBS ===`` header with no rows under it
+        and nothing would fail.
+        """
+        config: dict[str, Any] = {
+            "coordinator": {
+                "repos": {
+                    "no-path": {"github_repository_url": "https://example.invalid"},
+                    "blank-path": {"executor_job_path": "   "},
+                }
+            }
+        }
+        probed: list[str] = []
+
+        def responder(path: str) -> ProbeResult:
+            probed.append(path)
+            return _result(200)
+
+        with _patch_env(config=config), _patch_probes(responder):
+            server_result, jobs_result = verify_jenkins()
+
+        assert server_result["overall_ok"] is True
+        assert jobs_result == {}
+        # Only the server probe ran; no repo was probed.
+        assert probed == ["/api/json"]
 
     def test_no_repos_configured_skips_jobs_section(self) -> None:
         """Server reachable but no coordinator repos -> jobs section skipped."""

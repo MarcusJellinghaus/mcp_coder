@@ -277,7 +277,10 @@ class TestJenkinsExceptionMessages:
         # Verify
         message = str(excinfo.value)
         assert original in message
-        assert "may have changed" not in message
+        # Both probes answered 200, so the diagnosis must say Overall/Read is
+        # granted and point at the failing request - not speculate about it.
+        assert "Overall/Read is granted" in message
+        assert "could not be determined" not in message
         assert "<html" not in message
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
