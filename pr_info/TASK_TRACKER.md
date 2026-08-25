@@ -147,9 +147,32 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: `cli-reference.md` `--dry-run` boy-scout fix ([step_7.md](./steps/step_7.md))
 
-- [ ] Implementation: correct prose and example commands at `docs/cli-reference.md:505-506` and `:1155-1156`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: correct prose and example commands at `docs/cli-reference.md:505-506` and `:1155-1156`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      - Docs-only diff (`git status`: `docs/cli-reference.md` + this tracker), so no test
+        was written and none could regress.
+      - pytest: **PASS** — `tests/cli` → 1099 passed with the standard marker exclusions.
+      - mypy, pylint: clean over `src|tests/mcp_coder/cli` apart from the same
+        pre-existing stale-`.venv` findings recorded in steps 4-6
+        (`check_branch_status.py:154/299/301` and
+        `test_check_branch_status_exit_code.py:29` — `BranchStatusReport` lacks
+        `pr_feedback_undeterminable` and the `fail_on_reviews` kwarg because
+        `mcp-workspace` is an unpinned git dependency, `pyproject.toml:348`).
+        Zero findings in any file this step touched. `tools\reinstall_local.bat` still
+        clears the environment gap.
+      - Link check: `docs/repository-setup/jenkins.md` exists (step 2) and its H1 is
+        "Jenkins Setup", matching the added cross-reference text.
+      - **Three coordinator sites corrected, not two.** Beyond `:505-506` and
+        `:1155-1156`, `:1123` showed `mcp-coder coordinator --repo repo_name --dry-run`,
+        which `main.py:165-171` also rejects for the missing `--branch-name`; step_7.md's
+        "check for any other occurrence" instruction covers it. The quick-reference table
+        row at `:50` was reworded to match `parsers.py:316`.
+      - `--branch-name` was undocumented in the options list; added at `:493` so the
+        corrected examples are self-explanatory.
+      - **Out of scope, untouched as instructed:** `gh-tool define-labels --dry-run`
+        (`:593`, `:611`) genuinely *is* a preview, and `parsers.py:314-316` was already
+        correct.
+- [x] Commit message prepared
 
 ## Pull Request
 

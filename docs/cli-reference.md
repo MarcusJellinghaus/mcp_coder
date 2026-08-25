@@ -47,7 +47,7 @@ Orchestration and monitoring of automated development across repositories.
 
 | Command | Description |
 |---------|-------------|
-| [`coordinator --dry-run`](#coordinator) | Trigger Jenkins integration test for repository |
+| [`coordinator --dry-run`](#coordinator) | Trigger Jenkins test instead of dispatching workflows |
 | [`coordinator`](#coordinator) | Monitor and dispatch workflows for GitHub issues |
 
 ### Quality Checks
@@ -489,10 +489,13 @@ mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]
 - `--repo NAME` - Process single repository (required if --all not specified)
 
 **Additional Options:**
-- `--dry-run` - Trigger Jenkins integration test for repository
+- `--dry-run` - Trigger Jenkins test instead of dispatching workflows (requires `--repo` and `--branch-name`)
+- `--branch-name BRANCH` - Git branch to test (required with `--dry-run`)
 - `--force-refresh` - Force full cache refresh, bypass all caching
 
 **Description:** Monitor GitHub issues and automatically dispatch workflows (create-plan, implement, create-pr, and the optional review-plan / review-implementation) based on issue labels and status.
+
+`--dry-run` runs a real Jenkins build of the executor job against the given branch, without touching GitHub issues or labels — it is the recommended first-run check for a newly configured repository. See [Jenkins Setup](repository-setup/jenkins.md) for the required permissions and credentials.
 
 **Examples:**
 ```bash
@@ -502,8 +505,8 @@ mcp-coder coordinator --all
 # Process single repository
 mcp-coder coordinator --repo mcp_coder
 
-# Preview without executing
-mcp-coder coordinator --all --dry-run
+# Smoke-test one repo on Jenkins (triggers a real build; changes no issues or labels)
+mcp-coder coordinator --dry-run --repo mcp_coder --branch-name main
 
 # Force cache refresh
 mcp-coder coordinator --all --force-refresh
@@ -1120,7 +1123,7 @@ Some commands require configuration on first run:
 
 ```bash
 # Coordinator commands auto-create config template
-mcp-coder coordinator --repo repo_name --dry-run
+mcp-coder coordinator --dry-run --repo repo_name --branch-name main
 # Output: Created default config file at ~/.mcp_coder/config.toml
 ```
 
@@ -1152,8 +1155,8 @@ mcp-coder prompt "What's the next step?" --continue-session
 # Monitor all repositories for automation
 mcp-coder coordinator --all
 
-# Preview without executing
-mcp-coder coordinator --all --dry-run
+# Smoke-test one repo on Jenkins (triggers a real build; changes no issues or labels)
+mcp-coder coordinator --dry-run --repo mcp_coder --branch-name main
 ```
 
 ---
