@@ -110,7 +110,7 @@ _LABEL_MAP: dict[str, str] = {
     "api_key": "API key",
     "langchain_core": "LangChain core",
     "backend_package": "Backend package",
-    "endpoint_shape": "Endpoint",
+    "base_url_shape": "Base URL",
     "base_url_redirect": "Base URL redirect",
     "api_key_override": "API key override",
     "available_models": "Available models",

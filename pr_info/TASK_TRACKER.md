@@ -458,9 +458,82 @@ Details: [step_7.md](./steps/step_7.md)
 
 Details: [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`_check_base_url_shape` now takes the `ResolvedTarget` step 7 binds from
+      the run's single `resolve_target(config)` call — no second resolution and
+      no second chat-model construction. The three heuristics are byte-identical;
+      only the input changed, plus a `(source: {target.source})` suffix on **all
+      four** returned values. Skips: `api_version` (explicit Azure skip — the
+      resolved Azure URL ends in `openai/deployments/<name>/`, so the `/v1` rule
+      would fire on a correct config) and both sentinels, `"n/a"` and
+      `_UNSET_TARGET` **imported** from `_config_diagnostics` rather than
+      re-typed, so the sentinel can never be reported as a malformed URL; a
+      *configured* `base_url` is still checked in the unverified case. Call-site
+      gate unchanged at `backend == "openai"` — `/v1` is an OpenAI/relay
+      convention and a correct ollama host has none, so an `OLLAMA_HOST` redirect
+      is left to the `base_url_redirect` row. Still advisory: `ok` is only True
+      or None, never False. Same commit carries Decision 19's deferred half —
+      result key `endpoint_shape` → `base_url_shape` and `_LABEL_MAP`
+      `"Endpoint"` → `"Base URL"`.
+
+      **Test placement note.** The shape tests live in the new
+      `tests/llm/providers/langchain/test_langchain_base_url_shape.py` (29 tests,
+      TDD cases 1-9) rather than being added to `test_langchain_verification.py`
+      as step_8.md's WHERE suggests: that file is at 614 lines, the new coverage
+      is ~180, and step 9 adds contract rows to the same file — in-place would
+      have pushed it against the 750-line limit, the same reasoning step 7 used
+      when it split `test_langchain_effective_config.py` out. The old
+      config-string tests (`TestCheckBaseUrlShape`,
+      `TestVerifyLangchainEndpointShape`) are deleted from
+      `test_langchain_verification.py`. The `verify_langchain` wiring tests stub
+      `_create_chat_model` so the **real** `resolve_target` runs end to end
+      without a langchain install; TDD 8 instead patches `resolve_target` itself
+      and asserts `call_count == 1` with both the echo and the shape row present.
+      TDD 9 asserts `_LABEL_MAP["base_url_shape"] == "Base URL"` and that no
+      `"Endpoint"` label survives anywhere in the map.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in any file this step touches**: pylint scoped to
+      `verification.py`, `verify_formatting.py` and the three touched test files
+      reports nothing beyond the environmental `E0401`; mypy over
+      `src/mcp_coder/llm/providers/langchain`, `src/mcp_coder/cli/commands`,
+      `tests/llm/providers/langchain` and `tests/cli/commands` reports only the
+      4 known `check_branch_status` findings; ruff clean; isort clean; black
+      reformatted the new test file once and is now a no-op across 622 files.
+      lint-imports: 21 contracts kept. Step 8's own tests pass —
+      `test_langchain_base_url_shape.py` → 29 passed. Wider runs: `tests/cli`
+      → 996 passed; all of `tests/llm/providers/langchain` plus the verify
+      formatting/orchestration modules clean apart from the known environmental
+      failures. `mcp-coder check file-size --max-lines 750` flags only the
+      pre-existing `tests/cli/commands/test_verify_orchestration.py` (871 lines,
+      grown by steps 3-4), which step 8 does not touch;
+      `test_langchain_verification.py` shrank to 537 lines and
+      `verification.py` is at 583.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-7: the `.venv` copy of the unpinned git dependency `mcp-workspace` lacks
+      `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and pytest
+      collects zero tests (confirmed again this run: the first unshimmed run
+      collected 0). Same workaround: a throwaway `.pytest_shim/sitecustomize.py`
+      registering a stand-in `mcp_workspace.checks.branch_status_rendering`
+      (re-export `CIStatus` from `mcp_workspace.checks.branch_status`, any str
+      for `GITHUB_TOKEN_HINT`), run pytest with
+      `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the directory afterwards
+      — it is **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all
+      pre-existing, none in files this step touches: the six
+      `tests/cli/commands/test_check_branch_status*.py` modules (stale
+      `CIStatus.UNAVAILABLE` / `BranchStatusReport` API), excluded via
+      `--ignore-glob` for the 996-test `tests/cli` run; the three
+      `tests/llm/providers/copilot/test_copilot_integration.py` tests (no
+      working `copilot` CLI); and
+      `test_langchain_exceptions.py::…httpx_connect_error` (`httpx` absent →
+      MagicMock).)
+- [x] Commit message prepared
 
 ### Step 9: Contract findings in `verify` + exit-code wiring
 

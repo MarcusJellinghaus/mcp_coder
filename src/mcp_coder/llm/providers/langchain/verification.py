@@ -19,6 +19,8 @@ from . import _load_langchain_config
 from ._config_diagnostics import (
     _API_KEY_ENV,
     _KEYLESS_ENV,
+    _UNSET_TARGET,
+    ResolvedTarget,
     _targets_match,
     describe_effective_config,
     mode_of,
@@ -147,47 +149,53 @@ def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
 
 
 def _check_base_url_shape(
-    base_url: str | None, api_version: str | None
+    target: ResolvedTarget, api_version: str | None
 ) -> dict[str, Any] | None:
-    """Pure string heuristic for a custom OpenAI base URL (no network).
+    """Pure string heuristic against the URL the client will actually dial.
 
     Flags a base URL that is provably wrong (contains ``/completions``),
     malformed (missing scheme or host), or missing the conventional ``/v1``
     suffix. WARN-level findings use ``ok=None`` with the guidance carried
-    inside ``value``; INFO and healthy findings use ``ok=True``.
+    inside ``value``; INFO and healthy findings use ``ok=True``. Every value
+    names the provenance of the URL, which may well be an env var rather than
+    config — that redirect case is precisely what a config-string check missed.
 
     Args:
-        base_url: Custom base URL from config, or None.
+        target: The resolved target from :func:`resolve_target`.
         api_version: Azure API version from config, or None. When set the
-            backend routes to AzureChatOpenAI, so this heuristic is skipped.
+            backend routes to AzureChatOpenAI, whose dialed URL ends in
+            ``openai/deployments/<name>/``, so the ``/v1`` rule would fire on
+            a *correct* config and the heuristic is skipped.
 
     Returns:
         A verify-style dict with ``ok`` (``None`` | ``True``) and ``value``
-        (str), or None when the check does not apply (api_version set →
-        Azure path, or no custom base URL configured).
+        (str), or None when the check does not apply (Azure, or a sentinel
+        target that is not a URL at all).
     """
-    if api_version or not base_url:
+    if api_version or target.url in ("n/a", _UNSET_TARGET):
         return None
-    if "/completions" in base_url:
+    url = target.url
+    src = f"(source: {target.source})"
+    if "/completions" in url:
         return {
             "ok": None,
             "value": (
-                f"{base_url} — contains '/completions'; use the base URL only "
-                "e.g. https://host/v1 (mcp-coder appends /chat/completions)"
+                f"{url} — contains '/completions'; use the base URL only "
+                f"e.g. https://host/v1 (mcp-coder appends /chat/completions) {src}"
             ),
         }
-    parsed = urlparse(base_url)
+    parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         return {
             "ok": None,
-            "value": f"{base_url} — malformed URL; use e.g. https://host/v1",
+            "value": f"{url} — malformed URL; use e.g. https://host/v1 {src}",
         }
-    if not base_url.rstrip("/").endswith("/v1"):
+    if not url.rstrip("/").endswith("/v1"):
         return {
             "ok": True,
-            "value": f"{base_url} — most relays use .../v1",
+            "value": f"{url} — most relays use .../v1 {src}",
         }
-    return {"ok": True, "value": base_url}
+    return {"ok": True, "value": f"{url} {src}"}
 
 
 def verify_langchain(
@@ -291,12 +299,14 @@ def verify_langchain(
             "value": "no backend configured",
         }
 
-    # Base-URL-shape heuristic (openai custom base URL; advisory only, never
-    # contributes to overall_ok).
+    # Base-URL-shape heuristic over the *resolved* target, reusing the probe
+    # above — advisory only, never contributes to overall_ok. The gate stays at
+    # openai: /v1 is an OpenAI/relay convention, and a correct ollama host has
+    # no /v1 at all. An OLLAMA_HOST redirect is surfaced by the row below.
     if backend == "openai":
-        shape = _check_base_url_shape(config.get("base_url"), config.get("api_version"))
+        shape = _check_base_url_shape(target, config.get("api_version"))
         if shape is not None:
-            result["endpoint_shape"] = shape
+            result["base_url_shape"] = shape
 
     # Exit-neutral flags: something outside config.toml won. The redirect row
     # is keyed on the variable that actually *produced* the dialed URL, not on
