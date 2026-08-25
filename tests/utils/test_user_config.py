@@ -87,6 +87,110 @@ class TestFormatTomlError:
             assert str(config_file) in result
             assert "TOML parse error" in result
 
+    def test_format_hints_at_smart_quotes(self, tmp_path: Path) -> None:
+        """Curly quotes on the error line produce the smart-quote hint."""
+        # Setup - value delimited by U+201C / U+201D instead of straight quotes
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[llm.langchain]\nbase_url = \u201chttps://relay/v1\u201d\n",
+            encoding="utf-8",
+        )
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Execute
+            result = _format_toml_error(config_file, error)
+
+            # Verify - smart-quote hint present, backslash hint absent
+            assert "Curly/smart quotes" in result
+            assert "Use straight quotes" in result
+            assert "Backslashes in paths" not in result
+
+    def test_format_hints_at_single_smart_quotes(self, tmp_path: Path) -> None:
+        """Curly single quotes (U+2018/U+2019) also trigger the hint."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[llm.langchain]\nmodel = \u2018gpt-4o\u2019\n", encoding="utf-8"
+        )
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Execute
+            result = _format_toml_error(config_file, error)
+
+            # Verify
+            assert "Curly/smart quotes" in result
+
+    def test_format_backslash_hint_without_smart_quote_hint(
+        self, tmp_path: Path
+    ) -> None:
+        """An unescaped Windows path keeps the backslash hint only."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('path = "C:\\Users\\name"\n', encoding="utf-8")
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Execute
+            result = _format_toml_error(config_file, error)
+
+            # Verify - only the backslash hint
+            assert "Backslashes in paths" in result
+            assert "Curly/smart quotes" not in result
+
+    def test_format_plain_syntax_error_has_no_hints(self, tmp_path: Path) -> None:
+        """A plain syntax error renders neither hint."""
+        # Setup - missing '=' between key and value
+        config_file = tmp_path / "config.toml"
+        config_file.write_text('key "value"\n', encoding="utf-8")
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Execute
+            result = _format_toml_error(config_file, error)
+
+            # Verify
+            assert "Curly/smart quotes" not in result
+            assert "Backslashes in paths" not in result
+
+    def test_format_smart_quotes_unreadable_file_has_no_hint(
+        self, tmp_path: Path
+    ) -> None:
+        """Unreadable file skips the smart-quote hint without crashing."""
+        # Setup
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "base_url = \u201chttps://relay/v1\u201d\n", encoding="utf-8"
+        )
+
+        try:
+            with open(config_file, "rb") as f:
+                tomllib.load(f)
+            pytest.fail("Expected TOMLDecodeError")
+        except tomllib.TOMLDecodeError as error:
+            # Delete file so the error line can't be read
+            config_file.unlink()
+
+            # Execute - should not raise
+            result = _format_toml_error(config_file, error)
+
+            # Verify - no hint, but the error is still reported
+            assert "TOML parse error" in result
+            assert "Curly/smart quotes" not in result
+
 
 class TestLoadConfig:
     """Tests for load_config function."""

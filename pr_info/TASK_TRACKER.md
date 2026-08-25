@@ -1193,9 +1193,30 @@ Details: [step_17.md](./steps/step_17.md)
 
 Details: [step_18.md](./steps/step_18.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (TDD: 5 new tests in `TestFormatTomlError` (`tests/utils/test_user_config.py`) covering
+      all four TDD points — double smart quotes, single smart quotes, backslash-hint-only,
+      plain syntax error, unreadable file — written and failing before the production edit.
+      `_format_toml_error` in `user_config.py` now hoists `error_line` out of the `try` block
+      (initialised to `""`, so the existing `OSError` path yields no hint) and appends a
+      second `Hint:` block beside the backslash one. No signature change, no second file read,
+      new module constant `_SMART_QUOTES = "“”‘’"`.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in the two files this step touches.** pylint + mypy scoped to
+      `src/mcp_coder/utils` + `tests/utils`: clean. pytest: the 8 `TestFormatTomlError` tests
+      pass and all 314 `tests/utils` tests pass; `tests/cli tests/config tests/llm` show only
+      the 4 pre-existing failures documented in step 17.
+      **Environment caveat — pre-existing, unrelated to this step:** the venv's installed
+      `mcp-workspace` predates `mcp_workspace.checks.branch_status_rendering`, so every test
+      collection fails until it is reinstalled; runs above used
+      `PYTHONPATH=C:/Users/Marcus/Documents/GitHub/mcp-workspace/src` to work around it. That
+      same staleness plus missing optional packages (`langchain_*`, `httpx`, `mcp.server.fastmcp`)
+      is the sole source of the project-wide mypy (9) and pylint (E0401/E1123/E0611/E1101)
+      findings — all in `check_branch_status.py`, `checks/branch_status.py`, the langchain
+      modules and their tests. Pre-existing test failures: 3 copilot CLI integration tests,
+      `test_connection_errors_contains_httpx_connect_error` (no real `httpx`).
+      black/isort clean.)
+- [x] Commit message prepared
 
 ### Step 19: Documentation
 

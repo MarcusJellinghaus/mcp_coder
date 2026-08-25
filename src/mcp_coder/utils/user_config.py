@@ -30,6 +30,10 @@ class FieldDef:
     env_var: str | None = None
 
 
+# Curly quotes pasted from chat windows or documents (U+201C/U+201D/U+2018/U+2019)
+_SMART_QUOTES = "“”‘’"
+
+
 _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
     "github": {
         "token": FieldDef(str, required=True, env_var="GITHUB_TOKEN"),
@@ -131,6 +135,9 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
     # Build the file/line header
     lines = [f'  File "{file_path}", line {line_num}']
 
+    # Offending line content - stays empty when the file can't be read
+    error_line = ""
+
     # Try to read the error line from the file
     try:
         file_content = file_path.read_text(encoding="utf-8")
@@ -159,6 +166,12 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
         lines.append("Hint: Backslashes in paths need escaping in TOML.")
         lines.append('  Use forward slashes: "C:/Users/..."')
         lines.append("  Or single quotes:    'C:\\Users\\...'")
+
+    # Add hint for curly/smart quotes pasted from a chat window or a document
+    if any(ch in error_line for ch in _SMART_QUOTES):
+        lines.append("")
+        lines.append("Hint: Curly/smart quotes are not valid TOML string delimiters.")
+        lines.append("  Use straight quotes: \"value\" or 'value'")
 
     return "\n".join(lines)
 
