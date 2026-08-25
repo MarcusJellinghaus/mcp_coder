@@ -25,7 +25,7 @@ from mcp_coder.llm.storage.session_storage import (
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEvent
 from mcp_coder.utils.user_config import get_config_values
 
-from ._config_diagnostics import validate
+from ._config_diagnostics import dialed_url, validate
 from ._errors_404 import _format_404_hint
 from ._errors_404 import _is_404_error as _is_404_error  # re-exported for tests
 from ._exceptions import (
@@ -110,23 +110,32 @@ def _auth_errors_for_backend(backend: str | None) -> tuple[type[Exception], ...]
     return ()
 
 
-def _handle_provider_error(exc: Exception, backend: str | None) -> None:
+def _handle_provider_error(
+    exc: Exception, backend: str | None, dialed: str | None = None
+) -> None:
     """Raise LLMAuthError or LLMConnectionError when *exc* matches, else return.
 
     Args:
         exc: The caught exception.
         backend: Backend name ("openai", "gemini", "anthropic", or None).
+        dialed: The URL the constructed client actually dials, when known.
+            Callers read it off the client with :func:`dialed_url`, never from
+            config — a config-derived value is wrong the moment OPENAI_BASE_URL
+            or OLLAMA_HOST redirects the request, which is exactly the case a
+            connection error needs to expose. Left at None the message is
+            byte-identical to before, keeping the static per-backend hint.
     """
     auth_errors = _auth_errors_for_backend(backend)
     provider, env_var, base_url_hint = _BACKEND_ERROR_PARAMS.get(
         backend or "", (backend or "", "", "")
     )
+    hint = f"tried {dialed}" if dialed else base_url_hint
     if auth_errors and isinstance(exc, auth_errors):
         if backend == "gemini" and not is_google_auth_error(exc):
-            raise_connection_error(provider, env_var, exc, base_url_hint)
+            raise_connection_error(provider, env_var, exc, hint)
         raise_auth_error(provider, env_var, exc)
     if isinstance(exc, CONNECTION_ERRORS):
-        raise_connection_error(provider, env_var, exc, base_url_hint)
+        raise_connection_error(provider, env_var, exc, hint)
 
 
 def _load_langchain_config() -> dict[str, str | None]:
@@ -353,7 +362,7 @@ def _ask_text(
     try:
         ai_msg = chat_model.invoke(lc_messages)
     except Exception as exc:
-        _handle_provider_error(exc, backend)
+        _handle_provider_error(exc, backend, dialed_url(chat_model))
         if _is_404_error(exc):
             raise ValueError(_format_404_hint(config)) from exc
         raise
@@ -429,7 +438,7 @@ def _ask_agent(
             )
         )
     except Exception as exc:
-        _handle_provider_error(exc, agent_backend)
+        _handle_provider_error(exc, agent_backend, dialed_url(chat_model))
         raise
 
     # No storage here: run_agent drains run_agent_stream, which is the single
@@ -587,7 +596,7 @@ def _ask_agent_stream(
     # cancelled (GeneratorExit) to avoid masking the exit.
     if error_holder and not cancelled:
         held_exc = error_holder[0]
-        _handle_provider_error(held_exc, config.get("backend"))
+        _handle_provider_error(held_exc, config.get("backend"), dialed_url(chat_model))
         raise held_exc
 
 
@@ -710,7 +719,7 @@ def _ask_text_stream(
     except TimeoutError:
         raise
     except Exception as exc:
-        _handle_provider_error(exc, backend)
+        _handle_provider_error(exc, backend, dialed_url(chat_model))
         # Handle 404/model-not-found errors (mirrors _ask_text() path)
         if _is_404_error(exc):
             hint = _format_404_hint(config)

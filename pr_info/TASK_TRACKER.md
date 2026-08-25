@@ -648,9 +648,101 @@ Details: [step_9.md](./steps/step_9.md)
 
 Details: [step_10.md](./steps/step_10.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`_handle_provider_error` gains `dialed: str | None = None` and folds it
+      into one local — `hint = f"tried {dialed}" if dialed else base_url_hint`
+      — used by **both** `raise_connection_error` sites, so the gemini
+      non-auth-`ClientError` branch names the host too, not just the
+      `CONNECTION_ERRORS` branch. `_exceptions.raise_connection_error` is
+      untouched; it already renders the value as `  2. base_url: {hint}`. The
+      falsy guard is deliberate: `dialed=""` falls back to the static hint
+      rather than printing a bare `tried `. Threaded at **all four** call
+      sites with step 6's `dialed_url(chat_model)` — `_ask_text:365`,
+      `_ask_agent:441`, `_ask_agent_stream:599` (the held-thread exception)
+      and `_ask_text_stream:724` — no plumbing needed, `chat_model` is already
+      the local each `except` block sits under. `dialed_url` joins `validate`
+      on the existing module-level `from ._config_diagnostics import`, which
+      stays cycle-free because that module imports stdlib only.
+      Consequence worth stating: a backend whose `_BACKEND_ERROR_PARAMS` hint
+      is `""` (gemini, anthropic) now gets a `base_url:` line it never had.
+
+      `verification.py`: the `_list_models_for_backend` connection branch
+      appends `— tried {base_url}` when a base_url was handed to the SDK. This
+      is the one place the value is *not* read off a constructed client —
+      there is no langchain client on that path, only the raw SDK call — so it
+      is omitted entirely rather than guessed when `base_url` is None, which
+      also leaves the existing `test_connection_error_message_preserved`
+      (base_url=None) exact-match assertion valid.
+
+      **Test placement note.** The 17 tests live in the new
+      `tests/llm/providers/langchain/test_langchain_dialed_host.py` rather than
+      being split across `test_langchain_provider.py` (664 lines) and
+      `test_langchain_verification.py` (543) as step_10.md's WHERE suggests:
+      the provider file would have passed the 750-line limit, and the four
+      provider-path tests plus the `--check-models` tests are one subject. Same
+      reasoning steps 7-9 used. TDD cases 1-4 are all covered, plus: the empty
+      -string guard, the ollama and anthropic hint variants, auth errors *not*
+      naming the host, the gemini second branch, and a `dialed_url() -> None`
+      client keeping today's message. Every provider-path test leaves
+      `config["base_url"]` unset while the stub client reports
+      `https://relay.internal/v1`, so the assertion can only pass if the value
+      came off the client — which is the whole point of the step.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in any file this step touches**: pylint scoped to
+      `__init__.py`, `verification.py` and the new test file reports nothing
+      beyond the environmental `E0401`; mypy over
+      `src/mcp_coder/llm/providers/langchain` + `tests/llm/providers/langchain`
+      is clean; ruff clean; isort clean; black reformatted the new test file
+      and `__init__.py` once and is now a no-op across 624 files.
+      lint-imports: 21 contracts kept. Step 10's own tests pass —
+      `test_langchain_dialed_host.py` → 17 passed. Wider runs:
+      `tests/llm/providers/langchain` → 579 passed, 1 deselected (the known
+      httpx failure); `tests/cli` → 998 passed.
+      `mcp-coder check file-size --max-lines 750` flags only the pre-existing
+      `tests/cli/commands/test_verify_orchestration.py` (871 lines, grown by
+      steps 3-4), which step 10 does not touch; `__init__.py` is at 731 lines
+      and the new test file at 288.
+
+      **One finding was real and is fixed:** pylint `W0101` (unreachable) on
+      the first spelling of the agent-stream stub, a
+      `raise`-then-`yield` async generator. Replaced with a small
+      `_RaisingAsyncIter` class — the shape
+      `test_langchain_agent_streaming.py` already uses for the same purpose.
+
+      **Order-of-work note:** unlike steps 1-9 this step's production edit
+      landed before the tests were written, so the tests were green on first
+      run rather than red-then-green. They are not vacuous — every case-1/3
+      assertion matches on the literal `tried `, a string that exists nowhere
+      in the pre-change tree — but the TDD convention in `summary.md` was not
+      followed to the letter here.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-9: the `.venv` copy of the unpinned git dependency `mcp-workspace`
+      lacks `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and
+      pytest collects zero tests (confirmed again this run: the first
+      unshimmed run collected 0). Same workaround: a throwaway
+      `.pytest_shim/sitecustomize.py` registering a stand-in
+      `mcp_workspace.checks.branch_status_rendering` (re-export `CIStatus` from
+      `mcp_workspace.checks.branch_status`, any str for `GITHUB_TOKEN_HINT`),
+      run pytest with `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the
+      directory afterwards — it is **not** committed (`git status` confirms
+      only the three intended files). Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all
+      pre-existing, none in files this step touches: the six
+      `tests/cli/commands/test_check_branch_status*.py` modules (stale
+      `CIStatus.UNAVAILABLE` / `BranchStatusReport` API), excluded via
+      `--ignore-glob` for the 998-test `tests/cli` run; and
+      `test_langchain_exceptions.py::TestErrorTuples::…httpx_connect_error`
+      (`httpx` absent → `CONNECTION_ERRORS` falls back to `(ConnectionError,)`
+      at import time, before the conftest MagicMock lands). That fallback is
+      also why the new tests raise a plain `ConnectionError` rather than an
+      `httpx.ConnectError`.)
+- [x] Commit message prepared
 
 ### Step 11: `--check-models` cross-checks the configured model
 

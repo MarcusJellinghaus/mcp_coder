@@ -464,7 +464,12 @@ def _list_models_for_backend(
             return {"ok": False, "value": [], "error": f"Unknown backend: {backend}"}
         return {"ok": True, "value": models}
     except LLMConnectionError as exc:
-        return {"ok": False, "value": [], "error": str(exc), "error_type": "connection"}
+        # Name the URL the listing call used. Unlike the provider paths there
+        # is no constructed langchain client to read here, so this is the
+        # base_url that was handed to the SDK; it is omitted entirely rather
+        # than guessed when nothing was passed.
+        error = f"{exc} — tried {base_url}" if base_url else str(exc)
+        return {"ok": False, "value": [], "error": error, "error_type": "connection"}
     except LLMAuthError as exc:
         return {"ok": False, "value": [], "error": str(exc), "error_type": "auth"}
     except Exception as exc:  # pylint: disable=broad-exception-caught
