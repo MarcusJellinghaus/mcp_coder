@@ -147,6 +147,25 @@ def probe(session: Session, base_url: str, path: str) -> ProbeResult:
     return ProbeResult(status=response.status_code, url=url, error_text=error_text)
 
 
+def _probe_outcome(result: ProbeResult) -> str:
+    """Describe a probe that neither answered 200 nor denied access.
+
+    Used to say what actually happened instead of reading a non-answer as
+    evidence for a permission verdict.
+
+    Args:
+        result: The probe outcome to describe.
+
+    Returns:
+        A verb phrase, e.g. "did not complete (connection refused)".
+    """
+    if result.status is None:
+        detail = f" ({result.error_text})" if result.error_text else ""
+        return f"did not complete{detail}"
+    detail = f' - "{result.error_text}"' if result.error_text else ""
+    return f"returned HTTP {result.status}{detail}"
+
+
 def diagnose_403(
     session: Session, base_url: str, original_error: Optional[str] = None
 ) -> str:
@@ -157,10 +176,13 @@ def diagnose_403(
     original exception, yet it is what actually fails when Overall/Read is
     missing.
 
-    When both probes succeed the rejection was specific to the failing request
-    (typically Job/Build on the executor job). The probes cannot reproduce it,
-    so ``original_error`` - the sentence extracted from the failing response -
-    is the only evidence naming the cause and is surfaced verbatim.
+    Only a 200 from *both* probes establishes that Overall/Read is granted;
+    that is when the rejection was specific to the failing request (typically
+    Job/Build on the executor job), and ``original_error`` - the sentence
+    extracted from the failing response - is the only evidence naming the
+    cause, so it is surfaced verbatim. Any other outcome (a server error, a
+    probe that never completed) proves nothing either way and is reported as
+    such rather than dressed up as a permission verdict.
 
     Args:
         session: python-jenkins' own session (see ``JenkinsClient.probe_session``).
@@ -171,8 +193,10 @@ def diagnose_403(
     Returns:
         Complete operator-facing diagnosis including remedy and docs pointer.
     """
+    outcomes: list[tuple[str, ProbeResult]] = []
     for path in ("/api/json", "/crumbIssuer/api/json"):
         result = probe(session, base_url, path)
+        outcomes.append((path, result))
         detail = f' - "{result.error_text}"' if result.error_text else ""
 
         if result.status == 401:
@@ -187,6 +211,19 @@ def diagnose_403(
                 "call. Grant it in the global authorization matrix (it cannot be "
                 f"granted per-job). {DOCS_POINTER}"
             )
+
+    inconclusive = next(
+        ((path, result) for path, result in outcomes if result.status != 200), None
+    )
+    if inconclusive is not None:
+        path, result = inconclusive
+        original_detail = f' - "{original_error}"' if original_error else ""
+        return (
+            f"403 Forbidden{original_detail}. Whether Overall/Read is missing "
+            f"could not be determined: the diagnostic probe of {path} "
+            f"{_probe_outcome(result)}. Check the server itself before changing "
+            f"any permissions. {DOCS_POINTER}"
+        )
 
     if original_error:
         return (
@@ -211,7 +248,9 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
     from their parent's listing, so a wrong name and a missing Job/Read are
     indistinguishable from outside. Each message claims only what was actually
     probed - a top-level job has no ancestor to probe, so nothing beyond the
-    leaf's own 404 is asserted about it.
+    leaf's own 404 is asserted about it, and an ancestor that was never reached
+    (transport failure, server error) is reported as undetermined rather than
+    counted as unreadable.
 
     Args:
         session: python-jenkins' own session (see ``JenkinsClient.probe_session``).
@@ -233,6 +272,9 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
         )
 
     # Skip the leaf - it already 404'd - and walk ancestors deepest-first.
+    # An ancestor counts as "reached and denied" only for the statuses Jenkins
+    # uses to hide or refuse an item; anything else answered nothing.
+    unreached: Optional[tuple[str, ProbeResult]] = None
     for depth in range(len(parts) - 1, 0, -1):
         ancestor = "/".join(parts[:depth])
         result = probe(session, base_url, job_url_path(ancestor) + "/api/json")
@@ -242,6 +284,17 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
                 f"'{parts[depth]}' under it is not. Either the name is wrong or "
                 f"the API user lacks Job/Read on it. Check both. {DOCS_POINTER}"
             )
+        if unreached is None and result.status not in (401, 403, 404):
+            unreached = (ancestor, result)
+
+    if unreached is not None:
+        ancestor, result = unreached
+        return (
+            f"404 on '{job_path}' - which part of that path is readable could "
+            f"not be determined: the probe of '{ancestor}' "
+            f"{_probe_outcome(result)}. Check the server itself before changing "
+            f"any permissions. {DOCS_POINTER}"
+        )
 
     return (
         f"404 on '{job_path}' - no folder in that path is readable either. Either "

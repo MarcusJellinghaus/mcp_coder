@@ -250,6 +250,69 @@ class TestDiagnose403:
         assert "Job/Build" in message
         assert message.endswith(DOCS_POINTER)
 
+    @pytest.mark.parametrize("status", [500, 503])
+    def test_server_error_probe_claims_no_permission_verdict(self, status: int) -> None:
+        """A 5xx probe proves nothing about Overall/Read, so nothing is claimed.
+
+        Regression guard for treating "neither 401 nor 403" as success: that
+        reports "Overall/Read is granted" and points at Job/Build for a server
+        that was never in a position to answer.
+        """
+        session = _session(
+            {
+                f"{BASE_URL}/api/json": _response(status, ""),
+                f"{BASE_URL}/crumbIssuer/api/json": _response(status, ""),
+            }
+        )
+
+        message = diagnose_403(
+            session, BASE_URL, original_error="job_manager is denied"
+        )
+
+        assert "could not be determined" in message
+        assert f"returned HTTP {status}" in message
+        assert "/api/json" in message
+        assert "job_manager is denied" in message
+        assert "Overall/Read is granted" not in message
+        assert "Job/Build" not in message
+        assert message.endswith(DOCS_POINTER)
+
+    def test_transport_failure_claims_no_permission_verdict(self) -> None:
+        """A probe that never completed is reported as such, not as success."""
+        session = _session(
+            {
+                f"{BASE_URL}/api/json": RequestException("connection refused"),
+                f"{BASE_URL}/crumbIssuer/api/json": RequestException(
+                    "connection refused"
+                ),
+            }
+        )
+
+        message = diagnose_403(session, BASE_URL)
+
+        assert "could not be determined" in message
+        assert "did not complete" in message
+        assert "connection refused" in message
+        assert "Overall/Read is granted" not in message
+        assert "Job/Build" not in message
+        assert message.endswith(DOCS_POINTER)
+
+    def test_crumb_issuer_failure_claims_no_permission_verdict(self) -> None:
+        """A healthy /api/json does not license a verdict when the crumb probe fails."""
+        session = _session(
+            {
+                f"{BASE_URL}/api/json": _response(200, "{}"),
+                f"{BASE_URL}/crumbIssuer/api/json": RequestException("timed out"),
+            }
+        )
+
+        message = diagnose_403(session, BASE_URL)
+
+        assert "could not be determined" in message
+        assert "/crumbIssuer/api/json" in message
+        assert "both succeeded" not in message
+        assert "Job/Build" not in message
+
 
 class TestDiagnose404:
     """Tests for diagnose_404."""
@@ -267,12 +330,17 @@ class TestDiagnose404:
         assert "Job/Read" in message
         assert message.endswith(DOCS_POINTER)
 
-    def test_nothing_readable(self) -> None:
-        """When no ancestor is readable the message says so."""
+    @pytest.mark.parametrize("status", [401, 403, 404])
+    def test_nothing_readable(self, status: int) -> None:
+        """When every ancestor was reached and refused the message says so.
+
+        401/403/404 are all answers: Jenkins reached a verdict, so concluding
+        that nothing in the path is readable is backed by evidence.
+        """
         session = _session(
             {
-                f"{BASE_URL}/job/A/job/B/api/json": _response(404, ""),
-                f"{BASE_URL}/job/A/api/json": _response(404, ""),
+                f"{BASE_URL}/job/A/job/B/api/json": _response(status, ""),
+                f"{BASE_URL}/job/A/api/json": _response(status, ""),
             }
         )
 
@@ -280,6 +348,46 @@ class TestDiagnose404:
 
         assert "no folder in that path is readable" in message
         assert message.endswith(DOCS_POINTER)
+
+    @pytest.mark.parametrize("status", [500, 503])
+    def test_server_error_ancestor_is_undetermined_not_unreadable(
+        self, status: int
+    ) -> None:
+        """A 5xx is not a permission verdict, so none may be reported.
+
+        Regression guard for inferring "unreadable" from "not 200": a Jenkins
+        restart would otherwise send the operator into the authorization
+        matrix for a server that was simply down.
+        """
+        session = _session(
+            {
+                f"{BASE_URL}/job/A/job/B/api/json": _response(status, ""),
+                f"{BASE_URL}/job/A/api/json": _response(status, ""),
+            }
+        )
+
+        message = diagnose_404(session, BASE_URL, "A/B/C")
+
+        assert "could not be determined" in message
+        assert f"returned HTTP {status}" in message
+        assert "no folder in that path is readable" not in message
+        assert "lacks Job/Read" not in message
+        assert message.endswith(DOCS_POINTER)
+
+    def test_readable_ancestor_wins_over_an_unreached_deeper_one(self) -> None:
+        """A definite answer further up still narrows the search."""
+        session = _session(
+            {
+                f"{BASE_URL}/job/A/job/B/api/json": _response(500, ""),
+                f"{BASE_URL}/job/A/api/json": _response(200, "{}"),
+            }
+        )
+
+        message = diagnose_404(session, BASE_URL, "A/B/C")
+
+        assert "the folder 'A' is readable" in message
+        assert "'B'" in message
+        assert "could not be determined" not in message
 
     def test_single_segment_path_claims_only_what_was_probed(self) -> None:
         """A leaf-only path has no ancestor, so nothing may be claimed about one.
@@ -341,7 +449,12 @@ class TestDiagnoseBuild404:
         assert message.endswith(DOCS_POINTER)
 
     def test_transport_failure_falls_back_to_the_job_diagnosis(self) -> None:
-        """A probe that never completed must not be read as a readable job."""
+        """A probe that never completed must not be read as a readable job.
+
+        Nor as an unreadable one: with both requests refused, nothing at all
+        was established about the path, so the message must say the probes did
+        not complete rather than blame Job/Read.
+        """
         session = _session(
             {
                 f"{BASE_URL}/job/Windows-Agents/job/Executor/api/json": RequestException(
@@ -355,5 +468,9 @@ class TestDiagnoseBuild404:
 
         message = diagnose_build_404(session, BASE_URL, "Windows-Agents/Executor", 42)
 
-        assert "no folder in that path is readable" in message
+        assert "could not be determined" in message
+        assert "did not complete" in message
+        assert "connection refused" in message
+        assert "no folder in that path is readable" not in message
+        assert "lacks Job/Read" not in message
         assert "build #42" not in message
