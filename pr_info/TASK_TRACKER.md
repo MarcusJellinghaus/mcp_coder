@@ -27,23 +27,35 @@ Details: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
-      (STILL BLOCKED — re-confirmed, root cause now pinned down.
-      `mcp-workspace` is declared as an *unpinned git dependency* in pyproject.toml, and the copy
-      installed in `.venv` predates upstream HEAD: `.venv/.../mcp_workspace/checks/` has no
-      `branch_status_rendering.py`, while upstream HEAD does. `src/mcp_coder/checks/branch_status.py:17`
-      imports it, so `import mcp_coder` fails and **pytest collects zero tests**.
-      - pylint: every finding is a missing-import error (stale `mcp_workspace`, plus optional deps
-        `langchain_core`, `langchain_mcp_adapters`, `langgraph`, `httpx`, `mcp` not installed).
+      (STILL BLOCKED — confirmed a 3rd time. Root cause fully pinned; needs shell access to fix.
+      `mcp-workspace` is an *unpinned* git dependency (`pyproject.toml:348`), and the copy in
+      `.venv` predates upstream commit `a1f0eac`, which added `checks/branch_status_rendering.py`.
+      Verified directly: `.venv/Lib/site-packages/mcp_workspace/checks/` contains only
+      `branch_status.py`, `branch_status_polling.py`, `file_sizes.py`, `pr_feedback.py` — no
+      `branch_status_rendering.py`; upstream HEAD has it. `src/mcp_coder/checks/branch_status.py:17`
+      imports it, `src/mcp_coder/__init__.py:37` pulls that in, so `import mcp_coder` fails and
+      **pytest collects zero tests**. The repo code is correct; the venv is stale.
+      - pylint: every finding is a missing-import error (E0401/E0611 from the stale
+        `mcp_workspace`, plus optional deps `langchain_core`, `langchain_mcp_adapters`,
+        `langgraph`, `httpx`, `mcp` not installed) or an E1123/E1101 downstream of it.
         **No** finding is in a file touched by this step.
-      - mypy: 8 errors, all environmental. 7 trace to the stale `mcp_workspace`
-        (`add_assignees`, `pr_feedback_undeterminable`, `fail_on_reviews`,
-        `branch_status_rendering` — all verified present upstream); the 8th is an untyped decorator
-        caused by the missing optional `mcp` package. **No** error is in a file touched by this step.
-      Rename verified by inspection instead: schema + both loader tests present, and the only
-      remaining `endpoint` spellings are the intentional ones — the `endpoint_shape` key/label
-      (deferred to step 8), the `azure_endpoint=` SDK kwarg, an unrelated docstring, and the test
-      asserting the retired env var is ignored.
-      Fix: refresh the venv (reinstall the `mcp-workspace` git dependency), then re-run.)
+      - mypy: 8 errors, all environmental. 7 trace to the stale `mcp_workspace` — `add_assignees`
+        (upstream `pr_manager.py:401`), `pr_feedback_undeterminable` (upstream
+        `checks/branch_status.py`), `fail_on_reviews` (upstream `checks/branch_status_rendering.py`)
+        and `branch_status_rendering` itself, all re-verified present upstream this run; the 8th is
+        an untyped decorator caused by the missing optional `mcp` package. **No** error is in a
+        file touched by this step.
+      Rename re-verified by inspection instead: both TDD deliverables are present
+      (`tests/utils/test_user_config_schema.py:217` asserts the `MCP_CODER_LLM_LANGCHAIN_BASE_URL`
+      env var, `:221` asserts `endpoint` is gone from the schema;
+      `tests/llm/providers/langchain/test_langchain_provider.py:102` asserts the retired env var is
+      ignored). The only remaining `endpoint` spellings in `src/` are the intentional ones: the
+      `endpoint_shape` result key + `"Endpoint"` label (deferred to step 8), the `azure_endpoint=`
+      SDK kwarg, and an unrelated `task_tracker.py` docstring.
+      Fix: `pip install --force-reinstall --no-deps
+      "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"` in `.venv`
+      (optionally also install the langchain/httpx/mcp extras to clear the remaining findings),
+      then re-run all three checks.)
 - [x] Commit message prepared
 
 ### Step 2: Unknown-key hints: rename table + "did you mean"
