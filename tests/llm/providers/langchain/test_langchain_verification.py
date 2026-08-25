@@ -101,10 +101,15 @@ class TestVerifyLangchain:
 
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_no_api_key_overall_ok_true(
+    def test_no_api_key_fails_the_contract(
         self, mock_config: MagicMock, mock_pkg: MagicMock
     ) -> None:
-        """overall_ok is True even when no API key (verify_langchain no longer tests prompt)."""
+        """No prompt is sent, but a required-and-missing api_key still fails.
+
+        verify_langchain stopped sending a test prompt long ago; since step 9
+        the per-backend contract supplies the verdict instead, so an openai
+        config with no credential anywhere is exit-1 with a named cause.
+        """
         mock_config.return_value = {
             "provider": "langchain",
             "backend": "openai",
@@ -117,7 +122,8 @@ class TestVerifyLangchain:
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
         assert "test_prompt" not in result
-        assert result["overall_ok"] is True
+        assert result["overall_ok"] is False
+        assert "OPENAI_API_KEY" in result["api_key"]["value"]
 
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")

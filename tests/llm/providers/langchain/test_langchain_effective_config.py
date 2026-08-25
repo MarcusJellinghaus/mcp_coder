@@ -285,7 +285,11 @@ class TestBaseUrlRedirectRow:
         target = ResolvedTarget(
             "https://relay.internal/v1", "OPENAI_BASE_URL env var", True
         )
-        result, _resolve = _run_verify(_openai_config(), target)
+        # A key is supplied so the contract is satisfied: the assertion below
+        # is that the *redirect* row is exit-neutral, not that the config is.
+        result, _resolve = _run_verify(
+            _openai_config(api_key="sk-abcd1234wxyz5678"), target
+        )
         row = result["base_url_redirect"]
 
         assert row["ok"] is None

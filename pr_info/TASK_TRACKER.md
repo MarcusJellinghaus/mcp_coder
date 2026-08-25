@@ -539,9 +539,110 @@ Details: [step_8.md](./steps/step_8.md)
 
 Details: [step_9.md](./steps/step_9.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`verify_langchain` calls step 5's `validate()` once and merges the
+      findings into the result. Two new helpers in `verification.py`:
+      `_row_from()` — when a finding exists **both** its `ok` and its `value`
+      win, so the `API key` row carries the contract message naming `api_key`
+      and `OPENAI_API_KEY` rather than a bare `not set`; and
+      `_api_key_default_value()` for the no-finding branch, which never returns
+      a bare `_mask_api_key(key)` (that yields None → `_format_section`
+      stringifies it to the literal `"None"`). The hand-rolled
+      `backend == "ollama"` api_key special case is **deleted** — the contract
+      already declares api_key optional there — while its
+      `"not set (optional)"` text is preserved. `_resolve_api_key` is now
+      passed `mode`, not `backend`, and a source with no readable key (gemini's
+      keyless Vertex carve-out) renders `satisfied via {source}`, never
+      `[OK] not set (optional)` on a `required` row. The `backend` row is
+      **overwritten** when a `backend` finding exists, so an unsupported
+      backend is explained instead of rendering `[OK] opnai` next to exit 1;
+      `base_url` / `api_version` findings arrive via `setdefault`. Defaults are
+      **contract-aware**: `validate()` short-circuits when `mode_of()` is None,
+      so `scoped=False` falls back to today's presence test and the plain
+      `"not set"` text — a typo'd or unset backend never renders
+      `Model [OK] None`. `overall_ok` gains
+      `all(f["ok"] is not False for f in findings.values())`, so errors exit 1
+      while `ok=None` warnings stay exit-neutral; `verify_exit_code.py` is
+      untouched, as specified. `_LABEL_MAP` gains `"base_url": "Base URL"` and
+      `"api_version": "API version"`.
+
+      **Test placement note.** TDD cases 1-6, 8 and 8b live in the new
+      `tests/llm/providers/langchain/test_langchain_contract_rows.py`
+      (20 tests) rather than in `test_langchain_verification.py` as
+      step_9.md's WHERE suggests: that file is at 542 lines and the new
+      coverage is ~300, the same reasoning steps 7 and 8 used when they split.
+      Every case that says "assert the rendered row too" renders through the
+      real `_format_section` + `_LABEL_MAP`. TDD case 7 is in
+      `tests/cli/commands/test_verify_exit_codes.py` as
+      `TestContractViolationExitCode` — the one class there that leaves
+      `verify_langchain` **un-mocked**, so a finding produced inside the
+      provider really does reach `_compute_exit_code`; it patches
+      `_load_langchain_config` on the *verification* module, which holds its
+      own binding from a module-level `from . import`. A companion test pins
+      that a sound config still exits 0.
+
+      **Two existing tests changed, both because step 9 deliberately changes
+      their subject.** `test_no_api_key_overall_ok_true` asserted exit-neutral
+      behaviour for an openai config with no credential anywhere — precisely
+      what TDD case 2 makes exit 1 — so it is renamed
+      `test_no_api_key_fails_the_contract` and now also asserts the message
+      names `OPENAI_API_KEY`; its original point (no test prompt is sent) is
+      kept. `test_row_added_when_env_var_supplied_the_url` in
+      `test_langchain_effective_config.py` asserts `overall_ok is True` to show
+      the redirect row is exit-neutral, but used a keyless config; it now
+      supplies an `api_key` so the assertion still tests the redirect row
+      rather than the contract.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in any file this step touches**: pylint scoped to the
+      six touched source/test files reports only the environmental `E0401`
+      (`langchain_mcp_adapters` not installed); mypy over
+      `src/mcp_coder/llm/providers/langchain`, `src/mcp_coder/cli/commands`,
+      `tests/llm/providers/langchain` and `tests/cli/commands` reports only the
+      4 known `check_branch_status` findings; ruff clean; isort clean; black
+      reformatted the two new/extended test files once and is now a no-op
+      across 623 files. lint-imports: 21 contracts kept. Step 9's own tests
+      pass — `test_langchain_contract_rows.py` + `test_verify_exit_codes.py`
+      → 38 passed. Wider runs: `tests/cli` → 1002 passed; all of
+      `tests/llm/providers/langchain` clean apart from the known environmental
+      failure. `mcp-coder check file-size --max-lines 750` flags only the
+      pre-existing `tests/cli/commands/test_verify_orchestration.py`
+      (871 lines, grown by steps 3-4), which step 9 does not touch;
+      `verification.py` is at 641 lines.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-8: the `.venv` copy of the unpinned git dependency `mcp-workspace`
+      lacks `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and
+      pytest collects zero tests (confirmed again this run: the first
+      unshimmed run collected 0). Same workaround: a throwaway
+      `.pytest_shim/sitecustomize.py` registering a stand-in
+      `mcp_workspace.checks.branch_status_rendering` (re-export `CIStatus` from
+      `mcp_workspace.checks.branch_status`, any str for `GITHUB_TOKEN_HINT`),
+      run pytest with `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the
+      directory afterwards — it is **not** committed (`git status` confirms
+      only the six intended files). Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all
+      pre-existing, none in files this step touches: the six
+      `tests/cli/commands/test_check_branch_status*.py` modules (stale
+      `CIStatus.UNAVAILABLE` / `BranchStatusReport` API), excluded via
+      `--ignore-glob` for the 1002-test `tests/cli` run; the three
+      `tests/llm/providers/copilot/test_copilot_integration.py` tests (no
+      working `copilot` CLI); and
+      `test_langchain_exceptions.py::…httpx_connect_error` (`httpx` absent →
+      MagicMock). **One addition to the baseline, newly observed because this
+      run widened to all of `tests/llm`:** the 10 tests in
+      `tests/llm/providers/claude/test_llm_sessions.py` fail with
+      `MockClaudeCLI.__call__() got an unexpected keyword argument
+      'settings_file'` — a claude-CLI signature drift in that module's own
+      mock. Verified independent of this step: the file is untracked-clean in
+      `git status`, imports nothing from `verification.py` or
+      `verify_formatting.py`, and `settings_file` appears nowhere in the
+      langchain provider.)
+- [x] Commit message prepared
 
 ### Step 10: Connection errors name the host actually dialed
 

@@ -20,12 +20,14 @@ from ._config_diagnostics import (
     _API_KEY_ENV,
     _KEYLESS_ENV,
     _UNSET_TARGET,
+    Finding,
     ResolvedTarget,
     _targets_match,
     describe_effective_config,
     mode_of,
     redirect_env_in_effect,
     resolve_target,
+    validate,
 )
 from ._exceptions import LLMAuthError, LLMConnectionError
 from .agent import _load_mcp_server_config
@@ -97,6 +99,58 @@ def _resolve_api_key(
     if keyless and os.environ.get(keyless):
         return None, f"{keyless} env var", False
     return None, None, False
+
+
+def _row_from(
+    finding: Finding | None, *, default_ok: bool, default_value: str | None
+) -> dict[str, Any]:
+    """Turn a contract finding into a verify row, or fall back.
+
+    When a finding exists **both** its ``ok`` and its ``value`` win. The
+    finding's message *is* the diagnosis — it names the config key and every
+    environment variable that would satisfy it — and a masked value or a bare
+    ``not set`` in its place would leave an exit-1 run without a stated cause.
+
+    Args:
+        finding: The contract finding for this key, or None when the contract
+            raised nothing about it.
+        default_ok: Row status to use when there is no finding.
+        default_value: Row value to use when there is no finding.
+
+    Returns:
+        An entry in verify's usual ``{"ok", "value"}`` shape.
+    """
+    if finding is not None:
+        return {"ok": finding["ok"], "value": finding["value"]}
+    return {"ok": default_ok, "value": default_value}
+
+
+def _api_key_default_value(
+    api_key: str | None, key_source: str | None, scoped: bool
+) -> str | None:
+    """Row value for an ``api_key`` the contract raised no finding about.
+
+    Never a bare ``_mask_api_key(api_key)``: that returns None for a missing
+    key and ``_format_section`` stringifies None to the literal ``"None"``.
+
+    Args:
+        api_key: The resolved key, or None.
+        key_source: Provenance of the credential, which may be set while
+            *api_key* is None — gemini's keyless Vertex carve-out.
+        scoped: True when ``mode_of()`` resolved, i.e. the contract actually
+            examined this field.
+
+    Returns:
+        The masked key, the keyless carve-out's provenance, or the unset text.
+        ``"(optional)"`` is only claimed when the contract checked the field
+        and declared it satisfied; without a mode, nothing has established
+        that it is optional.
+    """
+    if api_key is not None:
+        return _mask_api_key(api_key)
+    if key_source is not None:
+        return f"satisfied via {key_source}"
+    return "not set (optional)" if scoped else "not set"
 
 
 def _check_package_installed(package_name: str) -> bool:
@@ -221,38 +275,49 @@ def verify_langchain(
     model = config.get("model")
     config_api_key = config.get("api_key")
 
+    # The per-backend contract, evaluated once and reported in full: validate()
+    # is non-raising, so every violation surfaces rather than just the first.
+    mode = mode_of(config)
+    findings: dict[str, Finding] = {f["key"]: f for f in validate(config)}
+    # validate() short-circuits to a single `backend` finding when the mode is
+    # unresolvable, so "no finding" only means "satisfied" while this is True.
+    scoped = mode is not None
+
     result: dict[str, Any] = {}
 
-    # Backend check
+    # Backend check — overwritten below when the contract has something to say.
     result["backend"] = {
         "ok": backend is not None,
         "value": backend,
     }
 
-    # Model check
-    result["model"] = {
-        "ok": model is not None,
-        "value": model,
-    }
+    # API key resolution, keyed by the mode rather than the backend.
+    api_key, key_source, key_overridden = _resolve_api_key(mode, config_api_key)
 
-    # API key resolution
-    api_key, key_source, key_overridden = _resolve_api_key(
-        mode_of(config), config_api_key
+    result["model"] = _row_from(
+        findings.get("model"),
+        default_ok=True if scoped else model is not None,
+        default_value=model,
     )
-    if backend == "ollama" and api_key is None:
-        # Ollama runs unauthenticated on plain localhost — treat missing key
-        # as optional rather than a failure.
-        result["api_key"] = {
-            "ok": True,
-            "value": "not set (optional)",
-            "source": None,
+    result["api_key"] = {
+        **_row_from(
+            findings.get("api_key"),
+            default_ok=True if scoped else api_key is not None,
+            default_value=_api_key_default_value(api_key, key_source, scoped),
+        ),
+        "source": key_source,
+    }
+    if "backend" in findings:
+        # Overwrite, never setdefault: the row above is already populated, so
+        # an unsupported backend would otherwise render "[OK] opnai" while
+        # overall_ok is False — exit 1 with no visible cause.
+        result["backend"] = {
+            "ok": findings["backend"]["ok"],
+            "value": findings["backend"]["value"],
         }
-    else:
-        result["api_key"] = {
-            "ok": api_key is not None,
-            "value": _mask_api_key(api_key),
-            "source": key_source,
-        }
+    # The remaining findings (base_url, api_version) get rows of their own.
+    for key, finding in findings.items():
+        result.setdefault(key, {"ok": finding["ok"], "value": finding["value"]})
 
     # Effective-config echo. This is the single resolve_target() call of the
     # run; the ResolvedTarget it returns is shared by every consumer below, so
@@ -361,6 +426,11 @@ def verify_langchain(
         overall_ok = overall_ok and result["ollama_daemon"]["ok"]
         if "ollama_tools_capability" in result:
             overall_ok = overall_ok and result["ollama_tools_capability"]["ok"]
+    # Contract errors fail the run with a named cause; ok=None warnings
+    # (ignored keys) stay exit-neutral.
+    overall_ok = overall_ok and all(
+        finding["ok"] is not False for finding in findings.values()
+    )
     result["overall_ok"] = overall_ok
 
     return result
