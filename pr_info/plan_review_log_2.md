@@ -96,3 +96,20 @@ Task tracker: empty — nothing implemented yet, so the whole plan is in scope.
 - `Decisions.md` — entries M–O.
 
 **Status**: committed
+
+---
+
+## Round 5 — 2026-08-25
+
+**Findings** (the reviewer verified every round-4 change correct against real source and found the rest of the plan clean; one item remained):
+- `step_7.md:205` — low — the effective-config `mode` row's non-Azure branch hardcoded `(api_version not set)`, but `azure` means `mode_of(config) == "azure"`, true only for `openai` + `api_version`. A `gemini`/`anthropic`/`ollama` config *with* `api_version` set — the stray-`api_version` misconfiguration this issue exists to surface, covered by step 5's TDD 5 — would render `plain gemini (api_version not set)` directly above step 9's `API version [WARN] api_version is ignored by backend 'gemini' — remove it`. `azure` was also undefined in the pseudo-code.
+
+**Decisions**: accepted and delegated. The reviewer judged it non-blocking and fixable during implementation; fixed now instead, since it is a five-line edit and is precisely the class of false-provenance bug the issue exists to eliminate.
+
+**User decisions**: none.
+
+**Changes**:
+- `step_7.md` — ALGORITHM defines `azure = mode_of(config) == "azure"` and derives the parenthetical from the actual value (`api_version ignored by {backend}` when present, `api_version not set` only when truly unset); HOW gains the rationale; TDD case 1 extended with `gemini` + `api_version` set, asserting agreement with step 9.
+- `Decisions.md` — entry P.
+
+**Status**: committed

@@ -93,6 +93,14 @@ result["effective_config"] = describe_effective_config(
   `_NO_BACKEND_TARGET`: this block must not assert a mode for a backend that does
   not exist, and it is the row next to `backend  (not configured)` and
   `base_url  (backend not configured)`.
+- **The non-Azure parenthetical states the actual `api_version`.** `azure` is
+  `mode_of(config) == "azure"`, true only for `openai` + `api_version`, so a
+  `gemini`/`anthropic`/`ollama` config *with* a stray `api_version` takes the
+  non-Azure branch. Hardcoding `(api_version not set)` there would print a false
+  claim directly above step 9's
+  `API version [WARN] api_version is ignored by backend 'gemini' — remove it` —
+  precisely the misconfiguration this issue exists to surface. When the key is
+  present the row reads `plain gemini (api_version ignored by gemini)` instead.
 - **`_resolve_api_key` is re-keyed by *mode*, not backend.** It reads
   `_BACKEND_ENV_VARS` (`verification.py:24-29`) — one variable per *backend* —
   while step 5's contract accepts a *tuple* per *mode*, including
@@ -202,7 +210,10 @@ describe_effective_config(config, target, *, api_key_masked, api_key_source,
     if mode_of(config) is None:                    # backend unset or typo'd
         mode = "(not applicable — backend not configured)"
     else:
-        mode = "Azure OpenAI (api_version set)" if azure else "plain <backend> (api_version not set)"
+        azure = mode_of(config) == "azure"         # only openai + api_version
+        note  = (f"api_version ignored by {backend}" if config.get("api_version")
+                 else "api_version not set")
+        mode  = "Azure OpenAI (api_version set)" if azure else f"plain <backend> ({note})"
     if api_key_masked is None:
         key_row = (f"(not set — satisfied via {api_key_source})"
                    if api_key_source else "(not set)")
@@ -257,7 +268,11 @@ configurable target)`.
    `backend = "opnai"` (`mode_of` → `None`), the `mode` row reads
    `(not applicable — backend not configured)` and never contains `None` —
    matching the `backend` row's `(not configured)` and step 6's
-   `_NO_BACKEND_TARGET` wording for the same config.
+   `_NO_BACKEND_TARGET` wording for the same config. And with
+   `backend = "gemini"` **plus** `api_version` set (step 5's TDD 5
+   misconfiguration): the row takes the non-Azure branch but must not claim
+   `api_version not set` — it names the ignored key, agreeing with step 9's
+   `API version [WARN] ... ignored by backend 'gemini'` row below it.
 2. `base_url` row carries the passed target's source verbatim; unverified
    targets keep the `unverified` wording. The builder never calls
    `resolve_target` itself (assert with a patched module attribute).
@@ -325,7 +340,12 @@ configurable target)`.
 > local, which holds the base-URL redirect variable and is usually `None`. Guard
 > the echo's `mode` row on `mode_of(config) is None` (`backend` unset or typo'd)
 > and render `(not applicable — backend not configured)` rather than
-> `plain None (api_version not set)`. Key the redirect row on
+> `plain None (api_version not set)`. In the non-Azure branch derive the
+> parenthetical from the config (`azure = mode_of(config) == "azure"`): say
+> `api_version not set` only when it really is unset, otherwise
+> `api_version ignored by <backend>` — a `gemini` config with a stray
+> `api_version` must not contradict step 9's `[WARN] ... ignored` row.
+> Key the redirect row on
 > `redirect_env_in_effect(config, target.url)` — the variable whose value
 > actually produced the dialed URL — so an exported-but-inert variable (a stale
 > `AZURE_OPENAI_ENDPOINT` under plain `openai`, or `OPENAI_BASE_URL` when

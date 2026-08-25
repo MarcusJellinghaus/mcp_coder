@@ -188,3 +188,15 @@ Widening the callee is the smaller change: its body only does `config.get(...)`,
 its four call sites pass dicts (valid `Mapping`s) and do not churn, and it keeps
 every `_config_diagnostics` entry point on one parameter type. Requires adding
 `Mapping` to the existing `collections.abc` import line.
+
+## P. The echo's non-Azure `mode` parenthetical states the actual `api_version` (step 7)
+
+Directed fix. `azure` was undefined in the pseudo-code and the non-Azure branch
+hardcoded `(api_version not set)`. Since `azure` means `mode_of(config) ==
+"azure"` — true only for `openai` + `api_version` — a `gemini`/`anthropic`/
+`ollama` config *with* `api_version` (step 5's TDD 5 misconfiguration) took that
+branch and would have rendered `plain gemini (api_version not set)` a few lines
+above step 9's `API version [WARN] api_version is ignored by backend 'gemini'`.
+`azure` is now defined explicitly, and the parenthetical reads
+`api_version ignored by <backend>` when the key is present. TDD case 1 gains
+that config.
