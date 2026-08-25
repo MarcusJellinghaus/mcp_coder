@@ -55,3 +55,25 @@ Task tracker: empty — nothing implemented yet, so the whole plan is in scope.
 - Issue #1117 — Decision 5, one AC, footnote ¹.
 
 **Status**: committed
+
+---
+
+## Round 3 — 2026-08-25
+
+**Findings**:
+- `step_7.md:181` / `step_9.md:100` / `Decisions.md:62` — high — round 2's mode-keyed `_API_KEY_ENV` was reused for *provenance* as well as presence, but only `_API_KEY_ENV[mode][0]` is read by our own code (`create_openai_model:36` etc.); the rest are SDK fallbacks reached only when no key is passed. Azure with a config `api_key` plus `AZURE_OPENAI_API_KEY` exported would render the wrong masked value, a false "overrides config.toml" label and a spurious `API key override [WARN]`.
+- `step_8.md:94` / `:3` — low — TDD case 2 pins a case that cannot occur: `create_openai_model` always passes `base_url=<config value>`, and both the SDK and `_resolve_gateway_config` give an explicit `base_url` precedence, so env redirection only happens when config is unset.
+- `step_6.md:16` — low — `_REDIRECT_ENV["openai"]` in inverted precedence order; `OPENAI_API_BASE` is consumed by langchain before the SDK ever reads `OPENAI_BASE_URL`.
+- `step_6.md:130` — low — two false sentinel provenance strings: "backend has no configurable target" for unset/typo'd backends, and a `config.toml (unverified …)` label on a value config never supplied — the common path when the contract is violated.
+
+**Decisions**: all four accepted and delegated. The high finding is a genuine consequence of round 2's fix overshooting — widening the env-var list was right for presence checking, wrong to reuse for provenance. No scope or design change, so nothing escalated.
+
+**User decisions**: none this round. (Marcus asked to run the loop to convergence without check-ins unless something needs a scope or design call.)
+
+**Changes**:
+- `step_6.md` — `_NO_BACKEND_TARGET` sentinel gated on `mode_of(config) is None`; `_REDIRECT_ENV["openai"]` reordered to `OPENAI_API_BASE, OPENAI_BASE_URL, AZURE_OPENAI_ENDPOINT` with a note that tuple order is the same-value tie-break and must reflect real precedence; unverified source names `config.toml` only when config supplied the value; TDD 2c/4b/5b added.
+- `step_7.md` — resolution order fixed to primary var > config > remaining vars > `_KEYLESS_ENV`, `overridden=True` only when the primary beats config; explicit note that step 5's `validate()` presence check is order-independent and unaffected; TDD 3d added; TDD 6b reworded.
+- `step_8.md` — opening trimmed to the one real inaccuracy; TDD case 2 reframed to "config unset, `OPENAI_API_BASE` redirecting, source named".
+- `step_9.md`, `summary.md` §2/§7, `Decisions.md` (E corrected, I–L added) — aligned.
+
+**Status**: committed

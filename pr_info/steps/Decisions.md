@@ -59,8 +59,9 @@ the echo would print `api_key   (not set)` and step 9's `scoped` default
 is provenance, and "optional" contradicts the `required` contract row.
 
 Mechanism chosen (the reviewer's preferred option, not the fallback): delete
-`_BACKEND_ENV_VARS`, pass `mode_of(config)`, scan `_API_KEY_ENV[mode]` in order,
-and name the variable that actually supplied the key. Gemini's keyless Vertex
+`_BACKEND_ENV_VARS`, pass `mode_of(config)`, resolve against
+`_API_KEY_ENV[mode]` (order corrected by decision I), and name the variable that
+actually supplied the key. Gemini's keyless Vertex
 carve-out has no readable key, so `_resolve_api_key` returns a source with a
 `None` key and the rows render `satisfied via GOOGLE_GENAI_USE_VERTEXAI env var`
 rather than `not set (optional)`. `not set (optional)` survives only for a
@@ -95,3 +96,59 @@ Directed fix. Step 7 called an undeclared `_matches_config_base_url`. The
 condition is expressed as `cfg_base and _targets_match(cfg_base, target.url)`,
 and `_targets_match` is promoted into step 6's declared module surface — the
 same predicate `_source_for` uses, so the two cannot drift.
+
+---
+
+Resolutions applied after the run-2 round-3 review (`pr_info/plan_review_log_2.md`).
+
+## I. `_resolve_api_key` resolves in the client's order, not the table's (steps 7, 9)
+
+Directed fix. The mode-keyed scan of decision E walked *all* of
+`_API_KEY_ENV[mode]` before falling back to config, but only the **first** entry
+of each row is read by our own code: `create_openai_model` does
+`os.getenv("OPENAI_API_KEY") or api_key` (`openai_backend.py:36`), and the
+gemini / anthropic / ollama backends have the same shape for `GEMINI_API_KEY` /
+`ANTHROPIC_API_KEY` / `OLLAMA_API_KEY`. The remaining entries
+(`AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_AD_TOKEN`, `GOOGLE_API_KEY`) are SDK
+fallbacks that apply only when no key is passed at all, so a config `api_key`
+beats them. Azure mode with a config key *and* `AZURE_OPENAI_API_KEY` exported
+would otherwise print the wrong masked value under
+`(from AZURE_OPENAI_API_KEY env var — overrides config.toml api_key)` plus a
+false `API key override [WARN]` row.
+
+Order: primary var (`_API_KEY_ENV[mode][0]`) > config `api_key` > the row's
+remaining vars > `_KEYLESS_ENV`; `overridden` only in the primary-beats-config
+case. Step 5's `validate()` is unaffected — its presence check is
+order-independent, so this is a provenance fix only.
+
+## J. Step 8 drops the "config overridden by env" case (step 8)
+
+Directed fix. Measured: `create_openai_model` always passes
+`base_url=<config value>`, langchain resolves
+`explicit base_url > OPENAI_API_BASE > gateway`
+(`chat_models/base.py:1321-1327`) and the SDK reads `OPENAI_BASE_URL` only when
+`base_url is None` (`openai/_client.py:294-298`). A configured `base_url`
+therefore always wins, so TDD case 2 would have pinned stub-only behaviour. It
+is reframed as "config unset, env redirecting, source named", and the step's
+opening keeps only the first stated inaccuracy — the check staying silent when
+config is unset and an env var redirects — which is real.
+
+## K. `_REDIRECT_ENV["openai"]` is ordered by real precedence (steps 6, 7)
+
+Directed fix. `OPENAI_API_BASE` is resolved by langchain before the SDK ever
+sees `OPENAI_BASE_URL`, so it wins and is listed first. The value-match filter
+covers the different-values case; the tuple order is the tie-break when both
+hold the same value, so it must be real precedence. Step 7's TDD 6b and its two
+prose examples, which asserted the opposite, are reworded.
+
+## L. Sentinel targets carry honest provenance (step 6)
+
+Directed fix. Two false strings removed:
+`resolve_target` returned `("n/a", "backend has no configurable target", True)`
+for *any* backend outside `("openai", "ollama")`, including unset and typo'd
+ones — now gated on `mode_of(config) is None` first, returning
+`(_NO_BACKEND_TARGET, "no supported backend configured", False)`. And the
+construction-failure fallback labelled the `(not configured)` sentinel
+`config.toml (unverified …)` even when nothing was configured — the common path,
+since construction fails exactly when the contract is violated. The source now
+names `config.toml` only when a config `base_url` supplied the value.

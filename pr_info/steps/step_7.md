@@ -39,12 +39,13 @@ def describe_effective_config(
 def _resolve_api_key(
     mode: str | None, config_key: str | None
 ) -> tuple[str | None, str | None, bool]:
-    """Return (key, source, overridden), scanning step 5's mode-keyed
-    `_API_KEY_ENV` row in order.
+    """Return (key, source, overridden), resolving in the order the *client*
+    resolves: primary env var > config.toml > the row's remaining env vars >
+    `_KEYLESS_ENV`.
 
-    *overridden* is True when an env var won while config.toml also had an
-    api_key. *source* may be set with *key* None — gemini's keyless Vertex
-    carve-out satisfies the credential without exposing a readable value.
+    *overridden* is True only in the primary-beats-config case. *source* may be
+    set with *key* None — gemini's keyless Vertex carve-out satisfies the
+    credential without exposing a readable value.
     """
 ```
 
@@ -97,7 +98,7 @@ result["effective_config"] = describe_effective_config(
   rows. So: **delete `_BACKEND_ENV_VARS`**, import `_API_KEY_ENV`,
   `_KEYLESS_ENV` and `mode_of` from `_config_diagnostics` (same package,
   mirroring step 8's `_UNSET_TARGET` import), pass `mode_of(config)` instead of
-  `backend`, and scan the mode's tuple in order — the row then names the
+  `backend` — the row then names the
   variable that actually supplied the key. Gemini's keyless Vertex carve-out has
   no readable key, so it returns
   `(None, "GOOGLE_GENAI_USE_VERTEXAI env var", False)`; the echo renders
@@ -105,6 +106,27 @@ result["effective_config"] = describe_effective_config(
   renders `satisfied via …` rather than `not set (optional)`. Step 9's `scoped`
   default keeps `not set (optional)` only for a genuinely optional-and-unset
   `api_key` (ollama).
+- **The scan order is `_API_KEY_ENV[mode][0]` > config `api_key` > the rest of
+  the row > `_KEYLESS_ENV`** — a straight scan of the whole row before config
+  would report a source the client never reads. Only the **first** entry of each
+  row is read by *our* code, and it genuinely beats config:
+  `create_openai_model` does `os.getenv("OPENAI_API_KEY") or api_key`
+  (`openai_backend.py:36`), and `create_gemini_model` / `create_anthropic_model`
+  / `create_ollama_model` have the same shape for `GEMINI_API_KEY` /
+  `ANTHROPIC_API_KEY` / `OLLAMA_API_KEY`. The remaining entries —
+  `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_AD_TOKEN`, `GOOGLE_API_KEY` — are **SDK
+  fallbacks that apply only when no key is passed at all**, so a config
+  `api_key` beats them. Scanning the whole row first would, for an Azure config
+  with both a config `api_key` and `AZURE_OPENAI_API_KEY` exported, print the
+  wrong masked value under
+  `(from AZURE_OPENAI_API_KEY env var — overrides config.toml api_key)` and add
+  a false `API key override [WARN]` row, while the client quietly used the
+  config key: fabricated provenance in the block whose whole purpose is truthful
+  provenance. `overridden` is therefore set **only** in the primary-beats-config
+  case.
+  Step 5's `validate()` is unaffected: its `api_key` check tests *presence*
+  across config, every env var in the row and the keyless carve-out, which is
+  order-independent. The ordering matters for provenance only.
 - **The api_key row's value, source and override flag are all passed in.**
   `describe_effective_config` never reads `config["api_key"]` for the value:
   the winning key frequently comes from the env var while config.toml holds a
@@ -137,7 +159,7 @@ result["effective_config"] = describe_effective_config(
   `_source_for` makes, rather than adding a second, drift-prone predicate.
   Without the value match the row would fabricate exactly the kind of claim this
   issue exists to kill: a stale `AZURE_OPENAI_ENDPOINT` under a plain `openai`
-  config, or `OPENAI_API_BASE` when `OPENAI_BASE_URL` is the one the SDK used,
+  config, or `OPENAI_BASE_URL` when `OPENAI_API_BASE` is the one the client used,
   would print `X overrides config.toml — requests go to https://api.openai.com/v1/`
   when nothing was redirected at all.
   `_format_section` renders it as `[WARN]`; `overall_ok` is composed explicitly
@@ -179,10 +201,14 @@ describe_effective_config(config, target, *, api_key_masked, api_key_source,
     return rows
 
 _resolve_api_key(mode, config_key):                  # mode, not backend
-    for var in _API_KEY_ENV.get(mode or "", ()):     # step 5's mode-keyed tuple
-        env_value = os.environ.get(var)
-        if env_value: return env_value, f"{var} env var", bool(config_key)
+    env_vars = _API_KEY_ENV.get(mode or "", ())      # step 5's mode-keyed tuple
+    primary  = env_vars[0] if env_vars else None     # the only var our code reads
+    if primary and os.environ.get(primary):          # create_*_model: getenv(X) or api_key
+        return os.environ[primary], f"{primary} env var", bool(config_key)
     if config_key: return config_key, "config.toml", False
+    for var in env_vars[1:]:                         # SDK fallbacks — reached only
+        env_value = os.environ.get(var)              # when no key is passed at all
+        if env_value: return env_value, f"{var} env var", False
     keyless = _KEYLESS_ENV.get(mode or "")           # gemini/Vertex: no readable key
     if keyless and os.environ.get(keyless):
         return None, f"{keyless} env var", False
@@ -231,6 +257,13 @@ configurable target)`.
    that variable, row reads
    `(not set — satisfied via GOOGLE_GENAI_USE_VERTEXAI env var)`. Nothing set →
    `(None, None, False)` and a bare `(not set)`.
+3d. Config key beats a *secondary* env var: Azure mode with a config `api_key`,
+   `OPENAI_API_KEY` cleared and `AZURE_OPENAI_API_KEY` exported → source is
+   `"config.toml"`, `overridden is False`, and `verify_langchain` adds **no**
+   `api_key_override` row. Same shape for `gemini` with a config `api_key` and
+   only `GOOGLE_API_KEY` exported. The primary var still wins: config `api_key`
+   plus `OPENAI_API_KEY` → source names `OPENAI_API_KEY` and
+   `overridden is True` (case 7).
 4. Wiring: `verify_langchain` calls `resolve_target` **exactly once** per run
    (patch and count) and puts a list under `result["effective_config"]`.
 5. Rendering test: the echo appears with **no** `[OK]`/`[WARN]` symbols, is not
@@ -242,7 +275,7 @@ configurable target)`.
    `api_version`), config `base_url` unset, a stale `AZURE_OPENAI_ENDPOINT`
    exported, target resolving to the SDK default → the `base_url_redirect` key
    is **absent** and the echo's `base_url` row reads `(SDK default)`. Same for
-   `OPENAI_API_BASE` when `OPENAI_BASE_URL` is the value the target matches:
+   `OPENAI_BASE_URL` when `OPENAI_API_BASE` is the value the target matches:
    only the matching variable is named, and only once.
 7. api_key override: env var **and** config `api_key` set → `overridden is True`,
    `api_key_override` row present, echo line names the override, `overall_ok`
@@ -264,16 +297,22 @@ configurable target)`.
 > `api_key_override` rows. Key the redirect row on
 > `redirect_env_in_effect(config, target.url)` — the variable whose value
 > actually produced the dialed URL — so an exported-but-inert variable (a stale
-> `AZURE_OPENAI_ENDPOINT` under plain `openai`, or `OPENAI_API_BASE` when
-> `OPENAI_BASE_URL` won) produces **no** row. Guard it with step 6's
+> `AZURE_OPENAI_ENDPOINT` under plain `openai`, or `OPENAI_BASE_URL` when
+> `OPENAI_API_BASE` won) produces **no** row. Guard it with step 6's
 > `_targets_match(config["base_url"], target.url)` — do not invent a second
 > predicate. Re-key `_resolve_api_key` on the **mode**: delete
-> `_BACKEND_ENV_VARS`, scan step 5's `_API_KEY_ENV[mode]` tuple in order and fall
-> back to `_KEYLESS_ENV[mode]`, so an Azure key in `AZURE_OPENAI_API_KEY` (or a
-> gemini key in `GOOGLE_API_KEY`) is named as the source instead of rendering
-> `(not set)`. Extend it to return `(key, source, overridden)` so an
+> `_BACKEND_ENV_VARS` and resolve in the order the client resolves —
+> `_API_KEY_ENV[mode][0]` (the only variable our own `create_*_model` reads, and
+> it beats config) > config `api_key` > the row's remaining variables (SDK
+> fallbacks that apply only when no key is passed at all) > `_KEYLESS_ENV[mode]`
+> — so an Azure key in `AZURE_OPENAI_API_KEY` (or a gemini key in
+> `GOOGLE_API_KEY`) is named as the source instead of rendering `(not set)`,
+> while a *configured* key with only a secondary variable exported still reports
+> `config.toml`. Do **not** scan the whole row before config: that would name a
+> source the client never read. Extend it to return `(key, source, overridden)`,
+> setting `overridden` only in the primary-beats-config case, so an
 > `OPENAI_API_KEY` that beats a configured `api_key` is flagged rather than
-> silently winning. Add the two `_LABEL_MAP`
+> silently winning — and a secondary variable that lost never is. Add the two `_LABEL_MAP`
 > entries. `cli/commands/verify.py` only *prints* the EFFECTIVE CONFIG section via
 > `_format_row(label, "", value, indent=2)` — it must not load config or call
 > private llm helpers itself. Write tests first (TDD).

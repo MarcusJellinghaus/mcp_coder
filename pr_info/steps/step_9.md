@@ -51,7 +51,8 @@ and uses it to build the `model` / `api_key` rows and to add `base_url` /
     **But `"not set (optional)"` is only true when nothing supplied a key.**
     After step 7 re-keys `_resolve_api_key` on the **mode**, an Azure key in
     `AZURE_OPENAI_API_KEY` or a gemini key in `GOOGLE_API_KEY` resolves normally
-    and this branch renders the masked value. The one remaining no-key,
+    (when no config `api_key` outranks it — step 7's order) and this branch
+    renders the masked value. The one remaining no-key,
     no-finding case is gemini's keyless Vertex carve-out, where
     `_resolve_api_key` returns a `source` with a `None` key; that renders
     `f"satisfied via {source}"`, never `"not set (optional)"` — `api_key` is
@@ -98,6 +99,7 @@ findings = {f["key"]: f for f in validate(config)}
 scoped   = mode is not None                  # False -> contract said nothing
                                              #          about model / api_key
 key, src, _over = _resolve_api_key(mode, config_api_key)   # mode, not backend
+                    # step 7 order: primary env var > config > rest of row > keyless
 
 def _api_key_default_value():
     if key is not None:      return _mask_api_key(key)

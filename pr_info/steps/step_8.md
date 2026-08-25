@@ -1,10 +1,10 @@
 # Step 8 — Rebase the base-URL shape check on the resolved target
 
 `_check_base_url_shape` (renamed in step 1, `verification.py:129-170`) currently
-validates the raw config string. Two concrete inaccuracies: it returns `None`
-when the config value is unset — staying silent exactly when `OPENAI_BASE_URL`
-is redirecting — and when config *is* set but an env var overrides it, it
-validates a string the client never uses.
+validates the raw config string, which is not necessarily the URL the client
+dials. Concrete inaccuracy: it returns `None` when the config value is unset —
+staying silent exactly when `OPENAI_BASE_URL` or `OPENAI_API_BASE` is
+redirecting, so the redirected URL is never shape-checked at all.
 
 This step also carries the deferred half of Decision 19: the result key
 `endpoint_shape` → `base_url_shape` and its `_LABEL_MAP` label
@@ -110,8 +110,15 @@ ending in `/v1` can only be `[OK]`, never `[WARN]`.)
 
 1. Config unset, `OPENAI_BASE_URL` redirecting to a malformed URL → the check now
    **fires** (previously silent).
-2. Config set but overridden by env → the heuristic runs on the env value, and
-   the message names the env var as the source.
+2. Config unset, `OPENAI_API_BASE` redirecting to a well-formed URL → the
+   heuristic runs on the env value and the message names the env var as the
+   source. (There is deliberately **no** "config set but overridden by env"
+   case: `create_openai_model` always passes `base_url=<config value>`, and both
+   layers give an explicit value precedence — langchain resolves
+   `explicit base_url > OPENAI_API_BASE > gateway` and the SDK reads
+   `OPENAI_BASE_URL` only when `base_url is None`
+   (`openai/_client.py:294-298`). A configured `base_url` always wins, so such a
+   test would pin behaviour that exists only in the stub.)
 3. `api_version` set → returns `None` (Azure skip preserved), even though the
    resolved Azure URL would otherwise trip the `/v1` rule.
 4. `n/a` target (gemini) → `None`.

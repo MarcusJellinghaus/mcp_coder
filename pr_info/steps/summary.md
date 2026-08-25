@@ -66,7 +66,10 @@ New primitive: `resolve_target(config) -> ResolvedTarget(url, source, verified)`
 It constructs the chat model (local, no network), reads
 `root_client.base_url` (openai/azure) or `ChatOllama.base_url`, closes the httpx
 clients, and falls back to the config value **labelled unverified** when
-construction fails. `gemini`/`anthropic` return an explicit `n/a`.
+construction fails — naming `config.toml` only when a config value actually
+supplied it. `gemini`/`anthropic` return an explicit `n/a`; an unset or typo'd
+`backend` returns its own `(backend not configured)` sentinel rather than
+claiming the backend "has no configurable target".
 
 Three consumers share it: the effective-config echo, the rebased base-URL shape
 check, and the connection-error message.
@@ -138,12 +141,17 @@ Only two fields need a *source*: `api_key` (already returned by
 element, `overridden: bool`: today it reports only the *winning* source, so an
 `OPENAI_API_KEY` that beats a configured `api_key` is indistinguishable from one
 that filled a gap — and the acceptance criterion asks for exactly that
-distinction. And it is re-keyed on the **mode**, scanning step 5's
+distinction. And it is re-keyed on the **mode**, using step 5's
 `_API_KEY_ENV[mode]` tuple instead of the one-per-backend `_BACKEND_ENV_VARS`
 (which is deleted); otherwise an Azure key in `AZURE_OPENAI_API_KEY` satisfies
 the contract, produces no finding, and still renders `api_key (not set)` /
 `API key [OK] not set (optional)` — fabricated provenance in the block built to
-prevent it. One in-repo caller (`verify_langchain`) plus its tests.
+prevent it. The row is not scanned straight through, though: only its **first**
+entry is read by our own `create_*_model` (`os.getenv(X) or api_key`), so the
+order is *primary var > config `api_key` > the row's remaining vars (SDK
+fallbacks, reached only when no key is passed) > `_KEYLESS_ENV`*, and
+`overridden` is set only when the primary beat config. One in-repo caller
+(`verify_langchain`) plus its tests.
 
 ### 8. Module boundaries
 

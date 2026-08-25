@@ -16,12 +16,16 @@ whenever that variable is exported. Shared by steps 7, 8 and 10.
 # Sentinel used when nothing resolves; step 8 skips the shape check on it.
 _UNSET_TARGET = "(not configured)"
 
+# Sentinel for a backend the contract cannot even scope — unset or typo'd.
+_NO_BACKEND_TARGET = "(backend not configured)"
+
 # What the ollama client dials when ChatOllama.base_url is None — the same
 # constant `_models._check_ollama_daemon` already falls back to.
 _OLLAMA_DEFAULT_URL = "http://localhost:11434"
 
 _REDIRECT_ENV: dict[str, tuple[str, ...]] = {   # keyed by backend, not by mode
-    "openai": ("OPENAI_BASE_URL", "OPENAI_API_BASE", "AZURE_OPENAI_ENDPOINT"),
+    # Precedence order — see HOW. OPENAI_API_BASE outranks OPENAI_BASE_URL.
+    "openai": ("OPENAI_API_BASE", "OPENAI_BASE_URL", "AZURE_OPENAI_ENDPOINT"),
     "ollama": ("OLLAMA_HOST",),
 }
 
@@ -76,7 +80,14 @@ def _targets_match(candidate: str, url: str) -> bool:
 - `resolve_target` constructs via `_create_chat_model(config, timeout=5)` —
   local, no network — inside `try/except Exception`. On failure it returns the
   config value (or the `_UNSET_TARGET` sentinel) with `verified=False` and a
-  source that says so. Export `_UNSET_TARGET` as a module constant: step 8 skips
+  source that says so. **The source names `config.toml` only when there was a
+  config value.** Labelling the `(not configured)` sentinel
+  `config.toml (unverified …)` claims a provenance nothing supplied — and that
+  is the *common* path here, because construction fails precisely when the
+  contract is violated (a missing `api_key`), which is exactly when a user runs
+  `verify`. So: `config.toml (unverified — client not constructed)` for a
+  configured value, plain `unverified — client not constructed` for the
+  sentinel. Export `_UNSET_TARGET` as a module constant: step 8 skips
   its shape heuristics on it, and a duplicated string literal there would drift.
   Construction can fail for two legitimate reasons: the backend package is not
   installed, or the step-5 contract is violated.
@@ -86,6 +97,14 @@ def _targets_match(candidate: str, url: str) -> bool:
   each guarded by `getattr(..., None)` and try/except (`ChatOllama` has neither).
 - `gemini` / `anthropic` return `ResolvedTarget("n/a", "backend has no
   configurable target", True)` without constructing anything.
+- **An unset or typo'd backend is not "a backend with no target".** Gate on
+  `mode_of(config)` (step 5) *before* the `("openai", "ollama")` test: when it
+  returns `None` — `backend` unset, or `opnai` — return
+  `ResolvedTarget(_NO_BACKEND_TARGET, "no supported backend configured", False)`.
+  Reusing the gemini/anthropic string there would assert something untrue about
+  a backend that does not exist, and `verified=True` would claim the value was
+  read off a client that was never built. Step 9 already renders the
+  contract's `backend` finding, so this row only has to avoid contradicting it.
 - For `ollama` the resolution happens in *our* code (`_resolve_ollama_host` does
   `os.getenv("OLLAMA_HOST") or base_url`), so the source is knowable directly.
 - **`ollama` is the one backend whose client can report no URL — never print
@@ -115,6 +134,14 @@ def _targets_match(candidate: str, url: str) -> bool:
     SDK's precedence: whichever one the client actually used is the one whose
     value matches.
 
+  The value match cannot separate two variables set to the *same* value, so the
+  `_REDIRECT_ENV` tuple order is the tie-break and must be real precedence, not
+  arbitrary. Measured: langchain resolves `OPENAI_API_BASE` into
+  `openai_api_base` at init (`chat_models/base.py:1321-1327`, precedence
+  `explicit base_url > OPENAI_API_BASE > gateway`) and passes it to the SDK,
+  which only reads `OPENAI_BASE_URL` when it receives `base_url=None`
+  (`openai/_client.py:294-298`). So `OPENAI_API_BASE` wins and is listed first.
+
   With no applicable, matching variable and no config `base_url`, the source is
   `"SDK default"` — which is the truth for a plain-`openai` config resolving to
   `https://api.openai.com/v1/`, whatever else is exported.
@@ -128,10 +155,14 @@ def _targets_match(candidate: str, url: str) -> bool:
 ```
 resolve_target(config):
     backend = config["backend"]
+    if mode_of(config) is None:                  # unset or typo'd — no contract scope
+        return ResolvedTarget(_NO_BACKEND_TARGET, "no supported backend configured", False)
     if backend not in ("openai", "ollama"): return ResolvedTarget("n/a", "...", True)
     try: model = _create_chat_model(config, timeout=5)
-    except Exception: return ResolvedTarget(config.get("base_url") or _UNSET_TARGET,
-                                            "config.toml (unverified — client not constructed)", False)
+    except Exception:
+        cfg = config.get("base_url")             # name config.toml only if it supplied one
+        if cfg: return ResolvedTarget(cfg, "config.toml (unverified — client not constructed)", False)
+        return ResolvedTarget(_UNSET_TARGET, "unverified — client not constructed", False)
     try: url = dialed_url(model) or _fallback_url(config)
     finally: _close_http_clients(model)
     return ResolvedTarget(url, _source_for(config, url), True)
@@ -176,6 +207,10 @@ ResolvedTarget(url="https://relay.internal/v1",
 ResolvedTarget(url="https://relay.internal/v1",
                source="config.toml (unverified — client not constructed)",
                verified=False)
+ResolvedTarget(url="(not configured)",             # construction failed, nothing configured
+               source="unverified — client not constructed", verified=False)
+ResolvedTarget(url="(backend not configured)",     # backend unset or typo'd
+               source="no supported backend configured", verified=False)
 ResolvedTarget(url="http://localhost:11434",       # ollama, nothing configured
                source="SDK default", verified=True)
 ```
@@ -191,6 +226,9 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 2b. Both `OPENAI_BASE_URL` and `OPENAI_API_BASE` set to *different* values → the
    variable named is the one whose value matches the URL the stub client
    reports, not the first entry in `_REDIRECT_ENV`.
+2c. Both set to the **same** value → the value match cannot discriminate, so
+   tuple order decides: the source names `OPENAI_API_BASE`, the one langchain
+   resolves first.
 3. Nothing set → url is the SDK default, source `"SDK default"`.
 3b. **Stale `AZURE_OPENAI_ENDPOINT` with plain `openai`** (no `api_version`, no
    config `base_url`, client reports the SDK default) → source is
@@ -200,9 +238,17 @@ recording `close()` / `aclose()` calls — no langchain install needed.
    `AZURE_OPENAI_ENDPOINT` set, client reports
    `https://res.openai.azure.com/openai/deployments/dep/`) → source names
    `AZURE_OPENAI_ENDPOINT` (prefix match, trailing-slash tolerant).
-4. `_create_chat_model` raises → `verified is False`, url is the config value,
-   source contains `unverified`.
+4. `_create_chat_model` raises **with** a config `base_url` → `verified is
+   False`, url is the config value, source contains `config.toml` and
+   `unverified`.
+4b. `_create_chat_model` raises with **no** config `base_url` (the common case:
+   the step-5 contract is violated) → url is `_UNSET_TARGET` and the source
+   contains `unverified` but **not** `config.toml` — nothing supplied that value.
 5. `gemini` → `("n/a", ..., True)` and `_create_chat_model` is **not** called.
+5b. `backend` unset, and again `backend = "opnai"` → url is
+   `_NO_BACKEND_TARGET`, `verified is False`, and the source is **not** the
+   gemini/anthropic "backend has no configurable target" string.
+   `_create_chat_model` is not called.
 6. Both stub http clients are closed exactly once.
 7. `ollama` reads `base_url` off the model, and `OLLAMA_HOST` is reported as the
    source when set.
@@ -221,7 +267,17 @@ recording `close()` / `aclose()` calls — no langchain install needed.
 > `llm/providers/langchain/_config_diagnostics.py`. Read the URL from the
 > constructed client (never computed from config), close both httpx clients
 > afterwards, return `n/a` for gemini/anthropic, and fall back to the
-> config-derived value labelled *unverified* when construction fails. When a
+> config-derived value labelled *unverified* when construction fails — with the
+> source naming `config.toml` **only** when a config `base_url` actually
+> supplied that value; for the `(not configured)` sentinel say just
+> `unverified — client not constructed`. Gate on `mode_of(config) is None`
+> before the openai/ollama test and return `_NO_BACKEND_TARGET` with
+> `"no supported backend configured"`: an unset or typo'd `backend` is not a
+> backend that "has no configurable target". Order `_REDIRECT_ENV["openai"]` as
+> `OPENAI_API_BASE`, `OPENAI_BASE_URL`, `AZURE_OPENAI_ENDPOINT` — langchain
+> resolves `OPENAI_API_BASE` at init and the SDK reads `OPENAI_BASE_URL` only
+> when it receives `base_url=None`, so the first is the one that wins when both
+> hold the same value. When a
 > **constructed** `ollama` client reports no URL — `ChatOllama.base_url` is
 > `None` whenever neither config `base_url` nor `OLLAMA_HOST` is set, the most
 > common setup — fall back to
