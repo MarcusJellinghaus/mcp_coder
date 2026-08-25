@@ -72,7 +72,7 @@ def _build_claude_system_prompts(
 
 def prompt_llm(
     question: str,
-    provider: str = "claude",
+    provider: str | None = None,
     session_id: str | None = None,
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
@@ -89,7 +89,9 @@ def prompt_llm(
 
     Args:
         question: The question to ask the LLM
-        provider: The LLM provider to use ("claude" or "langchain")
+        provider: Explicit LLM provider to use ("claude", "langchain" or
+            "copilot"). An explicitly passed provider always wins; when omitted,
+            the MCP_CODER_LLM_PROVIDER env var is used, then "claude".
         session_id: Optional session ID to resume previous conversation
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess.
@@ -150,8 +152,8 @@ def prompt_llm(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    # Allow env var to override the provider parameter (e.g. in CI)
-    provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
+    # Explicit argument wins; the env var only fills an omitted provider
+    provider = provider or os.environ.get("MCP_CODER_LLM_PROVIDER") or "claude"
 
     # Load prompts if project_dir is provided
     system_prompt: str | None = None
@@ -285,7 +287,7 @@ def prompt_llm(
 
 def prompt_llm_stream(
     question: str,
-    provider: str = "claude",
+    provider: str | None = None,
     session_id: str | None = None,
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
@@ -306,7 +308,9 @@ def prompt_llm_stream(
 
     Args:
         question: The question to ask the LLM.
-        provider: The LLM provider to use ("claude", "langchain", or "copilot").
+        provider: Explicit LLM provider to use ("claude", "langchain", or
+            "copilot"). An explicitly passed provider always wins; when omitted,
+            the MCP_CODER_LLM_PROVIDER env var is used, then "claude".
         session_id: Optional session ID to resume previous conversation.
         timeout: Timeout in seconds for the request.
         env_vars: Optional environment variables to pass to the LLM subprocess.
@@ -333,8 +337,8 @@ def prompt_llm_stream(
     if timeout <= 0:
         raise ValueError("Timeout must be a positive number")
 
-    # Allow env var to override the provider parameter
-    provider = os.environ.get("MCP_CODER_LLM_PROVIDER") or provider
+    # Explicit argument wins; the env var only fills an omitted provider
+    provider = provider or os.environ.get("MCP_CODER_LLM_PROVIDER") or "claude"
 
     # Load prompts if project_dir is provided
     system_prompt: str | None = None

@@ -983,6 +983,18 @@ class TestPromptLlmLangchainRouting:
             "raw_response": {},
         }
 
+    def _make_claude_response(self, text: str = "claude reply") -> dict[str, object]:
+        from datetime import datetime
+
+        return {
+            "version": "1.0",
+            "timestamp": datetime.now().isoformat(),
+            "text": text,
+            "session_id": "uuid-claude-session",
+            "provider": "claude",
+            "raw_response": {},
+        }
+
     def test_routes_to_langchain_provider(self) -> None:
         """prompt_llm with provider='langchain' calls ask_langchain."""
         expected = self._make_langchain_response()
@@ -1040,21 +1052,72 @@ class TestPromptLlmLangchainRouting:
             prompt_llm("Hello", provider="unsupported_xyz")
         assert "copilot" in str(exc_info.value)
 
-    def test_env_var_overrides_provider_to_langchain(
+    def test_explicit_provider_beats_env_var(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MCP_CODER_LLM_PROVIDER env var overrides the provider parameter."""
+        """An explicitly passed provider wins over MCP_CODER_LLM_PROVIDER."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
+        expected = self._make_langchain_response()
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain.ask_langchain",
+                return_value=expected,
+            ) as mock_langchain,
+            patch(
+                "mcp_coder.llm.interface.ask_claude_code_cli",
+                return_value=self._make_claude_response(),
+            ) as mock_claude,
+        ):
+            from mcp_coder.llm.interface import prompt_llm
+
+            result = prompt_llm("Hello", provider="claude")
+
+        mock_langchain.assert_not_called()
+        mock_claude.assert_called_once()
+        assert result["provider"] == "claude"
+
+    def test_env_var_used_when_provider_omitted(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MCP_CODER_LLM_PROVIDER applies when no provider argument is given."""
         monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
         expected = self._make_langchain_response()
         with patch(
             "mcp_coder.llm.providers.langchain.ask_langchain",
             return_value=expected,
-        ):
+        ) as mock_langchain:
             from mcp_coder.llm.interface import prompt_llm
 
-            # provider kwarg says "claude" but env var overrides to "langchain"
-            result = prompt_llm("Hello", provider="claude")
+            result = prompt_llm("Hello")
+
+        mock_langchain.assert_called_once()
         assert result["provider"] == "langchain"
+
+    def test_defaults_to_claude_when_provider_and_env_absent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With no provider argument and no env var, claude is used."""
+        monkeypatch.delenv("MCP_CODER_LLM_PROVIDER", raising=False)
+        with patch(
+            "mcp_coder.llm.interface.ask_claude_code_cli",
+            return_value=self._make_claude_response(),
+        ) as mock_claude:
+            from mcp_coder.llm.interface import prompt_llm
+
+            result = prompt_llm("Hello")
+
+        mock_claude.assert_called_once()
+        assert result["provider"] == "claude"
+
+    def test_unsupported_provider_still_raises_after_resolution(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An explicit unsupported provider raises even with a valid env var set."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
+        from mcp_coder.llm.interface import prompt_llm
+
+        with pytest.raises(ValueError, match="Unsupported provider: unsupported_xyz"):
+            prompt_llm("Hello", provider="unsupported_xyz")
 
     def test_passes_mcp_config_to_langchain(self) -> None:
         """mcp_config parameter is forwarded to ask_langchain()."""
@@ -1379,19 +1442,64 @@ class TestPromptLlmStream:
         )
         assert len(events) == 2
 
-    def test_prompt_llm_stream_env_override(
+    def test_prompt_llm_stream_explicit_provider_beats_env_var(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MCP_CODER_LLM_PROVIDER env var overrides provider parameter."""
+        """An explicitly passed provider wins over MCP_CODER_LLM_PROVIDER."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain.ask_langchain_stream",
+                return_value=iter([{"type": "done", "usage": {}}]),
+            ) as mock_langchain,
+            patch(
+                "mcp_coder.llm.providers.claude.claude_code_cli_streaming."
+                "ask_claude_code_cli_stream",
+                return_value=iter([{"type": "done", "usage": {}}]),
+            ) as mock_claude,
+        ):
+            events = list(prompt_llm_stream("Hello", provider="claude"))
+
+        mock_langchain.assert_not_called()
+        mock_claude.assert_called_once()
+        assert len(events) == 1
+
+    def test_prompt_llm_stream_env_var_used_when_provider_omitted(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MCP_CODER_LLM_PROVIDER applies when no provider argument is given."""
         monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
         with patch(
             "mcp_coder.llm.providers.langchain.ask_langchain_stream",
             return_value=iter([{"type": "done", "usage": {}}]),
-        ) as mock_stream:
-            events = list(prompt_llm_stream("Hello", provider="claude"))
+        ) as mock_langchain:
+            events = list(prompt_llm_stream("Hello"))
 
-        mock_stream.assert_called_once()
+        mock_langchain.assert_called_once()
         assert len(events) == 1
+
+    def test_prompt_llm_stream_defaults_to_claude_without_env(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With no provider argument and no env var, claude is used."""
+        monkeypatch.delenv("MCP_CODER_LLM_PROVIDER", raising=False)
+        with patch(
+            "mcp_coder.llm.providers.claude.claude_code_cli_streaming."
+            "ask_claude_code_cli_stream",
+            return_value=iter([{"type": "done", "usage": {}}]),
+        ) as mock_claude:
+            events = list(prompt_llm_stream("Hello"))
+
+        mock_claude.assert_called_once()
+        assert len(events) == 1
+
+    def test_prompt_llm_stream_unsupported_provider_still_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An explicit unsupported provider raises even with a valid env var set."""
+        monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
+        with pytest.raises(ValueError, match="Unsupported provider: unsupported_xyz"):
+            list(prompt_llm_stream("Hello", provider="unsupported_xyz"))
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"

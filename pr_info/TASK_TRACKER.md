@@ -842,9 +842,68 @@ Details: [step_11.md](./steps/step_11.md)
 
 Details: [step_12.md](./steps/step_12.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (Both signatures become `provider: str | None = None` and resolve
+      `provider or os.environ.get("MCP_CODER_LLM_PROVIDER") or "claude"`
+      (`interface.py:154`, `:339`), so an explicitly passed provider always wins.
+      The unsupported-provider `ValueError` stays *after* resolution and can
+      therefore never see `None`. No config lookup was added here —
+      `cli/utils.resolve_llm_method` still owns that tier, so end-to-end
+      precedence is explicit > env > config with no `llm → cli` import
+      (lint-imports: 21/21 kept). Both docstrings updated.
+
+      **No call-site changes needed, verified by grep:** all 22 in-repo
+      `prompt_llm(` / `prompt_llm_stream(` call sites pass `provider=`
+      explicitly (`cli/commands/prompt.py`, `verify.py`, `icoder/env_setup.py`
+      + `llm_service.py`, `workflows/{rebase,create_plan,create_pr,implement,
+      review}`, `workflow_steps/ci.py`, `workflow_utils/commit_operations.py`).
+
+      **TDD, genuinely red first.** The two inverted tests
+      (`test_explicit_provider_beats_env_var`,
+      `test_prompt_llm_stream_explicit_provider_beats_env_var`) failed on the
+      pre-change tree with *"Expected 'ask_langchain' to not have been called.
+      Called 1 times"*, and the two new unsupported-provider tests failed with
+      `ModuleNotFoundError: langchain_core` — the env var was routing an
+      unsupported provider straight into langchain instead of raising. 4 red →
+      9 green. Coverage added for all five TDD cases: explicit-beats-env
+      (both functions), env-when-omitted (both), default-claude-when-neither
+      (both), and unsupported-still-raises (both). A `_make_claude_response()`
+      helper mirrors the existing `_make_langchain_response()`.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in either file this step touches.** pylint and mypy
+      scoped to `src/mcp_coder/llm/interface.py` + `tests/llm/test_interface.py`
+      are both clean; ruff clean; isort clean; black reformatted the test file
+      once and is now a no-op across 624 files. lint-imports 21/21.
+
+      Test runs: `tests/llm/test_interface.py` → **99 passed**; `tests/llm` →
+      **1270 passed, 1 skipped**; whole fast suite → **4846 passed, 5 skipped,
+      0 failed**.
+
+      **Four environmental exclusions, all reproduced without this change:**
+      (1) the known `test_langchain_exceptions.py::…httpx_connect_error`
+      baseline from steps 2-11; (2) three `test_copilot_integration.py` tests
+      (`copilot_cli_integration` marker, absent from CLAUDE.md's exclusion list)
+      that shell out to a real unauthenticated `copilot.CMD`; (3) six
+      `tests/llm/test_mcp_manager.py` tests — `ModuleNotFoundError:
+      langchain_mcp_adapters`, confirmed failing *in isolation* on this tree
+      because the stub lives in `tests/llm/providers/langchain/conftest.py`,
+      out of that module's scope; (4) `tests/checks`, `tests/workflows/review`
+      and the five `test_check_branch_status*.py` modules (stale
+      `CIStatus`/`BranchStatusReport` API), excluded as in steps 2-11.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-11: the `.venv` copy of `mcp-workspace` lacks
+      `mcp_workspace/checks/branch_status_rendering.py`, so a bare
+      `import mcp_coder` raises and pytest collects zero tests (confirmed again:
+      the first unshimmed run collected 0). Same workaround — a throwaway
+      `.pytest_shim/sitecustomize.py` (this time it also needs a `CIStatus`
+      *enum* with PASSED/FAILED/PENDING/NOT_CONFIGURED/UNKNOWN/UNAVAILABLE, not
+      just a bare class, or those modules fail at collection),
+      `env_vars={"PYTHONPATH": ".pytest_shim"}`, directory deleted afterwards
+      and **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.)
+- [x] Commit message prepared
 
 ### Step 13: `verify`'s test prompt carries the real message shape
 
