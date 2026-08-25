@@ -11,6 +11,7 @@ from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.prompts import prompt_loader
 from mcp_coder.prompts.prompt_loader import (
+    claude_md_paths,
     get_project_prompt_path,
     is_claude_md,
     is_prompt_configured_but_missing,
@@ -325,6 +326,24 @@ def test_shipped_defaults_exist() -> None:
     assert "Project" in project or "project" in project.lower()
 
 
+def test_claude_md_paths_returns_both_candidates(tmp_path: Path) -> None:
+    """Returns root-level and .claude/ candidates for a directory."""
+    assert claude_md_paths(tmp_path) == [
+        tmp_path / "CLAUDE.md",
+        tmp_path / ".claude" / "CLAUDE.md",
+    ]
+
+
+def test_claude_md_paths_does_not_touch_filesystem(tmp_path: Path) -> None:
+    """Candidates, not hits - a nonexistent directory still yields both paths."""
+    missing = tmp_path / "does" / "not" / "exist"
+    assert not missing.exists()
+    assert claude_md_paths(missing) == [
+        missing / "CLAUDE.md",
+        missing / ".claude" / "CLAUDE.md",
+    ]
+
+
 def test_is_claude_md_root_level(tmp_path: Path) -> None:
     """Detects root-level CLAUDE.md."""
     claude_md = tmp_path / "CLAUDE.md"
@@ -338,6 +357,22 @@ def test_is_claude_md_dot_claude_dir(tmp_path: Path) -> None:
     claude_dir.mkdir()
     claude_md = claude_dir / "CLAUDE.md"
     claude_md.write_text("instructions", encoding="utf-8")
+    assert is_claude_md(claude_md, str(tmp_path)) is True
+
+
+def test_is_claude_md_parent_directory(tmp_path: Path) -> None:
+    """Detects CLAUDE.md in a parent of the project directory."""
+    claude_md = tmp_path / "CLAUDE.md"
+    claude_md.write_text("instructions", encoding="utf-8")
+    subdir = tmp_path / "repo"
+    subdir.mkdir()
+    assert is_claude_md(claude_md, str(subdir)) is True
+
+
+def test_is_claude_md_nonexistent_path(tmp_path: Path) -> None:
+    """Membership test, not existence check - unwritten CLAUDE.md still matches."""
+    claude_md = tmp_path / "CLAUDE.md"
+    assert not claude_md.exists()
     assert is_claude_md(claude_md, str(tmp_path)) is True
 
 

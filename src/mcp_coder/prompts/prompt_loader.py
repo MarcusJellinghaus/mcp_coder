@@ -169,6 +169,18 @@ def get_project_prompt_path(project_dir: Path | None = None) -> Path | None:
     return _resolve_path(config.project_prompt, project_dir)
 
 
+def claude_md_paths(directory: Path) -> list[Path]:
+    """Return the CLAUDE.md candidate paths Claude Code looks for in one directory.
+
+    Not existence-checked - these are candidates, not hits. The order is
+    presentational only and must not be treated as a precedence rule.
+
+    Returns:
+        [<directory>/CLAUDE.md, <directory>/.claude/CLAUDE.md]
+    """
+    return [directory / "CLAUDE.md", directory / ".claude" / "CLAUDE.md"]
+
+
 def is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> bool:
     """Check if project_prompt points to any known CLAUDE.md location.
 
@@ -187,12 +199,9 @@ def is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> b
         # Check current project dir and all parent directories
         current = project
         while True:
-            # Root-level CLAUDE.md
-            if resolved == (current / "CLAUDE.md").resolve():
-                return True
-            # .claude/CLAUDE.md
-            if resolved == (current / ".claude" / "CLAUDE.md").resolve():
-                return True
+            for candidate in claude_md_paths(current):
+                if resolved == candidate.resolve():
+                    return True
 
             parent = current.parent
             if parent == current:

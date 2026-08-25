@@ -30,9 +30,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Detail: [step_1.md](./steps/step_1.md) — shared candidate knowledge, no behaviour change.
 
-- [ ] Implementation (tests + production code)
+- [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+      (pylint/mypy/lint-imports clean; **pytest blocked**: repo `.venv` has a
+      stale `mcp-workspace` missing `checks.branch_status_rendering`, so
+      `import mcp_coder` fails and nothing collects. Needs a dependency
+      reinstall — pre-existing, unrelated to this step.)
+- [x] Commit message prepared
 
 ### Step 2: `resolve_execution_dir` signature + deprecation
 
