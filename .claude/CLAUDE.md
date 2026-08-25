@@ -6,6 +6,15 @@
 
 **Do NOT use native Claude Code file tools** (`Read`, `Write`, `Edit`, `Glob`, `Grep`, `Bash`) for any operation that has an MCP equivalent. Always use the `mcp__mcp-workspace__*` tools instead. This applies to all file reading, writing, editing, searching, listing, and git operations. If no MCP equivalent exists, use Bash. Check the tool mapping table below first.
 
+**Justify Bash.** Before a Bash command or script, say in chat, on two lines:
+
+- *What it does* — one sentence.
+- *Why MCP doesn't* — which tool you'd have used, and what stops it.
+
+If you can't name the gap, use the MCP tool. Exempt: the approved git/gh commands under Git operations.
+
+**No session scratchpad.** MCP tools can't write outside the project. Temporary files go in `.scratch/`.
+
 
 ### Tool mapping
 
@@ -147,6 +156,8 @@ Be concise. Shorter is better — chat, commits, PRs, docs, comments alike.
 Say it once. Never restate what the reader can already see: the diff, the code, the issue, or my own earlier message. Cut it; don't rephrase it.
 
 If a sentence isn't load-bearing, delete it.
+
+Readable beats short. Cut what I don't need; don't compress what stays — complete sentences, no arrow chains or invented abbreviations. Lead with the outcome.
 
 ## Asking questions
 
