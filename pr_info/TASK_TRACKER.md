@@ -27,10 +27,23 @@ Details: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
-      (BLOCKED: the venv's `mcp-workspace` is outdated — `mcp_workspace.checks.branch_status_rendering`
-      is missing, so `import mcp_coder` fails and pytest cannot collect any test. pylint/mypy run and
-      report **no** issues in the files touched by this step; all their findings are pre-existing and
-      caused by the same stale dependency. Re-run after refreshing the venv.)
+      (STILL BLOCKED — re-confirmed, root cause now pinned down.
+      `mcp-workspace` is declared as an *unpinned git dependency* in pyproject.toml, and the copy
+      installed in `.venv` predates upstream HEAD: `.venv/.../mcp_workspace/checks/` has no
+      `branch_status_rendering.py`, while upstream HEAD does. `src/mcp_coder/checks/branch_status.py:17`
+      imports it, so `import mcp_coder` fails and **pytest collects zero tests**.
+      - pylint: every finding is a missing-import error (stale `mcp_workspace`, plus optional deps
+        `langchain_core`, `langchain_mcp_adapters`, `langgraph`, `httpx`, `mcp` not installed).
+        **No** finding is in a file touched by this step.
+      - mypy: 8 errors, all environmental. 7 trace to the stale `mcp_workspace`
+        (`add_assignees`, `pr_feedback_undeterminable`, `fail_on_reviews`,
+        `branch_status_rendering` — all verified present upstream); the 8th is an untyped decorator
+        caused by the missing optional `mcp` package. **No** error is in a file touched by this step.
+      Rename verified by inspection instead: schema + both loader tests present, and the only
+      remaining `endpoint` spellings are the intentional ones — the `endpoint_shape` key/label
+      (deferred to step 8), the `azure_endpoint=` SDK kwarg, an unrelated docstring, and the test
+      asserting the retired env var is ignored.
+      Fix: refresh the venv (reinstall the `mcp-workspace` git dependency), then re-run.)
 - [x] Commit message prepared
 
 ### Step 2: Unknown-key hints: rename table + "did you mean"
