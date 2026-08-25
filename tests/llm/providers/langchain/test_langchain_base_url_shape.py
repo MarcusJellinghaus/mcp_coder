@@ -19,6 +19,7 @@ import pytest
 from mcp_coder.cli.commands.verify_formatting import _LABEL_MAP
 from mcp_coder.llm.providers.langchain._config_diagnostics import (
     _UNSET_TARGET,
+    NON_URL_TARGETS,
     ResolvedTarget,
 )
 from mcp_coder.llm.providers.langchain.verification import (
@@ -209,6 +210,18 @@ class TestCheckBaseUrlShapeSkips:
                 None,
             )
             is None
+        )
+
+    @pytest.mark.parametrize("sentinel", sorted(NON_URL_TARGETS))
+    def test_every_sentinel_skips(self, sentinel: str) -> None:
+        """No sentinel may be parsed as a URL and reported as malformed.
+
+        ``(unknown)`` and ``(backend not configured)`` used to reach urlparse()
+        and render "malformed URL", turning "we could not tell" into a
+        confident, wrong diagnosis.
+        """
+        assert (
+            _check_base_url_shape(ResolvedTarget(sentinel, "probe", True), None) is None
         )
 
     def test_unverified_config_value_is_still_checked(self) -> None:

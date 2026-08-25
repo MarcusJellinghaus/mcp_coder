@@ -81,6 +81,7 @@ def raise_connection_error(
     env_var: str,
     original: Exception,
     base_url_hint: str = "",
+    dialed: str | None = None,
 ) -> NoReturn:
     """Build multi-line connection error message and raise LLMConnectionError.
 
@@ -89,11 +90,18 @@ def raise_connection_error(
         env_var: Environment variable name for the API key.
         original: The original exception that triggered the error.
         base_url_hint: Optional hint about the base_url.
+        dialed: The URL the client actually dialed, when known. Reported on
+            its own line rather than in the ``base_url:`` slot — it states
+            what happened, whereas *base_url_hint* says what to change, and
+            collapsing the two would drop the actionable hint.
 
     Raises:
         LLMConnectionError: Always raised with a formatted error message.
     """
-    lines = [f"Connection to {provider} API failed: {original}", "Check:"]
+    lines = [f"Connection to {provider} API failed: {original}"]
+    if dialed:
+        lines.append(f"Requests were sent to: {dialed}")
+    lines.append("Check:")
     item = 1
     lines.append(f"  {item}. {env_var} env var or api_key in config.toml")
     item += 1

@@ -327,9 +327,15 @@ extras (smaller footprints if you only need one backend).
 | ------- | ------ | ------------- | ---------- |
 | `backend` | string | LangChain backend: `"openai"`, `"gemini"`, `"anthropic"`, or `"ollama"` | Yes |
 | `model` | string | Model name (e.g. `"gpt-4o"`, `"gemini-1.5-pro"`). Doubles as `azure_deployment` for Azure | Yes |
-| `api_key` | string | API key (env var takes priority — see below) | No |
-| `base_url` | string | Base URL of the server (`azure_endpoint` in Azure mode) | No |
-| `api_version` | string | Azure API version (e.g. `"2024-02-01"`). When set, uses `AzureChatOpenAI` | No |
+| `api_key` | string | API key (env var takes priority — see below) | Yes for `openai`/Azure/`gemini`/`anthropic`, here or via env var; optional for `ollama` |
+| `base_url` | string | Base URL of the server (`azure_endpoint` in Azure mode) | Yes in Azure mode, here or via `AZURE_OPENAI_ENDPOINT`; optional otherwise |
+| `api_version` | string | Azure API version (e.g. `"2024-02-01"`). When set, uses `AzureChatOpenAI` | Yes for Azure only — omit for every other setup |
+
+A missing `api_key` (with no matching env var) and a missing Azure `base_url`
+are **errors**: `mcp-coder verify` exits 1 naming the field, and the run fails
+before the request is sent. See
+[Which fields apply to which setup](#which-fields-apply-to-which-setup) for the
+per-backend breakdown.
 
 > ⚠️ **Renamed:** `endpoint` is now `base_url`. The old name no longer works —
 > it is rejected as an unknown key. Migration:

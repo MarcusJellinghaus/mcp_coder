@@ -21,7 +21,7 @@ from . import _load_langchain_config
 from ._config_diagnostics import (
     _API_KEY_ENV,
     _KEYLESS_ENV,
-    _UNSET_TARGET,
+    NON_URL_TARGETS,
     Finding,
     ResolvedTarget,
     _targets_match,
@@ -225,10 +225,10 @@ def _check_base_url_shape(
 
     Returns:
         A verify-style dict with ``ok`` (``None`` | ``True``) and ``value``
-        (str), or None when the check does not apply (Azure, or a sentinel
-        target that is not a URL at all).
+        (str), or None when the check does not apply (Azure, or any of the
+        sentinels in ``NON_URL_TARGETS``, which are not URLs at all).
     """
-    if api_version or target.url in ("n/a", _UNSET_TARGET):
+    if api_version or target.url in NON_URL_TARGETS:
         return None
     url = target.url
     src = f"(source: {target.source})"

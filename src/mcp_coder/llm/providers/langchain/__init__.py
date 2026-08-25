@@ -122,20 +122,21 @@ def _handle_provider_error(
             Callers read it off the client with :func:`dialed_url`, never from
             config — a config-derived value is wrong the moment OPENAI_BASE_URL
             or OLLAMA_HOST redirects the request, which is exactly the case a
-            connection error needs to expose. Left at None the message is
-            byte-identical to before, keeping the static per-backend hint.
+            connection error needs to expose. It is reported *alongside* the
+            static per-backend hint, never instead of it: the hint names the
+            key and env var to change, which the dialed URL cannot. Left at
+            None the message is byte-identical to before.
     """
     auth_errors = _auth_errors_for_backend(backend)
     provider, env_var, base_url_hint = _BACKEND_ERROR_PARAMS.get(
         backend or "", (backend or "", "", "")
     )
-    hint = f"tried {dialed}" if dialed else base_url_hint
     if auth_errors and isinstance(exc, auth_errors):
         if backend == "gemini" and not is_google_auth_error(exc):
-            raise_connection_error(provider, env_var, exc, hint)
+            raise_connection_error(provider, env_var, exc, base_url_hint, dialed)
         raise_auth_error(provider, env_var, exc)
     if isinstance(exc, CONNECTION_ERRORS):
-        raise_connection_error(provider, env_var, exc, hint)
+        raise_connection_error(provider, env_var, exc, base_url_hint, dialed)
 
 
 def _load_langchain_config() -> dict[str, str | None]:

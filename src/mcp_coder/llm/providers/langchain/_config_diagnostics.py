@@ -273,8 +273,19 @@ _UNSET_TARGET = "(not configured)"
 # The backend itself is unset or typo'd, so no target can even be scoped.
 _NO_BACKEND_TARGET = "(backend not configured)"
 
+# The backend has no configurable target at all (gemini, anthropic).
+_NO_TARGET = "n/a"
+
 # A constructed non-ollama client that exposes no URL at all.
 _UNKNOWN_TARGET = "(unknown)"
+
+# Every ResolvedTarget.url that is a sentinel rather than a URL. Consumers
+# that parse the target must skip these wholesale: urlparse() accepts them
+# happily and then reports a "malformed URL", turning "we could not tell" into
+# a confident, wrong diagnosis.
+NON_URL_TARGETS: frozenset[str] = frozenset(
+    {_UNSET_TARGET, _NO_BACKEND_TARGET, _NO_TARGET, _UNKNOWN_TARGET}
+)
 
 # What the ollama client dials when ChatOllama.base_url is None — the same
 # constant _models._check_ollama_daemon already falls back to.
@@ -478,7 +489,7 @@ def resolve_target(config: Mapping[str, str | None]) -> ResolvedTarget:
             _NO_BACKEND_TARGET, "no supported backend configured", False
         )
     if config.get("backend") not in _TARGETED_BACKENDS:
-        return ResolvedTarget("n/a", "backend has no configurable target", True)
+        return ResolvedTarget(_NO_TARGET, "backend has no configurable target", True)
 
     try:
         chat_model = _create_chat_model(config, timeout=5)

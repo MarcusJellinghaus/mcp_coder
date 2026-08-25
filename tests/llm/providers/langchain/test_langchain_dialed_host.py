@@ -28,8 +28,12 @@ _MOD = "mcp_coder.llm.providers.langchain"
 #: What the stub client reports; deliberately not any config value.
 _DIALED = "https://relay.internal/v1"
 
-#: The static per-backend hint that ``dialed`` replaces.
+#: The static per-backend hint that ``dialed`` accompanies but never replaces.
 _STATIC_OPENAI_HINT = "base_url if using a custom server"
+
+#: How a known dialed URL is rendered — on its own line, distinct from the
+#: ``base_url:`` hint, which says what to change rather than what happened.
+_DIALED_LINE = "Requests were sent to: "
 
 
 class _StubRootClient:
@@ -96,15 +100,28 @@ def _make_config(backend: str = "openai") -> dict[str, str | None]:
 
 
 class TestHandleProviderErrorDialed:
-    """The ``dialed`` argument replaces the static base_url hint."""
+    """The ``dialed`` argument accompanies the static base_url hint."""
 
     def test_dialed_named_in_connection_message(self) -> None:
-        """Case 1: the raised message contains the dialed URL."""
+        """Case 1: the raised message contains the dialed URL *and* the hint."""
         with pytest.raises(LLMConnectionError) as exc_info:
             _handle_provider_error(ConnectionError("boom"), "openai", _DIALED)
         message = str(exc_info.value)
-        assert f"tried {_DIALED}" in message
-        assert _STATIC_OPENAI_HINT not in message
+        assert f"{_DIALED_LINE}{_DIALED}" in message
+        assert f"base_url: {_STATIC_OPENAI_HINT}" in message
+
+    def test_dialed_line_is_distinct_from_the_base_url_hint(self) -> None:
+        """The dialed URL never occupies the ``base_url:`` slot."""
+        with pytest.raises(LLMConnectionError) as exc_info:
+            _handle_provider_error(ConnectionError("boom"), "openai", _DIALED)
+        assert str(exc_info.value) == (
+            "Connection to OpenAI API failed: boom\n"
+            f"{_DIALED_LINE}{_DIALED}\n"
+            "Check:\n"
+            "  1. OPENAI_API_KEY env var or api_key in config.toml\n"
+            f"  2. base_url: {_STATIC_OPENAI_HINT}\n"
+            "  3. Network/firewall/proxy settings"
+        )
 
     def test_default_none_keeps_todays_message(self) -> None:
         """Case 2: regression guard — the whole message is unchanged."""
@@ -118,29 +135,31 @@ class TestHandleProviderErrorDialed:
             "  3. Network/firewall/proxy settings"
         )
 
-    def test_empty_dialed_falls_back_to_the_static_hint(self) -> None:
-        """An empty string is not a host; do not print 'tried '."""
+    def test_empty_dialed_prints_no_dialed_line(self) -> None:
+        """An empty string is not a host; emit no dialed line at all."""
         with pytest.raises(LLMConnectionError) as exc_info:
             _handle_provider_error(ConnectionError("boom"), "openai", "")
         message = str(exc_info.value)
-        assert "tried" not in message
+        assert _DIALED_LINE not in message
         assert _STATIC_OPENAI_HINT in message
 
-    def test_dialed_replaces_the_ollama_hint_too(self) -> None:
-        """Every backend with a static hint gets the dialed host instead."""
+    def test_ollama_keeps_its_hint_beside_the_dialed_host(self) -> None:
+        """The OLLAMA_HOST guidance survives — the URL cannot replace it."""
         with pytest.raises(LLMConnectionError) as exc_info:
             _handle_provider_error(
                 ConnectionError("boom"), "ollama", "http://box:11434"
             )
         message = str(exc_info.value)
-        assert "tried http://box:11434" in message
-        assert "base_url/OLLAMA_HOST if not localhost" not in message
+        assert f"{_DIALED_LINE}http://box:11434" in message
+        assert "base_url/OLLAMA_HOST if not localhost" in message
 
-    def test_backend_without_a_hint_gains_one(self) -> None:
-        """anthropic has an empty static hint, so the line only exists now."""
+    def test_backend_without_a_hint_has_no_base_url_line(self) -> None:
+        """anthropic has an empty static hint, so only the dialed line appears."""
         with pytest.raises(LLMConnectionError) as exc_info:
             _handle_provider_error(ConnectionError("boom"), "anthropic", _DIALED)
-        assert f"2. base_url: tried {_DIALED}" in str(exc_info.value)
+        message = str(exc_info.value)
+        assert f"{_DIALED_LINE}{_DIALED}" in message
+        assert "base_url:" not in message
 
     def test_auth_errors_do_not_mention_the_host(self) -> None:
         """The auth message has no base_url line to carry it."""
@@ -159,7 +178,7 @@ class TestHandleProviderErrorDialed:
             pytest.raises(LLMConnectionError) as exc_info,
         ):
             _handle_provider_error(_FakeAuthError("503"), "gemini", _DIALED)
-        assert f"tried {_DIALED}" in str(exc_info.value)
+        assert f"{_DIALED_LINE}{_DIALED}" in str(exc_info.value)
 
     def test_unrelated_exception_still_returns(self) -> None:
         """A non-connection, non-auth error is not rewrapped."""
@@ -186,7 +205,7 @@ class TestProviderPathsNameTheDialedHost:
 
             with pytest.raises(LLMConnectionError) as exc_info:
                 ask_langchain("question")
-        assert f"tried {_DIALED}" in str(exc_info.value)
+        assert f"{_DIALED_LINE}{_DIALED}" in str(exc_info.value)
 
     def test_ask_text_stream(self) -> None:
         """_ask_text_stream does the same on the streaming path."""
@@ -200,7 +219,7 @@ class TestProviderPathsNameTheDialedHost:
 
             with pytest.raises(LLMConnectionError) as exc_info:
                 list(ask_langchain_stream("question"))
-        assert f"tried {_DIALED}" in str(exc_info.value)
+        assert f"{_DIALED_LINE}{_DIALED}" in str(exc_info.value)
 
     def test_ask_agent(self) -> None:
         """_ask_agent names the host when run_agent fails to connect."""
@@ -220,7 +239,7 @@ class TestProviderPathsNameTheDialedHost:
 
             with pytest.raises(LLMConnectionError) as exc_info:
                 ask_langchain("question", mcp_config="/tmp/mcp.json")
-        assert f"tried {_DIALED}" in str(exc_info.value)
+        assert f"{_DIALED_LINE}{_DIALED}" in str(exc_info.value)
 
     def test_ask_agent_stream(self) -> None:
         """_ask_agent_stream names the host on the held thread exception."""
@@ -240,7 +259,7 @@ class TestProviderPathsNameTheDialedHost:
 
             with pytest.raises(LLMConnectionError) as exc_info:
                 list(ask_langchain_stream("question", mcp_config="/tmp/mcp.json"))
-        assert f"tried {_DIALED}" in str(exc_info.value)
+        assert f"{_DIALED_LINE}{_DIALED}" in str(exc_info.value)
 
     def test_client_without_a_url_keeps_the_static_hint(self) -> None:
         """dialed_url() returning None must not degrade today's message."""
@@ -257,7 +276,7 @@ class TestProviderPathsNameTheDialedHost:
             with pytest.raises(LLMConnectionError) as exc_info:
                 ask_langchain("question")
         message = str(exc_info.value)
-        assert "tried" not in message
+        assert _DIALED_LINE not in message
         assert _STATIC_OPENAI_HINT in message
 
 
