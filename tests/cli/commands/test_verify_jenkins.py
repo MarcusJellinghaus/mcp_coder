@@ -356,7 +356,14 @@ class TestJobsSection:
     """Per-repo Job/Read rows."""
 
     def test_job_404_names_both_segments(self) -> None:
-        """A 404 job row carries the ancestor-walk diagnosis and the docs hint."""
+        """A 404 job row carries the narrowed ancestor-walk diagnosis, not a flat one.
+
+        Every ``diagnose_404`` branch opens with the whole job path, so asserting
+        the bare segment names would pass whichever one fired - including the
+        flat "no folder in that path is readable either" fallback. Only the
+        narrowing branch quotes the readable ancestor and the segment below it
+        separately, so the quoted wording is what pins the walk.
+        """
 
         def responder(path: str) -> ProbeResult:
             if path == "/api/json":
@@ -373,8 +380,8 @@ class TestJobsSection:
         row = jobs_result["my-repo"]
         assert row["ok"] is False
         assert row["value"] == "Windows-Agents/Executor"
-        assert "Windows-Agents" in row["error"]
-        assert "Executor" in row["error"]
+        assert "the folder 'Windows-Agents' is readable" in row["error"]
+        assert "'Executor' under it is not" in row["error"]
         assert row["install_hint"] == _DOCS
         assert jobs_result["overall_ok"] is False
 
