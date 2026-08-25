@@ -31,11 +31,17 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 Detail: [step_1.md](./steps/step_1.md) — shared candidate knowledge, no behaviour change.
 
 - [x] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — **blocked on the environment, not on this step**
-      - Clean: `lint-imports` 21/21 kept; `black`/`isort` no changes. Neither
-        `prompt_loader.py` nor `test_prompt_loader.py` draws a single pylint or
-        mypy finding.
-      - **pytest cannot collect anything**: `src/mcp_coder/checks/branch_status.py:17`
+- [x] Quality checks: pylint, pytest, mypy — **blocked on the environment, not on this step**
+      (re-verified; blocker unchanged, so the step is closed on what is verifiable here)
+      - Clean: `lint-imports` 21/21 kept; `black`/`isort` no changes (615 files
+        unchanged). Neither `prompt_loader.py` nor `test_prompt_loader.py` draws a
+        single pylint or mypy finding — every reported finding is in an unrelated
+        file and pre-exists on `main`.
+      - **pytest never ran**: 0 tests collected, whole-suite. Not "passed" —
+        collection aborts before any test executes. The 8 Step 1 tests
+        (`test_claude_md_paths_*`, `test_is_claude_md_*`) are therefore unproven
+        in this environment and must be run once the venv is repaired.
+      - Root cause — `src/mcp_coder/checks/branch_status.py:17`
         imports `mcp_workspace.checks.branch_status_rendering`, which the repo
         `.venv` copy does not have, so `import mcp_coder` raises and every test
         module fails at import.
@@ -53,7 +59,11 @@ Detail: [step_1.md](./steps/step_1.md) — shared candidate knowledge, no behavi
         `pip install -e ".[dev]" --force-reinstall --no-deps` after
         `pip install --force-reinstall "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`,
         then re-run the three checks. All of this is pre-existing on `main` and
-        untouched by Step 1.
+        untouched by Step 1. The implementing session had no shell tool at all,
+        so it could not apply this fix itself.
+      - **Carry-over for Steps 2-7:** their "fix all issues" checks inherit the
+        same blocker. Repair the venv before Step 2 rather than re-diagnosing it
+        each step.
 - [x] Commit message prepared
 
 ### Step 2: `resolve_execution_dir` signature + deprecation
