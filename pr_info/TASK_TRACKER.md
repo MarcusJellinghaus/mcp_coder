@@ -31,11 +31,29 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 Detail: [step_1.md](./steps/step_1.md) — shared candidate knowledge, no behaviour change.
 
 - [x] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-      (pylint/mypy/lint-imports clean; **pytest blocked**: repo `.venv` has a
-      stale `mcp-workspace` missing `checks.branch_status_rendering`, so
-      `import mcp_coder` fails and nothing collects. Needs a dependency
-      reinstall — pre-existing, unrelated to this step.)
+- [ ] Quality checks: pylint, pytest, mypy — **blocked on the environment, not on this step**
+      - Clean: `lint-imports` 21/21 kept; `black`/`isort` no changes. Neither
+        `prompt_loader.py` nor `test_prompt_loader.py` draws a single pylint or
+        mypy finding.
+      - **pytest cannot collect anything**: `src/mcp_coder/checks/branch_status.py:17`
+        imports `mcp_workspace.checks.branch_status_rendering`, which the repo
+        `.venv` copy does not have, so `import mcp_coder` raises and every test
+        module fails at import.
+      - Same root cause behind all pylint E0401/E0611/E1123/E1101 and all 9 mypy
+        errors (`BranchStatusReport.pr_feedback_undeterminable`,
+        `format_for_llm(fail_on_reviews=...)`). The installed `mcp-workspace`
+        predates upstream `a1f0eac feat(checks): add review gate + missing-token
+        degradation (#244)`, which added exactly those names. `mcp-workspace` is
+        an unpinned `git+https://` dependency (pyproject.toml:348), so the venv
+        drifted behind `main`.
+      - Secondary gaps in the same venv: `langchain_core`, `langchain_mcp_adapters`,
+        `langgraph`, `httpx`, `mcp.server.fastmcp.FastMCP` (the `[dev]` extra is
+        not fully installed); `tach` is absent so `run_tach_check` cannot run.
+      - **Fix (needs a shell — no MCP tool can install packages):**
+        `pip install -e ".[dev]" --force-reinstall --no-deps` after
+        `pip install --force-reinstall "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`,
+        then re-run the three checks. All of this is pre-existing on `main` and
+        untouched by Step 1.
 - [x] Commit message prepared
 
 ### Step 2: `resolve_execution_dir` signature + deprecation
