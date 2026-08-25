@@ -32,12 +32,20 @@ _CONTRACT: dict[str, dict[str, Status]] = {
 
 _SUPPORTED_BACKENDS: tuple[str, ...] = ("openai", "gemini", "anthropic", "ollama")
 
-# Keyed by *mode*, not by backend — "azure" reuses OPENAI_API_KEY.
-_API_KEY_ENV: dict[str, str] = {          # reuse verification._BACKEND_ENV_VARS values
-    "openai": "OPENAI_API_KEY", "azure": "OPENAI_API_KEY",
-    "gemini": "GEMINI_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY", "ollama": "OLLAMA_API_KEY",
+# Keyed by *mode*, not by backend. Every variable that can satisfy the
+# credential, verified against the installed SDKs (see HOW).
+_API_KEY_ENV: dict[str, tuple[str, ...]] = {
+    "openai":    ("OPENAI_API_KEY",),
+    "azure":     ("OPENAI_API_KEY", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_AD_TOKEN"),
+    "gemini":    ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    "anthropic": ("ANTHROPIC_API_KEY",),
+    "ollama":    ("OLLAMA_API_KEY",),
 }
+
+# Modes that can build a working client with *no* credential at all, and the
+# env var that signals it. Presence alone satisfies the rule — see HOW.
+_KEYLESS_ENV: dict[str, str] = {"gemini": "GOOGLE_GENAI_USE_VERTEXAI"}
+
 
 class Finding(TypedDict):
     key: str            # config field the finding is about
@@ -79,14 +87,55 @@ def validate(config: Mapping[str, str | None]) -> list[Finding]:
 - **One key everywhere: the *mode*.** `_CONTRACT`, `_API_KEY_ENV` and
   `_is_present()` are all keyed by the value `mode_of()` returns — never by the
   raw `config["backend"]`. `_API_KEY_ENV` therefore carries an explicit
-  `"azure": "OPENAI_API_KEY"` row. Mixing the two namespaces would look up
+  `"azure"` row. Mixing the two namespaces would look up
   `_API_KEY_ENV["azure"]`, miss, and report a false `api_key` required-error for
   an Azure config whose key comes from `OPENAI_API_KEY` — which
   `_create_chat_model` would then raise on, breaking a working setup
   (Decision 6). (`_REDIRECT_ENV` in step 6 is the one table keyed by *backend*,
   because it describes SDK-level env redirects, not contract rules.)
-- `api_key` presence means *config value or the mode's env var* — check
-  `config.get("api_key") or os.environ.get(_API_KEY_ENV[mode], "")`.
+- **`_API_KEY_ENV` rows are lists, because the SDKs read more than one
+  variable.** The contract must accept *every* variable that actually produces
+  credentials, or it turns a working setup into a false required-error — the
+  same Decision-6 regression class as the mode/backend mix-up above. Measured in
+  the project venv against the installed SDKs:
+  - **azure** — `create_openai_model` passes `api_key=None` straight through to
+    `openai.AzureOpenAI.__init__`, which falls back to `AZURE_OPENAI_API_KEY`,
+    then `AZURE_OPENAI_AD_TOKEN`, and only then raises `OpenAIError: Missing
+    credentials`. Both variables construct a client successfully with no config
+    `api_key` and no `OPENAI_API_KEY`. (`OPENAI_API_KEY` stays in the row
+    because `create_openai_model` reads it itself.)
+  - **gemini** — `create_gemini_model` *omits* the `google_api_key` kwarg when
+    neither config nor `GEMINI_API_KEY` yields a key, so langchain's
+    `secret_from_env(["GOOGLE_API_KEY", "GEMINI_API_KEY"])` factory applies.
+    `GOOGLE_API_KEY` is the SDK's *primary* variable and works on its own today.
+- **`_KEYLESS_ENV`: the one credential-free carve-out, gemini/Vertex.** Measured:
+  `ChatGoogleGenerativeAI` constructs with **no** credential when
+  `GOOGLE_GENAI_USE_VERTEXAI` is truthy, and raises
+  `ValidationError: API key required for Gemini Developer API` otherwise. The
+  other keyless-sounding paths are unreachable through our code: `credentials`
+  is a plain field with no env default and `create_gemini_model` never passes
+  it, so ADC/`GOOGLE_APPLICATION_CREDENTIALS` and `GOOGLE_CLOUD_PROJECT` do
+  **not** rescue a keyless construction (both verified to still raise). So the
+  rule is: gemini `api_key` is satisfied by config, `GEMINI_API_KEY`,
+  `GOOGLE_API_KEY`, **or** a non-empty `GOOGLE_GENAI_USE_VERTEXAI`; otherwise
+  `ok=False`, which is correct because construction is then certainly
+  impossible — the same standard applied to `openai` below.
+  **Presence, not truthiness.** `GOOGLE_GENAI_USE_VERTEXAI=0` / `=false` do not
+  actually enable Vertex mode, so a presence test is over-permissive there. That
+  direction is chosen deliberately: mirroring the SDK's truthiness parsing would
+  risk a false required-error on a working setup (the failure this fix exists to
+  remove), while over-permissiveness costs only a contract message the user
+  still gets from the SDK — whose own text ("Provide api_key parameter or set
+  GOOGLE_API_KEY/GEMINI_API_KEY environment variable") is already actionable,
+  unlike the opaque OpenAI one.
+- `api_key` presence means *config value, any of the mode's env vars, or its
+  keyless carve-out* — check `config.get("api_key")`, then
+  `any(os.environ.get(v) for v in _API_KEY_ENV[mode])`, then
+  `os.environ.get(_KEYLESS_ENV.get(mode, ""), "")`.
+- The `api_key` required-message names **all** of the mode's variables, so an
+  Azure user reads `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY` or
+  `AZURE_OPENAI_AD_TOKEN` rather than being pointed at one that may not be the
+  one their setup uses.
 - **`openai` `api_key` is unconditionally required — no `base_url` exception.**
   Decision 5 proposed an exit-neutral warning when `base_url` is set ("the relay
   may be unauthenticated"), but that is **contradicted by the installed SDK**:
@@ -152,6 +201,17 @@ Example findings:
            "custom base_url"}]
 ```
 
+The required-message enumerates the mode's whole `_API_KEY_ENV` row, so the
+other two modes read:
+
+```
+azure : no api_key in [llm.langchain] and none of OPENAI_API_KEY,
+        AZURE_OPENAI_API_KEY, AZURE_OPENAI_AD_TOKEN — set one
+gemini: no api_key in [llm.langchain] and none of GEMINI_API_KEY,
+        GOOGLE_API_KEY — set one (or GOOGLE_GENAI_USE_VERTEXAI for Vertex AI,
+        which authenticates without a key)
+```
+
 ## TDD
 
 Table-driven tests, one per contract cell plus the conditionals:
@@ -169,8 +229,22 @@ Table-driven tests, one per contract cell plus the conditionals:
    `api_key` but `OPENAI_API_KEY` set (monkeypatch) → **no** `api_key` finding,
    and `_create_chat_model` does not raise (guards the mode-keyed
    `_API_KEY_ENV["azure"]` lookup).
+4c. Same Azure config with **only** `AZURE_OPENAI_API_KEY` set, and again with
+   **only** `AZURE_OPENAI_AD_TOKEN` — parametrised, all other credential vars
+   cleared → **no** `api_key` finding in either case. Guard the SDK fact: assert
+   `create_openai_model(model, None, base_url, api_version)` constructs without
+   raising, so the widened row cannot silently drift from `AzureOpenAI`'s own
+   fallback chain.
+4d. Azure mode with **none** of the three set → `api_key` `ok=False`, and the
+   message names all three variables.
 5. `gemini` with `base_url` set → `ok=None` "ignored" warning; `api_version`
    likewise.
+5b. `gemini` api_key sources, all other credential vars cleared:
+   `GOOGLE_API_KEY` only → **no** `api_key` finding (assert
+   `create_gemini_model(model, None)` constructs too); `GEMINI_API_KEY` only →
+   no finding; `GOOGLE_GENAI_USE_VERTEXAI="1"` and nothing else → no finding
+   (the keyless carve-out); **nothing** set → `api_key` `ok=False` and the
+   message names `GEMINI_API_KEY` and `GOOGLE_API_KEY`.
 6. `ollama` with only `model` → no findings.
 7. Unsupported backend (`"opnai"`) → one `ok=False` finding on `backend`.
 7b. Literal `backend = "azure"` → `mode_of()` returns `None` and the same
@@ -187,8 +261,19 @@ Table-driven tests, one per contract cell plus the conditionals:
 > `mode_of()` and a pure, non-raising `validate()` returning `Finding` dicts
 > (`ok=False` error, `ok=None` warning). Key `_CONTRACT`, `_API_KEY_ENV` and the
 > presence check consistently by the **mode** (so `_API_KEY_ENV` needs an
-> `"azure": "OPENAI_API_KEY"` row — an Azure config keyed off `OPENAI_API_KEY`
-> must not produce a required-error). `mode_of()` returns `None` for any backend
+> `"azure"` row — an Azure config keyed off `OPENAI_API_KEY` must not produce a
+> required-error). `_API_KEY_ENV` values are **tuples**, listing every variable
+> the SDKs actually accept: `azure` also honours `AZURE_OPENAI_API_KEY` and
+> `AZURE_OPENAI_AD_TOKEN` (resolved by `openai.AzureOpenAI` itself, since
+> `create_openai_model` passes `api_key=None` through), and `gemini` also
+> honours `GOOGLE_API_KEY` (langchain's
+> `secret_from_env(["GOOGLE_API_KEY", "GEMINI_API_KEY"])` factory applies
+> whenever `create_gemini_model` omits the kwarg). Add `_KEYLESS_ENV =
+> {"gemini": "GOOGLE_GENAI_USE_VERTEXAI"}`: a non-empty value satisfies gemini's
+> `api_key` rule, because Vertex mode is the only path that constructs without a
+> credential — test for *presence*, not truthiness. Failing to accept any of
+> these turns a working setup into a false required-error, the Decision-6
+> regression class. `mode_of()` returns `None` for any backend
 > outside `_SUPPORTED_BACKENDS`, including the literal `"azure"`, which is an
 > internal mode and not a valid config value. A missing `openai`/`azure`
 > `api_key` is **always** an `ok=False` error — there is no `base_url`

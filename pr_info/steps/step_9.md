@@ -33,9 +33,13 @@ and uses it to build the `model` / `api_key` rows and to add `base_url` /
 - The contract **replaces** the naive rows rather than running beside them:
   - `result["model"]` — `ok`/`value` from the finding when present, else the
     contract-aware default below.
-  - `result["api_key"]` — keep the masked value and `source` from
-    `_resolve_api_key` (3-tuple after step 7); take `ok` from the finding when
-    present. **Delete** the hand-rolled `backend == "ollama"` special case: the
+  - `result["api_key"]` — when a finding exists, **both** `ok` and `value` come
+    from it, so the row shows the actionable contract message (naming `api_key`
+    and the backend's env vars) rather than a bare `not set`; the acceptance
+    criterion is "exit 1, **naming the contract violation**", and a masked-value
+    row cannot name it. When there is no finding, the value is the masked key
+    from `_resolve_api_key`. `source` (3-tuple after step 7) is carried through
+    in both branches. **Delete** the hand-rolled `backend == "ollama"` special case: the
     contract already declares `api_key` optional for ollama, so no finding is
     produced. **Keep its value text**: with no key resolved, `_mask_api_key`
     returns `None` and `_format_section` stringifies that to the literal
@@ -114,10 +118,17 @@ overall_ok = <existing clauses> and all(f["ok"] is not False for f in findings.v
 
 1. Azure mode without `base_url` → `result["base_url"]["ok"] is False` and
    `overall_ok is False`; the message names `api_version`.
-2. Public OpenAI without any key → `api_key` `ok=False`, `overall_ok is False`.
-3. `base_url` set, no key → `api_key` `ok=False` and `overall_ok is False` too
-   (no `base_url` exception — see step 5: the client cannot be constructed
-   without credentials).
+2. Public OpenAI without any key → `api_key` `ok=False`, `overall_ok is False`,
+   **and** `result["api_key"]["value"]` is the finding's message — assert it
+   names both `api_key` and `OPENAI_API_KEY`, and that it is not `"not set"` /
+   `"not set (optional)"` / `"None"`. Assert the rendered row too: the finding
+   branch is the whole point of the acceptance criterion.
+2b. The no-finding branch renders the key, not a message: `openai` with a
+   resolved key → `api_key` `ok=True`, `value == _mask_api_key(key)` and
+   `source` is set. Together with case 2 this pins both branches.
+3. `base_url` set, no key → `api_key` `ok=False`, `overall_ok is False` and the
+   same finding message in `value` (no `base_url` exception — see step 5: the
+   client cannot be constructed without credentials).
 4. `gemini` + `base_url` → an `[WARN]` row, `overall_ok` unchanged.
 5. `ollama` with no key → `api_key` `ok=True` **and** `value == "not set
    (optional)"` (special case removed, rendered text preserved); assert the
@@ -141,11 +152,15 @@ overall_ok = <existing clauses> and all(f["ok"] is not False for f in findings.v
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_9.md`.
 > Implement step 9: call the step-5 `validate()` from `verify_langchain`, merge
-> the findings into the result dict (replacing the naive `model` / `api_key` rows
-> and deleting the hand-rolled ollama api_key special case while keeping its
+> the findings into the result dict — when a finding exists for a key, **both**
+> its `ok` and its `value` win, so the `API key` row shows the contract message
+> naming `api_key`/`OPENAI_API_KEY` rather than a bare `not set`; only the
+> no-finding branch shows the masked key. This replaces the naive
+> `model` / `api_key` rows,
+> deleting the hand-rolled ollama api_key special case while keeping its
 > `"not set (optional)"` text, and **overwriting** the pre-populated `backend`
 > row when a `backend` finding exists so an unsupported backend is explained
-> rather than silently exiting 1). Make the `model` / `api_key` defaults
+> rather than silently exiting 1. Make the `model` / `api_key` defaults
 > **contract-aware**: `validate()` short-circuits when `mode_of(config)` is
 > `None`, so "no finding" there does not mean "satisfied" — fall back to today's
 > presence test (`model is not None`, `key is not None`) and the plain

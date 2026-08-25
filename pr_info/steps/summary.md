@@ -36,7 +36,12 @@ table** rather than discovered by the user at runtime:
 | `anthropic` | `model`, `api_key`¹ | — | `base_url`, `api_version` |
 | `ollama` | `model` | `base_url`, `api_key` | `api_version` |
 
-¹ or the backend env var. For `openai`/Azure this is **unconditional** — a
+¹ or **any** env var the backend's SDK accepts, not just the obvious one:
+`azure` also honours `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_AD_TOKEN` and
+`gemini` also honours `GOOGLE_API_KEY` (plus `GOOGLE_GENAI_USE_VERTEXAI`, which
+authenticates with no key at all) — all measured in the venv. A narrower table
+would hard-fail configs that work today. For `openai`/Azure this is
+**unconditional** — a
 missing key is always an error, whether or not `base_url` is set. Decision 5
 proposed an exit-neutral warning for the `base_url` case ("the relay may be
 unauthenticated"), but the installed SDK contradicts it: langchain builds

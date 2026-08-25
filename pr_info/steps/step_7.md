@@ -17,13 +17,21 @@ including fallbacks and the *source* of each value.
 ## WHAT
 
 ```python
-# _config_diagnostics.py — pure formatting, does NOT resolve anything itself
+# _config_diagnostics.py — pure formatting, does NOT resolve or mask anything
 def describe_effective_config(
     config: Mapping[str, str | None],
     target: ResolvedTarget,
+    *,
+    api_key_masked: str | None = None,
     api_key_source: str | None = None,
+    api_key_overridden: bool = False,
 ) -> list[tuple[str, str]]:
-    """Return (label, value) rows describing the config that will actually be used."""
+    """Return (label, value) rows describing the config that will actually be used.
+
+    The three api_key arguments travel together and all come from the same
+    `_resolve_api_key` call, so the printed value can never belong to a
+    different source than the printed label.
+    """
 
 # verification.py — third element added; verify_langchain is the only in-repo caller
 def _resolve_api_key(
@@ -47,7 +55,12 @@ twice, and `verify.py` needs no access to the private llm-layer helpers
 # verify_langchain
 target = resolve_target(config)                      # the one and only call
 api_key, key_source, key_overridden = _resolve_api_key(backend, config_api_key)
-result["effective_config"] = describe_effective_config(config, target, key_source)
+result["effective_config"] = describe_effective_config(
+    config, target,
+    api_key_masked=_mask_api_key(api_key),
+    api_key_source=key_source,
+    api_key_overridden=key_overridden,
+)
 ```
 
 - `result["effective_config"]` is a **list**, not a dict, so `_format_section`
@@ -64,8 +77,17 @@ result["effective_config"] = describe_effective_config(config, target, key_sourc
   ```
   Placed immediately before `_format_section("LLM PROVIDER DETAILS", ...)`,
   inside the existing `active_provider == "langchain"` branch (`verify.py:421`).
-- `api_key` provenance comes from `_resolve_api_key`; mask with the existing
-  `_mask_api_key`. No new source resolver.
+- **The api_key row's value, source and override flag are all passed in.**
+  `describe_effective_config` never reads `config["api_key"]` for the value:
+  the winning key frequently comes from the env var while config.toml holds a
+  different (losing) one, so masking the config value under an
+  `OPENAI_API_KEY env var` label would fabricate provenance — the exact bug
+  class this issue exists to kill — and dropping the value would print
+  `(not set)` for every env-var-sourced key. `verify_langchain` masks the
+  resolved key with the existing `_mask_api_key` (which stays in
+  `verification.py`, so `_config_diagnostics` gains no import back) and hands
+  the masked string, its source and `overridden` to the builder. No new source
+  resolver, no masking in `_config_diagnostics`.
 - **Redirection flag** (Decision 18): keyed on the variable that *actually
   produced* the dialed URL, never on "some redirect variable is exported".
   `verify_langchain` asks `redirect_env_in_effect(config, target.url)` (step 6),
@@ -108,13 +130,19 @@ result["effective_config"] = describe_effective_config(config, target, key_sourc
 ## ALGORITHM
 
 ```
-describe_effective_config(config, target, api_key_source):
+describe_effective_config(config, target, *, api_key_masked, api_key_source,
+                          api_key_overridden):
     mode   = "Azure OpenAI (api_version set)" if azure else "plain <backend> (api_version not set)"
+    if api_key_masked is None:
+        key_row = "(not set)"
+    else:
+        suffix  = " — overrides config.toml api_key" if api_key_overridden else ""
+        key_row = f"{api_key_masked}   (from {api_key_source}{suffix})"
     rows = [("backend", backend or "(not configured)"),
             ("mode", mode),
             ("model", model or "(not configured)"),
             ("base_url", f"{target.url}   ({target.source})"),
-            ("api_key", f"{masked}   (from {api_key_source})" if masked else "(not set)")]
+            ("api_key", key_row)]
     return rows
 
 _resolve_api_key(backend, config_key):
@@ -151,6 +179,11 @@ configurable target)`.
    targets keep the `unverified` wording. The builder never calls
    `resolve_target` itself (assert with a patched module attribute).
 3. `gemini` → `n/a`.
+3b. api_key row provenance: with `api_key_masked="Qwen...abcd"`,
+   `api_key_source="OPENAI_API_KEY env var"` and `api_key_overridden=True`, the
+   row shows **that** masked value, names the env var and appends the override
+   text — assert the config dict's own (losing) `api_key` value never appears.
+   `api_key_masked=None` is the only input that yields `(not set)`.
 4. Wiring: `verify_langchain` calls `resolve_target` **exactly once** per run
    (patch and count) and puts a list under `result["effective_config"]`.
 5. Rendering test: the echo appears with **no** `[OK]`/`[WARN]` symbols, is not
@@ -171,9 +204,14 @@ configurable target)`.
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_7.md`.
-> Implement step 7: add `describe_effective_config(config, target, api_key_source)`
-> to `_config_diagnostics.py` returning `list[tuple[str, str]]` (pure formatting —
-> it must **not** call `resolve_target`). In `verify_langchain`, make the single
+> Implement step 7: add
+> `describe_effective_config(config, target, *, api_key_masked, api_key_source,
+> api_key_overridden)` to `_config_diagnostics.py` returning
+> `list[tuple[str, str]]` (pure formatting — it must **not** call
+> `resolve_target`, mask anything, or read `config["api_key"]` for the api_key
+> row: the masked value, its source and the override flag all arrive from the
+> same `_resolve_api_key` call in `verify_langchain`, so the row can never show
+> one source's value under another source's label). In `verify_langchain`, make the single
 > `resolve_target(config)` call of the run, store the rows as the list-valued
 > `result["effective_config"]`, and add the exit-neutral `base_url_redirect` and
 > `api_key_override` rows. Key the redirect row on
