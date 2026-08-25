@@ -25,6 +25,7 @@ from mcp_coder.llm.storage.session_storage import (
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEvent
 from mcp_coder.utils.user_config import get_config_values
 
+from ._config_diagnostics import validate
 from ._errors_404 import _format_404_hint
 from ._errors_404 import _is_404_error as _is_404_error  # re-exported for tests
 from ._exceptions import (
@@ -187,6 +188,11 @@ def _create_chat_model(
 ) -> BaseChatModel:
     """Dispatch to correct backend's create_*_model() based on config.
 
+    The per-backend contract is checked here, before the dispatch, so that all
+    four provider paths (text, text-stream, agent, agent-stream) are covered by
+    a single site and the user gets an actionable message instead of the SDK's
+    opaque one.
+
     Args:
         config: LangChain configuration dict with backend, model, api_key, etc.
         timeout: Request timeout in seconds.
@@ -195,8 +201,13 @@ def _create_chat_model(
         Configured BaseChatModel instance for the selected backend.
 
     Raises:
-        ValueError: If the configured backend is not supported.
+        ValueError: If the config violates the per-backend contract, including
+            an unsupported or unset backend.
     """
+    for finding in validate(config):
+        if finding["ok"] is False:
+            raise ValueError(finding["value"])
+
     backend = config.get("backend")
 
     if backend == "openai":

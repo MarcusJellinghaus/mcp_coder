@@ -195,9 +195,80 @@ Details: [step_4.md](./steps/step_4.md)
 
 Details: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (New `llm/providers/langchain/_config_diagnostics.py`: `Status`,
+      `_CONTRACT` (5 mode rows), `_SUPPORTED_BACKENDS`, `_API_KEY_ENV`,
+      `_KEYLESS_ENV`, `_API_KEY_SUFFIX`, the `Finding` TypedDict, `mode_of()`
+      and a pure, non-raising `validate()`. **Everything is keyed by the
+      *mode*** — `_API_KEY_ENV` carries its own `"azure"` row, so an Azure
+      config whose key comes from `OPENAI_API_KEY` produces no finding
+      (Decision 6). Rows are tuples covering every variable the SDKs actually
+      read: azure also `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_AD_TOKEN`
+      (resolved by `openai.AzureOpenAI` itself, since `create_openai_model`
+      passes `api_key=None` through), gemini also `GOOGLE_API_KEY` (langchain's
+      `secret_from_env([...])` factory). `_KEYLESS_ENV` adds gemini/Vertex as
+      the one credential-free carve-out, tested for **presence** not
+      truthiness. `openai`/`azure` `api_key` is unconditionally `ok=False` —
+      no `base_url` exception (Decision 5 is contradicted by the installed
+      SDK). One conditional rule: azure `base_url` is satisfied by config
+      **or** `AZURE_OPENAI_ENDPOINT`, read straight from `os.environ` because
+      the explicit `azure_endpoint=None` bypasses langchain's `from_env`
+      factory. `mode_of()` returns `None` for a literal `backend = "azure"`,
+      whose finding reproduces the existing `Unsupported langchain backend`
+      wording verbatim. Wired into `_create_chat_model` as three lines
+      **before** the dispatch, so all four provider paths (text, text-stream,
+      agent, agent-stream) are covered by one site; module-level
+      `from ._config_diagnostics import validate` is safe because
+      `_config_diagnostics` imports stdlib only (the cycle guard step 6
+      depends on). 38 table-driven tests in new
+      `tests/llm/providers/langchain/test_langchain_contract.py`, covering
+      every TDD case 1-8 including 4b/4c/4d, 5b and 7b; 4c and 5b also call
+      the real `create_openai_model` / `create_gemini_model` so the widened
+      env rows cannot silently drift from the SDKs' own fallback chains.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in either file this step touches**: pylint scoped to
+      `_config_diagnostics.py` + `test_langchain_contract.py` reports nothing;
+      mypy over `src/mcp_coder/llm/providers/langchain` +
+      `tests/llm/providers/langchain` is clean; ruff clean; isort clean; black
+      reformatted the new test file once and is now a no-op. lint-imports:
+      21 contracts kept. Step 5's own tests pass — `test_langchain_contract.py`
+      → 38 passed. Wider runs: `tests/cli` + `tests/utils` → 1301 passed;
+      `tests/llm` clean apart from the known environmental failures below.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-4: the `.venv` copy of the unpinned git dependency `mcp-workspace`
+      lacks `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and
+      pytest collects zero tests. Same workaround: a throwaway
+      `.pytest_shim/sitecustomize.py` registering a stand-in
+      `mcp_workspace.checks.branch_status_rendering` (re-export `CIStatus`
+      from `mcp_workspace.checks.branch_status`, any str for
+      `GITHUB_TOKEN_HINT`), run pytest with
+      `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the directory
+      afterwards — it is **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all
+      pre-existing, none in files this step touches: the six
+      `tests/cli/commands/test_check_branch_status*.py` modules (stale
+      `CIStatus.UNAVAILABLE` / `BranchStatusReport` API), excluded via
+      `--ignore-glob` for the 1301-test run; the three
+      `tests/llm/providers/copilot/test_copilot_integration.py` tests (no
+      `copilot` CLI); and
+      `test_langchain_exceptions.py::...httpx_connect_error` (`httpx` absent →
+      MagicMock). The only project-wide pylint findings under the langchain
+      package are `E0401` for the uninstalled optional extras
+      (`langchain_core`, `langchain_openai`, `httpx`, …) — which also means
+      the two SDK-construction guards in 4c/5b pass trivially here and only
+      bite in CI where the extras are installed.
+
+      **Pre-existing file-size violation, out of scope for this step:**
+      `mcp-coder check file-size --max-lines 750` flags
+      `tests/cli/commands/test_verify_orchestration.py` at 871 lines (grown by
+      steps 3 and 4). Step 5 does not touch that file.)
+- [x] Commit message prepared
 
 ### Step 6: `resolve_target()`: read the dialed URL off the constructed client
 
