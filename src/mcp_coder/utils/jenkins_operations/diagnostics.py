@@ -1,7 +1,7 @@
-"""Jenkins permission diagnostics.
+r"""Jenkins permission diagnostics.
 
 python-jenkins converts 401/403/500 responses into ``JenkinsException(msg +
-"\\n" + response.text)`` and 404 into ``NotFoundException``, discarding the
+"\n" + response.text)`` and 404 into ``NotFoundException``, discarding the
 response object. That means neither the failing endpoint nor the response body
 survives in a usable form: the endpoint is unrecoverable and the body arrives
 as ~60 lines of HTML.
