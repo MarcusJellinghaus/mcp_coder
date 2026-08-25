@@ -1023,9 +1023,68 @@ Details: [step_14.md](./steps/step_14.md)
 
 Details: [step_15.md](./steps/step_15.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`prompt_loader.py`: extracted the duplicated absolute/relative resolution
+      into `_resolve_path()`, now the single implementation behind
+      `_resolve_and_read`, `get_project_prompt_path` (14 lines → 2, signature and
+      return type unchanged) and the new `is_prompt_configured_but_missing()`.
+      `_resolve_and_read` logs a WARNING via a module-level `logger` when a
+      *configured* path does not resolve, deduped through the module-level
+      `_warned_paths: set[str]`, and still returns `None` so the shipped-default
+      fallback is untouched — it never raises (Decision 8). No
+      `get_system_prompt_path()`: step 16 needs the predicate, not a resolver,
+      and a public resolver with no caller would be vulture bait.
+
+      **Tests** — 14 new in `tests/prompts/test_prompt_loader.py` (22 → 36,
+      all green), covering step_15 §TDD cases 1-7: no warning on an existing
+      path, one WARNING + default fallback on a missing one, still exactly one
+      after two reads of the same path, two for two distinct paths, absolute and
+      project-relative resolution, `get_project_prompt_path` unchanged for the
+      unconfigured / missing / absolute cases, and the predicate itself staying
+      silent. Plus the autouse `_clear_prompt_warning_cache` fixture the step
+      prescribes, so the counts do not depend on test order or on which `-n auto`
+      worker picks them up. Honest note on TDD: the new tests were written before
+      the implementation but not executed against the pre-change tree — the
+      `is_prompt_configured_but_missing` import alone makes the module
+      uncollectable there, so a red baseline run would have been an import error
+      rather than a behavioural signal.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in either file this step touches.** pylint and mypy scoped
+      to `src/mcp_coder/prompts` + `tests/prompts` are both clean; ruff clean;
+      isort a no-op; black reformatted the new `_resolve_path` signature onto one
+      line (applied, re-run green). Full-tree mypy reports 9 errors, all
+      pre-existing and none in `prompts/` — 7 are the stale-install
+      `BranchStatusReport` / `branch_status_rendering` mismatch, 2 are the
+      `_mcp_stub_server.py` fastmcp stubs. Vulture scoped to the package flags
+      every public function including the four that predate this step, which is
+      an artefact of scoping callers out, not a finding.
+
+      Test run: `tests/prompts/test_prompt_loader.py` → **36 passed**; full fast
+      selection minus the environmental exclusions below → **4854 passed,
+      5 skipped**.
+
+      **Environmental exclusions, all unchanged from steps 2-14 and none touched
+      by this step:** the `httpx_connect_error` baseline; `tests/checks`,
+      `tests/workflows/review` and the six `test_check_branch_status*.py` modules
+      (stale installed `mcp-workspace`: `BranchStatusReport.__init__() got an
+      unexpected keyword argument 'pr_feedback_undeterminable'`);
+      `tests/llm/test_mcp_manager.py` (`ModuleNotFoundError:
+      langchain_mcp_adapters`); the `copilot_cli_integration` marker.
+
+      **Environment note — pytest still needs the shim.** Unchanged: the `.venv`
+      copy of `mcp-workspace` lacks
+      `mcp_workspace/checks/branch_status_rendering.py`, so a bare
+      `import mcp_coder` raises at conftest import and pytest collects nothing
+      (confirmed again: the first unshimmed run collected 0 tests). Same
+      workaround — a throwaway `.pytest_shim/sitecustomize.py` supplying that
+      module with a `CIStatus` *enum* and `GITHUB_TOKEN_HINT`,
+      `env_vars={"PYTHONPATH": ".pytest_shim"}`, directory deleted afterwards and
+      **not** committed. The enum must be *defined* in the shim, not re-exported
+      from `mcp_workspace.checks.branch_status`: that installed copy has only
+      four members and is missing `UNKNOWN`/`UNAVAILABLE`. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.)
+- [x] Commit message prepared
 
 ### Step 16: PROMPTS section: lengths, and configured-but-missing → error
 
