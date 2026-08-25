@@ -107,9 +107,59 @@ Detail: [step_2.md](./steps/step_2.md) — new optional `project_dir` param, dep
 
 Detail: [step_3.md](./steps/step_3.md) — `find_context_claude_md`, `is_outside_project_dir`, `report_context_root`, wired into the resolver; `tach.toml`. Depends on Steps 1 and 2.
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      - All three functions added to `cli/utils.py` and to `__all__`; wired via
+        `report_context_root(resolved, project_dir)` before the return on **both**
+        `resolve_execution_dir` branches. `tach.toml` gained
+        `{ path = "mcp_coder.prompts" }` on the `mcp_coder.cli` allowlist.
+      - **Deviation from step_3.md, forced by CI:** the 16 tests live in a new
+        module `tests/cli/test_utils_context_root.py`, not in `tests/cli/test_utils.py`.
+        Adding them there took that file to 758 lines, over the 750-line limit that
+        `.github/workflows/ci.yml:109` enforces (`mcp-coder check file-size
+        --max-lines 750`). Same reasoning step_5.md already applies to `test_verify.py`.
+        Nothing else changed; `test_utils.py` is back to its 542-line content.
+      - One further judgement call: test 11 ("none found") patches
+        `mcp_coder.cli.utils.find_context_claude_md` to return `[]`.
+        `report_context_root` deliberately takes no `stop_at`, so the real walk would
+        climb past `tmp_path` into directories no test controls — the same
+        falsifiability the `stop_at` boundary exists to remove. The walk itself is
+        covered unpatched by tests 1-7.
+- [x] Quality checks: pylint, pytest, mypy — **pytest still blocked on the
+      environment blocker diagnosed in Step 1; unchanged and untouched by this step**
+      - Clean: pylint and mypy report **no findings at all** on the three files this
+        step touches (`cli/utils.py`, `tests/cli/test_utils.py`,
+        `tests/cli/test_utils_context_root.py`). `lint-imports` 21/21 kept (695 files,
+        3563 dependencies analysed — the new `cli/utils.py` → `prompts.prompt_loader`
+        import keeps "Layered Architecture"). `black`/`isort` clean (616 files).
+        `mcp-coder check file-size --max-lines 750`: all 823 files within limit.
+      - **`tach` could not be run**: not installed in the venv, so
+        `run_tach_check` returns "tach is not available". The `tach.toml` line is
+        therefore added but **unverified** — step_3.md's instruction to drop it if tach
+        reports the dependency was already permitted could not be executed. Re-run
+        `tach check` once the venv is repaired and remove the entry if redundant.
+        (`import-linter` does cover the same import and keeps it.)
+      - **pytest never ran the new tests.** Whole-suite collection still aborts:
+        `ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`
+        raised from `src/mcp_coder/checks/branch_status.py:17` via
+        `src/mcp_coder/__init__.py:37`, so `import mcp_coder` fails and every test module
+        errors at import. All 16 new tests are unproven in this environment, as is
+        step_3.md's "Expected impact on existing tests" analysis — in particular that
+        `test_commit.py`, `test_prompt.py`, `test_prompt_streaming.py` and the icoder
+        tests survive the resolver now doing a real filesystem walk and emitting OUTPUT
+        records. **Check `test_prompt_streaming.py`'s `capsys` assertions first** when
+        the suite can run: a break there would invalidate the decision to wire the
+        report into the resolver (summary.md §3), per step_3.md.
+      - Root cause unchanged from Steps 1-2: the venv's `mcp-workspace` predates
+        upstream `a1f0eac`. Same cause behind the 4 mypy errors and the pylint E1123 in
+        `cli/commands/check_branch_status.py` and
+        `tests/cli/commands/test_check_branch_status_exit_code.py` — pre-existing, from
+        merged commit `bce0f22`, not from this step.
+      - Fix (needs a shell; no MCP tool can install packages):
+        `pip install --force-reinstall "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+        then `pip install -e ".[dev]"` (which also brings back `tach`), then re-run the
+        checks. This session had no shell tool, so it could not apply the fix.
+      - Carry-over for Steps 4-7: repair the venv first; the same blocker applies.
+- [x] Commit message prepared
 
 ### Step 4: Nine call sites default to `project_dir`
 

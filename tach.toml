@@ -61,6 +61,7 @@ depends_on = [
     { path = "mcp_coder.checks" },        # High-level check modules
     { path = "mcp_coder.llm" },           # LLM interaction services
     { path = "mcp_coder.prompt_manager" }, # Prompt template management
+    { path = "mcp_coder.prompts" },       # CLAUDE.md candidate locations for context reporting
     { path = "mcp_coder.utils" },         # General utilities
     { path = "mcp_coder.config" },        # Configuration management
     { path = "mcp_coder.constants" },     # Shared constants
