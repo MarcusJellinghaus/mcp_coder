@@ -152,7 +152,11 @@ class TestExecutionDirResolution:
     """Test execution_dir path resolution utility."""
 
     def test_resolve_none_returns_cwd(self, tmp_path: Path) -> None:
-        """Test that None execution_dir resolves to current working directory."""
+        """Test the no-project_dir fallback to the current working directory.
+
+        With no execution_dir and no project_dir there is no anchor, so cwd is
+        used. When a project_dir is supplied it becomes the execution directory.
+        """
         import os
 
         from mcp_coder.cli.utils import resolve_execution_dir

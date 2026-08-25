@@ -1,6 +1,7 @@
 """Tests for CLI utility functions."""
 
 import logging
+import warnings
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -221,7 +222,11 @@ class TestResolveExecutionDir:
     """Test cases for resolve_execution_dir function."""
 
     def test_none_returns_cwd(self) -> None:
-        """None input should return current working directory."""
+        """No execution_dir and no project_dir falls back to the working directory.
+
+        This documents the no-``project_dir`` fallback, not the default: when a
+        ``project_dir`` is supplied it becomes the execution directory.
+        """
         from mcp_coder.cli.utils import resolve_execution_dir
 
         result = resolve_execution_dir(None)
@@ -271,6 +276,91 @@ class TestResolveExecutionDir:
 
         result = resolve_execution_dir(str(test_dir))
         assert result == test_dir.resolve()
+
+    def test_none_with_project_dir_returns_project_dir(self, tmp_path: Path) -> None:
+        """project_dir is the default execution directory."""
+        from mcp_coder.cli.utils import resolve_execution_dir
+
+        result = resolve_execution_dir(None, project_dir=tmp_path)
+        assert result == tmp_path.resolve()
+
+    def test_project_dir_accepts_str_and_path(self, tmp_path: Path) -> None:
+        """str and Path forms of project_dir give the same result."""
+        from mcp_coder.cli.utils import resolve_execution_dir
+
+        from_path = resolve_execution_dir(None, project_dir=tmp_path)
+        from_str = resolve_execution_dir(None, project_dir=str(tmp_path))
+        assert from_path == from_str == tmp_path.resolve()
+
+    def test_relative_project_dir_is_resolved(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A relative project_dir is resolved to an absolute path.
+
+        Pins the commit.py case, where Path(args.project_dir) is built without
+        .resolve() and must not reach the subprocess as a relative cwd.
+        """
+        from mcp_coder.cli.utils import resolve_execution_dir
+
+        (tmp_path / "sub").mkdir()
+        monkeypatch.chdir(tmp_path)
+
+        result = resolve_execution_dir(None, project_dir="sub")
+        assert result.is_absolute()
+        assert result == (tmp_path / "sub").resolve()
+
+    def test_nonexistent_project_dir_is_not_validated(self) -> None:
+        """The project_dir default is resolved but deliberately not validated.
+
+        Validating it would break commit.py's error ordering, where
+        validate_git_repository owns the message for a bad project_dir.
+        """
+        from mcp_coder.cli.utils import resolve_execution_dir
+
+        result = resolve_execution_dir(None, project_dir="/no/such/dir")
+        assert result.is_absolute()
+
+    def test_explicit_execution_dir_wins_over_project_dir(self, tmp_path: Path) -> None:
+        """An explicit execution_dir overrides the project_dir default."""
+        from mcp_coder.cli.utils import resolve_execution_dir
+
+        chosen = tmp_path / "a"
+        chosen.mkdir()
+        other = tmp_path / "b"
+        other.mkdir()
+
+        result = resolve_execution_dir(str(chosen), project_dir=other)
+        assert result == chosen.resolve()
+
+    def test_explicit_execution_dir_warns_deprecation(self, tmp_path: Path) -> None:
+        """An explicit execution_dir emits a DeprecationWarning naming #1132."""
+        from mcp_coder.cli.utils import resolve_execution_dir
+
+        with pytest.warns(DeprecationWarning, match="1132"):
+            resolve_execution_dir(str(tmp_path))
+
+    def test_explicit_execution_dir_logs_deprecation(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The deprecation is also logged, since warnings are hidden by default."""
+        from mcp_coder.cli.utils import resolve_execution_dir
+
+        with caplog.at_level(logging.WARNING, logger="mcp_coder.cli.utils"):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                resolve_execution_dir(str(tmp_path))
+
+        assert "1132" in caplog.text
+
+    def test_default_does_not_warn(self, tmp_path: Path) -> None:
+        """The project_dir default emits no deprecation warning."""
+        from mcp_coder.cli.utils import resolve_execution_dir
+
+        with warnings.catch_warnings(record=True) as recorded:
+            warnings.simplefilter("always")
+            resolve_execution_dir(None, project_dir=tmp_path)
+
+        assert [w for w in recorded if issubclass(w.category, DeprecationWarning)] == []
 
 
 class TestResolveIssueInteractionFlags:

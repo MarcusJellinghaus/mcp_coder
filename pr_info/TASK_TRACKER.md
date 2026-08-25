@@ -70,9 +70,38 @@ Detail: [step_1.md](./steps/step_1.md) — shared candidate knowledge, no behavi
 
 Detail: [step_2.md](./steps/step_2.md) — new optional `project_dir` param, deprecation warning; backwards compatible.
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — **pytest still blocked on the
+      environment blocker diagnosed in Step 1; unchanged and untouched by this step**
+      - Clean: pylint and mypy report **no findings at all** on the three files
+        this step touches (`cli/utils.py`, `tests/cli/test_utils.py`,
+        `tests/integration/test_execution_dir_integration.py`).
+        `lint-imports` 21/21 kept; `black`/`isort` no changes (615 files unchanged).
+      - **pytest never ran the new tests.** Whole-suite collection still aborts:
+        `ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`
+        raised from `src/mcp_coder/checks/branch_status.py:17` via
+        `src/mcp_coder/__init__.py:37`, so `import mcp_coder` fails and every test
+        module errors at import. The 8 new tests
+        (`test_none_with_project_dir_returns_project_dir`,
+        `test_project_dir_accepts_str_and_path`,
+        `test_relative_project_dir_is_resolved`,
+        `test_nonexistent_project_dir_is_not_validated`,
+        `test_explicit_execution_dir_wins_over_project_dir`,
+        `test_explicit_execution_dir_warns_deprecation`,
+        `test_explicit_execution_dir_logs_deprecation`,
+        `test_default_does_not_warn`) are unproven in this environment, as are the
+        existing `TestResolveExecutionDir` tests that must stay green.
+      - Root cause unchanged from Step 1: the venv's `mcp-workspace` predates
+        upstream `a1f0eac`. Same cause behind the 3 remaining mypy errors in
+        `cli/commands/check_branch_status.py` (`pr_feedback_undeterminable`,
+        `format_for_llm/format_for_human(fail_on_reviews=...)`) — pre-existing on
+        `main`, not from this step.
+      - Fix (needs a shell; no MCP tool can install packages):
+        `pip install --force-reinstall "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+        then `pip install -e ".[dev]"`, then re-run the three checks. This session
+        had no shell tool, so it could not apply the fix.
+      - Carry-over for Steps 3-7: repair the venv first; the same blocker applies.
+- [x] Commit message prepared
 
 ### Step 3: Context-root finder + reporter
 

@@ -7,6 +7,7 @@ for parameter parsing and conversion.
 import argparse
 import logging
 import os
+import warnings
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import get_repository_identifier
@@ -344,22 +345,32 @@ def resolve_claude_settings_path(
     return None
 
 
-def resolve_execution_dir(execution_dir: str | None) -> Path:
+def resolve_execution_dir(
+    execution_dir: str | None,
+    project_dir: str | Path | None = None,
+) -> Path:
     """Resolve execution directory path to absolute Path object.
 
     Args:
-        execution_dir: Optional execution directory path
-                      - None: Returns current working directory
+        execution_dir: Optional execution directory path (deprecated, see #1132)
+                      - None: Falls back to project_dir, or CWD if not given
                       - Absolute path: Validates and returns as Path
                       - Relative path: Resolves relative to CWD
+        project_dir: Optional project directory, used as the default execution
+                     directory. Resolved but deliberately NOT existence-checked -
+                     each command validates its own project_dir and owns the
+                     error message for a bad one.
 
     Returns:
         Path: Absolute path to execution directory
 
     Raises:
-        ValueError: If specified directory doesn't exist
+        ValueError: If a specified execution_dir doesn't exist
 
     Examples:
+        >>> resolve_execution_dir(None, project_dir='/my/project')
+        PosixPath('/my/project')
+
         >>> resolve_execution_dir(None)
         PosixPath('/current/working/dir')
 
@@ -370,7 +381,16 @@ def resolve_execution_dir(execution_dir: str | None) -> Path:
         PosixPath('/current/working/dir/relative')
     """
     if execution_dir is None:
-        return Path.cwd()
+        if project_dir is None:
+            return Path.cwd()
+        return Path(project_dir).resolve()
+
+    deprecation_message = (
+        "--execution-dir is deprecated; the project directory is used as the "
+        "execution directory by default. Removal is tracked in #1132."
+    )
+    warnings.warn(deprecation_message, DeprecationWarning, stacklevel=2)
+    logger.warning(deprecation_message)
 
     path = Path(execution_dir)
 
