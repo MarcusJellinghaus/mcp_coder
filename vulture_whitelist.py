@@ -186,6 +186,19 @@ _._mock_langchain_config
 # cli/commands/conftest.py - Autouse fixture to mock resolve_claude_settings_path
 _._mock_resolve_claude_settings_path
 
+# cli/commands/conftest.py - Autouse fixture neutralising verify_jenkins so the
+# verify tests never probe a real Jenkins from a developer machine with
+# [jenkins] configured
+_._neutral_jenkins_verify
+
+# test_verify_jenkins.py - Per-class autouse fixture overriding the neutraliser
+# above with a configured (both-sections-pass) result, so TestJenkinsOrchestration
+# can assert where the sections print
+_._live_jenkins_verify
+
+# test_diagnostics.py - Fixture supplying the hostile Jenkins 403 error page
+_.fixture_access_denied_html
+
 # test_langchain_integration.py - Module-level pytest marker assignment
 _.pytestmark
 

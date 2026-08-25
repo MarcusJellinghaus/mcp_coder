@@ -551,6 +551,59 @@ class TestDispatchWorkflow:
         assert "git pull" in command
         assert "mcp-coder --log-level INFO create-plan 123" in command
 
+    def test_dispatch_workflow_builds_pipeline_url_from_base_url(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The queued pipeline link is built from JenkinsClient.base_url."""
+        # Setup - Mock managers
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+
+        issue = IssueData(
+            number=123,
+            title="Add feature X",
+            body="Description of feature",
+            state="open",
+            labels=["status-02:awaiting-planning", "enhancement"],
+            assignees=[],
+            user=None,
+            created_at=None,
+            updated_at=None,
+            url="https://github.com/user/repo/issues/123",
+            locked=False,
+        )
+
+        repo_config = {
+            "repo_url": "https://github.com/user/repo.git",
+            "executor_job_path": "Tests/mcp-coder-test",
+            "github_credentials_id": "github-pat-123",
+        }
+
+        mock_jenkins.base_url = "https://jenkins.test.com"
+        mock_jenkins.start_job.return_value = 98765
+        # No build URL yet - dispatch falls back to the pipeline URL
+        mock_jenkins.get_job_status.return_value = MagicMock(status="queued", url=None)
+
+        caplog.set_level(logging.INFO, logger="mcp_coder.cli.commands.coordinator.core")
+
+        # Execute
+        dispatch_workflow(
+            issue=issue,
+            workflow_name="create-plan",
+            repo_config=repo_config,
+            jenkins_client=mock_jenkins,
+            issue_manager=mock_issue_mgr,
+            branch_manager=mock_branch_mgr,
+            log_level="INFO",
+        )
+
+        # Verify - pipeline URL uses base_url, not the python-jenkins internals
+        assert (
+            "Pipeline: https://jenkins.test.com/job/Tests/job/mcp-coder-test"
+            in caplog.text
+        )
+
     @patch("mcp_coder.cli.commands.coordinator.core.RepoIdentifier")
     def test_dispatch_workflow_handles_missing_branch_gracefully(
         self, mock_repo_id_cls: MagicMock, caplog: pytest.LogCaptureFixture
@@ -668,7 +721,7 @@ class TestDispatchWorkflow:
         # Mock Jenkins responses
         mock_jenkins.start_job.return_value = 98765
         mock_jenkins.get_job_status.return_value = MagicMock(status="queued", url=None)
-        mock_jenkins._client.server = "https://jenkins.test.com"
+        mock_jenkins.base_url = "https://jenkins.test.com"
 
         # Execute - should complete successfully
         dispatch_workflow(
@@ -772,7 +825,7 @@ class TestDispatchWorkflowSilentFallthroughGuard:
 
         mock_jenkins.start_job.return_value = 12345
         mock_jenkins.get_job_status.return_value = MagicMock(url=None)
-        mock_jenkins._client.server = "https://jenkins.test.com"
+        mock_jenkins.base_url = "https://jenkins.test.com"
 
         dispatch_workflow(
             issue=issue,

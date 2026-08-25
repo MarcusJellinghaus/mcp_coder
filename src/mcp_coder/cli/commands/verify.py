@@ -45,6 +45,7 @@ from .verify_formatting import (
     _looks_like_key,
     _pad,
 )
+from .verify_jenkins import verify_jenkins
 
 logger = logging.getLogger(__name__)
 
@@ -384,6 +385,20 @@ def execute_verify(args: argparse.Namespace) -> int:
     github_result = verify_github(project_dir)
     print(_format_section("GITHUB", github_result, symbols))
 
+    # 0f. Jenkins verification sections (both empty when [jenkins] is unset)
+    jenkins_result, jenkins_jobs_result = verify_jenkins()
+    if jenkins_result:
+        print(_format_section("JENKINS", jenkins_result, symbols))
+    if jenkins_jobs_result:
+        print(_format_section("JENKINS JOBS", jenkins_jobs_result, symbols))
+    # None keeps an unconfigured [jenkins] exit-neutral; CONFIG already reports
+    # a missing required field.
+    jenkins_ok: bool | None = None
+    if jenkins_result:
+        jenkins_ok = bool(jenkins_result.get("overall_ok")) and bool(
+            jenkins_jobs_result.get("overall_ok", True)
+        )
+
     # 1. Resolve active provider (already done above)
 
     # 2. Claude CLI verification (conditional on provider)
@@ -670,6 +685,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         git_result=git_result,
         tools_exposed_ok=tools_exposed_ok,
         mcp_config_ok=mcp_config_ok,
+        jenkins_ok=jenkins_ok,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

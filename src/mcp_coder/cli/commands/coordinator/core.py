@@ -8,7 +8,6 @@ This module contains:
 
 import logging
 from typing import List, Optional
-from urllib.parse import quote
 
 from ....config.label_config import load_labels_config
 from ....mcp_workspace_github import (
@@ -19,6 +18,7 @@ from ....mcp_workspace_github import (
     get_all_cached_issues,
 )
 from ....utils.jenkins_operations.client import JenkinsClient
+from ....utils.jenkins_operations.diagnostics import job_url_path
 from ....utils.user_config import get_config_file_path, get_config_values
 from .command_templates import PRIORITY_ORDER, WORKFLOW_TEMPLATES
 from .workflow_constants import WORKFLOW_MAPPING
@@ -446,14 +446,8 @@ def dispatch_workflow(
     job_status = jenkins_client.get_job_status(queue_id)
 
     # Build Jenkins links: pipeline URL and build URL (if available)
-    jenkins_base_url = jenkins_client._client.server.rstrip(
-        "/"
-    )  # pylint: disable=protected-access  # python-jenkins has no public server URL accessor
-    # Convert job path to URL format: "Tests/mcp-coder-test" -> "Tests/job/mcp-coder-test"
-    # URL-encode each part to handle spaces and special characters
-    job_path_parts = repo_config["executor_job_path"].split("/")
-    encoded_parts = [quote(part, safe="") for part in job_path_parts]
-    pipeline_url = f"{jenkins_base_url}/job/" + "/job/".join(encoded_parts)
+    jenkins_base_url = jenkins_client.base_url
+    pipeline_url = jenkins_base_url + job_url_path(repo_config["executor_job_path"])
 
     if job_status.url:
         # Build has started - show build URL

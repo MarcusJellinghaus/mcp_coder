@@ -159,6 +159,10 @@ _LABEL_MAP: dict[str, str] = {
     "allowed_signers": "Allowed signers file",
     "verify_head": "HEAD signature",
     "actual_signature": "End-to-end sign test",
+    # Jenkins section (JENKINS JOBS keys are repo names and pass through unmapped)
+    "server": "Server",
+    "authentication": "Authentication",
+    "overall_read": "Overall/Read",
 }
 
 
