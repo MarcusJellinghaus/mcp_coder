@@ -1352,3 +1352,119 @@ class TestProcessSingleTaskBlocked:
         assert outcome.reason == "blocked"
         assert outcome.detail == "why"
         assert mock_process.call_count == 1
+
+
+class TestBranchNameSource:
+    """The LLM-log branch name is read from project_dir, not execution_dir.
+
+    After the cwd default change the two coincide unless --execution-dir is
+    passed explicitly; that is the case these tests pin. The subprocess itself
+    must still run in execution_dir, so each test also asserts prompt_llm keeps
+    receiving it.
+    """
+
+    _PROJECT_DIR = Path("/test/project")
+    _EXECUTION_DIR = Path("/elsewhere/workspace")
+
+    @patch("mcp_coder.workflows.implement.task_processing.get_branch_name_for_logging")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_implementation_path_reads_branch_from_project_dir(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_store_session: MagicMock,
+        mock_branch_name: MagicMock,
+    ) -> None:
+        """execution_dir differing from project_dir must not move the lookup."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+        mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
+        mock_branch_name.return_value = "feature-branch"
+
+        process_single_task(
+            self._PROJECT_DIR,
+            "claude",
+            execution_dir=self._EXECUTION_DIR,
+        )
+
+        mock_branch_name.assert_called_once_with(str(self._PROJECT_DIR))
+        assert mock_prompt_llm.call_args.kwargs["execution_dir"] == str(
+            self._EXECUTION_DIR
+        )
+        assert mock_prompt_llm.call_args.kwargs["branch_name"] == "feature-branch"
+        mock_store_session.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.task_processing.get_branch_name_for_logging")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing._run_mypy_check")
+    def test_mypy_fix_path_reads_branch_from_project_dir(
+        self,
+        mock_mypy_check: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_store_session: MagicMock,
+        mock_branch_name: MagicMock,
+    ) -> None:
+        """The mypy-fix call site is separate code and needs its own coverage."""
+        mock_mypy_check.side_effect = ["mypy error output", None]
+        mock_get_prompt.return_value = "Fix mypy errors: [mypy_output]"
+        mock_prompt_llm.return_value = _make_llm_response("Fixed the errors")
+        mock_branch_name.return_value = "feature-branch"
+
+        result = check_and_fix_mypy(
+            self._PROJECT_DIR,
+            1,
+            "claude",
+            execution_dir=self._EXECUTION_DIR,
+        )
+
+        assert result is True
+        mock_branch_name.assert_called_once_with(str(self._PROJECT_DIR))
+        assert mock_prompt_llm.call_args.kwargs["execution_dir"] == str(
+            self._EXECUTION_DIR
+        )
+        assert mock_prompt_llm.call_args.kwargs["branch_name"] == "feature-branch"
+        mock_store_session.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.task_processing.get_branch_name_for_logging")
+    @patch("mcp_coder.workflows.implement.task_processing.store_session")
+    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
+    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
+    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
+    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    def test_matching_dirs_still_read_branch_from_project_dir(
+        self,
+        mock_get_next_task: MagicMock,
+        mock_get_prompt: MagicMock,
+        mock_prompt_llm: MagicMock,
+        mock_get_status: MagicMock,
+        mock_store_session: MagicMock,
+        mock_branch_name: MagicMock,
+    ) -> None:
+        """Regression: the usual case, where the two directories are the same."""
+        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_prompt.return_value = "Template"
+        mock_prompt_llm.return_value = _make_llm_response("Response")
+        mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
+        mock_branch_name.return_value = "feature-branch"
+
+        process_single_task(
+            self._PROJECT_DIR,
+            "claude",
+            execution_dir=self._PROJECT_DIR,
+        )
+
+        mock_branch_name.assert_called_once_with(str(self._PROJECT_DIR))
+        assert mock_prompt_llm.call_args.kwargs["execution_dir"] == str(
+            self._PROJECT_DIR
+        )
+        mock_store_session.assert_called_once()

@@ -211,9 +211,7 @@ def check_and_fix_mypy(
 
             # Call LLM for fixes
             try:
-                branch_name = get_branch_name_for_logging(
-                    str(execution_dir) if execution_dir else str(project_dir)
-                )
+                branch_name = get_branch_name_for_logging(str(project_dir))
                 llm_response = prompt_llm(
                     mypy_prompt,
                     provider=provider,
@@ -431,7 +429,7 @@ Please implement this task step by step."""
         if attempt > 1:
             full_prompt += RETRY_REMINDER
 
-        branch_name = get_branch_name_for_logging(cwd)
+        branch_name = get_branch_name_for_logging(str(project_dir))
         llm_response = prompt_llm(
             full_prompt,
             provider=provider,

@@ -303,9 +303,60 @@ Detail: [step_5.md](./steps/step_5.md) — PROMPTS section rows, new test module
 
 Detail: [step_6.md](./steps/step_6.md) — `task_processing.py` two lines. Depends on Step 4.
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      - Both call sites now pass `str(project_dir)`: `task_processing.py:214`
+        (the mypy-fix path, which loses the `execution_dir`/`project_dir`
+        conditional entirely) and `:432` (the implementation path, previously
+        `get_branch_name_for_logging(cwd)`).
+      - The `execution_dir=` arguments to `prompt_llm` at `:221-223` and `:439`
+        are untouched, and the `cwd` assignment at `:394` is left alone as
+        step_6.md directs — `cwd` is still live, it is what `:439` passes.
+      - No existing test in `tests/workflows/implement/test_task_processing.py`
+        asserted on `get_branch_name_for_logging`, so nothing needed updating;
+        the whole-`tests/` grep found the symbol only in `test_git_utils.py`
+        (unit tests of the function itself) and the two rebase test modules,
+        none of which touch these sites. Three new tests were added instead, in
+        a new `TestBranchNameSource` class.
+      - Test 1 (`test_implementation_path_reads_branch_from_project_dir`) is the
+        discriminating one: `execution_dir=Path("/elsewhere/workspace")` against
+        `project_dir=Path("/test/project")`. Test 2 covers the separate mypy-fix
+        site through `check_and_fix_mypy`; test 3 is the `execution_dir ==
+        project_dir` regression. Each also asserts `prompt_llm` still receives
+        `execution_dir` unchanged, so a future edit cannot "fix" the branch name
+        by moving the subprocess.
+      - TDD order followed (tests written and saved before the two edits) but the
+        **red state could not be observed** — see the pytest blocker below.
+- [x] Quality checks: pylint, pytest, mypy — **pytest still blocked on the
+      environment blocker diagnosed in Step 1; unchanged and untouched by this step**
+      - Clean: pylint, mypy and `ruff` report **no findings at all** on the two
+        files this step touches (`workflows/implement/task_processing.py`,
+        `tests/workflows/implement/test_task_processing.py`). `lint-imports`
+        21/21 kept (696 files, 3571 dependencies). `black`/`isort` no changes
+        (617 files unchanged). `check file-size --max-lines 750`: all 824 files
+        within limit — `test_task_processing.py` is on `.large-files-allowlist`
+        (line 20), which is why the three tests could go in that file rather
+        than a new module.
+      - **pytest never ran the new tests.** Collection still aborts:
+        `ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`
+        raised from `src/mcp_coder/checks/branch_status.py:17` via
+        `src/mcp_coder/__init__.py:37`, so `import mcp_coder` fails and every
+        test module errors at import. Targeting the new class directly
+        (`...::TestBranchNameSource`) collected 0 tests for the same reason.
+        All three new tests are unproven here, and so is step_6.md's requirement
+        that test 1 be seen to fail first.
+      - Note: the MCP tooling's *own* interpreter can import
+        `mcp_workspace.checks.branch_status_rendering` — the module exists
+        upstream. It is specifically the repo `.venv` that is behind.
+      - Root cause unchanged from Steps 1-5: the venv's `mcp-workspace` predates
+        upstream `a1f0eac`. Same cause behind all 9 mypy errors and every pylint
+        occurrence (E0401/E0611/E1123/E1101) — each in an unrelated file,
+        pre-existing on `main`. `tach` is still not installed either.
+      - Fix (needs a shell; no MCP tool can install packages):
+        `pip install --force-reinstall "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+        then `pip install -e ".[dev]"`, then re-run the checks. This session had
+        no shell tool, so it could not apply the fix.
+      - Carry-over for Step 7: repair the venv first; the same blocker applies.
+- [x] Commit message prepared
 
 ### Step 7: Documentation
 
