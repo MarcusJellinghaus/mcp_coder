@@ -43,11 +43,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] Implementation: ten tests incl. fixture payload swap at `test_client.py:272` and moving the 500 case, then `_clean_jenkins_message` + `_wrap_jenkins_error` + `except JenkinsException` branch (before `except HTTPError`) in `start_job` and `get_job_status`
 - [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-      - pylint, mypy, lint-imports: PASS. pytest: **could not run** - the project
-        `.venv` has a stale `mcp-workspace`, so `src/mcp_coder/checks/branch_status.py:17`
-        raises `ModuleNotFoundError: mcp_workspace.checks.branch_status_rendering` and
-        `import mcp_coder` fails for every test module (pre-existing, also affects the
-        already-committed `test_diagnostics.py`). Reinstall deps, then re-run pytest.
+      - **Blocked on a stale `.venv`, not on this branch.** `mcp-workspace` is an
+        unpinned git dependency (`pyproject.toml:348`), and the installed copy predates
+        `mcp_workspace.checks.branch_status_rendering`. Everything below traces to that
+        one gap; no finding touches a file this branch changed.
+      - lint-imports: **PASS** (21 contracts kept).
+      - pytest: **could not run at all** — `src/mcp_coder/checks/branch_status.py:17`
+        raises `ModuleNotFoundError`, so `import mcp_coder` fails during collection for
+        every test module, including `test_client.py` and `test_diagnostics.py`. The nine
+        new step-4 tests have therefore never executed.
+      - mypy: 8 errors, all environment-caused — missing `branch_status_rendering`,
+        plus `BranchStatusReport.pr_feedback_undeterminable`, the `fail_on_reviews`
+        kwarg on `format_for_*`, and `PullRequestManager.add_assignees`, which all
+        exist in current `mcp-workspace` main but not in the installed build.
+      - pylint: same 7 errors (E1123/E0611/E1101) from that stale build, plus E0401 for
+        the uninstalled optional extras (`langchain*`, `mcp.server.fastmcp`).
+      - **Fix:** run `tools\reinstall_local.bat` (it passes `--refresh` and installs the
+        langchain extras, clearing the E0401 noise too), then re-run all four checks.
 - [x] Commit message prepared
 
 ### Step 5: Drop `exc_info=True` at both coordinator sites ([step_5.md](./steps/step_5.md))
