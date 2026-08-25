@@ -394,3 +394,16 @@ _._generate
 _._agenerate
 _._llm_type
 _.run_manager
+
+# tests/llm/providers/langchain/ - autouse fixtures clearing credential, endpoint
+# and redirect env vars so backend config tests see a pristine environment;
+# pytest injects them, so vulture sees no call site. _clear_env is shared by
+# test_langchain_base_url_shape.py, test_langchain_contract_rows.py and
+# test_langchain_effective_config.py.
+_._clear_env
+_._clear_credentials
+_._clear_redirects
+
+# tests/prompts/test_prompt_loader.py - autouse fixture isolating the module-level
+# warn-once cache from test ordering.
+_._clear_prompt_warning_cache
