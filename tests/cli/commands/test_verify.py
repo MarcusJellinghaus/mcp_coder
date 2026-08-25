@@ -10,18 +10,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import (
-    _print_environment_section,
-    _print_project_section,
-    _prompt_source,
-    execute_verify,
-)
+from mcp_coder.cli.commands.verify import execute_verify
 from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_WIDTH,
     _MARKER_SLOT_WIDTH,
     _VALUE_COLUMN_INDENT,
     _format_row,
     _looks_like_key,
+)
+from mcp_coder.cli.commands.verify_sections import (
+    _print_environment_section,
+    _print_project_section,
+    _prompt_source,
 )
 from mcp_coder.cli.main import main
 from mcp_coder.utils.pyproject_config import PromptsConfig
@@ -360,7 +360,9 @@ class TestEnvironmentSection:
                 raise PackageNotFoundError(pkg)
             return "1.2.3"
 
-        monkeypatch.setattr("mcp_coder.cli.commands.verify.version", fake_version)
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.verify_sections.version", fake_version
+        )
         _print_environment_section()
         out = capsys.readouterr().out
         assert _format_row("mcp-tools-py", "[ERR]", "not installed", indent=2) in out
@@ -385,7 +387,9 @@ class TestEnvironmentSection:
         def fake_version(pkg: str) -> str:
             return "1.2.3"
 
-        monkeypatch.setattr("mcp_coder.cli.commands.verify.version", fake_version)
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.verify_sections.version", fake_version
+        )
         _print_environment_section()
         lines = capsys.readouterr().out.splitlines()
         python_line = next(l for l in lines if "Python version" in l)
@@ -408,7 +412,9 @@ class TestEnvironmentSection:
                 raise PackageNotFoundError(pkg)
             return "1.2.3"
 
-        monkeypatch.setattr("mcp_coder.cli.commands.verify.version", fake_version)
+        monkeypatch.setattr(
+            "mcp_coder.cli.commands.verify_sections.version", fake_version
+        )
         _print_environment_section()
         lines = capsys.readouterr().out.splitlines()
         python_line = next(l for l in lines if "Python version" in l)
