@@ -1090,9 +1090,74 @@ Details: [step_15.md](./steps/step_15.md)
 
 Details: [step_16.md](./steps/step_16.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`verify.py`: the two prompt rows became the step's loop over
+      `(label, configured, content)`, driven by `is_prompt_configured_but_missing()`
+      from step 15. Configured-and-missing → `[ERR]` with
+      `"{configured} — configured but not found; shipped default used instead"`
+      and `prompts_ok = False`; every other case keeps `[OK]` and gains
+      `({len} chars)` taken from the content `load_prompts` already returned at
+      the top of the section — no second read (the two locals stopped being
+      `_`-prefixed). `verify_exit_code.py`: `_compute_exit_code` gains
+      `prompts_ok: bool = True`, checked next to the other
+      provider-independent hard failures. `_prompt_source()`, the `Claude mode`
+      row and the CLAUDE.md redundancy warning are behaviourally untouched.
+
+      **One formatting-only deviation:** the `Claude mode` row was rewritten
+      from an 8-line `_format_row` call into a 2-line one via a `mode` local.
+      Byte-identical output; done because the new rows pushed `verify.py` to
+      754 lines and the project gate is 750. It is now 748.
+
+      **Tests** — 9 new. 5 in the *new* `tests/cli/commands/test_verify_prompts_section.py`
+      covering step_16 §TDD 1, 2, 3 and 5 plus a langchain-active case proving
+      the exit-1 path is provider-independent; they drive `execute_verify`
+      against a real `pyproject.toml` under `tmp_path` with `load_prompts`
+      left un-mocked, so the rows are checked against the resolution a real run
+      performs. 4 in `tests/cli/commands/test_verify_exit_codes.py`
+      (`TestPromptsExitCode`) for §TDD 4: `prompts_ok=False` exits 1 under both
+      providers, `True` and *omitted* stay 0. The tests were written and run
+      red first — 7 of the 9 failed on the missing lengths / `[OK]`-instead-of-
+      `[ERR]` / unexpected-kwarg, and the two "no effect" cases passed from the
+      start, which is exactly what they assert.
+
+      **Why a new test file rather than `test_verify_sections_orchestration.py`**
+      as step_16 §WHERE suggests: appending there took it from 727 to 851 lines,
+      a *new* file-size violation. The new module imports the same `.conftest`
+      helpers, so nothing was duplicated.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in any file this step touches.** pylint and mypy scoped
+      to `verify.py`, `verify_exit_code.py` and the three test modules are both
+      clean; ruff clean; isort a no-op; black reformatted the new test class
+      once (applied, re-run green). File-size check is back at its pre-step
+      baseline — the only violations are `TASK_TRACKER.md` and the pre-existing
+      `test_verify_orchestration.py` (1010 lines).
+
+      Full-tree mypy reports the same 9 pre-existing errors as step 15, none in
+      the touched files — 7 stale-install `BranchStatusReport` /
+      `branch_status_rendering`, 2 `_mcp_stub_server.py` fastmcp stubs.
+
+      Test runs: the 9 new tests → **9 passed**; `test_verify*.py` +
+      `tests/prompts/` → **153 passed**; full fast selection minus the
+      environmental exclusions below → **4876 passed, 5 skipped**.
+
+      **Environmental exclusions, all unchanged from steps 2-15 and none touched
+      by this step:** the `httpx_connect_error` baseline; `tests/checks`,
+      `tests/workflows/review` and the six `test_check_branch_status*.py` modules
+      (stale installed `mcp-workspace`: `BranchStatusReport.__init__() got an
+      unexpected keyword argument 'pr_feedback_undeterminable'`);
+      `tests/llm/test_mcp_manager.py` (`ModuleNotFoundError:
+      langchain_mcp_adapters`); the `copilot_cli_integration` marker.
+
+      **Environment note — pytest still needs the shim.** Unchanged and
+      confirmed again: without it the first run died at conftest import
+      (`mcp_workspace.checks.branch_status_rendering` missing from the `.venv`
+      copy) and collected nothing. Same workaround — a throwaway
+      `.pytest_shim/sitecustomize.py` defining that module with a `CIStatus`
+      *enum* and `GITHUB_TOKEN_HINT`, `env_vars={"PYTHONPATH": ".pytest_shim"}`,
+      directory deleted afterwards and **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.)
+- [x] Commit message prepared
 
 ### Step 17: TLS / proxy summary line
 

@@ -24,7 +24,12 @@ from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
 from ...mcp_workspace_git import verify_git
 from ...mcp_workspace_github import verify_github
-from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
+from ...prompts.prompt_loader import (
+    get_project_prompt_path,
+    is_claude_md,
+    is_prompt_configured_but_missing,
+    load_prompts,
+)
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.pyproject_config import get_implement_config
 from ...utils.user_config import verify_config
@@ -378,34 +383,30 @@ def execute_verify(args: argparse.Namespace) -> int:
 
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
-    _sys_prompt, _proj_prompt, prompt_config = load_prompts(project_dir)
+    sys_prompt, proj_prompt, prompt_config = load_prompts(project_dir)
     active_provider, source = resolve_llm_method(args.llm_method)
 
     prompt_lines = [_pad("PROMPTS")]
-    prompt_lines.append(
-        _format_row(
-            "System prompt",
-            symbols["success"],
-            _prompt_source(prompt_config.system_prompt, "shipped default"),
-            indent=2,
-        )
-    )
-    prompt_lines.append(
-        _format_row(
-            "Project prompt",
-            symbols["success"],
-            _prompt_source(prompt_config.project_prompt, "shipped default"),
-            indent=2,
-        )
-    )
-    prompt_lines.append(
-        _format_row(
-            "Claude mode",
-            symbols["success"],
-            prompt_config.claude_system_prompt_mode,
-            indent=2,
-        )
-    )
+    # Lengths come from the content load_prompts already resolved — no re-read.
+    # A configured path that did not resolve is an error, not an [OK] row
+    # showing a path the run never actually used.
+    prompts_ok = True
+    for label, configured, content in (
+        ("System prompt", prompt_config.system_prompt, sys_prompt),
+        ("Project prompt", prompt_config.project_prompt, proj_prompt),
+    ):
+        if is_prompt_configured_but_missing(configured, project_dir):
+            prompts_ok = False
+            marker, value = symbols["failure"], (
+                f"{configured} — configured but not found; "
+                "shipped default used instead"
+            )
+        else:
+            source_label = _prompt_source(configured, "shipped default")
+            marker, value = symbols["success"], f"{source_label} ({len(content)} chars)"
+        prompt_lines.append(_format_row(label, marker, value, indent=2))
+    mode = prompt_config.claude_system_prompt_mode
+    prompt_lines.append(_format_row("Claude mode", symbols["success"], mode, indent=2))
     if active_provider == "claude" and prompt_config.project_prompt:
         prompt_path = get_project_prompt_path(project_dir)
         if is_claude_md(prompt_path, str(project_dir)):
@@ -757,6 +758,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         tools_exposed_ok=tools_exposed_ok,
         mcp_config_ok=mcp_config_ok,
         jenkins_ok=jenkins_ok,
+        prompts_ok=prompts_ok,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

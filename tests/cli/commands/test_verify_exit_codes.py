@@ -556,3 +556,64 @@ class TestContractViolationExitCode:
             )
             == 0
         )
+
+
+class TestPromptsExitCode:
+    """Exit-code effect of the prompts_ok signal (provider-independent).
+
+    A configured prompt path that does not resolve is a misconfiguration
+    whatever the active provider is, so this is a new exit-1 path for claude
+    users too. The default stays ``True`` so every pre-existing call site and
+    test keeps its exit code.
+    """
+
+    def test_claude_active_prompts_not_ok_exit_1(self) -> None:
+        """Exit 1 when prompts_ok=False and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                prompts_ok=False,
+            )
+            == 1
+        )
+
+    def test_langchain_active_prompts_not_ok_exit_1(self) -> None:
+        """Exit 1 when prompts_ok=False and langchain is active."""
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _make_claude_result(),
+                _make_langchain_result(),
+                _make_mlflow_result(installed=False),
+                prompts_ok=False,
+            )
+            == 1
+        )
+
+    def test_prompts_ok_true_no_effect(self) -> None:
+        """Exit 0 when prompts_ok=True (every prompt resolved)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                prompts_ok=True,
+            )
+            == 0
+        )
+
+    def test_prompts_ok_defaults_to_true(self) -> None:
+        """Omitting the parameter is neutral, so existing callers are unchanged."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+            )
+            == 0
+        )
