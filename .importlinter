@@ -318,7 +318,7 @@ source_modules =
 forbidden_modules =
     requests
 ignore_imports =
-    mcp_coder.utils.jenkins_operations.client -> requests
+    mcp_coder.utils.jenkins_operations.** -> requests
 
 # -----------------------------------------------------------------------------
 # Contract: Black Library Isolation

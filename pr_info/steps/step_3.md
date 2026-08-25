@@ -237,3 +237,16 @@ Use a `Mock(spec=Session)` with `get.side_effect` keyed by URL. No network.
 > `mcp__tools-py__run_lint_imports_check`, and `mcp__tools-py__run_pytest_check` with
 > `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"]`.
 > Fix everything they report, then `./tools/format_all.sh` and commit as one commit.
+
+## NOTES (implementation)
+
+Done. 25 tests in `test_diagnostics.py`, all passing. `.importlinter` ignore is at
+line 321, not 334 — widened as specified (`lint-imports`: 21 contracts kept).
+
+**Environment caveat:** the repo `.venv` has a stale `mcp-workspace` install missing
+`mcp_workspace.checks.branch_status_rendering`, which `src/mcp_coder/checks/branch_status.py:17`
+imports. That breaks `import mcp_coder` and therefore *every* test in the repo, plus a handful of
+pre-existing pylint/mypy errors (`add_assignees`, `pr_feedback_undeterminable`, `fail_on_reviews`).
+Unrelated to this step. Tests were run with
+`PYTHONPATH=C:\Users\Marcus\Documents\GitHub\mcp-workspace\src` to shadow the stale package;
+the venv should be repaired (reinstall `mcp-workspace`) before the next step.

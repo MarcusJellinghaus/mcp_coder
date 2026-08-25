@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: `jenkins_operations/diagnostics.py` ([step_3.md](./steps/step_3.md))
 
-- [ ] Implementation: hostile HTML fixture + `test_diagnostics.py`, then `diagnostics.py` (`job_url_path`, `extract_jenkins_error`, `probe`, `diagnose_403`, `diagnose_404`), widen `.importlinter:334`, `core.py:452-456` uses `job_url_path()`
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: hostile HTML fixture + `test_diagnostics.py`, then `diagnostics.py` (`job_url_path`, `extract_jenkins_error`, `probe`, `diagnose_403`, `diagnose_404`), widen `.importlinter:334`, `core.py:452-456` uses `job_url_path()`
+- [x] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `_wrap_jenkins_error` and handler wiring ([step_4.md](./steps/step_4.md))
 

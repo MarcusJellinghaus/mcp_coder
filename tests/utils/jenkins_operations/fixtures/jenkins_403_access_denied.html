@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="jenkins-2.528.3">
+<head resURL="/static/8f3c1a2b" data-rooturl="" data-resurl="/static/8f3c1a2b">
+  <title>Access Denied [Jenkins]</title>
+  <meta name="ROBOTS" content="INDEX,NOFOLLOW">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="crumb-header" content="Jenkins-Crumb">
+  <meta name="crumb-value" content="a91c4d0f7e2b48c6913f5ad8e7b2c1049f6d3e8a5b7c2091d4e6f8a3b5c7d9e1">
+  <link rel="stylesheet" href="/static/8f3c1a2b/jsbundles/base-styles-v2.css" type="text/css">
+  <link rel="stylesheet" href="/static/8f3c1a2b/jsbundles/ui-refresh-overrides.css" type="text/css">
+  <link rel="stylesheet" href="/static/8f3c1a2b/css/color.css" type="text/css">
+  <link rel="shortcut icon" href="/static/8f3c1a2b/favicon.ico" type="image/vnd.microsoft.icon">
+  <script src="/static/8f3c1a2b/jsbundles/vendors.js" type="text/javascript" defer></script>
+  <script src="/static/8f3c1a2b/jsbundles/page-init.js" type="text/javascript" defer></script>
+</head>
+<body class="jenkins-2.528.3 two-column jenkins-!-dark-theme-supported" data-model-type="hudson.security.AccessDeniedException3" id="jenkins">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none" aria-hidden="true" focusable="false">
+  <symbol id="ionicon-alert-circle" viewBox="0 0 512 512">
+    <path d="M256 48C141.31 48 48 141.31 48 256s93.31 208 208 208 208-93.31 208-208S370.69 48 256 48z" fill="none" stroke="currentColor" stroke-width="32"/>
+    <path d="M250.26 166.05L256 288l5.73-121.95a5.74 5.74 0 00-5.73-6h0a5.74 5.74 0 00-5.74 6z" fill="none" stroke="currentColor" stroke-width="32"/>
+  </symbol>
+  <symbol id="ionicon-lock-closed" viewBox="0 0 512 512">
+    <path d="M336 208v-95a80 80 0 00-160 0v95" fill="none" stroke="currentColor" stroke-width="32"/>
+    <rect x="96" y="208" width="320" height="272" rx="48" ry="48" fill="none" stroke="currentColor" stroke-width="32"/>
+  </symbol>
+  <symbol id="ionicon-log-in" viewBox="0 0 512 512">
+    <path d="M192 176v-40a40 40 0 0140-40h160a40 40 0 0140 40v240a40 40 0 01-40 40H240c-22.09 0-48-17.91-48-40v-40" fill="none" stroke="currentColor" stroke-width="32"/>
+  </symbol>
+</svg>
+<template id="jenkins-tooltip-template">
+  <div class="tippy-box jenkins-tooltip" role="tooltip"><div class="tippy-content"></div></div>
+</template>
+<template id="jenkins-dialog-template">
+  <dialog class="jenkins-dialog"><div class="jenkins-dialog__title"></div><div class="jenkins-dialog__contents"></div></dialog>
+</template>
+<a href="#skip2content" class="skiplink">Skip to content</a>
+<header id="page-header" class="page-header">
+  <div class="page-header__brand">
+    <a href="/" class="page-header__brand-link"><svg class="page-header__brand-image"><use href="#ionicon-lock-closed"/></svg><span class="page-header__brand-name">Jenkins</span></a>
+  </div>
+  <div class="page-header__hyperlinks">
+    <a href="/user/job_manager" class="jenkins-button jenkins-button--tertiary">job_manager</a>
+    <a href="/logout" class="jenkins-button jenkins-button--tertiary">log out</a>
+  </div>
+</header>
+<div id="page-body" class="clear">
+  <div id="main-panel">
+    <!-- stapler: dispatching hudson.security.AccessDeniedException3 for GET /crumbIssuer/api/json -->
+    <!-- principal=job_manager authorities=[authenticated] crumb=a91c4d0f7e2b48c6913f5ad8e7b2c1049f6d3e8a5b7c2091d4e6f8a3b5c7d9e1
+--><h1>Access Denied</h1><p class="error">job_manager is missing the Overall/Read permission<!--
+      hudson.security.AccessDeniedException3: job_manager is missing the Overall/Read permission
+        at hudson.security.ACL.checkPermission(ACL.java:76)
+        at jenkins.model.Jenkins.checkPermission(Jenkins.java:4523)
+        at hudson.security.csrf.CrumbIssuer.getCrumbRequestField(CrumbIssuer.java:118)
+    -->
+    <div class="jenkins-notice">
+      <svg class="jenkins-notice__icon"><use href="#ionicon-alert-circle"/></svg>
+      <p>You are signed in as <strong>job_manager</strong>. If this is unexpected, <a href="/login?from=%2FcrumbIssuer%2Fapi%2Fjson">sign in again</a>.</p>
+    </div>
+  </div>
+</div>
+<footer class="page-footer">
+  <div class="page-footer__flex-row">
+    <div class="page-footer__footer-id-placeholder"></div>
+    <div class="jenkins-tooltip--footer">Page generated: Aug 25, 2026 9:14:07 AM CEST</div>
+    <div class="page-footer__links"><a href="/api/">REST API</a></div>
+    <div class="page-footer__links">Jenkins 2.528.3</div>
+  </div>
+</footer>
+</body>
+</html>
