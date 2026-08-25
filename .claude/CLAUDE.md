@@ -132,7 +132,7 @@ mcp-coder gh-tool set-status <label>
 - `execution_dir`: where Claude subprocess runs (config discovery)
 - `project_dir`: where source code lives (git ops and file modifications)
 
-Never conflate the two. Use `--execution-dir` when workspace and project differ.
+Never conflate the two. `execution_dir` defaults to `project_dir`, so Claude discovers the driven project's `CLAUDE.md` and settings. `--execution-dir` still overrides it but is deprecated (removal tracked in #1132).
 
 ## Shared Libraries
 

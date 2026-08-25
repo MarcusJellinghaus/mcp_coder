@@ -172,7 +172,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--output-format FORMAT` - Output format: `text` (default) or `json` (includes session_id)
 - `--mcp-config PATH` - Path to MCP configuration file (e.g., `.mcp.linux.json`)
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--execution-dir PATH` - Working directory for Claude subprocess (default: current directory)
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--add-system-prompts` - Inject system and project prompts into the LLM request. Loads prompts from `[tool.mcp-coder.prompts]` in `pyproject.toml` (or shipped defaults). See [Prompt Configuration](repository-setup/python.md#prompt-configuration).
 
 **Examples:**
@@ -216,7 +216,7 @@ mcp-coder icoder [OPTIONS]
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--project-dir PATH` - Project directory path (default: current directory)
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--initial-color COLOR` - Set prompt border color at startup (named color or hex code)
 
 **Built-in commands:**
@@ -261,7 +261,7 @@ mcp-coder commit auto [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--mcp-config PATH` - Path to MCP configuration file
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 
 **Examples:**
 ```bash
@@ -290,7 +290,7 @@ mcp-coder implement [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
@@ -329,7 +329,7 @@ mcp-coder create-plan ISSUE_NUMBER [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
@@ -362,7 +362,7 @@ mcp-coder review-plan [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
@@ -392,7 +392,7 @@ mcp-coder rebase [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--base-branch BRANCH` - Base branch to rebase onto (default: auto-detect; required for non-main/master bases)
 
 **Description:** Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. The base branch is auto-detected unless `--base-branch` is given (required when the base is not `main`/`master`). This is the same rebase step the `review-implementation` workflow runs between rounds.
@@ -423,7 +423,7 @@ mcp-coder create-pr [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
@@ -459,7 +459,7 @@ mcp-coder review-implementation [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
@@ -690,7 +690,7 @@ mcp-coder check branch-status [OPTIONS]
 - `--llm-method METHOD` - LLM provider for --fix (`claude`, `copilot`, or `langchain`)
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--execution-dir PATH` - Working directory for Claude subprocess
+- `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
 - `--wait-for-pr` - Wait for PR creation, then proceed with normal branch-status check
 - `--pr-timeout SECONDS` - Max seconds to wait for PR to appear (default: 600) (only used with `--wait-for-pr`)
 - `--fail-on-reviews` - Exit non-zero unless PR reviews are proven clean; also renders the Review Gate header (default: off = informational)

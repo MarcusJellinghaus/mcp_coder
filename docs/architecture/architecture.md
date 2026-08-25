@@ -115,38 +115,74 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **AI Delegation**: mcp_coder provides context, Claude Code creates content
 - **Tool Abstraction**: Claude Code handles all MCP server interactions
 - **Human-AI Collaboration**: Strategic review points (plan review, code review)
-- **Execution Context Separation**: Distinct project and execution directories for flexible workspace configurations
+- **Execution Context Anchoring**: The Claude subprocess runs in the project directory, so the rules and settings it discovers belong to the code being changed
 
 ### Architecture Patterns
 - **Provider Abstraction**: Extensible LLM interface supporting multiple providers
 - **Command Pattern**: CLI subcommand structure with consistent interfaces
 - **MCP Integration**: Specialized servers for file operations and quality checks
-- **Context Separation Pattern**: Separation of execution directory (where Claude runs) from project directory (where code lives)
+- **Context Separation Pattern**: Execution directory (where Claude runs) is a distinct concept from project directory (where code lives), but defaults to it; overriding it is deprecated (#1132)
 
 ### Execution Context Management
 
-**Design Decision**: Separate execution directory from project directory
+**Design Decision**: Anchor the Claude subprocess to the project directory
 
 mcp-coder distinguishes between:
 - **Project Directory** (`project_dir`): Where source files live and git operations occur
-- **Execution Directory** (`execution_dir`): Where Claude subprocess runs
+- **Execution Directory** (`execution_dir`): Where the Claude subprocess runs — its `cwd`
 
 **Implementation**:
-- CLI flag: `--execution-dir` controls Claude's working directory
-- Default: Uses shell's current working directory
-- Use case: Access workspace configs while modifying different projects
+- Default: `execution_dir` **is** `project_dir`. The shell's working directory is not used
+- CLI flag: `--execution-dir` overrides it. **Deprecated** — removal tracked in #1132
+- Passing the flag emits a deprecation warning naming #1132
+
+**Why the default is `project_dir`**:
+
+Claude Code discovers `CLAUDE.md` by walking up from **its own working directory**, and there
+is no flag that points it elsewhere — cwd is the only lever. The same walk finds project-level
+`.claude/settings.json` and `settings.local.json`. So whichever directory the subprocess starts
+in decides whose coding rules the agent obeys.
+
+That is what went wrong in #1113: on a build server the shell sits in the tool environment
+while the checkout lives in a separate tree, so every headless run loaded a stale predecessor
+project's `CLAUDE.md` and the driven project's own rules never arrived. Locally it worked only
+by coincidence — developers stand in the repo, so cwd happened to equal `project_dir`.
 
 **Example**:
 ```bash
-cd /home/user/workspace  # Has .mcp.json
+cd /anywhere  # the shell's location is irrelevant
 mcp-coder implement --project-dir /path/to/project
-# Claude runs in workspace, modifies project files
+# Claude runs with cwd=/path/to/project and discovers that project's CLAUDE.md
 ```
 
+**Deprecated override**:
+```bash
+mcp-coder implement --project-dir /path/to/project --execution-dir /home/user/workspace
+# Claude runs in the workspace: warns about #1132, and discovers the workspace's
+# CLAUDE.md and settings rather than the project's
+```
+
+**Reporting**: each run names the Claude working directory and every project instructions file
+found by the cwd-upward walk, and **warns when one lies outside `project_dir`**. `mcp-coder
+verify` reports the same in its PROMPTS section. Scope of the walk is `<dir>/CLAUDE.md` and
+`<dir>/.claude/CLAUDE.md` up to the filesystem root — not user-level `~/.claude/CLAUDE.md`, and
+not `@import` expansion.
+
 **Benefits**:
-- Share MCP configurations across multiple projects
-- Support CI/CD environments with separate checkout and execution contexts
-- Flexible workspace organization for development teams
+- Project instructions, MCP config and Claude settings all resolve against the same anchor
+- Headless and CI runs behave like a developer standing in the repo; the shell's working
+  directory can no longer change which rules the agent obeys
+- Separate checkout and execution contexts remain supported, but explicitly — via
+  `--project-dir`, `--mcp-config` and `--settings` rather than implicitly via cwd
+
+**Trade-off — one behaviour is genuinely lost**: a project with no `.mcp.json` of its own could
+previously pick one up from a shared workspace through Claude's cwd discovery. It no longer
+can. Pass the file with `--mcp-config`, pin settings with `--settings`, and select the tree
+with `--project-dir`; together these cover the CI/CD case that motivated shared workspaces.
+
+**Pattern family**: this is the third cwd-anchored input moved to `project_dir` — **#977**
+(`--mcp-config` resolved against cwd), **#981** (Claude settings discovered via cwd), **#1113**
+(`CLAUDE.md` discovered via cwd). All three are now project-anchored.
 
 ---
 
@@ -321,15 +357,19 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 4. **Claude Code** → **mcp_coder**: Returns structured implementation plan
 5. **mcp_coder** → **GitHub**: Posts plan as comment, changes label to `status:plan-review`
 
-### Scenario 4: Separate Execution and Project Contexts
-1. User has workspace with shared MCP configurations
-2. Runs `mcp-coder implement --project-dir /project --execution-dir /workspace`
+### Scenario 4: Driving a Project from Another Directory
+1. The shell sits anywhere — typically the tool environment on a build server, not the checkout
+2. Runs `mcp-coder implement --project-dir /project`
 3. mcp_coder prepares environment:
    - Sets `MCP_CODER_PROJECT_DIR=/project`
-   - Executes Claude with `cwd=/workspace`
-4. Claude discovers `.mcp.json` in workspace
+   - Executes Claude with `cwd=/project` (the default; the shell's directory is not consulted)
+4. Claude discovers `/project/.claude/CLAUDE.md`, `.mcp.json` and `.claude/settings*.json` by walking up from its cwd
 5. Claude modifies files in project directory
 6. Git operations target project directory
+
+> **Deprecated variant:** `--execution-dir /workspace` still forces `cwd=/workspace`. Steps 3-6
+> hold mechanically, but Claude then discovers the *workspace's* `CLAUDE.md` and settings
+> instead of the project's. The flag warns on use; removal is tracked in #1132.
 
 ### Scenario 2: Code Implementation Execution
 1. Human approves plan → label changed to `status:plan-ready`

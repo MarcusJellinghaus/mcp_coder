@@ -362,9 +362,78 @@ Detail: [step_6.md](./steps/step_6.md) — `task_processing.py` two lines. Depen
 
 Detail: [step_7.md](./steps/step_7.md) — architecture, cli-reference, environments, both claude-code docs. Depends on Step 4.
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      - Docs only, as step_7.md requires: no source file and no test file changed.
+      - `architecture.md`: \"Execution Context Management\" (`:126-185`) rewritten —
+        default is `project_dir`, `--execution-dir` is a deprecated override
+        (#1132), the reason is stated explicitly (Claude walks up from its own cwd
+        to find `CLAUDE.md`, no flag exists, cwd is the only lever), the worked
+        example no longer claims \"Claude runs in workspace\", Benefits revised with
+        the lost workspace-`.mcp.json` behaviour named rather than deleted, and the
+        #977 / #981 / #1113 family recorded. Scenario 4 rewritten around the default
+        with the `--execution-dir` variant kept as a labelled deprecated blockquote.
+        Two bullets at `:118` and `:124` updated to match.
+      - `cli-reference.md`: all ten bullets (`:175`, 219, 264, 293, 332, 365, 395,
+        426, 462, 690) replaced with one byte-identical canonical sentence carrying
+        the deprecation, the `--project-dir` default, and a link to
+        `architecture/architecture.md#execution-context-management`. Anchor verified
+        to resolve — the `### Execution Context Management` heading is unchanged.
+      - `environments.md`: new `## The Working Directory Selects the Agent's Rules`
+        section after the \"Who Sets the Environments?\" subsections, covering the cwd
+        walk, `cwd = project_dir`, the `cd %VENV_BASE_DIR%` coupling
+        (`command_templates.py:49`, `:242`, `:280`, `:318`, `:356`, `:394` — all six
+        verified present), and a keep/remove table for tool-env `.mcp.json` vs
+        `.claude/CLAUDE.md`. Placed as a `##` between sections rather than inside
+        the Entry Point Matrix, which would have broken the heading nesting.
+      - `repository-setup/claude-code.md`: \"invoked from a parent directory\" removed
+        as a cause of wrong settings discovery — an explicit deprecated
+        `--execution-dir` is the only cause left. New `#### Side effect` subsection
+        carries the settings-merge behaviour (project holding both files newly
+        activates the shared `settings.json`) plus the one-sentence copilot
+        `_read_settings_allow` note. Symptom list at `:203-205` kept unchanged.
+      - `configuration/claude-code.md:123-131`: callout names the deprecation and the
+        new default in one paragraph, cross-link to the section above retained; the
+        explanation is not duplicated.
+      - **One file outside step_7.md's five, taken in scope deliberately:**
+        `.claude/CLAUDE.md:135` said \"Use `--execution-dir` when workspace and project
+        differ\" — advice this PR falsifies, in the file the agent itself loads. It is
+        not under `docs/`, so the step's `docs/**/*.md` search never surfaced it; it is
+        also neither source nor test. Fixed in one line rather than left directing
+        future runs at the deprecated flag.
+- [x] Quality checks: pylint, pytest, mypy — **pytest still blocked on the
+      environment blocker diagnosed in Step 1; unchanged and untouched by this step**
+      - This step changes **no Python at all** — six markdown files only. `black`/`isort`
+        report no changes (617 files unchanged, 3 skipped).
+        `check file-size --max-lines 750`: all 824 files within limit; the two files
+        that grew (`architecture.md`, `environments.md`) stay well under it, and
+        `cli-reference.md` gained no lines.
+      - pylint and mypy report **no findings in any file this step touches** — they
+        cannot, since none is a Python file. The 9 mypy errors and every pylint
+        occurrence (E0401/E0611/E1123/E1101) are in unrelated files and pre-exist on
+        `main`.
+      - **pytest never ran.** Collection still aborts:
+        `ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`
+        raised from `src/mcp_coder/checks/branch_status.py:17` via
+        `src/mcp_coder/__init__.py:37`, so `import mcp_coder` fails and every test
+        module errors at import.
+      - step_7.md's reason for running the gates on a docs commit is that "some tests
+        assert on documented CLI help strings". **Checked by reading instead:** no test
+        reads `docs/` at all — grepping `tests/` for `cli-reference` / `docs/` returns
+        nothing, and `tests/cli/test_help_anti_drift.py` (the one candidate by name)
+        walks the built parser tree against `COMMAND_DESCRIPTIONS`, not against the
+        docs. The help strings themselves live in `shared_args.py`, which Step 4
+        already changed and this step does not touch. So the blocked pytest run hides
+        no risk specific to this step — but it also still hides Steps 1-6's unproven
+        tests, which remain unproven.
+      - Root cause unchanged from Steps 1-6: the venv's `mcp-workspace` predates
+        upstream `a1f0eac`. `tach` is still not installed either.
+      - Fix (needs a shell; no MCP tool can install packages):
+        `pip install --force-reinstall "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+        then `pip install -e ".[dev]"`, then re-run the checks — **including one
+        unfiltered `-n auto` run**, which is what finally executes Steps 4-6's
+        acceptance tests. This session had no shell tool, so it could not apply the
+        fix.
+- [x] Commit message prepared
 
 ## Pull Request
 
