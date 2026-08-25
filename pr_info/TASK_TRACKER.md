@@ -42,24 +42,42 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 4: `_wrap_jenkins_error` and handler wiring ([step_4.md](./steps/step_4.md))
 
 - [x] Implementation: ten tests incl. fixture payload swap at `test_client.py:272` and moving the 500 case, then `_clean_jenkins_message` + `_wrap_jenkins_error` + `except JenkinsException` branch (before `except HTTPError`) in `start_job` and `get_job_status`
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-      - **Blocked on a stale `.venv`, not on this branch.** `mcp-workspace` is an
-        unpinned git dependency (`pyproject.toml:348`), and the installed copy predates
-        `mcp_workspace.checks.branch_status_rendering`. Everything below traces to that
-        one gap; no finding touches a file this branch changed.
-      - lint-imports: **PASS** (21 contracts kept).
-      - pytest: **could not run at all** — `src/mcp_coder/checks/branch_status.py:17`
-        raises `ModuleNotFoundError`, so `import mcp_coder` fails during collection for
-        every test module, including `test_client.py` and `test_diagnostics.py`. The nine
-        new step-4 tests have therefore never executed.
-      - mypy: 8 errors, all environment-caused — missing `branch_status_rendering`,
-        plus `BranchStatusReport.pr_feedback_undeterminable`, the `fail_on_reviews`
-        kwarg on `format_for_*`, and `PullRequestManager.add_assignees`, which all
-        exist in current `mcp-workspace` main but not in the installed build.
-      - pylint: same 7 errors (E1123/E0611/E1101) from that stale build, plus E0401 for
-        the uninstalled optional extras (`langchain*`, `mcp.server.fastmcp`).
-      - **Fix:** run `tools\reinstall_local.bat` (it passes `--refresh` and installs the
-        langchain extras, clearing the E0401 noise too), then re-run all four checks.
+- [x] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+      - **All four checks pass for this branch's code. Zero findings in any file this
+        branch changed.** The `.venv` is still stale (`mcp-workspace` is an unpinned git
+        dependency, `pyproject.toml:348`, and the installed copy has no
+        `mcp_workspace/checks/branch_status_rendering.py`), so the checks were run with
+        that gap worked around — see the note at the end.
+      - lint-imports: **PASS** (21 contracts kept, 697 files / 3568 dependencies).
+      - pytest: **PASS** for the step-4 code. `tests/utils/jenkins_operations` →
+        78 passed, which is the first execution of the nine new step-4 tests. The wider
+        suite was run in chunks: `tests/utils` + `tests/workflow_steps` +
+        `tests/workflow_utils` + `tests/workflows` + `tests/integration` → 1824 passed,
+        5 skipped; `tests/checks` + `tests/cli` + `tests/config` + `tests/icoder` and
+        `tests/llm` + `tests/prompts` + `tests/services` + `tests/tools` pass apart from
+        the pre-existing environment failures listed below. (Full-suite `-n auto` exceeds
+        the 300 s tool timeout, hence the chunking.)
+      - mypy: **PASS** — clean over `src|tests/mcp_coder/utils/jenkins_operations` and
+        `src|tests/.../cli/commands/coordinator`, i.e. every directory this branch edits.
+      - pylint: **PASS** — clean over the same four directories.
+      - black/isort: clean (26 files unchanged).
+      - **Pre-existing, unrelated to this branch** (all still open, none in a changed
+        file): 8 mypy + 7 pylint E1123/E0611/E1101 errors from the stale `mcp_workspace`
+        build (`branch_status_rendering`, `BranchStatusReport.pr_feedback_undeterminable`,
+        the `fail_on_reviews` kwarg on `format_for_*`, `PullRequestManager.add_assignees`);
+        pylint E0401 for uninstalled optional extras (`langchain*`, `mcp.server.fastmcp`);
+        `tests/icoder/test_snapshots.py` (10 errors — `pytest-textual-snapshot` not
+        installed); `test_busy_indicator.py::test_show_busy_preserves_start_time` (timing
+        flake — 0.05 s sleep formatted to one decimal, asserts `> 0.0`);
+        3 × `test_copilot_integration.py` (copilot CLI exits 1);
+        `test_langchain_exceptions.py::test_connection_errors_contains_httpx_connect_error`
+        (`httpx` is a `MagicMock` without the extras).
+      - **Workaround used / still to do:** pytest was run with
+        `PYTHONPATH=C:/Users/Marcus/Documents/GitHub/mcp-workspace/src` to shadow the stale
+        package; mypy and pylint take no env, so they were scoped to the changed
+        directories instead. Run `tools\reinstall_local.bat` (passes `--refresh` and
+        installs the langchain extras) to clear the environment gap for good, then the
+        unscoped project-wide checks will be green too.
 - [x] Commit message prepared
 
 ### Step 5: Drop `exc_info=True` at both coordinator sites ([step_5.md](./steps/step_5.md))
