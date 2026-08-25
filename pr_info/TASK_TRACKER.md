@@ -165,9 +165,79 @@ Detail: [step_3.md](./steps/step_3.md) — `find_context_claude_md`, `is_outside
 
 Detail: [step_4.md](./steps/step_4.md) — **the behaviour change** + help text + 14 test updates + two `cwd == project_dir` tests. Depends on Steps 2 and 3.
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      - All nine call sites pass `project_dir=`. Five one-line edits
+        (`create_plan.py`, `create_pr.py`, `implement.py`, `rebase.py`,
+        `review.py`), three statement reorders (`commit.py`, `prompt.py`,
+        `icoder.py`), and the `check_branch_status.py` hoist out of the `--fix`
+        block. `_EXECUTION_DIR_HELP` updated, keeping the substring
+        "where Claude subprocess runs" that `test_canonical_help` asserts on.
+      - TDD order followed: all 14 mocked call-argument assertions were updated
+        before the call sites changed. Grepped `tests/` for `assert_called` on
+        every `resolve_execution_dir` mock — `test_rebase.py` (`:73`, `:107`,
+        `:122`) and `test_check_branch_status.py` (`:167`, `:226`) patch it but
+        assert nothing about its arguments, so the list of 14 was in fact
+        complete. No further sites found.
+      - Both acceptance tests written, each `monkeypatch.chdir`-ing outside the
+        project directory first: `test_default_execution_dir_uses_project_dir`
+        (`tests/cli/commands/test_prompt.py`, CLI-free, runs under the standard
+        marker exclusions) and `test_prompt_command_defaults_cwd_to_project_dir`
+        (`tests/integration/test_execution_dir_integration.py`, asserts
+        `options.cwd`, behind `require_claude_cli`).
+      - Three further focused tests: the `commit.py` reorder test, the
+        `--fix 0` + bad `--execution-dir` → exit 2 test pinning the hoist, and
+        the updated verbatim `_EXECUTION_DIR_HELP` assertion.
+      - **Deviation from step_4.md, forced by an existing name:** the commit
+        reorder test went into the **existing** `TestCommitAutoExecutionDir`
+        class (`test_commit.py:786`) rather than a new class of that name —
+        pylint E0102 caught the collision. It uses the literal patch paths that
+        class already uses, since `MODULE` is defined below it (`:938`).
+      - Comments added at the four `test_commit.py` tests and at
+        `test_check_branch_status.py:104` recording that they pass only because
+        Step 2's `project_dir` default is not existence-validated. The ten
+        `test_check_branch_status.py` tests the hoist newly exposes were left
+        unpatched as step_4.md directs. Stale names fixed at both
+        `test_prompt.py` (`test_default_execution_dir_uses_cwd` →
+        `test_no_project_dir_falls_back_to_cwd`) and
+        `test_execution_dir_integration.py`
+        (`..._none_execution_dir_uses_none_as_cwd` →
+        `test_prompt_command_no_project_dir_falls_back_to_cwd`), each with a
+        docstring saying it documents the no-`project_dir` fallback.
+- [x] Quality checks: pylint, pytest, mypy — **pytest still blocked on the
+      environment blocker diagnosed in Step 1; unchanged and untouched by this step**
+      - Clean: pylint and mypy report **no findings at all** on the twelve files
+        this step touches. `lint-imports` 21/21 kept (695 files, 3563
+        dependencies). `black`/`isort` clean (616 files).
+        `check file-size --max-lines 750`: all 823 files within limit.
+      - One real finding was raised and fixed during the step: pylint E0102
+        `class already defined line 786` in `test_commit.py` — see the class
+        collision noted above. Re-run is clean.
+      - **pytest never ran the new tests.** Whole-suite collection still aborts:
+        `ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`
+        raised from `src/mcp_coder/checks/branch_status.py:17` via
+        `src/mcp_coder/__init__.py:37`, so `import mcp_coder` fails and every
+        test module errors at import. **This is the behaviour-changing commit
+        and step_4.md asks for an unfiltered run; neither the filtered nor the
+        unfiltered run executed a single test.** Specifically unproven:
+        - the two acceptance tests, including test (a), which step_4.md requires
+          to be green before the step is complete;
+        - the "red before, green after" TDD confirmation — the assertions were
+          updated first, but the red state could not be observed;
+        - step_4.md's "Resolver-impact analysis", i.e. that the ten
+          `test_check_branch_status.py` tests at `:104`, `:143`, `:279`, `:312`,
+          `:355`, `:419`, `:458`, `:496`, `:531`, `:571` survive the hoist. If
+          one fails, check assumption 2 (Step 2's non-validation) first.
+      - Root cause unchanged from Steps 1-3: the venv's `mcp-workspace` predates
+        upstream `a1f0eac`. Same cause behind all 9 remaining mypy errors and
+        all 55 pylint occurrences — every one in an unrelated file,
+        pre-existing on `main`.
+      - Fix (needs a shell; no MCP tool can install packages):
+        `pip install --force-reinstall "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+        then `pip install -e ".[dev]"`, then re-run the checks — **including one
+        unfiltered `-n auto` run**, which is what executes test (b). This
+        session had no shell tool, so it could not apply the fix.
+      - Carry-over for Steps 5-7: repair the venv first; the same blocker applies.
+- [x] Commit message prepared
 
 ### Step 5: `verify` reports the same
 

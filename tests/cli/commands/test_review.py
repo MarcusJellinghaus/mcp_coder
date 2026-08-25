@@ -73,7 +73,7 @@ class TestExecuteReview:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(

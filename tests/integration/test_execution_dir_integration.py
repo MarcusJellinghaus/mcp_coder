@@ -286,13 +286,19 @@ class TestSubprocessCwdParameter:
 
     @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    def test_prompt_command_none_execution_dir_uses_none_as_cwd(
+    def test_prompt_command_no_project_dir_falls_back_to_cwd(
         self,
         mock_prepare_env: MagicMock,
         mock_execute_subprocess: MagicMock,
         require_claude_cli: None,
     ) -> None:
-        """Test prompt command with None execution_dir passes None to subprocess."""
+        """No --execution-dir *and* no --project-dir: the subprocess cwd is the CWD.
+
+        This documents the no-``project_dir`` fallback, not the default. The
+        default is ``project_dir`` (see
+        ``test_prompt_command_defaults_cwd_to_project_dir`` below); this test
+        only reaches the CWD because ``project_dir`` is None.
+        """
         from mcp_coder.cli.commands.prompt import execute_prompt
 
         # Setup
@@ -329,9 +335,68 @@ class TestSubprocessCwdParameter:
         call_args = mock_execute_subprocess.call_args[0]
         assert len(call_args) == 2  # command, options
         options = call_args[1]
-        # When execution_dir=None, resolve_execution_dir returns Path.cwd()
-        # which is then converted to string and passed as cwd
+        # With execution_dir=None *and* project_dir=None, resolve_execution_dir
+        # has nothing to anchor to and returns Path.cwd(), which is then
+        # converted to string and passed as cwd.
         assert options.cwd == str(Path.cwd())
+
+    @patch("mcp_coder.llm.providers.claude.claude_code_cli_streaming.stream_subprocess")
+    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+    def test_prompt_command_defaults_cwd_to_project_dir(
+        self,
+        mock_prepare_env: MagicMock,
+        mock_execute_subprocess: MagicMock,
+        require_claude_cli: None,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """No --execution-dir: the subprocess cwd is --project-dir, not the shell's cwd."""
+        from mcp_coder.cli.commands.prompt import execute_prompt
+
+        # Setup
+        project_dir = tmp_path / "repo"
+        project_dir.mkdir()
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(project_dir)}
+
+        # Create proper subprocess result mock with all required attributes
+        # The CLI uses stream-json format (NDJSON) by default
+        mock_execute_subprocess.return_value = _StreamMock(
+            '{"type": "assistant", "message": {"content": [{"type": "text", "text": "Claude response"}]}}\n'
+            '{"type": "result", "session_id": "test-session-789", "result": "Claude response"}'
+        )
+
+        # Execute with execution_dir=None (default) and an explicit project_dir
+        import argparse
+
+        args = argparse.Namespace(
+            prompt="Test prompt",
+            execution_dir=None,  # No explicit execution_dir
+            project_dir=str(project_dir),
+            timeout=30,
+            llm_method="claude",
+            verbosity="just-text",
+            session_id=None,
+            mcp_config=None,
+        )
+
+        # Stand outside the project directory: "from any shell working directory"
+        # is half the acceptance criterion.
+        monkeypatch.chdir(elsewhere)
+
+        result = execute_prompt(args)
+
+        # Verify
+        assert result == 0
+        assert mock_execute_subprocess.called
+        # execute_subprocess is called with (command, options) as positional args
+        call_args = mock_execute_subprocess.call_args[0]
+        assert len(call_args) == 2  # command, options
+        options = call_args[1]
+        assert options.cwd == str(project_dir)
+        assert options.cwd != str(Path.cwd())
 
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")

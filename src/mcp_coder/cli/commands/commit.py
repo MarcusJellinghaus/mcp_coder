@@ -69,15 +69,18 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     """
     logger.info("Starting commit auto with preview=%s", args.preview)
 
-    # Extract and validate execution_dir
+    project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
+
+    # Extract and validate execution_dir. Stays above validate_git_repository so
+    # a bad --execution-dir still errors before a bad project_dir does.
     try:
-        execution_dir = resolve_execution_dir(getattr(args, "execution_dir", None))
+        execution_dir = resolve_execution_dir(
+            getattr(args, "execution_dir", None), project_dir=project_dir
+        )
         logger.debug(f"Execution directory: {execution_dir}")
     except ValueError as e:
         logger.error(f"Invalid execution directory: {e}")
         return 1
-
-    project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
 
     # 1. Validate git repository
     success, error = validate_git_repository(project_dir)

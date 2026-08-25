@@ -46,13 +46,6 @@ def execute_icoder(args: argparse.Namespace) -> int:
     """
     logger.log(OUTPUT, "Starting iCoder...")
     try:
-        # Resolve execution directory
-        try:
-            execution_dir = resolve_execution_dir(getattr(args, "execution_dir", None))
-        except ValueError as e:
-            logger.error(f"Invalid execution directory: {e}")
-            return 1
-
         # Resolve project directory
         project_dir_arg = getattr(args, "project_dir", None)
         if project_dir_arg:
@@ -65,6 +58,15 @@ def execute_icoder(args: argparse.Namespace) -> int:
                 return 1
         else:
             project_dir = Path.cwd()
+
+        # Resolve execution directory (defaults to project_dir, resolved above)
+        try:
+            execution_dir = resolve_execution_dir(
+                getattr(args, "execution_dir", None), project_dir=project_dir
+            )
+        except ValueError as e:
+            logger.error(f"Invalid execution directory: {e}")
+            return 1
 
         # Pre-flight terminal checks (fail fast before slow env setup)
         TuiChecker().run_all_checks()

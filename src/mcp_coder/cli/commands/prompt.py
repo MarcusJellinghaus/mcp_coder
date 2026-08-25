@@ -43,13 +43,6 @@ def execute_prompt(
     logger.info("Executing prompt command")
 
     try:
-        # Extract and validate execution_dir
-        try:
-            execution_dir = resolve_execution_dir(getattr(args, "execution_dir", None))
-            logger.debug(f"Execution directory: {execution_dir}")
-        except ValueError as e:
-            logger.error(f"Invalid execution directory: {e}")
-            return 1
         # Prepare environment variables for LLM subprocess
         try:
             # Get project directory from args or use current directory
@@ -71,6 +64,18 @@ def execute_prompt(
             # No venv found - continue without env vars for backward compat
             logger.warning(f"Could not prepare environment: {e}")
             env_vars = None
+
+        # Extract and validate execution_dir. Resolved after the block above so
+        # project_dir is in scope; project_dir stays bound even when
+        # prepare_llm_environment raises RuntimeError.
+        try:
+            execution_dir = resolve_execution_dir(
+                getattr(args, "execution_dir", None), project_dir=project_dir
+            )
+            logger.debug(f"Execution directory: {execution_dir}")
+        except ValueError as e:
+            logger.error(f"Invalid execution directory: {e}")
+            return 1
 
         # Resolve LLM method early (CLI arg > config > default)
         raw_llm_method = getattr(args, "llm_method", None)

@@ -78,7 +78,7 @@ class TestExecuteImplement:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
@@ -126,7 +126,7 @@ class TestExecuteImplement:
 
         assert result == 1
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
             project_dir, "claude", None, None, str(execution_dir), False, False
@@ -203,7 +203,7 @@ class TestExecuteImplement:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with(None)
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
             project_dir, "claude", None, None, str(execution_dir), False, False
@@ -536,7 +536,7 @@ class TestImplementExecutionDir:
         result = execute_implement(args)
 
         assert result == 0
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
         mock_run_workflow.assert_called_once_with(
             project_dir, "claude", None, None, str(execution_dir), False, False
         )
@@ -582,7 +582,9 @@ class TestImplementExecutionDir:
         result = execute_implement(args)
 
         assert result == 0
-        mock_resolve_exec.assert_called_once_with(str(execution_dir))
+        mock_resolve_exec.assert_called_once_with(
+            str(execution_dir), project_dir=project_dir
+        )
         mock_run_workflow.assert_called_once_with(
             project_dir, "claude", None, None, str(execution_dir), False, False
         )

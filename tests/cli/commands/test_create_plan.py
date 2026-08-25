@@ -60,7 +60,7 @@ class TestExecuteCreatePlan:
         # Assert
         assert result == 0
         mock_resolve.assert_called_once_with("/test/project")
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=test_project_dir)
         mock_parse.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(mock_args, test_project_dir)
         mock_workflow.assert_called_once_with(
@@ -182,7 +182,7 @@ class TestCreatePlanExecutionDir:
         result = execute_create_plan(args)
 
         assert result == 0
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
         mock_run_workflow.assert_called_once_with(
             123, project_dir, "claude", None, None, str(execution_dir), False, False
         )
@@ -228,7 +228,9 @@ class TestCreatePlanExecutionDir:
         result = execute_create_plan(args)
 
         assert result == 0
-        mock_resolve_exec.assert_called_once_with(str(execution_dir))
+        mock_resolve_exec.assert_called_once_with(
+            str(execution_dir), project_dir=project_dir
+        )
         mock_run_workflow.assert_called_once_with(
             123, project_dir, "claude", None, None, str(execution_dir), False, False
         )

@@ -81,7 +81,9 @@ def _execute_review(args: argparse.Namespace, config: ReviewConfig) -> int:
         enable_crash_logging(project_dir, config.name)
 
         # Resolve execution directory
-        execution_dir = resolve_execution_dir(args.execution_dir)
+        execution_dir = resolve_execution_dir(
+            args.execution_dir, project_dir=project_dir
+        )
 
         logger.debug(f"Project directory: {project_dir}")
         logger.debug(f"Execution directory: {execution_dir}")

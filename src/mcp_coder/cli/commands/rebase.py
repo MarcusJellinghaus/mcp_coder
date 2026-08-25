@@ -78,7 +78,9 @@ def execute_rebase(args: argparse.Namespace) -> int:
     """
     try:
         project_dir = resolve_project_dir(args.project_dir)
-        execution_dir = resolve_execution_dir(args.execution_dir)
+        execution_dir = resolve_execution_dir(
+            args.execution_dir, project_dir=project_dir
+        )
 
         logger.debug("Project directory: %s", project_dir)
         logger.debug("Execution directory: %s", execution_dir)

@@ -709,14 +709,20 @@ class TestPromptExecutionDir:
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
-    def test_default_execution_dir_uses_cwd(
+    def test_no_project_dir_falls_back_to_cwd(
         self,
         mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
         mock_resolve_llm: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test default execution_dir should use current working directory."""
+        """No --execution-dir *and* no --project-dir: execution_dir is the CWD.
+
+        This documents the no-``project_dir`` fallback, not the default. The
+        default is ``project_dir`` (see
+        ``test_default_execution_dir_uses_project_dir`` below); this test only
+        reaches the CWD because ``project_dir`` is None.
+        """
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_prompt_llm_stream.return_value = iter(
@@ -741,6 +747,52 @@ class TestPromptExecutionDir:
         assert call_kwargs["execution_dir"] == str(Path.cwd())
         captured = capsys.readouterr()
         assert "Response with default execution_dir." in captured.out
+
+    @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
+    def test_default_execution_dir_uses_project_dir(
+        self,
+        mock_prompt_llm_stream: Mock,
+        mock_prepare_env: Mock,
+        mock_resolve_llm: Mock,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No --execution-dir: execution_dir is --project-dir, not the shell's cwd."""
+        project_dir = tmp_path / "repo"
+        project_dir.mkdir()
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+
+        mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": str(project_dir)}
+        mock_prompt_llm_stream.return_value = iter(
+            _make_text_events("Response from the project directory.")
+        )
+
+        args = argparse.Namespace(
+            prompt="Test prompt",
+            execution_dir=None,  # No explicit execution_dir
+            llm_method="claude",
+            mcp_config=None,
+            settings=None,
+            project_dir=str(project_dir),
+        )
+
+        # Stand outside the project directory: "from any shell working directory"
+        # is half the acceptance criterion.
+        monkeypatch.chdir(elsewhere)
+
+        result = execute_prompt(args)
+
+        assert result == 0
+        call_kwargs = mock_prompt_llm_stream.call_args[1]
+        assert call_kwargs["execution_dir"] == str(project_dir)
+        assert call_kwargs["execution_dir"] != str(Path.cwd())
+        captured = capsys.readouterr()
+        assert "Response from the project directory." in captured.out
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
