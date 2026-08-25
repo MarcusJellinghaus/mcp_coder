@@ -27,9 +27,8 @@ Details: [step_1.md](./steps/step_1.md)
 
 - [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
-      (BLOCKED on **pytest only**, confirmed a 5th time. Needs shell access to run one
-      `pip install`; no run so far has had a shell tool available. Everything not gated on
-      pytest is done and green — see "Verified green" below.
+      (BLOCKED on **pytest only** — environmental, not a code defect. Confirmed again on
+      2026-08-25; no run so far has had a shell tool, which is the only thing needed.
 
       **The one action that unblocks this** — run in `.venv`, then re-run the three checks:
       ```
@@ -38,58 +37,49 @@ Details: [step_1.md](./steps/step_1.md)
       pip install -e ".[langchain]"   # optional: clears langchain_core/langgraph/httpx/mcp findings
       ```
 
-      **Verified green this run** (these need no imports, so the stale venv can't hide anything):
-      - ruff: clean. black: 615 files unchanged. isort: clean.
-      - Rename verified complete by inspection, every integration point in step_1.md §HOW:
-        `user_config.py:57` (`base_url` + `MCP_CODER_LLM_LANGCHAIN_BASE_URL`), `__init__.py`
-        141/149/163/192/218, both backend signatures (`ollama_backend.py:40` local correctly
-        renamed to `resolved_url`), `_preflight.py:40`, `_errors_404.py:25,82`,
-        `verification.py` (`_check_base_url_shape`, `error_type: "base_url"`), and all hint
-        strings. Both TDD deliverables present: `tests/utils/test_user_config_schema.py:217,220`
-        and `tests/llm/providers/langchain/test_langchain_provider.py:101`.
-        Only `endpoint` spellings left in `src/`: the `endpoint_shape` key +
-        `"Endpoint"` label (step 8), the `azure_endpoint=` SDK kwarg, and an unrelated
-        `task_tracker.py` docstring. All intentional.
-      - pylint + mypy DID run: **zero findings in any file this step touches.** All are
-        environmental (see breakdown below).
-
-      **Why it is not the repo's fault** (newly established this run): the failing import was
-      added by commit `bce0f22`, which `git branch --contains` places on `origin/main` — it is
-      pre-existing upstream code, untouched by this branch. `git status` is clean.
-
       **Root cause.** `mcp-workspace` is an *unpinned* git dependency (`pyproject.toml:348`) and
-      the copy in `.venv` is stale. `.venv/Lib/site-packages/mcp_workspace/checks/` holds only
+      the `.venv` copy is stale: `.venv/Lib/site-packages/mcp_workspace/checks/` holds only
       `branch_status.py`, `branch_status_polling.py`, `file_sizes.py`, `pr_feedback.py` — no
       `branch_status_rendering.py`. `src/mcp_coder/checks/branch_status.py:17` imports it and
-      `src/mcp_coder/__init__.py:37` pulls that in, so `import mcp_coder` raises and
-      **pytest collects zero tests** — no test can run, in this step or any other.
+      `src/mcp_coder/__init__.py:37` pulls that in, so `import mcp_coder` raises and **pytest
+      collects zero tests** — no test can run, in this step or any other. The failing import
+      arrived with commit `bce0f22`, which `git branch --contains` places on `origin/main`:
+      pre-existing upstream code, untouched by this branch.
 
       The venv is behind on five upstream names, so the reinstall must land a revision carrying
       all of them, not merely `a1f0eac`: `branch_status_rendering` (module), `GITHUB_TOKEN_HINT`,
       `pr_feedback_undeterminable` (BranchStatusReport field), `fail_on_reviews`
       (format_for_llm/format_for_human kwarg), `add_assignees` (PullRequestManager method).
 
-      **Environmental findings, in full** (none in a file this step touches):
-      - pylint: only E0401/E0611 missing-imports (stale `mcp_workspace`; plus optional deps
-        `langchain_core`, `langchain_mcp_adapters`, `langgraph`, `httpx`, `mcp` not installed)
-        and the E1123/E1101 that follow from them.
-      - mypy: 8 errors. 7 trace to the stale `mcp_workspace` (`add_assignees`,
-        `pr_feedback_undeterminable` ×2, `fail_on_reviews` ×2, `branch_status_rendering`,
-        and the test-side `pr_feedback_undeterminable` ctor kwarg); the 8th is an untyped
-        decorator caused by the missing optional `mcp` package.
+      **Verified green (needs no imports, so the stale venv cannot hide anything):**
+      - ruff clean; black 615 files unchanged; isort clean.
+      - Rename verified complete by inspection at every integration point in step_1.md §HOW:
+        `user_config.py:57` (`base_url` + `MCP_CODER_LLM_LANGCHAIN_BASE_URL`), `__init__.py`
+        141/149/163/192/218, both backend signatures (`ollama_backend.py:40` local correctly
+        renamed to `resolved_url`), `_preflight.py:40`, `_errors_404.py:25,82`,
+        `verification.py` (`_check_base_url_shape`, `error_type: "base_url"`), and all hint
+        strings. Both TDD deliverables present: `tests/utils/test_user_config_schema.py:220`
+        and `tests/llm/providers/langchain/test_langchain_provider.py:101`.
+        Only `endpoint` spellings left in `src/`: the `endpoint_shape` key + `"Endpoint"` label
+        (step 8), the `azure_endpoint=` SDK kwarg, and an unrelated `task_tracker.py` docstring.
+        All intentional.
+      - pylint + mypy DID run: **zero findings in any file this step touches.** pylint reports
+        only E0401/E0611 missing-imports (stale `mcp_workspace`; plus uninstalled optional deps
+        `langchain_core`, `langchain_mcp_adapters`, `langgraph`, `httpx`, `mcp`) and the
+        E1123/E1101 that follow from them. mypy reports 8 errors: 7 trace to the stale
+        `mcp_workspace`, the 8th is an untyped decorator caused by the missing optional `mcp`.
 
       **Two traps for the next run:**
       1. `mcp__tools-py__get_library_source` resolves against the *tooling server's* environment,
          which has a NEWER mcp_workspace than the project `.venv`. Ask it for
          `mcp_workspace.checks.branch_status_rendering` and it returns the file happily, making
          the venv look fine. It is not. Use `mcp__workspace__list_directory` on
-         `.venv/Lib/site-packages/mcp_workspace/checks` — that reads the real venv and shows only
-         4 files. (`read_file` refuses .venv paths as gitignored; `list_directory` and
-         `list_symbols` both work.)
+         `.venv/Lib/site-packages/mcp_workspace/checks` — that reads the real venv. (`read_file`
+         refuses .venv paths as gitignored; `list_directory` and `list_symbols` both work.)
       2. An in-repo compat shim is NOT a viable workaround: the installed
-         `mcp_workspace/checks/branch_status.py` has no `GITHUB_TOKEN_HINT` at all, so a
-         try/except fallback import would mean back-porting that constant plus the four other
-         upstream features into mcp-coder. Don't.)
+         `mcp_workspace/checks/branch_status.py` has no `GITHUB_TOKEN_HINT` (re-confirmed via
+         `list_symbols`), so a try/except fallback import would mean back-porting that constant
+         plus the four other upstream features into mcp-coder. Don't.)
 - [x] Commit message prepared
 
 ### Step 2: Unknown-key hints: rename table + "did you mean"
