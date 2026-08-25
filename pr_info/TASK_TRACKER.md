@@ -41,9 +41,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: `_wrap_jenkins_error` and handler wiring ([step_4.md](./steps/step_4.md))
 
-- [ ] Implementation: ten tests incl. fixture payload swap at `test_client.py:272` and moving the 500 case, then `_clean_jenkins_message` + `_wrap_jenkins_error` + `except JenkinsException` branch (before `except HTTPError`) in `start_job` and `get_job_status`
+- [x] Implementation: ten tests incl. fixture payload swap at `test_client.py:272` and moving the 500 case, then `_clean_jenkins_message` + `_wrap_jenkins_error` + `except JenkinsException` branch (before `except HTTPError`) in `start_job` and `get_job_status`
 - [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+      - pylint, mypy, lint-imports: PASS. pytest: **could not run** - the project
+        `.venv` has a stale `mcp-workspace`, so `src/mcp_coder/checks/branch_status.py:17`
+        raises `ModuleNotFoundError: mcp_workspace.checks.branch_status_rendering` and
+        `import mcp_coder` fails for every test module (pre-existing, also affects the
+        already-committed `test_diagnostics.py`). Reinstall deps, then re-run pytest.
+- [x] Commit message prepared
 
 ### Step 5: Drop `exc_info=True` at both coordinator sites ([step_5.md](./steps/step_5.md))
 

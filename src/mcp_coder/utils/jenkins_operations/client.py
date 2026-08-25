@@ -27,18 +27,43 @@ Example:
 """
 
 import logging
+import re
 from typing import Any, Optional, cast
 
-from jenkins import Jenkins
+from jenkins import Jenkins, JenkinsException, NotFoundException
 from requests import Session
 from requests.exceptions import HTTPError
 
 from ..log_utils import log_function_call
 from ..user_config import get_config_values
+from .diagnostics import diagnose_403, diagnose_404, extract_jenkins_error
 from .models import JobStatus
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+# The literal message python-jenkins builds in jenkins_request() for 401/403/500
+# before it discards the response object.
+_AUTH_FAIL_RE = re.compile(r"Possibly authentication failed \[(\d+)\]")
+
+
+def _clean_jenkins_message(text: str) -> str:
+    """Reduce a python-jenkins message to its first line plus any error sentence.
+
+    python-jenkins appends the whole response body - typically a ~60-line
+    Jenkins HTML error page - to its own one-line message. Only that first line
+    and the single sentence buried in the page are worth showing.
+
+    Args:
+        text: The exception message, i.e. str(JenkinsException).
+
+    Returns:
+        The first line, with the extracted error sentence appended in quotes
+        when the body yields one.
+    """
+    head, _sep, body = text.partition("\n")
+    extracted = extract_jenkins_error(body) if body else None
+    return f'{head} - "{extracted}"' if extracted else head
 
 
 def _http_error_hint(status_code: int) -> str:
@@ -196,6 +221,60 @@ class JenkinsClient:
                 logger.debug("Could not resolve python-jenkins session auth")
         return session
 
+    def _wrap_jenkins_error(
+        self, exc: JenkinsException, context: str, job_path: Optional[str] = None
+    ) -> JenkinsError:
+        """Compose a clean, diagnosed JenkinsError for a python-jenkins failure.
+
+        Returns the exception instead of raising it, so that ``from None`` stays
+        visible at the raise site: breaking the chain is what keeps the raw
+        Jenkins HTML page out of the traceback.
+
+        Args:
+            exc: The exception python-jenkins raised.
+            context: Call-context prefix, e.g. "Failed to start job 'x'".
+            job_path: Job path involved, when there is one. Enables the 404
+                ancestor walk; omitted for queue-item lookups.
+
+        Returns:
+            JenkinsError carrying the context followed by the diagnosis.
+        """
+        # The raw page holds a live CSRF crumb and the username: DEBUG only, once.
+        logger.debug("Raw Jenkins error for %s: %s", context, exc)
+
+        try:
+            if isinstance(exc, NotFoundException):
+                detail = (
+                    diagnose_404(self._http, self.base_url, job_path)
+                    if job_path
+                    else (
+                        "404 - the queue item was not found (it may have expired) "
+                        "or is not readable"
+                    )
+                )
+            elif (match := _AUTH_FAIL_RE.search(str(exc))) and match.group(1) in (
+                "401",
+                "403",
+            ):
+                # Pass on the sentence python-jenkins appended: when every probe
+                # succeeds (e.g. Job/Build missing on the executor) it is the only
+                # evidence naming the cause, and diagnose_403 must not discard it.
+                _head, _sep, body = str(exc).partition("\n")
+                detail = diagnose_403(
+                    self._http,
+                    self.base_url,
+                    extract_jenkins_error(body) if body else None,
+                )
+            else:
+                # 500 and everything else: no permission question to answer.
+                detail = _clean_jenkins_message(str(exc))
+        except Exception:  # pylint: disable=broad-exception-caught
+            # A diagnostic must never replace a real error with its own stack trace.
+            logger.debug("Jenkins diagnosis failed", exc_info=True)
+            detail = _clean_jenkins_message(str(exc))
+
+        return JenkinsError(f"{context}: {detail}")
+
     @log_function_call
     def start_job(
         self,
@@ -239,6 +318,12 @@ class JenkinsClient:
                 extra={"job_path": job_path, "queue_id": queue_id},
             )
             return queue_id
+        except JenkinsException as e:
+            # python-jenkins converts 401/403/404/500 into its own exception types
+            # before they can surface as HTTPError, so this branch must come first.
+            raise self._wrap_jenkins_error(
+                e, f"Failed to start job '{job_path}'", job_path
+            ) from None
         except HTTPError as e:
             # HTTP errors: build a clean message without the full URL
             if e.response is not None:
@@ -331,6 +416,12 @@ class JenkinsClient:
                     url=None,
                 )
 
+        except JenkinsException as e:
+            # No job_path is available here, so a 404 reports the queue item
+            # rather than walking a path.
+            raise self._wrap_jenkins_error(
+                e, f"Failed to get status for queue_id {queue_id}"
+            ) from None
         except (
             Exception
         ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
