@@ -14,7 +14,7 @@ import queue
 import threading
 import time
 import uuid
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -183,7 +183,7 @@ def _load_langchain_config() -> dict[str, str | None]:
 
 
 def _create_chat_model(
-    config: dict[str, str | None],
+    config: Mapping[str, str | None],
     timeout: int = 30,
 ) -> BaseChatModel:
     """Dispatch to correct backend's create_*_model() based on config.

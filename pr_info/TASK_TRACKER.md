@@ -274,9 +274,87 @@ Details: [step_5.md](./steps/step_5.md)
 
 Details: [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`_config_diagnostics.py` gains `ResolvedTarget` (frozen slots
+      dataclass), `dialed_url()`, `resolve_target()`,
+      `redirect_env_in_effect()`, `_targets_match()` and the `_REDIRECT_ENV`
+      table, plus the `_UNSET_TARGET` / `_NO_BACKEND_TARGET` /
+      `_UNKNOWN_TARGET` / `_OLLAMA_DEFAULT_URL` constants. The URL is read off
+      a locally constructed client — `root_client.base_url` (ChatOpenAI /
+      AzureChatOpenAI, stringified because the SDK exposes an `httpx.URL`)
+      then `base_url` (ChatOllama) — never computed from config. `mode_of()`
+      gates *before* the `("openai", "ollama")` test so an unset or typo'd
+      backend gets `(backend not configured)` / `"no supported backend
+      configured"` with `verified=False` rather than the gemini/anthropic
+      "no configurable target" claim. Construction failure names `config.toml`
+      only when a config `base_url` actually supplied the fallback value.
+      Provenance needs **both** filters: mode-applicability
+      (`AZURE_OPENAI_ENDPOINT` in Azure mode only) and a value match against
+      the dialed URL, so a stale exported variable is inert; tuple order
+      (`OPENAI_API_BASE` first) breaks the same-value tie. A constructed
+      ollama client reporting `base_url = None` falls back to
+      `_resolve_ollama_host(...) or http://localhost:11434`, never
+      `(unknown)`. Both httpx clients are closed in a `finally`.
+      `_create_chat_model`'s `config` parameter widened
+      `dict` → `Mapping[str, str | None]` (`__init__.py:186`, `Mapping` added
+      to the `collections.abc` import); all four call sites pass dicts and are
+      unchanged. 31 tests in new
+      `tests/llm/providers/langchain/test_langchain_resolve_target.py` covering
+      TDD cases 1-8 including 2b/2c/3b/3c/4b/5b/7b, driven by a stub chat model
+      so no langchain install is needed.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in either file this step touches**: mypy over
+      `src/mcp_coder/llm/providers/langchain` + `tests/llm/providers/langchain`
+      is clean; pylint over the same package (minus the `E0401` extras noise)
+      reports nothing; ruff `--preview` clean; black/isort leave both files
+      unchanged after one reformat. lint-imports: 21 contracts kept. Step 6's
+      own tests pass — `test_langchain_resolve_target.py` → 31 passed. Wider
+      runs: `tests/cli` + `tests/utils` → 1301 passed; `tests/llm` clean apart
+      from the known environmental failures below.
+
+      **One finding was real and is fixed:** pylint has `R0401` explicitly
+      enabled, and the mandated deferred `from . import _create_chat_model`
+      makes the package↔module cycle visible to it even though it never
+      executes at import time. Suppressed at the import line with
+      `# pylint: disable=cyclic-import`, the same convention
+      `claude_code_cli.py:406` already uses for its deferred import. The cycle
+      *is* only deferred, not absent — hence TDD case 8, which drops every
+      `mcp_coder.llm.providers.langchain*` entry from `sys.modules` and
+      re-imports the package from scratch.
+
+      **Environment note — pytest still needs the shim.** Unchanged from steps
+      2-5: the `.venv` copy of the unpinned git dependency `mcp-workspace`
+      lacks `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and
+      pytest collects zero tests (confirmed again this run: the first
+      unshimmed run collected 0). Same workaround: a throwaway
+      `.pytest_shim/sitecustomize.py` registering a stand-in
+      `mcp_workspace.checks.branch_status_rendering` (re-export `CIStatus`
+      from `mcp_workspace.checks.branch_status`, any str for
+      `GITHUB_TOKEN_HINT`), run pytest with
+      `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the directory
+      afterwards — it is **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all
+      pre-existing, none in files this step touches: the six
+      `tests/cli/commands/test_check_branch_status*.py` modules (stale
+      `CIStatus.UNAVAILABLE` / `BranchStatusReport` API), excluded via
+      `--ignore-glob` for the 1301-test run; the three
+      `tests/llm/providers/copilot/test_copilot_integration.py` tests (no
+      `copilot` CLI); and
+      `test_langchain_exceptions.py::...httpx_connect_error` (`httpx` absent →
+      MagicMock). Because the extras are absent, the stub-driven design of the
+      new tests is what makes step 6 testable here at all.
+
+      **Pre-existing file-size violation, out of scope for this step:**
+      `mcp-coder check file-size --max-lines 750` still flags only
+      `tests/cli/commands/test_verify_orchestration.py` at 871 lines, grown by
+      steps 3 and 4. Step 6 does not touch that file;
+      `_config_diagnostics.py` is at 500 lines.)
+- [x] Commit message prepared
 
 ### Step 7: Effective-config echo + env-redirection flag + api_key override flag
 
