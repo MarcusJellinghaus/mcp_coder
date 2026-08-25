@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .config_hints import unknown_key_hint
 from .log_utils import log_function_call
 from .user_app_data import get_user_app_data_dir
 
@@ -508,11 +509,12 @@ def _verify_section(
     # Check for unknown keys (skip dict-valued sub-tables like repos)
     for key in section_data:
         if key not in fields and not isinstance(section_data[key], dict):
+            hint = unknown_key_hint(section_name, key, fields.keys())
             entries.append(
                 {
                     "label": f"[{section_name}]",
                     "status": "warning",
-                    "value": f"unknown key: {key}",
+                    "value": f"unknown key: {key}" + (f" — {hint}" if hint else ""),
                 }
             )
 

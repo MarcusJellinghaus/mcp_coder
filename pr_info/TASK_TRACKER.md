@@ -44,9 +44,36 @@ Details: [step_1.md](./steps/step_1.md)
 
 Details: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in any file this step touches**: pylint and mypy scoped to
+      `src/mcp_coder/utils` + `tests/utils` are both clean; ruff clean; black/isort
+      leave the files unchanged. Step 2's own tests pass — `tests/utils/test_config_hints.py`
+      + `tests/utils/test_verify_config.py` → 31 passed; whole `tests/utils` → 309 passed;
+      `tests/cli` → 1008 passed; `tests/llm` + `tests/config` + `tests/prompts` clean apart
+      from the known environmental failures. lint-imports: 21 contracts kept.
+
+      **Environment note (pytest again needs the shim).** The `.venv` copy of the
+      unpinned git dependency `mcp-workspace` is stale once more: no
+      `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via `mcp_coder/__init__.py:37`,
+      so a bare `import mcp_coder` raises and **pytest collects zero tests** — the note
+      dropped in `c1fae76` describes a real, still-present condition. Workaround used
+      (no shell needed): a throwaway `.pytest_shim/sitecustomize.py` registering a
+      stand-in `mcp_workspace.checks.branch_status_rendering` (re-export `CIStatus` from
+      `mcp_workspace.checks.branch_status`, any str for `GITHUB_TOKEN_HINT`), run pytest
+      with `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the directory afterwards —
+      it is *not* committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all pre-existing:
+      `tests/cli/commands/test_check_branch_status*.py` (stale `CIStatus.UNAVAILABLE` /
+      `BranchStatusReport` API), `tests/llm/providers/copilot/test_copilot_integration.py`
+      (no `copilot` CLI), `test_langchain_exceptions.py::...httpx_connect_error` (`httpx`
+      absent → MagicMock). Project-wide pylint/mypy findings trace to the same causes and
+      to the absent optional extras; none are in files this step touches.)
+- [x] Commit message prepared
 
 ### Step 3: Warn on the retired `MCP_CODER_LLM_LANGCHAIN_ENDPOINT`
 
