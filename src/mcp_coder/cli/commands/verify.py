@@ -125,12 +125,20 @@ def _validate_mcp_config(
 
 
 def _print_environment_section() -> None:
-    """Print the ENVIRONMENT section (Python info + 4 package versions).
+    """Print the ENVIRONMENT section (Python info, TLS/proxy, 4 package versions).
 
     Uses ``sys``, ``os.environ``, ``importlib.metadata``. Writes directly to
     stdout via ``print`` to match the style of inline sections in
     ``execute_verify``.
     """
+    # Lazy, like the test-prompt failure branch below: _exceptions keeps its
+    # httpx / openai / anthropic / google.genai imports behind try/except
+    # ImportError, so this is safe without the langchain extras installed.
+    from ...llm.providers.langchain._exceptions import (  # pylint: disable=import-outside-toplevel
+        _proxy_configured,
+        _truststore_available,
+    )
+
     print(_pad("ENVIRONMENT"))
     python_version = (
         f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
@@ -141,6 +149,20 @@ def _print_environment_section() -> None:
     print(_format_row("Virtualenv", "", virtualenv, indent=2))
     pythonpath = os.environ.get("PYTHONPATH") or "(not set)"
     print(_format_row("PYTHONPATH", "", pythonpath, indent=2))
+    # _truststore_available() is exactly what create_ssl_context branches on,
+    # so the source reported here is the one the HTTP client will really use.
+    ssl_source = (
+        "truststore (OS certificate store)"
+        if _truststore_available()
+        else "default (certifi/system)"
+    )
+    # Boolean only: the proxy URL may embed credentials.
+    proxy = "configured (HTTPS_PROXY/HTTP_PROXY)" if _proxy_configured() else "none"
+    print(
+        _format_row(
+            "TLS / proxy", "", f"SSL context: {ssl_source}; proxy: {proxy}", indent=2
+        )
+    )
     print()
     for pkg in _ENVIRONMENT_PACKAGES:
         try:

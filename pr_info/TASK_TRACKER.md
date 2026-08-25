@@ -1163,9 +1163,31 @@ Details: [step_16.md](./steps/step_16.md)
 
 Details: [step_17.md](./steps/step_17.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (TDD: `TestTlsProxySummaryRow` in `tests/cli/commands/test_verify_sections_orchestration.py`
+      — 10 tests covering all five TDD points, incl. the credential-leak assertion, written and
+      failing before the production edit. `_print_environment_section` in `verify.py` now lazily
+      imports `_truststore_available` / `_proxy_configured` from
+      `llm/providers/langchain/_exceptions.py` — no new helper, no new import-graph edge (the
+      module already imported from `_exceptions` in the test-prompt failure branch; lint-imports
+      still 21/21 KEPT) — and prints one `TLS / proxy` row with an empty marker after PYTHONPATH.
+      Only the boolean proxy state is rendered; the URL never reaches stdout.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in the two files this step touches.** pytest: the 10 new tests pass and
+      all 1115 `tests/cli` tests pass; `tests/prompts config services workflow_steps workflow_utils
+      workflows tools` → 1687 passed / 2 skipped.
+      **Environment caveat — pre-existing, unrelated to this step:** the venv's installed
+      `mcp-workspace` predates `mcp_workspace.checks.branch_status_rendering`, so
+      `import mcp_coder` raises `ModuleNotFoundError` and *every* test collection fails until
+      `mcp-workspace` is reinstalled from git. Runs above were done with
+      `PYTHONPATH=<mcp-workspace checkout>/src` to work around it. The same staleness is the sole
+      source of the 4 mypy errors and the E1123 pylint findings, all in `check_branch_status.py`
+      / its test (`fail_on_reviews`, `pr_feedback_undeterminable` — both present in current
+      mcp-workspace). Other pre-existing failures from missing packages: 3 copilot CLI
+      integration tests, `test_connection_errors_contains_httpx_connect_error` (no real `httpx`),
+      10 `tests/icoder/test_snapshots.py` errors (no `pytest-textual-snapshot`).
+      black/isort clean.)
+- [x] Commit message prepared
 
 ### Step 18: Smart-quote hint in `_format_toml_error`
 

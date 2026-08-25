@@ -8,7 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import _DropUnexpandedWarnings, execute_verify
+from mcp_coder.cli.commands.verify import (
+    _DropUnexpandedWarnings,
+    _print_environment_section,
+    execute_verify,
+)
+from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 from .conftest import (
@@ -724,4 +729,120 @@ class TestProviderEnvVarVisibility:
         result, output = self._run(("claude", "default"), capsys)
 
         assert self._env_rows(output) == []
+        assert result == 0
+
+
+class TestTlsProxySummaryRow:
+    """Step 17: a one-line TLS/proxy summary inside the ENVIRONMENT section.
+
+    ``_http.py`` already picks truststore-vs-certifi and notices a proxy, but
+    only logs it at DEBUG — invisible on a normal ``verify`` run, which is
+    precisely when a corporate-proxy user needs it. Informational only: no
+    status symbol, no exit-code impact, and never the proxy URL itself.
+    """
+
+    _LABEL = "TLS / proxy"
+    _EXC = "mcp_coder.llm.providers.langchain._exceptions"
+    _PROXY_VARS = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
+
+    def _clear_proxy(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        for var in self._PROXY_VARS:
+            monkeypatch.delenv(var, raising=False)
+
+    def _row(self, capsys: pytest.CaptureFixture[str]) -> str:
+        _print_environment_section()
+        out = capsys.readouterr().out
+        return next(line for line in out.splitlines() if self._LABEL in line)
+
+    def test_truststore_available_names_truststore(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """TDD 1: truststore importable → the row names truststore."""
+        self._clear_proxy(monkeypatch)
+        monkeypatch.setattr(f"{self._EXC}._truststore_available", lambda: True)
+
+        assert "SSL context: truststore (OS certificate store)" in self._row(capsys)
+
+    def test_truststore_missing_names_default_context(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """TDD 2: no truststore → the row names the default context."""
+        self._clear_proxy(monkeypatch)
+        monkeypatch.setattr(f"{self._EXC}._truststore_available", lambda: False)
+
+        row = self._row(capsys)
+        assert "SSL context: default (certifi/system)" in row
+        assert "truststore" not in row
+
+    @pytest.mark.parametrize("var", _PROXY_VARS)
+    def test_proxy_reported_without_leaking_the_url(
+        self,
+        var: str,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """TDD 3: a set proxy var is reported as a boolean, never as its URL."""
+        secret = "http://user:hunter2@proxy.corp.example:8080"
+        self._clear_proxy(monkeypatch)
+        monkeypatch.setenv(var, secret)
+
+        _print_environment_section()
+        out = capsys.readouterr().out
+
+        row = next(line for line in out.splitlines() if self._LABEL in line)
+        assert "proxy: configured (HTTPS_PROXY/HTTP_PROXY)" in row
+        # The URL — credentials included — must not appear anywhere in stdout.
+        assert secret not in out
+        assert "hunter2" not in out
+        assert "proxy.corp.example" not in out
+
+    def test_no_proxy_env_reports_none(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """TDD 4: nothing exported → ``proxy: none``."""
+        self._clear_proxy(monkeypatch)
+
+        assert "proxy: none" in self._row(capsys)
+
+    def test_row_carries_no_status_symbol(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """TDD 5a: informational row — empty marker slot, aligned like its peers."""
+        self._clear_proxy(monkeypatch)
+
+        row = self._row(capsys)
+        assert not any(symbol in row for symbol in STATUS_SYMBOLS.values())
+        _assert_value_at_column(row, _expected_value_column(2))
+
+    def test_row_uses_the_real_predicates(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The reported context source is whatever ``create_ssl_context`` branches on."""
+        from mcp_coder.llm.providers.langchain._exceptions import _truststore_available
+
+        self._clear_proxy(monkeypatch)
+        expected = "truststore" if _truststore_available() else "default"
+
+        assert f"SSL context: {expected}" in self._row(capsys)
+
+    def test_row_is_exit_code_neutral(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """TDD 5b: a full run still exits 0 whichever way the predicates fall."""
+        monkeypatch.setenv("HTTPS_PROXY", "http://proxy.invalid:3128")
+        with (
+            patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None),
+            patch(f"{_VERIFY}.find_claude_executable", return_value=None),
+            patch(f"{_VERIFY}.log_to_mlflow", create=True),
+            patch(f"{_VERIFY}.prompt_llm", return_value=_minimal_llm_response()),
+            patch(f"{_VERIFY}.verify_mlflow", return_value=_mlflow_not_installed()),
+            patch(f"{_VERIFY}.verify_claude", return_value=_claude_ok()),
+            patch(f"{_LC_VERIFY}.verify_langchain", return_value=_langchain_ok()),
+            patch(f"{_VERIFY}.resolve_llm_method", return_value=("claude", "default")),
+        ):
+            result = execute_verify(_make_args())
+        out = capsys.readouterr().out
+
+        assert self._LABEL in out
+        assert "proxy.invalid" not in out
         assert result == 0
