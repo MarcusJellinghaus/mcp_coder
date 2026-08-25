@@ -14,6 +14,7 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder.llm.providers.langchain._config_diagnostics import (
+    _CONTRACT,
     Finding,
     mode_of,
     validate,
@@ -153,6 +154,15 @@ class TestOpenAIContract:
             base_url="https://relay.example.com/v1",
         )
         assert validate(cfg) == []
+
+    def test_api_version_has_no_plain_openai_row(self) -> None:
+        """Any truthy api_version routes to azure, so the plain-openai
+        contract can never see one: a falsy value is the only thing that
+        reaches this row, and it produces no finding either way."""
+        assert mode_of(_config(backend="openai", model="m", api_version="x")) == "azure"
+        cfg = _config(backend="openai", model="m", api_key="k", api_version="")
+        assert validate(cfg) == []
+        assert "api_version" not in _CONTRACT["openai"]
 
 
 # ---------------------------------------------------------------------------

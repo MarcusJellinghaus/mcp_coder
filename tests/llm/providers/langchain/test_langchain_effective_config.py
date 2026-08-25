@@ -22,6 +22,7 @@ from mcp_coder.llm.providers.langchain.verification import (
 )
 
 _VERIFICATION = "mcp_coder.llm.providers.langchain.verification"
+_MODELS = "mcp_coder.llm.providers.langchain._models"
 
 # Every variable that can supply a credential or redirect a client, cleared
 # before each test so a developer's real environment cannot invent provenance.
@@ -294,10 +295,39 @@ class TestBaseUrlRedirectRow:
 
         assert row["ok"] is None
         assert row["value"] == (
-            "OPENAI_BASE_URL overrides config.toml — requests go to "
-            "https://relay.internal/v1"
+            "OPENAI_BASE_URL is set — requests go to https://relay.internal/v1 "
+            "(no base_url in config.toml)"
         )
         assert result["overall_ok"] is True
+
+    def test_row_claims_an_override_only_when_config_named_a_target(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """ollama is the one backend where env genuinely beats config."""
+        monkeypatch.setenv("OLLAMA_HOST", "http://box:11434")
+        target = ResolvedTarget("http://box:11434", "OLLAMA_HOST env var", True)
+        with (
+            patch(
+                f"{_MODELS}._check_ollama_daemon",
+                return_value={"ok": True, "value": "up"},
+            ),
+            patch(
+                f"{_MODELS}.check_ollama_tool_capability",
+                return_value={"ok": True, "value": "tools"},
+            ),
+        ):
+            result, _resolve = _run_verify(
+                _config(
+                    backend="ollama",
+                    model="llama3",
+                    base_url="http://configured:11434",
+                ),
+                target,
+            )
+
+        assert result["base_url_redirect"]["value"] == (
+            "OLLAMA_HOST overrides config.toml — requests go to http://box:11434"
+        )
 
     def test_no_row_without_a_redirect_variable(self) -> None:
         result, _resolve = _run_verify(_openai_config())

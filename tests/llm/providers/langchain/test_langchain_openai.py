@@ -222,3 +222,84 @@ class TestCreateOpenaiModelHttpClient:
             )
             _, kwargs = MockAzure.call_args
             assert kwargs["http_async_client"] is mock_async_client
+
+
+class _StubHttpClient:
+    """Stand-in for the sync httpx client create_openai_model builds."""
+
+    def __init__(self) -> None:
+        self.close_calls = 0
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
+class _StubAsyncHttpClient:
+    """Stand-in for the async httpx client create_openai_model builds."""
+
+    def __init__(self) -> None:
+        self.close_calls = 0
+
+    async def aclose(self) -> None:
+        self.close_calls += 1
+
+
+class TestCreateOpenaiModelHttpClientOwnership:
+    """Both clients are built before the constructor runs, so a raising
+    constructor leaves nobody holding them. ``verify`` probes construction on
+    every run, so that path leaks a pair whenever the contract is violated."""
+
+    _BACKEND = "mcp_coder.llm.providers.langchain.openai_backend"
+
+    def _build(
+        self,
+        client_class: str,
+        side_effect: Exception | None,
+        api_version: str | None = None,
+    ) -> tuple[_StubHttpClient, _StubAsyncHttpClient]:
+        sync_client = _StubHttpClient()
+        async_client = _StubAsyncHttpClient()
+        with (
+            patch(f"{self._BACKEND}.{client_class}", side_effect=side_effect),
+            patch(f"{self._BACKEND}.create_http_client", return_value=sync_client),
+            patch(
+                f"{self._BACKEND}.create_async_http_client", return_value=async_client
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain.openai_backend import (
+                create_openai_model,
+            )
+
+            if side_effect is None:
+                create_openai_model(
+                    model="gpt-4o", api_key="k", api_version=api_version
+                )
+            else:
+                with pytest.raises(type(side_effect)):
+                    create_openai_model(
+                        model="gpt-4o", api_key="k", api_version=api_version
+                    )
+        return sync_client, async_client
+
+    def test_clients_closed_when_chat_openai_raises(self) -> None:
+        sync_client, async_client = self._build("ChatOpenAI", ValueError("boom"))
+
+        assert sync_client.close_calls == 1
+        assert async_client.close_calls == 1
+
+    def test_clients_closed_when_azure_chat_openai_raises(self) -> None:
+        sync_client, async_client = self._build(
+            "AzureChatOpenAI",
+            ValueError("Must provide one of base_url or azure_endpoint"),
+            "2024-02-01",
+        )
+
+        assert sync_client.close_calls == 1
+        assert async_client.close_calls == 1
+
+    def test_clients_stay_open_on_success(self) -> None:
+        """The returned model owns them; closing here would break every call."""
+        sync_client, async_client = self._build("ChatOpenAI", None)
+
+        assert sync_client.close_calls == 0
+        assert async_client.close_calls == 0

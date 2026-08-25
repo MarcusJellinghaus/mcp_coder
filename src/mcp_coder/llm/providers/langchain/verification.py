@@ -424,10 +424,18 @@ def verify_langchain(
     cfg_base = config.get("base_url")
     env_var = redirect_env_in_effect(config, target.url)
     if env_var and not (cfg_base and _targets_match(cfg_base, target.url)):
-        result["base_url_redirect"] = {
-            "ok": None,
-            "value": (f"{env_var} overrides config.toml — requests go to {target.url}"),
-        }
+        # "overrides" only when config.toml actually named a target. Under
+        # openai it never has: an explicit base_url always wins there, so the
+        # row only fires with nothing to override. ollama is the real override
+        # case — OLLAMA_HOST outranks a configured base_url.
+        if cfg_base:
+            redirect = f"{env_var} overrides config.toml — requests go to {target.url}"
+        else:
+            redirect = (
+                f"{env_var} is set — requests go to {target.url} "
+                "(no base_url in config.toml)"
+            )
+        result["base_url_redirect"] = {"ok": None, "value": redirect}
     # Built from the api-key resolution, never from env_var above: that is a
     # base-URL variable and is None in most runs.
     if key_overridden:

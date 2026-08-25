@@ -18,8 +18,10 @@ import pytest
 
 from mcp_coder.llm.providers.langchain._config_diagnostics import (
     _NO_BACKEND_TARGET,
+    _NOT_CONFIGURED,
     _OLLAMA_DEFAULT_URL,
     _UNSET_TARGET,
+    NON_URL_TARGETS,
     ResolvedTarget,
     _targets_match,
     describe_effective_config,
@@ -373,6 +375,14 @@ class TestResolveTargetOllama:
         assert result.source == "SDK default"
         assert result.verified is True
         assert "unknown" not in result.url
+
+
+class TestNotConfiguredSentinelIsShared:
+    """The echo renders the same literal the shape check skips on."""
+
+    def test_echo_sentinel_is_the_unresolved_target_sentinel(self) -> None:
+        assert _NOT_CONFIGURED is _UNSET_TARGET
+        assert _NOT_CONFIGURED in NON_URL_TARGETS
 
 
 class TestImportCycle:

@@ -24,13 +24,13 @@ partially-initialised-module ImportError.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, TypedDict
 
+from ._http import close_http_clients
 from ._models import _resolve_ollama_host
 
 logger = logging.getLogger(__name__)
@@ -39,11 +39,12 @@ Status = Literal["required", "optional", "ignored"]
 
 # Contract modes, not backends: "azure" is what openai + api_version becomes.
 _CONTRACT: dict[str, dict[str, Status]] = {
+    # No api_version row: mode_of promotes any truthy api_version to "azure",
+    # so a plain-openai row could never be evaluated with a value set.
     "openai": {
         "model": "required",
         "api_key": "required",
         "base_url": "optional",
-        "api_version": "optional",
     },
     "azure": {
         "model": "required",
@@ -345,25 +346,17 @@ def dialed_url(chat_model: Any) -> str | None:
 def _close_http_clients(chat_model: Any) -> None:
     """Close the httpx clients ``create_openai_model`` built for this model.
 
-    Both are created per call and nothing else closes them. ChatOllama has
-    neither, hence the getattr guards; a failure to close must never turn a
-    diagnostic probe into an error, hence the swallowed exceptions.
+    ChatOllama has neither, hence the getattr defaults. The failure path is
+    covered inside ``create_openai_model`` itself: when the constructor
+    raises, this model never exists and only the factory can still reach them.
 
     Args:
         chat_model: A constructed langchain chat model.
     """
-    sync_client = getattr(chat_model, "http_client", None)
-    if sync_client is not None:
-        try:
-            sync_client.close()
-        except Exception:
-            logger.debug("Could not close sync http client", exc_info=True)
-    async_client = getattr(chat_model, "http_async_client", None)
-    if async_client is not None:
-        try:
-            asyncio.run(async_client.aclose())
-        except Exception:
-            logger.debug("Could not close async http client", exc_info=True)
+    close_http_clients(
+        getattr(chat_model, "http_client", None),
+        getattr(chat_model, "http_async_client", None),
+    )
 
 
 def _targets_match(candidate: str, url: str) -> bool:
@@ -515,8 +508,11 @@ def resolve_target(config: Mapping[str, str | None]) -> ResolvedTarget:
 # Effective-config echo — what the run will actually use, and from where
 # ---------------------------------------------------------------------------
 
-# Rendered for a field nothing supplied a value for.
-_NOT_CONFIGURED = "(not configured)"
+# Rendered for a field nothing supplied a value for. Deliberately the same
+# object as the unresolved-target sentinel above: NON_URL_TARGETS keys the
+# shape check's skip on that one, so a second copy of the literal would let
+# the two drift apart silently.
+_NOT_CONFIGURED = _UNSET_TARGET
 
 # The backend is unset or typo'd, so there is no mode to name. Asserting one
 # here would print "plain None (api_version not set)" next to a backend row
