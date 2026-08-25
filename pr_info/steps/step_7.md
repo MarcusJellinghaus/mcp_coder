@@ -88,6 +88,39 @@ Matrix). It should state:
 
 Cross-link to `architecture.md`'s Execution Context Management section.
 
+### 4. `docs/repository-setup/claude-code.md` — "Pinning the settings file with `--settings`"
+
+`:193-208` explains why `--settings` exists, and gives two causes for Claude discovering the
+wrong settings file: *"because `--execution-dir` differs from `--project-dir`, or the workflow
+was invoked from a parent directory"*. **The second cause no longer exists** — that was #1113,
+and the default is now `project_dir`. Left as-is, this paragraph documents the bug as if it were
+still current behaviour.
+
+- Rewrite the two causes: the remaining one is an explicitly passed (deprecated)
+  `--execution-dir`. Keep the section — `--settings` still earns its place, because it pins the
+  file rather than relying on discovery, and because the symptom list at `:200-202` is still
+  accurate for the `--execution-dir` case.
+- **This is also the carrier for the settings-merge side effect** (summary.md §6). State it here,
+  in the docs, rather than deferring it to a release note — this repo has no CHANGELOG and no
+  step produces one, so an unwritten release note is not a place anything lands. Wording to
+  cover: with `cwd == project_dir`, Claude Code now *also* discovers
+  `<project_dir>/.claude/settings.json` and `settings.local.json` by its own cwd walk and merges
+  them with the single file passed via `--settings`. `resolve_claude_settings_path` passes only
+  one of the two (`cli/utils.py:330-341` prefers `settings.local.json`), so **a project holding
+  both files newly activates the shared `settings.json`** that was previously inert. Intended,
+  not a regression — but a rollout surprise if undocumented.
+- Same note applies to the copilot provider, whose `_read_settings_allow`
+  (`llm/providers/copilot/copilot_cli.py:230-241`) reads
+  `<execution_dir>/.claude/settings.local.json` and therefore now reads the driven project's
+  file. One sentence.
+
+### 5. `docs/configuration/claude-code.md:123-128`
+
+The `--settings` pinning callout says it is "Useful when `--execution-dir` differs from
+`--project-dir`". Update to name the deprecation (#1132) and the new default, and keep the
+cross-link to the rewritten section 4 above. One paragraph, no new content — the explanation
+stays single-sourced in `repository-setup/claude-code.md` and `architecture.md`.
+
 ## WHAT / HOW / ALGORITHM / DATA
 
 Not applicable — prose only. No code, no signatures, no data structures.
@@ -101,6 +134,12 @@ and the deprecation, and no doc still claims the default is the current director
 search_files(pattern="execution-dir|execution_dir", glob="docs/**/*.md")
 search_files(pattern="current working directory|current directory", glob="docs/**/*.md")
 ```
+
+The first search returns exactly 14 hits today, in five files:
+`docs/cli-reference.md` (10), `docs/architecture/architecture.md` (2),
+`docs/configuration/claude-code.md:126` (1), `docs/repository-setup/claude-code.md:198` (1).
+All five files are in the WHERE scope above — if the search turns up a sixth, treat it as in
+scope rather than deferring it.
 
 Confirm the ten `cli-reference.md` bullets are byte-identical to each other.
 
@@ -125,6 +164,11 @@ architecture.md and cli-reference.md stated the execution-dir default as the
 shell's current directory; it is now project_dir. environments.md documented
 the two-environment split without ever mentioning that cwd selects which
 CLAUDE.md the agent obeys - the omission behind this whole class of surprise.
+
+repository-setup/claude-code.md still named "invoked from a parent directory"
+as a cause of wrong settings discovery - that cause is gone - and now carries
+the intended side effect: with cwd == project_dir, Claude also cwd-discovers
+<project_dir>/.claude/settings.json and merges it with the --settings file.
 ```
 
 ---
@@ -134,7 +178,7 @@ CLAUDE.md the agent obeys - the omission behind this whole class of surprise.
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_7.md`, then implement Step 7. Docs
 > only — do not change any source file.
 >
-> Three files:
+> Five files:
 >
 > 1. `docs/architecture/architecture.md` — rewrite "Execution Context Management" (`:124-144`)
 >    so the default is `project_dir`, `--execution-dir` is a deprecated override (#1132), and
@@ -158,7 +202,27 @@ CLAUDE.md the agent obeys - the omission behind this whole class of surprise.
 >    `.mcp.json` there must stay for the coordinator smoke test
 >    (`command_templates.py:88-89`).
 >
-> Verify with `search_files` that no doc still documents the default as the current directory.
+> 4. `docs/repository-setup/claude-code.md:193-208` ("Pinning the settings file with
+>    `--settings`") — it currently gives two causes for wrong settings discovery, and the second
+>    ("the workflow was invoked from a parent directory") is exactly the bug this issue fixes.
+>    Rewrite so the only remaining cause is an explicitly passed, deprecated `--execution-dir`.
+>    **In the same section, document the settings-merge side effect**: with `cwd == project_dir`,
+>    Claude now also cwd-discovers `<project_dir>/.claude/settings.json` and
+>    `settings.local.json` and merges them with the single file passed via `--settings`, so a
+>    project holding both newly activates the shared `settings.json`. Intended, not a regression.
+>    Add one sentence that the copilot provider's `_read_settings_allow`
+>    (`llm/providers/copilot/copilot_cli.py:230-241`) likewise now reads the driven project's
+>    `settings.local.json`. This section is the user-facing carrier for that side effect — there
+>    is no CHANGELOG in this repo, so do not defer it to a release note.
+>
+> 5. `docs/configuration/claude-code.md:123-128` — the `--settings` callout says it is "Useful
+>    when `--execution-dir` differs from `--project-dir`". State the deprecation (#1132) and the
+>    new default, and keep the cross-link to file 4. One paragraph; do not duplicate the
+>    explanation.
+>
+> Verify with `search_files` that no doc still documents the default as the current directory,
+> and that all 14 `--execution-dir` mentions across `docs/` (10 in `cli-reference.md`, 2 in
+> `architecture.md`, 1 each in the two files above) carry the new default and the deprecation.
 >
 > Use MCP tools for all file operations. Run `run_pylint_check`, `run_pytest_check` (with
 > `-n auto` and the integration-marker exclusions from summary.md) and `run_mypy_check` — some

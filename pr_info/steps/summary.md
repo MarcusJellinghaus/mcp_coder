@@ -123,7 +123,9 @@ load-bearing; treating it as precedence would invent a fact.
   `<project_dir>/.claude/settings.json` and `settings.local.json` and merges them with the one
   file passed via `--settings`. `resolve_claude_settings_path` passes only one of the two, so a
   project holding both newly activates the shared file. This is the intent of the issue, but it
-  belongs in the release note rather than being discovered during rollout.
+  must be written down rather than discovered during rollout. **Carrier: Step 7**, in
+  `docs/repository-setup/claude-code.md`'s "Pinning the settings file" section — not a release
+  note, since this repo has no CHANGELOG and no step produces one.
 - **Copilot settings discovery moves too.** `_read_settings_allow`
   (`llm/providers/copilot/copilot_cli.py:230-241`) reads
   `<execution_dir>/.claude/settings.local.json`, so it now reads the driven project's file.
@@ -192,13 +194,15 @@ misleading anyone reading the machine.
 | 1 | [`claude_md_paths()` + `is_claude_md` refactor](step_1.md) | shared candidate knowledge, no behaviour change |
 | 2 | [`resolve_execution_dir` signature + deprecation](step_2.md) | new optional param, warning; backwards compatible |
 | 3 | [Context-root finder + reporter](step_3.md) | `find_context_claude_md`, `is_outside_project_dir`, `report_context_root`, wired into the resolver; `tach.toml` |
-| 4 | [Nine call sites default to `project_dir`](step_4.md) | **the behaviour change** + help text + 14 test updates + the end-to-end `cwd == project_dir` test |
+| 4 | [Nine call sites default to `project_dir`](step_4.md) | **the behaviour change** + help text + 14 test updates + two `cwd == project_dir` tests (one CLI-free, one at the subprocess) |
 | 5 | [`verify` reports the same](step_5.md) | PROMPTS section rows, new test module |
 | 6 | [Branch-name call sites](step_6.md) | `task_processing.py` two lines |
-| 7 | [Docs](step_7.md) | architecture, cli-reference, environments |
+| 7 | [Docs](step_7.md) | architecture, cli-reference, environments, both claude-code docs |
 
-Steps 1→4 are strictly ordered (each depends on the previous). Steps 5, 6 and 7 depend on
-Step 3, Step 4 and Step 4 respectively, but are independent of each other.
+Ordering: Step 3 depends on Steps 1 and 2; Step 4 depends on Steps 2 and 3. **Steps 1 and 2 are
+independent of each other** — either may be committed first; the numbering is presentational.
+Steps 5, 6 and 7 depend on Step 3, Step 4 and Step 4 respectively, but are independent of each
+other. Every step is gated on the pre-flight marker probe below.
 
 ## Folders / modules / files
 
@@ -231,7 +235,7 @@ outcome of the two design decisions above. One new *test* module
 | `src/mcp_coder/cli/commands/verify.py` | 5 | PROMPTS section rows (`:338-374`) |
 | `src/mcp_coder/workflows/implement/task_processing.py` | 6 | branch name from `project_dir` (`:214-216`, `:434`) |
 
-### Modified — tests (11 files)
+### Modified — tests (12 files)
 
 | File | Step |
 |---|---|
@@ -244,7 +248,8 @@ outcome of the two design decisions above. One new *test* module
 | `tests/cli/commands/test_review.py` | 4 |
 | `tests/cli/commands/test_check_branch_status.py` | 4 (assertions + the `--fix 0` hoist test) |
 | `tests/cli/commands/test_commit.py` | 4 (comments + one resolver test) |
-| `tests/integration/test_execution_dir_integration.py` | 2, 4 (**incl. the end-to-end `cwd == project_dir` test**) |
+| `tests/cli/commands/test_prompt.py` | 4 (**the CLI-free `cwd == project_dir` test**, `:706`; plus rename the now-misleading `test_default_execution_dir_uses_cwd`, `:712`) |
+| `tests/integration/test_execution_dir_integration.py` | 2, 4 (**incl. the subprocess-level `cwd == project_dir` test**) |
 | `tests/workflows/implement/test_task_processing.py` | 6 |
 
 **Created — tests (1 file)**
@@ -257,19 +262,28 @@ outcome of the two design decisions above. One new *test* module
 `resolve_execution_dir` — they are not in the issue's list of 14, but **grep for
 `assert_called_once_with` on those mocks in Step 4** rather than trusting the list.
 
-### Modified — docs (3 files)
+### Modified — docs (5 files)
 
 - `docs/architecture/architecture.md` (`:124-144` default + Context Separation Pattern example;
   `:325` Scenario 4)
 - `docs/cli-reference.md` (`:175` plus bullets at 219, 264, 293, 332, 365, 395, 426, 462, 690)
 - `docs/environments/environments.md` (new section: cwd selects the agent's rules)
+- `docs/repository-setup/claude-code.md` (`:193-208` — drops "invoked from a parent directory"
+  as a cause of wrong settings discovery, and carries the settings-merge side effect)
+- `docs/configuration/claude-code.md` (`:123-128` — the `--settings` callout that justifies
+  itself by `--execution-dir` differing from `--project-dir`)
+
+Together these are all five files in `docs/` that mention `--execution-dir` (14 hits).
 
 ## Acceptance
 
 - `mcp-coder implement --project-dir <repo>` launches Claude with `cwd == <repo>` from any
-  shell working directory. Covered automatically by
-  `test_prompt_command_defaults_cwd_to_project_dir` (Step 4), which `chdir`s outside the project
-  directory and asserts the `cwd` handed to the subprocess.
+  shell working directory. Covered automatically by two Step 4 tests, both of which `chdir`
+  outside the project directory first: `test_default_execution_dir_uses_project_dir`
+  (`tests/cli/commands/test_prompt.py`, patches `prompt_llm_stream`, needs no Claude CLI, runs
+  under the standard marker exclusions) and `test_prompt_command_defaults_cwd_to_project_dir`
+  (`tests/integration/test_execution_dir_integration.py`, asserts the `cwd` handed to the
+  subprocess, behind `require_claude_cli`).
 - The subprocess `cwd` equals `project_dir`, and every reported project instructions file lies
   inside `project_dir`. That is the checkable proxy — whether the repo's `.claude/CLAUDE.md` is
   *actually* in effect is a claim about Claude Code's internal memory loading that nothing in

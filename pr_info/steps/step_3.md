@@ -156,6 +156,12 @@ style of enumeration as Step 2's warning analysis — verify each claim before r
 (`:167`, `:226`) and `test_rebase.py` (`:73`, `:107`, `:122`) all patch `resolve_execution_dir`,
 so no report is produced and no walk happens.
 
+> **`test_check_branch_status.py` only stays in that list for this step.** `:167` and `:226` are
+> the `--fix` tests, and in Step 3 the resolver is still called only inside the `if args.fix > 0:`
+> block. Step 4 hoists the call onto the read-only path, at which point ten further tests in that
+> file reach the real resolver, walk and logging. That impact is analysed in step_4.md under
+> "Resolver-impact analysis for the sites this hoist newly exposes" — do not re-derive it here.
+
 **Three command sites do *not* patch it, so their tests execute the real resolver, the real
 walk and the real logging:**
 

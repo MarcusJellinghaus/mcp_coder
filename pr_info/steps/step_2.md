@@ -1,6 +1,8 @@
 # Step 2 — `resolve_execution_dir`: `project_dir` parameter + deprecation warning
 
-**Depends on:** nothing (Step 1 is independent of this one, but keep plan order).
+**Depends on:** the pre-flight marker probe only. **Step 1 is independent of this step** —
+either may be committed first; the numbering is presentational, and summary.md's ordering note
+says the same. Step 3 is the first step that needs both.
 
 **Goal:** teach the resolver the new default and emit the deprecation notice.
 **Backwards compatible on purpose** — all nine call sites still pass one argument after this

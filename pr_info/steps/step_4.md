@@ -56,6 +56,40 @@ One call, one report, every run. Two consequences to accept knowingly:
 Do **not** instead call `report_context_root` separately from this command — that would
 double-report on `--fix` runs and put back exactly the per-call-site wiring Step 3 removed.
 
+#### Resolver-impact analysis for the sites this hoist newly exposes
+
+Step 3's "Expected impact on existing tests" listed `test_check_branch_status.py` as unaffected
+on the strength of `:167` and `:226`, the only two tests that patch `resolve_execution_dir`.
+That was accurate **for Step 3**, where the call still sat inside the `--fix` block. This hoist
+moves it onto the read-only path, so ten further tests in that file now reach the real resolver,
+the real root-ward `CLAUDE.md` walk and the real `OUTPUT` logging: `:104`, `:143`, `:279`,
+`:312`, `:355`, `:419`, `:458`, `:496`, `:531`, `:571`.
+
+**Handling: leave all ten unpatched.** Do not add `@patch("...check_branch_status.resolve_execution_dir")`
+to them. Verified reasons, in the same style as Step 3's analysis — check each before relying on
+it:
+
+1. **Every one of them sets `execution_dir=None`** in its `argparse.Namespace` (confirmed at
+   `:111`, `:150`, `:202`, `:261`, `:286`, `:319`, `:362`, `:426`, `:465`, `:504`, `:539`,
+   `:579`), so no `AttributeError` from the newly-reachable `args.execution_dir` read, no
+   `ValueError`, and no `DeprecationWarning`.
+2. **The `project_dir` they supply does not exist.** Nine of them mock `resolve_project_dir` to
+   return `Path("/test/project")`. Step 2's decision that the default is `.resolve()`d but
+   **not** existence-validated is exactly what keeps them green — the same coupling recorded for
+   `test_commit.py:1099`ff. Worth one comment in the file, at the first such test, pointing at
+   that decision.
+3. **The walk over a nonexistent tree is harmless**: `find_context_claude_md` finds nothing at
+   `/test/project`, walks to the filesystem root and returns `[]`, guarded by Step 3's
+   `try/except OSError`. The report logs "none found"; `is_outside_project_dir` is never called,
+   so no warning fires.
+4. **Nothing in the file asserts on stdout or on record counts** for these paths — they assert
+   exit codes and `capsys` output produced by `_safe_print`, which the report does not touch.
+5. `:279` mocks `resolve_project_dir` to raise `SystemExit(1)`; the hoist places
+   `resolve_execution_dir` *after* it, so that test never reaches the resolver at all.
+
+If one of the ten does fail, the cause is almost certainly assumption 2 — check whether Step 2's
+non-validation decision was implemented as written before changing the test.
+
 ### Source — three sites needing statement reordering
 
 These resolve `execution_dir` *before* `project_dir`, so they need the statements moved, not
@@ -119,10 +153,18 @@ with `project_dir="/repo"`, a path that does not exist, and do not patch
 **only because the default is not existence-validated** (Step 2). Add a one-line comment
 recording that coupling so a future change to the validation rule surfaces here.
 
-**Rename or fix the comment** — `tests/integration/test_execution_dir_integration.py:285-330`
-(`test_prompt_command_none_execution_dir_uses_none_as_cwd`) passes `project_dir=None`, so both
-the old and new defaults resolve to `Path.cwd()`. It still passes but its name and the comment
-at `:328` now describe the wrong reason.
+**Rename or fix the comment** — two tests that still pass, but for a reason their name no
+longer states. Both pass `project_dir=None`, so both the old and the new default resolve to
+`Path.cwd()`:
+
+- `tests/integration/test_execution_dir_integration.py:285-330`
+  (`test_prompt_command_none_execution_dir_uses_none_as_cwd`) — the name and the comment at
+  `:328` now describe the wrong reason.
+- `tests/cli/commands/test_prompt.py:712-743` (`test_default_execution_dir_uses_cwd`, asserting
+  `call_kwargs["execution_dir"] == str(Path.cwd())`) — same defect, same fix: rename to
+  something like `test_no_project_dir_falls_back_to_cwd`, or add a one-line comment saying it
+  documents the **no-`project_dir`** fallback, not the default. It sits directly next to the new
+  test (a), so leaving the stale name would put two contradictory-looking tests side by side.
 
 ## ALGORITHM
 
@@ -146,12 +188,57 @@ Step 3.
 TDD here is naturally red-first: **update the ~14+ assertions to expect `project_dir` before
 touching the call sites**, run the suite, watch them fail, then change the call sites.
 
-### The one test that proves the issue is fixed
+### The two tests that prove the issue is fixed
 
 Updating mocked call-argument assertions proves only that an argument is passed. The issue's
 headline acceptance criterion — *"`mcp-coder implement --project-dir <repo>` launches Claude
 with cwd == `<repo>`, from any shell working directory"* — is about the value that reaches the
 **subprocess**, and it is automatable. Nothing in the plan asserted it before this section.
+
+Write **both** tests below. They are not duplicates: the first runs in the standard gate and is
+the one that must stay green on every future change; the second reaches one layer deeper but
+only runs where the Claude CLI is installed.
+
+#### (a) CLI-free, runs in the default gate — write this one first
+
+Add to `class TestPromptExecutionDir` in `tests/cli/commands/test_prompt.py` (`:706`), next to
+`test_default_execution_dir_uses_cwd` (`:712`) and modelled on it. That class patches
+`prompt_llm_stream`, so nothing resolves or launches the Claude executable and **no
+`claude_cli_integration` marker or `require_claude_cli` fixture is involved** — it runs under
+the marker exclusions in the CHECKS section, i.e. in the gate this repo actually runs on every
+step.
+
+```python
+@patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
+@patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+@patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
+def test_default_execution_dir_uses_project_dir(
+    self,
+    mock_prompt_llm_stream: Mock,
+    mock_prepare_env: Mock,
+    mock_resolve_llm: Mock,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """No --execution-dir: execution_dir is --project-dir, not the shell's cwd."""
+```
+
+Shape it exactly like `test_default_execution_dir_uses_cwd` (`:712-743`), with three
+differences:
+
+1. `project_dir = tmp_path / "repo"; project_dir.mkdir()` and
+   `args = argparse.Namespace(..., execution_dir=None, project_dir=str(project_dir), ...)`.
+2. `monkeypatch.chdir(tmp_path / "elsewhere")` (created, and **not** an ancestor of
+   `project_dir`) before calling `execute_prompt` — "from any shell working directory" is half
+   the criterion, and without the chdir the test passes for the wrong reason on a developer
+   machine standing in the repo.
+3. `assert mock_prompt_llm_stream.call_args[1]["execution_dir"] == str(project_dir)` — and,
+   because that is the whole point, `!= str(Path.cwd())`.
+
+**This test must fail before the call-site change and pass after.**
+
+#### (b) Subprocess-level, behind `require_claude_cli`
 
 Add to `tests/integration/test_execution_dir_integration.py`, in the class holding
 `test_prompt_command_passes_execution_dir_to_subprocess` (`:234-281`), modelled directly on
@@ -165,28 +252,22 @@ def test_prompt_command_defaults_cwd_to_project_dir(
     mock_prepare_env: MagicMock,
     mock_execute_subprocess: MagicMock,
     require_claude_cli: None,
+    monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     """No --execution-dir: the subprocess cwd is --project-dir, not the shell's cwd."""
 ```
 
-Shape it exactly like the `:283-330` test, with three differences:
+Same three differences as (a), except that the assertion is on the value that reaches the
+subprocess: `assert options.cwd == str(project_dir)` and `assert options.cwd != str(Path.cwd())`.
 
-1. `project_dir = tmp_path / "repo"; project_dir.mkdir()` and
-   `args = argparse.Namespace(..., execution_dir=None, project_dir=str(project_dir), ...)`.
-2. `monkeypatch.chdir(tmp_path / "elsewhere")` (created, and **not** an ancestor of
-   `project_dir`) before calling `execute_prompt` — "from any shell working directory" is half
-   the criterion, and without the chdir the test passes for the wrong reason on a developer
-   machine standing in the repo.
-3. `assert options.cwd == str(project_dir)` — and, because that is the whole point,
-   `assert options.cwd != str(Path.cwd())`.
+**This test must fail before the call-site change and pass after.** Run both red first; if
+either is green beforehand, the `chdir` is not taking effect and it proves nothing.
 
-**This test must fail before the call-site change and pass after.** Run it red first; if it is
-green beforehand, the `chdir` is not taking effect and the test proves nothing.
-
-It carries the `require_claude_cli` fixture like its neighbours, so it is excluded by the
-standard marker exclusions — this is the specific reason the CHECKS section below asks for one
-unfiltered run.
+Test (b) reaches `_find_claude_executable` (`claude_code_cli_streaming.py:136`), which is why
+its class carries `claude_cli_integration` and `require_claude_cli` — that is inherent, not an
+oversight, and it is the specific reason the CHECKS section below asks for one unfiltered run.
+Test (a) exists so the criterion is still covered when that run is skipped.
 
 ### Three further focused tests
 
@@ -214,10 +295,12 @@ mcp__tools-py__run_mypy_check
 Because this is the behaviour-changing commit, run the suite **without** the marker exclusions
 once (`extra_args=["-n", "auto"]`) — not optional here. The integration tests under
 `tests/integration/test_execution_dir_integration.py` are exactly the ones this step moves, and
-the new `test_prompt_command_defaults_cwd_to_project_dir` — the only automated proof that the
-issue is fixed — is behind `require_claude_cli` and does not run under the exclusions. If the
-environment cannot run it, say so explicitly in the commit rather than reporting the step as
-verified.
+test (b) (`test_prompt_command_defaults_cwd_to_project_dir`) is behind `require_claude_cli` and
+does not run under the exclusions. If the environment cannot run it, say so explicitly in the
+commit rather than reporting the step as verified — but the criterion is **not** left unproven
+either way, because test (a)
+(`test_default_execution_dir_uses_project_dir`, `tests/cli/commands/test_prompt.py`) runs under
+the standard exclusions and must be green before this step is complete.
 
 Then `./tools/format_all.sh`, review the diff, commit.
 
@@ -277,19 +360,31 @@ via --settings.
 > grep `tests/` for `assert_called` on `resolve_execution_dir` mocks; `test_check_branch_status.py`
 > and `test_rebase.py` patch it too.
 >
-> Mocked call-argument assertions are **not** enough on their own. Add
-> `test_prompt_command_defaults_cwd_to_project_dir` to
-> `tests/integration/test_execution_dir_integration.py` as specified under TESTS — it
-> `monkeypatch.chdir`s outside the project directory and asserts the value that reaches the
-> subprocess (`options.cwd == str(project_dir)`). That is the only automated proof of the
-> issue's headline acceptance criterion. Confirm it is **red** before the call-site change; if
-> it is green beforehand the `chdir` is not effective and it proves nothing. It is behind
-> `require_claude_cli`, so run the suite once **without** the marker exclusions to execute it.
+> Mocked call-argument assertions are **not** enough on their own. Add **both** tests specified
+> under TESTS. Test (a) `test_default_execution_dir_uses_project_dir` goes in
+> `class TestPromptExecutionDir`, `tests/cli/commands/test_prompt.py:706` — it patches
+> `prompt_llm_stream`, needs no Claude CLI and therefore runs under the standard marker
+> exclusions; it asserts `call_args[1]["execution_dir"] == str(project_dir)`. Test (b)
+> `test_prompt_command_defaults_cwd_to_project_dir` goes in
+> `tests/integration/test_execution_dir_integration.py` and asserts the value that reaches the
+> subprocess (`options.cwd == str(project_dir)`); it is behind `require_claude_cli`, so run the
+> suite once **without** the marker exclusions to execute it. Both `monkeypatch.chdir` outside
+> the project directory first — declare `monkeypatch` in the signature. Confirm both are **red**
+> before the call-site change; if either is green beforehand the `chdir` is not effective and it
+> proves nothing.
 >
 > Add a comment (no behaviour change) at `tests/cli/commands/test_commit.py:1099`, `:1129`,
 > `:1158`, `:1183` noting they pass only because the `project_dir` default is not
-> existence-validated. Rename or fix the stale comment at
-> `tests/integration/test_execution_dir_integration.py:328`.
+> existence-validated. Rename or fix the stale names/comments at **both**
+> `tests/integration/test_execution_dir_integration.py:328` and
+> `tests/cli/commands/test_prompt.py:712` (`test_default_execution_dir_uses_cwd`) — each passes
+> only because its `project_dir` is `None`.
+>
+> Read "Resolver-impact analysis for the sites this hoist newly exposes" before running the
+> suite: the hoist puts the real resolver, walk and logging on the read-only path of ten
+> `test_check_branch_status.py` tests (`:104`, `:143`, `:279`, `:312`, `:355`, `:419`, `:458`,
+> `:496`, `:531`, `:571`). Leave them unpatched — they stay green because they all pass
+> `execution_dir=None` and because Step 2's default is not existence-validated.
 >
 > Use MCP tools for all file operations. Run `run_pylint_check`, `run_pytest_check` (with
 > `-n auto` and the integration-marker exclusions from summary.md), `run_mypy_check`. Fix
