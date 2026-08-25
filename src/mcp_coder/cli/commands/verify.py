@@ -56,6 +56,14 @@ _ENVIRONMENT_PACKAGES: tuple[str, ...] = (
     "mcp-workspace",
 )
 
+# Retired MCP_CODER_* environment variables mapped to their replacement.
+# Unknown-key detection scans config *sections*, so a still-exported retired
+# variable produces no signal anywhere else. Add a row here whenever a
+# variable stops being read.
+_RETIRED_ENV_VARS: dict[str, str] = {
+    "MCP_CODER_LLM_LANGCHAIN_ENDPOINT": "MCP_CODER_LLM_LANGCHAIN_BASE_URL",
+}
+
 
 class _DropUnexpandedWarnings(logging.Filter):
     """Scoped filter that drops langchain-mcp-adapters unresolved-var warnings."""
@@ -251,12 +259,40 @@ def _prompt_source(configured: str | None, default_label: str) -> str:
     return configured if configured else f"({default_label})"
 
 
+def _print_retired_env_var_warning(symbols: dict[str, str]) -> None:
+    """Warn (exit-neutral) when a retired MCP_CODER_* env var is still exported.
+
+    Called unconditionally — outside both provider gates — because a retired
+    variable is equally ignored whatever the active provider is. Builds no
+    result dict, so it can never affect the exit code.
+
+    Args:
+        symbols: Status-symbol map (e.g. ``STATUS_SYMBOLS``) supplying the
+            ``"warning"`` marker for the emitted rows.
+    """
+    for old, new in _RETIRED_ENV_VARS.items():
+        if not os.environ.get(old):
+            continue
+        print(
+            _format_row(
+                old,
+                symbols["warning"],
+                f"retired env var is set and ignored — use {new}",
+                indent=2,
+                label_width=len(old),
+            )
+        )
+
+
 def _print_langchain_readiness_warning(symbols: dict[str, str]) -> None:
     """Warn (exit-neutral) when the configured langchain backend module is missing.
 
-    Runs regardless of active provider. Prints nothing when langchain is not
-    configured, or when a known backend's module is installed. Builds no result
-    dict — it only prints, so it can never affect the exit code.
+    Runs for non-langchain providers only — its single call site is the
+    else-branch of the langchain gate in ``execute_verify``, where
+    ``verify_langchain`` would otherwise report nothing. Prints nothing when
+    langchain is not configured, or when a known backend's module is
+    installed. Builds no result dict — it only prints, so it can never affect
+    the exit code.
 
     Args:
         symbols: Status-symbol map (e.g. ``STATUS_SYMBOLS``) supplying the
@@ -330,6 +366,10 @@ def execute_verify(args: argparse.Namespace) -> int:
         else:
             # Top-level rows (Config file, Expected path, Hint, Parse error)
             print(_format_row(label, symbol, value, indent=2))
+
+    # 0a. Retired env vars — unconditional (outside both provider gates), since
+    # a retired variable is ignored whatever the active provider is.
+    _print_retired_env_var_warning(symbols)
 
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()

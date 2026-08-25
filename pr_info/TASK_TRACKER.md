@@ -79,9 +79,49 @@ Details: [step_2.md](./steps/step_2.md)
 
 Details: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (`_RETIRED_ENV_VARS` table + `_print_retired_env_var_warning()` in
+      `verify.py`, called at `execute_verify` step "0a" — right after the CONFIG
+      loop and **outside both provider gates**, so langchain and claude users
+      alike see it. Prints only; no result dict, so it cannot reach
+      `_compute_exit_code`. Row passes `label_width=len(old)` because the
+      32-char label overflows `_LABEL_WIDTH` (22). Same commit: corrected
+      `_print_langchain_readiness_warning`'s docstring — it claimed "Runs
+      regardless of active provider" while its only call site
+      (`verify.py:470`) is the else-branch of the langchain gate.
+      6 new tests in `tests/cli/commands/test_verify_orchestration.py`:
+      langchain-active, claude-active, unset, exported-but-empty, the table
+      mapping, and value-column alignment.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**Zero findings in either file this step touches**: pylint and mypy
+      scoped to `verify.py` + `test_verify_orchestration.py` are both clean;
+      ruff clean; black/isort leave both unchanged. Step 3's own module passes —
+      `tests/cli/commands/test_verify_orchestration.py` → 25 passed;
+      `tests/cli` → 1014 passed (step 2's 1008 + the 6 new tests).
+
+      **Environment note — pytest still needs the shim.** Unchanged from step 2:
+      the `.venv` copy of the unpinned git dependency `mcp-workspace` lacks
+      `mcp_workspace/checks/branch_status_rendering.py`, which
+      `src/mcp_coder/checks/branch_status.py:17` imports via
+      `mcp_coder/__init__.py:37`, so a bare `import mcp_coder` raises and pytest
+      collects zero tests. Same workaround: a throwaway `.pytest_shim/sitecustomize.py`
+      registering a stand-in `mcp_workspace.checks.branch_status_rendering`
+      (re-export `CIStatus` from `mcp_workspace.checks.branch_status`, any str
+      for `GITHUB_TOKEN_HINT`), run pytest with
+      `env_vars={"PYTHONPATH": ".pytest_shim"}`, delete the directory afterwards
+      — it is **not** committed. Real fix needs a shell:
+      `pip install --force-reinstall --no-deps "mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git"`
+      then `pip install -e ".[langchain]"`.
+
+      **Known-failing baseline under the shim** — all environmental, all
+      pre-existing, none in files this step touches: the four
+      `tests/cli/commands/test_check_branch_status*.py` modules (stale
+      `CIStatus.UNAVAILABLE` / `BranchStatusReport` API) were excluded via
+      `--ignore` for the 1014-test run; the only project-wide pylint (E1123) and
+      mypy (`attr-defined`, `call-arg`) findings under `src/mcp_coder/cli` +
+      `tests/cli` are the same four sites in `check_branch_status.py` /
+      `test_check_branch_status_exit_code.py`.)
+- [x] Commit message prepared
 
 ### Step 4: `_load_langchain_config()` must never raise
 

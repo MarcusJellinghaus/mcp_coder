@@ -12,7 +12,9 @@ from mcp_coder.cli.commands.verify import execute_verify
 from .conftest import (
     _LC_VERIFY,
     _VERIFY,
+    _assert_value_at_column,
     _claude_ok,
+    _expected_value_column,
     _github_ok_default,
     _langchain_fail,
     _langchain_ok,
@@ -623,3 +625,168 @@ class TestVerifyTestPromptFailure:
 
         assert "FAILED" in output
         assert "connection-reset" in output
+
+
+class TestRetiredEnvVarWarning:
+    """Tests for the retired-env-var warning (step 3).
+
+    ``MCP_CODER_LLM_LANGCHAIN_ENDPOINT`` is no longer read by anything after
+    the ``endpoint`` -> ``base_url`` rename, and unknown-key detection only
+    scans config sections, so ``verify`` calls it out explicitly. The check is
+    outside both provider gates and prints only.
+    """
+
+    _OLD = "MCP_CODER_LLM_LANGCHAIN_ENDPOINT"
+    _NEW = "MCP_CODER_LLM_LANGCHAIN_BASE_URL"
+
+    @pytest.fixture(autouse=True)
+    def _mock_resolve_mcp(self) -> Any:
+        """Default: resolve_mcp_config_path returns None (no MCP config)."""
+        with patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def _mock_github(self) -> Any:
+        """Default: verify_github returns neutral ok result."""
+        with patch(f"{_VERIFY}.verify_github", return_value=_github_ok_default()):
+            yield
+
+    @patch(f"{_VERIFY}.find_claude_executable", return_value=None)
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_LC_VERIFY}.verify_langchain")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_warning_shown_when_langchain_active(
+        self,
+        mock_provider: MagicMock,
+        mock_lc: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        mock_find_claude: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Warning appears for langchain users and leaves the exit code alone."""
+        monkeypatch.setenv(self._OLD, "https://relay.example/v1")
+        mock_provider.return_value = ("langchain", "config.toml")
+        mock_lc.return_value = _langchain_ok()
+        mock_mlflow.return_value = _mlflow_ok()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        result = execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert self._OLD in output
+        assert "retired env var is set and ignored" in output
+        assert self._NEW in output
+        assert result == 0
+
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_warning_shown_when_claude_active(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """The check is outside both provider gates, so claude users see it too."""
+        monkeypatch.setenv(self._OLD, "https://relay.example/v1")
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        result = execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert self._OLD in output
+        assert "retired env var is set and ignored" in output
+        assert self._NEW in output
+        assert result == 0
+
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_nothing_printed_when_env_var_unset(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No row at all when the retired variable is not exported."""
+        monkeypatch.delenv(self._OLD, raising=False)
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        result = execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert self._OLD not in output
+        assert "retired env var" not in output
+        assert result == 0
+
+    @patch(f"{_VERIFY}.log_to_mlflow", create=True)
+    @patch(f"{_VERIFY}.prompt_llm")
+    @patch(f"{_VERIFY}.verify_mlflow")
+    @patch(f"{_VERIFY}.verify_claude")
+    @patch(f"{_VERIFY}.resolve_llm_method")
+    def test_empty_env_var_is_not_flagged(
+        self,
+        mock_provider: MagicMock,
+        mock_claude: MagicMock,
+        mock_mlflow: MagicMock,
+        mock_prompt_llm: MagicMock,
+        _mock_log_mlflow: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """An exported-but-empty value carries no redirect, so it stays quiet."""
+        monkeypatch.setenv(self._OLD, "")
+        mock_provider.return_value = ("claude", "default")
+        mock_claude.return_value = _claude_ok()
+        mock_mlflow.return_value = _mlflow_not_installed()
+        mock_prompt_llm.return_value = _minimal_llm_response()
+
+        execute_verify(_make_args())
+        output = capsys.readouterr().out
+
+        assert "retired env var" not in output
+
+    def test_retired_table_maps_endpoint_to_base_url(self) -> None:
+        """The table drives the message, so future retirements have a home."""
+        from mcp_coder.cli.commands.verify import _RETIRED_ENV_VARS
+
+        assert _RETIRED_ENV_VARS[self._OLD] == self._NEW
+
+    def test_row_keeps_the_value_column_aligned(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The label is wider than _LABEL_WIDTH; the row widens to match."""
+        from mcp_coder.cli.commands.verify import _print_retired_env_var_warning
+        from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
+
+        with patch.dict("os.environ", {self._OLD: "https://relay.example/v1"}):
+            _print_retired_env_var_warning(STATUS_SYMBOLS)
+        line = capsys.readouterr().out.rstrip("\n")
+
+        assert line.startswith(f"  {self._OLD} ")
+        _assert_value_at_column(
+            line, _expected_value_column(2, label_width=len(self._OLD))
+        )
