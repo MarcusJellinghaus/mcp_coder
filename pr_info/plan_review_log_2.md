@@ -113,3 +113,41 @@ Task tracker: empty — nothing implemented yet, so the whole plan is in scope.
 - `Decisions.md` — entry P.
 
 **Status**: committed
+
+---
+
+## Round 6 — 2026-08-25 (convergence check)
+
+**Findings**: none. The reviewer verified the round-5 fix complete across ALGORITHM, HOW, DATA, TDD case 1 and `Decisions.md` P, and tabulated the `mode` row against step 9's `api_version` row for all five backend/`api_version` combinations — all agree.
+
+Whole-plan checks, re-verified against the real tree rather than taken from these logs: every ordering constraint in `summary.md` holds; every symbol a later step calls is declared by an earlier one (no undeclared call sites remain); all 25 acceptance criteria of the amended issue map to a step; step granularity is one commit each with the tree green at every commit; no new dependencies (`difflib`, `urllib.parse`, `asyncio` are stdlib, `pyproject.toml` untouched).
+
+**Decisions**: nothing to apply — the round produced zero plan changes, so the loop terminates.
+
+**Status**: no changes needed
+
+---
+
+## Final Status
+
+**Converged after 6 rounds.** Round 6 produced zero plan changes.
+
+**Rounds**: 6 (this run), following 5 in run 1 that ended in escalation.
+
+**Commits** (all documentation-only; no `src/` or `tests/` changes at any point):
+
+| Round | SHA | Message |
+|---|---|---|
+| 1 | `032fb5a` | `docs(steps): fix contract env-var tables, echo signature and step 9 api_key row` |
+| 2 | `05cc43f` | `docs(steps): apply run-2 review fixes to langchain verify plan` |
+| 3 | `230c0da` | `docs(pr_info): fix provenance ordering and sentinel accuracy in verify plan` |
+| 4 | `d7253db` | `docs(steps): fix api_key override provenance, guard mode row, widen _create_chat_model config type` |
+| 5 | `ee5928d` | `docs(steps): state actual api_version in step 7 effective-config mode row` |
+
+**Findings resolved**: 15 across rounds 1–5 (4 carried over from run 1's escalation, 11 found fresh) — 6 high, 4 medium, 5 low.
+
+**User decisions taken**: one. Issue #1117's Decision 5 and its acceptance criterion said a missing `api_key` with `base_url` set should be an exit-neutral warning; two independent SDK measurements showed such a config cannot construct a client at all (`OpenAIError: Missing credentials`). Marcus approved amending the issue to an unconditional error. Applied to the issue body in five places: Decision 5 (marked `*Revised:*`), the acceptance criterion, footnote ¹ under the contract table, the Design note above it, and the docs-impact scenario table's relay row.
+
+**Recurring theme across the run**: every high finding was the same bug class the issue exists to eliminate — a diagnostic block claiming a provenance the client would not actually use. Round 2's fix to that class (widening `_API_KEY_ENV` for presence checking) itself caused round 3's high finding by reusing the widened list for provenance, where only the primary variable is read.
+
+**Ready for approval.** The plan is implementable as written: 19 steps, one commit each, tree green at every commit, all acceptance criteria mapped, no new dependencies and no `pyproject.toml` or environment changes required before implementation starts.
