@@ -1222,9 +1222,36 @@ Details: [step_18.md](./steps/step_18.md)
 
 Details: [step_19.md](./steps/step_19.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+      (Documentation only — no test file, per the step spec. `docs/configuration/config.md`:
+      field table now documents `base_url` ("Base URL of the server (`azure_endpoint` in
+      Azure mode)") with a rename/migration note covering both the config key and
+      `MCP_CODER_LLM_LANGCHAIN_ENDPOINT` → `MCP_CODER_LLM_LANGCHAIN_BASE_URL`; new
+      "Which fields apply to which setup" scenario→values table; the relay example gained the
+      "no `api_version` on a non-Azure server" warning plus the keyless-relay note; all four
+      TOML examples and the `OLLAMA_HOST` override row use `base_url`; new "Variables that
+      change behaviour invisibly" table; new "LangChain provider: symptom → cause"
+      subsection under the existing `## Troubleshooting`, linked from the `[llm.langchain]`
+      section. `docs/architecture/architecture.md`: `_config_diagnostics.py` added to the
+      langchain module list.)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+      (**No Python touched by this step, so no new findings are possible — and none appeared.**
+      mypy scoped to `src/mcp_coder/llm/providers/langchain` + `src/mcp_coder/utils`: clean.
+      pytest (fast markers, whole suite): only the 4 pre-existing failures documented in
+      step 18 — 3 copilot CLI integration tests and
+      `test_connection_errors_contains_httpx_connect_error` (no real `httpx`).
+      pylint project-wide: only the pre-existing E0401/E1123/E0611/E1101 set, all traceable
+      to the stale installed `mcp-workspace` and missing optional packages
+      (`langchain_*`, `httpx`, `mcp.server.fastmcp`).
+      **Environment caveat — pre-existing, unrelated to this step:** the venv's installed
+      `mcp-workspace` predates `mcp_workspace.checks.branch_status_rendering`, so test
+      collection fails until it is reinstalled; the run above used
+      `PYTHONPATH=C:/Users/Marcus/Documents/GitHub/mcp-workspace/src` to work around it.
+      Doc verification per the step spec: `grep endpoint docs/configuration/config.md` returns
+      only the rename/migration note, the `azure_endpoint` mentions and the troubleshooting
+      rows; every TOML example uses `base_url`; the scenario table was read side by side with
+      `_CONTRACT` in `_config_diagnostics.py` and agrees cell for cell.)
+- [x] Commit message prepared
 
 ## Pull Request
 
