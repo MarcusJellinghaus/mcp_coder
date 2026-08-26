@@ -58,7 +58,7 @@ class TestFormatRowHelpers:
     def test_labeled_row_no_marker_aligns_with_marker_row(self) -> None:
         """Empty marker is padded so value column matches marker rows."""
         with_ok = _format_row("api_key", "[OK]", "configured", indent=2)
-        no_marker = _format_row("endpoint", "", "not configured", indent=2)
+        no_marker = _format_row("base_url", "", "not configured", indent=2)
         assert with_ok.index("configured") == no_marker.index("not configured")
 
     @pytest.mark.parametrize("marker", ["[OK]", "[WARN]", "[ERR]"])

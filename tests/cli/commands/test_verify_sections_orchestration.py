@@ -8,7 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import _DropUnexpandedWarnings, execute_verify
+from mcp_coder.cli.commands.verify import execute_verify
+from mcp_coder.cli.commands.verify_sections import _DropUnexpandedWarnings
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 from .conftest import (

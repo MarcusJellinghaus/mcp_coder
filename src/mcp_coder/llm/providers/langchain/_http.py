@@ -8,9 +8,11 @@ Both clients automatically respect HTTPS_PROXY / HTTP_PROXY environment
 variables (httpx native behaviour).
 """
 
+import asyncio
 import logging
 import os
 import ssl
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -79,3 +81,28 @@ def create_async_http_client() -> "httpx.AsyncClient":  # type: ignore[name-defi
     ctx = create_ssl_context()
     _log_proxy_status()
     return httpx.AsyncClient(verify=ctx)
+
+
+def close_http_clients(sync_client: Any, async_client: Any) -> None:
+    """Release a sync/async client pair built by this module.
+
+    Both clients are created per call and nothing else owns them, so whoever
+    built them without handing them on must close them. Either argument may be
+    ``None`` (ChatOllama has neither). Releasing must never turn a diagnostic
+    probe or a construction error into a new failure, hence the swallowed
+    exceptions — including the ``asyncio.run`` refusal inside a running loop.
+
+    Args:
+        sync_client: An ``httpx.Client``, or None.
+        async_client: An ``httpx.AsyncClient``, or None.
+    """
+    if sync_client is not None:
+        try:
+            sync_client.close()
+        except Exception:  # pylint: disable=broad-except
+            logger.debug("Could not close sync http client", exc_info=True)
+    if async_client is not None:
+        try:
+            asyncio.run(async_client.aclose())
+        except Exception:  # pylint: disable=broad-except
+            logger.debug("Could not close async http client", exc_info=True)

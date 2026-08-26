@@ -17,13 +17,15 @@ def _compute_exit_code(
     tools_exposed_ok: bool | None = None,
     mcp_config_ok: bool | None = None,
     jenkins_ok: bool | None = None,
+    prompts_ok: bool = True,
 ) -> int:
     """Compute CLI exit code from verification results.
 
     Exit 1 when the config has errors, the active provider fails, when MLflow
     is enabled but broken, when the test prompt failed, when GitHub verification
-    failed, when git verification failed, when MCP servers failed (langchain
-    only), or when Claude MCP servers failed (claude only).
+    failed, when git verification failed, when a configured prompt path does not
+    resolve, when MCP servers failed (langchain only), or when Claude MCP
+    servers failed (claude only).
 
     Args:
         active_provider: The active LLM provider name.
@@ -47,6 +49,8 @@ def _compute_exit_code(
             unconfigured / not checked (no effect), True=all probes passed,
             False=unreachable or missing permissions (exit 1,
             provider-independent).
+        prompts_ok: Whether every *configured* prompt path resolved. False when
+            one was configured but not found (exit 1, provider-independent).
 
     Returns:
         Exit code (0 if all checks pass, 1 if any critical check failed).
@@ -57,6 +61,11 @@ def _compute_exit_code(
 
     # Malformed .mcp.json is provider-independent hard failure (exit 1).
     if mcp_config_ok is False:
+        return 1
+
+    # A configured-but-missing prompt path is provider-independent (exit 1):
+    # the run silently used the shipped default instead of what was asked for.
+    if not prompts_ok:
         return 1
 
     # Test prompt failure always means exit 1

@@ -7,8 +7,11 @@ validating the exit code matrix across provider/mlflow scenarios.
 from typing import Any
 from unittest.mock import patch
 
+import pytest
+
 from mcp_coder.cli.commands.verify_exit_code import _compute_exit_code
 from mcp_coder.cli.main import main
+from mcp_coder.llm.providers.langchain._config_diagnostics import ResolvedTarget
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
 _LC_CONFIG = "mcp_coder.llm.providers.langchain"
@@ -457,6 +460,160 @@ class TestJenkinsExitCode:
                 None,
                 _make_mlflow_result(installed=False),
                 jenkins_ok=True,
+            )
+            == 0
+        )
+
+
+class TestContractViolationExitCode:
+    """A contract violation must exit 1 through the *whole* CLI path.
+
+    Unlike every other class here, ``verify_langchain`` is left un-mocked: the
+    point is that a finding produced deep in the provider reaches
+    ``overall_ok`` and then ``_compute_exit_code``. ``_load_langchain_config``
+    is patched on the *verification* module, which holds its own binding from a
+    module-level ``from . import`` — patching the package attribute would not
+    be seen.
+    """
+
+    _CREDENTIAL_VARS = (
+        "OPENAI_API_KEY",
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_AD_TOKEN",
+        "AZURE_OPENAI_ENDPOINT",
+        "OPENAI_BASE_URL",
+        "OPENAI_API_BASE",
+    )
+
+    def _run(self, config: dict[str, Any]) -> int:
+        """Run main() with a real verify_langchain over *config*."""
+        with (
+            patch("sys.argv", ["mcp-coder", "verify"]),
+            patch(f"{_VERIFY}.prompt_llm", return_value=_MOCK_LLM_RESPONSE),
+            patch(f"{_VERIFY}.log_to_mlflow", create=True),
+            patch(f"{_VERIFY}.resolve_mcp_config_path", return_value=None),
+            patch(
+                f"{_VERIFY}.resolve_llm_method",
+                return_value=("langchain", "config.toml"),
+            ),
+            patch(f"{_LC_CONFIG}._load_langchain_config", return_value=config),
+            patch(f"{_LC_VERIFY}._load_langchain_config", return_value=config),
+            patch(f"{_LC_VERIFY}._check_package_installed", return_value=True),
+            patch(
+                f"{_LC_VERIFY}.resolve_target",
+                return_value=ResolvedTarget("(not configured)", "unverified", False),
+            ),
+            patch(f"{_VERIFY}.verify_claude", return_value=_make_claude_result()),
+            patch(
+                f"{_VERIFY}.verify_mlflow",
+                return_value=_make_mlflow_result(installed=False),
+            ),
+            patch(
+                f"{_VERIFY}.verify_github",
+                return_value={
+                    "token_configured": {"ok": True, "value": "configured"},
+                    "overall_ok": True,
+                },
+            ),
+        ):
+            return main()
+
+    def test_azure_without_base_url_exits_1(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Case 1 end to end: exit 1, with the cause printed."""
+        for var in self._CREDENTIAL_VARS:
+            monkeypatch.delenv(var, raising=False)
+        exit_code = self._run(
+            {
+                "provider": "langchain",
+                "backend": "openai",
+                "model": "gpt-4o",
+                "api_key": "sk-abcd1234wxyz5678",
+                "base_url": None,
+                "api_version": "2024-02-01",
+            }
+        )
+        output = capsys.readouterr().out
+
+        assert exit_code == 1
+        assert "AZURE_OPENAI_ENDPOINT" in output
+
+    def test_sound_config_still_exits_0(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The same path with the contract satisfied must not regress to 1."""
+        for var in self._CREDENTIAL_VARS:
+            monkeypatch.delenv(var, raising=False)
+        assert (
+            self._run(
+                {
+                    "provider": "langchain",
+                    "backend": "openai",
+                    "model": "gpt-4o",
+                    "api_key": "sk-abcd1234wxyz5678",
+                    "base_url": None,
+                    "api_version": None,
+                }
+            )
+            == 0
+        )
+
+
+class TestPromptsExitCode:
+    """Exit-code effect of the prompts_ok signal (provider-independent).
+
+    A configured prompt path that does not resolve is a misconfiguration
+    whatever the active provider is, so this is a new exit-1 path for claude
+    users too. The default stays ``True`` so every pre-existing call site and
+    test keeps its exit code.
+    """
+
+    def test_claude_active_prompts_not_ok_exit_1(self) -> None:
+        """Exit 1 when prompts_ok=False and claude is active."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                prompts_ok=False,
+            )
+            == 1
+        )
+
+    def test_langchain_active_prompts_not_ok_exit_1(self) -> None:
+        """Exit 1 when prompts_ok=False and langchain is active."""
+        assert (
+            _compute_exit_code(
+                "langchain",
+                _make_claude_result(),
+                _make_langchain_result(),
+                _make_mlflow_result(installed=False),
+                prompts_ok=False,
+            )
+            == 1
+        )
+
+    def test_prompts_ok_true_no_effect(self) -> None:
+        """Exit 0 when prompts_ok=True (every prompt resolved)."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                prompts_ok=True,
+            )
+            == 0
+        )
+
+    def test_prompts_ok_defaults_to_true(self) -> None:
+        """Omitting the parameter is neutral, so existing callers are unchanged."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
             )
             == 0
         )

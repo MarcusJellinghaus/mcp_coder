@@ -31,7 +31,7 @@ def _make_config(backend: str = "openai") -> dict[str, str | None]:
         "backend": backend,
         "model": "gpt-4o",
         "api_key": None,
-        "endpoint": None,
+        "base_url": None,
         "api_version": None,
     }
 

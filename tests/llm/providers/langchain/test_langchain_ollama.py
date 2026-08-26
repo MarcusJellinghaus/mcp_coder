@@ -8,10 +8,10 @@ import pytest
 class TestResolveOllamaHost:
     """Tests for _resolve_ollama_host() helper in _models.py."""
 
-    def test_env_overrides_config_endpoint(
+    def test_env_overrides_config_base_url(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """OLLAMA_HOST env var takes priority over endpoint argument."""
+        """OLLAMA_HOST env var takes priority over base_url argument."""
         monkeypatch.setenv("OLLAMA_HOST", "foo:1234")
         from mcp_coder.llm.providers.langchain._models import _resolve_ollama_host
 
@@ -33,19 +33,19 @@ class TestResolveOllamaHost:
 
         assert _resolve_ollama_host(None) == "https://ollama.example.com"
 
-    def test_no_endpoint_no_env_returns_none(
+    def test_no_base_url_no_env_returns_none(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Neither env nor endpoint set → returns None."""
+        """Neither env nor base_url set → returns None."""
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         from mcp_coder.llm.providers.langchain._models import _resolve_ollama_host
 
         assert _resolve_ollama_host(None) is None
 
-    def test_endpoint_used_when_env_absent(
+    def test_base_url_used_when_env_absent(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """endpoint argument is used when env var is absent."""
+        """base_url argument is used when env var is absent."""
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         from mcp_coder.llm.providers.langchain._models import _resolve_ollama_host
 
@@ -55,10 +55,10 @@ class TestResolveOllamaHost:
 class TestCreateOllamaModel:
     """Tests for create_ollama_model() factory."""
 
-    def test_ollama_host_env_overrides_config_endpoint(
+    def test_ollama_host_env_overrides_config_base_url(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """OLLAMA_HOST env var overrides endpoint argument."""
+        """OLLAMA_HOST env var overrides base_url argument."""
         monkeypatch.setenv("OLLAMA_HOST", "foo:1234")
         monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
         with patch(
@@ -68,7 +68,7 @@ class TestCreateOllamaModel:
                 create_ollama_model,
             )
 
-            create_ollama_model(model="llama3.1", api_key=None, endpoint="bar:5678")
+            create_ollama_model(model="llama3.1", api_key=None, base_url="bar:5678")
             _, kwargs = MockChat.call_args
             assert kwargs.get("base_url") == "http://foo:1234"
 
@@ -106,10 +106,10 @@ class TestCreateOllamaModel:
             _, kwargs = MockChat.call_args
             assert kwargs.get("base_url") == "https://ollama.example.com"
 
-    def test_no_endpoint_no_env_omits_base_url(
+    def test_no_base_url_no_env_omits_base_url(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Neither endpoint nor OLLAMA_HOST set → base_url kwarg not passed."""
+        """Neither base_url nor OLLAMA_HOST set → base_url kwarg not passed."""
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
         monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
         with patch(

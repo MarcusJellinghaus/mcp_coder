@@ -37,7 +37,7 @@ def _ollama_preflight(config: dict[str, str | None]) -> None:
     cap = check_ollama_tool_capability(
         model=config.get("model") or "",
         api_key=os.getenv("OLLAMA_API_KEY") or config.get("api_key"),
-        endpoint=config.get("endpoint"),
+        base_url=config.get("base_url"),
     )
     if not cap["ok"]:
         raise ValueError(cap["value"])

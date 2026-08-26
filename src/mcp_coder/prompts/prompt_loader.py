@@ -5,14 +5,21 @@ and loads prompt content. Falls back to shipped defaults when no
 custom configuration is provided.
 """
 
+import logging
 from pathlib import Path
 
 from mcp_coder.utils.data_files import find_data_file
 from mcp_coder.utils.pyproject_config import PromptsConfig, get_prompts_config
 
+logger = logging.getLogger(__name__)
+
 _PACKAGE = "mcp_coder.prompts"
 _SYSTEM_PROMPT_FILE = "system-prompt.md"
 _PROJECT_PROMPT_FILE = "project-prompt.md"
+
+# Configured paths already warned about, so a long-running workflow logs
+# each missing prompt path only once per process.
+_warned_paths: set[str] = set()
 
 
 def _read_shipped_default(filename: str) -> str:
@@ -25,10 +32,52 @@ def _read_shipped_default(filename: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _resolve_path(configured_path: str | None, project_dir: Path | None) -> Path | None:
+    """Resolve a configured prompt path to an existing file, or None.
+
+    Absolute paths are used as-is; relative paths are resolved against
+    project_dir.
+
+    Returns:
+        The Path of the existing file, or None when the path is not
+        configured or does not exist.
+    """
+    if configured_path is None:
+        return None
+
+    path = Path(configured_path)
+
+    if path.is_absolute():
+        return path if path.exists() else None
+
+    if project_dir is not None:
+        candidate = project_dir / path
+        if candidate.exists():
+            return candidate
+
+    return None
+
+
+def is_prompt_configured_but_missing(
+    configured_path: str | None, project_dir: Path | None
+) -> bool:
+    """True when a path is configured but does not resolve to an existing file.
+
+    Returns:
+        True when configured_path is set and unresolvable, False otherwise.
+    """
+    if configured_path is None:
+        return False
+    return _resolve_path(configured_path, project_dir) is None
+
+
 def _resolve_and_read(
     configured_path: str | None, project_dir: Path | None
 ) -> str | None:
     """Resolve a configured prompt path and read its content.
+
+    Logs a WARNING (once per path per process) when a configured path does
+    not exist, then falls back to the shipped default by returning None.
 
     Returns:
         The file content as a string, or None if the path is not configured
@@ -37,19 +86,17 @@ def _resolve_and_read(
     if configured_path is None:
         return None
 
-    path = Path(configured_path)
-
-    if path.is_absolute():
-        if path.exists():
-            return path.read_text(encoding="utf-8")
+    path = _resolve_path(configured_path, project_dir)
+    if path is None:
+        if configured_path not in _warned_paths:
+            _warned_paths.add(configured_path)
+            logger.warning(
+                "Configured prompt path not found: %s - using the shipped default",
+                configured_path,
+            )
         return None
 
-    if project_dir is not None:
-        candidate = project_dir / path
-        if candidate.exists():
-            return candidate.read_text(encoding="utf-8")
-
-    return None
+    return path.read_text(encoding="utf-8")
 
 
 def load_system_prompt(project_dir: Path | None = None) -> str:
@@ -119,16 +166,7 @@ def get_project_prompt_path(project_dir: Path | None = None) -> Path | None:
         return None
 
     config = get_prompts_config(project_dir)
-    if config.project_prompt is None:
-        return None
-
-    path = Path(config.project_prompt)
-
-    if path.is_absolute():
-        return path if path.exists() else None
-
-    candidate = project_dir / path
-    return candidate if candidate.exists() else None
+    return _resolve_path(config.project_prompt, project_dir)
 
 
 def is_claude_md(project_prompt_path: Path | None, project_dir: str | None) -> bool:

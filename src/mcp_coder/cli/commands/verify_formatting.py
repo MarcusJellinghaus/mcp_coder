@@ -108,10 +108,19 @@ _LABEL_MAP: dict[str, str] = {
     "backend": "Backend",
     "model": "Model",
     "api_key": "API key",
+    "api_version": "API version",
     "langchain_core": "LangChain core",
     "backend_package": "Backend package",
-    "endpoint_shape": "Endpoint",
+    # "base_url" (contract finding) and "base_url_shape" (heuristic) share a
+    # label but are mutually exclusive by construction: the shape check runs
+    # only for non-Azure openai, while contract base_url findings arise only
+    # in Azure mode or on backends that ignore the key.
+    "base_url": "Base URL",
+    "base_url_shape": "Base URL",
+    "base_url_redirect": "Base URL redirect",
+    "api_key_override": "API key override",
     "available_models": "Available models",
+    "model_check": "Model available",
     # MCP adapter section
     "mcp_adapters": "MCP adapters",
     "langgraph": "LangGraph",

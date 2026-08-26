@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .config_hints import unknown_key_hint
 from .log_utils import log_function_call
 from .user_app_data import get_user_app_data_dir
 
@@ -27,6 +28,10 @@ class FieldDef:
     field_type: type  # str, bool, int, list
     required: bool = False
     env_var: str | None = None
+
+
+# Curly quotes pasted from chat windows or documents (U+201C/U+201D/U+2018/U+2019)
+_SMART_QUOTES = "“”‘’"
 
 
 _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
@@ -54,7 +59,7 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
         "backend": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_BACKEND"),
         "model": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_MODEL"),
         "api_key": FieldDef(str),
-        "endpoint": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_ENDPOINT"),
+        "base_url": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_BASE_URL"),
         "api_version": FieldDef(str, env_var="MCP_CODER_LLM_LANGCHAIN_API_VERSION"),
     },
     "coordinator": {
@@ -130,6 +135,9 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
     # Build the file/line header
     lines = [f'  File "{file_path}", line {line_num}']
 
+    # Offending line content - stays empty when the file can't be read
+    error_line = ""
+
     # Try to read the error line from the file
     try:
         file_content = file_path.read_text(encoding="utf-8")
@@ -158,6 +166,12 @@ def _format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
         lines.append("Hint: Backslashes in paths need escaping in TOML.")
         lines.append('  Use forward slashes: "C:/Users/..."')
         lines.append("  Or single quotes:    'C:\\Users\\...'")
+
+    # Add hint for curly/smart quotes pasted from a chat window or a document
+    if any(ch in error_line for ch in _SMART_QUOTES):
+        lines.append("")
+        lines.append("Hint: Curly/smart quotes are not valid TOML string delimiters.")
+        lines.append("  Use straight quotes: \"value\" or 'value'")
 
     return "\n".join(lines)
 
@@ -508,11 +522,12 @@ def _verify_section(
     # Check for unknown keys (skip dict-valued sub-tables like repos)
     for key in section_data:
         if key not in fields and not isinstance(section_data[key], dict):
+            hint = unknown_key_hint(section_name, key, fields.keys())
             entries.append(
                 {
                     "label": f"[{section_name}]",
                     "status": "warning",
-                    "value": f"unknown key: {key}",
+                    "value": f"unknown key: {key}" + (f" — {hint}" if hint else ""),
                 }
             )
 

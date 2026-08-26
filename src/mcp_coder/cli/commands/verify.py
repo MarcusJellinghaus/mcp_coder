@@ -6,12 +6,8 @@ MLflow, GitHub) and formats their output for the terminal.
 
 import argparse
 import datetime
-import json
 import logging
 import os
-import re
-import sys
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, cast
 
@@ -24,9 +20,13 @@ from ...llm.providers.claude.claude_cli_verification import verify_claude
 from ...llm.providers.claude.claude_executable_finder import find_claude_executable
 from ...mcp_workspace_git import verify_git
 from ...mcp_workspace_github import verify_github
-from ...prompts.prompt_loader import get_project_prompt_path, is_claude_md, load_prompts
+from ...prompts.prompt_loader import (
+    get_project_prompt_path,
+    is_claude_md,
+    is_prompt_configured_but_missing,
+    load_prompts,
+)
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
-from ...utils.pyproject_config import get_implement_config
 from ...utils.user_config import verify_config
 from ..utils import (
     resolve_claude_settings_path,
@@ -35,7 +35,6 @@ from ..utils import (
 )
 from .verify_formatting import (
     _LABEL_WIDTH,
-    _VALUE_COLUMN_INDENT,
     STATUS_SYMBOLS,
     _format_claude_mcp_section,
     _format_mcp_section,
@@ -47,137 +46,22 @@ from .verify_formatting import (
 )
 from .verify_jenkins import verify_jenkins
 
-logger = logging.getLogger(__name__)
-
-_ENVIRONMENT_PACKAGES: tuple[str, ...] = (
-    "mcp-coder",
-    "mcp-coder-utils",
-    "mcp-tools-py",
-    "mcp-workspace",
+# Bound as module globals on purpose: ``execute_verify`` resolves these names
+# here, so tests keep patching them at ``mcp_coder.cli.commands.verify.<name>``
+# even though they are defined in ``verify_sections``.
+from .verify_sections import (
+    _PROVIDER_ENV_SOURCE,
+    _PROVIDER_ENV_VAR,
+    _DropUnexpandedWarnings,
+    _print_environment_section,
+    _print_langchain_readiness_warning,
+    _print_project_section,
+    _print_retired_env_var_warning,
+    _prompt_source,
+    _validate_mcp_config,
 )
 
-
-class _DropUnexpandedWarnings(logging.Filter):
-    """Scoped filter that drops langchain-mcp-adapters unresolved-var warnings."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return "unexpanded variable" not in record.getMessage()
-
-
-def _validate_mcp_config(
-    mcp_json_path: str,
-) -> tuple[bool | None, str, list[tuple[str, str]]]:
-    """Validate ``.mcp.json`` and collect ``${...}`` placeholder findings in one parse.
-
-    Args:
-        mcp_json_path: Path to ``.mcp.json``.
-
-    Returns:
-        ``(ok, message, warnings)`` where:
-          - ``ok=True``  -> well-formed, non-empty ``mcpServers``.
-          - ``ok=None``  -> WARN: parseable but ``mcpServers`` is empty (``{}``).
-          - ``ok=False`` -> hard fail: unparseable JSON, top-level JSON not an
-            object, or ``mcpServers`` missing / not an object.
-          - ``message``  -> human-readable status for the validity row.
-          - ``warnings`` -> list of ``(f"{server} / {env_var}", value)`` pairs
-            for unresolved ``${...}`` templates (always ``[]`` on hard fail).
-    """
-    try:
-        data = json.loads(Path(mcp_json_path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return (False, f"invalid JSON ({exc})", [])
-    # A valid JSON document whose top level is NOT an object (e.g. [], "foo",
-    # 42) would make data.get(...) raise AttributeError, which is not caught
-    # above and would crash execute_verify. Hard-fail here before calling .get.
-    if not isinstance(data, dict):
-        return (False, "mcpServers missing or not an object", [])
-    servers = data.get("mcpServers")
-    if not isinstance(servers, dict):
-        return (False, "mcpServers missing or not an object", [])
-    warnings: list[tuple[str, str]] = [
-        (f"{name} / {var}", val)
-        for name, srv in servers.items()
-        if isinstance(srv, dict)
-        for var, val in srv.get("env", {}).items()
-        if isinstance(val, str) and re.search(r"\$\{[^}]+\}", val)
-    ]
-    if not servers:
-        return (None, "config present but no servers defined", warnings)
-    return (True, "well-formed", warnings)
-
-
-def _print_environment_section() -> None:
-    """Print the ENVIRONMENT section (Python info + 4 package versions).
-
-    Uses ``sys``, ``os.environ``, ``importlib.metadata``. Writes directly to
-    stdout via ``print`` to match the style of inline sections in
-    ``execute_verify``.
-    """
-    print(_pad("ENVIRONMENT"))
-    python_version = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    )
-    print(_format_row("Python version", "", python_version, indent=2))
-    print(_format_row("Executable", "", sys.executable, indent=2))
-    virtualenv = sys.prefix if sys.prefix != sys.base_prefix else "(none)"
-    print(_format_row("Virtualenv", "", virtualenv, indent=2))
-    pythonpath = os.environ.get("PYTHONPATH") or "(not set)"
-    print(_format_row("PYTHONPATH", "", pythonpath, indent=2))
-    print()
-    for pkg in _ENVIRONMENT_PACKAGES:
-        try:
-            value = version(pkg)
-            print(_format_row(pkg, "", value, indent=2))
-        except PackageNotFoundError:
-            print(
-                _format_row(pkg, STATUS_SYMBOLS["failure"], "not installed", indent=2)
-            )
-
-
-def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
-    """Print the PROJECT section showing language detection and tool config.
-
-    Args:
-        project_dir: Path to the project directory.
-        symbols: Dict with 'success', 'failure', 'warning' keys.
-    """
-    print(_pad("PROJECT"))
-    pyproject_exists = (project_dir / "pyproject.toml").exists()
-    if pyproject_exists:
-        print(_format_row("pyproject.toml", symbols["success"], "found", indent=2))
-        print(
-            _format_row("Language", symbols["success"], "Python (detected)", indent=2)
-        )
-        config = get_implement_config(project_dir)
-        print()
-        print("  [Python]")
-        if config.format_code:
-            print(_format_row("format_code", symbols["success"], "enabled", indent=4))
-        else:
-            print(
-                _format_row(
-                    "format_code",
-                    symbols["warning"],
-                    "not configured (default: disabled)",
-                    indent=4,
-                )
-            )
-        if config.check_type_hints:
-            print(
-                _format_row("check_type_hints", symbols["success"], "enabled", indent=4)
-            )
-        else:
-            print(
-                _format_row(
-                    "check_type_hints",
-                    symbols["warning"],
-                    "not configured (default: disabled)",
-                    indent=4,
-                )
-            )
-    else:
-        print(_format_row("pyproject.toml", symbols["warning"], "not found", indent=2))
-        print(_format_row("Language", symbols["success"], "(none detected)", indent=2))
+logger = logging.getLogger(__name__)
 
 
 def _run_mcp_edit_smoke_test(
@@ -238,55 +122,6 @@ def _run_mcp_edit_smoke_test(
         test_file.unlink(missing_ok=True)
 
 
-def _prompt_source(configured: str | None, default_label: str) -> str:
-    """Format a prompt source for display.
-
-    Args:
-        configured: Configured prompt path, or None if not set.
-        default_label: Label shown in parentheses when ``configured`` is None.
-
-    Returns:
-        The configured path, or the default_label in parentheses.
-    """
-    return configured if configured else f"({default_label})"
-
-
-def _print_langchain_readiness_warning(symbols: dict[str, str]) -> None:
-    """Warn (exit-neutral) when the configured langchain backend module is missing.
-
-    Runs regardless of active provider. Prints nothing when langchain is not
-    configured, or when a known backend's module is installed. Builds no result
-    dict — it only prints, so it can never affect the exit code.
-
-    Args:
-        symbols: Status-symbol map (e.g. ``STATUS_SYMBOLS``) supplying the
-            ``"warning"`` marker for the emitted row.
-    """
-    from ...llm.providers.langchain import _load_langchain_config
-    from ...llm.providers.langchain.verification import (
-        _BACKEND_PACKAGES,
-        _check_package_installed,
-    )
-
-    backend = _load_langchain_config().get("backend")
-    if not backend:
-        return  # not configured → note only
-    pkg = _BACKEND_PACKAGES.get(backend)
-    hint: str | None
-    if pkg is None:  # unrecognized backend name
-        msg = f"backend '{backend}' is not a recognized langchain backend"
-        hint = None
-    elif _check_package_installed(pkg):
-        return  # installed → emit nothing new
-    else:  # known backend, module missing
-        display = pkg.replace("_", "-")
-        msg = f"backend '{backend}' configured but {display} not installed"
-        hint = f"pip install {display} (needed for --llm-method langchain)"
-    print(_format_row("Langchain backend", symbols["warning"], msg, indent=2))
-    if hint:
-        print(f"{' ' * _VALUE_COLUMN_INDENT}-> {hint}")
-
-
 def execute_verify(args: argparse.Namespace) -> int:
     """Execute verify command: orchestrate domain checks and format output.
 
@@ -331,36 +166,36 @@ def execute_verify(args: argparse.Namespace) -> int:
             # Top-level rows (Config file, Expected path, Hint, Parse error)
             print(_format_row(label, symbol, value, indent=2))
 
+    # 0a. Retired env vars — unconditional (outside both provider gates), since
+    # a retired variable is ignored whatever the active provider is.
+    _print_retired_env_var_warning(symbols)
+
     # 0b. Prompt configuration section
     project_dir = Path(args.project_dir).resolve() if args.project_dir else Path.cwd()
-    _sys_prompt, _proj_prompt, prompt_config = load_prompts(project_dir)
+    sys_prompt, proj_prompt, prompt_config = load_prompts(project_dir)
     active_provider, source = resolve_llm_method(args.llm_method)
 
     prompt_lines = [_pad("PROMPTS")]
-    prompt_lines.append(
-        _format_row(
-            "System prompt",
-            symbols["success"],
-            _prompt_source(prompt_config.system_prompt, "shipped default"),
-            indent=2,
-        )
-    )
-    prompt_lines.append(
-        _format_row(
-            "Project prompt",
-            symbols["success"],
-            _prompt_source(prompt_config.project_prompt, "shipped default"),
-            indent=2,
-        )
-    )
-    prompt_lines.append(
-        _format_row(
-            "Claude mode",
-            symbols["success"],
-            prompt_config.claude_system_prompt_mode,
-            indent=2,
-        )
-    )
+    # Lengths come from the content load_prompts already resolved — no re-read.
+    # A configured path that did not resolve is an error, not an [OK] row
+    # showing a path the run never actually used.
+    prompts_ok = True
+    for label, configured, content in (
+        ("System prompt", prompt_config.system_prompt, sys_prompt),
+        ("Project prompt", prompt_config.project_prompt, proj_prompt),
+    ):
+        if is_prompt_configured_but_missing(configured, project_dir):
+            prompts_ok = False
+            marker, value = symbols["failure"], (
+                f"{configured} — configured but not found; "
+                "shipped default used instead"
+            )
+        else:
+            source_label = _prompt_source(configured, "shipped default")
+            marker, value = symbols["success"], f"{source_label} ({len(content)} chars)"
+        prompt_lines.append(_format_row(label, marker, value, indent=2))
+    mode = prompt_config.claude_system_prompt_mode
+    prompt_lines.append(_format_row("Claude mode", symbols["success"], mode, indent=2))
     if active_provider == "claude" and prompt_config.project_prompt:
         prompt_path = get_project_prompt_path(project_dir)
         if is_claude_md(prompt_path, str(project_dir)):
@@ -423,6 +258,21 @@ def execute_verify(args: argparse.Namespace) -> int:
             indent=2,
         )
     )
+    # The env var no longer silently wins over --llm-method, so an exported but
+    # overridden value would otherwise leave no trace at all. When it IS the
+    # source the row above already says so — add nothing. Exit-neutral.
+    env_provider = os.environ.get(_PROVIDER_ENV_VAR)
+    if env_provider and source != _PROVIDER_ENV_SOURCE:
+        print(
+            _format_row(
+                _PROVIDER_ENV_VAR,
+                symbols["warning"],
+                f"set to '{env_provider}' but overridden by {source} "
+                f"— using '{active_provider}'",
+                indent=2,
+                label_width=max(_LABEL_WIDTH, len(_PROVIDER_ENV_VAR)),
+            )
+        )
     # 2a. Resolve MCP config for ALL providers (before provider branch)
     mcp_config_resolved = resolve_mcp_config_path(
         args.mcp_config, project_dir=args.project_dir
@@ -439,6 +289,14 @@ def execute_verify(args: argparse.Namespace) -> int:
             check_models=check_models,
             mcp_config_path=mcp_config_resolved,
         )
+        # Printing only: the rows are already built and their sources already
+        # resolved, so this layer needs no access to the private llm helpers.
+        # The empty marker is what renders the block without status symbols.
+        effective_config = langchain_result.get("effective_config")
+        if effective_config:
+            print(_pad("EFFECTIVE CONFIG"))
+            for label, value in effective_config:
+                print(_format_row(label, "", value, indent=2))
         print(_format_section("LLM PROVIDER DETAILS", langchain_result, symbols))
     else:
         print("  (uses Claude CLI — see Basic Verification above)")
@@ -598,6 +456,8 @@ def execute_verify(args: argparse.Namespace) -> int:
     # Skipped on a malformed .mcp.json (mcp_config_ok is False): the MCP CONFIG
     # validity row above is the single upstream diagnostic, so the prompt (which
     # would fail indirectly) is short-circuited.
+    # project_dir= is what makes prompt_llm load the prompts, so the request
+    # carries the same merged system + project prompt a real run sends.
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     test_prompt_ok = True
     tools_exposed_ok: bool | None = None
@@ -611,6 +471,7 @@ def execute_verify(args: argparse.Namespace) -> int:
                 settings_file=settings_file,
                 execution_dir=str(project_dir),
                 env_vars=env_vars,
+                project_dir=str(project_dir),
             )
             print(
                 _format_row("Test prompt", symbols["success"], "responded OK", indent=2)
@@ -686,6 +547,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         tools_exposed_ok=tools_exposed_ok,
         mcp_config_ok=mcp_config_ok,
         jenkins_ok=jenkins_ok,
+        prompts_ok=prompts_ok,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code

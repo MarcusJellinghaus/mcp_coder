@@ -15,18 +15,26 @@ import shutil
 from typing import Any
 from urllib.parse import urlparse
 
+from mcp_coder.utils.config_hints import suggest
+
 from . import _load_langchain_config
+from ._config_diagnostics import (
+    _API_KEY_ENV,
+    _KEYLESS_ENV,
+    NON_URL_TARGETS,
+    Finding,
+    ResolvedTarget,
+    _targets_match,
+    describe_effective_config,
+    mode_of,
+    redirect_env_in_effect,
+    resolve_target,
+    validate,
+)
 from ._exceptions import LLMAuthError, LLMConnectionError
 from .agent import _load_mcp_server_config
 
 logger = logging.getLogger(__name__)
-
-_BACKEND_ENV_VARS: dict[str, str] = {
-    "openai": "OPENAI_API_KEY",
-    "gemini": "GEMINI_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY",
-    "ollama": "OLLAMA_API_KEY",
-}
 
 _BACKEND_PACKAGES: dict[str, str] = {
     "openai": "langchain_openai",
@@ -54,27 +62,97 @@ def _mask_api_key(key: str | None) -> str | None:
 
 
 def _resolve_api_key(
-    backend: str | None, config_key: str | None
-) -> tuple[str | None, str | None]:
-    """Resolve API key from environment variable or config.
+    mode: str | None, config_key: str | None
+) -> tuple[str | None, str | None, bool]:
+    """Resolve the API key the client will use, and say where it came from.
+
+    Keyed by *mode*, not backend, so an Azure setup whose key lives in
+    ``AZURE_OPENAI_API_KEY`` is named rather than reported as unset.
+
+    Resolution follows the order the *client* resolves, which is not the
+    table's order. Only ``_API_KEY_ENV[mode][0]`` is read by our own
+    ``create_*_model`` (``os.getenv(X) or api_key``), and it genuinely beats
+    config; the remaining entries are SDK fallbacks that apply only when no
+    key is passed at all, so a configured key beats them.
 
     Args:
-        backend: Backend name ("openai", "gemini", "anthropic", or None).
+        mode: Contract mode from ``mode_of()``, or None.
         config_key: API key from config.toml, or None.
 
     Returns:
-        Tuple of ``(key, source)`` where *key* is the resolved API key string
-        and *source* describes where it was found (e.g. ``"OPENAI_API_KEY env var"``
-        or ``"config.toml"``).  Both elements are None if no key is available.
+        Tuple of ``(key, source, overridden)``. *source* may be set while
+        *key* is None — gemini's keyless Vertex carve-out satisfies the
+        credential without exposing a readable value. *overridden* is True
+        only when the primary env var beat a configured ``api_key``.
     """
-    env_var = _BACKEND_ENV_VARS.get(backend or "")
-    if env_var:
-        env_value = os.environ.get(env_var)
+    env_vars = _API_KEY_ENV.get(mode or "", ())
+    primary = env_vars[0] if env_vars else None
+    if primary:
+        env_value = os.environ.get(primary)
         if env_value:
-            return env_value, f"{env_var} env var"
+            return env_value, f"{primary} env var", bool(config_key)
     if config_key:
-        return config_key, "config.toml"
-    return None, None
+        return config_key, "config.toml", False
+    for var in env_vars[1:]:
+        env_value = os.environ.get(var)
+        if env_value:
+            return env_value, f"{var} env var", False
+    keyless = _KEYLESS_ENV.get(mode or "")
+    if keyless and os.environ.get(keyless):
+        return None, f"{keyless} env var", False
+    return None, None, False
+
+
+def _row_from(
+    finding: Finding | None, *, default_ok: bool, default_value: str | None
+) -> dict[str, Any]:
+    """Turn a contract finding into a verify row, or fall back.
+
+    When a finding exists **both** its ``ok`` and its ``value`` win. The
+    finding's message *is* the diagnosis — it names the config key and every
+    environment variable that would satisfy it — and a masked value or a bare
+    ``not set`` in its place would leave an exit-1 run without a stated cause.
+
+    Args:
+        finding: The contract finding for this key, or None when the contract
+            raised nothing about it.
+        default_ok: Row status to use when there is no finding.
+        default_value: Row value to use when there is no finding.
+
+    Returns:
+        An entry in verify's usual ``{"ok", "value"}`` shape.
+    """
+    if finding is not None:
+        return {"ok": finding["ok"], "value": finding["value"]}
+    return {"ok": default_ok, "value": default_value}
+
+
+def _api_key_default_value(
+    api_key: str | None, key_source: str | None, scoped: bool
+) -> str | None:
+    """Row value for an ``api_key`` the contract raised no finding about.
+
+    Never a bare ``_mask_api_key(api_key)``: that returns None for a missing
+    key and ``_format_section`` stringifies None to the literal ``"None"``.
+
+    Args:
+        api_key: The resolved key, or None.
+        key_source: Provenance of the credential, which may be set while
+            *api_key* is None — gemini's keyless Vertex carve-out.
+        scoped: True when ``mode_of()`` resolved, i.e. the contract actually
+            examined this field.
+
+    Returns:
+        The masked key, the keyless carve-out's provenance, or the unset text.
+        ``"(optional)"`` is only claimed when the contract checked the field
+        and declared it satisfied; without a mode, nothing has established
+        that it is optional.
+    """
+    if api_key is not None:
+        return _mask_api_key(api_key)
+    if key_source is not None:
+        return f"satisfied via {key_source}"
+    return "not set (optional)" if scoped else "not set"
 
 
 def _check_package_installed(package_name: str) -> bool:
@@ -126,48 +204,96 @@ def _check_mcp_adapter_packages() -> dict[str, dict[str, Any]]:
     }
 
 
-def _check_endpoint_shape(
-    endpoint: str | None, api_version: str | None
+def _check_base_url_shape(
+    target: ResolvedTarget, api_version: str | None
 ) -> dict[str, Any] | None:
-    """Pure string heuristic for a custom OpenAI base URL (no network).
+    """Pure string heuristic against the URL the client will actually dial.
 
-    Flags an endpoint that is provably wrong (contains ``/completions``),
+    Flags a base URL that is provably wrong (contains ``/completions``),
     malformed (missing scheme or host), or missing the conventional ``/v1``
     suffix. WARN-level findings use ``ok=None`` with the guidance carried
-    inside ``value``; INFO and healthy findings use ``ok=True``.
+    inside ``value``; INFO and healthy findings use ``ok=True``. Every value
+    names the provenance of the URL, which may well be an env var rather than
+    config — that redirect case is precisely what a config-string check missed.
 
     Args:
-        endpoint: Custom base URL from config, or None.
+        target: The resolved target from :func:`resolve_target`.
         api_version: Azure API version from config, or None. When set the
-            backend routes to AzureChatOpenAI, so this heuristic is skipped.
+            backend routes to AzureChatOpenAI, whose dialed URL ends in
+            ``openai/deployments/<name>/``, so the ``/v1`` rule would fire on
+            a *correct* config and the heuristic is skipped.
 
     Returns:
         A verify-style dict with ``ok`` (``None`` | ``True``) and ``value``
-        (str), or None when the check does not apply (api_version set →
-        Azure path, or no custom endpoint configured).
+        (str), or None when the check does not apply (Azure, or any of the
+        sentinels in ``NON_URL_TARGETS``, which are not URLs at all).
     """
-    if api_version or not endpoint:
+    if api_version or target.url in NON_URL_TARGETS:
         return None
-    if "/completions" in endpoint:
+    url = target.url
+    src = f"(source: {target.source})"
+    if "/completions" in url:
         return {
             "ok": None,
             "value": (
-                f"{endpoint} — contains '/completions'; use the base URL only "
-                "e.g. https://host/v1 (mcp-coder appends /chat/completions)"
+                f"{url} — contains '/completions'; use the base URL only "
+                f"e.g. https://host/v1 (mcp-coder appends /chat/completions) {src}"
             ),
         }
-    parsed = urlparse(endpoint)
+    parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         return {
             "ok": None,
-            "value": f"{endpoint} — malformed URL; use e.g. https://host/v1",
+            "value": f"{url} — malformed URL; use e.g. https://host/v1 {src}",
         }
-    if not endpoint.rstrip("/").endswith("/v1"):
+    if not url.rstrip("/").endswith("/v1"):
         return {
             "ok": True,
-            "value": f"{endpoint} — most relays use .../v1",
+            "value": f"{url} — most relays use .../v1 {src}",
         }
-    return {"ok": True, "value": endpoint}
+    return {"ok": True, "value": f"{url} {src}"}
+
+
+def _check_model_listed(model: str | None, listing: dict[str, Any]) -> dict[str, Any]:
+    """Cross-check the configured model against a model listing.
+
+    Advisory only: ``ok`` is ``True`` or ``None``, never ``False``, so the
+    check cannot move ``overall_ok``. Two reasons. A listing that failed says
+    nothing about the config — plenty of LiteLLM proxies answer ``/models``
+    with an auth error or a 404 while serving chat completions perfectly —
+    and a genuinely wrong model still fails the live test prompt, which
+    already sets exit 1.
+
+    Near-misses reuse :func:`~mcp_coder.utils.config_hints.suggest`, the same
+    difflib helper the unknown-config-key path uses.
+
+    Args:
+        model: The configured model name, or None when nothing is configured.
+        listing: A :func:`_list_models_for_backend` result — ``ok`` plus a
+            ``value`` list of model names.
+
+    Returns:
+        A verify-style dict with ``ok`` (``True`` | ``None``) and ``value``
+        (str).
+    """
+    if not listing.get("ok"):
+        return {
+            "ok": None,
+            "value": "could not verify (server does not expose /models)",
+        }
+    names = listing.get("value") or []
+    if not model:
+        return {"ok": None, "value": "no model configured"}
+    if model in names:
+        return {"ok": True, "value": f"{model} found on server"}
+    near = suggest(model, names)
+    tail = f" — did you mean {near}?" if near else ""
+    return {
+        "ok": None,
+        "value": (
+            f"{model} not offered by the server ({len(names)} models listed){tail}"
+        ),
+    }
 
 
 def verify_langchain(
@@ -193,36 +319,63 @@ def verify_langchain(
     model = config.get("model")
     config_api_key = config.get("api_key")
 
+    # The per-backend contract, evaluated once and reported in full: validate()
+    # is non-raising, so every violation surfaces rather than just the first.
+    mode = mode_of(config)
+    findings: dict[str, Finding] = {f["key"]: f for f in validate(config)}
+    # validate() short-circuits to a single `backend` finding when the mode is
+    # unresolvable, so "no finding" only means "satisfied" while this is True.
+    scoped = mode is not None
+
     result: dict[str, Any] = {}
 
-    # Backend check
+    # Backend check — overwritten below when the contract has something to say.
     result["backend"] = {
         "ok": backend is not None,
         "value": backend,
     }
 
-    # Model check
-    result["model"] = {
-        "ok": model is not None,
-        "value": model,
-    }
+    # API key resolution, keyed by the mode rather than the backend.
+    api_key, key_source, key_overridden = _resolve_api_key(mode, config_api_key)
 
-    # API key resolution
-    api_key, key_source = _resolve_api_key(backend, config_api_key)
-    if backend == "ollama" and api_key is None:
-        # Ollama runs unauthenticated on plain localhost — treat missing key
-        # as optional rather than a failure.
-        result["api_key"] = {
-            "ok": True,
-            "value": "not set (optional)",
-            "source": None,
+    result["model"] = _row_from(
+        findings.get("model"),
+        default_ok=True if scoped else model is not None,
+        default_value=model,
+    )
+    result["api_key"] = {
+        **_row_from(
+            findings.get("api_key"),
+            default_ok=True if scoped else api_key is not None,
+            default_value=_api_key_default_value(api_key, key_source, scoped),
+        ),
+        "source": key_source,
+    }
+    if "backend" in findings:
+        # Overwrite, never setdefault: the row above is already populated, so
+        # an unsupported backend would otherwise render "[OK] opnai" while
+        # overall_ok is False — exit 1 with no visible cause.
+        result["backend"] = {
+            "ok": findings["backend"]["ok"],
+            "value": findings["backend"]["value"],
         }
-    else:
-        result["api_key"] = {
-            "ok": api_key is not None,
-            "value": _mask_api_key(api_key),
-            "source": key_source,
-        }
+    # The remaining findings (base_url, api_version) get rows of their own.
+    for key, finding in findings.items():
+        result.setdefault(key, {"ok": finding["ok"], "value": finding["value"]})
+
+    # Effective-config echo. This is the single resolve_target() call of the
+    # run; the ResolvedTarget it returns is shared by every consumer below, so
+    # nothing constructs a chat model twice. The rows are stored as a *list*,
+    # which _format_section, _collect_install_hints and _compute_exit_code all
+    # skip, so the echo is structurally symbol-free and exit-neutral.
+    target = resolve_target(config)
+    result["effective_config"] = describe_effective_config(
+        config,
+        target,
+        api_key_masked=_mask_api_key(api_key),
+        api_key_source=key_source,
+        api_key_overridden=key_overridden,
+    )
 
     # langchain-core package check
     lc_core_installed = _check_package_installed("langchain_core")
@@ -255,12 +408,41 @@ def verify_langchain(
             "value": "no backend configured",
         }
 
-    # Endpoint-shape heuristic (openai custom base URL; advisory only, never
-    # contributes to overall_ok).
+    # Base-URL-shape heuristic over the *resolved* target, reusing the probe
+    # above — advisory only, never contributes to overall_ok. The gate stays at
+    # openai: /v1 is an OpenAI/relay convention, and a correct ollama host has
+    # no /v1 at all. An OLLAMA_HOST redirect is surfaced by the row below.
     if backend == "openai":
-        shape = _check_endpoint_shape(config.get("endpoint"), config.get("api_version"))
+        shape = _check_base_url_shape(target, config.get("api_version"))
         if shape is not None:
-            result["endpoint_shape"] = shape
+            result["base_url_shape"] = shape
+
+    # Exit-neutral flags: something outside config.toml won. The redirect row
+    # is keyed on the variable that actually *produced* the dialed URL, not on
+    # "some redirect variable is exported", and is suppressed when config
+    # already implied that URL — nothing was redirected in that case.
+    cfg_base = config.get("base_url")
+    env_var = redirect_env_in_effect(config, target.url)
+    if env_var and not (cfg_base and _targets_match(cfg_base, target.url)):
+        # "overrides" only when config.toml actually named a target. Under
+        # openai it never has: an explicit base_url always wins there, so the
+        # row only fires with nothing to override. ollama is the real override
+        # case — OLLAMA_HOST outranks a configured base_url.
+        if cfg_base:
+            redirect = f"{env_var} overrides config.toml — requests go to {target.url}"
+        else:
+            redirect = (
+                f"{env_var} is set — requests go to {target.url} "
+                "(no base_url in config.toml)"
+            )
+        result["base_url_redirect"] = {"ok": None, "value": redirect}
+    # Built from the api-key resolution, never from env_var above: that is a
+    # base-URL variable and is None in most runs.
+    if key_overridden:
+        result["api_key_override"] = {
+            "ok": None,
+            "value": f"{key_source} overrides [llm.langchain] api_key in config.toml",
+        }
 
     # MCP adapter packages check (always run)
     mcp_pkg_results = _check_mcp_adapter_packages()
@@ -272,18 +454,21 @@ def verify_langchain(
         from . import _models
 
         result["ollama_daemon"] = _models._check_ollama_daemon(
-            api_key, config.get("endpoint")
+            api_key, config.get("base_url")
         )
         if model:
             result["ollama_tools_capability"] = _models.check_ollama_tool_capability(
-                model, api_key, config.get("endpoint")
+                model, api_key, config.get("base_url")
             )
 
-    # Check models (optional)
+    # Check models (optional). The cross-check rides on the listing rather
+    # than making a second network call, and is exit-neutral by construction
+    # (ok is never False), so it is not folded into overall_ok below.
     if check_models and backend:
         result["available_models"] = _list_models_for_backend(
-            backend, api_key, config.get("endpoint")
+            backend, api_key, config.get("base_url")
         )
+        result["model_check"] = _check_model_listed(model, result["available_models"])
 
     # overall_ok: True when backend configured AND all required packages installed
     overall_ok = bool(
@@ -296,20 +481,25 @@ def verify_langchain(
         overall_ok = overall_ok and result["ollama_daemon"]["ok"]
         if "ollama_tools_capability" in result:
             overall_ok = overall_ok and result["ollama_tools_capability"]["ok"]
+    # Contract errors fail the run with a named cause; ok=None warnings
+    # (ignored keys) stay exit-neutral.
+    overall_ok = overall_ok and all(
+        finding["ok"] is not False for finding in findings.values()
+    )
     result["overall_ok"] = overall_ok
 
     return result
 
 
 def _list_models_for_backend(
-    backend: str, api_key: str | None, endpoint: str | None
+    backend: str, api_key: str | None, base_url: str | None
 ) -> dict[str, Any]:
     """List models for the given backend using existing _models.py functions.
 
     Args:
         backend: Backend name ("openai", "gemini", "anthropic", or "ollama").
         api_key: API key for the backend, or None.
-        endpoint: Optional custom endpoint URL (used by OpenAI and Ollama backends).
+        base_url: Optional custom base URL (used by OpenAI and Ollama backends).
 
     Returns:
         Dict with 'ok' (bool), 'value' (list of model names), and optionally 'error'.
@@ -318,32 +508,37 @@ def _list_models_for_backend(
         from . import _models
 
         if backend == "openai":
-            models = _models.list_openai_models(api_key, endpoint)
+            models = _models.list_openai_models(api_key, base_url)
         elif backend == "gemini":
             models = _models.list_gemini_models(api_key)
         elif backend == "anthropic":
             models = _models.list_anthropic_models(api_key)
         elif backend == "ollama":
-            models = _models.list_ollama_models(api_key, endpoint)
+            models = _models.list_ollama_models(api_key, base_url)
         else:
             return {"ok": False, "value": [], "error": f"Unknown backend: {backend}"}
         return {"ok": True, "value": models}
     except LLMConnectionError as exc:
-        return {"ok": False, "value": [], "error": str(exc), "error_type": "connection"}
+        # Name the URL the listing call used. Unlike the provider paths there
+        # is no constructed langchain client to read here, so this is the
+        # base_url that was handed to the SDK; it is omitted entirely rather
+        # than guessed when nothing was passed.
+        error = f"{exc} — tried {base_url}" if base_url else str(exc)
+        return {"ok": False, "value": [], "error": error, "error_type": "connection"}
     except LLMAuthError as exc:
         return {"ok": False, "value": [], "error": str(exc), "error_type": "auth"}
     except Exception as exc:  # pylint: disable=broad-exception-caught
         msg = str(exc)
         low = msg.lower()
-        if endpoint and ("404" in low or "not found" in low or "not_found" in low):
+        if base_url and ("404" in low or "not found" in low or "not_found" in low):
             return {
                 "ok": False,
                 "value": [],
                 "error": (
-                    f"{msg} — endpoint/base-URL likely wrong; use the base URL "
+                    f"{msg} — base_url likely wrong; use the base URL "
                     "e.g. …/v1 (mcp-coder appends /chat/completions)"
                 ),
-                "error_type": "endpoint",
+                "error_type": "base_url",
             }
         return {"ok": False, "value": [], "error": msg, "error_type": "unknown"}
 

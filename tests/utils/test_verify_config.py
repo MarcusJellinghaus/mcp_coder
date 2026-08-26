@@ -21,7 +21,7 @@ class TestVerifyConfig:
             "MCP_CODER_MCP_CONFIG",
             "MCP_CODER_LLM_LANGCHAIN_BACKEND",
             "MCP_CODER_LLM_LANGCHAIN_MODEL",
-            "MCP_CODER_LLM_LANGCHAIN_ENDPOINT",
+            "MCP_CODER_LLM_LANGCHAIN_BASE_URL",
             "MCP_CODER_LLM_LANGCHAIN_API_VERSION",
             "MLFLOW_TRACKING_URI",
             "MLFLOW_EXPERIMENT_NAME",
@@ -414,6 +414,71 @@ github_credentials_id = "creds3"
 
         warnings = [e for e in result["entries"] if e["status"] == "warning"]
         assert any("unknown_key" in e["value"] for e in warnings)
+
+    def test_verify_config_retired_endpoint_key_hints_rename(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Stale [llm.langchain] endpoint -> warning naming the rename."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[llm.langchain]\nbackend = "openai"\nendpoint = "http://x"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        self._clear_env_vars(monkeypatch)
+
+        result = verify_config()
+
+        assert result["has_error"] is False
+        warnings = [e for e in result["entries"] if e["status"] == "warning"]
+        endpoint_warnings = [e for e in warnings if "endpoint" in e["value"]]
+        assert endpoint_warnings
+        assert "renamed to base_url" in endpoint_warnings[0]["value"]
+
+    def test_verify_config_typo_key_hints_near_miss(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Typo'd key in another section -> 'did you mean' warning."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[github]\ntoken = "ghp_test"\ntokenn = "oops"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        self._clear_env_vars(monkeypatch)
+
+        result = verify_config()
+
+        assert result["has_error"] is False
+        warnings = [e for e in result["entries"] if e["status"] == "warning"]
+        typo_warnings = [e for e in warnings if "tokenn" in e["value"]]
+        assert typo_warnings
+        assert "did you mean token?" in typo_warnings[0]["value"]
+
+    def test_verify_config_unrelated_unknown_key_has_no_hint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Unknown key close to nothing -> plain warning, no hint suffix."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            '[github]\ntoken = "ghp_test"\nzzz = "value"\n',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+        self._clear_env_vars(monkeypatch)
+
+        result = verify_config()
+
+        warnings = [e for e in result["entries"] if e["status"] == "warning"]
+        zzz_warnings = [e for e in warnings if "zzz" in e["value"]]
+        assert zzz_warnings
+        assert zzz_warnings[0]["value"] == "unknown key: zzz"
 
     def test_verify_config_auto_review_flags_no_unknown_warning(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

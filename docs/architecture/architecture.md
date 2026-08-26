@@ -207,6 +207,7 @@ mcp-coder implement --project-dir /path/to/project
     - `openai_backend.py` - OpenAI / Azure / Ollama backend via `ChatOpenAI`
     - `gemini_backend.py` - Google Gemini backend via `ChatGoogleGenerativeAI`
     - `anthropic_backend.py` - Anthropic backend via `ChatAnthropic`
+    - `_config_diagnostics.py` - per-backend config contract, resolved-target probe, effective-config echo
     - **Optional install**: `pip install 'mcp-coder[langchain]'`
     - See [`docs/configuration/optional-dependencies.md`](../configuration/optional-dependencies.md) for per-provider extras (smaller footprints if you only need one backend).
     - **Session storage**: history persisted to `~/.mcp_coder/sessions/langchain/`

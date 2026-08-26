@@ -7,11 +7,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.llm.providers.langchain.verification import (
-    _check_endpoint_shape,
     _check_mcp_adapter_packages,
+    _check_model_listed,
     _check_package_installed,
     _mask_api_key,
-    _resolve_api_key,
     verify_langchain,
 )
 
@@ -38,52 +37,6 @@ class TestMaskApiKey:
         assert _mask_api_key("") is None
 
 
-class TestResolveApiKey:
-    """Tests for _resolve_api_key helper."""
-
-    def test_env_var_takes_precedence(self) -> None:
-        with patch.dict("os.environ", {"OPENAI_API_KEY": "env-key"}):
-            key, source = _resolve_api_key("openai", "config-key")
-        assert key == "env-key"
-        assert source == "OPENAI_API_KEY env var"
-
-    def test_falls_back_to_config(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            key, source = _resolve_api_key("openai", "config-key")
-        assert key == "config-key"
-        assert source == "config.toml"
-
-    def test_no_key_available(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            key, source = _resolve_api_key("openai", None)
-        assert key is None
-        assert source is None
-
-    def test_gemini_env_var(self) -> None:
-        with patch.dict("os.environ", {"GEMINI_API_KEY": "gem-key"}):
-            key, source = _resolve_api_key("gemini", None)
-        assert key == "gem-key"
-        assert source == "GEMINI_API_KEY env var"
-
-    def test_anthropic_env_var(self) -> None:
-        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "ant-key"}):
-            key, source = _resolve_api_key("anthropic", None)
-        assert key == "ant-key"
-        assert source == "ANTHROPIC_API_KEY env var"
-
-    def test_unknown_backend(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            key, source = _resolve_api_key("unknown", "config-key")
-        assert key == "config-key"
-        assert source == "config.toml"
-
-    def test_none_backend(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
-            key, source = _resolve_api_key(None, None)
-        assert key is None
-        assert source is None
-
-
 class TestCheckPackageInstalled:
     """Tests for _check_package_installed helper."""
 
@@ -92,82 +45,6 @@ class TestCheckPackageInstalled:
 
     def test_not_installed_package(self) -> None:
         assert _check_package_installed("nonexistent_package_xyz_123") is False
-
-
-class TestCheckEndpointShape:
-    """Tests for the pure _check_endpoint_shape string heuristic."""
-
-    def test_completions_in_path_warns(self) -> None:
-        result = _check_endpoint_shape("https://h/v1/completions", None)
-        assert result is not None
-        assert result["ok"] is None
-        assert "/completions" in result["value"]
-
-    def test_chat_completions_in_path_warns(self) -> None:
-        result = _check_endpoint_shape("https://h/v1/chat/completions", None)
-        assert result is not None
-        assert result["ok"] is None
-        assert "/completions" in result["value"]
-
-    def test_no_scheme_is_malformed(self) -> None:
-        result = _check_endpoint_shape("host/v1", None)
-        assert result is not None
-        assert result["ok"] is None
-        assert "malformed" in result["value"]
-
-    def test_no_host_is_malformed(self) -> None:
-        result = _check_endpoint_shape("https:///v1", None)
-        assert result is not None
-        assert result["ok"] is None
-        assert "malformed" in result["value"]
-
-    def test_valid_without_v1_is_info(self) -> None:
-        result = _check_endpoint_shape("https://h/openai", None)
-        assert result is not None
-        assert result["ok"] is True
-        assert "v1" in result["value"]
-
-    def test_healthy_v1_endpoint(self) -> None:
-        result = _check_endpoint_shape("https://h/v1", None)
-        assert result is not None
-        assert result["ok"] is True
-        assert result["value"] == "https://h/v1"
-
-    def test_healthy_v1_endpoint_trailing_slash(self) -> None:
-        result = _check_endpoint_shape("https://h/v1/", None)
-        assert result is not None
-        assert result["ok"] is True
-
-    def test_api_version_set_skips(self) -> None:
-        assert _check_endpoint_shape("https://h/v1", "2024-02-01") is None
-
-    def test_no_endpoint_skips(self) -> None:
-        assert _check_endpoint_shape(None, None) is None
-
-
-class TestVerifyLangchainEndpointShape:
-    """Tests for endpoint_shape wiring in verify_langchain()."""
-
-    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
-    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_endpoint_shape_row_does_not_change_overall_ok(
-        self, mock_config: MagicMock, mock_pkg: MagicMock
-    ) -> None:
-        """A bad endpoint shape appears as a row but does not flip overall_ok."""
-        mock_config.return_value = {
-            "provider": "langchain",
-            "backend": "openai",
-            "model": "gpt-4o",
-            "api_key": None,
-            "endpoint": "https://h/v1/completions",
-            "api_version": None,
-        }
-        mock_pkg.return_value = True
-        with patch.dict("os.environ", {}, clear=True):
-            result = verify_langchain()
-        assert result["endpoint_shape"]["ok"] is None
-        # overall_ok is driven only by packages, unaffected by the shape finding.
-        assert result["overall_ok"] is True
 
 
 class TestVerifyLangchain:
@@ -180,7 +57,7 @@ class TestVerifyLangchain:
             "backend": None,
             "model": None,
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         with patch.dict("os.environ", {}, clear=True):
@@ -198,7 +75,7 @@ class TestVerifyLangchain:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": "sk-abcd1234wxyz5678",
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -215,7 +92,7 @@ class TestVerifyLangchain:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": "sk-abcd1234wxyz5678",
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         with patch.dict("os.environ", {}, clear=True):
@@ -225,23 +102,29 @@ class TestVerifyLangchain:
 
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
-    def test_no_api_key_overall_ok_true(
+    def test_no_api_key_fails_the_contract(
         self, mock_config: MagicMock, mock_pkg: MagicMock
     ) -> None:
-        """overall_ok is True even when no API key (verify_langchain no longer tests prompt)."""
+        """No prompt is sent, but a required-and-missing api_key still fails.
+
+        verify_langchain stopped sending a test prompt long ago; since step 9
+        the per-backend contract supplies the verdict instead, so an openai
+        config with no credential anywhere is exit-1 with a named cause.
+        """
         mock_config.return_value = {
             "provider": "langchain",
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
         assert "test_prompt" not in result
-        assert result["overall_ok"] is True
+        assert result["overall_ok"] is False
+        assert "OPENAI_API_KEY" in result["api_key"]["value"]
 
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
     @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
@@ -253,7 +136,7 @@ class TestVerifyLangchain:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         # langchain_core missing, backend_package ok, mcp_adapters ok, langgraph ok
@@ -277,7 +160,7 @@ class TestVerifyLangchain:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": "sk-test1234test5678",
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -297,7 +180,7 @@ class TestVerifyLangchain:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -315,7 +198,7 @@ class TestVerifyLangchain:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         # langchain_core ok, backend_package missing, mcp_adapters ok, langgraph ok
@@ -335,7 +218,7 @@ class TestVerifyLangchain:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -391,7 +274,7 @@ class TestVerifyLangchainMcpSection:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -413,7 +296,7 @@ class TestVerifyLangchainMcpSection:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         # langchain_core ok, backend_package ok, mcp_adapters fail, langgraph ok
@@ -438,7 +321,7 @@ class TestInstallHints:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         # langchain_core missing, backend_package ok, mcp_adapters ok, langgraph ok
@@ -459,7 +342,7 @@ class TestInstallHints:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         # langchain_core ok, backend_package missing, mcp_adapters ok, langgraph ok
@@ -503,7 +386,7 @@ class TestInstallHints:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -525,7 +408,7 @@ class TestInstallHints:
             "backend": None,
             "model": None,
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
         mock_pkg.return_value = True
@@ -621,7 +504,7 @@ class TestListModelsForBackendErrors:
         assert "error_type" not in result
 
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
-    def test_404_with_endpoint_returns_error_type_endpoint(
+    def test_404_with_base_url_returns_error_type_base_url(
         self, mock_list: MagicMock
     ) -> None:
         from mcp_coder.llm.providers.langchain.verification import (
@@ -631,12 +514,12 @@ class TestListModelsForBackendErrors:
         mock_list.side_effect = Exception("Error code: 404 - {'detail': 'Not Found'}")
         result = _list_models_for_backend("openai", None, "https://h/v1/completions")
         assert result["ok"] is False
-        assert result["error_type"] == "endpoint"
+        assert result["error_type"] == "base_url"
         assert "base URL" in result["error"]
         assert "/chat/completions" in result["error"]
 
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
-    def test_404_without_endpoint_stays_unknown(self, mock_list: MagicMock) -> None:
+    def test_404_without_base_url_stays_unknown(self, mock_list: MagicMock) -> None:
         from mcp_coder.llm.providers.langchain.verification import (
             _list_models_for_backend,
         )
@@ -648,7 +531,7 @@ class TestListModelsForBackendErrors:
         assert "base URL" not in result["error"]
 
     @patch("mcp_coder.llm.providers.langchain._models.list_openai_models")
-    def test_non_404_error_with_endpoint_stays_unknown(
+    def test_non_404_error_with_base_url_stays_unknown(
         self, mock_list: MagicMock
     ) -> None:
         from mcp_coder.llm.providers.langchain.verification import (
@@ -659,3 +542,174 @@ class TestListModelsForBackendErrors:
         result = _list_models_for_backend("openai", None, "https://h/v1/completions")
         assert result["ok"] is False
         assert result["error_type"] == "unknown"
+
+
+class TestCheckModelListed:
+    """Step 11 — cross-check the configured model against a model listing.
+
+    The check is advisory: ``ok`` is ``True`` or ``None``, never ``False``.
+    A relay that will not serve ``/models`` says nothing about whether the
+    config is right, and a genuinely wrong model still fails the live test
+    prompt, which already sets exit 1.
+    """
+
+    def test_model_present_in_listing(self) -> None:
+        entry = _check_model_listed(
+            "Qwen-2.5-72B", {"ok": True, "value": ["Qwen-2.5-72B", "gpt-4o"]}
+        )
+        assert entry["ok"] is True
+        assert entry["value"] == "Qwen-2.5-72B found on server"
+
+    def test_near_miss_is_suggested(self) -> None:
+        entry = _check_model_listed(
+            "Qwen-2.5-72b", {"ok": True, "value": ["Qwen-2.5-72B", "gpt-4o"]}
+        )
+        assert entry["ok"] is None
+        assert "Qwen-2.5-72b not offered by the server (2 models listed)" in str(
+            entry["value"]
+        )
+        assert "did you mean Qwen-2.5-72B?" in str(entry["value"])
+
+    def test_no_near_miss_omits_suggestion(self) -> None:
+        entry = _check_model_listed(
+            "llama3.1", {"ok": True, "value": ["gpt-4o", "text-embedding-3-small"]}
+        )
+        assert entry["ok"] is None
+        assert "llama3.1 not offered by the server (2 models listed)" in str(
+            entry["value"]
+        )
+        assert "did you mean" not in str(entry["value"])
+
+    def test_auth_failure_degrades_to_could_not_verify(self) -> None:
+        entry = _check_model_listed(
+            "gpt-4o",
+            {
+                "ok": False,
+                "value": [],
+                "error": "401 Unauthorized",
+                "error_type": "auth",
+            },
+        )
+        assert entry["ok"] is None
+        assert entry["value"] == "could not verify (server does not expose /models)"
+
+    def test_404_listing_degrades_to_could_not_verify(self) -> None:
+        entry = _check_model_listed(
+            "gpt-4o",
+            {"ok": False, "value": [], "error": "404 Not Found", "error_type": "404"},
+        )
+        assert entry["ok"] is None
+        assert entry["value"] == "could not verify (server does not expose /models)"
+
+    def test_no_model_configured(self) -> None:
+        entry = _check_model_listed(None, {"ok": True, "value": ["gpt-4o"]})
+        assert entry["ok"] is None
+        assert entry["value"] == "no model configured"
+
+    def test_missing_value_key_counts_as_empty_listing(self) -> None:
+        entry = _check_model_listed("gpt-4o", {"ok": True})
+        assert entry["ok"] is None
+        assert "0 models listed" in str(entry["value"])
+
+    def test_never_reports_false(self) -> None:
+        """No input shape may produce ok=False — that would move overall_ok."""
+        listings: list[dict[str, object]] = [
+            {"ok": True, "value": ["gpt-4o"]},
+            {"ok": True, "value": []},
+            {"ok": False, "value": []},
+            {},
+        ]
+        for listing in listings:
+            for model in ("gpt-4o", "nope", None):
+                assert _check_model_listed(model, listing)["ok"] is not False
+
+
+class TestModelCheckInVerify:
+    """Wiring of model_check into verify_langchain()."""
+
+    _CONFIG = {
+        "provider": "langchain",
+        "backend": "openai",
+        "model": "gpt-4o",
+        "api_key": "sk-test1234test5678",
+        "base_url": None,
+        "api_version": None,
+    }
+
+    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_model_check_ok_when_listed(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_list: MagicMock,
+    ) -> None:
+        mock_config.return_value = dict(self._CONFIG)
+        mock_pkg.return_value = True
+        mock_list.return_value = {"ok": True, "value": ["gpt-4o", "gpt-3.5-turbo"]}
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain(check_models=True)
+        assert result["model_check"]["ok"] is True
+        assert result["model_check"]["value"] == "gpt-4o found on server"
+
+    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_wrong_model_warns_but_keeps_overall_ok(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_list: MagicMock,
+    ) -> None:
+        mock_config.return_value = dict(self._CONFIG)
+        mock_pkg.return_value = True
+        mock_list.return_value = {"ok": True, "value": ["gpt-4p", "gpt-3.5-turbo"]}
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain(check_models=True)
+        assert result["model_check"]["ok"] is None
+        assert "not offered by the server" in result["model_check"]["value"]
+        assert result["overall_ok"] is True
+
+    @patch("mcp_coder.llm.providers.langchain.verification._list_models_for_backend")
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_failed_listing_keeps_overall_ok(
+        self,
+        mock_config: MagicMock,
+        mock_pkg: MagicMock,
+        mock_list: MagicMock,
+    ) -> None:
+        mock_config.return_value = dict(self._CONFIG)
+        mock_pkg.return_value = True
+        mock_list.return_value = {
+            "ok": False,
+            "value": [],
+            "error": "boom",
+            "error_type": "unknown",
+        }
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain(check_models=True)
+        assert result["model_check"]["ok"] is None
+        assert "does not expose /models" in result["model_check"]["value"]
+        assert result["overall_ok"] is True
+
+    @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
+    @patch("mcp_coder.llm.providers.langchain.verification._load_langchain_config")
+    def test_absent_without_check_models(
+        self, mock_config: MagicMock, mock_pkg: MagicMock
+    ) -> None:
+        mock_config.return_value = dict(self._CONFIG)
+        mock_pkg.return_value = True
+        with patch.dict("os.environ", {}, clear=True):
+            result = verify_langchain()
+        assert "model_check" not in result
+
+
+class TestModelCheckLabel:
+    """Without a label entry the row renders as the raw dict key."""
+
+    def test_label_map_entry(self) -> None:
+        from mcp_coder.cli.commands.verify_formatting import _LABEL_MAP
+
+        assert _LABEL_MAP["model_check"] == "Model available"

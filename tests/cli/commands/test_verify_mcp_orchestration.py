@@ -8,12 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import (
+from mcp_coder.cli.commands.verify import execute_verify
+from mcp_coder.cli.commands.verify_formatting import _format_mcp_section
+from mcp_coder.cli.commands.verify_sections import (
     _DropUnexpandedWarnings,
     _validate_mcp_config,
-    execute_verify,
 )
-from mcp_coder.cli.commands.verify_formatting import _format_mcp_section
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 from .conftest import (

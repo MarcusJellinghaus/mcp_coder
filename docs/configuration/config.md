@@ -327,13 +327,42 @@ extras (smaller footprints if you only need one backend).
 | ------- | ------ | ------------- | ---------- |
 | `backend` | string | LangChain backend: `"openai"`, `"gemini"`, `"anthropic"`, or `"ollama"` | Yes |
 | `model` | string | Model name (e.g. `"gpt-4o"`, `"gemini-1.5-pro"`). Doubles as `azure_deployment` for Azure | Yes |
-| `api_key` | string | API key (env var takes priority — see below) | No |
-| `endpoint` | string | Custom base URL for OpenAI; `azure_endpoint` for Azure; ignored by Gemini | No |
-| `api_version` | string | Azure API version (e.g. `"2024-02-01"`). When set, uses `AzureChatOpenAI` | No |
+| `api_key` | string | API key (env var takes priority — see below) | Yes for `openai`/Azure/`gemini`/`anthropic`, here or via env var; optional for `ollama` |
+| `base_url` | string | Base URL of the server (`azure_endpoint` in Azure mode) | Yes in Azure mode, here or via `AZURE_OPENAI_ENDPOINT`; optional otherwise |
+| `api_version` | string | Azure API version (e.g. `"2024-02-01"`). When set, uses `AzureChatOpenAI` | Yes for Azure only — omit for every other setup |
 
-> ⚠️ `endpoint` must be the **base URL only** (e.g. `https://your-host/v1`) with
+A missing `api_key` (with no matching env var) and a missing Azure `base_url`
+are **errors**: `mcp-coder verify` exits 1 naming the field, and the run fails
+before the request is sent. See
+[Which fields apply to which setup](#which-fields-apply-to-which-setup) for the
+per-backend breakdown.
+
+> ⚠️ **Renamed:** `endpoint` is now `base_url`. The old name no longer works —
+> it is rejected as an unknown key. Migration:
+>
+> - config: `endpoint = "..."` → `base_url = "..."`
+> - env var: `MCP_CODER_LLM_LANGCHAIN_ENDPOINT` → `MCP_CODER_LLM_LANGCHAIN_BASE_URL`
+
+> ⚠️ `base_url` must be the **base URL only** (e.g. `https://your-host/v1`) with
 > **no** `/chat/completions` — mcp-coder appends that itself. A full request path
 > produces a doubled path and a `404 - {'detail': 'Not Found'}`.
+
+#### Which fields apply to which setup
+
+| Setup | `base_url` | `api_version` | `model` | `api_key` |
+|---|---|---|---|---|
+| Plain OpenAI | omit | omit | model name | required (key / env) |
+| OpenAI-compatible relay (LiteLLM, vLLM) | `https://host/v1` | **omit** | relay alias | required (key / env) |
+| Azure OpenAI | `https://res.openai.azure.com/` | required | deployment | key / env |
+| Gemini / Anthropic | ignored | ignored | model name | key / env |
+| Ollama | optional (host) | ignored | model name | optional |
+
+Azure is not a separate backend — it is a **mode** of `backend = "openai"`,
+entered by setting `api_version`. `mcp-coder verify` checks the configuration
+against this table and reports every missing, ignored or conflicting field.
+
+When something goes wrong, see
+[LangChain provider: symptom → cause](#langchain-provider-symptom--cause).
 
 **Example — OpenAI GPT-4o:**
 
@@ -353,9 +382,15 @@ api_key  = "sk-..."       # or set OPENAI_API_KEY env var
 [llm.langchain]
 backend  = "openai"
 model    = "llama3"
-endpoint = "https://your-host/v1"   # base URL only — NO /chat/completions
+base_url = "https://your-host/v1"   # base URL only — NO /chat/completions
 api_key  = "..."                    # or OPENAI_API_KEY env var
 ```
+
+> ⚠️ Do **not** set `api_version` for a non-Azure server — it switches the
+> client to Azure mode and then requires `base_url` (or `AZURE_OPENAI_ENDPOINT`).
+>
+> An unauthenticated relay still needs an `api_key`: the OpenAI client cannot be
+> built without credentials. Set any non-empty value.
 
 **Example — Google Gemini:**
 
@@ -378,7 +413,7 @@ default_provider = "langchain"
 [llm.langchain]
 backend     = "openai"
 model       = "gpt-4o"                               # also = azure_deployment
-endpoint    = "https://my-resource.openai.azure.com/"
+base_url    = "https://my-resource.openai.azure.com/"  # = azure_endpoint
 api_version = "2024-02-01"                           # triggers AzureChatOpenAI
 api_key     = "..."
 ```
@@ -404,7 +439,7 @@ default_provider = "langchain"
 [llm.langchain]
 backend  = "ollama"
 model    = "llama3:latest"
-# endpoint = "127.0.0.1:11434"  # optional — defaults to localhost:11434
+# base_url = "127.0.0.1:11434"  # optional — defaults to localhost:11434
 # api_key  = "..."              # optional — only for proxy-auth setups
 ```
 
@@ -422,7 +457,7 @@ model    = "llama3:latest"
 >
 > **`OLLAMA_HOST` env var.** Ollama's own convention uses bare
 > `host:port` (e.g. `127.0.0.1:11434`) rather than a URL. mcp-coder
-> normalizes this automatically — set either `endpoint` in
+> normalizes this automatically — set either `base_url` in
 > config.toml (URL or `host:port`) or `OLLAMA_HOST` env var.
 
 #### Environment Variable Overrides
@@ -435,7 +470,7 @@ Environment variables take **highest priority** over config file values.
 | `GEMINI_API_KEY` | `[llm.langchain] api_key` | `gemini` |
 | `ANTHROPIC_API_KEY` | `[llm.langchain] api_key` | `anthropic` |
 | `OLLAMA_API_KEY` | `[llm.langchain] api_key` | `ollama` |
-| `OLLAMA_HOST` | `[llm.langchain] endpoint` | `ollama` |
+| `OLLAMA_HOST` | `[llm.langchain] base_url` | `ollama` |
 | `MCP_CODER_MCP_CONFIG` | `[mcp] default_config_path` | `.mcp.json` |
 | `MCP_CODER_CLAUDE_SETTINGS` | `[claude] default_settings_path` | `.claude/settings.local.json` |
 
@@ -445,6 +480,24 @@ Environment variables take **highest priority** over config file values.
 export OPENAI_API_KEY="sk-prod-key"
 mcp-coder prompt "Summarise this PR"
 ```
+
+#### Variables that change behaviour invisibly
+
+These are read by the underlying SDKs (or by provider resolution) and can send
+requests somewhere that appears in no config file:
+
+| Variable | Effect |
+| ---------- | -------- |
+| `OPENAI_BASE_URL` | redirects the OpenAI client when `base_url` is unset |
+| `OPENAI_API_BASE` | same, applied by LangChain's `ChatOpenAI` |
+| `AZURE_OPENAI_ENDPOINT` | supplies `azure_endpoint` in Azure mode |
+| `OLLAMA_HOST` | redirects the Ollama client |
+| `OPENAI_API_KEY` | overrides a configured `api_key` |
+| `MCP_CODER_LLM_PROVIDER` | overrides `[llm] default_provider` |
+
+`mcp-coder verify` reports each of them: the resolved target is read from the
+constructed client (not computed from config), and a redirect, an API-key
+override or a provider set by the environment each get their own row.
 
 #### Session Continuity
 
@@ -836,6 +889,25 @@ This ensures:
 - Local development installs everything (`pip install -e ".[dev]"`)
 
 ## Troubleshooting
+
+### LangChain provider: symptom → cause
+
+Run `mcp-coder verify` first — it echoes the effective configuration, the target
+actually dialed, and every environment variable that redirected it.
+
+| Symptom | Likely cause |
+|---|---|
+| `system messages must be at the beginning` | single-system provider + two system messages ([#1116](https://github.com/MarcusJellinghaus/mcp_coder/issues/1116)) |
+| "connection error" to `api.openai.com` | `base_url` not set → public-OpenAI fallback (check for a stale `endpoint` key) |
+| `unknown key: endpoint` | renamed to `base_url` |
+| requests hit a host that is in no config file | `OPENAI_BASE_URL` / `OPENAI_API_BASE` / `OLLAMA_HOST` set in the environment |
+| `404 - {"detail":"Not Found"}` | wrong `base_url` path (include the relay's prefix, e.g. `/v1`) |
+| `Must provide one of base_url or azure_endpoint` | stray `api_version` → Azure mode without `base_url` (and no `AZURE_OPENAI_ENDPOINT`) |
+| `Ensure Authorization has Bearer prefix` | curl only (add `Bearer `); the client adds it — don't put it in `api_key` |
+| `no api_key ... and no OPENAI_API_KEY` on a relay | the OpenAI client cannot be built without credentials even for an unauthenticated relay — set any non-empty `api_key` |
+| `Invalid model name passed in` | `model` not an alias the relay/proxy exposes |
+| `verify` reports one provider but behaves like another | `MCP_CODER_LLM_PROVIDER` set in the environment, overriding `--llm-method` (fixed in 0.1.21) |
+| `verify` passes but the real command fails | `verify` before 0.1.21 sent no system/project prompt, so it did not exercise the real message shape |
 
 ### Error: Repository not found
 

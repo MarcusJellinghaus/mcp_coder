@@ -14,7 +14,7 @@ import queue
 import threading
 import time
 import uuid
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -25,6 +25,7 @@ from mcp_coder.llm.storage.session_storage import (
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEvent
 from mcp_coder.utils.user_config import get_config_values
 
+from ._config_diagnostics import dialed_url, validate
 from ._errors_404 import _format_404_hint
 from ._errors_404 import _is_404_error as _is_404_error  # re-exported for tests
 from ._exceptions import (
@@ -75,18 +76,18 @@ def _build_system_messages(
 _AGENT_OVERALL_TIMEOUT = 3600  # 60 minutes
 
 _BACKEND_ERROR_PARAMS: dict[str, tuple[str, str, str]] = {
-    # (provider_label, env_var, endpoint_hint)
+    # (provider_label, env_var, base_url_hint)
     "openai": (
         "OpenAI",
         "OPENAI_API_KEY",
-        "endpoint/base_url if using a custom server",
+        "base_url if using a custom server",
     ),
     "gemini": ("Gemini", "GEMINI_API_KEY", ""),
     "anthropic": ("Anthropic", "ANTHROPIC_API_KEY", ""),
     "ollama": (
         "Ollama",
         "OLLAMA_API_KEY",
-        "endpoint/OLLAMA_HOST if not localhost",
+        "base_url/OLLAMA_HOST if not localhost",
     ),
 }
 
@@ -109,27 +110,37 @@ def _auth_errors_for_backend(backend: str | None) -> tuple[type[Exception], ...]
     return ()
 
 
-def _handle_provider_error(exc: Exception, backend: str | None) -> None:
+def _handle_provider_error(
+    exc: Exception, backend: str | None, dialed: str | None = None
+) -> None:
     """Raise LLMAuthError or LLMConnectionError when *exc* matches, else return.
 
     Args:
         exc: The caught exception.
         backend: Backend name ("openai", "gemini", "anthropic", or None).
+        dialed: The URL the constructed client actually dials, when known.
+            Callers read it off the client with :func:`dialed_url`, never from
+            config — a config-derived value is wrong the moment OPENAI_BASE_URL
+            or OLLAMA_HOST redirects the request, which is exactly the case a
+            connection error needs to expose. It is reported *alongside* the
+            static per-backend hint, never instead of it: the hint names the
+            key and env var to change, which the dialed URL cannot. Left at
+            None the message is byte-identical to before.
     """
     auth_errors = _auth_errors_for_backend(backend)
-    provider, env_var, endpoint_hint = _BACKEND_ERROR_PARAMS.get(
+    provider, env_var, base_url_hint = _BACKEND_ERROR_PARAMS.get(
         backend or "", (backend or "", "", "")
     )
     if auth_errors and isinstance(exc, auth_errors):
         if backend == "gemini" and not is_google_auth_error(exc):
-            raise_connection_error(provider, env_var, exc, endpoint_hint)
+            raise_connection_error(provider, env_var, exc, base_url_hint, dialed)
         raise_auth_error(provider, env_var, exc)
     if isinstance(exc, CONNECTION_ERRORS):
-        raise_connection_error(provider, env_var, exc, endpoint_hint)
+        raise_connection_error(provider, env_var, exc, base_url_hint, dialed)
 
 
 def _load_langchain_config() -> dict[str, str | None]:
-    """Read [llm] and [llm.langchain] from config.toml via get_config_values().
+    """Read [llm] and [llm.langchain] from config.toml. Never raises.
 
     Environment variable overrides (e.g. MCP_CODER_LLM_LANGCHAIN_BACKEND) are
     handled automatically by get_config_values() through the config schema.
@@ -137,39 +148,60 @@ def _load_langchain_config() -> dict[str, str | None]:
     API keys are resolved by the vendor env var (OPENAI_API_KEY, GEMINI_API_KEY,
     ANTHROPIC_API_KEY) in each backend module, falling back to config.toml.
 
+    A schema type mismatch (e.g. ``model = 123``) makes get_config_values()
+    raise ValueError. This loader runs on *every* ``mcp-coder verify``, including
+    for claude users who never configured langchain, so it degrades every value
+    to None instead — verify_config() already reports the mismatch as a CONFIG
+    error one section earlier, so re-reporting here would only duplicate it.
+    Validation of the resulting values happens at the point of use, not here.
+
     Returns:
-        Dict with keys: default_provider, backend, model, api_key, endpoint, api_version.
+        Dict with keys: default_provider, backend, model, api_key, base_url, api_version.
+        Every value is None when the config could not be read.
     """
-    raw = get_config_values(
-        [
-            ("llm", "default_provider", None),
-            ("llm.langchain", "backend", None),
-            ("llm.langchain", "model", None),
-            ("llm.langchain", "api_key", None),
-            ("llm.langchain", "endpoint", None),
-            ("llm.langchain", "api_version", None),
-        ]
-    )
+    raw: dict[tuple[str, str], str | bool | int | list[Any] | None]
+    try:
+        raw = get_config_values(
+            [
+                ("llm", "default_provider", None),
+                ("llm.langchain", "backend", None),
+                ("llm.langchain", "model", None),
+                ("llm.langchain", "api_key", None),
+                ("llm.langchain", "base_url", None),
+                ("llm.langchain", "api_version", None),
+            ]
+        )
+    except ValueError:
+        logger.warning(
+            "Ignoring [llm.langchain] config: schema type mismatch "
+            "(see the CONFIG section of `mcp-coder verify`)."
+        )
+        raw = {}
 
     # All langchain fields are str type in schema — narrow from the wider union
     def _str_or_none(val: str | bool | int | list[Any] | None) -> str | None:
         return val if isinstance(val, str) else None
 
     return {
-        "default_provider": _str_or_none(raw[("llm", "default_provider")]),
-        "backend": _str_or_none(raw[("llm.langchain", "backend")]),
-        "model": _str_or_none(raw[("llm.langchain", "model")]),
-        "api_key": _str_or_none(raw[("llm.langchain", "api_key")]),
-        "endpoint": _str_or_none(raw[("llm.langchain", "endpoint")]),
-        "api_version": _str_or_none(raw[("llm.langchain", "api_version")]),
+        "default_provider": _str_or_none(raw.get(("llm", "default_provider"))),
+        "backend": _str_or_none(raw.get(("llm.langchain", "backend"))),
+        "model": _str_or_none(raw.get(("llm.langchain", "model"))),
+        "api_key": _str_or_none(raw.get(("llm.langchain", "api_key"))),
+        "base_url": _str_or_none(raw.get(("llm.langchain", "base_url"))),
+        "api_version": _str_or_none(raw.get(("llm.langchain", "api_version"))),
     }
 
 
 def _create_chat_model(
-    config: dict[str, str | None],
+    config: Mapping[str, str | None],
     timeout: int = 30,
 ) -> BaseChatModel:
     """Dispatch to correct backend's create_*_model() based on config.
+
+    The per-backend contract is checked here, before the dispatch, so that all
+    four provider paths (text, text-stream, agent, agent-stream) are covered by
+    a single site and the user gets an actionable message instead of the SDK's
+    opaque one.
 
     Args:
         config: LangChain configuration dict with backend, model, api_key, etc.
@@ -179,8 +211,13 @@ def _create_chat_model(
         Configured BaseChatModel instance for the selected backend.
 
     Raises:
-        ValueError: If the configured backend is not supported.
+        ValueError: If the config violates the per-backend contract, including
+            an unsupported or unset backend.
     """
+    for finding in validate(config):
+        if finding["ok"] is False:
+            raise ValueError(finding["value"])
+
     backend = config.get("backend")
 
     if backend == "openai":
@@ -189,7 +226,7 @@ def _create_chat_model(
         return create_openai_model(
             model=config.get("model") or "",
             api_key=config.get("api_key"),
-            endpoint=config.get("endpoint"),
+            base_url=config.get("base_url"),
             api_version=config.get("api_version"),
             timeout=timeout,
         )
@@ -215,7 +252,7 @@ def _create_chat_model(
         return create_ollama_model(
             model=config.get("model") or "",
             api_key=config.get("api_key"),
-            endpoint=config.get("endpoint"),
+            base_url=config.get("base_url"),
             timeout=timeout,
         )
     raise ValueError(
@@ -326,7 +363,7 @@ def _ask_text(
     try:
         ai_msg = chat_model.invoke(lc_messages)
     except Exception as exc:
-        _handle_provider_error(exc, backend)
+        _handle_provider_error(exc, backend, dialed_url(chat_model))
         if _is_404_error(exc):
             raise ValueError(_format_404_hint(config)) from exc
         raise
@@ -402,7 +439,7 @@ def _ask_agent(
             )
         )
     except Exception as exc:
-        _handle_provider_error(exc, agent_backend)
+        _handle_provider_error(exc, agent_backend, dialed_url(chat_model))
         raise
 
     # No storage here: run_agent drains run_agent_stream, which is the single
@@ -560,7 +597,7 @@ def _ask_agent_stream(
     # cancelled (GeneratorExit) to avoid masking the exit.
     if error_holder and not cancelled:
         held_exc = error_holder[0]
-        _handle_provider_error(held_exc, config.get("backend"))
+        _handle_provider_error(held_exc, config.get("backend"), dialed_url(chat_model))
         raise held_exc
 
 
@@ -683,7 +720,7 @@ def _ask_text_stream(
     except TimeoutError:
         raise
     except Exception as exc:
-        _handle_provider_error(exc, backend)
+        _handle_provider_error(exc, backend, dialed_url(chat_model))
         # Handle 404/model-not-found errors (mirrors _ask_text() path)
         if _is_404_error(exc):
             hint = _format_404_hint(config)

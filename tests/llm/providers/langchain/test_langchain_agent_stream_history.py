@@ -273,7 +273,7 @@ class TestAskAgentStreamBoundary:
             "backend": "openai",
             "model": "gpt-4o",
             "api_key": None,
-            "endpoint": None,
+            "base_url": None,
             "api_version": None,
         }
 

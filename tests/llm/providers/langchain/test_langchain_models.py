@@ -123,23 +123,23 @@ class TestListOpenaiModels:
             result = list_openai_models(api_key="test-key")
         assert result == ["gpt-3.5-turbo", "gpt-4o"]
 
-    def test_passes_api_key_and_endpoint(self) -> None:
-        """api_key and endpoint are forwarded to the OpenAI client."""
+    def test_passes_api_key_and_base_url(self) -> None:
+        """api_key and base_url are forwarded to the OpenAI client."""
         mock_openai = _openai_mock()
         mock_openai.OpenAI.return_value.models.list.return_value = []
         with patch.dict(sys.modules, {"openai": mock_openai}):
-            list_openai_models(api_key="my-key", endpoint="https://custom.example.com")
+            list_openai_models(api_key="my-key", base_url="https://custom.example.com")
         mock_openai.OpenAI.assert_called_once()
         _, kwargs = mock_openai.OpenAI.call_args
         assert kwargs["api_key"] == "my-key"
         assert kwargs["base_url"] == "https://custom.example.com"
 
-    def test_omits_none_api_key_and_endpoint(self) -> None:
-        """None values for api_key and endpoint are passed as None."""
+    def test_omits_none_api_key_and_base_url(self) -> None:
+        """None values for api_key and base_url are passed as None."""
         mock_openai = _openai_mock()
         mock_openai.OpenAI.return_value.models.list.return_value = []
         with patch.dict(sys.modules, {"openai": mock_openai}):
-            list_openai_models(api_key=None, endpoint=None)
+            list_openai_models(api_key=None, base_url=None)
         mock_openai.OpenAI.assert_called_once()
         _, kwargs = mock_openai.OpenAI.call_args
         assert kwargs["api_key"] is None
@@ -319,7 +319,7 @@ class TestListOpenaiModelsConnectionError:
         with patch.dict(sys.modules, {"openai": mock_openai}):
             with pytest.raises(LLMConnectionError, match="OPENAI_API_KEY") as exc_info:
                 list_openai_models(api_key="k")
-        assert "endpoint" in str(exc_info.value).lower()
+        assert "base_url" in str(exc_info.value).lower()
 
 
 class TestListOpenaiModelsAuthError:

@@ -214,8 +214,13 @@ class TestConfigSchema:
         lc = _CONFIG_SCHEMA["llm.langchain"]
         assert lc["backend"].env_var == "MCP_CODER_LLM_LANGCHAIN_BACKEND"
         assert lc["model"].env_var == "MCP_CODER_LLM_LANGCHAIN_MODEL"
-        assert lc["endpoint"].env_var == "MCP_CODER_LLM_LANGCHAIN_ENDPOINT"
+        assert lc["base_url"].env_var == "MCP_CODER_LLM_LANGCHAIN_BASE_URL"
         assert lc["api_version"].env_var == "MCP_CODER_LLM_LANGCHAIN_API_VERSION"
+
+    def test_schema_langchain_endpoint_is_removed(self) -> None:
+        """The retired 'endpoint' key is no longer a recognised config key."""
+        assert "endpoint" not in _CONFIG_SCHEMA["llm.langchain"]
+        assert _get_field_def("llm.langchain", "endpoint") is None
 
     def test_get_field_def_exact_match(self) -> None:
         """_get_field_def returns FieldDef for exact section match."""
