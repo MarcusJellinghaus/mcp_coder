@@ -176,10 +176,13 @@ class TestContextRootReporting:
 
         assert "none found" in caplog.text
 
-    def test_report_warns_when_hit_is_outside_project_dir(
+    def test_report_warns_when_the_only_hit_is_outside_project_dir(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """The December Jenkins scenario: rules live outside the driven project.
+
+        The warning fires because no hit lies inside project_dir, not because
+        this one lies outside it - see the ancestor-hit test below.
 
         The finder is stubbed because report_context_root deliberately has no
         stop_at boundary; the real walk climbs past tmp_path into directories

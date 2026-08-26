@@ -144,7 +144,9 @@ leaves staging to the caller. Since the fix a stale tool-env `CLAUDE.md` is harm
 it stops it being mistaken for the rules in force.
 
 Every run now reports the Claude working directory and the project instructions files found by
-that upward walk, warning when one lies outside `project_dir`. See
+that upward walk, warning only when **none** of them lies inside `project_dir`. Individual files
+outside it are normal: the walk reaches every ancestor, so every ancestor hit — including
+user-level `~/.claude/CLAUDE.md` — is outside by definition. See
 [Execution Context Management](../architecture/architecture.md#execution-context-management).
 
 ## Calling mcp-coder Explicitly

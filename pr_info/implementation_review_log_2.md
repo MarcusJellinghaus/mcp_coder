@@ -63,3 +63,45 @@ the `_CONTEXT_LABEL` comment). Hoist comment cut from eight lines to two.
 
 **Status**: committed. Gates: pylint clean, pytest 5113 passed / 2 skipped, mypy clean,
 import-linter 21/21 kept.
+
+## Round 5 — 2026-08-26
+
+**Findings**
+
+- `docs/environments/environments.md:146-147` — low — still describes the retired per-hit
+  predicate ("warning when one lies outside `project_dir`"). A reader would expect a warning
+  on a normal healthy run and read its absence as the reporting being broken. Round 4's
+  correction sweep missed this fourth site.
+- Nothing else. The reviewer scrutinised `ced93a8` specifically on the three edge cases it
+  introduced and found no defects: with `project_dir=None` every hit is "not outside", so
+  `all(...)` is `False` and nothing warns — correct, since with no anchor there is nothing to
+  be outside of; the "none found" early return sits *before* the predicate, which is
+  load-bearing because `all([])` is `True` and an empty walk would otherwise warn while
+  naming an empty file list; and when `execution_dir` sits above `project_dir` the project's
+  own file is never reached and the warning correctly fires — the case a nearest-level walk
+  would have missed.
+- Findings dismissed in rounds 1-4 were re-examined and not re-raised; no new evidence
+  against any of them.
+
+**Decisions**
+
+- **Accept** the doc correction, and extend it to a repo-wide sweep for the same two stale
+  claims (the retired per-hit predicate, and the false "walk excludes user-level
+  `~/.claude/CLAUDE.md`"). The round-4 sweep having missed a site once is reason to verify
+  rather than assume the rest are clean.
+
+**Changes**
+
+`environments.md` now states the current predicate plus why individual outside hits are
+normal. The sweep found one further site: `tests/cli/test_utils_context_root.py:179`, whose
+name `test_report_warns_when_hit_is_outside_project_dir` asserted the retired per-hit rule
+and contradicted its own sibling three tests later — renamed to
+`test_report_warns_when_the_only_hit_is_outside_project_dir` with a docstring stating the
+warning fires because no hit is inside. Nothing else stale: `utils.py`'s docstrings,
+`architecture.md:167-174` and `verify.py:380-382` were already correct, and
+`test_verify_prompts_context.py:115`'s `test_hit_outside_project_dir_warns` is accurate
+because verify genuinely does still mark each outside row. The `@import` caveat is intact at
+all three sites.
+
+**Status**: committed. Gates: pylint clean, pytest 5113 passed / 2 skipped, mypy clean,
+import-linter 21/21 kept.
