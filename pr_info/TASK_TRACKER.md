@@ -33,20 +33,48 @@ reach the agent — nothing in this repo can observe Claude Code's internal memo
 so the automated tests cover the checkable proxy (`cwd == project_dir`, every reported
 instructions file inside `project_dir`) and nothing more.
 
-**Recorded result: none. Neither probe has been run.**
+**Recorded result: both probes run 2026-08-26. Premise confirmed, fix confirmed.**
 
-- [ ] **Pre-flight probe (was to gate Step 1) — NOT PERFORMED.** No run, no output and no
-      result is recorded in this branch: not in `pr_info/`, not in any commit message on
-      the branch, and not in the issue comments (#1113 carries only `/approve` and the
-      status-bot note). Steps 1-7 were implemented and committed without it, so the
-      "before" half of the evidence no longer exists in its intended form — the code
-      change has already landed on this branch.
-- [ ] **Post-Step-7 probe — NOT PERFORMED.** Still outstanding and still meaningful; it is
-      what confirms the marker is now *absent* and the repo's own rules present.
-- [ ] **Clean the Jenkins tool env — NOT PERFORMED.** Delete
-      `C:\Jenkins\environments\mcp-coder-dev\.claude\`, **keep `.mcp.json` there**
-      (`command_templates.py:88-89` runs `claude --mcp-config .mcp.json` from that
-      directory).
+Marker directory: a scratch directory outside the repo holding a `CLAUDE.md` that names a
+made-up tool `mcp__marker_probe__ping` and the marker string `ZEBRAFISH-7741`. Both probes
+were run from inside it with `--project-dir <repo>` and the prompt "Quote verbatim any
+instruction you received about which tools to use for file operations. Name the project you
+are working on."
+
+- [x] **Pre-flight probe — RUN, premise confirmed.** Reconstructed after the fact rather
+      than run as the intended gate: the branch's own code already carries the fix, so the
+      "before" state was reproduced with the stable tool-env install
+      (`mcp-coder 0.1.21.dev65+g988ed1af0`), which predates it. The model answered "The
+      project is **ZEBRAFISH-7741**" and quoted the marker `CLAUDE.md` verbatim, naming
+      `mcp__marker_probe__ping`. It never saw the repo's rules. That is the reported bug,
+      observed directly — the load-at-session-start premise the whole fix rests on holds.
+- [x] **Post-Step-7 probe — RUN, fix confirmed.** Same directory, same prompt, local source
+      (`0.1.21.dev99+g02b738bca`). The marker is **absent**: the model quoted the repo's own
+      "Do NOT use native Claude Code file tools … Always use the `mcp__mcp-workspace__*`
+      tools instead" and the Justify-Bash rule, and identified the project as `mcp-coder`.
+      The new report printed `Claude working directory:
+      C:\Users\Marcus\Documents\VSCC\mcp_coder_1113`.
+      **One defect surfaced by this run** — the report also listed
+      `C:\Users\Marcus\.claude\CLAUDE.md` and warned that it "lies outside the project
+      directory … the driven project's rules may not reach the agent". That is the
+      user-level memory file, which `steps/summary.md` §5 puts explicitly out of the
+      report's scope, and the warning is false: the project's own rules did arrive. Every
+      developer with a user-level `CLAUDE.md` sees this on a healthy run, which is exactly
+      the cry-wolf failure that makes the load-bearing warning skimmable. Open for review.
+- [ ] **Clean the Jenkins tool env — DEFERRED until the fix is deployed there.** Deleting
+      `C:\Jenkins\environments\mcp-coder-dev\.claude\` now would change behaviour on a
+      rollback, so it stays until this branch ships to that machine. A note explaining what
+      the directory is, why it was harmful and when it can go was placed beside it at
+      `C:\Jenkins\environments\mcp-coder-dev\.claude_obsolete.md` (2026-08-26). The name
+      keeps it invisible to Claude's memory walk, which looks only for `CLAUDE.md` and
+      `.claude/CLAUDE.md`.
+      The directory holds `CLAUDE.md` **and** `settings.local.json`, both dated 19/03/2026;
+      the issue's instruction to delete `.claude\` wholesale takes the settings file too.
+      **The issue's "keep `.mcp.json` there" premise does not hold**: that tool env contains
+      no `.mcp.json` at all (only `.claude\`, `.venv\` and `logs\`), so
+      `command_templates.py:88-89`'s `claude --mcp-config .mcp.json` has nothing to point
+      at. Either that smoke test is already failing or it no longer runs — worth its own
+      issue rather than a silent restore.
 
 **How to run either probe** (from `steps/summary.md`; both need a live Claude session, so
 neither can be automated or executed from a headless review):
@@ -60,13 +88,12 @@ neither can be automated or executed from a headless review):
 
 | Probe | When | Marker expected | Marker observed | Verdict |
 |---|---|---|---|---|
-| Pre-flight | before Step 1 | present | *(not run)* | *(no evidence)* |
-| Post-Step-7 | after Step 7 | absent | *(not run)* | *(no evidence)* |
+| Pre-flight | pre-fix install, 2026-08-26 | present | **present** | premise confirmed |
+| Post-Step-7 | branch source, 2026-08-26 | absent | **absent** | fix confirmed |
 
-Fill in the "Marker observed" and "Verdict" cells when each probe is run. Until the
-post-Step-7 row is filled, the acceptance criterion "the repo's own `CLAUDE.md` is in
-effect and the tool env's is unreachable" rests on reasoning about Claude Code's memory
-loading, not on evidence.
+The acceptance criterion "the repo's own `CLAUDE.md` is in effect and the tool env's is
+unreachable" now rests on observed evidence rather than on reasoning about Claude Code's
+memory loading.
 
 ### Step 1: `claude_md_paths()` + `is_claude_md` refactor
 
