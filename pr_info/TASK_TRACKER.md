@@ -506,5 +506,10 @@ Detail: [step_7.md](./steps/step_7.md) — architecture, cli-reference, environm
 
 ## Pull Request
 
-- [ ] PR review
+- [x] PR review — rounds 1-6, logged in
+      [implementation_review_log_1.md](./implementation_review_log_1.md) (rounds 1-3) and
+      [implementation_review_log_2.md](./implementation_review_log_2.md) (rounds 4-6, with
+      Final Status). Round 6 found no code defects. Still open, none blocking the code:
+      rebase onto `origin/main`; #1113's own text unamended for two deliberate deviations;
+      Jenkins tool env cleanup deferred to deployment.
 - [ ] PR summary
