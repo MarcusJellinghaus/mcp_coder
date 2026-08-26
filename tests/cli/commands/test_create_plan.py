@@ -150,7 +150,7 @@ class TestCreatePlanExecutionDir:
     @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
     @patch("mcp_coder.cli.commands.create_plan.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_plan.parse_llm_method_from_args")
-    def test_default_execution_dir_uses_cwd(
+    def test_default_execution_dir_uses_project_dir(
         self,
         mock_parse_llm: MagicMock,
         mock_resolve_llm: MagicMock,
@@ -159,7 +159,7 @@ class TestCreatePlanExecutionDir:
         mock_resolve_exec: MagicMock,
         mock_resolve_flags: MagicMock,
     ) -> None:
-        """Test default execution_dir should use current working directory."""
+        """No --execution-dir: execution_dir comes from --project-dir, not the cwd."""
         project_dir = Path("/test/project")
         execution_dir = Path.cwd()
         mock_resolve_project.return_value = project_dir

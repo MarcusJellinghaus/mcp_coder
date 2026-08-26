@@ -499,7 +499,7 @@ class TestCreatePrExecutionDir:
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
-    def test_default_execution_dir_uses_cwd(
+    def test_default_execution_dir_uses_project_dir(
         self,
         mock_parse_llm: Mock,
         mock_resolve_llm: Mock,
@@ -508,7 +508,7 @@ class TestCreatePrExecutionDir:
         mock_resolve_exec: Mock,
         mock_resolve_flags: Mock,
     ) -> None:
-        """Test default execution_dir should use current working directory."""
+        """No --execution-dir: execution_dir comes from --project-dir, not the cwd."""
         project_dir = Path("/test/project")
         execution_dir = Path.cwd()
         mock_resolve_project.return_value = project_dir
