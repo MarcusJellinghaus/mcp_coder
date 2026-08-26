@@ -112,6 +112,43 @@ For local development: discovers the tool environment the same way as `claude.ba
 
 `reinstall_local.bat` (and `reinstall_local.sh`) delegates to the unified entry point at `tools/install.py`, invoked as `tools\install.bat <repo> --source local --local-path <repo> --extras dev --refresh`. The installer reads `[tool.mcp-coder.install-from-github]` from `pyproject.toml` to override sibling MCP packages with their GitHub HEAD versions. The same `install.py` script is also used elsewhere in this repo — see `tools/install.py` for the full design. (Note: install.py installs Python packages only; callers that need `.mcp.json` + `.claude/` in the target stage those themselves.)
 
+## The Working Directory Selects the Agent's Rules
+
+Environment variables are not the only thing an entry point hands to Claude. **The working
+directory it starts in decides which coding rules it obeys.**
+
+- Claude Code discovers `CLAUDE.md` — and project-level `.claude/settings.json` /
+  `settings.local.json` — by walking up from **its own working directory**. No flag points it
+  somewhere else; cwd is the only lever.
+- mcp-coder therefore launches Claude with `cwd = project_dir`: the driven project's rules,
+  never the tool env's. `--execution-dir` still overrides this, but is deprecated (removal
+  tracked in #1132).
+
+**The trap this removes.** The Jenkins command templates run `cd %VENV_BASE_DIR%`
+(`command_templates.py:49` and five siblings at `:242`, `:280`, `:318`, `:356`, `:394`) for one
+reason: to activate a virtualenv. Before #1113, that shell-plumbing step *also* silently chose
+whose coding rules the agent followed, because the Claude subprocess inherited the shell's
+directory. Two unrelated concerns — which Python runs, and which rules apply — were coupled
+through one inherited variable. They are now decoupled: the virtualenv still comes from the
+shell, the rules come from `--project-dir`.
+
+**What belongs in the tool env, and what does not:**
+
+| File in the tool env | Verdict |
+|---|---|
+| `.mcp.json` | **Keep.** The coordinator smoke test (`command_templates.py:88-89`) runs `claude --mcp-config .mcp.json` from that directory. |
+| `.claude/CLAUDE.md` | **Should not exist.** Driven projects never read it; it only misleads whoever inspects the machine next. |
+
+No code in this repo creates either — `tools/install.py:17` installs Python packages only and
+leaves staging to the caller. Since the fix a stale tool-env `CLAUDE.md` is harmless; deleting
+it stops it being mistaken for the rules in force.
+
+Every run now reports the Claude working directory and the project instructions files found by
+that upward walk, warning only when **none** of them lies inside `project_dir`. Individual files
+outside it are normal: the walk reaches every ancestor, so every ancestor hit — including
+user-level `~/.claude/CLAUDE.md` — is outside by definition. See
+[Execution Context Management](../architecture/architecture.md#execution-context-management).
+
 ## Calling mcp-coder Explicitly
 
 After `claude.bat` or `claude_local.bat` sets up PATH, bare `mcp-coder` resolves to the **tool env** (Jenkins) copy — the stable installed version.

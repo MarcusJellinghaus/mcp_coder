@@ -29,6 +29,8 @@ from ...prompts.prompt_loader import (
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
 from ...utils.user_config import verify_config
 from ..utils import (
+    find_context_claude_md,
+    is_outside_project_dir,
     resolve_claude_settings_path,
     resolve_llm_method,
     resolve_mcp_config_path,
@@ -196,6 +198,36 @@ def execute_verify(args: argparse.Namespace) -> int:
         prompt_lines.append(_format_row(label, marker, value, indent=2))
     mode = prompt_config.claude_system_prompt_mode
     prompt_lines.append(_format_row("Claude mode", symbols["success"], mode, indent=2))
+    # Reporting only - the rows below must never feed verify_exit_code.
+    # Walk from project_dir: that is where verify runs Claude, at both of its
+    # LLM call sites.
+    prompt_lines.append(
+        _format_row("Claude cwd", symbols["success"], str(project_dir), indent=2)
+    )
+    context_hits = find_context_claude_md(project_dir)
+    if not context_hits:
+        # A project may legitimately have none - state the fact, do not warn.
+        prompt_lines.append(
+            _format_row(
+                "Project instructions", symbols["success"], "none found", indent=2
+            )
+        )
+    else:
+        # Per-row annotation, not a verdict: an ancestor file is outside
+        # project_dir by definition. The run-time report warns only when no
+        # file at all lies inside it.
+        for index, hit in enumerate(context_hits):
+            outside = is_outside_project_dir(hit, project_dir)
+            prompt_lines.append(
+                _format_row(
+                    # Continuation rows carry an empty label; _format_row pads
+                    # it so the value column stays aligned.
+                    "Project instructions" if index == 0 else "",
+                    symbols["warning"] if outside else symbols["success"],
+                    f"{hit} (outside project directory)" if outside else str(hit),
+                    indent=2,
+                )
+            )
     if active_provider == "claude" and prompt_config.project_prompt:
         prompt_path = get_project_prompt_path(project_dir)
         if is_claude_md(prompt_path, str(project_dir)):

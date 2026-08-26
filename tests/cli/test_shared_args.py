@@ -198,8 +198,8 @@ class TestCanonicalWordingConstants:
     def test_execution_dir_wording(self) -> None:
         """Execution-dir constant matches the settled canonical wording."""
         assert _EXECUTION_DIR_HELP == (
-            "Execution directory: where Claude subprocess runs (config discovery). "
-            "Default: current directory"
+            "DEPRECATED (removal tracked in #1132): execution directory: "
+            "where Claude subprocess runs. Default: the project directory"
         )
 
 

@@ -43,7 +43,9 @@ def execute_create_pr(args: argparse.Namespace) -> int:
         enable_crash_logging(project_dir, "create-pr")
 
         # Resolve execution directory
-        execution_dir = resolve_execution_dir(args.execution_dir)
+        execution_dir = resolve_execution_dir(
+            args.execution_dir, project_dir=project_dir
+        )
 
         # Log both directories for clarity
         logger.debug(f"Project directory: {project_dir}")

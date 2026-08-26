@@ -7,19 +7,29 @@ for parameter parsing and conversion.
 import argparse
 import logging
 import os
+import warnings
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import get_repository_identifier
 
 from ..llm.session import parse_llm_method
 from ..llm.types import SUPPORTED_PROVIDERS
+from ..prompts.prompt_loader import claude_md_paths
+from ..utils.log_utils import OUTPUT
 from ..utils.user_config import find_repo_section_by_url, get_config_values
 
 logger = logging.getLogger(__name__)
 
+# Worded so it does not claim to be a complete account of Claude's memory
+# chain: the walk does not expand @import directives.
+_CONTEXT_LABEL = "Project instructions (Claude cwd walk):"
+
 __all__ = [
+    "find_context_claude_md",
+    "is_outside_project_dir",
     "log_command_startup",
     "parse_llm_method_from_args",
+    "report_context_root",
     "resolve_issue_interaction_flags",
     "resolve_llm_method",
     "resolve_mcp_config_path",
@@ -344,22 +354,125 @@ def resolve_claude_settings_path(
     return None
 
 
-def resolve_execution_dir(execution_dir: str | None) -> Path:
+def find_context_claude_md(start: Path, stop_at: Path | None = None) -> list[Path]:
+    """Find the CLAUDE.md files Claude's cwd-upward walk would load.
+
+    Walks from ``start`` upward and returns every existing candidate at EVERY
+    ancestor level, because Claude Code loads the whole chain rather than the
+    nearest file. Reporting only the nearest level would hide ancestor files
+    that are equally in effect.
+
+    The user-level ``~/.claude/CLAUDE.md`` is therefore included whenever
+    ``start`` sits under the home directory - which is the normal case, and
+    matches what Claude actually loads. Still not a complete account of
+    Claude's memory chain: ``@import`` directives are not expanded.
+
+    Args:
+        start: Directory to start the walk from.
+        stop_at: Last directory to examine, inclusive. ``None`` (production
+            default) walks to the filesystem root. A test-only boundary, so
+            "found nothing" can be asserted without depending on directories
+            above a temporary path.
+
+    Returns:
+        Resolved paths, nearest level first, or [] if none exist. Within one
+        level the candidate order is a membership list, not a precedence rule.
+    """
+    hits: list[Path] = []
+    try:
+        current = start.resolve()
+        boundary = stop_at.resolve() if stop_at is not None else None
+
+        while True:
+            hits.extend(p.resolve() for p in claude_md_paths(current) if p.exists())
+
+            # Checked after collecting, so the boundary is examined inclusively.
+            if boundary is not None and current == boundary:
+                break
+            if current.parent == current:
+                break
+            current = current.parent
+    except OSError:
+        # A permission error mid-walk must not crash a workflow - report what
+        # was found below it rather than nothing.
+        pass
+
+    return hits
+
+
+def is_outside_project_dir(path: Path, project_dir: str | Path | None) -> bool:
+    """Return True when ``path`` does not lie inside ``project_dir``.
+
+    The single definition of "outside" shared by the run-time report and the
+    verify report. Always False when project_dir is None - with no anchor there
+    is nothing to be outside of.
+    """
+    if project_dir is None:
+        return False
+
+    try:
+        return not path.resolve().is_relative_to(Path(project_dir).resolve())
+    except OSError:
+        # Do not warn about a path we could not resolve.
+        return False
+
+
+def report_context_root(execution_dir: Path, project_dir: str | Path | None) -> None:
+    """Log the Claude working directory and the project instructions in effect.
+
+    Logs at OUTPUT level. Warns when no resolved file lies inside project_dir.
+    """
+    logger.log(OUTPUT, "Claude working directory: %s", execution_dir)
+
+    hits = find_context_claude_md(execution_dir)
+    if not hits:
+        logger.log(OUTPUT, "%s none found", _CONTEXT_LABEL)
+        return
+
+    for hit in hits:
+        logger.log(OUTPUT, "%s %s", _CONTEXT_LABEL, hit)
+
+    # One warning per run, keyed on the absence of an inside hit rather than on
+    # each outside one. The walk reaches every ancestor and every ancestor is
+    # outside project_dir by definition, so a per-hit warning fires on almost
+    # every run. Having no inside hit at all is the December drift itself.
+    if all(is_outside_project_dir(hit, project_dir) for hit in hits):
+        logger.warning(
+            "No project instructions file lies inside the project directory "
+            "(project: %s) — the agent's rules come only from outside it: %s. "
+            "Either the driven project has no CLAUDE.md of its own, or Claude "
+            "is not running inside it.",
+            project_dir,
+            ", ".join(str(hit) for hit in hits),
+        )
+
+
+def resolve_execution_dir(
+    execution_dir: str | None,
+    project_dir: str | Path | None = None,
+) -> Path:
     """Resolve execution directory path to absolute Path object.
 
     Args:
-        execution_dir: Optional execution directory path
-                      - None: Returns current working directory
+        execution_dir: Optional execution directory path (deprecated, see #1132)
+                      - None: Falls back to project_dir, or CWD if not given
                       - Absolute path: Validates and returns as Path
                       - Relative path: Resolves relative to CWD
+        project_dir: Optional project directory, used as the default execution
+                     directory. Resolved but deliberately NOT existence-checked -
+                     each command validates its own project_dir and owns the
+                     error message for a bad one.
 
     Returns:
         Path: Absolute path to execution directory
 
     Raises:
-        ValueError: If specified directory doesn't exist
+        ValueError: If a specified execution_dir doesn't exist
 
     Examples:
+        >>> resolve_execution_dir(None, project_dir='/my/project')
+        PosixPath('/my/project')
+
         >>> resolve_execution_dir(None)
         PosixPath('/current/working/dir')
 
@@ -370,7 +483,16 @@ def resolve_execution_dir(execution_dir: str | None) -> Path:
         PosixPath('/current/working/dir/relative')
     """
     if execution_dir is None:
-        return Path.cwd()
+        resolved = Path.cwd() if project_dir is None else Path(project_dir).resolve()
+        report_context_root(resolved, project_dir)
+        return resolved
+
+    deprecation_message = (
+        "--execution-dir is deprecated; the project directory is used as the "
+        "execution directory by default. Removal is tracked in #1132."
+    )
+    warnings.warn(deprecation_message, DeprecationWarning, stacklevel=2)
+    logger.warning(deprecation_message)
 
     path = Path(execution_dir)
 
@@ -387,4 +509,6 @@ def resolve_execution_dir(execution_dir: str | None) -> Path:
         )
 
     logger.debug(f"Resolved execution directory: {execution_dir} -> {path}")
-    return path.resolve()
+    resolved = path.resolve()
+    report_context_root(resolved, project_dir)
+    return resolved

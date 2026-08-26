@@ -31,8 +31,8 @@ _SETTINGS_HELP = (
     "Overrides Claude's cwd-based settings discovery."
 )
 _EXECUTION_DIR_HELP = (
-    "Execution directory: where Claude subprocess runs (config discovery). "
-    "Default: current directory"
+    "DEPRECATED (removal tracked in #1132): execution directory: "
+    "where Claude subprocess runs. Default: the project directory"
 )
 
 

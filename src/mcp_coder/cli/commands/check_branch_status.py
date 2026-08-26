@@ -188,6 +188,12 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
 
+        # Hoisted out of the --fix block below so the resolver's context report
+        # happens once per run, not only on runs that call an LLM.
+        execution_dir = resolve_execution_dir(
+            args.execution_dir, project_dir=project_dir
+        )
+
         # PR discovery phase (before CI waiting)
         pr_number: Optional[int] = None
         pr_url: Optional[str] = None
@@ -328,7 +334,6 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             settings_file = resolve_claude_settings_path(
                 args.settings, project_dir=args.project_dir
             )
-            execution_dir = resolve_execution_dir(args.execution_dir)
 
             # Attempt fixes with retry
             fix_success = _run_auto_fixes(

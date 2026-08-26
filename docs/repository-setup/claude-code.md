@@ -193,13 +193,15 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 ### Pinning the settings file with `--settings`
 
 Claude Code normally discovers `.claude/settings.local.json` (and
-`.claude/settings.json`) from its current working directory. When the Claude
-subprocess runs outside the project root — for example because
-`--execution-dir` differs from `--project-dir`, or the workflow was invoked
-from a parent directory — that discovery picks the wrong file or none at
-all. The symptom is silent: permissions look enabled in your repo but
-Claude prompts for them anyway, or `enabledMcpjsonServers` / `hooks` /
-`model` from your repo's settings are ignored.
+`.claude/settings.json`) by walking up from its own working directory. That
+working directory is `--project-dir` by default, so the discovery normally
+lands in your repo — the shell you launched from no longer matters. The one
+remaining way to run the subprocess outside the project root is passing
+`--execution-dir` explicitly, which is deprecated (removal tracked in #1132).
+In that case discovery picks the wrong file or none at all, and the symptom is
+silent: permissions look enabled in your repo but Claude prompts for them
+anyway, or `enabledMcpjsonServers` / `hooks` / `model` from your repo's
+settings are ignored.
 
 mcp-coder commands that drive Claude Code accept `--settings <path>` to
 forward the settings file explicitly via Claude's native `--settings` flag,
@@ -220,6 +222,28 @@ With no `--settings` argument, mcp-coder auto-detects
 `MCP_CODER_CLAUDE_SETTINGS` or `[claude] default_settings_path` in
 `config.toml`. See [Configuration Guide](../configuration/config.md#claude)
 for the full resolution chain.
+
+#### Side effect: your repo's `settings.json` is now also discovered
+
+`--settings` pins **one** file, and mcp-coder passes only one — its
+auto-detection prefers `settings.local.json` when both exist. Since the
+Claude subprocess now runs with `cwd = project_dir`, Claude *additionally*
+discovers `<project_dir>/.claude/settings.json` and
+`.claude/settings.local.json` through its own cwd walk and **merges** them
+with the pinned file.
+
+The practical consequence: a project holding **both** files now activates the
+shared, checked-in `settings.json` that was previously inert whenever the
+subprocess ran elsewhere. This is intended — the repo's settings are the ones
+that should apply to the repo's code — but it is a behaviour change worth
+knowing before rollout. If a repo's `settings.json` contains entries you do
+not want in effect (stale `hooks`, a pinned `model`, permissive `permissions`),
+review it now rather than after the first surprising run.
+
+The same anchoring shift applies to the copilot provider: its
+`_read_settings_allow` (`llm/providers/copilot/copilot_cli.py:230-241`) reads
+`<execution_dir>/.claude/settings.local.json`, which is now the driven
+project's file rather than the launching shell's.
 
 ## Architecture Documentation
 

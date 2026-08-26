@@ -60,7 +60,7 @@ class TestExecuteCreatePlan:
         # Assert
         assert result == 0
         mock_resolve.assert_called_once_with("/test/project")
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=test_project_dir)
         mock_parse.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(mock_args, test_project_dir)
         mock_workflow.assert_called_once_with(
@@ -150,7 +150,7 @@ class TestCreatePlanExecutionDir:
     @patch("mcp_coder.workflows.create_plan.run_create_plan_workflow")
     @patch("mcp_coder.cli.commands.create_plan.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_plan.parse_llm_method_from_args")
-    def test_default_execution_dir_uses_cwd(
+    def test_default_execution_dir_uses_project_dir(
         self,
         mock_parse_llm: MagicMock,
         mock_resolve_llm: MagicMock,
@@ -159,7 +159,7 @@ class TestCreatePlanExecutionDir:
         mock_resolve_exec: MagicMock,
         mock_resolve_flags: MagicMock,
     ) -> None:
-        """Test default execution_dir should use current working directory."""
+        """No --execution-dir: execution_dir comes from --project-dir, not the cwd."""
         project_dir = Path("/test/project")
         execution_dir = Path.cwd()
         mock_resolve_project.return_value = project_dir
@@ -182,7 +182,7 @@ class TestCreatePlanExecutionDir:
         result = execute_create_plan(args)
 
         assert result == 0
-        mock_resolve_exec.assert_called_once_with(None)
+        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
         mock_run_workflow.assert_called_once_with(
             123, project_dir, "claude", None, None, str(execution_dir), False, False
         )
@@ -228,7 +228,9 @@ class TestCreatePlanExecutionDir:
         result = execute_create_plan(args)
 
         assert result == 0
-        mock_resolve_exec.assert_called_once_with(str(execution_dir))
+        mock_resolve_exec.assert_called_once_with(
+            str(execution_dir), project_dir=project_dir
+        )
         mock_run_workflow.assert_called_once_with(
             123, project_dir, "claude", None, None, str(execution_dir), False, False
         )
