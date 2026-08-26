@@ -131,9 +131,10 @@ class TestVerifyReportsProjectInstructions:
     ) -> None:
         """Claude loads the whole chain, so verify reports the whole chain.
 
-        Were the walk to stop at the nearest level, a project holding its own
-        CLAUDE.md would silence the outside-project_dir warning entirely - the
-        common case, and the drift this report exists to catch.
+        Verify annotates each row with whether that file lies inside the
+        project - informational, per row. The run-time report is the one that
+        warns, and only when *no* file lies inside project_dir, so a healthy
+        project like this one draws no warning there.
         """
         stale = tmp_path / "CLAUDE.md"
         stale.write_text("call mcp__filesystem__*", encoding="utf-8")

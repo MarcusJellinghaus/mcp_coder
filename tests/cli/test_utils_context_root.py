@@ -183,7 +183,7 @@ class TestContextRootReporting:
 
         The finder is stubbed because report_context_root deliberately has no
         stop_at boundary; the real walk climbs past tmp_path into directories
-        no test controls, and a CLAUDE.md up there would add a second warning.
+        no test controls, and a CLAUDE.md up there would decide the assertion.
         The walk itself is covered above, with stop_at.
         """
         tool_env = tmp_path / "tool_env"
@@ -204,32 +204,63 @@ class TestContextRootReporting:
         assert len(warnings_logged) == 1
         assert str(stale.resolve()) in warnings_logged[0].getMessage()
 
-    def test_report_warns_for_an_ancestor_hit_above_the_project(
+    def test_report_warns_when_every_hit_is_outside_project_dir(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """A project with its own CLAUDE.md must not mask a stale one above it.
+        """Hits exist, but none of them belongs to the driven project.
 
-        Claude loads both files, so both are reported and the ancestor - which
-        lies outside project_dir - still draws the warning.
+        One warning for the run, not one per file: the failure is the absence
+        of an inside hit, which is a property of the whole chain.
+        """
+        tool_env = tmp_path / "tool_env"
+        tool_env.mkdir()
+        stale = tool_env / "CLAUDE.md"
+        stale.write_text("call mcp__filesystem__*", encoding="utf-8")
+        user_level = tmp_path / "CLAUDE.md"
+        user_level.write_text("user rules", encoding="utf-8")
+        repo = tmp_path / "repo"
+        repo.mkdir()
+
+        with patch(
+            "mcp_coder.cli.utils.find_context_claude_md",
+            return_value=[stale.resolve(), user_level.resolve()],
+        ):
+            with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
+                report_context_root(tool_env, repo)
+
+        warnings_logged = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings_logged) == 1
+        message = warnings_logged[0].getMessage()
+        assert str(stale.resolve()) in message
+        assert str(user_level.resolve()) in message
+
+    def test_report_does_not_warn_when_an_ancestor_hit_lies_outside(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A project holding its own CLAUDE.md is the healthy case.
+
+        The walk reaches every ancestor, and every ancestor is outside
+        project_dir by definition, so warning per outside hit would fire on
+        almost every run. The project's own file arriving is what matters;
+        both files are still reported.
         """
         repo = tmp_path / "repo"
         repo.mkdir()
         own = repo / "CLAUDE.md"
         own.write_text("project rules", encoding="utf-8")
-        stale = tmp_path / "CLAUDE.md"
-        stale.write_text("call mcp__filesystem__*", encoding="utf-8")
+        ancestor = tmp_path / "CLAUDE.md"
+        ancestor.write_text("user rules", encoding="utf-8")
 
         with patch(
             "mcp_coder.cli.utils.find_context_claude_md",
-            return_value=[own.resolve(), stale.resolve()],
+            return_value=[own.resolve(), ancestor.resolve()],
         ):
             with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
                 report_context_root(repo, repo)
 
-        warnings_logged = [r for r in caplog.records if r.levelno >= logging.WARNING]
-        assert len(warnings_logged) == 1
-        assert str(stale.resolve()) in warnings_logged[0].getMessage()
+        assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
         assert str(own.resolve()) in caplog.text
+        assert str(ancestor.resolve()) in caplog.text
 
     def test_report_does_not_warn_when_hit_is_inside_project_dir(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture

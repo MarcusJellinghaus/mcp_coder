@@ -58,9 +58,11 @@ which `CLAUDE.md` it loaded — a wrong memory file and a right one are indistin
 outside the process, which is why this drifted silently since December.
 
 Three new functions in `cli/utils.py` report, once per run at `OUTPUT` level, the Claude working
-directory and the cwd-upward `CLAUDE.md` walk, **warning when any resolved file lies outside
-`project_dir`**. That warning is the line that would have caught this in December; a bare
-resolved path is too easy to skim past.
+directory and the cwd-upward `CLAUDE.md` walk, **warning when none of the resolved files lies
+inside `project_dir`**. That warning is the line that would have caught this in December; a bare
+resolved path is too easy to skim past. The predicate is the absence of an inside hit rather than
+the presence of an outside one: the walk reaches every ancestor, so individual outside files are
+the norm and warning on each would cry wolf on almost every run.
 
 `is_outside_project_dir` is the **single** definition of "outside", shared by the run-time report
 (Step 3) and the verify report (Step 5) so the two cannot drift on the one rule the issue calls
@@ -110,12 +112,14 @@ modules import it.
 ### 5. What the report does and does not claim
 
 Scope is the cwd-upward walk only: `<dir>/CLAUDE.md` and `<dir>/.claude/CLAUDE.md`, up to the
-filesystem root. **Not** user-level `~/.claude/CLAUDE.md`, **not** `@import` expansion. The
-label must be worded so it does not claim to be a complete account of Claude's memory chain.
+filesystem root. That **includes** user-level `~/.claude/CLAUDE.md` whenever the working
+directory sits under the home directory, because Claude loads it and reporting what Claude
+actually loads is the point. It does **not** expand `@import` directives, so the label must
+still be worded so it does not claim to be a complete account of Claude's memory chain.
 
-At the nearest ancestor level that has any hit, **every** hit there is named — not one picked
-by precedence. The ordering inside `is_claude_md` is a membership test and was never
-load-bearing; treating it as precedence would invent a fact.
+**Every** hit at **every** ancestor level is named — Claude loads the whole chain, not the
+nearest file — and never one picked by precedence. The ordering inside `is_claude_md` is a
+membership test and was never load-bearing; treating it as precedence would invent a fact.
 
 ### 6. Side effects that are intended, not regressions
 

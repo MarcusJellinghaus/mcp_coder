@@ -21,7 +21,7 @@ from ..utils.user_config import find_repo_section_by_url, get_config_values
 logger = logging.getLogger(__name__)
 
 # Worded so it does not claim to be a complete account of Claude's memory
-# chain: the walk covers neither ~/.claude/CLAUDE.md nor @import expansion.
+# chain: the walk does not expand @import directives.
 _CONTEXT_LABEL = "Project instructions (Claude cwd walk):"
 
 __all__ = [
@@ -359,12 +359,13 @@ def find_context_claude_md(start: Path, stop_at: Path | None = None) -> list[Pat
 
     Walks from ``start`` upward and returns every existing candidate at EVERY
     ancestor level, because Claude Code loads the whole chain rather than the
-    nearest file. Stopping at the nearest level would silence the
-    outside-project_dir warning for any project that has a CLAUDE.md of its
-    own - the common case, and the one this reporting exists to police.
+    nearest file. Reporting only the nearest level would hide ancestor files
+    that are equally in effect.
 
-    Not a complete account of Claude's memory chain: no ~/.claude/CLAUDE.md,
-    no @import expansion.
+    The user-level ``~/.claude/CLAUDE.md`` is therefore included whenever
+    ``start`` sits under the home directory - which is the normal case, and
+    matches what Claude actually loads. Still not a complete account of
+    Claude's memory chain: ``@import`` directives are not expanded.
 
     Args:
         start: Directory to start the walk from.
@@ -419,7 +420,7 @@ def is_outside_project_dir(path: Path, project_dir: str | Path | None) -> bool:
 def report_context_root(execution_dir: Path, project_dir: str | Path | None) -> None:
     """Log the Claude working directory and the project instructions in effect.
 
-    Logs at OUTPUT level. Warns when a resolved file lies outside project_dir.
+    Logs at OUTPUT level. Warns when no resolved file lies inside project_dir.
     """
     logger.log(OUTPUT, "Claude working directory: %s", execution_dir)
 
@@ -431,15 +432,19 @@ def report_context_root(execution_dir: Path, project_dir: str | Path | None) -> 
     for hit in hits:
         logger.log(OUTPUT, "%s %s", _CONTEXT_LABEL, hit)
 
-    for hit in hits:
-        if is_outside_project_dir(hit, project_dir):
-            logger.warning(
-                "Project instructions file lies outside the project directory: "
-                "%s (project: %s) — the driven project's rules may not reach "
-                "the agent",
-                hit,
-                project_dir,
-            )
+    # One warning per run, keyed on the absence of an inside hit rather than on
+    # each outside one. The walk reaches every ancestor and every ancestor is
+    # outside project_dir by definition, so a per-hit warning fires on almost
+    # every run. Having no inside hit at all is the December drift itself.
+    if all(is_outside_project_dir(hit, project_dir) for hit in hits):
+        logger.warning(
+            "No project instructions file lies inside the project directory "
+            "(project: %s) — the agent's rules come only from outside it: %s. "
+            "Either the driven project has no CLAUDE.md of its own, or Claude "
+            "is not running inside it.",
+            project_dir,
+            ", ".join(str(hit) for hit in hits),
+        )
 
 
 def resolve_execution_dir(

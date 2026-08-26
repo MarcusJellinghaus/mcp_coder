@@ -163,10 +163,14 @@ mcp-coder implement --project-dir /path/to/project --execution-dir /home/user/wo
 ```
 
 **Reporting**: each run names the Claude working directory and every project instructions file
-found by the cwd-upward walk, and **warns when one lies outside `project_dir`**. `mcp-coder
-verify` reports the same in its PROMPTS section. Scope of the walk is `<dir>/CLAUDE.md` and
-`<dir>/.claude/CLAUDE.md` up to the filesystem root — not user-level `~/.claude/CLAUDE.md`, and
-not `@import` expansion.
+found by the cwd-upward walk, and **warns when none of them lies inside `project_dir`** — the
+drift this fix exists to catch. A single file outside `project_dir` is normal: the walk reaches
+every ancestor, and every ancestor is outside by definition. `mcp-coder verify` reports the same
+in its PROMPTS section, annotating each row with whether it lies inside the project. Scope of the
+walk is `<dir>/CLAUDE.md` and `<dir>/.claude/CLAUDE.md` up to the filesystem root, so it includes
+user-level `~/.claude/CLAUDE.md` whenever the directory sits under the home directory — matching
+what Claude loads. It does **not** expand `@import` directives, so it is still not a complete
+account of Claude's memory chain.
 
 **Benefits**:
 - Project instructions, MCP config and Claude settings all resolve against the same anchor

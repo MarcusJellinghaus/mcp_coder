@@ -213,6 +213,9 @@ def execute_verify(args: argparse.Namespace) -> int:
             )
         )
     else:
+        # Per-row annotation, not a verdict: an ancestor file is outside
+        # project_dir by definition. The run-time report warns only when no
+        # file at all lies inside it.
         for index, hit in enumerate(context_hits):
             outside = is_outside_project_dir(hit, project_dir)
             prompt_lines.append(

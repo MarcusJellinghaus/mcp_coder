@@ -188,14 +188,8 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         # Resolve project directory with validation
         project_dir = resolve_project_dir(args.project_dir)
 
-        # Hoisted out of the --fix block below so the context report the
-        # resolver emits happens once per run, not only on runs that call an
-        # LLM. Consequence, accepted: a bad --execution-dir now also fails
-        # read-only runs, via the boundary handler below (exit code 2).
-        # Direct attribute access (not getattr) is deliberate here, matching
-        # project_dir/fix above: add_execution_dir_arg on the parser makes the
-        # attribute always present, so a missing one signals a hand-built
-        # namespace that skipped the parser and should surface loudly.
+        # Hoisted out of the --fix block below so the resolver's context report
+        # happens once per run, not only on runs that call an LLM.
         execution_dir = resolve_execution_dir(
             args.execution_dir, project_dir=project_dir
         )
