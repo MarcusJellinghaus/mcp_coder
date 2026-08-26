@@ -24,7 +24,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 > **Manual actions (no commits).** See
 > [summary.md](./steps/summary.md#manual-actions-no-commits--schedule-around-the-code-steps).
 > **Before Step 1:** run the pre-flight marker probe — it gates the whole implementation.
-> **After Step 7:** repeat the probe, and clean the Jenkins tool env `.claude\` (keep `.mcp.json`).
+> **After Step 7:** repeat the probe. Cleaning the Jenkins tool env waits for deployment —
+> see [Post-merge](#post-merge--not-implementation-work).
 
 ### Manual acceptance evidence (requirement 1 of #1113)
 
@@ -61,20 +62,9 @@ are working on."
       report's scope, and the warning is false: the project's own rules did arrive. Every
       developer with a user-level `CLAUDE.md` sees this on a healthy run, which is exactly
       the cry-wolf failure that makes the load-bearing warning skimmable. Open for review.
-- [ ] **Clean the Jenkins tool env — DEFERRED until the fix is deployed there.** Deleting
-      `C:\Jenkins\environments\mcp-coder-dev\.claude\` now would change behaviour on a
-      rollback, so it stays until this branch ships to that machine. A note explaining what
-      the directory is, why it was harmful and when it can go was placed beside it at
-      `C:\Jenkins\environments\mcp-coder-dev\.claude_obsolete.md` (2026-08-26). The name
-      keeps it invisible to Claude's memory walk, which looks only for `CLAUDE.md` and
-      `.claude/CLAUDE.md`.
-      The directory holds `CLAUDE.md` **and** `settings.local.json`, both dated 19/03/2026;
-      the issue's instruction to delete `.claude\` wholesale takes the settings file too.
-      **The issue's "keep `.mcp.json` there" premise does not hold**: that tool env contains
-      no `.mcp.json` at all (only `.claude\`, `.venv\` and `logs\`), so
-      `command_templates.py:88-89`'s `claude --mcp-config .mcp.json` has nothing to point
-      at. Either that smoke test is already failing or it no longer runs — worth its own
-      issue rather than a silent restore.
+Cleaning the Jenkins tool env is the third manual action from `summary.md`. It has moved to
+[Post-merge](#post-merge--not-implementation-work): it cannot be done from this branch, so
+counting it here would hold the task gate shut on something no commit can satisfy.
 
 **How to run either probe** (from `steps/summary.md`; both need a live Claude session, so
 neither can be automated or executed from a headless review):
@@ -513,3 +503,23 @@ Detail: [step_7.md](./steps/step_7.md) — architecture, cli-reference, environm
       rebase onto `origin/main`; #1113's own text unamended for two deliberate deviations;
       Jenkins tool env cleanup deferred to deployment.
 - [ ] PR summary
+
+## Post-merge — not implementation work
+
+Machine state, not code. Nothing on this branch can satisfy it, which is why it sits outside
+`## Tasks`.
+
+**Clean the Jenkins tool env — after this fix is deployed there.** Delete
+`C:\Jenkins\environments\mcp-coder-dev\.claude\`. Deleting it before deployment would change
+behaviour on a rollback, so it stays until then. A note explaining what the directory is, why
+it was harmful and when it can go sits beside it at
+`C:\Jenkins\environments\mcp-coder-dev\.claude_obsolete.md` (written 2026-08-26); that name
+keeps it invisible to Claude's memory walk, which looks only for `CLAUDE.md` and
+`.claude/CLAUDE.md`. The directory holds `CLAUDE.md` **and** `settings.local.json`, both dated
+19/03/2026 — deleting `.claude\` wholesale, as #1113 instructs, takes the settings file too.
+
+**The issue's "keep `.mcp.json` there" premise does not hold.** That tool env contains no
+`.mcp.json` at all — only `.claude\`, `.venv\` and `logs\` — so
+`command_templates.py:88-89`'s `claude --mcp-config .mcp.json` has nothing to point at. Either
+that smoke test is already failing or it no longer runs. Worth its own issue; do not silently
+restore a file that was never there.
