@@ -22,7 +22,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 - [x] [Step 1: tasks.json single task, no `code`, `focus: false`](./steps/step_1.md)
-- [ ] [Step 2: `launch_vscode` opens the status file with the window](./steps/step_2.md)
+- [x] [Step 2: `launch_vscode` opens the status file with the window](./steps/step_2.md)
 - [ ] [Step 3: Document the `ForegroundLockTimeout` mitigation](./steps/step_3.md)
 
 ## Pull Request

@@ -53,6 +53,7 @@ from .workspace import (
     create_vscode_task,
     create_working_folder,
     create_workspace_file,
+    get_status_file_path,
     get_working_folder_path,
     run_setup_commands,
     setup_git_repo,
@@ -81,7 +82,11 @@ def launch_vscode(
     workspace_file: Path,
     session_working_dir: Path | None = None,  # pylint: disable=unused-argument
 ) -> int:
-    """Launch VSCode with workspace file.
+    """Launch VSCode with workspace file and its status file.
+
+    The status file is opened alongside the workspace; its path comes from
+    `workspace.get_status_file_path` applied to the session folder derived from
+    `workspace_file` (convention owned by `workspace.get_workspace_file_path`).
 
     Args:
         workspace_file: Path to .code-workspace file
@@ -96,11 +101,17 @@ def launch_vscode(
     """
     is_windows = platform.system() == "Windows"
 
+    # The session folder sits beside the workspace file (see
+    # workspace.get_workspace_file_path). Opening the status file here - rather than
+    # from a folderOpen task - means `code` only runs when a window is being created
+    # anyway; on reload VS Code restores the tab itself. See issue #1008.
+    status_file = get_status_file_path(workspace_file.parent / workspace_file.stem)
+
     if is_windows:
         # On Windows, 'code' is a .cmd file which requires shell=True
-        return launch_process(f'code "{workspace_file}"', shell=True)
+        return launch_process(f'code "{workspace_file}" "{status_file}"', shell=True)
     else:
-        return launch_process(["code", str(workspace_file)])
+        return launch_process(["code", str(workspace_file), str(status_file)])
 
 
 def prepare_and_launch_session(

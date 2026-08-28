@@ -152,6 +152,19 @@ def get_workspace_file_path(workspace_base: str, folder_name: str) -> Path:
     return Path(workspace_base) / f"{folder_name}.code-workspace"
 
 
+STATUS_FILE_NAME = ".vscodeclaude_status.txt"
+
+
+def get_status_file_path(session_folder: Path) -> Path:
+    """Return the status-file path inside a session folder.
+
+    Single source of truth for the `<session folder>/.vscodeclaude_status.txt`
+    convention, shared by the writer (`create_status_file`) and the launcher
+    (`session_launch.launch_vscode`).
+    """
+    return session_folder / STATUS_FILE_NAME
+
+
 def get_working_folder_path(
     workspace_base: str,
     repo_name: str,
@@ -405,7 +418,7 @@ def update_gitignore(folder_path: Path) -> list[str]:
 
     # Fresh repo (no marker yet): write the full block for a clean comment
     # header. Otherwise append just the missing pattern lines.
-    if ".vscodeclaude_status.txt" in existing_lines:
+    if STATUS_FILE_NAME in existing_lines:
         addition = "\n".join(missing) + "\n"
     else:
         addition = GITIGNORE_ENTRY.lstrip("\n")
@@ -697,5 +710,5 @@ def create_status_file(
     )
 
     # Write status file
-    status_file = folder_path / ".vscodeclaude_status.txt"
+    status_file = get_status_file_path(folder_path)
     status_file.write_text(content, encoding="utf-8")
