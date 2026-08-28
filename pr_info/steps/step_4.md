@@ -66,8 +66,8 @@ Delete the `cwd: str` field (`:58`). Uses at `:131`, `:211`, `:251` become
 
 ### E1. Direct `prompt_llm` / `prompt_llm_stream` callers — retargeted in 4a
 
-Each passes `project_dir=` (the value it passed as `execution_dir`) plus the `inject_prompts`
-value from the mapping table below:
+Each passes `project_dir=` (the value it passed as `execution_dir`, except where the two rows
+below say otherwise) plus the `inject_prompts` value from the mapping table below:
 
 `cli/commands/prompt.py:150`, `:190`, `:213`; `cli/commands/verify.py:97-105` and `:498-507`;
 `icoder/services/llm_service.py:104-115`; `icoder/env_setup.py:112-119`;
@@ -76,6 +76,14 @@ value from the mapping table below:
 `workflows/implement/task_tracker_prep.py:78`; `workflows/create_plan/core.py:250`, `:312`,
 `:361`; `workflows/create_pr/core.py:270`; `workflows/review/reviewer.py:161`, `:228`;
 `workflow_steps/ci.py:125-131`, `:205-211`.
+
+**Two sites must pass their own `project_dir` parameter, not the value they passed as
+`execution_dir`** — following the general rule at either one makes 4a red:
+
+| Site | 4a passes | Why |
+|---|---|---|
+| `workflow_utils/commit_operations.py:166` (`:171` is the keyword) | `project_dir=str(project_dir)` | its `execution_dir` is `Optional[str] = None` (`commit_operations.py:68`), so `project_dir=execution_dir` feeds `str \| None` into the now-required `project_dir: str \| Path` → mypy incompatible-argument error. `project_dir: Path` is the function's first parameter (`:66`). Same fix class as `RealLLMService.project_dir` below. |
+| `cli/commands/verify.py:97-105` (`:103` is the keyword) | `project_dir=project_dir` | `project_dir: Path` is already `_run_mcp_edit_smoke_test`'s first parameter (`verify.py:70`). Passing `project_dir=execution_dir` instead would leave an undefined name in the body once 4b deletes the `execution_dir` parameter (`verify.py:73`) — pylint `E0602` / mypy `name-defined`, i.e. a red 4b. |
 
 **Not in this list — do not touch them in 4a.** Six sites carry an `execution_dir=` keyword but
 call something other than `prompt_llm`, so retargeting them to `project_dir=` would pass an
@@ -103,7 +111,10 @@ Deleting a parameter in section B breaks every call that still supplies it. Comm
 
 - `cli/commands/*` — drop the duplicated `project_dir` argument introduced in step 3.
 - `icoder.py:202` — drop `execution_dir=`; `project_dir=` (`:208`) already present.
-- `verify.py` — drop the `str(project_dir)` argument to `_run_mcp_edit_smoke_test`.
+- `verify.py` — drop the `str(project_dir)` argument at the call site (`:476-484`) **and** the
+  `execution_dir: str` parameter plus its docstring line from `_run_mcp_edit_smoke_test`
+  (`:73`, `:84`). Its body needs no edit: 4a already made the `prompt_llm` call pass
+  `project_dir=project_dir`, the function's own first parameter (see E1).
 - `icoder/env_setup.py:197` — already passes `str(project_dir)`; only the keyword name changes.
 
 Intra-workflow forwards, which are just as numerous and easy to miss:
@@ -331,7 +342,12 @@ CIFixConfig.cwd. Closes the src half of #1132.
 >
 > Then retarget **only the direct callers** listed in section E1 to pass `project_dir=` (the
 > value they passed as `execution_dir`; `str(execution_dir) if execution_dir else None` becomes
-> `str(project_dir)`). **Do not touch the 23 workflow signatures in section B, the section C
+> `str(project_dir)`). **Two of them take their own `project_dir` parameter instead** — see the
+> exception table in E1: `workflow_utils/commit_operations.py:166` passes
+> `project_dir=str(project_dir)` (its `execution_dir` is `Optional[str]`, which no longer
+> type-checks) and `cli/commands/verify.py:97-105` passes `project_dir=project_dir` (already
+> `_run_mcp_edit_smoke_test`'s first parameter, so 4b's deletion of `execution_dir` leaves no
+> dangling name). **Do not touch the 23 workflow signatures in section B, the section C
 > fallbacks or `CIFixConfig` — that is 4b.** In particular, leave the six `execution_dir=`
 > keywords named under E1 as "not in this list" alone: they call `commit_changes` /
 > `generate_commit_message_with_llm`, whose parameters still exist until 4b, so renaming them
