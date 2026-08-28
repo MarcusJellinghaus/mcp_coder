@@ -98,20 +98,7 @@ TASKS_JSON_TEMPLATE = """{{
             "presentation": {{
                 "reveal": "always",
                 "panel": "new",
-                "focus": true
-            }},
-            "runOptions": {{
-                "runOn": "folderOpen"
-            }},
-            "problemMatcher": []
-        }},
-        {{
-            "label": "Open Status File",
-            "type": "shell",
-            "command": "code",
-            "args": ["${{workspaceFolder}}/.vscodeclaude_status.txt"],
-            "presentation": {{
-                "reveal": "never"
+                "focus": false
             }},
             "runOptions": {{
                 "runOn": "folderOpen"

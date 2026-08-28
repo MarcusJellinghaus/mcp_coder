@@ -374,7 +374,7 @@ class TestWorkspaceSetup:
         assert read_session_spec(tmp_path).is_intervention is True
 
     def test_create_vscode_task(self, tmp_path: Path) -> None:
-        """Creates tasks.json with two tasks that run on folderOpen."""
+        """Creates tasks.json with a single startup task that runs on folderOpen."""
         script_path = tmp_path / ".vscodeclaude_start.bat"
         script_path.touch()
 
@@ -384,9 +384,30 @@ class TestWorkspaceSetup:
         assert tasks_file.exists()
 
         content = json.loads(tasks_file.read_text(encoding="utf-8"))
-        assert len(content["tasks"]) == 2
+        assert len(content["tasks"]) == 1
+        assert content["tasks"][0]["label"] == "VSCodeClaude Startup"
         assert content["tasks"][0]["runOptions"]["runOn"] == "folderOpen"
-        assert content["tasks"][1]["label"] == "Open Status File"
+        assert content["tasks"][0]["presentation"]["reveal"] == "always"
+        assert content["tasks"][0]["presentation"]["focus"] is False
+
+    def test_no_folder_open_task_invokes_code(self, tmp_path: Path) -> None:
+        """No auto-run task shells out to `code` (it raises background windows)."""
+        script_path = tmp_path / ".vscodeclaude_start.bat"
+        script_path.touch()
+
+        create_vscode_task(tmp_path, script_path)
+
+        tasks_file = tmp_path / ".vscode" / "tasks.json"
+        tasks = json.loads(tasks_file.read_text(encoding="utf-8"))["tasks"]
+        auto_tasks = [
+            task
+            for task in tasks
+            if task.get("runOptions", {}).get("runOn") == "folderOpen"
+        ]
+        assert auto_tasks  # the guard must not pass vacuously
+        for task in auto_tasks:
+            assert task["command"] != "code"
+            assert "code" not in task.get("args", [])
 
     def test_create_status_file(
         self, tmp_path: Path, mock_vscodeclaude_config: None
