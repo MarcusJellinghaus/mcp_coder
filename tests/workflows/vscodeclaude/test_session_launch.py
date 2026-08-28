@@ -45,7 +45,7 @@ class TestLaunch:
     def test_launch_vscode_uses_code_command(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Calls 'code' with workspace path."""
+        """Calls 'code' with the workspace path; no status file without a session folder."""
         captured_args: list[Any] = []
         captured_kwargs: dict[str, Any] = {}
 
@@ -71,14 +71,10 @@ class TestLaunch:
 
         # The command can be a list or a string (shell=True on Windows)
         cmd = captured_args[0]
-        if isinstance(cmd, str):
-            # Windows: shell command string like 'code "path"'
-            assert "code" in cmd
-            assert str(workspace) in cmd
-        else:
-            # Linux: list like ['code', 'path']
-            assert "code" in cmd
-            assert str(workspace) in cmd
+        rendered = cmd if isinstance(cmd, str) else " ".join(cmd)
+        assert "code" in rendered
+        assert str(workspace) in rendered
+        assert ".vscodeclaude_status" not in rendered
 
     def test_launch_vscode_opens_status_file(
         self,
@@ -120,9 +116,8 @@ class TestLaunch:
             is_intervention=False,
         )
         written = next(session_folder.glob(".vscodeclaude_status*"))
-        assert written.exists()
 
-        launch_vscode(workspace)
+        launch_vscode(workspace, session_folder)
 
         cmd = captured_args[0]
         rendered = cmd if isinstance(cmd, str) else " ".join(cmd)

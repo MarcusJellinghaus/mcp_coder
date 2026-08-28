@@ -120,7 +120,7 @@ class TestRestartClosedSessionsBranchHandling:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
-            lambda _: 9999,
+            lambda *_args: 9999,
         )
 
         # Create working folder and workspace file
@@ -412,7 +412,7 @@ class TestRestartClosedSessionsBranchHandling:
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
-            lambda _: 9999,
+            lambda *_args: 9999,
         )
 
         working_folder = tmp_path / "repo_123"

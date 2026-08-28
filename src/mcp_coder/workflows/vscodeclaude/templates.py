@@ -124,10 +124,14 @@ Started: {started_at}
 INTERVENTION_LINE = """Mode:    ⚠️ INTERVENTION
 """
 
+# Name of the per-session status file, shared with `workspace.get_status_file_path`
+# so the gitignore block and the path helper cannot drift apart.
+STATUS_FILE_NAME = ".vscodeclaude_status.txt"
+
 # Gitignore entry
-GITIGNORE_ENTRY = """
+GITIGNORE_ENTRY = f"""
 # VSCodeClaude session files (auto-generated)
-.vscodeclaude_status.txt
+{STATUS_FILE_NAME}
 .vscodeclaude_analysis.json
 .vscodeclaude_session.json
 .vscodeclaude_start.bat

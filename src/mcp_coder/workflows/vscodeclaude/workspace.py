@@ -22,6 +22,7 @@ from ...utils.subprocess_runner import (
 )
 from .config import get_vscodeclaude_config, sanitize_folder_name
 from .helpers import load_to_be_deleted
+from .templates import STATUS_FILE_NAME
 from .types import DEFAULT_PROMPT_TIMEOUT, SessionSpec, write_session_spec
 
 logger = logging.getLogger(__name__)
@@ -150,9 +151,6 @@ def get_workspace_file_path(workspace_base: str, folder_name: str) -> Path:
     inline so the convention lives in one place.
     """
     return Path(workspace_base) / f"{folder_name}.code-workspace"
-
-
-STATUS_FILE_NAME = ".vscodeclaude_status.txt"
 
 
 def get_status_file_path(session_folder: Path) -> Path:

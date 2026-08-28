@@ -80,17 +80,14 @@ __all__ = [
 
 def launch_vscode(
     workspace_file: Path,
-    session_working_dir: Path | None = None,  # pylint: disable=unused-argument
+    session_working_dir: Path | None = None,
 ) -> int:
     """Launch VSCode with workspace file and its status file.
 
-    The status file is opened alongside the workspace; its path comes from
-    `workspace.get_status_file_path` applied to the session folder derived from
-    `workspace_file` (convention owned by `workspace.get_workspace_file_path`).
-
     Args:
         workspace_file: Path to .code-workspace file
-        session_working_dir: Session working directory (passed to startup script for MCP configuration)
+        session_working_dir: Session folder whose status file is opened next to
+            the workspace. When None, only the workspace is opened.
 
     Returns:
         VSCode process PID
@@ -101,17 +98,19 @@ def launch_vscode(
     """
     is_windows = platform.system() == "Windows"
 
-    # The session folder sits beside the workspace file (see
-    # workspace.get_workspace_file_path). Opening the status file here - rather than
-    # from a folderOpen task - means `code` only runs when a window is being created
-    # anyway; on reload VS Code restores the tab itself. See issue #1008.
-    status_file = get_status_file_path(workspace_file.parent / workspace_file.stem)
+    paths = [workspace_file]
+    if session_working_dir is not None:
+        # Opening the status file at launch - rather than from a folderOpen task -
+        # means `code` only runs when a window is being created anyway; on reload
+        # VS Code restores the tab itself. See issue #1008.
+        paths.append(get_status_file_path(session_working_dir))
 
     if is_windows:
         # On Windows, 'code' is a .cmd file which requires shell=True
-        return launch_process(f'code "{workspace_file}" "{status_file}"', shell=True)
+        quoted = " ".join(f'"{path}"' for path in paths)
+        return launch_process(f"code {quoted}", shell=True)
     else:
-        return launch_process(["code", str(workspace_file), str(status_file)])
+        return launch_process(["code", *(str(path) for path in paths)])
 
 
 def prepare_and_launch_session(
