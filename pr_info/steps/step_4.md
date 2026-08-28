@@ -223,10 +223,42 @@ old code passed the `project_dir` string.
 `RealLLMService.project_dir` becomes **required** (`str | Path`) — **in 4a, not 4b.** It is
 `str | None` today (`llm_service.py:58`, stored at `:69`), so the moment `:114` passes
 `project_dir=self._project_dir` into a required `str | Path`, mypy reports an incompatible
-argument type; narrowing the constructor parameter is what makes 4a pass its own gate. Its only
-caller, `icoder.py:208`, already passes `project_dir=str(project_dir)`, so no call site changes —
-only tests that construct `RealLLMService` without it. The `execution_dir` parameter beside it
-(`:52`, `self._execution_dir` at `:63`) still goes in 4b.
+argument type; narrowing the constructor parameter is what makes 4a pass its own gate. The
+`execution_dir` parameter beside it (`:52`, `self._execution_dir` at `:63`) still goes in 4b.
+
+**Mechanism — do not just delete the default.** `project_dir` is the *ninth* parameter
+(`llm_service.py:48-60`) and every parameter before it has a default, so dropping its `= None`
+is a `SyntaxError` (non-default argument follows default argument). **Keep the parameter where
+it is and insert a `*` keyword-only marker immediately before it**, which is the smallest change
+and reorders no call site:
+
+```python
+def __init__(
+    self,
+    provider: str = "claude",
+    session_id: str | None = None,
+    execution_dir: str | None = None,          # deleted in 4b
+    mcp_config: str | None = None,
+    settings_file: str | None = None,
+    env_vars: dict[str, str] | None = None,
+    timeout: int = ICODER_LLM_TIMEOUT_SECONDS,
+    mcp_manager: MCPManager | None = None,
+    *,
+    project_dir: str | Path,                   # required, keyword-only
+    gateway: LangchainEnforcementGateway | None = None,
+) -> None: ...
+```
+
+`gateway` becomes keyword-only too, which is why the constructions must be audited: **search
+`RealLLMService(` across `src/` and `tests/` and fix two things** — any construction that passes
+arguments *positionally* (a positional `gateway` or a positional argument reaching past
+`mcp_manager` now fails), and any construction that **omits `project_dir`**, which is now a
+`TypeError`. The production caller `icoder.py:199-208` already passes everything by keyword
+including `project_dir=str(project_dir)`, so it needs no change; the work is in
+`tests/icoder/test_llm_service.py` (~20 constructions, most of them `RealLLMService(provider=…)`
+with no `project_dir`) and `tests/icoder/test_icoder_permission_wiring.py:273`, `:320`. Give them
+a `tmp_path`-based or literal project dir. Without this sweep 4a's pytest run is red even though
+mypy is clean.
 
 ## The `inject_prompts` mapping — decide each site, never take the default blindly
 
@@ -356,6 +388,13 @@ CIFixConfig.cwd. Closes the src half of #1132.
 > One section B signature does change in 4a: make `RealLLMService.__init__`'s `project_dir`
 > **required** (`str | Path`), since `self._project_dir` is `str | None` today and
 > `prompt_llm_stream` no longer accepts `None`. Leave its `execution_dir` parameter for 4b.
+> **Do not simply delete its `= None`** — it is the ninth parameter and every parameter before
+> it has a default, so that is a `SyntaxError`. Keep its position and insert a `*` keyword-only
+> marker immediately before it (see DATA), then search `RealLLMService(` across `src/` and
+> `tests/`: fix any positional construction (`gateway` is now keyword-only too) and add
+> `project_dir=` to every construction that omits it — ~20 in
+> `tests/icoder/test_llm_service.py` and two in `tests/icoder/test_icoder_permission_wiring.py`
+> (`:273`, `:320`). Skipping that sweep leaves 4a red at pytest even with mypy clean.
 >
 > Apply the `inject_prompts` table in the step document **site by site** — `verify.py`'s LLM
 > check and iCoder's `RealLLMService` get `True`; `prompt.py` gets
