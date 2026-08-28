@@ -31,6 +31,12 @@
 - **`architecture.md:374-376`** — delete the "Deprecated variant" blockquote in Scenario 1.
 - **`environments.md:124`** — "`--execution-dir` still overrides this, but is deprecated" →
   drop the clause; the sentence keeps its first half.
+- **`repository-setup/claude-code.md:243-246`** — "its `_read_settings_allow`
+  (`llm/providers/copilot/copilot_cli.py:230-241`) reads
+  `<execution_dir>/.claude/settings.local.json`". Step 2 renamed that parameter to `cwd`, so the
+  passage is already false; it contains no `--execution-dir`, only `<execution_dir>`. Rewrite it
+  as `<cwd>/.claude/settings.local.json` — the point it makes (the anchoring shift applies to
+  copilot too) stays true.
 - **`.claude/CLAUDE.md`** — delete the whole "Execution Directory Flag" section including its
   "Key Distinction" list. Nothing replaces it: `--project-dir` is documented elsewhere.
 
@@ -52,7 +58,10 @@ None — prose only.
 
 ## Verification
 
-- Zero hits for `--execution-dir` across `docs/` and `.claude/`.
+- Zero hits for the **broad** pattern `--execution-dir|execution_dir|<execution_dir>|Execution
+  Directory` across `docs/` and `.claude/` — not just the literal flag. Grepping only
+  `--execution-dir` misses prose like `<execution_dir>/.claude/settings.local.json`
+  (`repository-setup/claude-code.md:245`).
 - `docs/environments/environments.md:150`'s `#execution-context-management` anchor still
   resolves to a heading in `docs/architecture/architecture.md`.
 - Read `architecture.md`'s "Execution Context Management" section end-to-end: it must describe
@@ -78,12 +87,16 @@ corrected. Closes #1132.
 > "Execution Directory Flag" section of `.claude/CLAUDE.md`. Also fix the passages that are now
 > wrong without containing the literal string: the "Context Separation Pattern" bullet
 > (`architecture.md:124`), the two-directory framing and deprecated-override block under
-> "Execution Context Management", and the "Deprecated variant" blockquote in Scenario 1.
+> "Execution Context Management", the "Deprecated variant" blockquote in Scenario 1, and
+> `repository-setup/claude-code.md:243-246`, where `<execution_dir>/.claude/settings.local.json`
+> must become `<cwd>/.claude/settings.local.json` after step 2's rename.
 >
 > **Keep the `### Execution Context Management` heading exactly as it is** —
 > `docs/environments/environments.md:150` links to its anchor. Keep the "Why the default is
 > `project_dir`" explanation and the "Reporting" paragraph; both are still true.
 >
-> Use `mcp__workspace__search_files` to find the occurrences and again afterwards to prove
-> none remain. Docs-only: no source or test changes. Use MCP tools exclusively, run the three
+> Use `mcp__workspace__search_files` to find the occurrences and again afterwards to prove none
+> remain — search the broad pattern `execution.dir|execution_dir|Execution Directory`, not just
+> `--execution-dir`, or references written as `<execution_dir>` survive. Docs-only: no source or
+> test changes. Use MCP tools exclusively, run the three
 > quality checks, and make one commit for this step.

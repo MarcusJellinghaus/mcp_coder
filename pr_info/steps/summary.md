@@ -138,26 +138,38 @@ do not reintroduce cwd plumbing.
 
 ## Step order (and why it is forced)
 
-Steps 1 and 2 are independent. Steps 3 and 4 cannot be swapped or merged further:
+Steps 1 and 2 are independent. Steps 3 and 4 cannot be swapped:
 
 - **Not swappable.** Several workflow sites pass `execution_dir=str(execution_dir) if
   execution_dir else None` — a `None` cwd, i.e. the #1113 bug. So the flag can only be removed
   (step 3) while the workflow parameter still receives a real path; the parameter can only be
-  deleted (step 4) once `prompt_llm` derives cwd from a required `project_dir`.
-- **Not splittable further.** In step 4 every `prompt_llm` caller breaks simultaneously, and
-  leaving a workflow parameter unused would fail pylint. It is one atomic change, kept
-  mechanical by an explicit per-file checklist in the step.
+  deleted (step 4b) once `prompt_llm` derives cwd from a required `project_dir`.
+- **Step 4 splits into two green commits.** 4a rewrites `prompt_llm` / `prompt_llm_stream` and
+  retargets only the *direct* callers to pass `project_dir=` plus the `inject_prompts` mapping.
+  The 23 workflow `execution_dir` parameters stay in place and stay **used** — each one still
+  supplies the value that is now passed as `project_dir` — so no parameter goes unused and
+  pylint, mypy and pytest all stay green. 4b then deletes those parameters, the dead
+  `cwd = str(execution_dir) if … else str(project_dir)` fallbacks and `CIFixConfig.cwd`.
+
+  The direct callers retargeted in 4a: `cli/commands/prompt.py` (3 sites),
+  `cli/commands/verify.py:97-105` and `:506`, `icoder/services/llm_service.py:114`,
+  `icoder/env_setup.py:112`, `workflow_utils/commit_operations.py:166`,
+  `workflows/implement/task_processing.py:221`, `:439`, `:543`, `workflows/rebase.py:319`,
+  `workflows/implement/finalisation.py`, `workflows/implement/task_tracker_prep.py:78`,
+  `workflows/create_plan/core.py`, `workflows/create_pr/core.py`, `workflows/review/core.py:425`,
+  `workflows/review/reviewer.py`, `workflow_steps/ci.py`.
 
 Step 3 leaves one intentional, temporary artefact: commands pass the same `project_dir` value
-twice (once as itself, once as the workflow's `execution_dir` argument). Step 4 deletes the
-duplicate. This is what makes both commits green.
+twice (once as itself, once as the workflow's `execution_dir` argument). Step 4b deletes the
+duplicate. This is what makes the commits green.
 
 | Step | Scope | Size |
 |---|---|---|
 | [1](./step_1.md) | Langchain: delete `execution_dir` from 6 functions | small |
 | [2](./step_2.md) | Copilot: collapse `execution_dir` into `cwd` | small |
 | [3](./step_3.md) | CLI flag removal + `resolve_claude_cwd` + test/marker cleanup | medium |
-| [4](./step_4.md) | `prompt_llm` collapse + 23 workflow signatures | large |
+| [4a](./step_4.md) | `prompt_llm` collapse + retarget the direct callers | medium |
+| [4b](./step_4.md) | delete `execution_dir` from the 23 workflow signatures + `CIFixConfig.cwd` | medium |
 | [5](./step_5.md) | Documentation | small |
 
 ## Files created / modified
@@ -180,15 +192,15 @@ duplicate. This is what makes both commits green.
 |---|---|---|
 | `src/mcp_coder/llm/providers/langchain/` | `__init__.py`, `agent.py` | 1 |
 | `src/mcp_coder/llm/providers/copilot/` | `copilot_cli.py`, `copilot_cli_streaming.py` | 2 |
-| `src/mcp_coder/llm/providers/claude/` | `claude_mcp_guard.py` (docstring only) | 4 |
-| `src/mcp_coder/llm/` | `interface.py` | 1, 2, 4 |
+| `src/mcp_coder/llm/providers/claude/` | `claude_mcp_guard.py` (docstring only) | 4b |
+| `src/mcp_coder/llm/` | `interface.py` | 1, 2, 4a |
 | `src/mcp_coder/cli/` | `shared_args.py`, `parsers.py`, `utils.py` | 3 |
-| `src/mcp_coder/cli/commands/` | `prompt.py`, `commit.py`, `implement.py`, `create_plan.py`, `create_pr.py`, `review.py`, `rebase.py`, `check_branch_status.py`, `icoder.py`, `verify.py` | 3, 4 |
-| `src/mcp_coder/workflows/` | `rebase.py`, `create_plan/core.py`, `create_pr/core.py`, `implement/core.py`, `implement/finalisation.py`, `implement/task_processing.py`, `implement/task_tracker_prep.py`, `review/core.py`, `review/reviewer.py`, `review/steps.py` | 4 |
-| `src/mcp_coder/workflow_steps/` | `ci.py`, `commit.py` | 4 |
-| `src/mcp_coder/workflow_utils/` | `commit_operations.py` | 4 |
-| `src/mcp_coder/icoder/` | `env_setup.py`, `services/llm_service.py` | 4 |
-| `src/mcp_coder/` | `__init__.py` (docstring example) | 4 |
+| `src/mcp_coder/cli/commands/` | `prompt.py`, `commit.py`, `implement.py`, `create_plan.py`, `create_pr.py`, `review.py`, `rebase.py`, `check_branch_status.py`, `icoder.py`, `verify.py` | 3, 4a, 4b |
+| `src/mcp_coder/workflows/` | `rebase.py`, `create_plan/core.py`, `create_pr/core.py`, `implement/core.py`, `implement/finalisation.py`, `implement/task_processing.py`, `implement/task_tracker_prep.py`, `review/core.py`, `review/reviewer.py`, `review/steps.py` | 4a, 4b |
+| `src/mcp_coder/workflow_steps/` | `ci.py`, `commit.py` | 4a, 4b |
+| `src/mcp_coder/workflow_utils/` | `commit_operations.py` | 4a, 4b |
+| `src/mcp_coder/icoder/` | `env_setup.py`, `services/llm_service.py` | 4a, 4b |
+| `src/mcp_coder/` | `__init__.py` (docstring example) | 4a |
 
 ### Modified — `tests/` (37 files, ~537 references)
 
@@ -199,7 +211,9 @@ duplicate. This is what makes both commits green.
 `tests/workflows/` (8 files), `tests/workflow_steps/`, `tests/workflow_utils/`.
 
 Roughly 470 of those references are mock keyword arguments and reduce to two mechanical rules
-(see step 4). Per-site handling of the ~15 flag-specific tests is enumerated in step 3.
+(see step 4); the sweep splits across 4a and 4b along the same line as the source change —
+`prompt_llm` call/assertion sites in 4a, workflow-signature keywords in 4b. Per-site handling
+of the ~15 flag-specific tests is enumerated in step 3.
 
 ### Modified — docs & config
 
@@ -213,13 +227,13 @@ Roughly 470 of those references are mock keyword arguments and reduce to two mec
 | Criterion | Step |
 |---|---|
 | `mcp-coder <cmd> --execution-dir X` fails with "unrecognized argument" | 3 |
-| No `execution_dir` identifier remains in `src/` | 4 |
-| Subprocess `cwd` equals resolved `project_dir` for every command, from any shell cwd | 3 + 4 |
+| No `execution_dir` identifier remains in `src/` | 4b |
+| Subprocess `cwd` equals resolved `project_dir` for every command, from any shell cwd | 3 + 4a |
 | Each run still reports Claude cwd + project instructions, and still warns | 3 |
-| Headless `implement`/`create-plan`/`review` inject no prompt | 4 |
-| `verify` LLM check injects prompts; its smoke test does not | 4 |
-| iCoder still injects system + project prompts | 4 |
-| `prompt_llm(...)` without `project_dir` raises `TypeError` | 4 |
+| Headless `implement`/`create-plan`/`review` inject no prompt | 4a |
+| `verify` LLM check injects prompts; its smoke test does not | 4a |
+| iCoder still injects system + project prompts | 4a |
+| `prompt_llm(...)` without `project_dir` raises `TypeError` | 4a |
 | Suite green; `test_claude_cwd_integration.py` keeps 2 tests; marker gone | 3 |
 | No documentation references `--execution-dir` | 5 |
 
