@@ -185,6 +185,20 @@ code --version
 
 If not, add VS Code to PATH via VS Code: `Ctrl+Shift+P` → "Shell Command: Install 'code' command in PATH"
 
+### Keyboard focus jumps between session windows (Windows)
+
+With several session windows open, another window can occasionally steal focus while you are typing. The generated session files no longer raise windows in the background - only launching or restarting a session does, which is intended.
+
+Windows that were already open keep their old `.vscode/tasks.json` until they are closed and restarted - sessions pick up the new file on the next restart, there is nothing to migrate.
+
+As a cause-agnostic backstop, tell Windows to flash the taskbar instead of switching focus when a background app asks for the foreground:
+
+1. Open `regedit` and go to `HKEY_CURRENT_USER\Control Panel\Desktop`.
+2. Set `ForegroundLockTimeout` (DWORD) to a non-zero value - e.g. `30000` (decimal), i.e. 30 seconds.
+3. Reboot; the setting is read at logon.
+
+A value of `0` lets any application take the foreground immediately.
+
 ### Trust prompts for each folder
 
 Follow the [one-time trust setup](#1-trust-the-workspace-folder-one-time-setup) above.
