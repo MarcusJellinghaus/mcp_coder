@@ -94,7 +94,7 @@ behavioural difference.
 | File | Change |
 |------|--------|
 | `templates.py` | `TASKS_JSON_TEMPLATE`: delete the "Open Status File" task; `"focus": true` → `false` |
-| `workspace.py` | new `STATUS_FILE_NAME` + `get_status_file_path()` beside `get_workspace_file_path`; `create_status_file` uses it instead of an inline literal |
+| `workspace.py` | new `STATUS_FILE_NAME` + `get_status_file_path()` beside `get_workspace_file_path`; `create_status_file` and `update_gitignore`'s marker check use them instead of inline literals |
 | `session_launch.py` | `launch_vscode`: append `get_status_file_path(...)` to the `code` invocation (both Windows and POSIX branches) |
 
 ### Modified — tests

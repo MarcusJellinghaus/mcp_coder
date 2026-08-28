@@ -13,7 +13,7 @@ task.
 
 | File | Role |
 |------|------|
-| `src/mcp_coder/workflows/vscodeclaude/workspace.py` | new `STATUS_FILE_NAME` + `get_status_file_path()` beside `get_workspace_file_path` (~line 148); `create_status_file` uses it (~line 700) |
+| `src/mcp_coder/workflows/vscodeclaude/workspace.py` | new `STATUS_FILE_NAME` + `get_status_file_path()` beside `get_workspace_file_path` (~line 148); `create_status_file` (~line 700) and `update_gitignore` (~line 408) use it |
 | `src/mcp_coder/workflows/vscodeclaude/session_launch.py` | `launch_vscode` (~line 80-103) |
 | `tests/workflows/vscodeclaude/test_session_launch.py` | `TestLaunch` — new test |
 
@@ -69,10 +69,11 @@ The existing `test_launch_vscode_*` tests keep passing unchanged (they only asse
 ### Implementation
 
 **1. `workspace.py` — one home for the status-file name.** The filename
-`.vscodeclaude_status.txt` is currently a bare literal in `create_status_file` (~line 700)
-and inside `templates.GITIGNORE_ENTRY`; `launch_vscode` must not add a third copy. Add
-beside `get_workspace_file_path` (~line 148), which already owns the sibling
-`.code-workspace` convention:
+`.vscodeclaude_status.txt` is currently a bare literal twice in `workspace.py` itself — in
+`create_status_file` (~line 700) and in `update_gitignore` (~line 408) — plus once inside
+`templates.GITIGNORE_ENTRY`; `launch_vscode` must not add a fourth copy. Add beside
+`get_workspace_file_path` (~line 148), which already owns the sibling `.code-workspace`
+convention:
 
 ```python
 STATUS_FILE_NAME = ".vscodeclaude_status.txt"
@@ -94,9 +95,21 @@ Then in `create_status_file`, replace the literal:
     status_file = get_status_file_path(folder_path)
 ```
 
+And in `update_gitignore` (~line 408), where the same filename is used as the marker
+pattern that decides whether the gitignore block is already present:
+
+```python
+    if STATUS_FILE_NAME in existing_lines:
+```
+
+`existing_lines` holds stripped gitignore lines, so the constant is an exact drop-in for
+the literal. After this, `STATUS_FILE_NAME` is the only occurrence of the name in
+`workspace.py`. The existing `update_gitignore` tests
+(`test_workspace.py:181-283`) cover both branches and must keep passing unchanged.
+
 `GITIGNORE_ENTRY` stays a literal template block (it lists several generated filenames as
 gitignore patterns, not paths) — it is already covered by
-`test_vscodeclaude_cli.py:145`. Only the *path derivation* is unified.
+`test_vscodeclaude_cli.py:145`. Only the name inside `workspace.py` is consolidated.
 
 **2. `session_launch.py` — use the helper.**
 
@@ -166,7 +179,8 @@ a guard would add a branch plus a non-deterministic test for nothing.
   both platforms.
 - The status filename exists as exactly one path-building helper
   (`workspace.get_status_file_path` / `STATUS_FILE_NAME`), used by both `create_status_file`
-  and `launch_vscode`.
+  and `launch_vscode`; `STATUS_FILE_NAME` is the only occurrence of the literal
+  `.vscodeclaude_status.txt` left in `workspace.py` (`update_gitignore` uses it too).
 - New test passes and fails if writer and launcher disagree (it asserts on the file
   `create_status_file` actually wrote, not on a re-derived path).
 - All pre-existing `launch_vscode` tests and the `session_restart` tests that patch it
@@ -194,7 +208,9 @@ a guard would add a branch plus a non-deterministic test for nothing.
 >
 > Then add `STATUS_FILE_NAME` and `get_status_file_path(session_folder)` to
 > `src/mcp_coder/workflows/vscodeclaude/workspace.py` next to `get_workspace_file_path`,
-> switch `create_status_file` to use it, and edit `launch_vscode` in
+> switch `create_status_file` to use the helper and `update_gitignore`'s marker check
+> (`if ".vscodeclaude_status.txt" in existing_lines`) to use `STATUS_FILE_NAME` so no copy
+> of the literal is left in `workspace.py`, and edit `launch_vscode` in
 > `src/mcp_coder/workflows/vscodeclaude/session_launch.py` to append
 > `get_status_file_path(workspace_file.parent / workspace_file.stem)` to both the Windows
 > shell string and the POSIX list. Do not add a fresh `.vscodeclaude_status.txt` literal
