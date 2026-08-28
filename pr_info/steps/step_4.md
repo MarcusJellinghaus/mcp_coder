@@ -28,7 +28,7 @@ After 4b, `grep -r execution_dir src/` returns nothing.
 | `cli/commands/check_branch_status.py` | `:379` (`_run_auto_fixes`) |
 | `cli/commands/verify.py` | `:73` (`_run_mcp_edit_smoke_test`) |
 | `icoder/env_setup.py` | `:88` (`_probe_exposed_mcp_tools` — **rename** to `project_dir`, not delete) |
-| `icoder/services/llm_service.py` | `:52` (`RealLLMService.__init__`) |
+| `icoder/services/llm_service.py` | `:52` (`RealLLMService.__init__` — the `execution_dir` parameter goes in 4b, but **`project_dir` must become required in 4a**, see below) |
 | `workflows/rebase.py` | `:304`, `:404` |
 | `workflows/create_plan/core.py` | `:190`, `:438` |
 | `workflows/create_pr/core.py` | `:205`, `:457` |
@@ -71,12 +71,27 @@ value from the mapping table below:
 
 `cli/commands/prompt.py:150`, `:190`, `:213`; `cli/commands/verify.py:97-105` and `:498-507`;
 `icoder/services/llm_service.py:104-115`; `icoder/env_setup.py:112-119`;
-`workflow_utils/commit_operations.py:166`; `workflows/implement/task_processing.py:221`, `:439`,
-`:543`; `workflows/rebase.py:319`; `workflows/implement/finalisation.py:89`, `:147`;
+`workflow_utils/commit_operations.py:166`; `workflows/implement/task_processing.py:221`, `:439`;
+`workflows/rebase.py:319`; `workflows/implement/finalisation.py:89`;
 `workflows/implement/task_tracker_prep.py:78`; `workflows/create_plan/core.py:250`, `:312`,
-`:361`; `workflows/create_pr/core.py:270`; `workflows/implement/core.py:280`;
-`workflows/review/core.py:425`; `workflows/review/reviewer.py:161`, `:228`;
-`workflow_steps/commit.py` (via `commit_operations`); `workflow_steps/ci.py`.
+`:361`; `workflows/create_pr/core.py:270`; `workflows/review/reviewer.py:161`, `:228`;
+`workflow_steps/ci.py:125-131`, `:205-211`.
+
+**Not in this list — do not touch them in 4a.** Six sites carry an `execution_dir=` keyword but
+call something other than `prompt_llm`, so retargeting them to `project_dir=` would pass an
+unknown keyword to a signature section B keeps until 4b (`workflow_steps/commit.py:64`,
+`workflow_utils/commit_operations.py:68`) — mypy error and `TypeError` at runtime, i.e. a red 4a:
+
+| Site | Actually calls |
+|---|---|
+| `workflows/implement/core.py:280` | `commit_changes(...)` |
+| `workflows/review/core.py:425` | `commit_changes(...)` |
+| `workflows/implement/task_processing.py:543` | `commit_changes(...)` |
+| `workflow_steps/ci.py:251` | `commit_changes(...)` |
+| `workflows/implement/finalisation.py:147` | `generate_commit_message_with_llm(...)` |
+| `workflow_steps/commit.py:104` | `generate_commit_message_with_llm(...)` |
+
+They are handled in **4b/E2**, when the parameters they feed are deleted.
 
 The `execution_dir=str(execution_dir) if execution_dir else None` sites become
 `project_dir=str(project_dir)` — `project_dir` is in scope at every one of them, and the `None`
@@ -106,6 +121,19 @@ Intra-workflow forwards, which are just as numerous and easy to miss:
 | `workflows/rebase.py:547`, `:587` | keyword `execution_dir=` |
 | `workflows/review/steps.py:127` | keyword `execution_dir=` |
 | `cli/commands/check_branch_status.py:432`, `:463` | positional (last argument to `check_and_fix_ci`) |
+
+The six sites held back from E1 land here — they pass `execution_dir=` to `commit_changes`
+(`workflow_steps/commit.py:64`) or `generate_commit_message_with_llm`
+(`commit_operations.py:68`), so they can only change when those parameters are deleted:
+
+| Call site | Form |
+|---|---|
+| `workflows/implement/core.py:280` | keyword `execution_dir=str(execution_dir) if … else None` → drop |
+| `workflows/review/core.py:425` | keyword, same form → drop |
+| `workflows/implement/task_processing.py:543` | keyword `execution_dir=cwd` → drop (`cwd` disappears with section C) |
+| `workflow_steps/ci.py:251` | keyword `execution_dir=config.cwd` → drop (section D) |
+| `workflows/implement/finalisation.py:147` | keyword, `generate_commit_message_with_llm` → drop |
+| `workflow_steps/commit.py:104` | keyword, `generate_commit_message_with_llm` → drop |
 
 The positional ones are the risk: dropping the wrong argument still type-checks in some cases.
 Work from the mypy error list rather than by eye, and re-read each call after editing.
@@ -179,8 +207,15 @@ old code passed the `project_dir` string.
 ## DATA
 
 `LLMResponseDict` / `StreamEvent` unchanged. `metadata["working_directory"]` stays a `str`.
-`CIFixConfig` loses one field. `RealLLMService.project_dir` becomes **required** (`str | Path`),
-since `prompt_llm_stream` can no longer accept `None`.
+`CIFixConfig` loses one field (4b).
+
+`RealLLMService.project_dir` becomes **required** (`str | Path`) — **in 4a, not 4b.** It is
+`str | None` today (`llm_service.py:58`, stored at `:69`), so the moment `:114` passes
+`project_dir=self._project_dir` into a required `str | Path`, mypy reports an incompatible
+argument type; narrowing the constructor parameter is what makes 4a pass its own gate. Its only
+caller, `icoder.py:208`, already passes `project_dir=str(project_dir)`, so no call site changes —
+only tests that construct `RealLLMService` without it. The `execution_dir` parameter beside it
+(`:52`, `self._execution_dir` at `:63`) still goes in 4b.
 
 ## The `inject_prompts` mapping — decide each site, never take the default blindly
 
@@ -297,8 +332,14 @@ CIFixConfig.cwd. Closes the src half of #1132.
 > Then retarget **only the direct callers** listed in section E1 to pass `project_dir=` (the
 > value they passed as `execution_dir`; `str(execution_dir) if execution_dir else None` becomes
 > `str(project_dir)`). **Do not touch the 23 workflow signatures in section B, the section C
-> fallbacks or `CIFixConfig` — that is 4b.** Those parameters stay in place and stay used, which
-> is what keeps this commit green.
+> fallbacks or `CIFixConfig` — that is 4b.** In particular, leave the six `execution_dir=`
+> keywords named under E1 as "not in this list" alone: they call `commit_changes` /
+> `generate_commit_message_with_llm`, whose parameters still exist until 4b, so renaming them
+> here would be an unknown keyword argument.
+>
+> One section B signature does change in 4a: make `RealLLMService.__init__`'s `project_dir`
+> **required** (`str | Path`), since `self._project_dir` is `str | None` today and
+> `prompt_llm_stream` no longer accepts `None`. Leave its `execution_dir` parameter for 4b.
 >
 > Apply the `inject_prompts` table in the step document **site by site** — `verify.py`'s LLM
 > check and iCoder's `RealLLMService` get `True`; `prompt.py` gets
@@ -328,10 +369,13 @@ CIFixConfig.cwd. Closes the src half of #1132.
 > Delete the `execution_dir` parameter from the 23 signatures in section B, delete the three
 > dead `cwd = str(execution_dir) if execution_dir else str(project_dir)` fallbacks (section C)
 > and `CIFixConfig.cwd` (section D — its three uses become `str(config.project_dir)`). Rename
-> `_probe_exposed_mcp_tools`'s parameter to `project_dir`. Make `RealLLMService.project_dir`
-> required. Fix the docstrings in section F.
+> `_probe_exposed_mcp_tools`'s parameter to `project_dir`. (`RealLLMService.project_dir` was
+> already made required in 4a — only its `execution_dir` parameter is left to delete here.)
+> Fix the docstrings in section F.
 >
-> Update every forwarding call site in section E2 — note which are **positional**, and note that
+> Update every forwarding call site in section E2 — including the six `commit_changes` /
+> `generate_commit_message_with_llm` keywords held back from 4a — note which are **positional**,
+> and note that
 > `generate_commit_message_with_llm`'s `execution_dir` is a *middle* positional parameter, so
 > removing it shifts `mcp_config`/`settings_file` by one for any positional caller: audit those
 > call sites before deleting. Then sweep the remaining test references with the two mechanical

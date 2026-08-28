@@ -138,6 +138,14 @@ Then implement. Order that keeps the feedback loop tight: `utils.py` → the 9 c
 - A run from an unrelated shell cwd still logs `Claude working directory: <project_dir>` and
   the project instructions files (the report must not have gone missing).
 - `--strict-markers` still passes after the marker is deleted (nothing applies it any more).
+- `mcp__tools-py__run_pytest_check(markers=["claude_cli_integration"])` — the mandated fast gate
+  excludes this marker, but the two tests this step keeps in the renamed
+  `tests/integration/test_claude_cwd_integration.py` carry it (`TestSubprocessCwdParameter` at
+  `test_execution_dir_integration.py:228`, plus the `require_claude_cli` fixture at `:242`,
+  `:293`, `:349`), so the fast run never executes the file this step renames and trims. Without
+  this run the step's own acceptance ("the renamed file keeps the two tests, suite green") is
+  unverified. If the tests skip because the Claude CLI is absent, say so explicitly rather than
+  treating the skip as a pass.
 
 ## Commit
 
@@ -182,4 +190,9 @@ which keeps the resolve and the #1113 context report. Part of #1132.
 > `mcp__tools-py__run_pytest_check` (with `extra_args=["-n","auto","-m","not git_integration
 > and not claude_cli_integration and not claude_api_integration and not formatter_integration
 > and not github_integration and not langchain_integration"]`) and
-> `mcp__tools-py__run_mypy_check`; all three must pass. One commit for this step.
+> `mcp__tools-py__run_mypy_check`; all three must pass. Also run
+> `mcp__tools-py__run_pytest_check(markers=["claude_cli_integration"])` — that marker is
+> excluded from the fast gate but is carried by the two tests you keep in
+> `tests/integration/test_claude_cwd_integration.py`, so nothing else executes the file this
+> step renames and trims; report a skip (missing Claude CLI) as a skip, not as a pass.
+> One commit for this step.

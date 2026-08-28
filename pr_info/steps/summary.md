@@ -154,10 +154,16 @@ Steps 1 and 2 are independent. Steps 3 and 4 cannot be swapped:
   The direct callers retargeted in 4a: `cli/commands/prompt.py` (3 sites),
   `cli/commands/verify.py:97-105` and `:506`, `icoder/services/llm_service.py:114`,
   `icoder/env_setup.py:112`, `workflow_utils/commit_operations.py:166`,
-  `workflows/implement/task_processing.py:221`, `:439`, `:543`, `workflows/rebase.py:319`,
-  `workflows/implement/finalisation.py`, `workflows/implement/task_tracker_prep.py:78`,
-  `workflows/create_plan/core.py`, `workflows/create_pr/core.py`, `workflows/review/core.py:425`,
-  `workflows/review/reviewer.py`, `workflow_steps/ci.py`.
+  `workflows/implement/task_processing.py:221`, `:439`, `workflows/rebase.py:319`,
+  `workflows/implement/finalisation.py:89`, `workflows/implement/task_tracker_prep.py:78`,
+  `workflows/create_plan/core.py`, `workflows/create_pr/core.py`,
+  `workflows/review/reviewer.py`, `workflow_steps/ci.py:125`, `:205` — i.e. only sites that
+  really call `prompt_llm` / `prompt_llm_stream`. Six further `execution_dir=` keywords
+  (`implement/core.py:280`, `review/core.py:425`, `task_processing.py:543`, `ci.py:251`,
+  `finalisation.py:147`, `workflow_steps/commit.py:104`) call `commit_changes` /
+  `generate_commit_message_with_llm` instead and stay untouched until 4b, where the parameters
+  they feed are deleted. 4a additionally makes `RealLLMService.project_dir` required, since
+  `str | None` no longer type-checks against the required `project_dir`.
 
 Step 3 leaves one intentional, temporary artefact: commands pass the same `project_dir` value
 twice (once as itself, once as the workflow's `execution_dir` argument). Step 4b deletes the
