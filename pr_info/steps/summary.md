@@ -45,8 +45,13 @@ Small and local; no new modules, no new abstractions, no signature changes.
 workspace file instead of taking a new parameter:
 
 ```python
-status_file = workspace_file.parent / workspace_file.stem / ".vscodeclaude_status.txt"
+status_file = get_status_file_path(workspace_file.parent / workspace_file.stem)
 ```
+
+`get_status_file_path()` (plus `STATUS_FILE_NAME`) is a new one-line helper in
+`workspace.py`, next to `get_workspace_file_path`, and is also used by `create_status_file`
+— so the `<session folder>/.vscodeclaude_status.txt` path is built in exactly one place
+rather than duplicated between the writer and the launcher.
 
 This is valid because `workspace.get_workspace_file_path()` is the single source of truth
 for the convention `{workspace_base}/{folder_name}.code-workspace`, sitting right beside
@@ -89,7 +94,8 @@ behavioural difference.
 | File | Change |
 |------|--------|
 | `templates.py` | `TASKS_JSON_TEMPLATE`: delete the "Open Status File" task; `"focus": true` → `false` |
-| `session_launch.py` | `launch_vscode`: append the derived `.vscodeclaude_status.txt` path to the `code` invocation (both Windows and POSIX branches) |
+| `workspace.py` | new `STATUS_FILE_NAME` + `get_status_file_path()` beside `get_workspace_file_path`; `create_status_file` uses it instead of an inline literal |
+| `session_launch.py` | `launch_vscode`: append `get_status_file_path(...)` to the `code` invocation (both Windows and POSIX branches) |
 
 ### Modified — tests
 
