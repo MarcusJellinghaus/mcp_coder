@@ -99,7 +99,6 @@ class TestExecuteRebase:
             "main",
             None,
             "/tmp/rebase-settings.json",
-            project_dir,
         )
 
     @patch("mcp_coder.cli.commands.rebase.resolve_project_dir")

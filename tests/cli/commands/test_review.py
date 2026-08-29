@@ -80,7 +80,6 @@ class TestExecuteReview:
             "claude",
             None,
             None,
-            project_dir,
             False,
             False,
         )
@@ -128,7 +127,6 @@ class TestExecuteReview:
             "claude",
             None,
             None,
-            project_dir,
             True,
             True,
         )

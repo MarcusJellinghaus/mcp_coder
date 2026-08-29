@@ -84,7 +84,7 @@ class TestExecuteCreatePr:
         mock_parse_llm.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, project_dir, False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -127,7 +127,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, project_dir, False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -172,7 +172,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, project_dir, False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
@@ -242,7 +242,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, project_dir, False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -284,7 +284,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("claude")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", None, None, project_dir, False, False
+            project_dir, "claude", None, None, False, False
         )
 
         # Reset mocks
@@ -311,7 +311,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("langchain")
         mock_run_workflow.assert_called_with(
-            project_dir, "langchain", None, None, project_dir, False, False
+            project_dir, "langchain", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -514,7 +514,7 @@ class TestCreatePrClaudeCwd:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, project_dir, False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")

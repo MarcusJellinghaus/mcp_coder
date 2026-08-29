@@ -328,12 +328,12 @@ class TestPromptLLMProjectDirRouting:
     def test_project_dir_is_required(self) -> None:
         """prompt_llm without project_dir raises TypeError (no silent cwd fallback)."""
         with pytest.raises(TypeError):
-            prompt_llm("hi")  # type: ignore[call-arg]
+            prompt_llm("hi")  # type: ignore[call-arg]  # pylint: disable=missing-kwoa
 
     def test_prompt_llm_stream_project_dir_is_required(self) -> None:
         """prompt_llm_stream without project_dir raises TypeError."""
         with pytest.raises(TypeError):
-            list(prompt_llm_stream("hi"))  # type: ignore[call-arg]
+            list(prompt_llm_stream("hi"))  # type: ignore[call-arg]  # pylint: disable=missing-kwoa
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_project_dir_passed_to_provider(

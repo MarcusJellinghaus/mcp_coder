@@ -67,7 +67,6 @@ class TestExecuteCreatePlan:
             "claude",
             mock_args.mcp_config,
             mock_args.settings,
-            test_project_dir,
             False,
             False,
         )
@@ -179,7 +178,7 @@ class TestCreatePlanClaudeCwd:
         assert result == 0
         mock_resolve_cwd.assert_called_once_with(project_dir)
         mock_run_workflow.assert_called_once_with(
-            123, project_dir, "claude", None, None, project_dir, False, False
+            123, project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_plan.resolve_project_dir")
