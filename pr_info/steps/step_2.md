@@ -18,6 +18,7 @@ Read [summary.md](./summary.md) first.
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Import the helper; add `_resolve_session_id()`; swap two call sites; update two docstrings |
 | `tests/llm/providers/langchain/conftest.py` | Add an **opt-in** (non-autouse) fixture that neutralises the guard |
 | `tests/llm/providers/langchain/test_langchain_*.py` | Request that fixture in the unit tests that resume a synthetic id (4 files) |
+| `tests/llm/providers/langchain/test_langchain_integration.py` | Seed an empty history file for the self-minted id at `:219` (2c) — no fixture |
 | `tests/llm/providers/test_langchain_session_guard.py` | **New file** — real-filesystem guard tests, deliberately one directory *above* the langchain conftest |
 | `tests/cli/commands/test_prompt.py` | One CLI-boundary test asserting `execute_prompt` returns 1 |
 | `docs/architecture/architecture.md`, `docs/cli-reference.md`, `docs/configuration/config.md` | Three short additions (2f) |
@@ -116,9 +117,9 @@ Twelve call sites across 5 files in that directory pass an explicit `session_id`
 `ask_langchain` / `ask_langchain_stream`. Nine of them (4 files) are unit tests that patch
 `load_langchain_history` at module level; those patches do not cover the new symbol, so they
 would start raising. The remaining three are the `langchain_integration` resume tests, which
-pass with the guard live and are left alone. (The other `session_id=` sites in that directory
-call private helpers such as `run_agent` and `run_agent_stream` directly, below the guard,
-and are unaffected.)
+run with the guard live and are left unpatched — but one of them needs a one-line seed, see
+below. (The other `session_id=` sites in that directory call private helpers such as
+`run_agent` and `run_agent_stream` directly, below the guard, and are unaffected.)
 
 Absorb them with one function-scoped **opt-in** fixture — `patch` and `Generator` are
 already imported in that file:
@@ -151,12 +152,35 @@ Deliberately **not** applied to `test_langchain_multi_turn.py` (`:222`, `:331`):
 the guard, so they need no fixture — consistent with the parenthesis above.
 
 Deliberately **not** applied to `tests/llm/providers/langchain/test_langchain_integration.py`
-(`:90`, `:195`, `:229`): those `langchain_integration` tests resume ids whose history files
-were really written by the preceding turn, so they pass with the guard live — and they are
-the only place the guard is exercised end-to-end against a genuine resume.
+(`:90`, `:195`, `:229`) — but only two of those three are unconditionally safe:
+
+- `:90` (`test_session_continuity`) and `:195` (`test_agent_session_continuity`) take
+  `session_id` from `result1["session_id"]`, so the history file really was written by the
+  preceding turn. They pass with the guard live, unchanged, and are the place the guard is
+  exercised end-to-end against a genuine resume.
+- `:229` (`test_agent_stream_two_turns_store_system_free_history`) does **not**. It mints its
+  own id at `test_langchain_integration.py:219`
+  (`session_id = f"itest-stream-{uuid.uuid4()}"`) and passes it to `ask_langchain_stream` on
+  the **first** turn, so no history file exists at that point and the live guard raises
+  `ValueError` on turn 1.
+
+**Fix for `:229`: seed an empty history file before the loop.** Add, right after the
+`session_id = f"itest-stream-{uuid.uuid4()}"` line, a
+`store_langchain_history(session_id, [])` call (imported from
+`mcp_coder.llm.storage.session_storage` alongside the `load_langchain_history` import already
+at `:216`). An empty history file is a valid session — the guard keys on file existence,
+never on content (see step 1) — so turn 1 proceeds exactly as before, the assertions on
+`histories` are unchanged, and turn 2 still resumes a genuinely written file with the guard
+live. Do **not** give this test the `skip_langchain_history_guard` fixture: that would
+disable the guard for the only end-to-end streaming resume in the suite.
+
+⚠️ The marker-excluded default CHECKS run below does **not** execute this test, so the
+failure would not surface during implementation — only the `langchain_integration` job would
+catch it. Make the seed edit as part of this step rather than waiting for CI.
 
 A missed site fails loudly with the step-1 `ValueError`, so the list above is a starting
-point, not a contract: add the fixture wherever the suite reports the guard firing.
+point, not a contract: add the fixture wherever the suite reports the guard firing — with the
+one exception of `:229`, which is fixed by seeding rather than by the fixture.
 
 ### 2d. New file — `tests/llm/providers/test_langchain_session_guard.py`
 
@@ -276,6 +300,9 @@ fixture in 2c. Also confirm `tests/llm/test_interface.py` and the *existing*
 `prompt_llm_stream` / `resolve_llm_method` and never reach the guard, so no fallout is
 expected there (only the new 2e test runs the real provider path).
 
+These exclusions hide the `:229` seed edit from 2c — it is only exercised by the
+`langchain_integration` job, so verify it by inspection here.
+
 The `langchain_integration` tests in `test_langchain_integration.py` are excluded by the
 marker filter above; run them separately with `markers=["langchain_integration"]` when the
 optional backend is available, since they are the ones that now exercise the guard live.
@@ -299,7 +326,12 @@ optional backend is available, since they are the ones that now exercise the gua
 > Constraints: the new test file goes in `tests/llm/providers/`, NOT in
 > `tests/llm/providers/langchain/` — being outside that conftest is what lets it see the real
 > guard. The fixture must NOT be autouse: `test_langchain_integration.py` has to keep running
-> with the guard live. Do not give `_resolve_session_id` a `base_dir` parameter. Remember
+> with the guard live — and in that file, `test_agent_stream_two_turns_store_system_free_history`
+> mints its own session id on the first turn, so seed it with
+> `store_langchain_history(session_id, [])` instead of giving it the fixture (see 2c). The
+> default marker-excluded pytest run does not cover that test, so make the seed edit
+> deliberately rather than waiting for it to fail. Do not give `_resolve_session_id` a
+> `base_dir` parameter. Remember
 > `ask_langchain_stream` is a generator, so `pytest.raises` must consume the iterator. In 2f,
 > do not repeat the inaccurate "claude response file" framing — a langchain
 > `--store-response` file has the same problem.

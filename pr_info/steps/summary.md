@@ -104,10 +104,24 @@ session id through `ask_langchain` / `ask_langchain_stream`. Sites that pass a
 **Design decision — opt-in, not autouse.** An autouse fixture would be shorter, but it
 would also disable the guard for the `langchain_integration` resume tests in
 `test_langchain_integration.py` (`:90`, `:195`, `:229`) — the only place a real history file
-is written and then resumed end-to-end. Those tests pass with the guard live (their ids
-refer to files the preceding turn really wrote), so leaving them unpatched is free coverage
-of the guard on a genuine resume path. A missed opt-in site fails loudly, so the cost of
-being explicit is one failing test, not a silent hole.
+is written and then resumed end-to-end. Leaving them unpatched is free coverage of the guard
+on a genuine resume path. A missed opt-in site fails loudly, so the cost of being explicit is
+one failing test, not a silent hole.
+
+**The "ids refer to files the preceding turn really wrote" rationale holds for `:90` and
+`:195` only.** Both take `session_id` from `result1["session_id"]`, so the file exists by
+construction and they pass with the guard live, unchanged. `:229`
+(`test_agent_stream_two_turns_store_system_free_history`) is different: it mints its own id at
+`test_langchain_integration.py:219` (`session_id = f"itest-stream-{uuid.uuid4()}"`) and passes
+it to `ask_langchain_stream` on the **first** turn, so no history file exists yet and the live
+guard would raise `ValueError` on turn 1. **Handled by seeding, not by the fixture:** step 2
+adds `store_langchain_history(session_id, [])` immediately after that line. An empty history
+file is a valid session (the guard keys on existence, never on content), so turn 1 behaves as
+before, the `histories` assertions are unchanged, and turn 2 remains a genuine guarded resume
+— which giving the test the guard-disabling fixture would have destroyed. Note the
+marker-excluded default check run does not execute this test; only the `langchain_integration`
+job would surface the failure, so the seed is a deliberate step-2 edit rather than a
+fix-on-red.
 
 **Design decision — the entry-point guard tests live one directory up.** Step 1 already
 covers `_langchain_session_path` for real via a tmp `base_dir`, which is what the issue's
@@ -201,6 +215,7 @@ langchain installed nor the sys.modules mocks.
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Import helper; add `_resolve_session_id()`; swap `:306` and `:638`; update two `Raises:` docstrings | 2 |
 | `tests/llm/providers/langchain/conftest.py` | Opt-in fixture neutralising the guard | 2 |
 | `tests/llm/providers/langchain/test_langchain_{agent_mode,multi_turn,provider,streaming}.py` | Request the opt-in fixture (9 tests) | 2 |
+| `tests/llm/providers/langchain/test_langchain_integration.py` | Seed `store_langchain_history(session_id, [])` for the self-minted id at `:219`; no fixture | 2 |
 | `tests/cli/commands/test_prompt.py` | One test asserting the guard makes `execute_prompt` return 1 | 2 |
 | `docs/architecture/architecture.md` | Note the guard under LangChain session storage | 2 |
 | `docs/cli-reference.md` | Note the `--session-id` restriction for langchain | 2 |
