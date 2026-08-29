@@ -96,8 +96,10 @@ function.
 ### 4. Test-fallout strategy
 
 A function-scoped **opt-in** fixture in `tests/llm/providers/langchain/conftest.py`
-neutralises the guard for the 11 unit tests (across 4 files) that resume a synthetic
-session id.
+neutralises the guard for the 9 unit tests (across 4 files) that resume a synthetic
+session id through `ask_langchain` / `ask_langchain_stream`. Sites that pass a
+`session_id` straight into a private helper (`run_agent`, `run_agent_stream`,
+`_ask_agent_stream`) sit below the guard and need nothing.
 
 **Design decision — opt-in, not autouse.** An autouse fixture would be shorter, but it
 would also disable the guard for the `langchain_integration` resume tests in
@@ -129,11 +131,35 @@ langchain installed nor the sys.modules mocks.
   updates from `done` events, `llm_service.py:116-120`), so every later turn raises the same
   error until `/clear`. Auto-reset was considered and rejected: it needs a distinguishable
   exception type, and retrying is sometimes what the user wants.
+- **`icoder`'s `/load` and startup session picker reach that wedge too.**
+  `icoder/core/app_core.py:329` takes the id from `read_session_id_from_log(log_path)` — an
+  **event log**, not a history file — and hands it to `set_session_id()`. Nothing checks that
+  `~/.mcp_coder/sessions/langchain/<id>.json` still exists, so loading a log whose history
+  entry was cleaned (or never written, see the `agent.py` bullet below) now hard-errors on
+  the first turn after the load and on every turn after that until `/clear`. This is a
+  routine interactive path, not an exotic one: the issue's *"history file deleted, or
+  `~/.mcp_coder/sessions/langchain/` cleaned between runs"* exposure is exactly what `/load`
+  replays. Erroring is the intended behaviour (a blank continuation of a visibly replayed
+  conversation is precisely the bug), but the stuck-until-`/clear` state is the accepted cost
+  above, so `/load` is called out here and covered by an acceptance item rather than left
+  implicit. Making `/load` fall back to a fresh session when the history file is gone would
+  need the distinguishable exception type that auto-reset was rejected for — separate issue.
 - `agent.py:672-694` already logs *"history not stored (the turn is not recorded)"* when no
   terminal graph event matches, yet still yields `done` carrying the session id. In `icoder`
   that id is adopted, so the **next** turn now raises instead of blank-starting. This is the
   correct signal — the turn genuinely was not recorded — but it is a new failure mode not
   listed in the issue.
+- **The same not-stored id also breaks non-interactive automation.** `prompt_llm` returns it
+  from `_ask_agent`, which deliberately does not persist (`llm/providers/langchain/__init__.py:445-446`
+  — `run_agent` drains `run_agent_stream`, the single persistence site), and the workflows
+  chain it into the following turn: `workflows/create_plan/core.py:308`, `:358`,
+  `workflows/review/reviewer.py:225`, `workflows/review/core.py:389`,
+  `workflows/rebase.py:322`. Under `--llm-method langchain` in agent mode, a turn that yields
+  no terminal graph event therefore **aborts the whole workflow with `ValueError`** where it
+  previously continued from a blank conversation. Louder is better than silently losing the
+  conversation mid-workflow, and the underlying not-stored turn is the real defect (separate
+  issue), but this is a new failure mode for `create_plan`, `review` and `rebase` that the
+  issue does not mention.
 - Custom-path resume (`--continue-session-from /some/copy/abc.json`) now errors where it
   previously blank-started. Naming the *expected* path in the message avoids claiming the id
   "does not exist" when the user is looking at a file with that name.
@@ -174,11 +200,11 @@ langchain installed nor the sys.modules mocks.
 | `tests/llm/storage/test_session_storage.py` | Two tests for the new helper via tmp `base_dir` | 1 |
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Import helper; add `_resolve_session_id()`; swap `:306` and `:638`; update two `Raises:` docstrings | 2 |
 | `tests/llm/providers/langchain/conftest.py` | Opt-in fixture neutralising the guard | 2 |
-| `tests/llm/providers/langchain/test_langchain_{agent_mode,multi_turn,provider,streaming}.py` | Request the opt-in fixture (11 tests) | 2 |
+| `tests/llm/providers/langchain/test_langchain_{agent_mode,multi_turn,provider,streaming}.py` | Request the opt-in fixture (9 tests) | 2 |
 | `tests/cli/commands/test_prompt.py` | One test asserting the guard makes `execute_prompt` return 1 | 2 |
 | `docs/architecture/architecture.md` | Note the guard under LangChain session storage | 2 |
 | `docs/cli-reference.md` | Note the `--session-id` restriction for langchain | 2 |
-| `docs/configuration/config.md` | Note the guard under "Session Continuity", incl. the `--continue-session-from` consequence | 2 |
+| `docs/configuration/config.md` | Note the guard under "Session Continuity", incl. the `--continue-session-from` and `icoder` `/load` consequences | 2 |
 
 ### Not modified (verified)
 
@@ -202,8 +228,14 @@ not warrant a separate commit and quality-check cycle.
 ## Acceptance (from the issue)
 
 - [ ] An explicitly requested session id with no history file exits 1, naming the id and the
-      expected path. *(message: step 1 tests; exit code: 2e)*
+      expected path. *(step 1 tests assert the message shape; 2e asserts the exit code **and**
+      that the surfaced CLI message names both the id and the expected history path)*
 - [ ] Both `ask_langchain` and `ask_langchain_stream` are guarded. *(2d tests 1-2)*
+- [ ] Resuming via `icoder`'s `/load` / startup session picker with an id whose history file
+      is gone errors instead of blank-starting. *(2d test 2 — `/load` sets the id via
+      `set_session_id()` and the next turn goes through `prompt_llm_stream` →
+      `ask_langchain_stream`, so no icoder-level code path is added and no extra test is
+      warranted; the stuck-until-`/clear` consequence is documented in 2f)*
 - [ ] A new session (no id passed) is unaffected. *(2d test 4)*
 - [ ] A successful resume stays silent. *(2d test 3, plus the `langchain_integration` resume
       tests, which now run with the guard live)*

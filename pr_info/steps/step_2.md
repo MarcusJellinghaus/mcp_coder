@@ -112,12 +112,12 @@ The `if not session_id` form (rather than `is None`) preserves today's
 
 ### 2c. Fallout fixture — `tests/llm/providers/langchain/conftest.py`
 
-Roughly 14 call sites across 5 files in that directory pass an explicit `session_id` into
-`ask_langchain` / `ask_langchain_stream`. Eleven of them (4 files) are unit tests that patch
+Twelve call sites across 5 files in that directory pass an explicit `session_id` into
+`ask_langchain` / `ask_langchain_stream`. Nine of them (4 files) are unit tests that patch
 `load_langchain_history` at module level; those patches do not cover the new symbol, so they
 would start raising. The remaining three are the `langchain_integration` resume tests, which
 pass with the guard live and are left alone. (The other `session_id=` sites in that directory
-call private helpers such as `run_agent` and `_ask_agent_stream` directly, below the guard,
+call private helpers such as `run_agent` and `run_agent_stream` directly, below the guard,
 and are unaffected.)
 
 Absorb them with one function-scoped **opt-in** fixture — `patch` and `Generator` are
@@ -139,12 +139,16 @@ def skip_langchain_history_guard() -> Generator[None, None, None]:
 
 **Not autouse, no marker.** Add `skip_langchain_history_guard` as a parameter to each unit
 test that calls `ask_langchain` / `ask_langchain_stream` with an explicit `session_id` —
-eleven sites across four files:
+nine sites across four files:
 
 - `test_langchain_agent_mode.py` (`:157`)
-- `test_langchain_multi_turn.py` (`:137`, `:222`, `:287`, `:331`, `:387`)
+- `test_langchain_multi_turn.py` (`:137`, `:287`, `:387`)
 - `test_langchain_provider.py` (`:262`, `:326`)
 - `test_langchain_streaming.py` (`:113`, `:138`, `:260`)
+
+Deliberately **not** applied to `test_langchain_multi_turn.py` (`:222`, `:331`): those two
+`session_id=` sites call `run_agent_stream(...)` directly (`:217`, `:326`), which is below
+the guard, so they need no fixture — consistent with the parenthesis above.
 
 Deliberately **not** applied to `tests/llm/providers/langchain/test_langchain_integration.py`
 (`:90`, `:195`, `:229`): those `langchain_integration` tests resume ids whose history files
@@ -206,8 +210,10 @@ llm_method="langchain", mcp_config=None, settings=None, project_dir=None)` and a
   monkeypatch `Path.home()` to `tmp_path` so the expected history path is missing by
   construction.
 - Assert on `caplog` that the logged failure names the requested id
-  (`response_2025-01-01T00-00-00`), so a future unrelated exception cannot keep this test
-  green.
+  (`response_2025-01-01T00-00-00`) **and** the expected history path
+  (`response_2025-01-01T00-00-00.json`, under `tmp_path`), so a future unrelated exception
+  cannot keep this test green and the "names the id and the expected path" acceptance item
+  is covered on the surfaced CLI message, not only in the storage unit tests.
 
 This is the langchain stem-resolution path from `prompt.py:107-111`: the file's stem becomes
 the session id, which is why a stored-response filename never has a history file.
@@ -250,6 +256,11 @@ a langchain session id resolves to a bogus id — including a langchain file wri
 workflow now **exits 1** instead of silently starting a blank conversation, and that
 `--continue-session` (which discovers a real file under
 `~/.mcp_coder/sessions/langchain/`) or an explicit `--session-id` is the working route.
+
+Close that subsection with one sentence on `icoder`: `/load` (and the startup session picker)
+resumes the id recorded in an *event log*, not a history file, so loading a log whose
+`~/.mcp_coder/sessions/langchain/` entry has been cleaned now errors on every turn until
+`/clear` starts a fresh conversation. One sentence, same style — no new heading.
 
 ## CHECKS
 
