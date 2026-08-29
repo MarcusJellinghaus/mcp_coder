@@ -107,14 +107,24 @@ pending count. Serialisation is achieved by emitting only for the front entry:
   unwinds while the join is waiting, so the agent thread is dead when the join returns instead of
   leaking for the process lifetime with a future nothing can resolve. Joining first would expire
   the full 5s with the thread still parked.
-* **Timeout suspension is pause, not keepalives** (FINDINGS §3, D1): the consumer treats
-  `queue.Empty` as "re-wait" while `pending() > 0`, and the overall cap compares
-  `elapsed − paused`. `paused` is measured from a **timestamped pending window** — the wall time
-  between `pending()` going 0→n and back to 0 — **not** accumulated in `queue.Empty` units: with
-  iCoder's 300s inactivity timeout and the 3600s cap, an `Empty`-only accumulation credits
-  *nothing* for any pause shorter than 300s and charges it in full against the cap, so a turn
-  with a few one-minute approvals still trips it. Keepalives *arm* the overall cap (it is checked
-  inside the consumer loop after `q.get()` returns) and would reach the session `.jsonl` and replay.
+* **Timeout suspension is pause, not keepalives** (FINDINGS §3, D1) — keepalives *arm* the overall
+  cap (it is checked inside the consumer loop after `q.get()` returns) and would reach the session
+  `.jsonl` and replay. The two timeouts need **two different treatments**, and "re-wait while
+  `pending() > 0`" only covers one of them:
+  * **Overall cap** — compares `elapsed − paused`, where `paused` is measured from a
+    **timestamped pending window** (the wall time between `pending()` going 0→n and back to 0),
+    **not** accumulated in `queue.Empty` units: with iCoder's 300s inactivity timeout and the
+    3600s cap, an `Empty`-only accumulation credits *nothing* for any pause shorter than 300s and
+    charges it in full against the cap, so a turn with a few one-minute approvals still trips it.
+  * **Inactivity `q.get(timeout=…)`** — is **restarted**, not merely suspended. Every `q.get`
+    call gets a fresh 300s budget, so re-waiting only while a pause is *still open at expiry*
+    leaves a pause that opened and closed **inside** one wait charging its full duration to that
+    budget: `approval_request` at t=0, the user answers at t=250, the approved tool then runs
+    quietly for 60s, and at t=300 the `Empty` sees `pending() == 0` and kills the turn with
+    `TimeoutError("no response for 300s. Connection closed.")` after 50s of real inactivity.
+    So a `pause_epoch` counter is bumped whenever a window **closes** and snapshotted before each
+    `q.get`; on `queue.Empty` the consumer re-waits when the window is open **or** the epoch
+    advanced during that wait. Only a wait that contained no pause at all may raise.
 
 ### 2.4 Resolver: `runtime` becomes its own top-priority stage (R14)
 

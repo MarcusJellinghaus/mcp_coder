@@ -80,12 +80,28 @@ def _ask_agent_stream(..., approval_bridge: ApprovalBridge | None = None) -> Ite
      able to raise.
   2. Pause: a **timestamped pending window**. Sample `approval_bridge.pending()` at every loop
      point (after `q.get` returns *and* on `queue.Empty`); opening the window records
-     `pause_began`, closing it credits the real wall time to `paused`. On `queue.Empty` with the
-     window open, `continue` instead of raising the inactivity timeout. The overall cap is
+     `pause_began`, closing it credits the real wall time to `paused` **and bumps a
+     `pause_epoch` counter**. On `queue.Empty` with the window open, `continue` instead of
+     raising the inactivity timeout. The overall cap is
      compared against `elapsed − paused − (the currently open window)`. Do **not** accumulate
      `paused += timeout` in the `queue.Empty` branch only: with a 300s inactivity timeout every
      pause shorter than 300s would produce no `Empty` at all and would be charged in full against
      the 3600s cap.
+
+     **The inactivity budget must be restarted, not merely suspended.** "Re-wait while
+     `pending() > 0`" is not sufficient: `q.get(timeout=timeout)` starts a fresh 300s budget on
+     every call, and a pause that *opens and closes inside one such wait* still consumes that
+     budget. Concretely — the `approval_request` is dequeued at t=0, the user answers at t=250,
+     the approved tool then runs quietly for 60s: at t=300 `q.get` raises `Empty` with
+     `pending() == 0`, so the window-open check fails and the turn dies with
+     `TimeoutError("no response for 300s. Connection closed.")` after only 50s of real
+     inactivity. So: snapshot `pause_epoch` immediately **before** each `q.get`, and on
+     `queue.Empty` re-wait when the window is open **or** when `pause_epoch` has advanced since
+     that snapshot — i.e. any pause overlapping the current wait buys a full fresh `timeout`.
+     Only a wait that contained no pause at all may raise the inactivity `TimeoutError`.
+     A pause can never go unobserved: the registry entry is created *before* the emit
+     (summary §2.2), so `pending()` is already `> 0` on the loop point that dequeues the
+     `approval_request`, and the window is always opened there.
   3. `_run` gains `except asyncio.CancelledError:` **before** the `except Exception`, which does
      **not** append to `error_holder`; the `finally` still puts the sentinel.
 * **Comments to carry (D9):** why pause and not keepalives — the overall cap is checked *inside*
@@ -99,11 +115,11 @@ def _ask_agent_stream(..., approval_bridge: ApprovalBridge | None = None) -> Ite
 
 ```python
 # _ask_agent_stream consumer loop
-start, paused, pause_began = time.monotonic(), 0.0, None
+start, paused, pause_began, pause_epoch = time.monotonic(), 0.0, None, 0
 
 def _sync_pause() -> None:
     """Open/close the pending window from the bridge's count (consumer thread)."""
-    nonlocal paused, pause_began
+    nonlocal paused, pause_began, pause_epoch
     waiting = approval_bridge is not None and approval_bridge.pending() > 0
     now = time.monotonic()
     if waiting and pause_began is None:
@@ -111,6 +127,7 @@ def _sync_pause() -> None:
     elif not waiting and pause_began is not None:
         paused += now - pause_began             # window closes, real wall time credited
         pause_began = None
+        pause_epoch += 1                        # ... and the inactivity budget is void
 
 def _elapsed() -> float:
     now = time.monotonic()
@@ -118,11 +135,16 @@ def _elapsed() -> float:
     return (now - start) - paused - open_window
 
 while True:
+    epoch_at_wait_start = pause_epoch           # snapshot BEFORE the wait
     try:
         event = q.get(timeout=timeout)
     except queue.Empty as exc:
         _sync_pause()
-        if pause_began is not None:             # legitimate human pause -> re-wait
+        # Re-wait on a still-open pause, and equally on one that opened and
+        # closed inside this wait: `q.get` gives every call a fresh `timeout`,
+        # so a pause overlapping the wait would otherwise eat the whole budget
+        # and trip the inactivity error moments after the user approved.
+        if pause_began is not None or pause_epoch != epoch_at_wait_start:
             continue
         cancel.set(); raise TimeoutError(...) from exc
     _sync_pause()                               # sampled BEFORE the yield blocks on the UI
@@ -134,19 +156,27 @@ while True:
 
 The window opens on the iteration that dequeues the `approval_request` itself — the registry
 entry is created *before* the emit (summary §2.2), so `pending()` is already `> 0` there — and
-closes on the first event that follows the decision. It therefore covers the whole human wait,
-including the part spent suspended at `yield` while the UI handles the event, and works for
-pauses far shorter than `timeout`.
+closes on the first event (or `queue.Empty`) that follows the decision. It therefore covers the
+whole human wait, including the part spent suspended at `yield` while the UI handles the event,
+and works for pauses far shorter than `timeout`.
+
+`pause_epoch` covers the other half: the window feeds the **overall cap**, the epoch protects the
+**inactivity budget**. Closing a window voids the `q.get` wait it overlapped, so the consumer
+re-waits with a fresh `timeout` instead of raising — which is the only thing standing between a
+user who answers late in a wait and a spurious "Connection closed" on the next quiet stretch.
 
 ## DATA
 
 * `approval_bridge.attach(q.put)` — `q` is `queue.Queue[StreamEvent | None]`, so `q.put`
   satisfies `Callable[[StreamEvent], None]` (contravariant parameter, extra params have defaults).
 * `paused` and `pause_began` are floats in seconds (`pause_began` is `float | None`, `None` when
-  no approval is pending). The inactivity `timeout` is iCoder's **300s**
+  no approval is pending); `pause_epoch` is an `int` bumped once per closed window and is only
+  ever compared for inequality against a snapshot taken before `q.get`. The inactivity `timeout`
+  is iCoder's **300s**
   (`ICODER_LLM_TIMEOUT_SECONDS`), not the 30s default, and `_AGENT_OVERALL_TIMEOUT` is **3600s** —
   tests must monkeypatch both to small values, and must cover a pause **shorter** than the
-  inactivity timeout, where no `queue.Empty` ever occurs.
+  inactivity timeout, where no `queue.Empty` ever occurs, **and** a pause that opens and closes
+  inside a single `q.get` wait which is then followed by a quiet stretch.
 * Yielded events are unchanged; `approval_request` passes through the generator like any other.
 
 ## TESTS (write first)
@@ -160,6 +190,15 @@ Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
    that **no `queue.Empty` ever fires** and `_AGENT_OVERALL_TIMEOUT` smaller than the pause, a
    bridge reporting `pending() > 0` across the wait still completes. This is the case the
    `queue.Empty`-only accumulation got wrong; test 1 cannot detect it.
+2b. **A pause that ends mid-wait does not consume the inactivity budget:** with a small
+   monkeypatched `timeout` (and `_AGENT_OVERALL_TIMEOUT` large), the bridge reports
+   `pending() > 0` for ~0.8 × `timeout`, then drops to `0`, and **no event follows for another
+   ~0.8 × `timeout`** before the tool finally emits. The turn must complete: the `Empty` raised
+   at the end of that first wait sees `pending() == 0` but an advanced `pause_epoch`, so the
+   consumer re-waits with a fresh budget. Without the epoch this raises
+   `TimeoutError("no response for …")` — the 250s-answer + 60s-tool scenario. Tests 1–3 cannot
+   detect it: test 1 keeps `pending() > 0` for the whole wait, test 2 sets `timeout` so no
+   `queue.Empty` ever fires, and test 3 has no pause at all.
 3. **Negative control:** the same setup with `approval_bridge=None` raises `TimeoutError` — proves
    the pause is load-bearing, not vacuous.
 4. **Attach/detach lifecycle:** `attach` is called with a callable that puts onto *this* turn's
@@ -203,7 +242,12 @@ Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
 > **timestamped window** (sample `pending()` at every loop point, credit real wall time when the
 > window closes, subtract the still-open window in the cap check) — do **not** accumulate
 > `paused += timeout` in the `queue.Empty` branch only, or pauses shorter than the 300s inactivity
-> timeout are charged in full against the 3600s cap; add `except asyncio.CancelledError`
+> timeout are charged in full against the 3600s cap. Also bump a `pause_epoch` counter whenever a
+> window **closes**, snapshot it before each `q.get`, and re-wait on `queue.Empty` when the window
+> is open **or** the epoch advanced during that wait: `q.get` restarts its full `timeout` on every
+> call, so a pause that opens and closes inside one wait would otherwise eat the whole inactivity
+> budget and kill the turn with "no response for 300s. Connection closed." moments after the user
+> approved. Add `except asyncio.CancelledError`
 > to `_run` that does not append to `error_holder` while the `finally` still puts the sentinel.
 >
 > In `llm/types.py`, add `_TRANSIENT_EVENT_TYPES = frozenset({"raw_line", "approval_request"})`,
@@ -212,8 +256,10 @@ Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
 > `llm/interface.py` annotate the new parameter under `TYPE_CHECKING` so no eager langchain import
 > is introduced, and document it as "langchain provider only" like the neighbouring `tools` param.
 >
-> Write the eight test cases listed in the step first, reusing the Step 1 harness; monkeypatch both
-> timeouts to small values, and include the sub-inactivity pause case (no `queue.Empty` at all) and
+> Write the nine test cases listed in the step first (1, 2, 2b, 3–8), reusing the Step 1 harness;
+> monkeypatch both
+> timeouts to small values, and include the sub-inactivity pause case (no `queue.Empty` at all),
+> the pause-ends-mid-wait case (2b — pause, then a quiet stretch, both under one `timeout`) and
 > the generator-closed-while-pending case. Carry the "pause not keepalives" and "CancelledError is
 > a BaseException" rationale into code comments.
 >
