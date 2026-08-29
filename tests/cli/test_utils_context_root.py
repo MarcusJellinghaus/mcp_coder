@@ -5,7 +5,6 @@ A separate module from test_utils.py, which would otherwise cross the repo's
 """
 
 import logging
-import warnings
 from pathlib import Path
 from unittest.mock import patch
 
@@ -140,7 +139,7 @@ class TestContextRootReporting:
     ) -> None:
         """The Claude working directory is named at OUTPUT level."""
         with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-            report_context_root(tmp_path, tmp_path)
+            report_context_root(tmp_path)
 
         assert "Claude working directory" in caplog.text
         assert str(tmp_path) in caplog.text
@@ -156,7 +155,7 @@ class TestContextRootReporting:
         dot_claude.write_text("more rules", encoding="utf-8")
 
         with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-            report_context_root(tmp_path, tmp_path)
+            report_context_root(tmp_path)
 
         assert str(root_level.resolve()) in caplog.text
         assert str(dot_claude.resolve()) in caplog.text
@@ -172,7 +171,7 @@ class TestContextRootReporting:
         """
         with patch("mcp_coder.cli.utils.find_context_claude_md", return_value=[]):
             with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-                report_context_root(tmp_path, tmp_path)
+                report_context_root(tmp_path)
 
         assert "none found" in caplog.text
 
@@ -201,7 +200,7 @@ class TestContextRootReporting:
             return_value=[stale.resolve()],
         ):
             with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-                report_context_root(tool_env, repo)
+                report_context_root(repo)
 
         warnings_logged = [r for r in caplog.records if r.levelno >= logging.WARNING]
         assert len(warnings_logged) == 1
@@ -229,7 +228,7 @@ class TestContextRootReporting:
             return_value=[stale.resolve(), user_level.resolve()],
         ):
             with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-                report_context_root(tool_env, repo)
+                report_context_root(repo)
 
         warnings_logged = [r for r in caplog.records if r.levelno >= logging.WARNING]
         assert len(warnings_logged) == 1
@@ -259,7 +258,7 @@ class TestContextRootReporting:
             return_value=[own.resolve(), ancestor.resolve()],
         ):
             with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-                report_context_root(repo, repo)
+                report_context_root(repo)
 
         assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
         assert str(own.resolve()) in caplog.text
@@ -283,45 +282,19 @@ class TestContextRootReporting:
             return_value=[own.resolve()],
         ):
             with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-                report_context_root(repo, repo)
+                report_context_root(repo)
 
         assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
 
-    def test_report_does_not_warn_without_project_dir(
+    # --- wiring into resolve_claude_cwd ------------------------------------
+
+    def test_resolver_reports_the_context_root(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """With no project_dir there is no anchor to be outside of."""
-        tool_env = tmp_path / "tool_env"
-        tool_env.mkdir()
-        (tool_env / "CLAUDE.md").write_text("rules", encoding="utf-8")
+        """Resolving the Claude cwd reports the context root."""
+        from mcp_coder.cli.utils import resolve_claude_cwd
 
         with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-            report_context_root(tool_env, None)
-
-        assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
-
-    # --- wiring into resolve_execution_dir --------------------------------
-
-    def test_resolver_reports_on_default_branch(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """The project_dir default reports the context root."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-            resolve_execution_dir(None, project_dir=tmp_path)
-
-        assert "Claude working directory" in caplog.text
-
-    def test_resolver_reports_on_explicit_branch(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """An explicit --execution-dir reports the context root too."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
-                resolve_execution_dir(str(tmp_path))
+            resolve_claude_cwd(tmp_path)
 
         assert "Claude working directory" in caplog.text

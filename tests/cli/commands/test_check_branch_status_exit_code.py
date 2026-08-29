@@ -115,7 +115,6 @@ def _args(*, fail_on_reviews: bool) -> argparse.Namespace:
         llm_method="claude",
         mcp_config=None,
         settings=None,
-        execution_dir=None,
         wait_for_pr=False,
         pr_timeout=600,
         fail_on_reviews=fail_on_reviews,

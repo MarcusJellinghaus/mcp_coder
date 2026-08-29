@@ -26,7 +26,6 @@ def _make_args() -> argparse.Namespace:
     return argparse.Namespace(
         project_dir="/test/project",
         llm_method="claude",
-        execution_dir=None,
         mcp_config=None,
         settings=None,
         update_issue_labels=None,
@@ -40,7 +39,7 @@ class TestExecuteReview:
     @patch("mcp_coder.cli.commands.review.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.review.resolve_claude_settings_path")
     @patch("mcp_coder.cli.commands.review.resolve_mcp_config_path")
-    @patch("mcp_coder.cli.commands.review.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.review.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.review.resolve_project_dir")
     @patch("mcp_coder.cli.commands.review.parse_llm_method_from_args")
     @patch("mcp_coder.cli.commands.review.resolve_llm_method")
@@ -58,9 +57,8 @@ class TestExecuteReview:
     ) -> None:
         """review-plan passes REVIEW_PLAN and resolved params; return propagates."""
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = execution_dir
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_mcp.return_value = None
@@ -73,7 +71,7 @@ class TestExecuteReview:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
+        mock_resolve_exec.assert_called_once_with(project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
@@ -82,7 +80,7 @@ class TestExecuteReview:
             "claude",
             None,
             None,
-            execution_dir,
+            project_dir,
             False,
             False,
         )
@@ -90,7 +88,7 @@ class TestExecuteReview:
     @patch("mcp_coder.cli.commands.review.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.review.resolve_claude_settings_path")
     @patch("mcp_coder.cli.commands.review.resolve_mcp_config_path")
-    @patch("mcp_coder.cli.commands.review.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.review.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.review.resolve_project_dir")
     @patch("mcp_coder.cli.commands.review.parse_llm_method_from_args")
     @patch("mcp_coder.cli.commands.review.resolve_llm_method")
@@ -108,9 +106,8 @@ class TestExecuteReview:
     ) -> None:
         """review-implementation passes REVIEW_IMPLEMENTATION; return propagates."""
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = execution_dir
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_mcp.return_value = None
@@ -131,7 +128,7 @@ class TestExecuteReview:
             "claude",
             None,
             None,
-            execution_dir,
+            project_dir,
             True,
             True,
         )
@@ -140,7 +137,7 @@ class TestExecuteReview:
     @patch("mcp_coder.cli.commands.review.resolve_issue_interaction_flags")
     @patch("mcp_coder.cli.commands.review.resolve_claude_settings_path")
     @patch("mcp_coder.cli.commands.review.resolve_mcp_config_path")
-    @patch("mcp_coder.cli.commands.review.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.review.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.review.resolve_project_dir")
     @patch("mcp_coder.cli.commands.review.parse_llm_method_from_args")
     @patch("mcp_coder.cli.commands.review.resolve_llm_method")
@@ -160,7 +157,7 @@ class TestExecuteReview:
         """Crash logging is tagged with the review verb name."""
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = Path.cwd()
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_mcp.return_value = None
@@ -196,23 +193,21 @@ class TestExecuteReview:
         assert result == 1
         assert "boom" in caplog.text
 
-    @patch("mcp_coder.cli.commands.review.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.review.resolve_project_dir")
-    def test_invalid_execution_dir_returns_error(
+    def test_invalid_project_dir_returns_error(
         self,
         mock_resolve_dir: Mock,
-        mock_resolve_exec: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """An invalid execution dir (ValueError) returns exit code 1."""
-        mock_resolve_dir.return_value = Path("/test/project")
-        mock_resolve_exec.side_effect = ValueError("Directory does not exist")
+        """An invalid project dir (ValueError) returns exit code 1."""
+        mock_resolve_dir.side_effect = ValueError("Directory does not exist")
 
         with caplog.at_level(logging.DEBUG):
             result = execute_review_implementation(_make_args())
 
         assert result == 1
         assert "Directory does not exist" in caplog.text
+        assert "Invalid project directory" in caplog.text
 
 
 class TestReviewParsers:
@@ -255,11 +250,10 @@ class TestReviewParsers:
             self._parse("review-plan", "42")
 
     def test_shared_args_present(self) -> None:
-        """Both verbs expose the shared project/llm/mcp/settings/exec args."""
+        """Both verbs expose the shared project/llm/mcp/settings args."""
         for verb in ("review-plan", "review-implementation"):
             args = self._parse(verb, "--llm-method", "claude")
             assert args.llm_method == "claude"
             assert hasattr(args, "project_dir")
             assert hasattr(args, "mcp_config")
             assert hasattr(args, "settings")
-            assert hasattr(args, "execution_dir")

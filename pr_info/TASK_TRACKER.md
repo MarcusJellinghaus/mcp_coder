@@ -36,9 +36,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Remove the `--execution-dir` flag and replace the resolver ([step_3.md](./steps/step_3.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (pytest still blocked by the same
+  pre-existing stale `mcp-workspace` install as step 2 — see note in step_3.md)
+- [x] Commit message prepared
 
 ### Step 4a: `prompt_llm` takes a required `project_dir`; retarget the direct callers ([step_4a.md](./steps/step_4a.md))
 

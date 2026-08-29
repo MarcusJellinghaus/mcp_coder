@@ -19,8 +19,8 @@ from ...workflows.rebase_permissions import REBASE_LLM_PERMISSIONS
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
+    resolve_claude_cwd,
     resolve_claude_settings_path,
-    resolve_execution_dir,
     resolve_llm_method,
     resolve_mcp_config_path,
 )
@@ -65,7 +65,6 @@ def execute_rebase(args: argparse.Namespace) -> int:
     Args:
         args: Parsed command line arguments with:
             - project_dir: Optional project directory path
-            - execution_dir: Optional execution directory
             - llm_method: LLM method to use ('claude' or 'langchain')
             - mcp_config: Optional MCP config path
             - settings: Optional Claude settings path
@@ -78,12 +77,9 @@ def execute_rebase(args: argparse.Namespace) -> int:
     """
     try:
         project_dir = resolve_project_dir(args.project_dir)
-        execution_dir = resolve_execution_dir(
-            args.execution_dir, project_dir=project_dir
-        )
+        project_dir = resolve_claude_cwd(project_dir)
 
         logger.debug("Project directory: %s", project_dir)
-        logger.debug("Execution directory: %s", execution_dir)
 
         llm_method, _ = resolve_llm_method(args.llm_method)
         provider = parse_llm_method_from_args(llm_method)
@@ -102,11 +98,11 @@ def execute_rebase(args: argparse.Namespace) -> int:
             args.base_branch,
             mcp_config,
             settings_file,
-            execution_dir,
+            project_dir,
         )
 
     except ValueError as e:
-        logger.error(f"Invalid execution directory: {e}")
+        logger.error(f"Invalid project directory: {e}")
         return 2
 
     except KeyboardInterrupt:

@@ -1357,10 +1357,10 @@ class TestProcessSingleTaskBlocked:
 class TestBranchNameSource:
     """The LLM-log branch name is read from project_dir, not execution_dir.
 
-    After the cwd default change the two coincide unless --execution-dir is
-    passed explicitly; that is the case these tests pin. The subprocess itself
-    must still run in execution_dir, so each test also asserts prompt_llm keeps
-    receiving it.
+    Every CLI command now passes project_dir as the workflow's execution_dir,
+    so the two coincide unless a caller passes a different one directly; that
+    is the case these tests pin. The subprocess itself must still run in
+    execution_dir, so each test also asserts prompt_llm keeps receiving it.
     """
 
     _PROJECT_DIR = Path("/test/project")

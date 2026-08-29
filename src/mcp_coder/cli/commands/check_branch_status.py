@@ -33,8 +33,8 @@ from ...workflow_steps.ci import check_and_fix_ci
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
+    resolve_claude_cwd,
     resolve_claude_settings_path,
-    resolve_execution_dir,
     resolve_llm_method,
     resolve_mcp_config_path,
 )
@@ -171,7 +171,6 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
             - llm_truncate: Whether to use LLM-friendly output format
             - llm_method: LLM method for fixes (if --fix enabled)
             - mcp_config: Optional MCP configuration path
-            - execution_dir: Optional execution directory
             - fail_on_reviews: Gate the exit code on PR-review feedback
 
     Returns:
@@ -190,9 +189,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
 
         # Hoisted out of the --fix block below so the resolver's context report
         # happens once per run, not only on runs that call an LLM.
-        execution_dir = resolve_execution_dir(
-            args.execution_dir, project_dir=project_dir
-        )
+        project_dir = resolve_claude_cwd(project_dir)
 
         # PR discovery phase (before CI waiting)
         pr_number: Optional[int] = None
@@ -342,7 +339,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 provider,
                 mcp_config,
                 settings_file=settings_file,
-                execution_dir=execution_dir,
+                execution_dir=project_dir,
                 fix_attempts=args.fix,  # NEW
                 ci_timeout=args.ci_timeout,  # NEW
                 llm_truncate=args.llm_truncate,  # NEW

@@ -1,7 +1,7 @@
 """Unit tests for the DRY shared CLI flag helpers (`cli/shared_args.py`).
 
 These tests lock the canonical wording, defaults, choices, and metavar of the
-five opt-in per-flag helpers, plus an integration guard verifying that every
+four opt-in per-flag helpers, plus an integration guard verifying that every
 parser owning ``--llm-method`` renders ``METHOD`` in its help output.
 """
 
@@ -13,12 +13,10 @@ import pytest
 
 from mcp_coder.cli.main import create_parser
 from mcp_coder.cli.shared_args import (
-    _EXECUTION_DIR_HELP,
     _LLM_METHOD_HELP,
     _MCP_CONFIG_HELP,
     _PROJECT_DIR_HELP,
     _SETTINGS_HELP,
-    add_execution_dir_arg,
     add_llm_method_arg,
     add_mcp_config_arg,
     add_project_dir_arg,
@@ -148,23 +146,6 @@ class TestAddSettingsArg:
         assert "settings.local.json" in parser.format_help()
 
 
-class TestAddExecutionDirArg:
-    """Tests for add_execution_dir_arg."""
-
-    def test_default_is_none(self) -> None:
-        """execution_dir defaults to None."""
-        parser = argparse.ArgumentParser()
-        add_execution_dir_arg(parser)
-        args = parser.parse_args([])
-        assert args.execution_dir is None
-
-    def test_canonical_help(self) -> None:
-        """Canonical wording appears in help output."""
-        parser = argparse.ArgumentParser()
-        add_execution_dir_arg(parser)
-        assert "where Claude subprocess runs" in parser.format_help()
-
-
 class TestCanonicalWordingConstants:
     """The exported help constants carry the canonical wording."""
 
@@ -193,13 +174,6 @@ class TestCanonicalWordingConstants:
             "Path to Claude Code settings file (.claude/settings.local.json). "
             "Auto-detected from <project_dir>/.claude/ if omitted. "
             "Overrides Claude's cwd-based settings discovery."
-        )
-
-    def test_execution_dir_wording(self) -> None:
-        """Execution-dir constant matches the settled canonical wording."""
-        assert _EXECUTION_DIR_HELP == (
-            "DEPRECATED (removal tracked in #1132): execution directory: "
-            "where Claude subprocess runs. Default: the project directory"
         )
 
 

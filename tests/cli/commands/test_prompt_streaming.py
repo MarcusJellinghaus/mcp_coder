@@ -47,7 +47,6 @@ def _make_args(**overrides: Any) -> argparse.Namespace:
         "continue_session_from": None,
         "continue_session": False,
         "project_dir": None,
-        "execution_dir": None,
         "mcp_config": None,
         "settings": None,
         "store_response": False,

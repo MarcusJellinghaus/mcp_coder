@@ -86,8 +86,10 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_claude_cwd")
     def test_execute_check_branch_status_read_only_success(
         self,
+        mock_resolve_cwd: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
         mock_branch: Mock,
@@ -98,13 +100,10 @@ class TestExecuteCheckBranchStatus:
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_resolve_cwd.return_value = project_dir
         mock_branch.return_value = "feature/test-branch"
         mock_collect.return_value = sample_report
 
-        # execution_dir=None means the real resolve_execution_dir runs on the
-        # read-only path and defaults to project_dir. "/test/project" does not
-        # exist, which is fine: that default is deliberately not
-        # existence-validated (see resolve_execution_dir in cli/utils.py).
         args = argparse.Namespace(
             project_dir="/test/project",
             ci_timeout=0,
@@ -112,7 +111,6 @@ class TestExecuteCheckBranchStatus:
             llm_truncate=False,
             llm_method="claude",
             mcp_config=None,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -129,8 +127,10 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_claude_cwd")
     def test_execute_check_branch_status_llm_mode(
         self,
+        mock_resolve_cwd: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
         mock_branch: Mock,
@@ -141,6 +141,7 @@ class TestExecuteCheckBranchStatus:
         # Setup mocks
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
+        mock_resolve_cwd.return_value = project_dir
         mock_branch.return_value = "feature/test-branch"
         mock_collect.return_value = sample_report
 
@@ -151,7 +152,6 @@ class TestExecuteCheckBranchStatus:
             llm_truncate=True,
             llm_method="claude",
             mcp_config=None,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -167,42 +167,8 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
-    def test_read_only_invalid_execution_dir_returns_two(
-        self,
-        mock_collect: Mock,
-        mock_resolve_dir: Mock,
-        mock_branch: Mock,
-        sample_report: BranchStatusReport,
-        tmp_path: Path,
-    ) -> None:
-        """A bad --execution-dir fails the read-only path too (exit code 2).
-
-        resolve_execution_dir is hoisted out of the --fix block so the context
-        report is emitted once per run. The cost, accepted knowingly: an
-        unusable --execution-dir now raises before any status is collected, and
-        the broad boundary handler classifies it as a technical error.
-        """
-        mock_resolve_dir.return_value = Path("/test/project")
-        mock_branch.return_value = "feature/test-branch"
-        mock_collect.return_value = sample_report
-
-        args = argparse.Namespace(
-            project_dir="/test/project",
-            ci_timeout=0,
-            fix=0,  # read-only path
-            llm_truncate=False,
-            llm_method="claude",
-            mcp_config=None,
-            execution_dir=str(tmp_path / "does_not_exist"),
-        )
-
-        assert execute_check_branch_status(args) == 2
-
-    @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
-    @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_llm_method")
     @patch("mcp_coder.cli.commands.check_branch_status.parse_llm_method_from_args")
     def test_execute_check_branch_status_with_fixes_success(
@@ -220,10 +186,9 @@ class TestExecuteCheckBranchStatus:
         """Test branch status check with --fix flag when fixes succeed."""
         # Setup mocks
         project_dir = Path("/test/project")
-        exec_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_branch.return_value = "feature/test-branch"
-        mock_resolve_exec.return_value = exec_dir
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_collect.return_value = failed_ci_report
@@ -237,7 +202,6 @@ class TestExecuteCheckBranchStatus:
             llm_method="claude",
             mcp_config=None,
             settings=None,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -251,7 +215,7 @@ class TestExecuteCheckBranchStatus:
             "claude",
             None,
             settings_file=None,
-            execution_dir=exec_dir,
+            execution_dir=project_dir,
             fix_attempts=1,
             ci_timeout=0,
             llm_truncate=False,
@@ -261,7 +225,7 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
     @patch("mcp_coder.cli.commands.check_branch_status._run_auto_fixes")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.check_branch_status.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_llm_method")
     @patch("mcp_coder.cli.commands.check_branch_status.parse_llm_method_from_args")
     def test_execute_check_branch_status_with_fixes_failure(
@@ -279,10 +243,9 @@ class TestExecuteCheckBranchStatus:
         """Test branch status check with --fix flag when fixes fail."""
         # Setup mocks
         project_dir = Path("/test/project")
-        exec_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
         mock_branch.return_value = "feature/test-branch"
-        mock_resolve_exec.return_value = exec_dir
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_collect.return_value = failed_ci_report
@@ -296,7 +259,6 @@ class TestExecuteCheckBranchStatus:
             llm_method="claude",
             mcp_config=None,
             settings=None,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -321,7 +283,6 @@ class TestExecuteCheckBranchStatus:
             llm_truncate=False,
             llm_method="claude",
             mcp_config=None,
-            execution_dir=None,
         )
 
         with pytest.raises(SystemExit) as exc_info:
@@ -354,7 +315,6 @@ class TestExecuteCheckBranchStatus:
             llm_truncate=False,
             llm_method="claude",
             mcp_config=None,
-            execution_dir=None,
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -397,7 +357,6 @@ class TestExecuteCheckBranchStatus:
             llm_truncate=False,
             llm_method="claude",
             mcp_config=None,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -461,7 +420,6 @@ class TestMissingTokenGuards:
             llm_truncate=False,
             llm_method="claude",
             mcp_config=None,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -500,7 +458,6 @@ class TestMissingTokenGuards:
             llm_truncate=False,
             llm_method="claude",
             mcp_config=None,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -539,7 +496,6 @@ class TestMissingTokenGuards:
             llm_method="claude",
             mcp_config=None,
             settings=None,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)
@@ -574,7 +530,6 @@ class TestMissingTokenGuards:
             llm_method="claude",
             mcp_config=None,
             settings=None,
-            execution_dir=None,
             wait_for_pr=True,
             pr_timeout=0,
         )
@@ -614,7 +569,6 @@ class TestMissingTokenGuards:
             llm_method="claude",
             mcp_config=None,
             settings=None,
-            execution_dir=None,
             wait_for_pr=True,
             pr_timeout=0,
         )

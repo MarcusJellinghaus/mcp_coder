@@ -162,6 +162,30 @@ Then implement. Order that keeps the feedback loop tight: `utils.py` → the 9 c
   unverified. If the tests skip because the Claude CLI is absent, say so explicitly rather than
   treating the skip as a pass.
 
+## Implementation note — quality gate caveat (pytest still blocked)
+
+**Pre-existing environment breakage, not caused by this step** — the same one recorded in
+[step_2.md](./step_2.md). The installed `mcp-workspace` package is older than what `main`
+requires: `src/mcp_coder/checks/branch_status.py:17` imports
+`mcp_workspace.checks.branch_status_rendering`, which does not exist in the installed copy.
+Because `mcp_coder/__init__.py:37` imports that module, **every** test module fails at
+collection, so pytest cannot run at all — neither the fast gate nor
+`markers=["claude_cli_integration"]` (so the two tests kept in the renamed
+`tests/integration/test_claude_cwd_integration.py` were **not** executed). Fix by reinstalling
+`mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git`.
+
+Pylint and mypy were run and report **exactly** the pre-existing baseline from step 2 — the
+`E0401` / `import-not-found` entries plus the `fail_on_reviews` / `pr_feedback_undeterminable`
+`E1123` / `call-arg` and `E1101` / `attr-defined` errors that the same stale package causes, and
+the unrelated `langchain_*` / `httpx` / `mcp.server.fastmcp` import errors. **No new issue in any
+file this step touched.** `black` and `isort` pass.
+
+Two Windows-specific test adjustments the plan did not anticipate: rebinding `project_dir` from
+the resolver makes `Path("/test/project").resolve()` → `C:\test\project`, so
+`test_check_branch_status.py`'s two read-only tests gained a `resolve_claude_cwd` patch (they had
+never patched the resolver), and `test_commit.py:1091` now asserts `Path("/repo").resolve()` —
+the deliberate `commit.py` side effect named in HOW, reaching `_push_after_commit`.
+
 ## Commit
 
 ```

@@ -37,13 +37,6 @@ def test_icoder_mcp_config_flag() -> None:
     assert args.mcp_config == "/tmp/.mcp.json"
 
 
-def test_icoder_execution_dir_flag() -> None:
-    """Test parser accepts --execution-dir flag."""
-    parser = create_parser()
-    args = parser.parse_args(["icoder", "--execution-dir", "/tmp/exec"])
-    assert args.execution_dir == "/tmp/exec"
-
-
 def test_icoder_default_values() -> None:
     """Test parser default values."""
     parser = create_parser()
@@ -51,7 +44,6 @@ def test_icoder_default_values() -> None:
     assert args.llm_method is None
     assert args.project_dir is None
     assert args.mcp_config is None
-    assert args.execution_dir is None
 
 
 def test_icoder_no_format_tools_flag() -> None:

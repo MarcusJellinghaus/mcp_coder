@@ -13,8 +13,8 @@ from ...workflows.utils import resolve_project_dir
 from ..utils import (
     log_command_startup,
     parse_llm_method_from_args,
+    resolve_claude_cwd,
     resolve_claude_settings_path,
-    resolve_execution_dir,
     resolve_issue_interaction_flags,
     resolve_llm_method,
     resolve_mcp_config_path,
@@ -30,7 +30,6 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         args: Parsed command line arguments with:
             - issue_number: GitHub issue number (int)
             - project_dir: Optional project directory path
-            - execution_dir: Optional execution directory (NEW)
             - llm_method: LLM method to use ('claude' or 'langchain')
 
     Returns:
@@ -42,14 +41,10 @@ def execute_create_plan(args: argparse.Namespace) -> int:
         log_command_startup("create-plan", project_dir)
         enable_crash_logging(project_dir, "create-plan")
 
-        # Resolve execution directory
-        execution_dir = resolve_execution_dir(
-            args.execution_dir, project_dir=project_dir
-        )
+        # Resolve the working directory for the Claude subprocess
+        project_dir = resolve_claude_cwd(project_dir)
 
-        # Log both directories for clarity
         logger.debug(f"Project directory: {project_dir}")
-        logger.debug(f"Execution directory: {execution_dir}")
 
         # Parse LLM method using shared utility
         llm_method, _ = resolve_llm_method(args.llm_method)
@@ -78,14 +73,13 @@ def execute_create_plan(args: argparse.Namespace) -> int:
             provider,
             mcp_config,
             settings_file,
-            execution_dir,
+            project_dir,
             update_issue_labels,
             post_issue_comments,
         )
 
     except ValueError as e:
-        # Handle invalid execution_dir
-        logger.error(f"Invalid execution directory: {e}")
+        logger.error(f"Invalid project directory: {e}")
         return 1
 
     except KeyboardInterrupt:

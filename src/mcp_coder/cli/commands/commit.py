@@ -21,7 +21,7 @@ from ...utils.log_utils import OUTPUT
 from ...workflow_utils.commit_operations import generate_commit_message_with_llm
 from ..utils import (
     parse_llm_method_from_args,
-    resolve_execution_dir,
+    resolve_claude_cwd,
     resolve_llm_method,
 )
 
@@ -71,16 +71,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
 
     project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
 
-    # Extract and validate execution_dir. Stays above validate_git_repository so
-    # a bad --execution-dir still errors before a bad project_dir does.
-    try:
-        execution_dir = resolve_execution_dir(
-            getattr(args, "execution_dir", None), project_dir=project_dir
-        )
-        logger.debug(f"Execution directory: {execution_dir}")
-    except ValueError as e:
-        logger.error(f"Invalid execution directory: {e}")
-        return 1
+    project_dir = resolve_claude_cwd(project_dir)
 
     # 1. Validate git repository
     success, error = validate_git_repository(project_dir)
@@ -92,10 +83,10 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     llm_method, _ = resolve_llm_method(args.llm_method)
     provider = parse_llm_method_from_args(llm_method)
     success, commit_message, error = generate_commit_message_with_llm(
-        project_dir, provider, execution_dir=str(execution_dir)
+        project_dir, provider, execution_dir=str(project_dir)
     )
     # Interactive command: mcp_config deliberately stays None so the subprocess
-    # uses normal MCP config discovery from execution_dir. Workflow-internal
+    # uses normal MCP config discovery from project_dir. Workflow-internal
     # callers pass explicit session params instead (see workflow_steps/commit.py);
     # the guard's needs-auth tolerance (layer 1) covers this discovery mode.
     if not success:

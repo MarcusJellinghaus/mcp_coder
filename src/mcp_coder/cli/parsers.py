@@ -13,7 +13,6 @@ from typing import Any, NoReturn
 
 from .command_catalog import COMMAND_DESCRIPTIONS
 from .shared_args import (
-    add_execution_dir_arg,
     add_llm_method_arg,
     add_mcp_config_arg,
     add_project_dir_arg,
@@ -110,7 +109,6 @@ def add_prompt_parser(subparsers: Any) -> None:
         action="store_true",
         help="Inject system and project prompts into the LLM request",
     )
-    add_execution_dir_arg(prompt_parser)
 
 
 def add_commit_parsers(subparsers: Any) -> None:
@@ -133,7 +131,6 @@ def add_commit_parsers(subparsers: Any) -> None:
     )
     add_llm_method_arg(auto_parser)
     add_project_dir_arg(auto_parser)
-    add_execution_dir_arg(auto_parser)
     auto_parser.add_argument(
         "--push",
         action="store_true",
@@ -152,7 +149,6 @@ def add_implement_parser(subparsers: Any) -> None:
     add_llm_method_arg(implement_parser)
     add_mcp_config_arg(implement_parser)
     add_settings_arg(implement_parser)
-    add_execution_dir_arg(implement_parser)
     implement_parser.add_argument(
         "--update-issue-labels",
         action=argparse.BooleanOptionalAction,
@@ -178,7 +174,6 @@ def add_review_plan_parser(subparsers: Any) -> None:
     add_llm_method_arg(review_plan_parser)
     add_mcp_config_arg(review_plan_parser)
     add_settings_arg(review_plan_parser)
-    add_execution_dir_arg(review_plan_parser)
     review_plan_parser.add_argument(
         "--update-issue-labels",
         action=argparse.BooleanOptionalAction,
@@ -204,7 +199,6 @@ def add_review_implementation_parser(subparsers: Any) -> None:
     add_llm_method_arg(review_implementation_parser)
     add_mcp_config_arg(review_implementation_parser)
     add_settings_arg(review_implementation_parser)
-    add_execution_dir_arg(review_implementation_parser)
     review_implementation_parser.add_argument(
         "--update-issue-labels",
         action=argparse.BooleanOptionalAction,
@@ -234,7 +228,6 @@ def add_create_plan_parser(subparsers: Any) -> None:
     add_llm_method_arg(create_plan_parser)
     add_mcp_config_arg(create_plan_parser)
     add_settings_arg(create_plan_parser)
-    add_execution_dir_arg(create_plan_parser)
     create_plan_parser.add_argument(
         "--update-issue-labels",
         action=argparse.BooleanOptionalAction,
@@ -264,7 +257,6 @@ def add_rebase_parser(subparsers: Any) -> None:
     add_llm_method_arg(rebase_parser)
     add_mcp_config_arg(rebase_parser)
     add_settings_arg(rebase_parser)
-    add_execution_dir_arg(rebase_parser)
     rebase_parser.add_argument(
         "--base-branch",
         type=str,
@@ -286,7 +278,6 @@ def add_create_pr_parser(subparsers: Any) -> None:
     add_llm_method_arg(create_pr_parser)
     add_mcp_config_arg(create_pr_parser)
     add_settings_arg(create_pr_parser)
-    add_execution_dir_arg(create_pr_parser)
     create_pr_parser.add_argument(
         "--update-issue-labels",
         action=argparse.BooleanOptionalAction,
@@ -429,7 +420,6 @@ def add_check_parsers(subparsers: Any) -> None:
     add_llm_method_arg(branch_status_parser)
     add_mcp_config_arg(branch_status_parser)
     add_settings_arg(branch_status_parser)
-    add_execution_dir_arg(branch_status_parser)
     branch_status_parser.add_argument(
         "--wait-for-pr",
         action="store_true",
@@ -596,7 +586,6 @@ def add_icoder_parser(subparsers: Any) -> None:
     add_mcp_config_arg(icoder_parser)
     add_settings_arg(icoder_parser)
     add_project_dir_arg(icoder_parser)
-    add_execution_dir_arg(icoder_parser)
     icoder_parser.add_argument(
         "--timeout",
         type=int,
