@@ -166,7 +166,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--store-response` - Save session to `.mcp-coder/responses/` for later continuation
 - `--continue-session-from FILE` - Resume conversation from specific stored session file
 - `--continue-session` - Resume from most recent session (auto-discovers latest file)
-- `--session-id ID` - Direct session ID for continuation (overrides file-based options)
+- `--session-id ID` - Direct session ID for continuation (overrides file-based options). With `--llm-method langchain` the ID must already have a stored history file; an unknown ID is an error, not a new conversation.
 - `--timeout SECONDS` - API request timeout in seconds (default: 60)
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--output-format FORMAT` - Output format: `text` (default) or `json` (includes session_id)

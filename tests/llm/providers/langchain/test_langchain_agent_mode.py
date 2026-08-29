@@ -105,7 +105,9 @@ class TestAskLangchainAgentMode:
             with pytest.raises(ImportError, match="langchain-mcp-adapters"):
                 ask_langchain("question", mcp_config="/path/to/.mcp.json")
 
-    def test_agent_mode_does_not_store_history(self) -> None:
+    def test_agent_mode_does_not_store_history(
+        self, skip_langchain_history_guard: None
+    ) -> None:
         """Agent mode never stores: run_agent_stream is the single storage site.
 
         ``_ask_agent`` dropped its ``store_langchain_history`` call, so storing

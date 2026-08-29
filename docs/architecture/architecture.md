@@ -252,6 +252,7 @@ with `--project-dir`; together these cover the CI/CD case that motivated shared 
     - See [`docs/configuration/optional-dependencies.md`](../configuration/optional-dependencies.md) for per-provider extras (smaller footprints if you only need one backend).
     - **Session storage**: history persisted to `~/.mcp_coder/sessions/langchain/`
       - Stored history is **system-free**: system + project prompts are merged into one `SystemMessage` and applied fresh each turn, never persisted. Otherwise they accumulate per turn and single-system providers (LiteLLM/Qwen-class) reject the conversation.
+      - Resuming is **guarded**: an explicitly requested `session_id` with no history file raises `ValueError` instead of starting a blank conversation. Both `ask_langchain` and `ask_langchain_stream` check at id resolution; a new session (no id passed) is unaffected.
 
 ### CLI System (`src/mcp_coder/cli/`)
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)

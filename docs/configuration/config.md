@@ -510,6 +510,21 @@ LangChain conversations are **resumed automatically** using the same
 This means sessions survive process restarts, unlike Claude (which stores
 history server-side).
 
+Resuming a session id that has no history file at the path above is an error:
+the command fails with a message naming the requested id and the expected file,
+rather than silently starting a blank conversation under that id. In practice
+this means the documented `--store-response` → `--continue-session-from` pairing
+now **exits 1** under `--llm-method langchain`: the session id is derived from
+the file's *name*, and a stored response is named `response_<timestamp>.json`,
+which is not a langchain session id. Use `--continue-session` (which discovers a
+real file under `~/.mcp_coder/sessions/langchain/`) or an explicit `--session-id`
+naming a stored session instead.
+
+In `icoder`, `/load` (and the startup session picker) resumes the id recorded in
+an *event log* rather than a history file, so loading a log whose
+`~/.mcp_coder/sessions/langchain/` entry has been cleaned now errors on every
+turn until `/clear` starts a fresh conversation.
+
 ### [jenkins]
 
 Jenkins server credentials for job automation.

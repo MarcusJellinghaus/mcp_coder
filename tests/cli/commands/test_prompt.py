@@ -347,6 +347,63 @@ class TestExecutePrompt:
         captured = capsys.readouterr()
         assert "Adding error handling." in captured.out
 
+    @patch("mcp_coder.llm.providers.langchain._load_langchain_config")
+    @patch("mcp_coder.cli.commands.prompt.mlflow_conversation")
+    @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
+    @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
+    def test_langchain_continue_from_non_session_stem_exits_1(
+        self,
+        mock_prepare_env: Mock,
+        mock_resolve_llm: Mock,
+        mock_resolve_mcp: Mock,
+        mock_mlflow_conversation: Mock,
+        mock_langchain_config: Mock,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A langchain resume with no history file exits 1, naming id and path.
+
+        Runs the real provider path (prompt_llm_stream is deliberately not
+        mocked) so the guard in ask_langchain_stream is what fails the command.
+        """
+        mock_resolve_llm.return_value = ("langchain", "cli argument")
+        mock_resolve_mcp.return_value = None
+        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
+        mock_mlflow_conversation.return_value.__enter__.return_value = {
+            "response_data": None,
+            "error": None,
+        }
+        # Truthy backend: without it the "backend not configured" error would
+        # produce a false pass.
+        mock_langchain_config.return_value = {
+            "backend": "openai",
+            "model": "gpt-4o-mini",
+            "api_key": "k",
+            "base_url": None,
+            "api_version": None,
+            "default_provider": None,
+        }
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+        args = argparse.Namespace(
+            prompt="Continue conversation",
+            continue_session_from=str(tmp_path / "response_2025-01-01T00-00-00.json"),
+            llm_method="langchain",
+            mcp_config=None,
+            settings=None,
+            project_dir=None,
+        )
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_prompt(args)
+
+        assert result == 1
+        assert "response_2025-01-01T00-00-00" in caplog.text
+        assert "response_2025-01-01T00-00-00.json" in caplog.text
+        assert str(tmp_path) in caplog.text
+
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")

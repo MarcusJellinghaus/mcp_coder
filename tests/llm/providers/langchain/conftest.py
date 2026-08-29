@@ -91,6 +91,22 @@ async def async_events(
         yield item
 
 
+@pytest.fixture
+def skip_langchain_history_guard() -> Generator[None, None, None]:
+    """Neutralise the resume guard for tests that use synthetic session ids.
+
+    Opt-in on purpose: an autouse version would also disable the guard for
+    the langchain_integration resume tests in test_langchain_integration.py,
+    which are the only end-to-end path where a real history file is written
+    and then resumed. Those tests must run with the guard live.
+
+    Yields:
+        None, with the guard patched out for the duration of the test.
+    """
+    with patch("mcp_coder.llm.providers.langchain.require_langchain_history"):
+        yield
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _mock_langchain_modules() -> Generator[None, None, None]:
     """Inject sys.modules mocks for any absent langchain packages.
