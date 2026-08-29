@@ -227,9 +227,9 @@ Roughly 470 of those references are mock keyword arguments and reduce to three m
 source change — `prompt_llm` call/assertion sites in 4a, workflow-signature keywords in 4b.
 Per-site handling of the ~15 flag-specific tests is enumerated in step 3, and of the tests pinning
 the removed `prompt_llm` semantics in step 4a. Those tables are the known cases, not complete
-lists: steps 3, 4a and 4b each close with the two-part `tests/` sweep defined in
-[step_4b.md](./step_4b.md) — `execution_dir` in identifiers and prose, then assertions whose
-*expected value* still pins the removed semantics.
+lists: steps 3, 4a and 4b each close with the three-part `tests/` sweep defined in
+[step_4b.md](./step_4b.md) — `execution_dir` in identifiers and prose; assertions whose
+*expected value* still pins the removed semantics; and arguments supplied by position.
 
 4a's rule 3 reaches beyond the list above: every `prompt_llm` / `prompt_llm_stream` call in
 `tests/` must gain a `project_dir=` argument, including ~90 that pass no directory today —

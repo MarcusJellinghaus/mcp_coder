@@ -95,7 +95,12 @@ Deleting a parameter in section B breaks every call that still supplies it. Comm
 - `verify.py` — drop the `str(project_dir)` argument at the call site (`:476-484`) **and** the
   `execution_dir: str` parameter plus its docstring line from `_run_mcp_edit_smoke_test`
   (`:73`, `:84`). Its body needs no edit: 4a already made the `prompt_llm` call pass
-  `project_dir=project_dir`, the function's own first parameter.
+  `project_dir=project_dir`, the function's own first parameter. **Its four test callers pass the
+  argument positionally** — `tests/cli/commands/test_verify_mcp_edit_smoke.py:115`, `:131`, `:147`,
+  `:208`, all of the form `_run_mcp_edit_smoke_test(tmp_path, "langchain", "/fake/.mcp.json",
+  str(tmp_path), self._symbols())`. Drop that fourth argument at each; left in place it slides onto
+  `symbols: dict[str, str]`. Neither mechanical rule nor parts 1 and 2 of the sweep reaches them —
+  the file contains no `execution_dir` string at all — so they are part 3's first entry.
 - `icoder/env_setup.py:197` — already passes `str(project_dir)`; only the keyword name changes.
 
 Intra-workflow forwards, which are just as numerous and easy to miss:
@@ -161,9 +166,10 @@ as the complete worklist for sections B, C, D and E2.
 ### The final `tests/` sweep — the enumerated tables are the known cases, not a complete list
 
 Three review rounds each turned up further per-site handling that no mechanical rule catches, so
-steps 3, 4a and 4b each end with the same two-part search over **all** of `tests/`, marker-excluded
-files included. Neither part is optional, and neither is derivable from the rules above: the rules
-rewrite *keywords*, and never touch identifiers, prose, or the value a test expects.
+steps 3, 4a and 4b each end with the same three-part search over **all** of `tests/`, marker-excluded
+files included. No part is optional, and none is derivable from the rules above: the rules rewrite
+*keywords*, and never touch identifiers, prose, the value a test expects, or arguments passed by
+position.
 
 1. **`execution_dir` as an identifier or as prose** — test names, class names, docstrings,
    comments and module-level constants. Nothing else looks here: rule 1 matches only the
@@ -178,9 +184,19 @@ rewrite *keywords*, and never touch identifiers, prose, or the value a test expe
    populated. Rules 1 and 2 rename the keyword and leave the expectation untouched, so a rewritten
    assertion can still compare against the value the old code passed. Re-derive what the new code
    actually passes at each site rather than trusting the rename.
+3. **Positional forms** — call arguments and `assert_called_once_with(...)` tuples that supply the
+   removed argument **by position**. They carry neither the `execution_dir=` keyword nor the
+   identifier, so parts 1 and 2 and every mechanical rule miss them; only mypy and pytest see them.
+   Two known instances: `tests/cli/commands/test_verify_mcp_edit_smoke.py` (`:115`, `:131`, `:147`,
+   `:208`) calls `_run_mcp_edit_smoke_test(tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path),
+   self._symbols())` — deleting the fourth positional parameter slides `str(tmp_path)` onto
+   `symbols: dict[str, str]`, a mypy arg-type error; and
+   `tests/cli/commands/test_check_branch_status_auto_fixes.py:88-90`,
+   `mock_check_ci.assert_called_once_with(project_dir, "feature/test-branch", "claude", None, None,
+   exec_dir)`, which must lose its trailing argument when `check_and_fix_ci` loses the parameter.
 
-`mcp__tools-py__run_mypy_check` and this step's own pytest run are the backstop for both parts —
-the search is what makes them cheap to satisfy, not a substitute for running them.
+`mcp__tools-py__run_mypy_check` and this step's own pytest run are the backstop for all three parts
+— the search is what makes them cheap to satisfy, not a substitute for running them.
 
 ## Verification beyond the gate
 
@@ -230,9 +246,11 @@ CIFixConfig.cwd. Closes the src half of #1132.
 > `generate_commit_message_with_llm` loses the parameter — see section B.
 >
 > **The enumerated lists are the known cases, not a complete list.** Finish with the step's
-> two-part `tests/` sweep: `execution_dir` in test names, class names, docstrings, comments and
+> three-part `tests/` sweep: `execution_dir` in test names, class names, docstrings, comments and
 > constants; then any assertion whose *expected value* still pins the removed semantics — a
-> directory distinct from `project_dir`, or an `is None` on a now-required argument. The
+> directory distinct from `project_dir`, or an `is None` on a now-required argument; then any call
+> argument or `assert_called_once_with(...)` tuple supplying the removed argument **by position**,
+> which carries neither the keyword nor the identifier. The
 > mechanical rules rewrite keywords and never re-derive expected values; mypy and this step's
 > pytest run are the backstop.
 >

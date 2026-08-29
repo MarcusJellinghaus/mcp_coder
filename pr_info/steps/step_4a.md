@@ -285,9 +285,10 @@ gate excludes, so a missed call fails only in CI. Before committing, search
 files — and confirm every hit passes `project_dir=`.
 
 **The two tables above are the known cases, not a complete list.** Finish this step with the
-two-part `tests/` sweep stated in full in [step_4b.md](./step_4b.md) (identifiers and prose, then
-assertions whose *expected value* still pins the removed semantics) — rules 1 and 3 rewrite
-keywords and add arguments, but never re-derive what a test expects.
+three-part `tests/` sweep stated in full in [step_4b.md](./step_4b.md) (identifiers and prose;
+assertions whose *expected value* still pins the removed semantics; arguments supplied by
+position) — rules 1 and 3 rewrite keywords and add arguments, but never re-derive what a test
+expects or look at a positional argument.
 
 **Implementation order** (keeps mypy useful as the driver): `interface.py` first — then run
 mypy and work the error list bottom-up (providers → workflows → commands). mypy names every
@@ -385,9 +386,9 @@ BREAKING: prompt_llm requires project_dir.
 > files** — several of these sites sit behind `claude_api_integration` /
 > `claude_cli_integration` and the fast gate would hide them. Use
 > `mcp__tools-py__run_mypy_check` output as the worklist for the source side. **The step's tables
-> are the known cases, not a complete list:** finish with the two-part `tests/` sweep defined in
-> `pr_info/steps/step_4b.md` — `execution_dir` in identifiers and prose, then assertions whose
-> expected value still pins the removed semantics.
+> are the known cases, not a complete list:** finish with the three-part `tests/` sweep defined in
+> `pr_info/steps/step_4b.md` — `execution_dir` in identifiers and prose; assertions whose
+> expected value still pins the removed semantics; and arguments supplied by position.
 >
 > Use MCP tools exclusively. Finish with `mcp__tools-py__run_pylint_check`,
 > `mcp__tools-py__run_pytest_check` (with `extra_args=["-n","auto","-m","not git_integration

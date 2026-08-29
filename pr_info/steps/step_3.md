@@ -122,10 +122,11 @@ only). No other data structures change.
 | `tests/cli/commands/test_*.py`, `tests/icoder/conftest.py:44` | Mechanical: delete `execution_dir=` attributes from `argparse.Namespace` fixtures; any assertion expecting a *distinct* execution dir to reach a workflow now expects `project_dir`. Also delete the two comments that explain the removed wiring and become false with it: `test_check_branch_status.py:104-107` and `test_check_branch_status_ci_waiting.py:216-220`, both of the form "`execution_dir=None` means the real `resolve_execution_dir` runs". |
 | `tests/cli/commands/test_*.py` — the patched resolver | **The largest edit in this step, and not covered by the row above.** Every `@patch("mcp_coder.cli.commands.<cmd>.resolve_execution_dir")` decorator breaks on the rename (`patch` raises `AttributeError` for a name the module no longer has): `test_create_plan.py:33, 90, 117, 148, 191, 238`; `test_create_pr.py:45, 93, 138, 205, 258, 330, 373, 417, 497, 540, 587`; `test_implement.py:41, 89, 160, 213, 356, 400, 502, 545, 592`; `test_review.py:43, 93, 143, 199`; `test_rebase.py:73, 107, 122`; `test_check_branch_status.py:205, 264`. Either drop the patch (the real `resolve_claude_cwd` cannot raise and only resolves + logs) or retarget it to `…<cmd>.resolve_claude_cwd`. **If retained, the mock must return the real project dir.** The new idiom rebinds `project_dir` from the resolver's return value, so a mock still returning a separate execution dir (e.g. `mock_resolve_exec.return_value = str(Path.cwd())`) silently replaces `project_dir` downstream and breaks the surviving assertions — `mock_workflow.assert_called_once_with(123, test_project_dir, …)` and `mock_resolve_flags.assert_called_once_with(mock_args, test_project_dir)`. Also drop the now-meaningless `mock_resolve_exec.assert_called_once_with(None, project_dir=test_project_dir)` assertions (e.g. `test_create_plan.py:63`) or rewrite them as `assert_called_once_with(test_project_dir)`, and delete the duplicated `test_execution_dir` positional argument from the workflow-call assertions. |
 
-**The table above is the known set, not a complete list.** Finish this step with the two-part
-`tests/` sweep stated in full in [step_4b.md](./step_4b.md) (identifiers and prose, then
-assertions whose *expected value* still pins the removed semantics) — the mechanical row rewrites
-keywords and never re-derives what a test expects.
+**The table above is the known set, not a complete list.** Finish this step with the three-part
+`tests/` sweep stated in full in [step_4b.md](./step_4b.md) (identifiers and prose; assertions
+whose *expected value* still pins the removed semantics; arguments supplied by position) — the
+mechanical row rewrites keywords, and never re-derives what a test expects or looks at a
+positional argument.
 
 **New test** (replaces the deleted `TestExecutionDirArgument` in `tests/cli/test_main.py`):
 
@@ -205,8 +206,9 @@ which keeps the resolve and the #1113 context report. Part of #1132.
 > module, class and test docstrings and the comments onto the new vocabulary — `:338-340` in
 > particular narrates `resolve_execution_dir`'s removed no-anchor branch by name, and nothing
 > later in the plan greps `tests/` for it. **The table is the known set, not a complete list:**
-> finish with the two-part `tests/` sweep defined in `pr_info/steps/step_4b.md` — `execution_dir`
-> in identifiers and prose, then assertions whose expected value still pins the removed semantics.
+> finish with the three-part `tests/` sweep defined in `pr_info/steps/step_4b.md` — `execution_dir`
+> in identifiers and prose; assertions whose expected value still pins the removed semantics; and
+> arguments supplied by position.
 >
 > Use MCP tools exclusively. Finish with `mcp__tools-py__run_pylint_check`,
 > `mcp__tools-py__run_pytest_check` (with `extra_args=["-n","auto","-m","not git_integration
