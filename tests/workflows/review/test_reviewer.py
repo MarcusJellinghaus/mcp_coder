@@ -198,7 +198,6 @@ def _call_get_verdict(**overrides: Any) -> tuple[Any, str | None]:
         provider="langchain",
         mcp_config=None,
         settings_file=None,
-        execution_dir=None,
         supervisor_sid=None,
         report="NO FINDINGS",
         round_number=1,
