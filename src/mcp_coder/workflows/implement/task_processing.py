@@ -218,9 +218,7 @@ def check_and_fix_mypy(
                     # Tool-using site (mypy-fix): inactivity budget, not wall-clock.
                     timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
                     env_vars=env_vars,
-                    execution_dir=(
-                        str(execution_dir) if execution_dir else str(project_dir)
-                    ),
+                    project_dir=str(project_dir),
                     mcp_config=mcp_config,
                     settings_file=settings_file,
                     branch_name=branch_name,
@@ -436,7 +434,7 @@ Please implement this task step by step."""
             # Tool-using site (implement task): inactivity budget, not wall-clock.
             timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            execution_dir=cwd,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,

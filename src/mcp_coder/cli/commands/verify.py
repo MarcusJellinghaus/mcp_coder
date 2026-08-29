@@ -100,7 +100,7 @@ def _run_mcp_edit_smoke_test(
             timeout=60,
             mcp_config=mcp_config,
             settings_file=settings_file,
-            execution_dir=execution_dir,
+            project_dir=project_dir,
             env_vars=env_vars,
         )
         content = test_file.read_text(encoding="utf-8")
@@ -488,7 +488,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     # Skipped on a malformed .mcp.json (mcp_config_ok is False): the MCP CONFIG
     # validity row above is the single upstream diagnostic, so the prompt (which
     # would fail indirectly) is short-circuited.
-    # project_dir= is what makes prompt_llm load the prompts, so the request
+    # inject_prompts=True is what makes prompt_llm load the prompts, so the request
     # carries the same merged system + project prompt a real run sends.
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     test_prompt_ok = True
@@ -501,9 +501,9 @@ def execute_verify(args: argparse.Namespace) -> int:
                 timeout=30,
                 mcp_config=mcp_config_resolved,
                 settings_file=settings_file,
-                execution_dir=str(project_dir),
                 env_vars=env_vars,
                 project_dir=str(project_dir),
+                inject_prompts=True,
             )
             print(
                 _format_row("Test prompt", symbols["success"], "responded OK", indent=2)

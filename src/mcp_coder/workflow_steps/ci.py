@@ -128,7 +128,7 @@ def _run_ci_analysis(
             # Pure-LLM site (CI-analysis, no MCP tools): 300s inactivity budget.
             timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
-            execution_dir=config.cwd,
+            project_dir=config.cwd,
             mcp_config=config.mcp_config,
             settings_file=config.settings_file,
             branch_name=branch_name,
@@ -208,7 +208,7 @@ def _run_ci_fix(
             # Tool-using site (CI-fix): inactivity budget, not wall-clock.
             timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
-            execution_dir=config.cwd,
+            project_dir=config.cwd,
             mcp_config=config.mcp_config,
             settings_file=config.settings_file,
             branch_name=branch_name,

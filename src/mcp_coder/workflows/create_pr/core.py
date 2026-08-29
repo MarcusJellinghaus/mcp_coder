@@ -267,7 +267,7 @@ def generate_pr_summary(
             # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=300,
             env_vars=env_vars,
-            execution_dir=str(execution_dir) if execution_dir else None,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,

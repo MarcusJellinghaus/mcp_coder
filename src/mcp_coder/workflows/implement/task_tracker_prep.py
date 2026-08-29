@@ -81,7 +81,7 @@ def prepare_task_tracker(
             # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            execution_dir=str(execution_dir) if execution_dir else None,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,

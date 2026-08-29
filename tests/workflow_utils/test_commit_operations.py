@@ -121,7 +121,7 @@ class TestGenerateCommitMessageWithLLM:
         mock_stage: Mock,
         mock_prepare_env: Mock,
     ) -> None:
-        """Test mcp_config/settings_file/execution_dir are forwarded to prompt_llm."""
+        """Test mcp_config/settings_file/project_dir are forwarded to prompt_llm."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test/repo"}
         mock_stage.return_value = True
         mock_get_diff.return_value = "diff --git a/file.py b/file.py\n+new line"
@@ -140,7 +140,6 @@ class TestGenerateCommitMessageWithLLM:
         success, message, error = generate_commit_message_with_llm(
             project_dir,
             "claude",
-            execution_dir="/x",
             mcp_config="cfg.json",
             settings_file="s.json",
         )
@@ -151,7 +150,7 @@ class TestGenerateCommitMessageWithLLM:
 
         mock_prompt_llm.assert_called_once()
         call_kwargs = mock_prompt_llm.call_args.kwargs
-        assert call_kwargs["execution_dir"] == "/x"
+        assert call_kwargs["project_dir"] == str(project_dir)
         assert call_kwargs["mcp_config"] == "cfg.json"
         assert call_kwargs["settings_file"] == "s.json"
 

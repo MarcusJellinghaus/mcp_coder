@@ -121,10 +121,8 @@ def execute_prompt(
                     "Using explicit session ID (ignoring file-based continuation)",
                 )
 
-        # Determine whether to pass project_dir for prompt loading
-        prompt_project_dir = (
-            str(project_dir) if getattr(args, "add_system_prompts", False) else None
-        )
+        # Determine whether the system/project prompts should be injected
+        inject_prompts = getattr(args, "add_system_prompts", False)
 
         # Get user-specified timeout, output_format, and mcp_config
         timeout = getattr(args, "timeout", 30)
@@ -146,11 +144,11 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                execution_dir=str(project_dir),
+                project_dir=str(project_dir),
                 mcp_config=mcp_config,
                 settings_file=settings_file,
                 branch_name=branch_name,
-                project_dir=prompt_project_dir,
+                inject_prompts=inject_prompts,
             ):
                 assembler.add(event)
                 print_stream_event(event, output_format)
@@ -186,10 +184,10 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                execution_dir=str(project_dir),
+                project_dir=str(project_dir),
                 mcp_config=mcp_config,
                 settings_file=settings_file,
-                project_dir=prompt_project_dir,
+                inject_prompts=inject_prompts,
             )
 
             session_id = response_dict.get("session_id", "")
@@ -209,11 +207,11 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                execution_dir=str(project_dir),
+                project_dir=str(project_dir),
                 mcp_config=mcp_config,
                 settings_file=settings_file,
                 branch_name=branch_name,
-                project_dir=prompt_project_dir,
+                inject_prompts=inject_prompts,
             )
             # Output complete response as JSON (includes session_id)
             print(json.dumps(response_dict, indent=2, default=str))

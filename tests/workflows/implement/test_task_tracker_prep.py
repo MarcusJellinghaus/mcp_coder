@@ -95,9 +95,9 @@ class TestPrepareTaskTracker:
         assert mock_has_tasks.call_count == 2
         mock_get_prompt.assert_called_once()
         mock_prompt_llm.assert_called_once()
-        # Verify execution_dir parameter is passed as None by default
+        # Verify project_dir is what prompt_llm receives
         call_kwargs = mock_prompt_llm.call_args[1]
-        assert call_kwargs.get("execution_dir") is None
+        assert call_kwargs.get("project_dir") == str(tmp_path)
         mock_get_status.assert_called_once_with(tmp_path)
         mock_commit.assert_called_once()
         # Verify store_session called with task_tracker step_name
@@ -452,9 +452,9 @@ class TestPrepareTaskTrackerExecutionDir:
         result = prepare_task_tracker(tmp_path, "claude", execution_dir=exec_dir)
 
         assert result is True
-        # Verify execution_dir was passed to prompt_llm
+        # prompt_llm receives project_dir, never the caller's execution_dir
         call_kwargs = mock_prompt_llm.call_args[1]
-        assert call_kwargs.get("execution_dir") == str(exec_dir)
+        assert call_kwargs.get("project_dir") == str(tmp_path)
 
     @patch("mcp_coder.workflows.implement.task_tracker_prep.commit_all_changes")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.has_implementation_tasks")
@@ -500,6 +500,6 @@ class TestPrepareTaskTrackerExecutionDir:
         result = prepare_task_tracker(tmp_path, "claude", execution_dir=None)
 
         assert result is True
-        # Verify execution_dir was passed as None
+        # Verify project_dir is what prompt_llm receives
         call_kwargs = mock_prompt_llm.call_args[1]
-        assert call_kwargs.get("execution_dir") is None
+        assert call_kwargs.get("project_dir") == str(tmp_path)

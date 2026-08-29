@@ -247,7 +247,7 @@ def run_planning_prompts(
             # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=600,
             env_vars=env_vars,
-            execution_dir=str(execution_dir) if execution_dir else None,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,
@@ -325,7 +325,7 @@ def run_planning_prompts(
             # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=600,
             env_vars=env_vars,
-            execution_dir=str(execution_dir) if execution_dir else None,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,
@@ -374,7 +374,7 @@ def run_planning_prompts(
             session_id=session_id,
             timeout=PROMPT_3_TIMEOUT,
             env_vars=env_vars,
-            execution_dir=str(execution_dir) if execution_dir else None,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,

@@ -43,9 +43,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4a: `prompt_llm` takes a required `project_dir`; retarget the direct callers ([step_4a.md](./steps/step_4a.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (pytest still blocked by the same
+  pre-existing stale `mcp-workspace` install as steps 2 and 3 — see note in step_4a.md)
+- [x] Commit message prepared
 
 ### Step 4b: Delete `execution_dir` from every workflow signature ([step_4b.md](./steps/step_4b.md))
 

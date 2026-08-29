@@ -934,7 +934,7 @@ Please implement this task step by step."""
             provider="claude",
             timeout=600,
             env_vars=ANY,
-            execution_dir=ANY,
+            project_dir=ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=ANY,
@@ -1395,9 +1395,7 @@ class TestBranchNameSource:
         )
 
         mock_branch_name.assert_called_once_with(str(self._PROJECT_DIR))
-        assert mock_prompt_llm.call_args.kwargs["execution_dir"] == str(
-            self._EXECUTION_DIR
-        )
+        assert mock_prompt_llm.call_args.kwargs["project_dir"] == str(self._PROJECT_DIR)
         assert mock_prompt_llm.call_args.kwargs["branch_name"] == "feature-branch"
         mock_store_session.assert_called_once()
 
@@ -1429,9 +1427,7 @@ class TestBranchNameSource:
 
         assert result is True
         mock_branch_name.assert_called_once_with(str(self._PROJECT_DIR))
-        assert mock_prompt_llm.call_args.kwargs["execution_dir"] == str(
-            self._EXECUTION_DIR
-        )
+        assert mock_prompt_llm.call_args.kwargs["project_dir"] == str(self._PROJECT_DIR)
         assert mock_prompt_llm.call_args.kwargs["branch_name"] == "feature-branch"
         mock_store_session.assert_called_once()
 
@@ -1464,7 +1460,5 @@ class TestBranchNameSource:
         )
 
         mock_branch_name.assert_called_once_with(str(self._PROJECT_DIR))
-        assert mock_prompt_llm.call_args.kwargs["execution_dir"] == str(
-            self._PROJECT_DIR
-        )
+        assert mock_prompt_llm.call_args.kwargs["project_dir"] == str(self._PROJECT_DIR)
         mock_store_session.assert_called_once()

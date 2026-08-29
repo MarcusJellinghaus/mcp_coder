@@ -115,7 +115,7 @@ def _probe_exposed_mcp_tools(
             timeout=30,
             mcp_config=mcp_config,
             env_vars=env_vars,
-            execution_dir=execution_dir,
+            project_dir=execution_dir,
         )
         raw_response = cast(dict[str, Any], resp.get("raw_response", {}))
         system_message = cast(Any, raw_response.get("system"))

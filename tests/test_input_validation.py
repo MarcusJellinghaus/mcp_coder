@@ -70,9 +70,9 @@ class TestInputValidation:
     ) -> None:
         """Test that negative timeout raises ValueError."""
         with pytest.raises(ValueError, match="Timeout must be a positive number"):
-            function("test question", timeout=-1)
+            function("test question", timeout=-1, project_dir=".")
 
     def test_prompt_llm_invalid_provider_raises_error(self) -> None:
         """Test that invalid provider raises ValueError."""
         with pytest.raises(ValueError, match="Unsupported provider: invalid"):
-            prompt_llm("test question", provider="invalid")
+            prompt_llm("test question", provider="invalid", project_dir=".")

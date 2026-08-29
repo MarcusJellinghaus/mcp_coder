@@ -73,6 +73,7 @@ class TestClaudeCodeCliStreamingIntegration:
                     provider="claude",
                     timeout=60,
                     env_vars={"MCP_CODER_PROJECT_DIR": tmp_logs_dir},
+                    project_dir=tmp_logs_dir,
                 )
             )
 

@@ -312,6 +312,39 @@ cannot see.
 - Run `mcp-coder verify` and one headless workflow from an unrelated shell cwd if credentials
   allow; otherwise rely on the injection tests above.
 
+## Implementation note (2026-08-29)
+
+**pytest could not be run — the same pre-existing environment blocker recorded in
+[step_2.md](./step_2.md) and [step_3.md](./step_3.md).** The installed `mcp-workspace` package
+is older than what `main` requires: `src/mcp_coder/checks/branch_status.py:17` imports
+`mcp_workspace.checks.branch_status_rendering`, which does not exist in the installed copy.
+`mcp_coder/__init__.py:37` imports that module, so **every** test module fails at collection —
+neither the fast gate nor `markers=["claude_cli_integration"]` runs (so
+`tests/integration/test_claude_cwd_integration.py`'s two end-to-end cwd tests were **not**
+executed, and neither were this step's four new behaviour tests). Fix by reinstalling
+`mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git`.
+
+`black` / `isort` pass. Pylint and mypy report **exactly** the step-2/3 baseline — the
+`E0401` / `import-not-found` entries, the `fail_on_reviews` / `pr_feedback_undeterminable`
+`E1123` / `call-arg` and `E1101` / `attr-defined` errors from the same stale package, and the
+unrelated `langchain_*` / `httpx` / `mcp.server.fastmcp` import errors. **No new issue in any
+file this step touched.** Because CI runs `mypy --strict src tests` and the test functions are
+annotated, mypy is what verified rule 3 across **all** of `tests/` (including the
+marker-excluded files): a `prompt_llm` / `prompt_llm_stream` call missing the now-required
+`project_dir` is a `call-arg` error, and none remain.
+
+Two details the plan did not spell out:
+
+- `tests/llm/test_interface.py` and `tests/llm/providers/claude/test_llm_sessions.py` gained a
+  module-level `PROJECT_DIR = str(Path("/test/project"))`. `prompt_llm` normalises with
+  `Path(project_dir)`, so on Windows a raw `"/test/project"` literal would not equal the `cwd`
+  the provider receives (`\test\project`); pre-normalising the constant keeps the ~90 rewritten
+  assertions platform-independent. The same applies to the `cwd=str(Path("/my/project"))` and
+  `working_directory=str(Path("/work"))` expectations.
+- `tests/cli/commands/test_verify_orchestration.py` asserts
+  `Path(call_kwargs["project_dir"]) == tmp_path.resolve()` rather than `== str(tmp_path)`:
+  `execute_verify` passes the value through `resolve_claude_cwd`, which resolves.
+
 ## Commit
 
 ```

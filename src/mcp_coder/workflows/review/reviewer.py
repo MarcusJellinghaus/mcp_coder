@@ -161,7 +161,7 @@ def _run_reviewer(
         session_id=session_id,
         timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
         env_vars=env_vars,
-        execution_dir=cwd,
+        project_dir=cwd,
         mcp_config=mcp_config,
         settings_file=settings_file,
     )
@@ -234,7 +234,7 @@ def _get_verdict(
             session_id=current_sid,
             timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            execution_dir=cwd,
+            project_dir=cwd,
             mcp_config=mcp_config,
             settings_file=settings_file,
         )
