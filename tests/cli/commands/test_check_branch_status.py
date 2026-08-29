@@ -19,6 +19,7 @@ import pytest
 from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
+from mcp_coder.utils.log_utils import OUTPUT
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
@@ -86,21 +87,26 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_claude_cwd")
     def test_execute_check_branch_status_read_only_success(
         self,
-        mock_resolve_cwd: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
         mock_branch: Mock,
         sample_report: BranchStatusReport,
         capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test successful read-only branch status check."""
+        """Test successful read-only branch status check.
+
+        resolve_claude_cwd runs for real: it is hoisted out of the --fix block
+        precisely so its context report fires once per run, including on this
+        read-only path. It resolves project_dir and is deliberately not
+        existence-validated, so "/test/project" not existing is fine.
+        """
         # Setup mocks
         project_dir = Path("/test/project")
+        resolved_dir = project_dir.resolve()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_cwd.return_value = project_dir
         mock_branch.return_value = "feature/test-branch"
         mock_collect.return_value = sample_report
 
@@ -113,11 +119,16 @@ class TestExecuteCheckBranchStatus:
             mcp_config=None,
         )
 
-        result = execute_check_branch_status(args)
+        with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
+            result = execute_check_branch_status(args)
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_collect.assert_called_once_with(project_dir)
+        mock_collect.assert_called_once_with(resolved_dir)
+
+        # The per-run context report reaches the read-only path too
+        assert "Claude working directory" in caplog.text
+        assert str(resolved_dir) in caplog.text
 
         # Check output contains human-formatted report
         captured = capsys.readouterr()
@@ -127,21 +138,24 @@ class TestExecuteCheckBranchStatus:
     @patch("mcp_coder.cli.commands.check_branch_status.get_current_branch_name")
     @patch("mcp_coder.cli.commands.check_branch_status.resolve_project_dir")
     @patch("mcp_coder.cli.commands.check_branch_status.collect_branch_status")
-    @patch("mcp_coder.cli.commands.check_branch_status.resolve_claude_cwd")
     def test_execute_check_branch_status_llm_mode(
         self,
-        mock_resolve_cwd: Mock,
         mock_collect: Mock,
         mock_resolve_dir: Mock,
         mock_branch: Mock,
         sample_report: BranchStatusReport,
         capsys: pytest.CaptureFixture[str],
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test branch status check with LLM output format."""
+        """Test branch status check with LLM output format.
+
+        As in the read-only test above, resolve_claude_cwd runs for real so the
+        per-run context report stays covered on the no-fix path.
+        """
         # Setup mocks
         project_dir = Path("/test/project")
+        resolved_dir = project_dir.resolve()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_cwd.return_value = project_dir
         mock_branch.return_value = "feature/test-branch"
         mock_collect.return_value = sample_report
 
@@ -154,11 +168,16 @@ class TestExecuteCheckBranchStatus:
             mcp_config=None,
         )
 
-        result = execute_check_branch_status(args)
+        with caplog.at_level(OUTPUT, logger="mcp_coder.cli.utils"):
+            result = execute_check_branch_status(args)
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_collect.assert_called_once_with(project_dir)
+        mock_collect.assert_called_once_with(resolved_dir)
+
+        # The per-run context report reaches the LLM-output path too
+        assert "Claude working directory" in caplog.text
+        assert str(resolved_dir) in caplog.text
 
         # Check output contains LLM-formatted report
         captured = capsys.readouterr()

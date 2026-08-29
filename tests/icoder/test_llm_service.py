@@ -351,6 +351,30 @@ def test_real_llm_service_passes_project_dir(
     assert captured_kwargs["project_dir"] == "/tmp/my-project"
 
 
+def test_real_llm_service_injects_prompts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RealLLMService asks prompt_llm_stream to inject the system/project prompts.
+
+    iCoder is one of the two sites that opt in deliberately; the headless
+    workflows keep the ``inject_prompts=False`` default.
+    """
+    captured_kwargs: dict[str, object] = {}
+    fake_events: list[StreamEvent] = [{"type": "done"}]
+
+    def mock_stream(question: str, **kwargs: object) -> Iterator[StreamEvent]:
+        captured_kwargs.update(kwargs)
+        yield from fake_events
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
+        mock_stream,
+    )
+    service = RealLLMService(provider="claude", project_dir=PROJECT_DIR)
+    list(service.stream("hello"))
+    assert captured_kwargs["inject_prompts"] is True
+
+
 def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
     """FakeLLMService falls back to default after canned responses are exhausted."""
     responses: list[list[StreamEvent]] = [

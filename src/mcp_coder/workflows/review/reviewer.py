@@ -130,7 +130,6 @@ def _run_reviewer(
         The reviewer's :class:`LLMResponseDict`.
     """
     env_vars = prepare_llm_environment(project_dir)
-    cwd = str(project_dir)
 
     if tasks is None:
         prompt = get_prompt(str(PROMPTS_FILE_PATH), config.reviewer_prompt_header)
@@ -159,7 +158,7 @@ def _run_reviewer(
         session_id=session_id,
         timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
         env_vars=env_vars,
-        project_dir=cwd,
+        project_dir=str(project_dir),
         mcp_config=mcp_config,
         settings_file=settings_file,
     )
@@ -212,7 +211,6 @@ def _get_verdict(
         resumable supervisor session to repair or continue.
     """
     env_vars = prepare_llm_environment(project_dir)
-    cwd = str(project_dir)
 
     header = get_prompt(str(PROMPTS_FILE_PATH), config.supervisor_prompt_header)
     header = header.replace("{round_number}", str(round_number))
@@ -230,7 +228,7 @@ def _get_verdict(
             session_id=current_sid,
             timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            project_dir=cwd,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
         )
