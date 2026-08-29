@@ -270,10 +270,7 @@ def _resolve_session_id(session_id: str | None) -> str:
 
     Returns:
         The requested id, or a freshly minted UUID when none was requested.
-
-    Raises:
-        ValueError: If *session_id* was supplied but has no history file.
-    """
+    """  # Also raises ValueError via require_langchain_history for an unknown id.
     if not session_id:
         return str(uuid.uuid4())
     require_langchain_history(session_id)
