@@ -282,7 +282,6 @@ def ask_langchain(
     session_id: str | None = None,
     timeout: int = 30,
     mcp_config: str | None = None,
-    execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     system_prompt: str | None = None,
     project_prompt: str | None = None,
@@ -298,7 +297,6 @@ def ask_langchain(
         session_id: Optional session ID for conversation history.
         timeout: Request timeout in seconds.
         mcp_config: Optional path to .mcp.json for agent mode.
-        execution_dir: Optional working directory for agent execution.
         env_vars: Optional environment variables for agent subprocesses.
         system_prompt: Optional system-level prompt text.
         project_prompt: Optional project-level prompt text.
@@ -332,7 +330,6 @@ def ask_langchain(
             config=config,
             session_id=sid,
             mcp_config=mcp_config,
-            execution_dir=execution_dir,
             env_vars=env_vars,
             timeout=agent_timeout,
             system_messages=sys_msgs,
@@ -411,7 +408,6 @@ def _ask_agent(
     config: dict[str, str | None],
     session_id: str,
     mcp_config: str,
-    execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
     system_messages: list[Any] | None = None,
@@ -423,7 +419,6 @@ def _ask_agent(
         config: LangChain configuration dict.
         session_id: Session ID for conversation history.
         mcp_config: Path to .mcp.json configuration file.
-        execution_dir: Optional working directory for agent execution.
         env_vars: Optional environment variables for agent subprocesses.
         timeout: Request timeout in seconds.
         system_messages: Optional list of system messages to prepend.
@@ -451,7 +446,6 @@ def _ask_agent(
                 messages=history,
                 mcp_config_path=mcp_config,
                 session_id=session_id,
-                execution_dir=execution_dir,
                 env_vars=env_vars,
                 timeout=timeout,
                 system_messages=system_messages,
@@ -518,7 +512,6 @@ def _ask_agent_stream(
     config: dict[str, str | None],
     session_id: str,
     mcp_config: str,
-    execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
     tools: list[Any] | None = None,
@@ -534,7 +527,6 @@ def _ask_agent_stream(
         config: LangChain configuration dict.
         session_id: Session ID for conversation history.
         mcp_config: Path to .mcp.json configuration file.
-        execution_dir: Optional working directory for agent execution.
         env_vars: Optional environment variables for agent subprocesses.
         timeout: Request timeout in seconds.
         tools: Optional pre-built LangChain tools (e.g. from MCPManager).
@@ -567,7 +559,6 @@ def _ask_agent_stream(
                 mcp_config_path=mcp_config,
                 session_id=session_id,
                 cancel_event=cancel,
-                execution_dir=execution_dir,
                 env_vars=env_vars,
                 tools=tools,
                 system_messages=system_messages,
@@ -625,7 +616,6 @@ def ask_langchain_stream(
     session_id: str | None = None,
     timeout: int = 600,
     mcp_config: str | None = None,
-    execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     tools: list[Any] | None = None,
     system_prompt: str | None = None,
@@ -664,7 +654,6 @@ def ask_langchain_stream(
             config=config,
             session_id=sid,
             mcp_config=mcp_config,
-            execution_dir=execution_dir,
             env_vars=env_vars,
             timeout=timeout,
             tools=tools,

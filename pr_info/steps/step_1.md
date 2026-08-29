@@ -122,3 +122,19 @@ already unused and annotated as such. Part of #1132.
 > claude_api_integration and not formatter_integration and not github_integration and not
 > langchain_integration"]`) and `mcp__tools-py__run_mypy_check`; all three must pass. One
 > commit for this step.
+
+## Implementation note (blocked quality gate)
+
+Implementation is complete. `run_format_code` (clean), `run_pylint_check` and
+`run_mypy_check` were run and report **nothing** on the files touched by this step —
+pylint does analyse the langchain modules (it emits the usual optional-dependency
+`E0401`s there), so the forwarding chain has no `unexpected-keyword-arg`.
+
+`run_pytest_check` could **not** be executed: the `.venv` has a stale `mcp-workspace`
+install, so `src/mcp_coder/checks/branch_status.py:17` fails with
+`ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`.
+That import runs from `mcp_coder/__init__.py`, so *every* test module fails to collect.
+The same staleness produces the only pylint/mypy errors reported
+(`fail_on_reviews`, `pr_feedback_undeterminable`, `add_assignees`). All of this is
+pre-existing and unrelated to this step; refreshing the venv
+(`[tool.mcp-coder.install-from-github]` in `pyproject.toml`) unblocks it.

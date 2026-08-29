@@ -1139,26 +1139,6 @@ class TestPromptLlmLangchainRouting:
         _, kwargs = call_kwargs
         assert kwargs.get("mcp_config") == "/path/to/mcp.json"
 
-    def test_passes_execution_dir_to_langchain(self) -> None:
-        """execution_dir parameter is forwarded to ask_langchain()."""
-        expected = self._make_langchain_response()
-        with patch(
-            "mcp_coder.llm.providers.langchain.ask_langchain",
-            return_value=expected,
-        ) as mock_ask:
-            from mcp_coder.llm.interface import prompt_llm
-
-            prompt_llm(
-                "Hello",
-                provider="langchain",
-                execution_dir="/custom/dir",
-            )
-
-        call_kwargs = mock_ask.call_args
-        assert call_kwargs is not None
-        _, kwargs = call_kwargs
-        assert kwargs.get("execution_dir") == "/custom/dir"
-
     def test_passes_env_vars_to_langchain(self) -> None:
         """env_vars parameter is forwarded to ask_langchain()."""
         expected = self._make_langchain_response()
@@ -1195,7 +1175,6 @@ class TestPromptLlmLangchainRouting:
         assert call_kwargs is not None
         _, kwargs = call_kwargs
         assert kwargs.get("mcp_config") is None
-        assert kwargs.get("execution_dir") is None
         assert kwargs.get("env_vars") is None
         assert result["text"] == "langchain reply"
 
@@ -1434,7 +1413,6 @@ class TestPromptLlmStream:
             session_id=None,
             timeout=30,
             mcp_config=None,
-            execution_dir=None,
             env_vars=None,
             tools=None,
             system_prompt=None,
@@ -1558,7 +1536,6 @@ class TestPromptLlmStreamToolsParam:
             session_id=None,
             timeout=30,
             mcp_config=None,
-            execution_dir=None,
             env_vars=None,
             tools=fake_tools,
             system_prompt=None,
@@ -1580,7 +1557,6 @@ class TestPromptLlmStreamToolsParam:
             session_id=None,
             timeout=30,
             mcp_config=None,
-            execution_dir=None,
             env_vars=None,
             tools=None,
             system_prompt=None,

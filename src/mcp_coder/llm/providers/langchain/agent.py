@@ -397,7 +397,6 @@ async def run_agent(
     messages: list[dict[str, Any]],
     mcp_config_path: str,
     session_id: str,
-    execution_dir: str | None = None,
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
     system_messages: list[Any] | None = None,
@@ -420,7 +419,6 @@ async def run_agent(
         mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
         session_id: Session identifier; ``run_agent_stream`` stores the resulting
             history under it.
-        execution_dir: Optional working directory (reserved for future).
         env_vars: Optional extra environment variables for MCP server resolution.
         timeout: Maximum time in seconds for the whole agent run. Note this now
             also covers MCP tool discovery: the drainer wraps the entire
@@ -457,7 +455,6 @@ async def run_agent(
             messages=messages,
             mcp_config_path=mcp_config_path,
             session_id=session_id,
-            execution_dir=execution_dir,
             env_vars=env_vars,
             system_messages=system_messages,
         ):
@@ -480,7 +477,6 @@ async def run_agent_stream(
     mcp_config_path: str,
     session_id: str,
     cancel_event: threading.Event | None = None,
-    execution_dir: str | None = None,  # pylint: disable=unused-argument
     env_vars: dict[str, str] | None = None,
     tools: list[Any] | None = None,
     system_messages: list[Any] | None = None,
@@ -497,7 +493,6 @@ async def run_agent_stream(
         mcp_config_path: Absolute path to the ``.mcp.json`` configuration file.
         session_id: Session identifier for history storage.
         cancel_event: Optional threading.Event to signal early cancellation.
-        execution_dir: Optional working directory (reserved for future).
         env_vars: Optional extra environment variables for MCP server resolution.
         tools: Optional pre-built LangChain tools (e.g. from MCPManager).
             When provided, skips MultiServerMCPClient creation.

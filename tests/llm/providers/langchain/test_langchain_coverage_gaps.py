@@ -165,12 +165,12 @@ class TestNonDictServerEntrySkipping:
 
 
 # ---------------------------------------------------------------------------
-# 3. execution_dir / env_vars forwarding through _ask_agent -> run_agent
+# 3. env_vars forwarding through _ask_agent -> run_agent
 # ---------------------------------------------------------------------------
 
 
-class TestExecutionDirEnvVarsForwarding:
-    """Verify execution_dir and env_vars are forwarded to run_agent."""
+class TestEnvVarsForwarding:
+    """Verify env_vars is forwarded to run_agent."""
 
     @staticmethod
     def _make_config() -> dict[str, str | None]:
@@ -230,53 +230,6 @@ class TestExecutionDirEnvVarsForwarding:
             len(call_kwargs.args) > 0 and any(v == env for v in call_kwargs.args)
         )
 
-    def test_execution_dir_forwarded_to_run_agent(self) -> None:
-        """execution_dir parameter is passed through to run_agent."""
-        mock_run_agent = AsyncMock(
-            return_value=(
-                "answer",
-                [{"type": "ai", "content": "answer"}],
-                {"agent_steps": 0, "total_tool_calls": 0, "tool_trace": []},
-                "sid",
-            )
-        )
-
-        with (
-            patch(
-                "mcp_coder.llm.providers.langchain._load_langchain_config",
-                return_value=self._make_config(),
-            ),
-            patch(
-                "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
-            ),
-            patch(
-                "mcp_coder.llm.providers.langchain.agent.run_agent",
-                mock_run_agent,
-            ),
-            patch(
-                "mcp_coder.llm.providers.langchain._create_chat_model",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "mcp_coder.llm.providers.langchain.load_langchain_history",
-                return_value=[],
-            ),
-            patch("mcp_coder.llm.providers.langchain.store_langchain_history"),
-        ):
-            from mcp_coder.llm.providers.langchain import ask_langchain
-
-            ask_langchain(
-                "question",
-                mcp_config="/path/.mcp.json",
-                execution_dir="/my/exec/dir",
-            )
-
-        call_kwargs = mock_run_agent.call_args
-        assert call_kwargs.kwargs.get("execution_dir") == "/my/exec/dir" or (
-            len(call_kwargs.args) > 0
-            and any(v == "/my/exec/dir" for v in call_kwargs.args)
-        )
-
     def test_env_vars_none_forwarded(self) -> None:
         """env_vars=None is forwarded without error."""
         mock_run_agent = AsyncMock(
@@ -316,7 +269,6 @@ class TestExecutionDirEnvVarsForwarding:
                 "question",
                 mcp_config="/path/.mcp.json",
                 env_vars=None,
-                execution_dir=None,
             )
 
         assert result["text"] == "answer"
