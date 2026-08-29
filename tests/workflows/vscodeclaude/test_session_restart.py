@@ -426,7 +426,7 @@ class TestSessionRestart:
         new_pid = 9999
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
-            lambda _: new_pid,
+            lambda *_args: new_pid,
         )
 
         session = {
@@ -650,7 +650,7 @@ class TestSessionRestart:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
-            lambda _: 9999,
+            lambda *_args: 9999,
         )
 
         working_folder = tmp_path / "repo_123"
@@ -894,7 +894,7 @@ class TestSessionRestart:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
-            lambda _: 9999,
+            lambda *_args: 9999,
         )
 
         # Mock _prepare_restart_branch to avoid git operations
@@ -967,7 +967,7 @@ class TestSessionRestart:
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.launch_vscode",
-            lambda _: 8888,
+            lambda *_args: 8888,
         )
 
         # Track status updates

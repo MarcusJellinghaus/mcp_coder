@@ -435,7 +435,7 @@ def restart_closed_sessions(
 
         # Relaunch VSCode
         try:
-            new_pid = launch_vscode(workspace_file)
+            new_pid = launch_vscode(workspace_file, folder_path)
             update_session_pid(session["folder"], new_pid)
             logger.debug(
                 "Restarted VSCode for issue #%d (PID: %d)",

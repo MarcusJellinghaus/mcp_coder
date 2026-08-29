@@ -53,6 +53,7 @@ from .workspace import (
     create_vscode_task,
     create_working_folder,
     create_workspace_file,
+    get_status_file_path,
     get_working_folder_path,
     run_setup_commands,
     setup_git_repo,
@@ -79,13 +80,14 @@ __all__ = [
 
 def launch_vscode(
     workspace_file: Path,
-    session_working_dir: Path | None = None,  # pylint: disable=unused-argument
+    session_working_dir: Path | None = None,
 ) -> int:
-    """Launch VSCode with workspace file.
+    """Launch VSCode with workspace file and its status file.
 
     Args:
         workspace_file: Path to .code-workspace file
-        session_working_dir: Session working directory (passed to startup script for MCP configuration)
+        session_working_dir: Session folder whose status file is opened next to
+            the workspace. When None, only the workspace is opened.
 
     Returns:
         VSCode process PID
@@ -96,11 +98,19 @@ def launch_vscode(
     """
     is_windows = platform.system() == "Windows"
 
+    paths = [workspace_file]
+    if session_working_dir is not None:
+        # Opening the status file at launch - rather than from a folderOpen task -
+        # means `code` only runs when a window is being created anyway; on reload
+        # VS Code restores the tab itself. See issue #1008.
+        paths.append(get_status_file_path(session_working_dir))
+
     if is_windows:
         # On Windows, 'code' is a .cmd file which requires shell=True
-        return launch_process(f'code "{workspace_file}"', shell=True)
+        quoted = " ".join(f'"{path}"' for path in paths)
+        return launch_process(f"code {quoted}", shell=True)
     else:
-        return launch_process(["code", str(workspace_file)])
+        return launch_process(["code", *(str(path) for path in paths)])
 
 
 def prepare_and_launch_session(

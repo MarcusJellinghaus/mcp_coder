@@ -46,7 +46,7 @@ class TestTemplates:
         formatted = TASKS_JSON_TEMPLATE.format(script_path="test.bat")
         parsed = json.loads(formatted)
         assert "tasks" in parsed
-        assert len(parsed["tasks"]) == 2
+        assert len(parsed["tasks"]) == 1
         task = parsed["tasks"][0]
         assert task["label"] == "VSCodeClaude Startup"
         assert task["command"] == "test.bat"

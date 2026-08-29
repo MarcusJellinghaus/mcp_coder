@@ -152,8 +152,13 @@ class TestBranchHandlingIntegration:
             mock_create_status,
         )
 
-        def mock_launch(workspace: Path) -> int:
+        launch_session_dirs: list[Path | None] = []
+
+        def mock_launch(
+            workspace: Path, session_working_dir: Path | None = None
+        ) -> int:
             operations.append("launch_vscode")
+            launch_session_dirs.append(session_working_dir)
             return 9999
 
         monkeypatch.setattr(
@@ -200,6 +205,9 @@ class TestBranchHandlingIntegration:
         assert "regenerate_files" in operations
         assert "create_status:branch=feat-100" in operations
         assert "launch_vscode" in operations
+
+        # Restart opens the session's status file along with the window
+        assert launch_session_dirs == [working_folder]
 
         # Verify status was updated
         assert "status-04:plan-review" in status_updates

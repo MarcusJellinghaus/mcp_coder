@@ -12,6 +12,7 @@ from mcp_coder.workflows.vscodeclaude.session_launch import (
     prepare_and_launch_session,
     process_eligible_issues,
 )
+from mcp_coder.workflows.vscodeclaude.workspace import create_status_file
 
 
 class TestLaunch:
@@ -44,7 +45,7 @@ class TestLaunch:
     def test_launch_vscode_uses_code_command(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Calls 'code' with workspace path."""
+        """Calls 'code' with the workspace path; no status file without a session folder."""
         captured_args: list[Any] = []
         captured_kwargs: dict[str, Any] = {}
 
@@ -70,14 +71,59 @@ class TestLaunch:
 
         # The command can be a list or a string (shell=True on Windows)
         cmd = captured_args[0]
-        if isinstance(cmd, str):
-            # Windows: shell command string like 'code "path"'
-            assert "code" in cmd
-            assert str(workspace) in cmd
-        else:
-            # Linux: list like ['code', 'path']
-            assert "code" in cmd
-            assert str(workspace) in cmd
+        rendered = cmd if isinstance(cmd, str) else " ".join(cmd)
+        assert "code" in rendered
+        assert str(workspace) in rendered
+        assert ".vscodeclaude_status" not in rendered
+
+    def test_launch_vscode_opens_status_file(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,  # needed by create_status_file
+    ) -> None:
+        """Status file rides along with the workspace so no folderOpen task needs `code`."""
+        captured_args: list[Any] = []
+
+        def mock_launch_process(
+            cmd: list[str] | str,
+            cwd: str | Path | None = None,
+            shell: bool = False,
+            env: dict[str, str] | None = None,
+        ) -> int:
+            captured_args.append(cmd)
+            return 1
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.launch_process",
+            mock_launch_process,
+        )
+
+        session_folder = tmp_path / "repo_123"
+        session_folder.mkdir()
+        workspace = tmp_path / "repo_123.code-workspace"
+        workspace.touch()
+
+        # Real writer - not a hand-built path.
+        create_status_file(
+            folder_path=session_folder,
+            issue_number=123,
+            issue_title="Test issue",
+            status="status-04:planning",
+            repo_full_name="owner/repo",
+            branch_name="123-test-issue",
+            issue_url="https://github.com/owner/repo/issues/123",
+            is_intervention=False,
+        )
+        written = next(session_folder.glob(".vscodeclaude_status*"))
+
+        launch_vscode(workspace, session_folder)
+
+        cmd = captured_args[0]
+        rendered = cmd if isinstance(cmd, str) else " ".join(cmd)
+        assert str(workspace) in rendered
+        # Launched path == the file create_status_file actually wrote
+        assert str(written) in rendered
 
     def test_launch_vscode_no_longer_sets_environment_variables(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
