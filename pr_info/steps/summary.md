@@ -85,23 +85,36 @@ for the empty-string case.
 | `cli/commands/prompt.py:238-243` | catches bare `Exception`, logs, returns 1 | none |
 | `icoder/ui/app.py:293` | catches, finalises the turn, shows the error | none |
 
+No plumbing is needed, but the *"exits 1"* acceptance item is asserted rather than assumed:
+step 2 (2e) adds one test in `tests/cli/commands/test_prompt.py` that drives `execute_prompt`
+through the real provider path and checks the return code.
+
 `ask_langchain_stream` is a generator, so its guard **raises lazily** on first `next()`, not
 at call time — consistent with the existing "backend not configured" raise in the same
 function.
 
 ### 4. Test-fallout strategy
 
-An unconditional function-scoped autouse fixture in
-`tests/llm/providers/langchain/conftest.py` neutralises the guard for that directory, which
-already uses the autouse pattern for `_mock_langchain_modules`.
+A function-scoped **opt-in** fixture in `tests/llm/providers/langchain/conftest.py`
+neutralises the guard for the 11 unit tests (across 4 files) that resume a synthetic
+session id.
 
-**Design decision — the real-filesystem test lives one directory up.** A blanket
-always-passes mock would hide exactly the kind of path bug the guard depends on, so at least
-one test must exercise `_langchain_session_path` for real. Rather than adding a registered
-pytest marker plus opt-out logic inside the autouse fixture, the real-filesystem test is
-placed at `tests/llm/providers/test_langchain_session_guard.py` — **outside** the langchain
-conftest's directory, so the autouse fixture never applies to it. That directory has no
-conftest of its own and is already used this way by `test_provider_structure.py`.
+**Design decision — opt-in, not autouse.** An autouse fixture would be shorter, but it
+would also disable the guard for the `langchain_integration` resume tests in
+`test_langchain_integration.py` (`:90`, `:195`, `:229`) — the only place a real history file
+is written and then resumed end-to-end. Those tests pass with the guard live (their ids
+refer to files the preceding turn really wrote), so leaving them unpatched is free coverage
+of the guard on a genuine resume path. A missed opt-in site fails loudly, so the cost of
+being explicit is one failing test, not a silent hole.
+
+**Design decision — the entry-point guard tests live one directory up.** Step 1 already
+covers `_langchain_session_path` for real via a tmp `base_dir`, which is what the issue's
+acceptance item asks for. Step 2 additionally needs the *default* (`base_dir`-free)
+production path exercised through `ask_langchain` / `ask_langchain_stream`, and it must not
+be reachable by the guard-disabling fixture. Those tests are therefore placed at
+`tests/llm/providers/test_langchain_session_guard.py` — **outside** the langchain conftest's
+directory, so the fixture is not even visible to them. That directory has no conftest of its
+own and is already used this way by `test_provider_structure.py`.
 
 This works because the guard raises *before* any langchain import: `ask_langchain` runs
 config → backend check → `_resolve_session_id` → raise, and `_build_system_messages` (the
@@ -124,6 +137,19 @@ langchain installed nor the sys.modules mocks.
 - Custom-path resume (`--continue-session-from /some/copy/abc.json`) now errors where it
   previously blank-started. Naming the *expected* path in the message avoids claiming the id
   "does not exist" when the user is looking at a file with that name.
+- **Wider than the issue states:** the issue names only "a claude response file under a
+  langchain provider", but `prompt.py:107-111` derives the id from the *filename stem* via
+  `extract_langchain_session_id` for **every** langchain `--continue-session-from`. A
+  langchain file written by `--store-response` has the stem `response_<ts>`, which is never
+  a langchain session id either. So the standard, documented `--store-response` →
+  `--continue-session-from` pairing under `--llm-method langchain` moves from a silent blank
+  start to **exit 1** — not just the custom-path `/some/copy/abc.json` case. Still the right
+  trade (the old behaviour answered from a blank conversation and stored the bogus id), but
+  it is a user-visible break of a documented workflow, so 2f documents it explicitly and
+  points at the routes that do work: `--continue-session` (which discovers a real file under
+  `~/.mcp_coder/sessions/langchain/`) or an explicit `--session-id` naming a stored session.
+  Making `--continue-session-from` read `response_data.session_id` for langchain files would
+  fix the underlying stem-resolution defect; that is a separate issue, not this one.
 
 ## Out of scope
 
@@ -138,7 +164,7 @@ langchain installed nor the sys.modules mocks.
 | --- | --- |
 | `tests/llm/providers/test_langchain_session_guard.py` | Real-filesystem guard tests, outside the langchain conftest |
 | `pr_info/steps/summary.md` | This document |
-| `pr_info/steps/step_1.md` … `step_3.md` | Step details |
+| `pr_info/steps/step_1.md`, `step_2.md` | Step details |
 
 ### Modified
 
@@ -147,10 +173,12 @@ langchain installed nor the sys.modules mocks.
 | `src/mcp_coder/llm/storage/session_storage.py` | Add `require_langchain_history()`; add to `__all__` | 1 |
 | `tests/llm/storage/test_session_storage.py` | Two tests for the new helper via tmp `base_dir` | 1 |
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Import helper; add `_resolve_session_id()`; swap `:306` and `:638`; update two `Raises:` docstrings | 2 |
-| `tests/llm/providers/langchain/conftest.py` | Unconditional autouse fixture neutralising the guard | 2 |
-| `docs/architecture/architecture.md` | Note the guard under LangChain session storage | 3 |
-| `docs/cli-reference.md` | Note the `--session-id` restriction for langchain | 3 |
-| `docs/configuration/config.md` | Note the guard under "Session Continuity" | 3 |
+| `tests/llm/providers/langchain/conftest.py` | Opt-in fixture neutralising the guard | 2 |
+| `tests/llm/providers/langchain/test_langchain_{agent_mode,multi_turn,provider,streaming}.py` | Request the opt-in fixture (11 tests) | 2 |
+| `tests/cli/commands/test_prompt.py` | One test asserting the guard makes `execute_prompt` return 1 | 2 |
+| `docs/architecture/architecture.md` | Note the guard under LangChain session storage | 2 |
+| `docs/cli-reference.md` | Note the `--session-id` restriction for langchain | 2 |
+| `docs/configuration/config.md` | Note the guard under "Session Continuity", incl. the `--continue-session-from` consequence | 2 |
 
 ### Not modified (verified)
 
@@ -165,14 +193,19 @@ langchain installed nor the sys.modules mocks.
 
 1. **[step_1.md](./step_1.md)** — `require_langchain_history()` in the storage layer.
 2. **[step_2.md](./step_2.md)** — `_resolve_session_id()` guard in both langchain entry
-   points, plus the test-fallout fixture.
-3. **[step_3.md](./step_3.md)** — Documentation.
+   points, the test-fallout fixture, the CLI exit-code test, and the three doc notes.
+
+The documentation is folded into step 2 rather than given its own step: three 1-3 line edits
+with no behavioural exit criterion, describing behaviour introduced in the same commit, do
+not warrant a separate commit and quality-check cycle.
 
 ## Acceptance (from the issue)
 
 - [ ] An explicitly requested session id with no history file exits 1, naming the id and the
-      expected path.
-- [ ] Both `ask_langchain` and `ask_langchain_stream` are guarded.
-- [ ] A new session (no id passed) is unaffected.
-- [ ] A successful resume stays silent.
-- [ ] One test exercises the real filesystem path via a tmp `base_dir`.
+      expected path. *(message: step 1 tests; exit code: 2e)*
+- [ ] Both `ask_langchain` and `ask_langchain_stream` are guarded. *(2d tests 1-2)*
+- [ ] A new session (no id passed) is unaffected. *(2d test 4)*
+- [ ] A successful resume stays silent. *(2d test 3, plus the `langchain_integration` resume
+      tests, which now run with the guard live)*
+- [ ] One test exercises the real filesystem path via a tmp `base_dir`. *(step 1,
+      `test_require_history_raises_when_file_missing`)*
