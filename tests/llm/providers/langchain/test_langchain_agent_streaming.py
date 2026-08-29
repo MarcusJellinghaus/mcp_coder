@@ -3,6 +3,7 @@
 import threading
 from collections.abc import AsyncIterator, Generator
 from contextlib import contextmanager
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -247,8 +248,15 @@ class TestRunAgentStream:
         raw_lines = [e for e in result if e["type"] == "raw_line"]
         assert len(raw_lines) == 2
 
-    async def test_done_event_emitted_last(self) -> None:
+    async def test_done_event_emitted_last(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         """Stream ends with done event containing session_id."""
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        from mcp_coder.llm.storage.session_storage import store_langchain_history
+
+        # A resumable id: done only carries an id that has a history file.
+        store_langchain_history("sess-42", [])
         events: list[dict[str, object]] = []
         with _patch_run_agent_stream(events):
             from mcp_coder.llm.providers.langchain.agent import run_agent_stream

@@ -164,7 +164,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--project-dir PATH` - Project directory path (default: current directory)
 - `--verbosity LEVEL` - Output detail: `just-text` (response only), `verbose` (+ metrics), `raw` (+ full JSON)
 - `--store-response` - Save session to `.mcp-coder/responses/` for later continuation
-- `--continue-session-from FILE` - Resume conversation from specific stored session file
+- `--continue-session-from FILE` - Resume conversation from specific stored session file. Not supported with `--llm-method langchain`: the session ID is taken from the file name, so a `--store-response` file (`response_<timestamp>.json`) has no matching history and the command exits 1 - use `--continue-session` or `--session-id` instead.
 - `--continue-session` - Resume from most recent session (auto-discovers latest file)
 - `--session-id ID` - Direct session ID for continuation (overrides file-based options). With `--llm-method langchain` the ID must already have a stored history file; an unknown ID is an error, not a new conversation.
 - `--timeout SECONDS` - API request timeout in seconds (default: 60)

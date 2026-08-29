@@ -11,6 +11,7 @@ import pytest
 from mcp_coder.llm.storage.session_storage import (
     extract_langchain_session_id,
     extract_session_id,
+    langchain_history_exists,
     load_langchain_history,
     require_langchain_history,
     store_langchain_history,
@@ -400,6 +401,12 @@ class TestLangchainSessionStorage:
         """An empty history file is a valid session - the guard stays silent."""
         store_langchain_history("sid", [], base_dir=str(tmp_path))
         require_langchain_history("sid", base_dir=str(tmp_path))
+
+    def test_history_exists_tracks_the_file_on_disk(self, tmp_path: Path) -> None:
+        """The predicate is False until the history file is written."""
+        assert not langchain_history_exists("sid", base_dir=str(tmp_path))
+        store_langchain_history("sid", [], base_dir=str(tmp_path))
+        assert langchain_history_exists("sid", base_dir=str(tmp_path))
 
 
 class TestExtractLangchainSessionId:

@@ -1,5 +1,6 @@
 """Tests for agent mode routing and MLflow logging in langchain provider."""
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -57,6 +58,46 @@ class TestAskLangchainAgentMode:
             result = ask_langchain("question", mcp_config="/path/to/.mcp.json")
         assert result["text"] == "agent answer"
         mock_run_agent.assert_called_once()
+
+    def test_omits_session_id_when_turn_stored_no_history(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A turn that persisted nothing reports no resumable session id.
+
+        create_plan / review / rebase chain ``result["session_id"]`` into the
+        next prompt_llm call; handing back an id with no history file would
+        abort that turn with the resume guard's ValueError.
+        """
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        mock_run_agent = AsyncMock(return_value=("agent answer", [], {"usage": {}}))
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain._load_langchain_config",
+                return_value=_make_config(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.agent.run_agent",
+                mock_run_agent,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.load_langchain_history",
+                return_value=[],
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            result = ask_langchain("question", mcp_config="/path/to/.mcp.json")
+
+        assert result["text"] == "agent answer"
+        assert not list(tmp_path.rglob("*.json"))
+        assert result["session_id"] is None
 
     def test_routes_to_text_mode_when_mcp_config_none(self) -> None:
         """When mcp_config is None, _create_chat_model dispatch used."""

@@ -19,6 +19,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from mcp_coder.llm.storage.session_storage import (
+    langchain_history_exists,
     load_langchain_history,
     require_langchain_history,
     store_langchain_history,
@@ -430,7 +431,8 @@ def _ask_agent(
 
     Returns:
         LLMResponseDict with the agent's text response and tool usage stats.
-
+        ``session_id`` is None when the turn stored nothing: an id no history
+        was written under is not resumable and would fail the next turn.
     """  # Also raises LLMAuthError / LLMConnectionError via _handle_provider_error.
     from .agent import _check_agent_dependencies, run_agent
 
@@ -472,7 +474,7 @@ def _ask_agent(
         version=LLM_RESPONSE_VERSION,
         timestamp=datetime.now().isoformat(),
         text=text,
-        session_id=session_id,
+        session_id=session_id if langchain_history_exists(session_id) else None,
         provider="langchain",
         raw_response=raw_response,
     )

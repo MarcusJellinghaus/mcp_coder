@@ -507,7 +507,9 @@ async def run_agent_stream(
         Without a terminal graph event (cancelled turn, or no ``on_chain_end``
         matching the root ``run_id``) ``stats`` carries ``usage`` alone: the
         tool stats come from the final message list, so they are omitted
-        rather than reported as zeros.
+        rather than reported as zeros. Such a turn also drops ``session_id``
+        unless a history file already exists for it — nothing was stored, so
+        the id is not resumable and chaining it would fail the next turn.
 
     Raises:
         LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
@@ -685,14 +687,22 @@ async def run_agent_stream(
         # turn that may have made several calls, so the three tool-stat keys are
         # omitted entirely and only `usage` — which the stream accumulated
         # itself and therefore does know — is reported.
-        yield {
+        from mcp_coder.llm.storage.session_storage import langchain_history_exists
+
+        done: StreamEvent = {
             "type": "done",
-            "session_id": session_id,
             "usage": accumulated_usage,
             "messages": [],
             "result": accumulated_text,
             "stats": {"usage": accumulated_usage},
         }
+        # The id is only handed back when it is actually resumable. A brand-new
+        # session stored nothing, so advertising it would make the next turn
+        # raise on the missing history file instead of continuing. A resumed
+        # session keeps its id: the prior history is still on disk.
+        if langchain_history_exists(session_id):
+            done["session_id"] = session_id
+        yield done
         return
 
     # The graph's own final message list is the persisted history; the shared
