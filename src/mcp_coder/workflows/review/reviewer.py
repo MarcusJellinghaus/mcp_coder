@@ -7,6 +7,7 @@ supervisor session, parsing its machine-readable verdict and repairing an
 unparseable one up to :data:`VERDICT_REPAIR_RETRIES` times.
 """
 
+import logging
 from pathlib import Path
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
@@ -18,6 +19,8 @@ from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 
 from .config import ReviewConfig
 from .verdict import Verdict, parse_verdict
+
+logger = logging.getLogger(__name__)
 
 VERDICT_REPAIR_RETRIES = 2
 
@@ -183,6 +186,11 @@ def _get_verdict(
     turn. A ``None`` parse is repaired up to :data:`VERDICT_REPAIR_RETRIES`
     times before giving up.
 
+    A turn that reports no session id is tolerated only while an earlier
+    supervisor id is in hand; without one (round 1, provider did not record the
+    turn) the verdict is abandoned rather than repaired against a supervisor
+    that never saw the report.
+
     The header is rebuilt every turn (including resumed ones), so the round-
     varying ``{round_number}`` / ``{max_rounds}`` / ``{strict_from_round}`` /
     ``{tie_break}`` substitution needs no new session plumbing. The stated
@@ -204,7 +212,8 @@ def _get_verdict(
 
     Returns:
         ``(verdict, next_supervisor_sid)`` where ``verdict`` is ``None`` if it
-        could not be parsed after all repair retries.
+        could not be parsed after all repair retries, or if the turn left no
+        resumable supervisor session to repair or continue.
     """
     env_vars = prepare_llm_environment(project_dir)
     cwd = str(execution_dir) if execution_dir else str(project_dir)
@@ -229,7 +238,30 @@ def _get_verdict(
             mcp_config=mcp_config,
             settings_file=settings_file,
         )
-        current_sid = response["session_id"] or current_sid
+        new_sid = response["session_id"]
+        if new_sid is None:
+            # A provider reports no session id when the turn was not recorded
+            # (langchain drops an id nothing was stored under). With an earlier
+            # id in hand the supervisor conversation is still resumable, so keep
+            # it; on round 1 there is none, and both the repair retry and every
+            # later round would silently address a blank supervisor that never
+            # saw this report. Give up on the verdict instead.
+            if current_sid is None:
+                logger.error(
+                    "Round %d: the supervisor turn was not recorded by provider "
+                    "'%s' and left no resumable session, so its verdict cannot "
+                    "be repaired or continued in later rounds",
+                    round_number,
+                    provider,
+                )
+                return None, None
+            logger.warning(
+                "Round %d: the supervisor turn returned no resumable session "
+                "id; keeping the current one",
+                round_number,
+            )
+        else:
+            current_sid = new_sid
         verdict = parse_verdict(response["text"])
         if verdict is not None:
             return verdict, current_sid

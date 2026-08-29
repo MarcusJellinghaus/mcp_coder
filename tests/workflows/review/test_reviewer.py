@@ -189,6 +189,78 @@ def test_supervisor_header_substitutes_round_and_tie_break(
         assert placeholder not in prompt
 
 
+# --- Supervisor session-id chaining ----------------------------------------
+
+
+def _call_get_verdict(**overrides: Any) -> tuple[Any, str | None]:
+    """Invoke _get_verdict with sensible defaults, applying overrides."""
+    kwargs: dict[str, Any] = dict(
+        config=REVIEW_IMPLEMENTATION,
+        project_dir=Path("/p"),
+        provider="langchain",
+        mcp_config=None,
+        settings_file=None,
+        execution_dir=None,
+        supervisor_sid=None,
+        report="NO FINDINGS",
+        round_number=1,
+        max_rounds=5,
+    )
+    kwargs.update(overrides)
+    return reviewer._get_verdict(**kwargs)
+
+
+def test_round_one_without_session_id_abandons_the_verdict(
+    mock_supervisor_llm: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An unrecorded round-1 supervisor turn yields no verdict and no retry.
+
+    There is no earlier id to fall back to, so a repair retry would send
+    ``_REPAIR_PROMPT`` into a blank conversation that never saw the report.
+    """
+    mock_supervisor_llm.return_value = {"text": "no verdict here", "session_id": None}
+
+    with caplog.at_level("ERROR"):
+        verdict, sid = _call_get_verdict()
+
+    assert verdict is None
+    assert sid is None
+    # The repair retries never ran.
+    assert mock_supervisor_llm.call_count == 1
+    assert "left no resumable session" in caplog.text
+
+
+def test_round_one_without_session_id_abandons_even_a_parseable_verdict(
+    mock_supervisor_llm: MagicMock,
+) -> None:
+    """Later rounds must not silently start a fresh supervisor.
+
+    The verdict parsed here, but keeping it would thread ``None`` into every
+    later round, dropping the persistent-session discipline.
+    """
+    mock_supervisor_llm.return_value = {
+        "text": '```json\n{"decision": "dismiss"}\n```',
+        "session_id": None,
+    }
+
+    assert _call_get_verdict() == (None, None)
+
+
+def test_unrecorded_later_turn_keeps_the_previous_session_id(
+    mock_supervisor_llm: MagicMock,
+) -> None:
+    """With an earlier id in hand the supervisor conversation is still resumable."""
+    mock_supervisor_llm.return_value = {
+        "text": '```json\n{"decision": "dismiss"}\n```',
+        "session_id": None,
+    }
+
+    verdict, sid = _call_get_verdict(supervisor_sid="sup-1", round_number=2)
+
+    assert verdict is not None
+    assert sid == "sup-1"
+
+
 # --- PR-feedback note framing helpers --------------------------------------
 
 

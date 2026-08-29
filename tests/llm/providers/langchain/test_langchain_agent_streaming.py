@@ -359,8 +359,11 @@ class TestRunAgentStream:
         assert len(error_events) == 1
         assert "agent error" in str(error_events[0]["message"])
 
-    async def test_cancel_event_stops_stream(self) -> None:
+    async def test_cancel_event_stops_stream(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         """Setting cancel_event stops the async generator."""
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         cancel = threading.Event()
 
         async def _cancelling_events() -> AsyncIterator[dict[str, object]]:

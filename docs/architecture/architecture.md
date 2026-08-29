@@ -254,7 +254,11 @@ with `--project-dir`; together these cover the CI/CD case that motivated shared 
       - Stored history is **system-free**: system + project prompts are merged into one `SystemMessage` and applied fresh each turn, never persisted. Otherwise they accumulate per turn and single-system providers (LiteLLM/Qwen-class) reject the conversation.
       - Resuming is **guarded**: an explicitly requested `session_id` with no history file raises `ValueError` instead of starting a blank conversation. Both `ask_langchain` and `ask_langchain_stream` check at id resolution; a new session (no id passed) is unaffected.
       - Because of that guard, the agent path only hands an id back once it is resumable: `run_agent_stream`'s `done` event carries `session_id` only when a history file exists for it, and omits the key for a turn that stored nothing (cancelled, or no terminal graph event). `LLMResponseDict["session_id"]` is therefore `None` for such a turn in langchain agent mode.
-      - Callers that chain the id into a following turn must handle that `None` rather than pass it on, or the next turn hits the resume guard: see `workflows/create_plan/core.py`, `workflows/review/core.py` and `workflows/rebase.py`, which keep the previous id and log a warning.
+      - Callers that chain the id into a following turn must handle that `None` rather than pass it on, or the next turn either hits the resume guard or silently continues a blank conversation. The treatment depends on what the following turn needs from the missing conversation:
+        - `workflows/rebase.py` keeps the previous id and logs a warning — its steps share one long-running session, so the earlier context is still resumable.
+        - `workflows/create_plan/core.py` logs an error and aborts with a `WorkflowFailure` — prompt 2 reviews prompt 1's answer, and there is no earlier id to fall back to.
+        - `workflows/review/core.py` logs an error, writes a round log and fails the round when the *reviewer* turn left no session — the fix tasks would otherwise be applied to a conversation that never saw the diff.
+        - `workflows/review/reviewer.py` logs an error and returns no verdict when the *supervisor* turn left no session and none was carried in — the verdict-repair retry would otherwise land in a blank conversation.
 
 ### CLI System (`src/mcp_coder/cli/`)
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)
