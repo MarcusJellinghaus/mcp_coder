@@ -66,6 +66,18 @@ def _ask_agent_stream(..., approval_bridge: ApprovalBridge | None = None) -> Ite
      the join meaningful on the `GeneratorExit`-while-pending path. That `finally` runs on normal
      completion **and** on `GeneratorExit`, which is the cancel path — one lifecycle site, per
      summary §2.10.
+     **Guard both `finally` statements — the widening makes them conditional.** `thread` is now
+     bound *inside* the `try`, so the `finally` must survive the two failure modes the widening
+     exists to cover: `attach(q.put)` raising as the first statement leaves `thread` **unbound**
+     (`UnboundLocalError` from the `finally`), and `thread.start()` raising leaves it **created
+     but not started** (`RuntimeError: cannot join thread before it is started`). Either one would
+     raise out of the `finally` and mask the original exception — the very failure the widening is
+     justified by. So each cleanup step is conditioned on its own setup having succeeded:
+     `detach()` only when `attach()` returned (a flag set immediately after the attach call, not
+     `approval_bridge is not None` — attach may itself have raised), and `thread.join(timeout=5)`
+     only when `thread` is bound **and** was started (`thread.ident is not None`, or an explicit
+     `thread = None` pre-binding above the `try` plus a started flag). The `finally` must not be
+     able to raise.
   2. Pause: a **timestamped pending window**. Sample `approval_bridge.pending()` at every loop
      point (after `q.get` returns *and* on `queue.Empty`); opening the window records
      `pause_began`, closing it credits the real wall time to `paused`. On `queue.Empty` with the
@@ -182,7 +194,11 @@ Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
 > right after `q` is created, make `attach(q.put)` its first statement, and in the `finally` call
 > `detach()` **before** `thread.join(timeout=5)` (detach cancels the pending futures, which is the
 > only thing that unparks a blocked interceptor; joining first burns the full 5s and leaves the
-> agent thread alive) — **one** lifecycle site; make the
+> agent thread alive) — **one** lifecycle site. Guard both `finally` statements, because the
+> widening puts `thread` inside the `try`: call `detach()` only when `attach()` returned, and
+> `thread.join(timeout=5)` only when the thread is bound and was started, so an `attach(q.put)`
+> failure (`UnboundLocalError`) or a `thread.start()` failure (`RuntimeError: cannot join thread
+> before it is started`) cannot raise out of the `finally` and mask the original exception. Make the
 > consumer treat `queue.Empty` as "re-wait" while `pending() > 0` and track the pause as a
 > **timestamped window** (sample `pending()` at every loop point, credit real wall time when the
 > window closes, subtract the still-open window in the cap check) — do **not** accumulate

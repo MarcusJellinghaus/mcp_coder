@@ -217,6 +217,15 @@ first statement — otherwise a failure between attach and the loop (`thread.sta
 would leave the engine attached to a dead turn with no `detach()`. In the `finally`,
 `detach()` runs **before** `thread.join(timeout=5)`, never after.
 
+**Both `finally` statements are guarded, because the widening makes them conditional.** `thread`
+is now bound inside the `try`, so the two failures the widening exists to cover would otherwise
+raise *out of the `finally`* and mask the original exception: `attach(q.put)` raising as the first
+statement leaves `thread` unbound (`UnboundLocalError`), and `thread.start()` raising leaves it
+created but unstarted (`RuntimeError: cannot join thread before it is started`). Each cleanup step
+is therefore conditioned on its own setup having succeeded — `detach()` only when `attach()`
+returned, `thread.join(timeout=5)` only when the thread is bound and was started. Step 5 spells
+out the mechanics; the invariant is that the `finally` cannot raise.
+
 Because that `finally` is also the `GeneratorExit` path, and `GeneratorExit` *is* reachable with
 an approval pending (§2.3), `detach()` must **cancel then clear**: schedule
 `fut.cancel` for every remaining entry onto `_loop` with `call_soon_threadsafe`, then drop
