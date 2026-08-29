@@ -19,7 +19,8 @@ runtime-rules store that I3.3/#1046 will write to.
 ```python
 _DENY_NEVER = "This tool is disabled by permission policy."           # unchanged
 _DENY_ASK = "This tool requires approval — not yet available."        # REPURPOSED: fail-closed fallback
-_DENY_USER = (                                                        # R11 — canonical wording
+_DENY_USER = (                        # R11 — canonical wording; used unless the decision
+                                      # carries its own `reason` (see the AFTER_APPROVAL branch)
     "Tool call denied by the user. Do not retry this call — choose a "
     "different approach, or ask the user what they would prefer."
 )
@@ -78,7 +79,9 @@ approved = await self._engine.request_approval(                 # CancelledError
 )
 if approved.outcome == "allow":
     return await handler(request)
-return build_deny_tool_message(_DENY_USER, request.name, tool_call_id)
+# `reason` lets the answering side override the wording. Step 8's interim auto-deny
+# uses it so an unanswered call is not reported to the model as a user denial.
+return build_deny_tool_message(approved.reason or _DENY_USER, request.name, tool_call_id)
 ```
 
 ## DATA
@@ -98,6 +101,8 @@ bridge via an autouse fixture, so no `langchain_core` is needed).
 1. `AFTER_APPROVAL` + engine returning **allow** → the real handler is awaited.
 2. `AFTER_APPROVAL` + engine returning **deny** → `ToolMessage` with `_DENY_USER` and the real
    `tool_call_id`; the handler is **not** awaited; nothing raises.
+2b. `AFTER_APPROVAL` + a deny carrying `reason="…"` → the `ToolMessage` uses that text, not
+   `_DENY_USER` (Step 8's interim auto-deny depends on it).
 3. `AFTER_APPROVAL` + engine raising `CancelledError` → it propagates out of `interceptor`.
 4. **Degraded config** → deny, and `request_approval` was **never called** (assert on a spy).
 5. **No engine** and **engine not attached** → `_DENY_ASK` deny with the real `tool_call_id`, and
@@ -123,14 +128,16 @@ bridge via an autouse fixture, so no `langchain_core` is needed).
 > step's pseudocode: keep the whole `Decision` (not just `.policy`), deny outright when
 > `decision.source` is `Degraded` **without emitting an approval request**, fail closed with
 > `_DENY_ASK` when no engine is attached (never awaiting a Future nobody will resolve), otherwise
-> await `engine.request_approval(...)` and allow or deny with the canonical R11 wording. Let
+> await `engine.request_approval(...)` and allow, or deny with `decision.reason` when the decision
+> carries one and the canonical R11 wording otherwise. Let
 > `CancelledError` propagate. Add `add_runtime_rule(rule)` using `dataclasses.replace`, and a
 > `_source_label` helper that flattens `Decision.Source` to a plain JSON-safe string.
 >
 > Add an `approval_engine: ApprovalEngine | None = None` constructor parameter. The deny
 > `ToolMessage` is constructed here, never in the engine.
 >
-> Write the eight test cases listed in the step first, extending
+> Write the nine test cases listed in the step first (including the `reason`-override case),
+> extending
 > `tests/icoder/test_permissions_gateway.py` in its existing style (the autouse fixture already
 > stubs the deny bridge). Update the module/class docstrings, which currently say
 > `AFTER_APPROVAL` returns a deny.

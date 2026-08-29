@@ -53,8 +53,14 @@ def _ask_agent_stream(..., approval_bridge: ApprovalBridge | None = None) -> Ite
      `try`; `approval_bridge.detach()` in the existing `finally` (next to `thread.join`). That
      `finally` runs on normal completion **and** on `GeneratorExit`, which is the cancel path —
      one lifecycle site, per summary §2.10.
-  2. Pause: on `queue.Empty`, `continue` while `approval_bridge.pending() > 0`, accumulating
-     `paused += timeout`; compare the overall cap against `(time.monotonic() - start) - paused`.
+  2. Pause: a **timestamped pending window**. Sample `approval_bridge.pending()` at every loop
+     point (after `q.get` returns *and* on `queue.Empty`); opening the window records
+     `pause_began`, closing it credits the real wall time to `paused`. On `queue.Empty` with the
+     window open, `continue` instead of raising the inactivity timeout. The overall cap is
+     compared against `elapsed − paused − (the currently open window)`. Do **not** accumulate
+     `paused += timeout` in the `queue.Empty` branch only: with a 300s inactivity timeout every
+     pause shorter than 300s would produce no `Empty` at all and would be charged in full against
+     the 3600s cap.
   3. `_run` gains `except asyncio.CancelledError:` **before** the `except Exception`, which does
      **not** append to `error_holder`; the `finally` still puts the sentinel.
 * **Comments to carry (D9):** why pause and not keepalives — the overall cap is checked *inside*
@@ -68,28 +74,54 @@ def _ask_agent_stream(..., approval_bridge: ApprovalBridge | None = None) -> Ite
 
 ```python
 # _ask_agent_stream consumer loop
-start, paused = time.monotonic(), 0.0
+start, paused, pause_began = time.monotonic(), 0.0, None
+
+def _sync_pause() -> None:
+    """Open/close the pending window from the bridge's count (consumer thread)."""
+    nonlocal paused, pause_began
+    waiting = approval_bridge is not None and approval_bridge.pending() > 0
+    now = time.monotonic()
+    if waiting and pause_began is None:
+        pause_began = now                       # window opens
+    elif not waiting and pause_began is not None:
+        paused += now - pause_began             # window closes, real wall time credited
+        pause_began = None
+
+def _elapsed() -> float:
+    now = time.monotonic()
+    open_window = now - pause_began if pause_began is not None else 0.0
+    return (now - start) - paused - open_window
+
 while True:
     try:
         event = q.get(timeout=timeout)
     except queue.Empty as exc:
-        if approval_bridge is not None and approval_bridge.pending() > 0:
-            paused += timeout          # legitimate human pause -> re-wait
+        _sync_pause()
+        if pause_began is not None:             # legitimate human pause -> re-wait
             continue
         cancel.set(); raise TimeoutError(...) from exc
+    _sync_pause()                               # sampled BEFORE the yield blocks on the UI
     if event is None: break
-    if (time.monotonic() - start) - paused > _AGENT_OVERALL_TIMEOUT:
+    if _elapsed() > _AGENT_OVERALL_TIMEOUT:
         cancel.set(); raise TimeoutError(...)
     yield event
 ```
+
+The window opens on the iteration that dequeues the `approval_request` itself — the registry
+entry is created *before* the emit (summary §2.2), so `pending()` is already `> 0` there — and
+closes on the first event that follows the decision. It therefore covers the whole human wait,
+including the part spent suspended at `yield` while the UI handles the event, and works for
+pauses far shorter than `timeout`.
 
 ## DATA
 
 * `approval_bridge.attach(q.put)` — `q` is `queue.Queue[StreamEvent | None]`, so `q.put`
   satisfies `Callable[[StreamEvent], None]` (contravariant parameter, extra params have defaults).
-* `paused` is a float in seconds; the inactivity `timeout` is iCoder's **300s**
-  (`ICODER_LLM_TIMEOUT_SECONDS`), not the 30s default — tests must monkeypatch both it and
-  `_AGENT_OVERALL_TIMEOUT` to small values.
+* `paused` and `pause_began` are floats in seconds (`pause_began` is `float | None`, `None` when
+  no approval is pending). The inactivity `timeout` is iCoder's **300s**
+  (`ICODER_LLM_TIMEOUT_SECONDS`), not the 30s default, and `_AGENT_OVERALL_TIMEOUT` is **3600s** —
+  tests must monkeypatch both to small values, and must cover a pause **shorter** than the
+  inactivity timeout, where no `queue.Empty` ever occurs.
 * Yielded events are unchanged; `approval_request` passes through the generator like any other.
 
 ## TESTS (write first)
@@ -99,16 +131,24 @@ Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
 1. **Pause defeats both timeouts:** a tool that blocks for longer than *both* a small
    monkeypatched `timeout` and a small monkeypatched `_AGENT_OVERALL_TIMEOUT` still completes when
    a bridge reports `pending() > 0`.
-2. **Negative control:** the same setup with `approval_bridge=None` raises `TimeoutError` — proves
+2. **Sub-inactivity pause is still excluded from the overall cap:** with `timeout` large enough
+   that **no `queue.Empty` ever fires** and `_AGENT_OVERALL_TIMEOUT` smaller than the pause, a
+   bridge reporting `pending() > 0` across the wait still completes. This is the case the
+   `queue.Empty`-only accumulation got wrong; test 1 cannot detect it.
+3. **Negative control:** the same setup with `approval_bridge=None` raises `TimeoutError` — proves
    the pause is load-bearing, not vacuous.
-3. **Attach/detach lifecycle:** `attach` is called with a callable that puts onto *this* turn's
+4. **Attach/detach lifecycle:** `attach` is called with a callable that puts onto *this* turn's
    queue; `detach` is called on normal completion **and** on generator close (cancel path). Two
    consecutive turns never share a queue (the stale-`q` failure mode).
-4. **`CancelledError` in `_run`:** `error_holder` stays empty, the sentinel is still put, the
+5. **Generator closed while an approval is pending:** close the consumer generator at the `yield`
+   that delivered `approval_request` (the reachable `GeneratorExit`, summary §2.3). `detach()`
+   runs, the pending future is cancelled, and the agent thread is dead after the 5s join
+   (`thread.is_alive() is False`) — it does not survive parked on the future.
+6. **`CancelledError` in `_run`:** `error_holder` stays empty, the sentinel is still put, the
    generator ends normally, and nothing is re-raised.
-5. **No-op on the text branch:** `ask_langchain_stream` without `mcp_config` and with a bridge
+7. **No-op on the text branch:** `ask_langchain_stream` without `mcp_config` and with a bridge
    ignores it and never calls `attach`.
-6. **`ResponseAssembler`:** an `approval_request` event is absent from
+8. **`ResponseAssembler`:** an `approval_request` event is absent from
    `result()["raw_response"]["events"]`; `raw_line` exclusion still holds; all other event types
    still accumulate.
 
@@ -127,8 +167,11 @@ Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
 > `prompt_llm_stream` → `ask_langchain_stream` → `_ask_agent_stream` (a no-op on the
 > `_ask_text_stream` branch). In `_ask_agent_stream`: `attach(q.put)` right after `q` is created
 > and `detach()` in the existing `finally` next to `thread.join` — **one** lifecycle site; make the
-> consumer treat `queue.Empty` as "re-wait" while `pending() > 0`, accumulating `paused`, and
-> compare `_AGENT_OVERALL_TIMEOUT` against `elapsed − paused`; add `except asyncio.CancelledError`
+> consumer treat `queue.Empty` as "re-wait" while `pending() > 0` and track the pause as a
+> **timestamped window** (sample `pending()` at every loop point, credit real wall time when the
+> window closes, subtract the still-open window in the cap check) — do **not** accumulate
+> `paused += timeout` in the `queue.Empty` branch only, or pauses shorter than the 300s inactivity
+> timeout are charged in full against the 3600s cap; add `except asyncio.CancelledError`
 > to `_run` that does not append to `error_holder` while the `finally` still puts the sentinel.
 >
 > In `llm/types.py`, add `_TRANSIENT_EVENT_TYPES = frozenset({"raw_line", "approval_request"})`,
@@ -137,9 +180,10 @@ Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
 > `llm/interface.py` annotate the new parameter under `TYPE_CHECKING` so no eager langchain import
 > is introduced, and document it as "langchain provider only" like the neighbouring `tools` param.
 >
-> Write the six test cases listed in the step first, reusing the Step 1 harness; monkeypatch both
-> timeouts to small values. Carry the "pause not keepalives" and "CancelledError is a
-> BaseException" rationale into code comments.
+> Write the eight test cases listed in the step first, reusing the Step 1 harness; monkeypatch both
+> timeouts to small values, and include the sub-inactivity pause case (no `queue.Empty` at all) and
+> the generator-closed-while-pending case. Carry the "pause not keepalives" and "CancelledError is
+> a BaseException" rationale into code comments.
 >
 > Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and
 > `run_lint_imports_check` all green, then one commit.

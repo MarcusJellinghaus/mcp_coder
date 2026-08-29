@@ -31,7 +31,7 @@ def pop_pending_tool(
     run_id: str | None,
     name: str,
 ) -> tuple[str | None, str, Any] | None:
-    """Pop by ``tool_run_id`` when both sides carry one, else the first match by name (FIFO)."""
+    """Pop by ``tool_run_id``; fall back to name-FIFO **only** when *run_id* is ``None``."""
 ```
 
 ## HOW
@@ -55,9 +55,14 @@ def pop_pending_tool(
   the `ToolStart` append, the `ToolResult` lookup, and `_cleanup_orphan_tools`. The FIFO-desync
   WARN log stays (it becomes "N entries left over after cleanup"). `ui/app.py` already imports
   from `llm.formatting`, so importing `pop_pending_tool` adds no new dependency edge.
-* **Fallback is required, not optional:** `claude_code_cli_streaming.py` and
+* **Fallback is required, but only for the id-less shape:** `claude_code_cli_streaming.py` and
   `copilot_cli_streaming.py` emit neither field, and replayed pre-change logs carry neither — so
-  `run_id=None` must degrade to name-FIFO exactly as today. Say so in the helper's docstring.
+  `run_id=None` must degrade to name-FIFO exactly as today. When a `run_id` **is** supplied and
+  matches nothing pending, return `None` instead: both langchain tool events carry the same
+  `run_id`, so a miss means a genuine desync, and falling through to name-FIFO there would attach
+  the result to some *other* call of the same tool — the exact defect R1/R18 exist to fix. An
+  unpaired result is already handled (`duration_ms is None`; the "no open tool unit" WARN in
+  `ui/app.py`). Say both halves in the helper's docstring.
 * Blast radius check already done: `cleanup_pending` has **one** production caller
   (`_cleanup_orphan_tools`), which has four callers (`app.py` error / cancel / `StreamDone`, and
   `replay.py`). None of their signatures change.
@@ -66,11 +71,12 @@ def pop_pending_tool(
 
 ```python
 def pop_pending_tool(pending, run_id, name):
-    if run_id:
+    if run_id:                                   # id-keyed: a miss is a MISS, not a name match
         for i, entry in enumerate(pending):
             if entry[0] == run_id:
                 del pending[i]; return entry
-    for i, entry in enumerate(pending):          # fallback: first match by name, FIFO
+        return None
+    for i, entry in enumerate(pending):          # no id at all: first match by name, FIFO
         if entry[1] == name:
             del pending[i]; return entry
     return None
@@ -82,7 +88,8 @@ def pop_pending_tool(pending, run_id, name):
   `tool_call_id` is unchanged on both.
 * `ToolStart.tool_run_id` / `ToolResult.tool_run_id`: `str | None`, default `None`.
 * `pop_pending_tool` returns the matched tuple or `None` (unpaired → `duration_ms is None`,
-  or the existing "no open tool unit" WARN in `ui/app.py`).
+  or the existing "no open tool unit" WARN in `ui/app.py`). A supplied-but-unmatched `run_id`
+  returns `None`; only a `run_id` of `None` reaches the name-FIFO branch.
 
 ## TESTS (write first)
 
@@ -91,13 +98,16 @@ def pop_pending_tool(pending, run_id, name):
    correct start (assert with monkeypatched `time.monotonic` or ordering, not wall-clock values).
 2. **Renderer, fallback:** events with no `tool_run_id` (the Claude/Copilot shape) pair by
    name-FIFO exactly as today — existing tests in the file stay green unchanged.
-3. **Renderer, cleanup:** `cleanup_pending` returns `ToolResult`s carrying their `tool_run_id`.
-4. **`agent.py`:** both tool events carry `tool_run_id == run_id`; the two existing `tool_call_id`
+3. **Renderer, id miss does not mis-pair:** a `tool_result` whose `tool_run_id` matches nothing
+   pending leaves the pending same-name start **untouched** and reports `duration_ms is None`;
+   the later matching result still pairs correctly.
+4. **Renderer, cleanup:** `cleanup_pending` returns `ToolResult`s carrying their `tool_run_id`.
+5. **`agent.py`:** both tool events carry `tool_run_id == run_id`; the two existing `tool_call_id`
    assertions still pass.
-5. **UI (`test_app_pilot.py`, `textual_integration`):** one turn with two calls to the **same**
+6. **UI (`test_app_pilot.py`, `textual_integration`):** one turn with two calls to the **same**
    tool, results out of order → each `tool_result` updates the correct unit; the desync WARN is
    not emitted.
-6. **UI orphan cleanup:** a cancelled turn with one open same-name unit still resolves the right row.
+7. **UI orphan cleanup:** a cancelled turn with one open same-name unit still resolves the right row.
 
 ## CHECKS
 
@@ -118,15 +128,17 @@ def pop_pending_tool(pending, run_id, name):
 > not modify it.
 >
 > Add one module-level helper `pop_pending_tool(pending, run_id, name)` in `stream_renderer.py`
-> (id-keyed with a name-FIFO fallback — the fallback is required because the Claude and Copilot
-> streaming paths and replayed pre-change logs carry neither field). Use it from
+> (id-keyed, with a name-FIFO fallback **only when `run_id is None`** — the fallback is required
+> because the Claude and Copilot streaming paths and replayed pre-change logs carry neither field,
+> but a supplied-and-unmatched `run_id` must return `None` rather than fall through, or a lookup
+> miss silently mis-pairs two calls of the same tool). Use it from
 > `StreamEventRenderer` (whose `_pending` becomes a deque of `(run_id, raw_name, start)`) and from
 > `icoder/ui/app.py`, whose `_open_tool_units` collapses from `dict[str, deque[str]]` to a single
 > deque of `(run_id, raw_name, unit_id)`. Do not build a generic container class. Thread
 > `tool_run_id` through `cleanup_pending`; no caller signature changes.
 >
-> Write the six test cases listed in the step first, including the same-tool gated/ungated
-> out-of-order case at both sites.
+> Write the seven test cases listed in the step first, including the same-tool gated/ungated
+> out-of-order case at both sites and the id-miss case.
 >
 > Use MCP tools only. Run the fast suite **and** the `textual_integration` marker. Finish with
 > `run_pylint_check`, `run_pytest_check`, `run_mypy_check` all green, then one commit.

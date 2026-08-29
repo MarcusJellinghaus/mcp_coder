@@ -41,10 +41,26 @@ Textual handle" **machine-enforced on every CI run** — that is what protects R
 
 ### 2.2 The engine is one insertion-ordered dict (KISS simplification)
 
-Everything that mutates the engine runs **on the agent loop, single-threaded**: interceptor
-coroutines run there, and `resolve_pending` / `cancel_all` only ever `call_soon_threadsafe`, so
-their bodies run there too. The single cross-thread read (`pending()` from the consumer thread)
-is `len(dict)`, atomic under the GIL.
+The registry is mutated from the **agent loop** in the normal case: interceptor coroutines run
+there, and `resolve_pending` / `cancel_all` only ever hand their bodies over with
+`call_soon_threadsafe`. Three members are touched **off** that loop, and the docstring must say
+so rather than claim blanket single-threadedness:
+
+* `attach()` / `detach()` mutate `_pending`, `_emit`, `_loop` (and `_cancelled`, on `attach`)
+  from the **consumer thread** — `_ask_agent_stream`'s body and its `finally`. `detach()` is
+  *not* guaranteed to run after the agent loop is dead: it follows `thread.join(timeout=5)`, and
+  that join can expire with the loop still live (§2.3);
+* `cancel_all()` sets `_cancelled = True` on the **Textual thread** before scheduling the future
+  cancellations onto the loop;
+* `pending()` is read cross-thread from the consumer thread.
+
+Each of those is one attribute rebind or a `len(dict)` read — atomic under the GIL — so no lock
+is needed. Two consequences must be *coded*, not assumed:
+
+* the `finally: _emit_front()` in `request_approval` guards on `self._emit is None`: after a
+  `detach()` that raced an expiring join, the sink is gone and promoting the next entry must be
+  a no-op rather than an `AttributeError` on a dead turn;
+* `detach()` **cancels** the futures it drops (§2.3) instead of merely clearing them.
 
 Consequence: **no lock, no deque, no separate counter.** One `dict[approval_id → _PendingApproval]`
 is simultaneously the registry, the FIFO arrival order (dicts are insertion-ordered), and the
@@ -70,13 +86,31 @@ pending count. Serialisation is achieved by emitting only for the front entry:
   so the loop object differs every turn — this is why `detach()` must clear the registry.
 * **Cancel-while-pending uses the direct UI→engine channel** (FINDINGS §4). The three generic
   paths (`cancel_event`, the TUI `_cancel_event`, `GeneratorExit`) are all gated on an event
-  arriving from the generator, and a blocked interceptor emits none; `GeneratorExit` is
-  provably *unreachable* (CPython refuses `gen.close()` on an executing frame). They remain
-  wired as a **post-resolution backstop** only.
+  arriving from the generator, and a blocked interceptor emits none, so none of them can *trigger*
+  a cancel while the consumer sits in `q.get`. They remain wired as a **post-resolution
+  backstop** only.
+* **`GeneratorExit` while an approval is pending is rare, not impossible — do not design as if it
+  cannot happen.** It cannot be raised from the consumer's own `q.get` (CPython refuses
+  `gen.close()` on an executing frame), but the consumer is **not** in `q.get` for the whole
+  pending window: it yields the `approval_request` and is then suspended at that `yield` while
+  the event is handled — `AppCore.stream_llm` passes it to `ui/app.py::_stream_llm`, which
+  dispatches through `call_from_thread` and blocks until the UI handler returns. Under
+  I3.3/#1046 that is the entire open-modal window. An exception in that handler (or any other
+  consumer-side abort) leaves the `for` loop, closes the generator, and delivers `GeneratorExit`
+  at the `yield` **with an approval still pending**; that path runs `cancel.set()` →
+  `thread.join(timeout=5)` → `detach()`, and the join expires because the agent thread is parked
+  on the future. **Required behaviour for that path:** `detach()` cancels every future it is
+  about to drop (`call_soon_threadsafe(fut.cancel)`) before clearing `_pending`, so the parked
+  interceptor unwinds and the daemon agent thread dies instead of leaking for the process
+  lifetime with a future nothing can resolve.
 * **Timeout suspension is pause, not keepalives** (FINDINGS §3, D1): the consumer treats
   `queue.Empty` as "re-wait" while `pending() > 0`, and the overall cap compares
-  `elapsed − paused`. Keepalives *arm* the overall cap (it is checked inside the consumer loop
-  after `q.get()` returns) and would reach the session `.jsonl` and replay.
+  `elapsed − paused`. `paused` is measured from a **timestamped pending window** — the wall time
+  between `pending()` going 0→n and back to 0 — **not** accumulated in `queue.Empty` units: with
+  iCoder's 300s inactivity timeout and the 3600s cap, an `Empty`-only accumulation credits
+  *nothing* for any pause shorter than 300s and charges it in full against the cap, so a turn
+  with a few one-minute approvals still trips it. Keepalives *arm* the overall cap (it is checked
+  inside the consumer loop after `q.get()` returns) and would reach the session `.jsonl` and replay.
 
 ### 2.4 Resolver: `runtime` becomes its own top-priority stage (R14)
 
@@ -84,11 +118,21 @@ pending count. Serialisation is achieved by emitting only for the front entry:
 only the **third** key and `Policy.rank` puts `AFTER_APPROVAL` above `ALWAYS`, so a session grant
 `Rule(Matcher("s","t"), ALWAYS, "runtime")` currently **loses** to an authored
 `"ask": ["mcp__s__t"]`. Runtime rules now contest among themselves and win **as a group**.
-Two lines. `_LAYER_ORDER` keeps its meaning for the other three layers.
+`_LAYER_ORDER` keeps its meaning for the other three layers.
 
-*Ripples to mirror (not implemented here):* this is a semantic change to I2.1/#1041's resolver,
-and it means a broad runtime `always` shadows a specific authored `never` — uncovered for
-#1048's `/allow` quick commands, which carry no never-override confirm.
+**Bound on the widening (security):** the group short-circuit is skipped when any *authored*
+(non-runtime) matching rule is `never`. R14's canonical case is a runtime `always` beating an
+authored `ask`; letting a **broad** runtime `always` also shadow a **specific** authored `never`
+is a widening this issue does not need. With the bound, an authored `never` falls through to the
+ordinary 4-key contest, where it loses only to a *strictly more specific* runtime rule — never to
+a broader one. The bound is close to free: `filter_tools` hides `never` tools at turn start from
+a snapshot, so a runtime grant cannot make such a tool callable in that turn anyway; without the
+bound the resolver would merely disagree with the tool list.
+
+*Ripple to mirror (not implemented here):* this is a semantic change to I2.1/#1041's resolver.
+#1048's `/allow` quick commands carry no never-override confirm; with the bound above they do not
+need one for the broad-grant case, but the specific-grant case still overrides an authored
+`never` — record that in #1048 rather than solving it here.
 
 ### 2.5 Degraded config denies outright (R15)
 
@@ -141,9 +185,13 @@ match and would silently degrade to name-FIFO — reproducing the exact defect R
 A new `tool_run_id` field carries the `run_id` on both events; `tool_call_id` semantics are
 untouched (#1118 depends on them, and two existing assertions stay green).
 
-Pairing is id-keyed with a **name-FIFO fallback** — `claude_code_cli_streaming.py` and
-`copilot_cli_streaming.py` emit neither field, and replayed pre-change logs carry neither.
-One 12-line module-level function `pop_pending_tool()` serves both sites; `ui/app.py`'s
+Pairing is id-keyed with a name-FIFO fallback **only when the result carries no `tool_run_id`** —
+`claude_code_cli_streaming.py` and `copilot_cli_streaming.py` emit neither field, and replayed
+pre-change logs carry neither. When an id *is* supplied and matches nothing pending, the lookup
+returns `None` (unpaired: `duration_ms is None`, or the existing "no open tool unit" WARN) rather
+than falling through to name-FIFO — falling through there would silently attach the result to
+some other call of the same tool, which is precisely the defect R1/R18 exist to fix.
+One short module-level function `pop_pending_tool()` serves both sites; `ui/app.py`'s
 `_open_tool_units` collapses from `dict[str, deque[str]]` to a single `deque`.
 
 *Not fixed (R17, recorded):* there is **no** correlation key between `approval_request` and the
@@ -159,11 +207,22 @@ already holding `thread.join(timeout=5)`, which runs on both normal completion *
 `detach()`-clears-the-registry criterion; a second defensive detach in `RealLLMService.stream`
 is deliberately **not** added (two lifecycle sites rot).
 
+Because that `finally` is also the `GeneratorExit` path, and `GeneratorExit` *is* reachable with
+an approval pending (§2.3), `detach()` must **cancel then clear**: schedule
+`fut.cancel` for every remaining entry onto `_loop` with `call_soon_threadsafe`, then drop
+`_pending`, `_emit`, `_loop`. Clearing alone would strand the parked interceptor on a future no
+longer reachable from any registry, keeping the daemon agent thread alive for the process lifetime.
+
 ### 2.11 Interim behaviour until I3.3 lands
 
 Nothing answers an `approval_request` until the modal exists. The `ui/app.py` branch therefore
-resolves immediately with `ApprovalDecision("deny", "once")` — fail-closed, three lines, replaced
-by the modal in #1046. Without it, a live `ask` rule would wedge a turn until the user cancels.
+resolves immediately with a deny — fail-closed, a few lines, replaced by the modal in #1046.
+Without it, a live `ask` rule would wedge a turn until the user cancels.
+
+That deny must **not** reach the model as the gateway's R11 user-deny wording ("Tool call denied
+by the user…"): no user was asked. `ApprovalDecision` therefore carries an optional `reason`, the
+UI passes its own `_DENY_NO_UI` string, and the gateway prefers `decision.reason` over
+`_DENY_USER`. #1046 drops the `reason` when a real user answers, and the R11 wording applies again.
 
 ---
 

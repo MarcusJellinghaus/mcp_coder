@@ -40,10 +40,20 @@ def on_unmount(self) -> None:
   fail-closed:
 
   ```python
+  _DENY_NO_UI = (
+      "This tool requires approval, but the approval prompt is not available yet, "
+      "so the call was refused without asking the user. Choose a different approach "
+      "or ask the user how to proceed."
+  )
+
   approval_id = str(event.get("approval_id", ""))
   # I3.3/#1046 replaces this with the modal (ModalScreen[ApprovalDecision]).
   # Until then, fail closed: a live `ask` rule would otherwise wedge the turn.
-  self._core.resolve_pending(approval_id, ApprovalDecision("deny", "once"))
+  # Its own `reason` — never the gateway's R11 user-deny wording, because no user
+  # was asked and the model must not be told one refused (summary §2.11).
+  self._core.resolve_pending(
+      approval_id, ApprovalDecision("deny", "once", reason=_DENY_NO_UI)
+  )
   return
   ```
 
@@ -51,9 +61,14 @@ def on_unmount(self) -> None:
   into `icoder.ui` is legal (the leaf contract forbids the *reverse* direction).
 * **Cancel channel** — `action_cancel_stream` keeps `self._cancel_event.set()` **and** adds
   `self._core.cancel_pending_approvals()`. Comment why (FINDINGS §4): all three generic paths are
-  gated on an event arriving from the generator and a blocked interceptor emits none;
-  `GeneratorExit` is provably *unreachable*, not merely inert. They stay wired as the
+  gated on an event arriving from the generator, and a blocked interceptor emits none, so none of
+  them can *trigger* a cancel while the consumer is waiting in `q.get`. They stay wired as the
   post-resolution backstop.
+  Do **not** write that `GeneratorExit` is unreachable while an approval is pending (summary
+  §2.3): the consumer is suspended at the `yield` that delivered `approval_request` for as long as
+  the UI handler runs — under #1046, the whole open-modal window — so an exception in that handler
+  closes the generator with an approval still pending. That path is covered by `detach()`
+  cancelling what it drops (Steps 2 and 5), not by this channel.
 * **Shutdown hook** — add `on_unmount` calling the same `cancel_pending_approvals()`. `_stream_llm`
   runs via `run_worker(..., thread=True)` and a thread blocked in `q.get` cannot be interrupted;
   nothing in `app.py` overrides `on_unmount` or `action_quit` today.
@@ -101,13 +116,15 @@ fixture — R12):
 5. **Backstop still works:** with no approval pending, `cancel_event` / generator close still stop
    the turn.
 6. **Ordering:** `approval_request` arrives after that tool's `tool_use_start`.
+7. **Interim deny wording:** the deny `ToolMessage` produced by the `ui/app.py` auto-deny carries
+   `_DENY_NO_UI`, **not** the gateway's `_DENY_USER` text — no user was asked.
 
 UI (`tests/icoder/test_app_pilot.py`, `textual_integration`):
 
-7. An `approval_request` event routes to `resolve_pending` and renders nothing; `ResponseAssembler`
+8. An `approval_request` event routes to `resolve_pending` and renders nothing; `ResponseAssembler`
    and the event log are unaffected.
-8. `action_cancel_stream` calls `cancel_pending_approvals()` **and** sets `_cancel_event`.
-9. Unmounting the app calls `cancel_pending_approvals()`.
+9. `action_cancel_stream` calls `cancel_pending_approvals()` **and** sets `_cancel_event`.
+10. Unmounting the app calls `cancel_pending_approvals()`.
 
 ## CHECKS
 
@@ -125,15 +142,18 @@ imported it.
 >
 > In `src/mcp_coder/icoder/ui/app.py`: add an `approval_request` early-return branch to
 > `_handle_stream_event` (mirroring the existing `permission_warning` precedent) that, until
-> I3.3/#1046 lands, resolves the approval immediately with `ApprovalDecision("deny", "once")` via
-> `self._core.resolve_pending` — mark it `TODO(#1046)`. Make `action_cancel_stream` also call
+> I3.3/#1046 lands, resolves the approval immediately with
+> `ApprovalDecision("deny", "once", reason=_DENY_NO_UI)` via `self._core.resolve_pending` — a
+> module-level reason string of its own, **never** the gateway's `_DENY_USER` R11 wording, because
+> no user was asked. Mark it `TODO(#1046)`. Make `action_cancel_stream` also call
 > `self._core.cancel_pending_approvals()`, and add an `on_unmount` hook that does the same so
 > quitting with an approval pending does not stall on the 300s inactivity timeout. Comment why the
 > direct channel is required: all three generic cancel paths are inert while an interceptor is
-> blocked, and `GeneratorExit` is unreachable, not merely inert. Do not add a modal, scopes, or any
-> persist write-back — that is #1046.
+> blocked in `q.get`. Do **not** claim `GeneratorExit` is unreachable — it is reachable at the
+> `yield` that delivered the `approval_request`, and `detach()`'s cancel-then-clear covers it. Do
+> not add a modal, scopes, or any persist write-back — that is #1046.
 >
-> Write `tests/llm/providers/langchain/test_approval_integration.py` (cases 1–6 in the step, real
+> Write `tests/llm/providers/langchain/test_approval_integration.py` (cases 1–7 in the step, real
 > agent path, reusing the Step 1 harness) and the three UI pilot cases first.
 >
 > Then, once you have confirmed that the FINDINGS §2/§3/§4/§5/§10 rationale is present in the
