@@ -15,7 +15,7 @@ feed it.
 | `src/mcp_coder/llm/providers/langchain/agent.py` | `run_agent` (~`:400`), `run_agent_stream` (~`:476`) |
 | `src/mcp_coder/llm/interface.py` | langchain branches only (~`:188`, `~:368`) |
 | `tests/llm/providers/langchain/test_langchain_coverage_gaps.py` | `:168`, `:173`, `:232`, `:233`, `:269`, `:273`, `:316` |
-| `tests/llm/test_interface.py` | langchain kwarg assertions (~`:302-385`, `~:723-773`) |
+| `tests/llm/test_interface.py` | langchain assertions only: `test_passes_execution_dir_to_langchain` (`:1142-1160`) → **delete the test**, it exists solely to assert forwarding; drop `execution_dir=None` from the `assert_called_once_with` kwarg dicts at `:1437`, `:1561`, `:1583`. (`:1198` survives either way — the assertion is dropped by step 4 or here, whichever touches it first.) **Leave `TestPromptLLMExecutionDirRouting` (`:302-385`) and `TestPromptLLMExecutionDir` (`:723-773`) alone — they patch `ask_claude_code_cli`, i.e. they are Claude tests, and step 4 handles them.** |
 
 ## WHAT
 
@@ -73,8 +73,10 @@ No return values or data structures change. `LLMResponseDict` / `StreamEvent` un
 1. **Tests first.** In `test_langchain_coverage_gaps.py`, delete the `execution_dir=` keyword
    from the calls at `:168`, `:232`, `:269`, `:316` and drop the assertions that it is
    forwarded (`:173`, `:233`, `:273`). Where a test exists *only* to assert forwarding, delete
-   the test. In `tests/llm/test_interface.py`, remove `execution_dir` from the expected-kwargs
-   dicts of the langchain assertions only — leave the Claude/Copilot ones alone.
+   the test. In `tests/llm/test_interface.py`, apply the WHERE row exactly: delete
+   `test_passes_execution_dir_to_langchain` (`:1142-1160`) and drop `execution_dir=None` from
+   the three `ask_langchain_stream` kwarg dicts (`:1437`, `:1561`, `:1583`) — leave the
+   Claude/Copilot assertions alone.
 2. Run the suite: the langchain tests now fail with `unexpected keyword argument` on the
    assertion side, or pass trivially.
 3. **Implementation.** Delete the parameter from the six functions and the two `interface.py`
@@ -107,7 +109,9 @@ already unused and annotated as such. Part of #1132.
 >
 > Follow TDD: update the affected tests first
 > (`tests/llm/providers/langchain/test_langchain_coverage_gaps.py` and the langchain
-> assertions in `tests/llm/test_interface.py`), then make the source change.
+> assertions in `tests/llm/test_interface.py` — exactly the sites named in the WHERE table;
+> `TestPromptLLMExecutionDirRouting` and `TestPromptLLMExecutionDir` patch
+> `ask_claude_code_cli` and belong to step 4, not here), then make the source change.
 >
 > Use MCP tools exclusively (`mcp__workspace__*` for files). Finish with
 > `mcp__tools-py__run_pylint_check`, `mcp__tools-py__run_pytest_check` (with

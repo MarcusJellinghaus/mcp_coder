@@ -18,6 +18,7 @@ the workflow parameter still receives a real path.
 | `src/mcp_coder/cli/parsers.py` | delete the import (`:16`) and 10 call sites (`:113, 136, 155, 181, 207, 237, 267, 289, 432, 599`) |
 | `src/mcp_coder/cli/utils.py` | `report_context_root` (`:420`) → one parameter; `resolve_execution_dir` (`:450`) → `resolve_claude_cwd`; update `__all__` (`:37`); drop the now-unused `warnings` import |
 | `src/mcp_coder/cli/commands/*.py` | 9 commands: uniform resolver line, error-handler relabel/delete |
+| `src/mcp_coder/cli/commands/*.py` — docstrings | delete the `execution_dir` `Args:` entries at `check_branch_status.py:174`, `create_plan.py:33`, `create_pr.py:33`, `implement.py:33`, `rebase.py:68`, and the "project/execution dirs" phrasing at `review.py:5`, `:40`, `:53`; update the `commit.py:98` comment ("MCP config discovery from execution_dir" → from `project_dir`). This is where the flag stops existing, so this is where its documentation goes. |
 | `pyproject.toml` | delete the `execution_dir` marker (`:164`) |
 
 ## WHAT
@@ -70,6 +71,12 @@ already resolves, so in eight commands this is idempotent; in `commit.py` (which
 `Path(args.project_dir)` unresolved) it supplies the resolve the issue calls for. Delete every
 `getattr(args, "execution_dir", None)` and every `logger.debug("Execution directory: …")`.
 
+**One side effect in `commit.py`, deliberate.** Rebinding `project_dir` from the resolver does
+more there than supply the subprocess cwd: `validate_git_repository` and the git operations
+below it now receive the `.resolve()`d path instead of the unresolved `Path(args.project_dir)`.
+Benign — every consumer accepts an absolute path — but it is a real change, not a no-op like the
+other eight commands.
+
 **Transitional, intentional:** where a command passed `execution_dir` onward, it now passes
 `project_dir` — so the same value appears twice in the call. Step 4 deletes the duplicate.
 
@@ -102,7 +109,7 @@ only). No other data structures change.
 
 | Test file | Action |
 |---|---|
-| `tests/cli/test_utils.py:221-364` (`TestResolveExecutionDir`) | **Split.** Delete the tests for an explicitly passed flag, its existence validation and its deprecation warning. **Retain and rename onto `resolve_claude_cwd`**: `test_none_with_project_dir_returns_project_dir` (`:280`), `test_project_dir_accepts_str_and_path` (`:287`), `test_relative_project_dir_is_resolved` (`:295`), `test_nonexistent_project_dir_is_not_validated` (`:312`). Rename the class to `TestResolveClaudeCwd`; the retained tests now call with one positional argument. |
+| `tests/cli/test_utils.py:221-364` (`TestResolveExecutionDir`) | **Split.** Delete the tests for an explicitly passed flag, its existence validation and its deprecation warning. **Retain and rename onto `resolve_claude_cwd`**: `test_none_with_project_dir_returns_project_dir` (`:280`), `test_project_dir_accepts_str_and_path` (`:287`), `test_relative_project_dir_is_resolved` (`:295`), `test_nonexistent_project_dir_is_not_validated` (`:312`). Rename the class to `TestResolveClaudeCwd`; the retained tests now call with one positional argument. **Two tests fall in neither half — delete both explicitly:** `test_none_returns_cwd` (`:224`) calls `resolve_execution_dir(None)` with no `project_dir`; against `resolve_claude_cwd(project_dir)` that is a `TypeError`, and the cwd fallback it pins is exactly what #1132 removes. `test_default_does_not_warn` (`:355`) becomes vacuous once there is no deprecation warning to not-emit. |
 | `tests/cli/test_main.py` | Delete `:448-513` — start at the `class TestExecutionDirArgument:` header (`:448`), **not** its docstring (`:449`), which would leave an empty class body. Delete `:683-692`. **Update, do not delete,** `test_check_branch_status_with_all_flags` (`:694-721`): it also covers `--project-dir`, `--fix`, `--llm-truncate`, `--llm-method`, `--mcp-config`. |
 | `tests/cli/test_shared_args.py` | Delete the `add_execution_dir_arg` class (`:151-165`), `test_execution_dir_wording` (`:198-203`) and the import at `:21`. |
 | `tests/icoder/test_cli_icoder_parser.py` | Delete `:40-44`. In `test_icoder_default_values` (`:47-54`) drop **only** the `execution_dir` assertion at `:54`. |
@@ -176,7 +183,9 @@ which keeps the resolve and the #1113 context report. Part of #1132.
 > intended temporary state. Relabel the five whole-body `except ValueError` handlers to
 > "Invalid project directory" (keeping `rebase.py`'s exit code 2) and delete the three now-dead
 > narrow handlers in `commit.py`, `prompt.py` and `icoder.py`. Delete the `execution_dir` pytest
-> marker from `pyproject.toml`.
+> marker from `pyproject.toml`. Also delete the command docstring `Args:` entries and phrasing
+> that document the removed flag — see the docstring row in WHERE; the flag stops existing in
+> this step, so its documentation goes with it.
 >
 > Follow TDD and the per-file test table in the step document exactly — it is not a uniform
 > delete: some classes are split, some tests are only updated, and two line ranges have

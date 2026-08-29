@@ -146,10 +146,16 @@ Steps 1 and 2 are independent. Steps 3 and 4 cannot be swapped:
   deleted (step 4b) once `prompt_llm` derives cwd from a required `project_dir`.
 - **Step 4 splits into two green commits.** 4a rewrites `prompt_llm` / `prompt_llm_stream` and
   retargets only the *direct* callers to pass `project_dir=` plus the `inject_prompts` mapping.
-  The 23 workflow `execution_dir` parameters stay in place and stay **used** — each one still
-  supplies the value that is now passed as `project_dir` — so no parameter goes unused and
-  pylint, mypy and pytest all stay green. 4b then deletes those parameters, the dead
-  `cwd = str(execution_dir) if … else str(project_dir)` fallbacks and `CIFixConfig.cwd`.
+  The 23 workflow `execution_dir` parameters stay in place; 4b then deletes them along with the
+  dead `cwd = str(execution_dir) if … else str(project_dir)` fallbacks and `CIFixConfig.cwd`.
+
+  Seven of those 23 do go **unused** between the two commits — `create_plan/core.py:190`,
+  `create_pr/core.py:205`, `task_tracker_prep.py:31`, `rebase.py:304`, `task_processing.py:138`,
+  `verify.py:73` and `workflow_utils/commit_operations.py:68`, whose `execution_dir` existed only
+  to feed `prompt_llm`. 4a stays green anyway because pylint's `W0613` (unused-argument) is
+  disabled project-wide (`pyproject.toml:207`, `[tool.pylint.messages_control]`), and 4b deletes
+  them. `icoder/env_setup.py:88` is **not** in that set: 4a passes `project_dir=execution_dir`
+  there, so it stays used until 4b.
 
   The direct callers retargeted in 4a: `cli/commands/prompt.py` (3 sites),
   `cli/commands/verify.py:97-105` and `:506`, `icoder/services/llm_service.py:114`,
@@ -174,8 +180,8 @@ duplicate. This is what makes the commits green.
 | [1](./step_1.md) | Langchain: delete `execution_dir` from 6 functions | small |
 | [2](./step_2.md) | Copilot: collapse `execution_dir` into `cwd` | small |
 | [3](./step_3.md) | CLI flag removal + `resolve_claude_cwd` + test/marker cleanup | medium |
-| [4a](./step_4.md) | `prompt_llm` collapse + retarget the direct callers | medium |
-| [4b](./step_4.md) | delete `execution_dir` from the 23 workflow signatures + `CIFixConfig.cwd` | medium |
+| [4a](./step_4a.md) | `prompt_llm` collapse + retarget the direct callers | medium |
+| [4b](./step_4b.md) | delete `execution_dir` from the 23 workflow signatures + `CIFixConfig.cwd` | medium |
 | [5](./step_5.md) | Documentation | small |
 
 ## Files created / modified
@@ -216,10 +222,18 @@ duplicate. This is what makes the commits green.
 `tests/llm/` (`test_interface.py`, copilot + langchain provider tests),
 `tests/workflows/` (8 files), `tests/workflow_steps/`, `tests/workflow_utils/`.
 
-Roughly 470 of those references are mock keyword arguments and reduce to two mechanical rules
-(see step 4); the sweep splits across 4a and 4b along the same line as the source change —
-`prompt_llm` call/assertion sites in 4a, workflow-signature keywords in 4b. Per-site handling
-of the ~15 flag-specific tests is enumerated in step 3.
+Roughly 470 of those references are mock keyword arguments and reduce to three mechanical rules
+(see [step_4a.md](./step_4a.md)); the sweep splits across 4a and 4b along the same line as the
+source change — `prompt_llm` call/assertion sites in 4a, workflow-signature keywords in 4b.
+Per-site handling of the ~15 flag-specific tests is enumerated in step 3, and of the six tests
+pinning the removed `prompt_llm` semantics in step 4a.
+
+4a's rule 3 reaches beyond the list above: every `prompt_llm` / `prompt_llm_stream` call in
+`tests/` must gain a `project_dir=` argument, including ~90 that pass no directory today —
+`tests/llm/providers/claude/` (`test_llm_sessions.py`, `test_claude_integration.py`,
+`test_claude_code_cli_streaming_integration.py`), `tests/test_input_validation.py` and
+`tests/workflows/review/test_prototype_session_interleave.py`. Several sit behind
+`claude_api_integration` / `claude_cli_integration`, which the fast gate hides.
 
 ### Modified — docs & config
 
