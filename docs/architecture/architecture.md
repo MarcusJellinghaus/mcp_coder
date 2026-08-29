@@ -242,7 +242,7 @@ with `--project-dir`; together these cover the CI/CD case that motivated shared 
     - `copilot_cli_streaming.py` - Streaming variant
   - `langchain/` - LangChain multi-backend integration (tests: `llm/providers/langchain/test_*.py`)
     - `__init__.py` - Entry point `ask_langchain()`, config loading, backend dispatch
-    - `agent.py` - LangGraph ReAct agent; `run_agent_stream` is the single execution and storage site, `run_agent` drains it
+    - `agent.py` - LangGraph ReAct agent; `run_agent_stream` is the single execution and storage site (and the single decision point for whether the turn's session id is resumable), `run_agent` drains it
     - `_messages.py` - Shared assemble/serialize helpers used by both the text and agent paths
     - `openai_backend.py` - OpenAI / Azure / Ollama backend via `ChatOpenAI`
     - `gemini_backend.py` - Google Gemini backend via `ChatGoogleGenerativeAI`
@@ -253,6 +253,8 @@ with `--project-dir`; together these cover the CI/CD case that motivated shared 
     - **Session storage**: history persisted to `~/.mcp_coder/sessions/langchain/`
       - Stored history is **system-free**: system + project prompts are merged into one `SystemMessage` and applied fresh each turn, never persisted. Otherwise they accumulate per turn and single-system providers (LiteLLM/Qwen-class) reject the conversation.
       - Resuming is **guarded**: an explicitly requested `session_id` with no history file raises `ValueError` instead of starting a blank conversation. Both `ask_langchain` and `ask_langchain_stream` check at id resolution; a new session (no id passed) is unaffected.
+      - Because of that guard, the agent path only hands an id back once it is resumable: `run_agent_stream`'s `done` event carries `session_id` only when a history file exists for it, and omits the key for a turn that stored nothing (cancelled, or no terminal graph event). `LLMResponseDict["session_id"]` is therefore `None` for such a turn in langchain agent mode.
+      - Callers that chain the id into a following turn must handle that `None` rather than pass it on, or the next turn hits the resume guard: see `workflows/create_plan/core.py`, `workflows/review/core.py` and `workflows/rebase.py`, which keep the previous id and log a warning.
 
 ### CLI System (`src/mcp_coder/cli/`)
 - **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)

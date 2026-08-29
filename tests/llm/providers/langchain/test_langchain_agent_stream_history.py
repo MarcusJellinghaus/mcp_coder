@@ -167,8 +167,11 @@ class TestRunAgentStreamHistory:
         assert done_events[0]["messages"] == []
         assert "session_id" not in done_events[0]
 
-    async def test_cancel_done_carries_partial_text(self) -> None:
+    async def test_cancel_done_carries_partial_text(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         """The text streamed before the cancel survives on done['result']."""
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         cancel = threading.Event()
         events = graph_events(
             [MagicMock()],
@@ -237,8 +240,11 @@ class TestRunAgentStreamHistory:
         assert "agent error" in str(error_events[0]["message"])
         assert not [e for e in collected if e["type"] == "done"]
 
-    async def test_no_terminal_event_done_carries_streamed_text(self) -> None:
+    async def test_no_terminal_event_done_carries_streamed_text(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         """Without a terminal graph event: no storage, but the text survives."""
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         events = [_text_delta_event("streamed "), _text_delta_event("answer", "r2")]
         store_mock = MagicMock()
         result = await _collect(events, store_mock)

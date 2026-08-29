@@ -689,13 +689,13 @@ async def run_agent_stream(
                 "%s; history not stored (the turn is not recorded)",
                 session_id,
             )
+        from mcp_coder.llm.storage.session_storage import langchain_history_exists
+
         # Tool stats are derived from the final message list, which is exactly
         # what is missing here. Reporting zeros would claim "no tools ran" for a
         # turn that may have made several calls, so the three tool-stat keys are
         # omitted entirely and only `usage` — which the stream accumulated
         # itself and therefore does know — is reported.
-        from mcp_coder.llm.storage.session_storage import langchain_history_exists
-
         done: StreamEvent = {
             "type": "done",
             "usage": accumulated_usage,

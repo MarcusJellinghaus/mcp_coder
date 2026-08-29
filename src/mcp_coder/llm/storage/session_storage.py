@@ -265,9 +265,9 @@ def require_langchain_history(
             names the requested id and the expected path, so a resume from a
             copied file elsewhere is not misreported as a non-existent id.
     """
-    if langchain_history_exists(session_id, base_dir):
-        return
     path = _langchain_session_path(session_id, base_dir)
+    if path.exists():
+        return
     raise ValueError(
         f"Session {session_id!r} has no langchain history. "
         f"Expected history file: {path}"

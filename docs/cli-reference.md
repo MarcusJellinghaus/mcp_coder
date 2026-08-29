@@ -169,7 +169,7 @@ mcp-coder prompt "Your prompt here" [OPTIONS]
 - `--session-id ID` - Direct session ID for continuation (overrides file-based options). With `--llm-method langchain` the ID must already have a stored history file; an unknown ID is an error, not a new conversation.
 - `--timeout SECONDS` - API request timeout in seconds (default: 60)
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--output-format FORMAT` - Output format: `text` (default) or `json` (includes session_id)
+- `--output-format FORMAT` - Output format: `text` (default) or `json` (includes session_id). Under `--llm-method langchain` in agent mode, a turn whose history was not recorded reports `"session_id": null` - that id is not resumable, so do not chain it into a later `--session-id`.
 - `--mcp-config PATH` - Path to MCP configuration file (e.g., `.mcp.linux.json`)
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
 - `--execution-dir PATH` - **Deprecated** (removal tracked in #1132). Working directory for Claude subprocess. Default: `--project-dir`. See [Execution Context Management](architecture/architecture.md#execution-context-management).
