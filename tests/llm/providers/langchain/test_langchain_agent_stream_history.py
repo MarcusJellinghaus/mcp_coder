@@ -129,15 +129,12 @@ class TestRunAgentStreamHistory:
         # usage on stats mirrors the top-level accumulator, not a second source.
         assert stats["usage"] == done["usage"]
 
-    async def test_cancel_persists_nothing(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    async def test_cancel_persists_nothing(self) -> None:
         """A cancelled turn stores nothing but still emits done.
 
         Nothing was stored under ``s1``, so the done event must not advertise
         it either - chaining it would fail the next turn on the resume guard.
         """
-        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         cancel = threading.Event()
         events = graph_events(
             [MagicMock()],
@@ -167,11 +164,8 @@ class TestRunAgentStreamHistory:
         assert done_events[0]["messages"] == []
         assert "session_id" not in done_events[0]
 
-    async def test_cancel_done_carries_partial_text(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    async def test_cancel_done_carries_partial_text(self) -> None:
         """The text streamed before the cancel survives on done['result']."""
-        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         cancel = threading.Event()
         events = graph_events(
             [MagicMock()],
@@ -240,11 +234,8 @@ class TestRunAgentStreamHistory:
         assert "agent error" in str(error_events[0]["message"])
         assert not [e for e in collected if e["type"] == "done"]
 
-    async def test_no_terminal_event_done_carries_streamed_text(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    async def test_no_terminal_event_done_carries_streamed_text(self) -> None:
         """Without a terminal graph event: no storage, but the text survives."""
-        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         events = [_text_delta_event("streamed "), _text_delta_event("answer", "r2")]
         store_mock = MagicMock()
         result = await _collect(events, store_mock)
@@ -259,7 +250,7 @@ class TestRunAgentStreamHistory:
         assert done["stats"] == {"usage": {}}
 
     async def test_no_terminal_event_omits_unresumable_session_id(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+        self, tmp_path: Path
     ) -> None:
         """A turn that stored nothing under a new id does not report that id.
 
@@ -268,7 +259,6 @@ class TestRunAgentStreamHistory:
         ``/clear`` and a chained workflow turn aborts mid-run. Dropping the id
         makes the next turn start a fresh conversation instead.
         """
-        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         store_mock = MagicMock()
 
         result = await _collect([_text_delta_event("streamed answer")], store_mock)
@@ -283,15 +273,12 @@ class TestRunAgentStreamHistory:
         next_sid = _resolve_session_id(cast(Optional[str], done.get("session_id")))
         uuid.UUID(next_sid)
 
-    async def test_no_terminal_event_keeps_session_id_of_stored_session(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    async def test_no_terminal_event_keeps_session_id_of_stored_session(self) -> None:
         """A resumed session keeps its id even when the turn is not recorded.
 
         The prior history is still on disk, so the id stays resumable - only an
         id nothing was ever stored under is dropped.
         """
-        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         from mcp_coder.llm.storage.session_storage import store_langchain_history
 
         store_langchain_history("s1", [])

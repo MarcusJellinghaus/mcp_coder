@@ -3,7 +3,6 @@
 import threading
 from collections.abc import AsyncIterator, Generator
 from contextlib import contextmanager
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -248,11 +247,8 @@ class TestRunAgentStream:
         raw_lines = [e for e in result if e["type"] == "raw_line"]
         assert len(raw_lines) == 2
 
-    async def test_done_event_emitted_last(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    async def test_done_event_emitted_last(self) -> None:
         """Stream ends with done event containing session_id."""
-        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         from mcp_coder.llm.storage.session_storage import store_langchain_history
 
         # A resumable id: done only carries an id that has a history file.
@@ -359,11 +355,8 @@ class TestRunAgentStream:
         assert len(error_events) == 1
         assert "agent error" in str(error_events[0]["message"])
 
-    async def test_cancel_event_stops_stream(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    async def test_cancel_event_stops_stream(self) -> None:
         """Setting cancel_event stops the async generator."""
-        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         cancel = threading.Event()
 
         async def _cancelling_events() -> AsyncIterator[dict[str, object]]:
