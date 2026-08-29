@@ -93,3 +93,25 @@ prompt_llm passed the identical value to both parameters. Part of #1132.
 > and not claude_cli_integration and not claude_api_integration and not formatter_integration
 > and not github_integration and not langchain_integration"]`) and
 > `mcp__tools-py__run_mypy_check`; all three must pass. One commit for this step.
+
+## Implementation note (2026-08-29)
+
+Change applied as specified: `execution_dir` deleted from `ask_copilot_cli` /
+`ask_copilot_cli_stream`, `_read_settings_allow`'s parameter renamed to `cwd`, docstring lines
+merged, and the two `execution_dir=` keywords removed from the copilot branches in
+`interface.py`. Tests updated first (`tests/llm/test_interface.py` copilot kwarg assertions,
+`tests/llm/providers/copilot/test_copilot_integration.py:69`). No other caller passed the
+parameter.
+
+**Quality gate caveat — pre-existing environment breakage, not caused by this step.** The
+installed `mcp-workspace` package is older than what `main` requires:
+`src/mcp_coder/checks/branch_status.py:17` imports
+`mcp_workspace.checks.branch_status_rendering`, which does not exist in the installed copy.
+Because `mcp_coder/__init__.py:37` imports that module, **every** test module fails at
+collection, so pytest cannot run at all until the dependency is reinstalled
+(`mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git`). The same
+breakage produces the pylint `E0401` / mypy `import-not-found` entries, plus the
+`fail_on_reviews` / `pr_feedback_undeterminable` `E1123` / `call-arg` errors in
+`cli/commands/check_branch_status.py`, `workflows/create_pr/core.py` and
+`workflows/review/core.py`. Pylint and mypy report **no** issues in
+`src/mcp_coder/llm/` — i.e. none attributable to this step.

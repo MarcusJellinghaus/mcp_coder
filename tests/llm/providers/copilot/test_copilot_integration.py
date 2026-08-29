@@ -66,7 +66,6 @@ class TestCopilotIntegration:
             timeout=120,
             env_vars=env_vars,
             cwd=str(Path.cwd()),
-            execution_dir=str(Path.cwd()),
         )
 
         assert isinstance(result, dict)

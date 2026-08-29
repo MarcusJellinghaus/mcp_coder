@@ -107,7 +107,6 @@ def ask_copilot_cli_stream(
     logs_dir: str | None = None,
     branch_name: str | None = None,
     system_prompt: str | None = None,
-    execution_dir: str | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream Copilot CLI responses as events.
 
@@ -119,11 +118,11 @@ def ask_copilot_cli_stream(
         session_id: Optional session ID to resume
         timeout: Timeout in seconds
         env_vars: Environment variables for subprocess
-        cwd: Working directory
+        cwd: Working directory; also the directory
+            .claude/settings.local.json is read from
         logs_dir: Log directory for JSONL files
         branch_name: Git branch for log filename context
         system_prompt: System prompt to prepend (skipped on resume)
-        execution_dir: Directory to read .claude/settings.local.json from
 
     Yields:
         StreamEvent dicts: text_delta, tool_use_start, tool_result,
@@ -151,7 +150,7 @@ def ask_copilot_cli_stream(
     # Read settings and convert to tool flags
     available_tools: list[str] | None = None
     allow_tools: list[str] | None = None
-    settings_allow = _read_settings_allow(execution_dir)
+    settings_allow = _read_settings_allow(cwd)
     if settings_allow is not None:
         tool_flags = convert_settings_to_copilot_tools(settings_allow)
         available_tools = tool_flags["available_tools"] or None

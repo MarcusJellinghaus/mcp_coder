@@ -1962,7 +1962,6 @@ class TestPromptLlmCopilotRouting:
             logs_dir=None,
             branch_name=None,
             system_prompt=None,
-            execution_dir=None,
         )
         assert result["text"] == "Copilot response"
         assert result["provider"] == "copilot"
@@ -1985,7 +1984,6 @@ class TestPromptLlmCopilotRouting:
             logs_dir=None,
             branch_name=None,
             system_prompt=None,
-            execution_dir=None,
         )
         assert len(events) == 2
         assert events[0]["type"] == "text_delta"

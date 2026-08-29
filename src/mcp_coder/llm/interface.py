@@ -223,7 +223,6 @@ def prompt_llm(
                     logs_dir=logs_dir,
                     branch_name=branch_name,
                     system_prompt=copilot_system_prompt,
-                    execution_dir=execution_dir,
                 )
             except TimeoutExpired as e:
                 logger.error("LLM request timed out after %ds", timeout)
@@ -392,7 +391,6 @@ def prompt_llm_stream(
             logs_dir=logs_dir,
             branch_name=branch_name,
             system_prompt=copilot_system_prompt,
-            execution_dir=execution_dir,
         )
     else:
         from .providers.claude.claude_code_cli_streaming import (  # noqa: PLC0415

@@ -29,9 +29,10 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Copilot — collapse `execution_dir` into `cwd` ([step_2.md](./steps/step_2.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (pytest blocked by a pre-existing
+  stale `mcp-workspace` install — see note in step_2.md)
+- [x] Commit message prepared
 
 ### Step 3: Remove the `--execution-dir` flag and replace the resolver ([step_3.md](./steps/step_3.md))
 
