@@ -34,6 +34,16 @@ After 4b, `grep -r execution_dir src/` returns nothing.
 | `workflow_steps/commit.py` | `:64` |
 | `workflow_utils/commit_operations.py` | `:68` (`generate_commit_message_with_llm` — **third positional parameter**, see below) |
 
+**Each deleted parameter takes its docstring `Args:` entry with it** — 17 lines, listed here
+because section F below carries only the docstrings that have *no* parameter to delete:
+`create_plan/core.py:200`, `:450`, `create_pr/core.py:214`, `:468`, `implement/core.py:77`,
+`finalisation.py:49`, `task_processing.py:149`, `:370`, `:575`, `task_tracker_prep.py:40`,
+`review/core.py:91`, `review/reviewer.py:112`, `:198`, `review/steps.py:90`,
+`workflow_steps/ci.py:496`, `workflow_steps/commit.py:74`, `workflow_utils/commit_operations.py:77`.
+(`check_branch_status.py:392` is in F; `verify.py:84` is in E2.) Nothing flags a stale entry —
+ruff's `DOC` rules do not check argument lists — so only this step's final
+`grep -rn "execution_dir" src/` catches a miss.
+
 **`generate_commit_message_with_llm` is not a pure deletion.** Its signature is
 `(project_dir, provider, execution_dir, mcp_config, settings_file)` (`commit_operations.py:66-70`),
 so `execution_dir` sits in the *middle*: removing it shifts `mcp_config` and `settings_file` one

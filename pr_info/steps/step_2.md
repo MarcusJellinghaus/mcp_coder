@@ -13,7 +13,7 @@ which side effect they enable. Collapse them into `cwd`. Independent of every ot
 | `src/mcp_coder/llm/providers/copilot/copilot_cli.py` | `_read_settings_allow` (`:230`), `ask_copilot_cli` (`:271`, docstring `:284`, use `:317`) |
 | `src/mcp_coder/llm/providers/copilot/copilot_cli_streaming.py` | `ask_copilot_cli_stream` (`:110`, docstring `:126`, use `:154`) |
 | `src/mcp_coder/llm/interface.py` | copilot branches only (`:227`, `:397`) |
-| `tests/llm/test_interface.py` | copilot kwarg assertions |
+| `tests/llm/test_interface.py` | copilot kwarg assertions only: `execution_dir=None` at `:1989` and `:2012`, both in `TestPromptLlmCopilotRouting` (class at `:1963`) |
 | `tests/llm/providers/copilot/` | `test_copilot_integration.py:69` and any unit test passing `execution_dir=` |
 
 ## WHAT
@@ -22,7 +22,7 @@ which side effect they enable. Collapse them into `cwd`. Independent of every ot
 # copilot_cli.py
 def _read_settings_allow(cwd: str | None) -> list[str] | None: ...
 
-def ask_copilot_cli(question, *, session_id=None, timeout=..., env_vars=None,
+def ask_copilot_cli(question, session_id=None, timeout=..., env_vars=None,
                     cwd=None, logs_dir=None, branch_name=None,
                     system_prompt=None) -> LLMResponseDict: ...
 ```

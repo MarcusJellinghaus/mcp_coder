@@ -14,7 +14,7 @@
 | `docs/configuration/claude-code.md` | `:127` |
 | `docs/environments/environments.md` | `:124` (and the anchor link at `:150` — see below) |
 | `docs/repository-setup/claude-code.md` | `:200`, `:245` |
-| `.claude/CLAUDE.md` | the "📂 Execution Directory Flag" section (2 refs) |
+| `.claude/CLAUDE.md` | the `## Execution directory` section (`:130-135`, 2 refs at `:132`, `:135`) |
 
 ## WHAT — passages that change without containing the literal string
 
@@ -37,8 +37,9 @@
   passage is already false; it contains no `--execution-dir`, only `<execution_dir>`. Rewrite it
   as `<cwd>/.claude/settings.local.json` — the point it makes (the anchoring shift applies to
   copilot too) stays true.
-- **`.claude/CLAUDE.md`** — delete the whole "Execution Directory Flag" section including its
-  "Key Distinction" list. Nothing replaces it: `--project-dir` is documented elsewhere.
+- **`.claude/CLAUDE.md:130-135`** — delete the whole `## Execution directory` section: the
+  heading, the two-bullet `execution_dir` / `project_dir` list and the "Never conflate the two"
+  paragraph. Nothing replaces it: `--project-dir` is documented elsewhere.
 
 ## HOW
 
@@ -84,7 +85,7 @@ corrected. Closes #1132.
 > Delete every `--execution-dir` reference from `docs/cli-reference.md`,
 > `docs/architecture/architecture.md`, `docs/configuration/claude-code.md`,
 > `docs/environments/environments.md`, `docs/repository-setup/claude-code.md` and the
-> "Execution Directory Flag" section of `.claude/CLAUDE.md`. Also fix the passages that are now
+> `## Execution directory` section of `.claude/CLAUDE.md` (`:130-135`). Also fix the passages that are now
 > wrong without containing the literal string: the "Context Separation Pattern" bullet
 > (`architecture.md:124`), the two-directory framing and deprecated-override block under
 > "Execution Context Management", the "Deprecated variant" blockquote in Scenario 1, and

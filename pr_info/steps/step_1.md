@@ -70,10 +70,13 @@ No return values or data structures change. `LLMResponseDict` / `StreamEvent` un
 
 ## TDD
 
-1. **Tests first.** In `test_langchain_coverage_gaps.py`, delete the `execution_dir=` keyword
-   from the calls at `:168`, `:232`, `:269`, `:316` and drop the assertions that it is
-   forwarded (`:173`, `:233`, `:273`). Where a test exists *only* to assert forwarding, delete
-   the test. In `tests/llm/test_interface.py`, apply the WHERE row exactly: delete
+1. **Tests first.** In `test_langchain_coverage_gaps.py`: delete
+   `test_execution_dir_forwarded_to_run_agent` (`:232-276`) — it exists only to assert the
+   forwarding, including the call keyword at `:269` and the assertion at `:273`; drop
+   `execution_dir=None` from the surviving call at `:316`; and rename the now-misnamed class
+   `TestExecutionDirEnvVarsForwarding` (`:172`), its docstring (`:173`) and the section comment
+   (`:168`), which cover env_vars only once the parameter is gone.
+   In `tests/llm/test_interface.py`, apply the WHERE row exactly: delete
    `test_passes_execution_dir_to_langchain` (`:1142-1160`) and drop `execution_dir=None` from
    the three `ask_langchain_stream` kwarg dicts (`:1437`, `:1561`, `:1583`) — leave the
    Claude/Copilot assertions alone.

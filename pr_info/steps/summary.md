@@ -260,9 +260,11 @@ pinning the removed `prompt_llm` semantics in step 4a.
 ## Quality gate (every step)
 
 ```
+mcp__tools-py__run_format_code
 mcp__tools-py__run_pylint_check
 mcp__tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])
 mcp__tools-py__run_mypy_check
 ```
 
-All three must pass before the step is committed. Use MCP tools only (see `.claude/CLAUDE.md`).
+Format first, then all three checks must pass before the step is committed — CI gates on
+`black --check` and `isort --check` as well. Use MCP tools only (see `.claude/CLAUDE.md`).

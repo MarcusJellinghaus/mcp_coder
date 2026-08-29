@@ -252,9 +252,12 @@ files — and confirm every hit passes `project_dir=`.
 
 **Implementation order** (keeps mypy useful as the driver): `interface.py` first — then run
 mypy and work the error list bottom-up (providers → workflows → commands). mypy names every
-stale keyword, so treat its output as the worklist rather than re-reading each file. mypy will
-**not** flag the rule-3 sites in tests that lack `project_dir` if the file is untyped, so the
-grep above is the safety net.
+stale keyword, so treat its output as the worklist rather than re-reading each file. It is the
+worklist for the test sweep too: CI runs `mypy --strict src tests`
+(`.github/workflows/ci.yml`) and these test functions are annotated, so a `prompt_llm` call
+missing the now-required `project_dir` is reported as a call-arg error like any other. Run mypy
+over `tests/` as well as `src/`, and keep the grep above as the safety net for anything mypy
+cannot see.
 
 ## Verification beyond the gate
 
