@@ -106,3 +106,39 @@ corrected. Closes #1132.
 > `--execution-dir`, or references written as `<execution_dir>` or "Execution directory" survive.
 > Docs-only: no source or test changes. Use MCP tools exclusively, run the three
 > quality checks, and make one commit for this step.
+
+---
+
+## Implementation note (2026-08-29)
+
+Docs-only, as planned — no source or test change. Deleted: 10 identical `--execution-dir` bullets
+in `docs/cli-reference.md`; the "Context Separation Pattern" bullet, the two-directory framing +
+`**Implementation**` bullets, the "Deprecated override" example and the Scenario 1 "Deprecated
+variant" blockquote in `docs/architecture/architecture.md`; the `## Execution directory` section
+of `.claude/CLAUDE.md`. Reworded: the deprecation clauses in `docs/configuration/claude-code.md`,
+`docs/environments/environments.md` and `docs/repository-setup/claude-code.md` (whose
+"discovery picks the wrong file" symptom paragraph described a case that can no longer occur),
+plus `<execution_dir>/.claude/settings.local.json` → `<cwd>/.claude/settings.local.json` after
+step 2's rename. Kept verbatim: the `### Execution Context Management` heading (anchor target of
+`environments.md:149`), the "Why the default is `project_dir`" explanation and the "Reporting"
+paragraph.
+
+**Verified:** `(?i)execution.dir` returns **0 matches** across `docs/**/*.md` and `.claude/*.md`;
+`environments.md:149`'s `#execution-context-management` link still resolves to
+`architecture.md:125`.
+
+**pytest could not be run — the same pre-existing environment blocker recorded in
+[step_2.md](./step_2.md), [step_3.md](./step_3.md), [step_4a.md](./step_4a.md) and
+[step_4b.md](./step_4b.md).** The installed `mcp-workspace` package lacks
+`mcp_workspace.checks.branch_status_rendering`, which `src/mcp_coder/checks/branch_status.py:17`
+imports via `mcp_coder/__init__.py:37`, so every test module fails at collection. Fix by
+reinstalling `mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git`.
+
+`black` / `isort` pass. Pylint and mypy report **exactly** the step-4b baseline (the `E0401` /
+`import-not-found`, `fail_on_reviews` / `pr_feedback_undeterminable` and `E1125` entries from the
+same stale package plus the optional langchain extras) — unchanged, as a docs-only edit cannot
+affect them.
+
+`run_format_code` also reformatted one unrelated pre-existing file,
+`tests/workflows/vscodeclaude/test_assessment_issue_facts.py` (isort collapsed a wrapped
+`from ... import assess_issue_state`). It is not part of this step; commit or drop it separately.

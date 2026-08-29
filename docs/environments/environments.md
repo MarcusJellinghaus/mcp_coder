@@ -121,8 +121,7 @@ directory it starts in decides which coding rules it obeys.**
   `settings.local.json` — by walking up from **its own working directory**. No flag points it
   somewhere else; cwd is the only lever.
 - mcp-coder therefore launches Claude with `cwd = project_dir`: the driven project's rules,
-  never the tool env's. `--execution-dir` still overrides this, but is deprecated (removal
-  tracked in #1132).
+  never the tool env's.
 
 **The trap this removes.** The Jenkins command templates run `cd %VENV_BASE_DIR%`
 (`command_templates.py:49` and five siblings at `:242`, `:280`, `:318`, `:356`, `:394`) for one

@@ -123,10 +123,9 @@ This file configures Claude Code permissions and MCP server settings for your lo
 > **Pinning the settings file:** mcp-coder commands that drive Claude Code
 > accept `--settings <path>` to forward this file explicitly via Claude's
 > native `--settings` flag, overriding Claude's cwd-based discovery. Claude
-> runs in `--project-dir` by default, so discovery normally finds this repo's
-> file anyway; pinning still matters when the deprecated `--execution-dir`
-> (removal tracked in #1132) points elsewhere, and because Claude merges the
-> pinned file with whatever its own cwd walk finds. See
+> runs in `--project-dir`, so discovery normally finds this repo's
+> file anyway; pinning still matters because Claude merges the pinned file
+> with whatever its own cwd walk finds. See
 > [Repository Setup — Pinning the settings file](../repository-setup/claude-code.md#pinning-the-settings-file-with---settings)
 > and [Configuration Guide](config.md#claude).
 

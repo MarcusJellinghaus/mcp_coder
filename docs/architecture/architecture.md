@@ -121,20 +121,10 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **Provider Abstraction**: Extensible LLM interface supporting multiple providers
 - **Command Pattern**: CLI subcommand structure with consistent interfaces
 - **MCP Integration**: Specialized servers for file operations and quality checks
-- **Context Separation Pattern**: Execution directory (where Claude runs) is a distinct concept from project directory (where code lives), but defaults to it; overriding it is deprecated (#1132)
 
 ### Execution Context Management
 
 **Design Decision**: Anchor the Claude subprocess to the project directory
-
-mcp-coder distinguishes between:
-- **Project Directory** (`project_dir`): Where source files live and git operations occur
-- **Execution Directory** (`execution_dir`): Where the Claude subprocess runs — its `cwd`
-
-**Implementation**:
-- Default: `execution_dir` **is** `project_dir`. The shell's working directory is not used
-- CLI flag: `--execution-dir` overrides it. **Deprecated** — removal tracked in #1132
-- Passing the flag emits a deprecation warning naming #1132
 
 **Why the default is `project_dir`**:
 
@@ -153,13 +143,6 @@ by coincidence — developers stand in the repo, so cwd happened to equal `proje
 cd /anywhere  # the shell's location is irrelevant
 mcp-coder implement --project-dir /path/to/project
 # Claude runs with cwd=/path/to/project and discovers that project's CLAUDE.md
-```
-
-**Deprecated override**:
-```bash
-mcp-coder implement --project-dir /path/to/project --execution-dir /home/user/workspace
-# Claude runs in the workspace: warns about #1132, and discovers the workspace's
-# CLAUDE.md and settings rather than the project's
 ```
 
 **Reporting**: each run names the Claude working directory and every project instructions file
@@ -377,10 +360,6 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 4. Claude discovers `/project/.claude/CLAUDE.md`, `.mcp.json` and `.claude/settings*.json` by walking up from its cwd
 5. Claude modifies files in project directory
 6. Git operations target project directory
-
-> **Deprecated variant:** `--execution-dir /workspace` still forces `cwd=/workspace`. Steps 3-6
-> hold mechanically, but Claude then discovers the *workspace's* `CLAUDE.md` and settings
-> instead of the project's. The flag warns on use; removal is tracked in #1132.
 
 ### Scenario 2: Code Implementation Execution
 1. Human approves plan → label changed to `status:plan-ready`
