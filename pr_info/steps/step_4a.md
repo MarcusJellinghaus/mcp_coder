@@ -173,6 +173,10 @@ with no `project_dir`) and `tests/icoder/test_icoder_permission_wiring.py:273`, 
 a `tmp_path`-based or literal project dir. Without this sweep 4a's pytest run is red even though
 mypy is clean.
 
+**One construction is not part of this sweep**: `test_real_llm_service_project_dir_none`
+(`test_llm_service.py:353`) is deleted by the TDD table below, because it asserts the `None` that
+4a removes — handing it a project dir keeps the test red rather than fixing it.
+
 ## The `inject_prompts` mapping — decide each site, never take the default blindly
 
 | Call site | Value |
@@ -209,8 +213,9 @@ def test_verify_llm_check_injects_prompts(...) -> None:
 
 ### Tests that pin the removed semantics — delete or rewrite, do not rename
 
-Handle these six sites **before** applying the mechanical rules below; the rules would turn each
-of them into `project_dir=None` against a required `str | Path`.
+Handle these sites **before** applying the mechanical rules below; the rules would turn each of
+them either into `project_dir=None` against a required `str | Path`, or into an assertion against
+a value 4a no longer passes.
 
 | Site | Action |
 |---|---|
@@ -218,6 +223,9 @@ of them into `project_dir=None` against a required `str | Path`.
 | `tests/llm/test_interface.py:759` `test_execution_dir_none_defaults_to_cwd` (call at `:773`) | Delete, same reason. Its class `TestPromptLLMExecutionDir` (`:722`) then holds only `test_execution_dir_with_cli` — rename the class and the surviving test onto `project_dir`. |
 | `tests/llm/test_interface.py:1343` `test_metadata_defaults_to_none_values` (`:1346`, `:1359`, `:1363`) | Rewrite. `metadata["working_directory"]` can no longer be `None`; assert `branch_name is None` and `working_directory == str(project_dir)`. |
 | `tests/llm/test_interface.py:1622` `TestPromptLlmProjectDir` — `:1626` (`prompt_llm("Test question", project_dir=None)`), `:1657` (`:1684`), `:1710` (`:1733`) | Rewrite onto `inject_prompts`. The class tests today's `project_dir`-as-prompt-switch, which is exactly what 4a splits: the `None` case becomes `inject_prompts=False` (no prompts loaded) and the two loading cases become `project_dir=…, inject_prompts=True`. Rename the class accordingly. |
+| `tests/icoder/test_llm_service.py:338` `test_real_llm_service_project_dir_none` (construction at `:353`, assertion at `:355`) | **Delete.** Its docstring — "passes `project_dir=None` when not provided (backward compat)" — names the exact semantics 4a removes. It is **not** part of the `RealLLMService(` sweep below: giving it a directory leaves `assert captured_kwargs["project_dir"] is None` failing. Its sibling `test_real_llm_service_passes_project_dir` (`:318`) already pins the surviving behaviour. |
+| `tests/cli/commands/test_prompt.py:1005` `test_prompt_no_flag_no_project_dir` (assertion at `:1035`) | **Rewrite onto `inject_prompts`.** It asserts `call_kwargs["project_dir"] is None` with `add_system_prompts=False` — the `project_dir`-as-prompt-switch that 4a splits, one file over from `TestPromptLlmProjectDir`. **Neither mechanical rule reaches it**: rule 1 matches `execution_dir=`, rule 3 matches calls, not assertions. After 4a the value is always `str(Path.cwd())` here, so assert `call_kwargs["inject_prompts"] is False` instead. Its siblings `:998-999` and `:1072` (flag on) already assert the surviving value and stay green. |
+| `tests/workflows/implement/test_task_tracker_prep.py:100` and `:505` (`test_execution_dir_none_uses_default`, `:466`) | **Rewrite the expected value, not just the keyword.** Both assert `execution_dir is None`; rule 1 gives `project_dir is None`, but 4a passes `project_dir=str(project_dir)` — here `str(tmp_path)`. Assert that instead. `:505`'s test name and docstring ("passes None to prompt_llm") name the removed semantics and go with the parameter in 4b. |
 
 ### Then the mechanical test updates
 
@@ -238,6 +246,32 @@ Three rules:
    `tests/test_input_validation.py:73`, `:78`, and
    `tests/workflows/review/test_prototype_session_interleave.py:88`.
 
+**Rule 1 has exceptions wherever 4a stops forwarding the caller's directory**, mirroring E1's.
+At each of these, rule 1 renames the keyword but leaves the *expected value* pointing at a
+directory `prompt_llm` no longer receives, so the assertion fails in 4a's own pytest run:
+
+- `tests/workflow_utils/test_commit_operations.py:116-156`
+  (`test_generate_commit_message_forwards_session_params`): `:143` passes `execution_dir="/x"` and
+  `:154` asserts `prompt_llm` received it, but `commit_operations.py:166` now passes
+  `project_dir=str(project_dir)`. **Drop the `execution_dir="/x"` argument and assert
+  `call_kwargs["project_dir"] == str(project_dir)`**; the `mcp_config` / `settings_file`
+  assertions at `:155-156` are unaffected.
+- `tests/workflows/implement/test_task_tracker_prep.py:457`
+  (`test_execution_dir_passed_to_prompt_llm`, `:414`): asserts `== str(exec_dir)`, a directory
+  deliberately distinct from the `tmp_path` project dir. `task_tracker_prep.py:78` now passes
+  `project_dir=str(project_dir)` — assert `str(tmp_path)`. The test's name and the whole
+  `TestPrepareTaskTrackerExecutionDir` class (`:404`) go with the parameter in 4b.
+- `tests/workflows/implement/test_task_processing.py` `TestBranchNameSource` (`:1357`): `:1398`
+  and `:1432` assert `prompt_llm` received `str(self._EXECUTION_DIR)` (`/elsewhere/workspace`,
+  `:1367`), deliberately distinct from `_PROJECT_DIR`. 4a makes `task_processing.py:221` and
+  `:439` pass `project_dir=str(project_dir)` — assert `str(self._PROJECT_DIR)` at both.
+  `:1467` already compares against `_PROJECT_DIR` and stays green. The `_EXECUTION_DIR`
+  constant and the class docstring (`:1358-1364`, "the subprocess itself must still run in
+  execution_dir") go to 4b.
+
+(The similar assertion at `tests/cli/commands/test_verify_orchestration.py:390` only checks key
+presence, so rule 1 applies to it unchanged.)
+
 Rules 1 and 3 apply to `prompt_llm` / `prompt_llm_stream` call and assertion sites in **4a**
 (`tests/llm/test_interface.py`, the `prompt_llm` assertions under `tests/workflows/**`,
 `tests/workflow_utils/`, `tests/icoder/`, `tests/cli/commands/test_verify*.py`,
@@ -249,6 +283,11 @@ sit behind `claude_api_integration` / `claude_cli_integration` markers, which th
 gate excludes, so a missed call fails only in CI. Before committing, search
 `prompt_llm(` and `prompt_llm_stream(` across **all** of `tests/` — including marker-excluded
 files — and confirm every hit passes `project_dir=`.
+
+**The two tables above are the known cases, not a complete list.** Finish this step with the
+two-part `tests/` sweep stated in full in [step_4b.md](./step_4b.md) (identifiers and prose, then
+assertions whose *expected value* still pins the removed semantics) — rules 1 and 3 rewrite
+keywords and add arguments, but never re-derive what a test expects.
 
 **Implementation order** (keeps mypy useful as the driver): `interface.py` first — then run
 mypy and work the error list bottom-up (providers → workflows → commands). mypy names every
@@ -320,7 +359,9 @@ BREAKING: prompt_llm requires project_dir.
 > `tests/`: fix any positional construction (`gateway` is now keyword-only too) and add
 > `project_dir=` to every construction that omits it — ~20 in
 > `tests/icoder/test_llm_service.py` and two in `tests/icoder/test_icoder_permission_wiring.py`
-> (`:273`, `:320`). Skipping that sweep leaves 4a red at pytest even with mypy clean.
+> (`:273`, `:320`). Skipping that sweep leaves 4a red at pytest even with mypy clean. The one
+> construction outside the sweep is `test_real_llm_service_project_dir_none`
+> (`test_llm_service.py:353`), which the TDD table deletes — do not hand it a project dir.
 >
 > Apply the `inject_prompts` table in the step document **site by site** — `verify.py`'s LLM
 > check and iCoder's `RealLLMService` get `True`; `prompt.py` gets
@@ -330,15 +371,23 @@ BREAKING: prompt_llm requires project_dir.
 >
 > Follow TDD: write the four new behaviour tests first (required `project_dir` raises
 > `TypeError`; cwd equals `project_dir`; workflows inject nothing; verify injects), then make
-> the source change, then sweep the test call sites. Handle the six delete-or-rewrite tests in
+> the source change, then sweep the test call sites. Handle the delete-or-rewrite tests in
 > the TDD table **before** the mechanical rules — they pin the removed `None` semantics and
-> cannot be renamed into the new signature. Then apply rules 1 and 3: rule 3 requires that
+> cannot be renamed into the new signature. Note rule 1's three exceptions, which mirror E1's —
+> `tests/workflow_utils/test_commit_operations.py:143`/`:154`,
+> `tests/workflows/implement/test_task_tracker_prep.py:457` and
+> `tests/workflows/implement/test_task_processing.py:1398`/`:1432`: at each, 4a stops forwarding
+> the caller's directory, so the *expected value* must be re-derived, not just the keyword
+> renamed. Then apply rules 1 and 3: rule 3 requires that
 > **every** remaining `prompt_llm` / `prompt_llm_stream` call in `tests/` gains a `project_dir=`
 > argument, including the ~90 that pass no directory today. Finish that sweep with a search for
 > `prompt_llm(` / `prompt_llm_stream(` across all of `tests/`, **including marker-excluded
 > files** — several of these sites sit behind `claude_api_integration` /
 > `claude_cli_integration` and the fast gate would hide them. Use
-> `mcp__tools-py__run_mypy_check` output as the worklist for the source side.
+> `mcp__tools-py__run_mypy_check` output as the worklist for the source side. **The step's tables
+> are the known cases, not a complete list:** finish with the two-part `tests/` sweep defined in
+> `pr_info/steps/step_4b.md` — `execution_dir` in identifiers and prose, then assertions whose
+> expected value still pins the removed semantics.
 >
 > Use MCP tools exclusively. Finish with `mcp__tools-py__run_pylint_check`,
 > `mcp__tools-py__run_pytest_check` (with `extra_args=["-n","auto","-m","not git_integration

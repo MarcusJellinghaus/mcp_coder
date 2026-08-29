@@ -48,10 +48,25 @@ ruff's `DOC` rules do not check argument lists — so only this step's final
 `(project_dir, provider, execution_dir, mcp_config, settings_file)` (`commit_operations.py:66-70`),
 so `execution_dir` sits in the *middle*: removing it shifts `mcp_config` and `settings_file` one
 position left, and any caller passing them positionally would silently bind the wrong value —
-the same hazard step 1 calls out for langchain. Search the project for
-`generate_commit_message_with_llm(` (`cli/commands/commit.py:95`, `workflow_steps/commit.py:100-106`,
-and the tests) and confirm every argument after `provider` is passed by keyword before deleting
-the parameter; convert any positional caller found.
+the same hazard step 1 calls out for langchain. The two `src/` callers
+(`cli/commands/commit.py:95`, `workflow_steps/commit.py:100-106`) already pass by keyword; **the
+positional callers are all in `tests/workflow_utils/test_commit_operations.py`**, roughly ten
+calls of the form `generate_commit_message_with_llm(project_dir, "claude", "api")` (`:51`, `:169`,
+`:189`, `:213`, `:235`, and on down the file). Drop that third argument rather than letting it
+slide onto `mcp_config`. **A miss here is invisible to both gates**: `"api"` type-checks as
+`Optional[str]`, so mypy stays clean, and these tests mock `prompt_llm` without asserting
+`mcp_config`, so pytest stays green too. Search
+`generate_commit_message_with_llm(` project-wide and confirm every argument after `provider` is
+passed by keyword before deleting the parameter.
+
+**One assertion on this function is handed over from step 3.**
+`tests/cli/commands/test_commit.py:978-979` asserts
+`mock_generate.call_args[1]["execution_dir"] == str(project_dir)` (and `!= str(Path.cwd())`).
+It stays green through step 3 — `commit.py:95` still passes `execution_dir=str(project_dir)` —
+but rule 1's `→ project_dir` rewrite gives a **`KeyError`** here, not a rename: after this step
+`project_dir` is the function's *first positional* parameter and never appears in `call_args[1]`.
+Assert on `call_args[0][0]` instead, or drop the pair — `mock_generate.assert_called_once()`
+above it already covers the call.
 
 ### C. Dead branches that disappear with the parameter
 
@@ -66,6 +81,10 @@ Delete the `cwd: str` field (`:58`). The uses at `:131` and `:211` become
 `str(config.project_dir)`; the use at `:251` is `commit_changes(..., execution_dir=config.cwd)`,
 whose parameter this step deletes, so that argument is **dropped**, not rewritten (section E2).
 Delete `cwd=cwd` from the constructor call (`:552-562`).
+
+`tests/workflow_steps/test_ci.py:198` is the **only** test construction of `CIFixConfig` (in
+`_make_config()`); drop its `cwd=` line. Neither mechanical rule below covers it — they match
+`execution_dir=`, not `cwd=` — but mypy reports it as an unexpected keyword argument.
 
 ### E2. Forwarding call sites that lose an argument
 
@@ -113,11 +132,10 @@ Work from the mypy error list rather than by eye, and re-read each call after ed
 
 ### F. Docstrings mentioning the removed concept
 
-`llm/providers/claude/claude_mcp_guard.py:166`, `workflow_utils/commit_operations.py:21`,
-`cli/commands/commit.py:98` and the `_run_auto_fixes` `Args:` entry at
-`check_branch_status.py:392` — fixed here, with the parameters they mention. (The public
-`prompt_llm` examples were fixed in 4a; the command-level `Args:` entries for the removed
-*flag* are step 3's.)
+`llm/providers/claude/claude_mcp_guard.py:166`, `workflow_utils/commit_operations.py:21` and the
+`_run_auto_fixes` `Args:` entry at `check_branch_status.py:392` — fixed here, with the parameters
+they mention. (The public `prompt_llm` examples were fixed in 4a; the command-level `Args:`
+entries for the removed *flag* are step 3's, and so is the `commit.py:98` comment.)
 
 ## DATA
 
@@ -139,6 +157,30 @@ rules (numbered as in step_4a.md):
 
 Use `mcp__tools-py__run_mypy_check`'s "unexpected keyword argument" / "too many arguments" list
 as the complete worklist for sections B, C, D and E2.
+
+### The final `tests/` sweep — the enumerated tables are the known cases, not a complete list
+
+Three review rounds each turned up further per-site handling that no mechanical rule catches, so
+steps 3, 4a and 4b each end with the same two-part search over **all** of `tests/`, marker-excluded
+files included. Neither part is optional, and neither is derivable from the rules above: the rules
+rewrite *keywords*, and never touch identifiers, prose, or the value a test expects.
+
+1. **`execution_dir` as an identifier or as prose** — test names, class names, docstrings,
+   comments and module-level constants. Nothing else looks here: rule 1 matches only the
+   `execution_dir=` keyword, and this step's `grep -rn "execution_dir" src/` is `src/`-only.
+   Rename or delete each hit. Known examples carried over from 4a: the `_EXECUTION_DIR` constant
+   and `TestBranchNameSource`'s class docstring
+   (`tests/workflows/implement/test_task_processing.py:1357-1367`), and the
+   `TestPrepareTaskTrackerExecutionDir` class name plus its two test names
+   (`tests/workflows/implement/test_task_tracker_prep.py:404`, `:414`, `:466`).
+2. **Assertions whose *expected value* still pins the removed semantics** — an expected directory
+   **distinct from** `project_dir`, or an `is None` on an argument that is now required or always
+   populated. Rules 1 and 2 rename the keyword and leave the expectation untouched, so a rewritten
+   assertion can still compare against the value the old code passed. Re-derive what the new code
+   actually passes at each site rather than trusting the rename.
+
+`mcp__tools-py__run_mypy_check` and this step's own pytest run are the backstop for both parts —
+the search is what makes them cheap to satisfy, not a substitute for running them.
 
 ## Verification beyond the gate
 
@@ -177,10 +219,22 @@ CIFixConfig.cwd. Closes the src half of #1132.
 > `generate_commit_message_with_llm` keywords held back from 4a — note which are **positional**,
 > and note that `generate_commit_message_with_llm`'s `execution_dir` is a *middle* positional
 > parameter, so removing it shifts `mcp_config`/`settings_file` by one for any positional
-> caller: audit those call sites before deleting. Then sweep the remaining test references with
+> caller. Every positional caller is in `tests/workflow_utils/test_commit_operations.py`
+> (~10 calls of the form `(project_dir, "claude", "api")`); drop that third argument, because a
+> miss there is caught by neither mypy nor pytest. Then sweep the remaining test references with
 > the two mechanical rules in the step (including
-> `tests/integration/test_mcp_config_integration.py:122`), using
-> `mcp__tools-py__run_mypy_check` output as the worklist.
+> `tests/integration/test_mcp_config_integration.py:122` and `tests/workflow_steps/test_ci.py:198`,
+> the sole `CIFixConfig(cwd=…)` construction), using
+> `mcp__tools-py__run_mypy_check` output as the worklist. Note that
+> `tests/cli/commands/test_commit.py:978-979` is a `KeyError`, not a rename, once
+> `generate_commit_message_with_llm` loses the parameter — see section B.
+>
+> **The enumerated lists are the known cases, not a complete list.** Finish with the step's
+> two-part `tests/` sweep: `execution_dir` in test names, class names, docstrings, comments and
+> constants; then any assertion whose *expected value* still pins the removed semantics — a
+> directory distinct from `project_dir`, or an `is None` on a now-required argument. The
+> mechanical rules rewrite keywords and never re-derive expected values; mypy and this step's
+> pytest run are the backstop.
 >
 > Use MCP tools exclusively. Finish with `mcp__tools-py__run_pylint_check`,
 > `mcp__tools-py__run_pytest_check` (with `extra_args=["-n","auto","-m","not git_integration

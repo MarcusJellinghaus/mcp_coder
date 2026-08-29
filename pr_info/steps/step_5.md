@@ -10,7 +10,7 @@
 | File | Occurrences |
 |---|---|
 | `docs/cli-reference.md` | 10, last at `:693` |
-| `docs/architecture/architecture.md` | `:118`, `:124`, `:126-137`, `:158-163`, `:374-376` |
+| `docs/architecture/architecture.md` | `:124`, `:126-137`, `:158-163`, `:374-376` |
 | `docs/configuration/claude-code.md` | `:127` |
 | `docs/environments/environments.md` | `:124` (and the anchor link at `:150` — see below) |
 | `docs/repository-setup/claude-code.md` | `:200`, `:245` |
@@ -19,8 +19,9 @@
 ## WHAT — passages that change without containing the literal string
 
 - **`architecture.md:124`** — the "Context Separation Pattern" bullet becomes factually wrong
-  once the two directories are one. Delete it; `:118` ("Execution Context Anchoring") already
-  states the surviving truth and only needs the deprecation clause trimmed.
+  once the two directories are one. Delete it. **Leave `:118` ("Execution Context Anchoring")
+  alone** — it carries no deprecation clause and already states the surviving truth verbatim, so
+  it needs no edit at all.
 - **`architecture.md:126` `### Execution Context Management`** — **keep the heading verbatim.**
   `environments.md:150` links to `#execution-context-management`; keeping the name is
   anchor-compatible by definition and leaves no dangling link to chase.
@@ -46,10 +47,14 @@
 Search-driven, not memory-driven:
 
 ```
-mcp__workspace__search_files(pattern="execution.dir|execution_dir|Execution Directory",
-                             glob="docs/**/*.md")
-mcp__workspace__search_files(pattern="execution.dir", glob=".claude/*.md")
+mcp__workspace__search_files(pattern="(?i)execution.dir", glob="docs/**/*.md")
+mcp__workspace__search_files(pattern="(?i)execution.dir", glob=".claude/*.md")
 ```
+
+**The `(?i)` matters.** A case-sensitive pattern misses `architecture.md:124`'s "Execution
+directory" (capital E, lowercase d) and any other sentence-case prose; `execution.dir` with an
+inline any-character then covers `--execution-dir`, `execution_dir`, `<execution_dir>` and
+"Execution Directory" in one pass.
 
 Then re-run both searches after editing; the only surviving hits should be none.
 
@@ -59,10 +64,10 @@ None — prose only.
 
 ## Verification
 
-- Zero hits for the **broad** pattern `--execution-dir|execution_dir|<execution_dir>|Execution
-  Directory` across `docs/` and `.claude/` — not just the literal flag. Grepping only
-  `--execution-dir` misses prose like `<execution_dir>/.claude/settings.local.json`
-  (`repository-setup/claude-code.md:245`).
+- Zero hits for the **broad, case-insensitive** pattern `(?i)execution.dir` across `docs/` and
+  `.claude/` — not just the literal flag. Grepping only `--execution-dir` misses prose like
+  `<execution_dir>/.claude/settings.local.json` (`repository-setup/claude-code.md:245`), and a
+  case-sensitive grep misses sentence-case prose like `architecture.md:124`.
 - `docs/environments/environments.md:150`'s `#execution-context-management` anchor still
   resolves to a heading in `docs/architecture/architecture.md`.
 - Read `architecture.md`'s "Execution Context Management" section end-to-end: it must describe
@@ -97,7 +102,7 @@ corrected. Closes #1132.
 > `project_dir`" explanation and the "Reporting" paragraph; both are still true.
 >
 > Use `mcp__workspace__search_files` to find the occurrences and again afterwards to prove none
-> remain — search the broad pattern `execution.dir|execution_dir|Execution Directory`, not just
-> `--execution-dir`, or references written as `<execution_dir>` survive. Docs-only: no source or
-> test changes. Use MCP tools exclusively, run the three
+> remain — search the broad, **case-insensitive** pattern `(?i)execution.dir`, not just
+> `--execution-dir`, or references written as `<execution_dir>` or "Execution directory" survive.
+> Docs-only: no source or test changes. Use MCP tools exclusively, run the three
 > quality checks, and make one commit for this step.
