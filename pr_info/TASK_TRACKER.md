@@ -39,5 +39,5 @@ Details: [step_2.md](./steps/step_2.md)
 
 ## Pull Request
 
-- [ ] PR review: verify acceptance items in [summary.md](./steps/summary.md) are met
+- [x] PR review: verify acceptance items in [summary.md](./steps/summary.md) are met
 - [ ] PR summary prepared
