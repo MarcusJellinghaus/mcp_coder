@@ -70,7 +70,6 @@ def _run_mcp_edit_smoke_test(
     project_dir: Path,
     provider: str,
     mcp_config: str,
-    execution_dir: str,
     symbols: dict[str, str],
     env_vars: dict[str, str] | None = None,
     settings_file: str | None = None,
@@ -81,7 +80,6 @@ def _run_mcp_edit_smoke_test(
         project_dir: Path to the project directory.
         provider: The active LLM provider name.
         mcp_config: Path to the MCP config file.
-        execution_dir: Execution directory path.
         symbols: Dict with 'success', 'failure', 'warning' keys.
         env_vars: Environment variables passed to the LLM subprocess so
             ``${MCP_CODER_*}`` placeholders in ``.mcp.json`` resolve.
@@ -477,7 +475,6 @@ def execute_verify(args: argparse.Namespace) -> int:
             project_dir,
             active_provider,
             mcp_config_resolved,
-            str(project_dir),
             symbols,
             env_vars=env_vars,
             settings_file=settings_file,

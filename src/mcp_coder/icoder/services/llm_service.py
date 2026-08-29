@@ -50,7 +50,6 @@ class RealLLMService:
         self,
         provider: str = "claude",
         session_id: str | None = None,
-        execution_dir: str | None = None,
         mcp_config: str | None = None,
         settings_file: str | None = None,
         env_vars: dict[str, str] | None = None,
@@ -62,7 +61,6 @@ class RealLLMService:
     ) -> None:
         self._provider = provider
         self._session_id = session_id
-        self._execution_dir = execution_dir
         self._mcp_config = mcp_config
         self._settings_file = settings_file
         self._env_vars = env_vars

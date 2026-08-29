@@ -193,7 +193,6 @@ def execute_icoder(args: argparse.Namespace) -> int:
         llm_service = RealLLMService(
             provider=provider,
             session_id=session_id,
-            execution_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             env_vars=env_vars,

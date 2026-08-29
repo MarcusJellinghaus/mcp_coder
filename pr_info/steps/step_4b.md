@@ -207,6 +207,47 @@ position.
   `project_dir`". If the tests skip because the Claude CLI is absent, say so explicitly rather
   than treating the skip as a pass.
 
+## Implementation note (2026-08-29)
+
+**pytest could not be run — the same pre-existing environment blocker recorded in
+[step_2.md](./step_2.md), [step_3.md](./step_3.md) and [step_4a.md](./step_4a.md).** The installed
+`mcp-workspace` package is older than what `main` requires:
+`src/mcp_coder/checks/branch_status.py:17` imports
+`mcp_workspace.checks.branch_status_rendering`, which does not exist in the installed copy.
+`mcp_coder/__init__.py:37` imports that module, so **every** test module fails at collection.
+The fast gate collected nothing, and `markers=["claude_cli_integration"]` collected **0 tests** —
+so `tests/integration/test_claude_cwd_integration.py`'s two end-to-end cwd tests were **not**
+executed. Fix by reinstalling
+`mcp-workspace @ git+https://github.com/MarcusJellinghaus/mcp-workspace.git`.
+
+`black` / `isort` pass. Pylint and mypy report **exactly** the step-4a baseline — the `E0401` /
+`import-not-found` entries, the `fail_on_reviews` / `pr_feedback_undeterminable` `E1123` /
+`call-arg` and `E1101` / `attr-defined` errors from the same stale package, the `E1125` pair in
+`tests/llm/test_interface.py` (4a's deliberate "`project_dir` is required" tests), and the
+unrelated `langchain_*` / `httpx` / `mcp.server.fastmcp` import errors. **No new issue in any file
+this step touched**, and mypy over `src` **and** `tests` reports no remaining `call-arg` /
+`arg-type` error from the deleted parameter — that is what verified sections B–E2 and the
+positional test call sites. `grep -rn "execution_dir" src/` returns nothing.
+
+Details the plan did not spell out:
+
+- `tests/cli/test_main.py:463` (`test_execution_dir_flag_rejected`) keeps the identifier
+  deliberately: it is step 3's acceptance test that `--execution-dir` fails loudly, so the name
+  must go on naming the removed flag. It is the only `execution_dir` hit left in `tests/`.
+- Two test pairs collapsed into duplicates once the parameter went, and the survivor was kept:
+  `TestBranchNameSource.test_matching_dirs_still_read_branch_from_project_dir`
+  (`test_task_processing.py`) became byte-identical to
+  `test_implementation_path_reads_branch_from_project_dir`, and
+  `test_execution_dir_none_uses_default` (`test_task_tracker_prep.py`) to its sibling. Both
+  duplicates were deleted; the classes were renamed (`TestPrepareTaskTrackerExecutionDir` →
+  `TestPrepareTaskTrackerProjectDir`) and the `_EXECUTION_DIR` constant dropped.
+- `tests/cli/commands/test_commit.py` lost its last `mock.ANY` with the
+  `generate_commit_message_with_llm` assertion at `:116`, so the now-unused
+  `from unittest import mock` import went with it.
+- `rebase.py`'s CLI caller (`cli/commands/rebase.py:100`) also passed the duplicated positional
+  `project_dir` introduced in step 3; it is not in section E2's list but mypy flagged it
+  alongside the four commands that are.
+
 ## Commit
 
 ```

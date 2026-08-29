@@ -339,7 +339,6 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 provider,
                 mcp_config,
                 settings_file=settings_file,
-                execution_dir=project_dir,
                 fix_attempts=args.fix,  # NEW
                 ci_timeout=args.ci_timeout,  # NEW
                 llm_truncate=args.llm_truncate,  # NEW
@@ -373,7 +372,6 @@ def _run_auto_fixes(
     provider: str,
     mcp_config: Optional[str],
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
     fix_attempts: int = 1,
     ci_timeout: int = 180,
     llm_truncate: bool = False,
@@ -386,7 +384,6 @@ def _run_auto_fixes(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional MCP configuration path
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional execution directory
         fix_attempts: Number of fix attempts (1 = no retry, N ≥ 2 = retry)
         ci_timeout: Seconds to wait for CI between attempts
         llm_truncate: Whether in LLM mode (affects progress display)
@@ -426,7 +423,6 @@ def _run_auto_fixes(
                 provider,
                 mcp_config,
                 settings_file,
-                execution_dir,
             )
 
             if ci_success:
@@ -457,7 +453,6 @@ def _run_auto_fixes(
                 provider,
                 mcp_config,
                 settings_file,
-                execution_dir,
             )
 
             if not ci_success:

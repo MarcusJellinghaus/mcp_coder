@@ -155,7 +155,6 @@ class TestCommitChanges:
             Path("/test/project"),
             "claude",
             mcp_config=None,
-            execution_dir=None,
             settings_file=None,
         )
         mock_commit.assert_called_once_with(
@@ -179,7 +178,6 @@ class TestCommitChanges:
             Path("/test/project"),
             "claude",
             mcp_config="cfg.json",
-            execution_dir="/x",
             settings_file="s.json",
         )
 
@@ -188,7 +186,6 @@ class TestCommitChanges:
             Path("/test/project"),
             "claude",
             mcp_config="cfg.json",
-            execution_dir="/x",
             settings_file="s.json",
         )
 
@@ -215,7 +212,6 @@ class TestCommitChanges:
             Path("/test/project"),
             "claude",
             mcp_config=None,
-            execution_dir=None,
             settings_file=None,
         )
         mock_commit.assert_called_once_with(

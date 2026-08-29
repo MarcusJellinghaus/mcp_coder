@@ -135,7 +135,6 @@ def check_and_fix_mypy(
     env_vars: dict[str, str] | None = None,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
 ) -> bool:
     """Run mypy check and attempt fixes if issues found. Returns True if clean.
 
@@ -146,7 +145,6 @@ def check_and_fix_mypy(
         env_vars: Optional environment variables for the subprocess
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         True if mypy check passes (no type errors), False if errors remain after fix attempts.
@@ -353,7 +351,6 @@ def process_single_task(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
     attempt: int = 1,
     format_code: bool = False,
     check_type_hints: bool = False,
@@ -365,7 +362,6 @@ def process_single_task(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess
         attempt: 1-based attempt number; appends retry reminder when > 1
         format_code: If True, run code formatters after implementation
         check_type_hints: If True, run mypy type checking after implementation
@@ -387,9 +383,6 @@ def process_single_task(
 
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
-
-    # Set working directory for LLM subprocess
-    cwd = str(execution_dir) if execution_dir else str(project_dir)
 
     # Get next incomplete task
     next_task = get_next_task(project_dir)
@@ -518,7 +511,6 @@ Please implement this task step by step."""
             env_vars,
             mcp_config,
             settings_file,
-            execution_dir,
         ):
             logger.warning(
                 "Mypy check failed or found unresolved issues - continuing anyway"
@@ -538,7 +530,6 @@ Please implement this task step by step."""
         project_dir,
         provider,
         mcp_config=mcp_config,
-        execution_dir=cwd,
         settings_file=settings_file,
     ):
         return TaskOutcome(False, "error")
@@ -556,7 +547,6 @@ def process_task_with_retry(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
     format_code: bool = False,
     check_type_hints: bool = False,
 ) -> TaskOutcome:
@@ -570,7 +560,6 @@ def process_task_with_retry(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess
         format_code: If True, run code formatters after implementation
         check_type_hints: If True, run mypy type checking after implementation
 
@@ -586,7 +575,6 @@ def process_task_with_retry(
             provider,
             mcp_config=mcp_config,
             settings_file=settings_file,
-            execution_dir=execution_dir,
             attempt=attempt,
             format_code=format_code,
             check_type_hints=check_type_hints,

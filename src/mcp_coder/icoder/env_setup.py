@@ -85,7 +85,7 @@ def _probe_exposed_mcp_tools(
     provider: str,
     mcp_config: str | None,
     env_vars: dict[str, str],
-    execution_dir: str,
+    project_dir: str,
 ) -> tuple[str | None, int | None]:
     """Return (status, count) via one short 'Reply with OK' prompt; (None, None) on any failure.
 
@@ -115,7 +115,7 @@ def _probe_exposed_mcp_tools(
             timeout=30,
             mcp_config=mcp_config,
             env_vars=env_vars,
-            project_dir=execution_dir,
+            project_dir=project_dir,
         )
         raw_response = cast(dict[str, Any], resp.get("raw_response", {}))
         system_message = cast(Any, raw_response.get("system"))
@@ -194,7 +194,7 @@ def setup_icoder_environment(
         provider=provider,
         mcp_config=mcp_config,
         env_vars=effective,
-        execution_dir=str(project_dir),
+        project_dir=str(project_dir),
     )
 
     return RuntimeInfo(

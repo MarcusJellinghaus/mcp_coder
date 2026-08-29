@@ -195,7 +195,6 @@ def _make_config() -> CIFixConfig:
         project_dir=Path("/test/project"),
         provider="claude",
         env_vars={},
-        cwd="/test/project",
         mcp_config=None,
         settings_file=None,
     )

@@ -86,7 +86,6 @@ def _run_reviewer(
     provider: str,
     mcp_config: str | None,
     settings_file: str | None,
-    execution_dir: Path | None,
     issue_number: int | None,
     base_branch: str | None,
     round_number: int,
@@ -112,7 +111,6 @@ def _run_reviewer(
         provider: LLM provider.
         mcp_config: Optional MCP config path (threaded to the reviewer session).
         settings_file: Optional Claude settings file.
-        execution_dir: Optional LLM subprocess working directory.
         issue_number: Issue number injected into the reviewer prompt.
         base_branch: Base branch injected into the reviewer prompt (impl only).
         round_number: Current 1-based round, substituted into the fresh prompt.
@@ -132,7 +130,7 @@ def _run_reviewer(
         The reviewer's :class:`LLMResponseDict`.
     """
     env_vars = prepare_llm_environment(project_dir)
-    cwd = str(execution_dir) if execution_dir else str(project_dir)
+    cwd = str(project_dir)
 
     if tasks is None:
         prompt = get_prompt(str(PROMPTS_FILE_PATH), config.reviewer_prompt_header)
@@ -173,7 +171,6 @@ def _get_verdict(
     provider: str,
     mcp_config: str | None,
     settings_file: str | None,
-    execution_dir: Path | None,
     supervisor_sid: str | None,
     report: str,
     round_number: int,
@@ -203,7 +200,6 @@ def _get_verdict(
         provider: LLM provider.
         mcp_config: Optional MCP config path (threaded to the supervisor).
         settings_file: Optional Claude settings file.
-        execution_dir: Optional LLM subprocess working directory.
         supervisor_sid: Supervisor session id to resume, or ``None`` on round 1.
         report: The reviewer's structured findings text.
         round_number: Current 1-based round, substituted into the header.
@@ -216,7 +212,7 @@ def _get_verdict(
         resumable supervisor session to repair or continue.
     """
     env_vars = prepare_llm_environment(project_dir)
-    cwd = str(execution_dir) if execution_dir else str(project_dir)
+    cwd = str(project_dir)
 
     header = get_prompt(str(PROMPTS_FILE_PATH), config.supervisor_prompt_header)
     header = header.replace("{round_number}", str(round_number))

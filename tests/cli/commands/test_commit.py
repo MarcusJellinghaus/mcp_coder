@@ -6,7 +6,6 @@ import sys
 from io import StringIO
 from pathlib import Path
 from typing import Any
-from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -113,9 +112,7 @@ class TestExecuteCommitAuto:
         # Verify function calls
         mock_validate.assert_called_once()
         mock_parse_llm.assert_called_once_with("claude")
-        mock_generate.assert_called_once_with(
-            Path.cwd(), "claude", execution_dir=mock.ANY
-        )
+        mock_generate.assert_called_once_with(Path.cwd(), "claude")
         mock_commit.assert_called_once_with("feat: add new feature", Path.cwd())
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
@@ -906,8 +903,8 @@ class TestCommitAutoClaudeCwd:
         result = execute_commit_auto(args)
 
         assert result == 0
-        assert mock_generate.call_args[1]["execution_dir"] == str(project_dir)
-        assert mock_generate.call_args[1]["execution_dir"] != str(Path.cwd())
+        assert mock_generate.call_args[0][0] == project_dir.resolve()
+        assert mock_generate.call_args[0][0] != Path.cwd()
 
 
 MODULE = "mcp_coder.cli.commands.commit"

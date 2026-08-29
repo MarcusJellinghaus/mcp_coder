@@ -83,7 +83,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     llm_method, _ = resolve_llm_method(args.llm_method)
     provider = parse_llm_method_from_args(llm_method)
     success, commit_message, error = generate_commit_message_with_llm(
-        project_dir, provider, execution_dir=str(project_dir)
+        project_dir, provider
     )
     # Interactive command: mcp_config deliberately stays None so the subprocess
     # uses normal MCP config discovery from project_dir. Workflow-internal

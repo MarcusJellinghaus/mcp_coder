@@ -49,7 +49,7 @@ class TestGenerateCommitMessageWithLLM:
         project_dir = Path("/test/repo")
 
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is True
@@ -166,7 +166,7 @@ class TestGenerateCommitMessageWithLLM:
         project_dir = Path("/test/repo")
 
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -186,7 +186,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -210,7 +210,7 @@ class TestGenerateCommitMessageWithLLM:
         project_dir = Path("/test/repo")
 
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -232,7 +232,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -254,7 +254,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -282,7 +282,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -310,7 +310,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -348,7 +348,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -379,7 +379,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -409,7 +409,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -451,7 +451,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -493,7 +493,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -534,7 +534,7 @@ class TestGenerateCommitMessageWithLLM:
 
         project_dir = Path("/test/repo")
         success, message, error = generate_commit_message_with_llm(
-            project_dir, "claude", "api"
+            project_dir, "claude"
         )
 
         assert success is False
@@ -578,7 +578,7 @@ class TestGenerateCommitMessageWithLLM:
 
         with caplog.at_level(logging.WARNING):
             success, message, error = generate_commit_message_with_llm(
-                project_dir, "claude", "api"
+                project_dir, "claude"
             )
 
         assert success is True
@@ -625,7 +625,7 @@ class TestGenerateCommitMessageWithLLM:
 
         with caplog.at_level(logging.WARNING):
             success, message, error = generate_commit_message_with_llm(
-                project_dir, "claude", "api"
+                project_dir, "claude"
             )
 
         assert success is True

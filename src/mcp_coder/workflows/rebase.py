@@ -301,7 +301,6 @@ def _prompt_in_session(
     env_vars: dict[str, str],
     mcp_config: str | None,
     settings_file: str | None,
-    execution_dir: Path | None,
     step_name: str,
 ) -> tuple[str, str | None]:
     """Send one prompt in the resumable rebase LLM session.
@@ -411,7 +410,6 @@ def run_rebase_workflow(
     base_branch: str | None = None,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-    execution_dir: Path | None = None,
 ) -> int:
     """Orchestrate the automated rebase (Python-driven).
 
@@ -554,7 +552,6 @@ def run_rebase_workflow(
                     env_vars=env_vars,
                     mcp_config=mcp_config,
                     settings_file=settings_file,
-                    execution_dir=execution_dir,
                     step_name=f"conflict_{stop}",
                 )
                 unresolved = [
@@ -594,7 +591,6 @@ def run_rebase_workflow(
                 env_vars=env_vars,
                 mcp_config=mcp_config,
                 settings_file=settings_file,
-                execution_dir=execution_dir,
                 step_name=f"fix_{attempt}",
             )
             run_format_code(project_dir)

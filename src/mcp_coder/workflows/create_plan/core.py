@@ -187,7 +187,6 @@ def run_planning_prompts(
     provider: str,
     mcp_config: Optional[str] = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
 ) -> tuple[bool, WorkflowFailure | None]:
     """Execute three planning prompts with session continuation.
 
@@ -197,7 +196,6 @@ def run_planning_prompts(
         provider: LLM provider name (e.g., "claude" or "langchain")
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         Tuple of (success, failure). On success: (True, None).
@@ -451,7 +449,6 @@ def run_create_plan_workflow(
     provider: str,
     mcp_config: Optional[str] = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
 ) -> int:
@@ -463,7 +460,6 @@ def run_create_plan_workflow(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess
         update_issue_labels: If True, update GitHub issue labels on success
         post_issue_comments: If True, post failure comments on the issue when
             the workflow fails
@@ -626,7 +622,6 @@ def run_create_plan_workflow(
             provider,
             mcp_config,
             settings_file,
-            execution_dir,
         )
         if not prompt_success:
             logger.error("Planning prompts execution failed")

@@ -98,7 +98,6 @@ def execute_rebase(args: argparse.Namespace) -> int:
             args.base_branch,
             mcp_config,
             settings_file,
-            project_dir,
         )
 
     except ValueError as e:

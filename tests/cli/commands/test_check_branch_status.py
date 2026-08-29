@@ -215,7 +215,6 @@ class TestExecuteCheckBranchStatus:
             "claude",
             None,
             settings_file=None,
-            execution_dir=project_dir,
             fix_attempts=1,
             ci_timeout=0,
             llm_truncate=False,

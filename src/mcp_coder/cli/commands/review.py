@@ -109,7 +109,6 @@ def _execute_review(args: argparse.Namespace, config: ReviewConfig) -> int:
             provider,
             mcp_config,
             settings_file,
-            project_dir,
             update_issue_labels,
             post_issue_comments,
         )

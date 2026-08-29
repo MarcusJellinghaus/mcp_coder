@@ -69,7 +69,6 @@ def execute_implement(args: argparse.Namespace) -> int:
             provider,
             mcp_config,
             settings_file,
-            project_dir,
             update_issue_labels,
             post_issue_comments,
         )

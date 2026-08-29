@@ -63,7 +63,6 @@ def run_implement_workflow(
     provider: str,
     mcp_config: Optional[str] = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
 ) -> int:
@@ -74,7 +73,6 @@ def run_implement_workflow(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess
         update_issue_labels: If True, update GitHub issue labels on success/failure
         post_issue_comments: If True, post comments on the issue on failure
 
@@ -124,9 +122,7 @@ def run_implement_workflow(
         implement_config = get_implement_config(project_dir)
 
         # Step 2: Prepare task tracker if needed
-        if not prepare_task_tracker(
-            project_dir, provider, mcp_config, settings_file, execution_dir
-        ):
+        if not prepare_task_tracker(project_dir, provider, mcp_config, settings_file):
             return fail(
                 "task_tracker_prep_failed",
                 stage="Task tracker preparation",
@@ -153,7 +149,6 @@ def run_implement_workflow(
                 provider,
                 mcp_config,
                 settings_file,
-                execution_dir,
                 format_code=implement_config.format_code,
                 check_type_hints=implement_config.check_type_hints,
             )
@@ -237,7 +232,6 @@ def run_implement_workflow(
                         env_vars,
                         mcp_config,
                         settings_file,
-                        execution_dir=execution_dir,
                     )
                 except (LLMTimeoutError, McpServersUnavailableError) as exc:
                     # Fallback keeps mypy happy; the reason is non-None for both types.
@@ -277,7 +271,6 @@ def run_implement_workflow(
                     project_dir,
                     provider,
                     mcp_config=mcp_config,
-                    execution_dir=str(execution_dir) if execution_dir else None,
                     settings_file=settings_file,
                 ):
                     logger.error("Failed to commit final mypy fixes")
@@ -303,7 +296,6 @@ def run_implement_workflow(
             provider,
             mcp_config,
             settings_file,
-            execution_dir,
         )
         if not finalisation_success:
             logger.warning("Finalisation encountered issues - continuing anyway")
@@ -323,7 +315,6 @@ def run_implement_workflow(
                     provider=provider,
                     mcp_config=mcp_config,
                     settings_file=settings_file,
-                    execution_dir=execution_dir,
                 )
             except (LLMTimeoutError, McpServersUnavailableError) as exc:
                 # Fallback keeps mypy happy; the reason is non-None for both types.

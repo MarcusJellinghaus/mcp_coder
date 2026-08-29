@@ -162,8 +162,8 @@ def find_fatal_mcp_servers(
 def load_mcp_server_names(mcp_config: str, base_dir: str | None = None) -> set[str]:
     """Return the ``mcpServers`` keys of an mcp-config file.
 
-    Relative paths resolve against ``base_dir`` (the subprocess cwd /
-    execution_dir), NOT the caller's cwd. A file without ``mcpServers`` yields
+    Relative paths resolve against ``base_dir`` (the subprocess cwd, i.e. the
+    resolved ``project_dir``), NOT the caller's cwd. A file without ``mcpServers`` yields
     an empty set (valid: a session deliberately configured with no servers).
 
     Args:
