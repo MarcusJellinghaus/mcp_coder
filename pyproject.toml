@@ -18,8 +18,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "black==26.5.1",
-    "isort==9.0.1",
+    "black>=26.5.1",
+    "isort>=9.0.1",
     "mcp-tools-py",
     "mcp-workspace",
     "mcp-coder-utils",
