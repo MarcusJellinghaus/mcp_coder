@@ -146,7 +146,7 @@ async def _run_with(
         patch(_PATCH_FROM_DICT, return_value=[]),
         patch(_PATCH_STORE, MagicMock()),
     ):
-        _text, _history, stats = await run_agent(
+        _text, _history, stats, _sid = await run_agent(
             question="Hi",
             chat_model=MagicMock(),
             messages=[],

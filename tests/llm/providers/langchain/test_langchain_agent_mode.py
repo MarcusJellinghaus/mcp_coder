@@ -29,6 +29,7 @@ class TestAskLangchainAgentMode:
                 "agent answer",
                 [{"type": "human", "content": "q"}],
                 {"agent_steps": 1, "total_tool_calls": 0, "tool_trace": []},
+                "sid",
             )
         )
         with (
@@ -64,12 +65,16 @@ class TestAskLangchainAgentMode:
     ) -> None:
         """A turn that persisted nothing reports no resumable session id.
 
+        ``run_agent`` relays the done event's verdict (``None`` here); the
+        provider passes it straight through rather than second-guessing it.
         create_plan / review / rebase chain ``result["session_id"]`` into the
-        next prompt_llm call; handing back an id with no history file would
+        next prompt_llm call, so handing back an id with no history file would
         abort that turn with the resume guard's ValueError.
         """
         monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
-        mock_run_agent = AsyncMock(return_value=("agent answer", [], {"usage": {}}))
+        mock_run_agent = AsyncMock(
+            return_value=("agent answer", [], {"usage": {}}, None)
+        )
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._load_langchain_config",
@@ -166,6 +171,7 @@ class TestAskLangchainAgentMode:
                 "Here is the answer",
                 serialized_messages,
                 {"agent_steps": 1, "total_tool_calls": 1, "tool_trace": []},
+                "sid",
             )
         )
         store_mock = MagicMock()
@@ -211,7 +217,7 @@ class TestAskLangchainAgentMode:
             "tool_trace": [{"name": "t", "args": {}, "result": "r"}],
         }
         mock_run_agent = AsyncMock(
-            return_value=("answer", [{"type": "ai", "content": "answer"}], stats)
+            return_value=("answer", [{"type": "ai", "content": "answer"}], stats, "sid")
         )
         with (
             patch(

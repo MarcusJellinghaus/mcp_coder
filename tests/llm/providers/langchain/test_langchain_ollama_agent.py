@@ -71,6 +71,7 @@ class TestAskAgentOllamaPreflight:
                 "agent answer",
                 [{"type": "human", "content": "x"}],
                 {"agent_steps": 1, "total_tool_calls": 0, "tool_trace": []},
+                "sid",
             )
         )
         with (
@@ -128,6 +129,7 @@ class TestAskAgentOllamaPreflight:
                 "agent answer",
                 [],
                 {"agent_steps": 0, "total_tool_calls": 0, "tool_trace": []},
+                "sid",
             )
         )
         with (

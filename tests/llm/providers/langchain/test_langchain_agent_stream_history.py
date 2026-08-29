@@ -129,8 +129,15 @@ class TestRunAgentStreamHistory:
         # usage on stats mirrors the top-level accumulator, not a second source.
         assert stats["usage"] == done["usage"]
 
-    async def test_cancel_persists_nothing(self) -> None:
-        """A cancelled turn stores nothing but still emits done."""
+    async def test_cancel_persists_nothing(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A cancelled turn stores nothing but still emits done.
+
+        Nothing was stored under ``s1``, so the done event must not advertise
+        it either - chaining it would fail the next turn on the resume guard.
+        """
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
         cancel = threading.Event()
         events = graph_events(
             [MagicMock()],
@@ -158,6 +165,7 @@ class TestRunAgentStreamHistory:
         done_events = [e for e in collected if e["type"] == "done"]
         assert len(done_events) == 1
         assert done_events[0]["messages"] == []
+        assert "session_id" not in done_events[0]
 
     async def test_cancel_done_carries_partial_text(self) -> None:
         """The text streamed before the cancel survives on done['result']."""

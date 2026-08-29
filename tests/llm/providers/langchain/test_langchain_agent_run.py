@@ -154,7 +154,7 @@ class TestRunAgent:
         mock_agent = _make_stream_agent([human_msg, ai_msg])
 
         with _patch_run_agent(mock_agent):
-            text, _history, _stats = await run_agent(
+            text, _history, _stats, _sid = await run_agent(
                 question="What is 2+2?",
                 chat_model=MagicMock(),
                 messages=[],
@@ -163,6 +163,52 @@ class TestRunAgent:
             )
 
         assert text == "The answer is 4."
+
+    @pytest.mark.asyncio
+    async def test_relays_session_id_from_done_event(self, tmp_path: Path) -> None:
+        """The drainer reports the id the terminal done event carried."""
+        cfg_path = _write_mcp_config(tmp_path)
+
+        mock_agent = _make_stream_agent([_make_ai_message("answer")])
+
+        with _patch_run_agent(mock_agent):
+            _text, _history, _stats, session_id = await run_agent(
+                question="Hi",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path=cfg_path,
+                session_id="s1",
+            )
+
+        assert session_id == "s1"
+
+    @pytest.mark.asyncio
+    async def test_no_session_id_without_terminal_event(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A turn with no terminal graph event yields no resumable id.
+
+        Nothing was stored under ``s1``, so ``run_agent_stream`` drops the id
+        from its done event and the drainer relays that verdict — the single
+        decision point ``_ask_agent`` depends on. Handing the id back would
+        make the next chained turn raise on the resume guard.
+        """
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        cfg_path = _write_mcp_config(tmp_path)
+
+        mock_agent = MagicMock()
+        mock_agent.astream_events.return_value = async_events([])
+
+        with _patch_run_agent(mock_agent):
+            _text, _history, _stats, session_id = await run_agent(
+                question="Hi",
+                chat_model=MagicMock(),
+                messages=[],
+                mcp_config_path=cfg_path,
+                session_id="s1",
+            )
+
+        assert session_id is None
 
     @pytest.mark.asyncio
     async def test_returns_message_history(self, tmp_path: Path) -> None:
@@ -175,7 +221,7 @@ class TestRunAgent:
         mock_agent = _make_stream_agent([human_msg, ai_msg])
 
         with _patch_run_agent(mock_agent):
-            _text, history, _stats = await run_agent(
+            _text, history, _stats, _sid = await run_agent(
                 question="Hello",
                 chat_model=MagicMock(),
                 messages=[],
@@ -209,7 +255,7 @@ class TestRunAgent:
         )
 
         with _patch_run_agent(mock_agent):
-            _text, _history, stats = await run_agent(
+            _text, _history, stats, _sid = await run_agent(
                 question="Read file",
                 chat_model=MagicMock(),
                 messages=[],
@@ -262,7 +308,7 @@ class TestRunAgent:
         mock_agent = _make_stream_agent([human_msg, partial_ai])
 
         with _patch_run_agent(mock_agent):
-            text, history, _stats = await run_agent(
+            text, history, _stats, _sid = await run_agent(
                 question="Do something complex",
                 chat_model=MagicMock(),
                 messages=[],
@@ -294,7 +340,7 @@ class TestRunAgent:
         mock_messages_from_dict = MagicMock(return_value=[prior_human, prior_ai])
 
         with _patch_run_agent(mock_agent, from_dict=mock_messages_from_dict):
-            _text, _history, _stats = await run_agent(
+            _text, _history, _stats, _sid = await run_agent(
                 question="New question",
                 chat_model=MagicMock(),
                 messages=[{"type": "human", "content": "Earlier question"}],
@@ -345,7 +391,7 @@ class TestRunAgent:
         )
 
         with _patch_run_agent(mock_agent):
-            _text, _history, stats = await run_agent(
+            _text, _history, stats, _sid = await run_agent(
                 question="Read two files",
                 chat_model=MagicMock(),
                 messages=[],
@@ -389,7 +435,7 @@ class TestRunAgent:
         mock_agent = _make_stream_agent(final_messages)
 
         with _patch_run_agent(mock_agent) as store_mock:
-            text, history, stats = await run_agent(
+            text, history, stats, _sid = await run_agent(
                 question="Search twice",
                 chat_model=MagicMock(),
                 messages=[],

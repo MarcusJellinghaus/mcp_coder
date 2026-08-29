@@ -214,6 +214,7 @@ class TestAskLangchainPassesSystemMessages:
                     "response",
                     [],
                     {"agent_steps": 0, "total_tool_calls": 0},
+                    "sid",
                 ),
             ) as mock_run,
         ):

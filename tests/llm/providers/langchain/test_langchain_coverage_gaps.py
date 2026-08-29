@@ -190,6 +190,7 @@ class TestExecutionDirEnvVarsForwarding:
                 "answer",
                 [{"type": "ai", "content": "answer"}],
                 {"agent_steps": 1, "total_tool_calls": 0, "tool_trace": []},
+                "sid",
             )
         )
         env = {"MY_VAR": "my_value", "OTHER": "other_value"}
@@ -236,6 +237,7 @@ class TestExecutionDirEnvVarsForwarding:
                 "answer",
                 [{"type": "ai", "content": "answer"}],
                 {"agent_steps": 0, "total_tool_calls": 0, "tool_trace": []},
+                "sid",
             )
         )
 
@@ -282,6 +284,7 @@ class TestExecutionDirEnvVarsForwarding:
                 "answer",
                 [{"type": "ai", "content": "answer"}],
                 {"agent_steps": 0, "total_tool_calls": 0, "tool_trace": []},
+                "sid",
             )
         )
 

@@ -401,7 +401,7 @@ async def run_agent(
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
     system_messages: list[Any] | None = None,
-) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+) -> tuple[str, list[dict[str, Any]], dict[str, Any], str | None]:
     """Run a LangGraph ReAct agent with MCP tools (non-streaming).
 
     A thin drainer of :func:`run_agent_stream`: it consumes that generator and
@@ -430,11 +430,14 @@ async def run_agent(
             conversation.
 
     Returns:
-        ``(final_text, stored_messages, stats_dict)``.
+        ``(final_text, stored_messages, stats_dict, session_id)``.
         *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
         ``tool_trace`` and ``usage`` — all but ``usage`` are omitted when the
         run produced no terminal graph event, since they are derived from the
         final message list that is missing in that case.
+        *session_id* is whatever the terminal ``done`` event carries, i.e.
+        ``None`` when that event dropped the id as unresumable. The drainer
+        reports the stream's decision rather than making its own.
 
     Raises:
         LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
@@ -443,10 +446,11 @@ async def run_agent(
     """  # noqa: DOC502 - both propagate: LLMMCPLaunchError from the drained
     # generator, asyncio.TimeoutError from the asyncio.wait_for below.
 
-    async def _drain() -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+    async def _drain() -> tuple[str, list[dict[str, Any]], dict[str, Any], str | None]:
         final_text = ""
         stored: list[dict[str, Any]] = []
         stats: dict[str, Any] = {}
+        resumable_sid: str | None = None
         async for event in run_agent_stream(
             question=question,
             chat_model=chat_model,
@@ -461,7 +465,10 @@ async def run_agent(
                 final_text = str(event.get("result", ""))
                 stored = cast(list[dict[str, Any]], event.get("messages", []))
                 stats = cast(dict[str, Any], event.get("stats", {}))
-        return (final_text, stored, stats)
+                # Absent when the stream judged the id unresumable.
+                raw_sid = event.get("session_id")
+                resumable_sid = raw_sid if isinstance(raw_sid, str) else None
+        return (final_text, stored, stats, resumable_sid)
 
     return await asyncio.wait_for(_drain(), timeout=float(timeout))
 

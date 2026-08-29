@@ -1,0 +1,12 @@
+# review-implementation review log 1
+
+## Round 1 — 2026-08-29
+**Findings**:
+I'll gather context systematically. Starting with the knowledge base, issue, and plan files in parallel.`src/mcp_coder/llm/providers/langchain/__init__.py:271` — medium — an agent turn that ends without a terminal graph event (`agent.py:669-696`) still yields `done` with a session id whose history file was never written, so the next chained turn now raises: `icoder` is wedged until `/clear` and `create_plan`/`review`/`rebase` abort mid-workflow; accepted in `summary.md` but neither tested nor mitigated (e.g. by not reporting an id for a turn that persisted nothing).
+`tests/llm/providers/test_langchain_session_guard.py:3` — low — module docstring justifies placing the file outside `tests/llm/providers/langchain/` because the conftest fixture would hide the guard, but `skip_langchain_history_guard` is opt-in, not autouse, so the rationale is stale and the file breaks the tests-mirror-src convention for no remaining reason.
+`docs/cli-reference.md:167` — low — the `--store-response` / `--continue-session-from` lines still present that pairing as working, while under `--llm-method langchain` it now exits 1; only `docs/configuration/config.md` records the break.
+`src/mcp_coder/llm/providers/langchain/__init__.py:748` — low — the module is now 748 lines against the 750-line CI limit (commit `0cd8717` had to shave 3 lines to fit), leaving no headroom for the next edit.
+**Decisions**:
+Verdict(decision='tasks', tasks=['In src/mcp_coder/llm/providers/langchain/__init__.py (around line 271, with the turn-completion path at agent.py:669-696): do not report a resumable session id for a turn that ended without a terminal graph event and therefore persisted no history file. Return the `done` result with the session id omitted (or otherwise marked non-resumable) so a subsequent chained turn does not raise on a missing history file and wedge icoder / abort create_plan/review/rebase mid-workflow.', 'Add a regression test covering the turn-ends-without-terminal-graph-event case: assert that no history file is written, that the result does not advertise a resumable session id, and that a following chained turn starts cleanly instead of raising.', 'Update docs/cli-reference.md around line 167 so the `--store-response` / `--continue-session-from` documentation states that this pairing is not supported under `--llm-method langchain` (exits 1), matching what docs/configuration/config.md already records.'], escalate_reason=None)
+**Changes**:
+applied
