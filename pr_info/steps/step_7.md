@@ -120,7 +120,9 @@ def action_cancel_stream(self) -> None:
   `detach()`'s cancel-then-clear covers it.
 * **Do not** add a modal, scopes, or any persist write-back — that is #1046. The `on_unmount`
   shutdown hook stays in Step 8; with the interim auto-deny above, no approval is ever left
-  pending across a quit in this commit.
+  pending across a quit in this commit. Consequence for Step 8: its R9 pilot test must suppress
+  this auto-deny (monkeypatching `AppCore.resolve_pending` to a no-op) to reach the pending state
+  at all — see `step_8.md` test 8.
 
 ## ALGORITHM
 

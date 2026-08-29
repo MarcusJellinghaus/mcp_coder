@@ -110,6 +110,27 @@ UI (`tests/icoder/test_app_pilot.py`, `textual_integration`) — cases 8/9 of th
    alive afterwards. Asserting only that `on_unmount` called `cancel_pending_approvals()` is a
    proxy for the hook, not for R9's "the process exits without stalling", and would stay green
    while the worker blocked forever in `call_from_thread`.
+
+   **Reaching the pending state — required, because Step 7's interim auto-deny would otherwise
+   answer instantly.** `_handle_stream_event`'s `approval_request` branch resolves every request
+   synchronously via `self._core.resolve_pending(...)` (`step_7.md`, §2.11), so a plain turn
+   leaves nothing pending — which is exactly why Step 7 can defer the shutdown hook, and exactly
+   why this test needs an explicit way to hold the approval open. Use the delegator as the patch
+   point: **monkeypatch `AppCore.resolve_pending` to a no-op for this test only.** The UI branch
+   still runs unchanged (event dispatched, `TODO(#1046)` path taken), but nothing answers, so the
+   engine keeps the future registered and `pending()` stays `> 0` for the quit. Do **not** patch
+   `_handle_stream_event` itself — that would bypass the very branch whose interaction with
+   shutdown is under test.
+
+   Build the turn from: a real `ApprovalEngine` injected into the pilot's `AppCore` (Step 7
+   wiring) and a fake LLM service whose `stream` runs `request_approval` on a background
+   thread + `asyncio.run` loop and yields the emitted `approval_request` — i.e. the Step 1
+   harness's consumer shape, without langgraph. That reproduces the two-loop topology R9 is
+   about (worker thread parked, future on another loop) without needing a real agent.
+
+   Add a `TODO(#1046)` next to the monkeypatch: once I3.3 replaces the auto-deny with a modal, a
+   pending approval is the *natural* state while the modal is open, and the patch point is
+   deleted rather than replaced.
 9. **Closed-app guard, directly:** with `_shutting_down` set, the `_stream_llm` tail issues no
    `call_from_thread` (spy on it) and returns; a `RuntimeError` raised by `call_from_thread` in the
    race window is caught and logged rather than propagated out of the worker.
@@ -143,7 +164,11 @@ imported it.
 > Write `tests/llm/providers/langchain/test_approval_integration.py` (cases 1–7 in the step, real
 > agent path, reusing the Step 1 harness) and the two UI pilot cases first. Pilot case 8 must
 > assert the real exit path (the app quits with an approval pending and the worker thread is gone),
-> not merely that `on_unmount` called the delegator.
+> not merely that `on_unmount` called the delegator. To reach the pending state, monkeypatch
+> `AppCore.resolve_pending` to a no-op for that test — Step 7's interim auto-deny answers every
+> `approval_request` synchronously, so without that patch point nothing is ever pending at quit
+> time and the test cannot exercise R9 at all. Leave the `_handle_stream_event` branch itself
+> unpatched, and mark the patch `TODO(#1046)` (the modal makes the pending state natural).
 >
 > Then, once you have confirmed that the FINDINGS §2/§3/§4/§5/§10 rationale is present in the
 > production docstrings and comments added by Steps 2, 4 and 5, delete `spikes/i3-1-approval/`
