@@ -15,9 +15,7 @@ from mcp_coder.workflows.vscodeclaude.assessment import (
 from mcp_coder.workflows.vscodeclaude.assessment import (
     _issue_facts as _produce_issue_facts,
 )
-from mcp_coder.workflows.vscodeclaude.assessment import (
-    assess_issue_state,
-)
+from mcp_coder.workflows.vscodeclaude.assessment import assess_issue_state
 from tests.workflows.vscodeclaude.conftest import make_session
 
 _STALE = "mcp_coder.workflows.vscodeclaude.assessment.is_session_stale"
