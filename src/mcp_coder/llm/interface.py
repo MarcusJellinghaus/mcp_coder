@@ -72,15 +72,16 @@ def _build_claude_system_prompts(
 
 def prompt_llm(
     question: str,
+    *,
+    project_dir: str | Path,
     provider: str | None = None,
     session_id: str | None = None,
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
-    execution_dir: str | None = None,
     mcp_config: str | None = None,
     settings_file: str | None = None,
     branch_name: str | None = None,
-    project_dir: str | None = None,
+    inject_prompts: bool = False,
 ) -> LLMResponseDict:
     """Ask a question to an LLM provider with full session management.
 
@@ -89,6 +90,8 @@ def prompt_llm(
 
     Args:
         question: The question to ask the LLM
+        project_dir: Project directory. Used as the working directory (cwd) of the
+            LLM subprocess.
         provider: Explicit LLM provider to use ("claude", "langchain" or
             "copilot"). An explicitly passed provider always wins; when omitted,
             the MCP_CODER_LLM_PROVIDER env var is used, then "claude".
@@ -96,18 +99,16 @@ def prompt_llm(
         timeout: Timeout in seconds for the request (default: 30)
         env_vars: Optional environment variables to pass to the LLM subprocess.
             MCP server configuration (e.g. MCP_CODER_PROJECT_DIR) is passed here
-            via prepare_llm_environment(); see execution_dir for MCP discovery.
-        execution_dir: Working directory for the LLM subprocess. Claude discovers
-            .mcp.json (and therefore which MCP servers to load) relative to this
-            directory. Defaults to the caller's current working directory.
+            via prepare_llm_environment().
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to Claude Code settings file (.claude/settings.local.json).
             Forwarded to Claude via --settings when the provider is "claude", overriding
             matching keys in Claude's cwd-discovered settings. None means Claude uses its
             cwd-based discovery as today. Ignored for non-Claude providers.
         branch_name: Optional git branch name to include in log filename
-        project_dir: Optional project directory for loading system/project prompts.
-            When provided, prompts are loaded via prompt_loader and passed to providers.
+        inject_prompts: When True, load the system and project prompts from
+            project_dir and pass them to the provider. Default False: headless
+            runs inject nothing.
 
     Returns:
         LLMResponseDict containing:
@@ -125,12 +126,14 @@ def prompt_llm(
 
     Examples:
         >>> # Start new conversation
-        >>> result = prompt_llm("My favorite color is blue")
+        >>> result = prompt_llm("My favorite color is blue", project_dir=".")
         >>> print(result["text"])
         >>> session_id = result["session_id"]
 
         >>> # Continue conversation
-        >>> result2 = prompt_llm("What's my favorite color?", session_id=session_id)
+        >>> result2 = prompt_llm(
+        ...     "What's my favorite color?", project_dir=".", session_id=session_id
+        ... )
         >>> print(result2["text"])  # "Your favorite color is blue"
 
         >>> # Access metadata
@@ -155,14 +158,17 @@ def prompt_llm(
     # Explicit argument wins; the env var only fills an omitted provider
     provider = provider or os.environ.get("MCP_CODER_LLM_PROVIDER") or "claude"
 
-    # Load prompts if project_dir is provided
+    # Normalise once; resolution belongs to resolve_claude_cwd
+    project_path = Path(project_dir)
+
+    # Load prompts only when explicitly requested
     system_prompt: str | None = None
     project_prompt: str | None = None
     prompts_config = None
-    if project_dir:
+    if inject_prompts:
         from mcp_coder.prompts.prompt_loader import load_prompts  # noqa: PLC0415
 
-        system_prompt, project_prompt, prompts_config = load_prompts(Path(project_dir))
+        system_prompt, project_prompt, prompts_config = load_prompts(project_path)
 
     # Unsupported provider check — before context manager (no MLflow run needed)
     if provider not in SUPPORTED_PROVIDERS:
@@ -171,7 +177,8 @@ def prompt_llm(
             f"Supported: {', '.join(repr(p) for p in sorted(SUPPORTED_PROVIDERS))}"
         )
 
-    metadata = {"branch_name": branch_name, "working_directory": execution_dir}
+    cwd = str(project_path)
+    metadata = {"branch_name": branch_name, "working_directory": cwd}
 
     with mlflow_conversation(question, provider, session_id, metadata) as mlflow_ctx:
         if provider == "langchain":
@@ -185,7 +192,6 @@ def prompt_llm(
                     session_id=session_id,
                     timeout=timeout,
                     mcp_config=mcp_config,
-                    execution_dir=execution_dir,
                     env_vars=env_vars,
                     system_prompt=system_prompt,
                     project_prompt=project_prompt,
@@ -220,11 +226,10 @@ def prompt_llm(
                     session_id=session_id,
                     timeout=timeout,
                     env_vars=env_vars,
-                    cwd=execution_dir,
+                    cwd=cwd,
                     logs_dir=logs_dir,
                     branch_name=branch_name,
                     system_prompt=copilot_system_prompt,
-                    execution_dir=execution_dir,
                 )
             except TimeoutExpired as e:
                 logger.error("LLM request timed out after %ds", timeout)
@@ -250,7 +255,7 @@ def prompt_llm(
             claude_replace: str | None = None
             if prompts_config is not None:
                 claude_append, claude_replace = _build_claude_system_prompts(
-                    system_prompt, project_prompt, prompts_config, project_dir
+                    system_prompt, project_prompt, prompts_config, str(project_path)
                 )
 
             try:
@@ -259,7 +264,7 @@ def prompt_llm(
                     session_id=session_id,
                     timeout=timeout,
                     env_vars=env_vars,
-                    cwd=execution_dir,
+                    cwd=cwd,
                     mcp_config=mcp_config,
                     settings_file=settings_file,
                     branch_name=branch_name,
@@ -287,16 +292,17 @@ def prompt_llm(
 
 def prompt_llm_stream(
     question: str,
+    *,
+    project_dir: str | Path,
     provider: str | None = None,
     session_id: str | None = None,
     timeout: int = LLM_DEFAULT_TIMEOUT_SECONDS,
     env_vars: dict[str, str] | None = None,
-    execution_dir: str | None = None,
     mcp_config: str | None = None,
     settings_file: str | None = None,
     branch_name: str | None = None,
     tools: list[Any] | None = None,
-    project_dir: str | None = None,
+    inject_prompts: bool = False,
 ) -> Iterator[StreamEvent]:
     """Stream LLM responses as events.
 
@@ -308,13 +314,14 @@ def prompt_llm_stream(
 
     Args:
         question: The question to ask the LLM.
+        project_dir: Project directory. Used as the working directory (cwd) of the
+            LLM subprocess.
         provider: Explicit LLM provider to use ("claude", "langchain", or
             "copilot"). An explicitly passed provider always wins; when omitted,
             the MCP_CODER_LLM_PROVIDER env var is used, then "claude".
         session_id: Optional session ID to resume previous conversation.
         timeout: Timeout in seconds for the request.
         env_vars: Optional environment variables to pass to the LLM subprocess.
-        execution_dir: Working directory for the LLM subprocess (see prompt_llm).
         mcp_config: Optional path to MCP configuration file.
         settings_file: Optional path to Claude Code settings file (.claude/settings.local.json).
             Forwarded to Claude via --settings when the provider is "claude", overriding
@@ -322,7 +329,9 @@ def prompt_llm_stream(
             cwd-based discovery as today. Ignored for non-Claude providers.
         branch_name: Optional git branch name to include in log filename.
         tools: Optional list of langchain tools (langchain provider only).
-        project_dir: Optional project directory for loading system/project prompts.
+        inject_prompts: When True, load the system and project prompts from
+            project_dir and pass them to the provider. Default False: headless
+            runs inject nothing.
 
     Yields:
         StreamEvent dicts from the underlying provider.
@@ -340,14 +349,18 @@ def prompt_llm_stream(
     # Explicit argument wins; the env var only fills an omitted provider
     provider = provider or os.environ.get("MCP_CODER_LLM_PROVIDER") or "claude"
 
-    # Load prompts if project_dir is provided
+    # Normalise once; resolution belongs to resolve_claude_cwd
+    project_path = Path(project_dir)
+    cwd = str(project_path)
+
+    # Load prompts only when explicitly requested
     system_prompt: str | None = None
     project_prompt: str | None = None
     prompts_config = None
-    if project_dir:
+    if inject_prompts:
         from mcp_coder.prompts.prompt_loader import load_prompts  # noqa: PLC0415
 
-        system_prompt, project_prompt, prompts_config = load_prompts(Path(project_dir))
+        system_prompt, project_prompt, prompts_config = load_prompts(project_path)
 
     if provider not in SUPPORTED_PROVIDERS:
         raise ValueError(
@@ -365,7 +378,6 @@ def prompt_llm_stream(
             session_id=session_id,
             timeout=timeout,
             mcp_config=mcp_config,
-            execution_dir=execution_dir,
             env_vars=env_vars,
             tools=tools,
             system_prompt=system_prompt,
@@ -390,11 +402,10 @@ def prompt_llm_stream(
             session_id=session_id,
             timeout=timeout,
             env_vars=env_vars,
-            cwd=execution_dir,
+            cwd=cwd,
             logs_dir=logs_dir,
             branch_name=branch_name,
             system_prompt=copilot_system_prompt,
-            execution_dir=execution_dir,
         )
     else:
         from .providers.claude.claude_code_cli_streaming import (  # noqa: PLC0415
@@ -411,7 +422,7 @@ def prompt_llm_stream(
         claude_replace: str | None = None
         if prompts_config is not None:
             claude_append, claude_replace = _build_claude_system_prompts(
-                system_prompt, project_prompt, prompts_config, project_dir
+                system_prompt, project_prompt, prompts_config, str(project_path)
             )
 
         yield from ask_claude_code_cli_stream(
@@ -419,7 +430,7 @@ def prompt_llm_stream(
             session_id=session_id,
             timeout=timeout,
             env_vars=env_vars,
-            cwd=execution_dir,
+            cwd=cwd,
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,

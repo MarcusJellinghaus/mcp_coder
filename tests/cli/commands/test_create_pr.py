@@ -42,7 +42,7 @@ class TestExecuteCreatePr:
     """
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
@@ -60,9 +60,8 @@ class TestExecuteCreatePr:
         """Test successful create-pr execution."""
         # Setup mocks
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_flags.return_value = (False, False)
@@ -71,7 +70,6 @@ class TestExecuteCreatePr:
         args = argparse.Namespace(
             project_dir="/test/project",
             llm_method="claude",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -82,15 +80,15 @@ class TestExecuteCreatePr:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
+        mock_resolve_exec.assert_called_once_with(project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, str(execution_dir), False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
@@ -108,9 +106,8 @@ class TestExecuteCreatePr:
         """Test execution with custom LLM method."""
         # Setup mocks
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_flags.return_value = (False, False)
@@ -119,7 +116,6 @@ class TestExecuteCreatePr:
         args = argparse.Namespace(
             project_dir="/test/project",
             llm_method="claude",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -131,11 +127,11 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, str(execution_dir), False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
@@ -153,9 +149,8 @@ class TestExecuteCreatePr:
         """Test handling of workflow failure (returns 1)."""
         # Setup mocks
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_flags.return_value = (False, False)
@@ -164,7 +159,6 @@ class TestExecuteCreatePr:
         args = argparse.Namespace(
             project_dir="/test/project",
             llm_method="claude",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -175,10 +169,10 @@ class TestExecuteCreatePr:
 
         assert result == 1
         mock_resolve_dir.assert_called_once_with("/test/project")
-        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
+        mock_resolve_exec.assert_called_once_with(project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, str(execution_dir), False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
@@ -192,7 +186,6 @@ class TestExecuteCreatePr:
         args = argparse.Namespace(
             project_dir="/invalid/path",
             llm_method="claude",
-            execution_dir=None,
         )
 
         with pytest.raises(SystemExit) as exc_info:
@@ -202,7 +195,7 @@ class TestExecuteCreatePr:
         mock_resolve_dir.assert_called_once_with("/invalid/path")
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
@@ -224,9 +217,8 @@ class TestExecuteCreatePr:
         """Test with None project_dir (uses current directory)."""
         # Setup mocks
         project_dir = Path.cwd()
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_mcp.return_value = None
@@ -237,7 +229,6 @@ class TestExecuteCreatePr:
         args = argparse.Namespace(
             project_dir=None,  # Should use current directory
             llm_method="claude",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -248,14 +239,14 @@ class TestExecuteCreatePr:
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with(None)
-        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
+        mock_resolve_exec.assert_called_once_with(project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, str(execution_dir), False, False
+            project_dir, "claude", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
@@ -273,9 +264,8 @@ class TestExecuteCreatePr:
         """Test execution with different LLM methods."""
         # Setup mocks
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_flags.return_value = (False, False)
         mock_run_workflow.return_value = 0
 
@@ -285,7 +275,6 @@ class TestExecuteCreatePr:
         args_cli = argparse.Namespace(
             project_dir="/test/project",
             llm_method="claude",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -295,7 +284,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("claude")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", None, None, str(execution_dir), False, False
+            project_dir, "claude", None, None, False, False
         )
 
         # Reset mocks
@@ -313,7 +302,6 @@ class TestExecuteCreatePr:
         args_lc = argparse.Namespace(
             project_dir="/test/project",
             llm_method="langchain",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -323,11 +311,11 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("langchain")
         mock_run_workflow.assert_called_with(
-            project_dir, "langchain", None, None, str(execution_dir), False, False
+            project_dir, "langchain", None, None, False, False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
@@ -345,9 +333,8 @@ class TestExecuteCreatePr:
         """Test graceful handling of keyboard interrupt."""
         # Setup mocks
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_flags.return_value = (False, False)
@@ -356,7 +343,6 @@ class TestExecuteCreatePr:
         args = argparse.Namespace(
             project_dir="/test/project",
             llm_method="claude",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -370,7 +356,7 @@ class TestExecuteCreatePr:
         assert "Operation cancelled by user." in caplog.text
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
@@ -388,9 +374,8 @@ class TestExecuteCreatePr:
         """Test handling of unexpected errors."""
         # Setup mocks
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_flags.return_value = (False, False)
@@ -399,7 +384,6 @@ class TestExecuteCreatePr:
         args = argparse.Namespace(
             project_dir="/test/project",
             llm_method="claude",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -414,7 +398,7 @@ class TestExecuteCreatePr:
 
     @patch("mcp_coder.cli.commands.create_pr.enable_crash_logging")
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
@@ -433,7 +417,7 @@ class TestExecuteCreatePr:
         """Test that enable_crash_logging is called with project_dir and command name."""
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
-        mock_resolve_exec.return_value = str(Path.cwd())
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_flags.return_value = (False, False)
@@ -442,7 +426,6 @@ class TestExecuteCreatePr:
         args = argparse.Namespace(
             project_dir="/test/project",
             llm_method="claude",
-            execution_dir=None,
             mcp_config=None,
             settings=None,
             update_issue_labels=None,
@@ -490,16 +473,16 @@ class TestCreatePrCliIntegration:
         assert args.llm_method is None  # None = resolve at runtime from config
 
 
-class TestCreatePrExecutionDir:
-    """Tests for execution_dir handling in create-pr command."""
+class TestCreatePrClaudeCwd:
+    """Tests for Claude working directory handling in create-pr command."""
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
     @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
     @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
     @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
-    def test_default_execution_dir_uses_project_dir(
+    def test_claude_cwd_is_project_dir(
         self,
         mock_parse_llm: Mock,
         mock_resolve_llm: Mock,
@@ -508,11 +491,10 @@ class TestCreatePrExecutionDir:
         mock_resolve_exec: Mock,
         mock_resolve_flags: Mock,
     ) -> None:
-        """No --execution-dir: execution_dir comes from --project-dir, not the cwd."""
+        """Claude's working directory comes from --project-dir, not the shell cwd."""
         project_dir = Path("/test/project")
-        execution_dir = Path.cwd()
         mock_resolve_project.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
+        mock_resolve_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_resolve_flags.return_value = (False, False)
@@ -520,7 +502,6 @@ class TestCreatePrExecutionDir:
 
         args = argparse.Namespace(
             project_dir="/test/project",
-            execution_dir=None,  # No explicit execution_dir
             llm_method="claude",
             mcp_config=None,
             settings=None,
@@ -531,75 +512,22 @@ class TestCreatePrExecutionDir:
         result = execute_create_pr(args)
 
         assert result == 0
-        mock_resolve_exec.assert_called_once_with(None, project_dir=project_dir)
+        mock_resolve_exec.assert_called_once_with(project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, str(execution_dir), False, False
+            project_dir, "claude", None, None, False, False
         )
 
-    @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
-    @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
-    @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
-    def test_explicit_execution_dir_absolute(
-        self,
-        mock_parse_llm: Mock,
-        mock_resolve_llm: Mock,
-        mock_run_workflow: Mock,
-        mock_resolve_project: Mock,
-        mock_resolve_exec: Mock,
-        mock_resolve_flags: Mock,
-        tmp_path: Path,
-    ) -> None:
-        """Test explicit absolute execution_dir should be validated and used."""
-        project_dir = Path("/test/project")
-        execution_dir = tmp_path / "exec_dir"
-        execution_dir.mkdir()
-
-        mock_resolve_project.return_value = project_dir
-        mock_resolve_exec.return_value = str(execution_dir)
-        mock_resolve_llm.return_value = ("claude", "cli argument")
-        mock_parse_llm.return_value = "claude"
-        mock_resolve_flags.return_value = (False, False)
-        mock_run_workflow.return_value = 0
-
-        args = argparse.Namespace(
-            project_dir="/test/project",
-            execution_dir=str(execution_dir),
-            llm_method="claude",
-            mcp_config=None,
-            settings=None,
-            update_issue_labels=None,
-            post_issue_comments=None,
-        )
-
-        result = execute_create_pr(args)
-
-        assert result == 0
-        mock_resolve_exec.assert_called_once_with(
-            str(execution_dir), project_dir=project_dir
-        )
-        mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, str(execution_dir), False, False
-        )
-
-    @patch("mcp_coder.cli.commands.create_pr.resolve_execution_dir")
-    @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
-    def test_invalid_execution_dir_returns_error(
+    def test_invalid_project_dir_returns_error(
         self,
         mock_resolve_project: Mock,
-        mock_resolve_exec: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test invalid execution_dir should return error code 1."""
-        project_dir = Path("/test/project")
-        mock_resolve_project.return_value = project_dir
-        mock_resolve_exec.side_effect = ValueError("Directory does not exist")
+        """An invalid --project-dir returns error code 1."""
+        mock_resolve_project.side_effect = ValueError("Directory does not exist")
 
         args = argparse.Namespace(
-            project_dir="/test/project",
-            execution_dir="/nonexistent/invalid/path",
+            project_dir="/nonexistent/invalid/path",
             llm_method="claude",
             mcp_config=None,
         )
@@ -609,3 +537,4 @@ class TestCreatePrExecutionDir:
 
         assert result == 1
         assert "Directory does not exist" in caplog.text
+        assert "Invalid project directory" in caplog.text

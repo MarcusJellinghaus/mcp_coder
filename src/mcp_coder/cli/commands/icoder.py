@@ -21,8 +21,8 @@ from ...utils.log_utils import OUTPUT
 from ...utils.tui_preparation import TuiChecker, TuiPreflightAbort
 from ..utils import (
     parse_llm_method_from_args,
+    resolve_claude_cwd,
     resolve_claude_settings_path,
-    resolve_execution_dir,
     resolve_llm_method,
     resolve_mcp_config_path,
 )
@@ -59,14 +59,8 @@ def execute_icoder(args: argparse.Namespace) -> int:
         else:
             project_dir = Path.cwd()
 
-        # Resolve execution directory (defaults to project_dir, resolved above)
-        try:
-            execution_dir = resolve_execution_dir(
-                getattr(args, "execution_dir", None), project_dir=project_dir
-            )
-        except ValueError as e:
-            logger.error(f"Invalid execution directory: {e}")
-            return 1
+        # Resolve the working directory for the Claude subprocess
+        project_dir = resolve_claude_cwd(project_dir)
 
         # Pre-flight terminal checks (fail fast before slow env setup)
         TuiChecker().run_all_checks()
@@ -199,7 +193,6 @@ def execute_icoder(args: argparse.Namespace) -> int:
         llm_service = RealLLMService(
             provider=provider,
             session_id=session_id,
-            execution_dir=str(execution_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             env_vars=env_vars,

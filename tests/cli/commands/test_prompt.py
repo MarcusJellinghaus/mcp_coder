@@ -60,7 +60,6 @@ class TestSessionIdOutputFormat:
             continue_session_from=None,
             continue_session=False,
             project_dir=None,
-            execution_dir=None,
             mcp_config=None,
             settings=None,
         )
@@ -103,7 +102,6 @@ class TestSessionIdOutputFormat:
             continue_session_from=None,
             continue_session=False,
             project_dir=None,
-            execution_dir=None,
             mcp_config=None,
             settings=None,
         )
@@ -146,7 +144,6 @@ class TestSessionIdOutputFormat:
             continue_session_from=None,
             continue_session=False,
             project_dir=None,
-            execution_dir=None,
             mcp_config=None,
             settings=None,
         )
@@ -189,7 +186,6 @@ class TestSessionIdOutputFormat:
             continue_session_from=None,
             continue_session=False,
             project_dir=None,
-            execution_dir=None,
             mcp_config=None,
             settings=None,
         )
@@ -244,11 +240,11 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            execution_dir=mock.ANY,
+            project_dir=mock.ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=mock.ANY,
-            project_dir=None,
+            inject_prompts=False,
         )
         captured = capsys.readouterr()
         assert "The capital of France is Paris." in captured.out
@@ -338,11 +334,11 @@ class TestExecutePrompt:
             timeout=30,
             session_id="previous-session-456",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            execution_dir=mock.ANY,
+            project_dir=mock.ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=mock.ANY,
-            project_dir=None,
+            inject_prompts=False,
         )
         captured = capsys.readouterr()
         assert "Adding error handling." in captured.out
@@ -445,11 +441,11 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            execution_dir=mock.ANY,
+            project_dir=mock.ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=mock.ANY,
-            project_dir=None,
+            inject_prompts=False,
         )
         captured = capsys.readouterr()
         assert (
@@ -509,11 +505,11 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            execution_dir=mock.ANY,
+            project_dir=mock.ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=mock.ANY,
-            project_dir=None,
+            inject_prompts=False,
         )
         captured = capsys.readouterr()
         assert (
@@ -575,11 +571,11 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            execution_dir=mock.ANY,
+            project_dir=mock.ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=mock.ANY,
-            project_dir=None,
+            inject_prompts=False,
         )
         # "Warning: No session_id found" now goes through logging, not stdout
 
@@ -642,11 +638,11 @@ class TestExecutePrompt:
             timeout=30,
             session_id="ndjson-session-123",
             env_vars={"MCP_CODER_PROJECT_DIR": "/test"},
-            execution_dir=mock.ANY,
+            project_dir=mock.ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=mock.ANY,
-            project_dir=None,
+            inject_prompts=False,
         )
         captured = capsys.readouterr()
         # NDJSON format should output JSON lines
@@ -699,11 +695,11 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars=mock_env_vars,
-            execution_dir=mock.ANY,
+            project_dir=mock.ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=mock.ANY,
-            project_dir=None,
+            inject_prompts=False,
         )
         captured = capsys.readouterr()
         assert "Response with env vars." in captured.out
@@ -750,18 +746,18 @@ class TestExecutePrompt:
             timeout=30,
             session_id=None,
             env_vars=None,
-            execution_dir=mock.ANY,
+            project_dir=mock.ANY,
             mcp_config=None,
             settings_file=None,
             branch_name=mock.ANY,
-            project_dir=None,
+            inject_prompts=False,
         )
         captured = capsys.readouterr()
         assert "Response without env vars." in captured.out
 
 
-class TestPromptExecutionDir:
-    """Tests for execution_dir handling in prompt command."""
+class TestPromptClaudeCwd:
+    """Tests for Claude working directory handling in prompt command."""
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
@@ -773,22 +769,20 @@ class TestPromptExecutionDir:
         mock_resolve_llm: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """No --execution-dir *and* no --project-dir: execution_dir is the CWD.
+        """No --project-dir: the subprocess cwd is the shell's CWD.
 
         This documents the no-``project_dir`` fallback, not the default. The
-        default is ``project_dir`` (see
-        ``test_default_execution_dir_uses_project_dir`` below); this test only
-        reaches the CWD because ``project_dir`` is None.
+        default is ``project_dir`` (see ``test_claude_cwd_is_project_dir``
+        below); this test only reaches the CWD because ``project_dir`` is None.
         """
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_prompt_llm_stream.return_value = iter(
-            _make_text_events("Response with default execution_dir.")
+            _make_text_events("Response from the working directory.")
         )
 
         args = argparse.Namespace(
             prompt="Test prompt",
-            execution_dir=None,  # No explicit execution_dir
             llm_method="claude",
             mcp_config=None,
             settings=None,
@@ -798,17 +792,17 @@ class TestPromptExecutionDir:
         result = execute_prompt(args)
 
         assert result == 0
-        # Verify execution_dir was passed to prompt_llm_stream and equals CWD
+        # Verify the subprocess cwd was passed to prompt_llm_stream and is CWD
         call_kwargs = mock_prompt_llm_stream.call_args[1]
-        assert "execution_dir" in call_kwargs
-        assert call_kwargs["execution_dir"] == str(Path.cwd())
+        assert "project_dir" in call_kwargs
+        assert call_kwargs["project_dir"] == str(Path.cwd())
         captured = capsys.readouterr()
-        assert "Response with default execution_dir." in captured.out
+        assert "Response from the working directory." in captured.out
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
-    def test_default_execution_dir_uses_project_dir(
+    def test_claude_cwd_is_project_dir(
         self,
         mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
@@ -817,7 +811,7 @@ class TestPromptExecutionDir:
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """No --execution-dir: execution_dir is --project-dir, not the shell's cwd."""
+        """The subprocess cwd is --project-dir, not the shell's cwd."""
         project_dir = tmp_path / "repo"
         project_dir.mkdir()
         elsewhere = tmp_path / "elsewhere"
@@ -831,7 +825,6 @@ class TestPromptExecutionDir:
 
         args = argparse.Namespace(
             prompt="Test prompt",
-            execution_dir=None,  # No explicit execution_dir
             llm_method="claude",
             mcp_config=None,
             settings=None,
@@ -846,15 +839,15 @@ class TestPromptExecutionDir:
 
         assert result == 0
         call_kwargs = mock_prompt_llm_stream.call_args[1]
-        assert call_kwargs["execution_dir"] == str(project_dir)
-        assert call_kwargs["execution_dir"] != str(Path.cwd())
+        assert call_kwargs["project_dir"] == str(project_dir)
+        assert call_kwargs["project_dir"] != str(Path.cwd())
         captured = capsys.readouterr()
         assert "Response from the project directory." in captured.out
 
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
-    def test_explicit_execution_dir_absolute(
+    def test_claude_cwd_with_all_other_args(
         self,
         mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
@@ -862,137 +855,18 @@ class TestPromptExecutionDir:
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test explicit absolute execution_dir should be validated and used."""
-        mock_resolve_llm.return_value = ("claude", "cli argument")
-        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        mock_prompt_llm_stream.return_value = iter(
-            _make_text_events("Response with explicit execution_dir.")
-        )
-
-        # Create a valid temporary directory
-        execution_dir = tmp_path / "exec_dir"
-        execution_dir.mkdir()
-
-        args = argparse.Namespace(
-            prompt="Test prompt",
-            execution_dir=str(execution_dir),
-            llm_method="claude",
-            mcp_config=None,
-            settings=None,
-            project_dir=None,
-        )
-
-        result = execute_prompt(args)
-
-        assert result == 0
-        # Verify execution_dir was validated and passed to prompt_llm_stream
-        call_kwargs = mock_prompt_llm_stream.call_args[1]
-        assert "execution_dir" in call_kwargs
-        assert call_kwargs["execution_dir"] == str(execution_dir)
-        captured = capsys.readouterr()
-        assert "Response with explicit execution_dir." in captured.out
-
-    @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
-    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
-    def test_explicit_execution_dir_relative(
-        self,
-        mock_prompt_llm_stream: Mock,
-        mock_prepare_env: Mock,
-        mock_resolve_llm: Mock,
-        tmp_path: Path,
-        capsys: pytest.CaptureFixture[str],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Test explicit relative execution_dir should be resolved to CWD."""
-        mock_resolve_llm.return_value = ("claude", "cli argument")
-        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        mock_prompt_llm_stream.return_value = iter(
-            _make_text_events("Response with relative execution_dir.")
-        )
-
-        # Create a valid temporary directory structure
-        base_dir = tmp_path / "base"
-        base_dir.mkdir()
-        rel_dir = base_dir / "relative"
-        rel_dir.mkdir()
-
-        # Change to base directory so relative path works
-        monkeypatch.chdir(base_dir)
-
-        args = argparse.Namespace(
-            prompt="Test prompt",
-            execution_dir="relative",  # Relative path
-            llm_method="claude",
-            mcp_config=None,
-            settings=None,
-            project_dir=None,
-        )
-
-        result = execute_prompt(args)
-
-        assert result == 0
-        # Verify execution_dir was resolved to absolute path
-        call_kwargs = mock_prompt_llm_stream.call_args[1]
-        assert "execution_dir" in call_kwargs
-        assert call_kwargs["execution_dir"] == str(rel_dir)
-        captured = capsys.readouterr()
-        assert "Response with relative execution_dir." in captured.out
-
-    @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
-    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    def test_invalid_execution_dir_returns_error(
-        self,
-        mock_prepare_env: Mock,
-        mock_resolve_llm: Mock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Test invalid execution_dir should return error code 1."""
-        mock_resolve_llm.return_value = ("claude", "cli argument")
-        mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-
-        args = argparse.Namespace(
-            prompt="Test prompt",
-            execution_dir="/nonexistent/invalid/path",
-            llm_method="claude",
-            mcp_config=None,
-            settings=None,
-            project_dir=None,
-        )
-
-        with caplog.at_level(logging.DEBUG):
-            result = execute_prompt(args)
-
-        assert result == 1
-        assert "execution directory" in caplog.text.lower()
-
-    @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
-    @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
-    @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
-    def test_execution_dir_with_all_other_args(
-        self,
-        mock_prompt_llm_stream: Mock,
-        mock_prepare_env: Mock,
-        mock_resolve_llm: Mock,
-        tmp_path: Path,
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        """Test execution_dir works with all other args (no conflicts)."""
+        """Resolving the Claude cwd works with all other args (no conflicts)."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         mock_prompt_llm_stream.return_value = iter(
             _make_text_events("Response with all args.")
         )
 
-        # Create valid directories
-        execution_dir = tmp_path / "exec_dir"
-        execution_dir.mkdir()
         project_dir = tmp_path / "project_dir"
         project_dir.mkdir()
 
         args = argparse.Namespace(
             prompt="Test prompt",
-            execution_dir=str(execution_dir),
             project_dir=str(project_dir),
             timeout=60,
             llm_method="claude",
@@ -1007,7 +881,7 @@ class TestPromptExecutionDir:
         assert result == 0
         # Verify all arguments were passed correctly
         call_kwargs = mock_prompt_llm_stream.call_args[1]
-        assert call_kwargs["execution_dir"] == str(execution_dir)
+        assert call_kwargs["project_dir"] == str(project_dir)
         assert call_kwargs["timeout"] == 60
         assert call_kwargs["session_id"] == "test-session-123"
         captured = capsys.readouterr()
@@ -1021,7 +895,7 @@ class TestAddSystemPromptsFlag:
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
-    def test_prompt_add_system_prompts_flag_passes_project_dir(
+    def test_prompt_add_system_prompts_flag_injects_prompts(
         self,
         mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
@@ -1029,7 +903,7 @@ class TestAddSystemPromptsFlag:
         mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """When --add-system-prompts is set, project_dir is passed to prompt_llm_stream."""
+        """When --add-system-prompts is set, inject_prompts=True reaches prompt_llm_stream."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
@@ -1044,22 +918,21 @@ class TestAddSystemPromptsFlag:
             mcp_config=None,
             settings=None,
             project_dir=None,
-            execution_dir=None,
         )
 
         result = execute_prompt(args)
 
         assert result == 0
         call_kwargs = mock_prompt_llm_stream.call_args[1]
-        # project_dir should be set (resolved from CWD since project_dir arg is None)
-        assert call_kwargs["project_dir"] is not None
+        assert call_kwargs["inject_prompts"] is True
+        # project_dir is resolved from CWD since the project_dir arg is None
         assert call_kwargs["project_dir"] == str(Path.cwd())
 
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
     @patch("mcp_coder.cli.commands.prompt.prepare_llm_environment")
     @patch("mcp_coder.cli.commands.prompt.prompt_llm_stream")
-    def test_prompt_no_flag_no_project_dir(
+    def test_prompt_no_flag_no_prompt_injection(
         self,
         mock_prompt_llm_stream: Mock,
         mock_prepare_env: Mock,
@@ -1067,7 +940,7 @@ class TestAddSystemPromptsFlag:
         mock_resolve_mcp: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Without --add-system-prompts, project_dir=None is passed."""
+        """Without --add-system-prompts, inject_prompts=False is passed."""
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_resolve_mcp.return_value = None
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
@@ -1082,14 +955,13 @@ class TestAddSystemPromptsFlag:
             mcp_config=None,
             settings=None,
             project_dir=None,
-            execution_dir=None,
         )
 
         result = execute_prompt(args)
 
         assert result == 0
         call_kwargs = mock_prompt_llm_stream.call_args[1]
-        assert call_kwargs["project_dir"] is None
+        assert call_kwargs["inject_prompts"] is False
 
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
@@ -1119,13 +991,13 @@ class TestAddSystemPromptsFlag:
             mcp_config=None,
             settings=None,
             project_dir=str(tmp_path),
-            execution_dir=None,
         )
 
         result = execute_prompt(args)
 
         assert result == 0
         call_kwargs = mock_prompt_llm_stream.call_args[1]
+        assert call_kwargs["inject_prompts"] is True
         assert call_kwargs["project_dir"] == str(tmp_path)
 
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
@@ -1165,14 +1037,13 @@ class TestAddSystemPromptsFlag:
             mcp_config=None,
             settings=None,
             project_dir=None,
-            execution_dir=None,
         )
 
         result = execute_prompt(args)
 
         assert result == 0
         call_kwargs = mock_prompt_llm.call_args[1]
-        assert call_kwargs["project_dir"] is not None
+        assert call_kwargs["inject_prompts"] is True
 
     @patch("mcp_coder.cli.commands.prompt.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.prompt.resolve_llm_method")
@@ -1212,11 +1083,10 @@ class TestAddSystemPromptsFlag:
             mcp_config=None,
             settings=None,
             project_dir=None,
-            execution_dir=None,
         )
 
         result = execute_prompt(args)
 
         assert result == 0
         call_kwargs = mock_prompt_llm.call_args[1]
-        assert call_kwargs["project_dir"] is not None
+        assert call_kwargs["inject_prompts"] is True

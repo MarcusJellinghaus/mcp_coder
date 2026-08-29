@@ -95,9 +95,9 @@ class TestPrepareTaskTracker:
         assert mock_has_tasks.call_count == 2
         mock_get_prompt.assert_called_once()
         mock_prompt_llm.assert_called_once()
-        # Verify execution_dir parameter is passed as None by default
+        # Verify project_dir is what prompt_llm receives
         call_kwargs = mock_prompt_llm.call_args[1]
-        assert call_kwargs.get("execution_dir") is None
+        assert call_kwargs.get("project_dir") == str(tmp_path)
         mock_get_status.assert_called_once_with(tmp_path)
         mock_commit.assert_called_once()
         # Verify store_session called with task_tracker step_name
@@ -401,8 +401,8 @@ class TestLogProgressSummary:
         )
 
 
-class TestPrepareTaskTrackerExecutionDir:
-    """Test execution_dir parameter in prepare_task_tracker."""
+class TestPrepareTaskTrackerProjectDir:
+    """Test project_dir threading in prepare_task_tracker."""
 
     @patch("mcp_coder.workflows.implement.task_tracker_prep.commit_all_changes")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.has_implementation_tasks")
@@ -411,7 +411,7 @@ class TestPrepareTaskTrackerExecutionDir:
     @patch("mcp_coder.workflows.implement.task_tracker_prep.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.get_prompt")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.prepare_llm_environment")
-    def test_execution_dir_passed_to_prompt_llm(
+    def test_project_dir_passed_to_prompt_llm(
         self,
         mock_prepare_env: MagicMock,
         mock_get_prompt: MagicMock,
@@ -422,7 +422,7 @@ class TestPrepareTaskTrackerExecutionDir:
         mock_commit: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test execution_dir is passed to prompt_llm call."""
+        """Test project_dir is passed to the prompt_llm call."""
         # Create steps directory
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
@@ -444,62 +444,9 @@ class TestPrepareTaskTrackerExecutionDir:
         }
         mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
 
-        # Create execution_dir
-        exec_dir = tmp_path / "execution"
-        exec_dir.mkdir()
-
-        # Call with execution_dir
-        result = prepare_task_tracker(tmp_path, "claude", execution_dir=exec_dir)
+        result = prepare_task_tracker(tmp_path, "claude")
 
         assert result is True
-        # Verify execution_dir was passed to prompt_llm
+        # prompt_llm receives project_dir as the subprocess working directory
         call_kwargs = mock_prompt_llm.call_args[1]
-        assert call_kwargs.get("execution_dir") == str(exec_dir)
-
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.commit_all_changes")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.has_implementation_tasks")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.get_full_status")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.store_session")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.prompt_llm")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.prepare_llm_environment")
-    def test_execution_dir_none_uses_default(
-        self,
-        mock_prepare_env: MagicMock,
-        mock_get_prompt: MagicMock,
-        mock_prompt_llm: MagicMock,
-        mock_store_session: MagicMock,
-        mock_get_status: MagicMock,
-        mock_has_tasks: MagicMock,
-        mock_commit: MagicMock,
-        tmp_path: Path,
-    ) -> None:
-        """Test execution_dir=None passes None to prompt_llm."""
-        # Create steps directory
-        steps_dir = tmp_path / "pr_info" / "steps"
-        steps_dir.mkdir(parents=True)
-
-        # Setup mocks
-        mock_has_tasks.side_effect = [False, True]
-        mock_prepare_env.return_value = {
-            "MCP_CODER_PROJECT_DIR": str(tmp_path),
-            "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
-        }
-        mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_prompt_llm.return_value = _make_llm_response(
-            "LLM updated the task tracker"
-        )
-        mock_get_status.return_value = {
-            "staged": [],
-            "modified": ["pr_info/TASK_TRACKER.md"],
-            "untracked": [],
-        }
-        mock_commit.return_value = {"success": True, "commit_hash": "abc123"}
-
-        # Call with execution_dir=None (default)
-        result = prepare_task_tracker(tmp_path, "claude", execution_dir=None)
-
-        assert result is True
-        # Verify execution_dir was passed as None
-        call_kwargs = mock_prompt_llm.call_args[1]
-        assert call_kwargs.get("execution_dir") is None
+        assert call_kwargs.get("project_dir") == str(tmp_path)

@@ -8,7 +8,7 @@ Main Interfaces:
 
 Example:
     >>> from mcp_coder import prompt_llm
-    >>> result = prompt_llm("Explain recursion", provider="claude")
+    >>> result = prompt_llm("Explain recursion", project_dir=".", provider="claude")
     >>> print(result["text"])
 """
 

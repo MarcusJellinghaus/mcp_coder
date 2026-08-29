@@ -1,7 +1,6 @@
 """Tests for CLI utility functions."""
 
 import logging
-import warnings
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -218,78 +217,22 @@ class TestResolveLlmMethod:
         assert resolve_llm_method(None) == ("claude", "config default_provider")
 
 
-class TestResolveExecutionDir:
-    """Test cases for resolve_execution_dir function."""
+class TestResolveClaudeCwd:
+    """Test cases for resolve_claude_cwd function."""
 
-    def test_none_returns_cwd(self) -> None:
-        """No execution_dir and no project_dir falls back to the working directory.
+    def test_project_dir_is_returned(self, tmp_path: Path) -> None:
+        """project_dir is the Claude working directory."""
+        from mcp_coder.cli.utils import resolve_claude_cwd
 
-        This documents the no-``project_dir`` fallback, not the default: when a
-        ``project_dir`` is supplied it becomes the execution directory.
-        """
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        result = resolve_execution_dir(None)
-        assert result == Path.cwd()
-
-    def test_existing_absolute_path(self, tmp_path: Path) -> None:
-        """Absolute paths to existing directories should be validated and returned."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        result = resolve_execution_dir(str(tmp_path))
-        assert result == tmp_path.resolve()
-
-    def test_existing_relative_path(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Relative paths should resolve relative to CWD."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        # Create a subdirectory
-        subdir = tmp_path / "subdir"
-        subdir.mkdir()
-
-        # Change to tmp_path as CWD
-        monkeypatch.chdir(tmp_path)
-
-        result = resolve_execution_dir("subdir")
-        assert result == subdir.resolve()
-
-    def test_nonexistent_path_raises_error(self) -> None:
-        """Non-existent paths should raise ValueError."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        with pytest.raises(ValueError, match="Execution directory does not exist"):
-            resolve_execution_dir("/nonexistent/path/12345")
-
-    @pytest.mark.parametrize(
-        "dir_name",
-        ["simple", "with-dash", "with_underscore", "nested/path"],
-    )
-    def test_various_directory_names(self, tmp_path: Path, dir_name: str) -> None:
-        """Test various valid directory name patterns."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        # Create directory structure
-        test_dir = tmp_path / dir_name
-        test_dir.mkdir(parents=True, exist_ok=True)
-
-        result = resolve_execution_dir(str(test_dir))
-        assert result == test_dir.resolve()
-
-    def test_none_with_project_dir_returns_project_dir(self, tmp_path: Path) -> None:
-        """project_dir is the default execution directory."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        result = resolve_execution_dir(None, project_dir=tmp_path)
+        result = resolve_claude_cwd(tmp_path)
         assert result == tmp_path.resolve()
 
     def test_project_dir_accepts_str_and_path(self, tmp_path: Path) -> None:
         """str and Path forms of project_dir give the same result."""
-        from mcp_coder.cli.utils import resolve_execution_dir
+        from mcp_coder.cli.utils import resolve_claude_cwd
 
-        from_path = resolve_execution_dir(None, project_dir=tmp_path)
-        from_str = resolve_execution_dir(None, project_dir=str(tmp_path))
+        from_path = resolve_claude_cwd(tmp_path)
+        from_str = resolve_claude_cwd(str(tmp_path))
         assert from_path == from_str == tmp_path.resolve()
 
     def test_relative_project_dir_is_resolved(
@@ -300,67 +243,25 @@ class TestResolveExecutionDir:
         Pins the commit.py case, where Path(args.project_dir) is built without
         .resolve() and must not reach the subprocess as a relative cwd.
         """
-        from mcp_coder.cli.utils import resolve_execution_dir
+        from mcp_coder.cli.utils import resolve_claude_cwd
 
         (tmp_path / "sub").mkdir()
         monkeypatch.chdir(tmp_path)
 
-        result = resolve_execution_dir(None, project_dir="sub")
+        result = resolve_claude_cwd("sub")
         assert result.is_absolute()
         assert result == (tmp_path / "sub").resolve()
 
     def test_nonexistent_project_dir_is_not_validated(self) -> None:
-        """The project_dir default is resolved but deliberately not validated.
+        """project_dir is resolved but deliberately not validated.
 
         Validating it would break commit.py's error ordering, where
         validate_git_repository owns the message for a bad project_dir.
         """
-        from mcp_coder.cli.utils import resolve_execution_dir
+        from mcp_coder.cli.utils import resolve_claude_cwd
 
-        result = resolve_execution_dir(None, project_dir="/no/such/dir")
+        result = resolve_claude_cwd("/no/such/dir")
         assert result.is_absolute()
-
-    def test_explicit_execution_dir_wins_over_project_dir(self, tmp_path: Path) -> None:
-        """An explicit execution_dir overrides the project_dir default."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        chosen = tmp_path / "a"
-        chosen.mkdir()
-        other = tmp_path / "b"
-        other.mkdir()
-
-        result = resolve_execution_dir(str(chosen), project_dir=other)
-        assert result == chosen.resolve()
-
-    def test_explicit_execution_dir_warns_deprecation(self, tmp_path: Path) -> None:
-        """An explicit execution_dir emits a DeprecationWarning naming #1132."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        with pytest.warns(DeprecationWarning, match="1132"):
-            resolve_execution_dir(str(tmp_path))
-
-    def test_explicit_execution_dir_logs_deprecation(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """The deprecation is also logged, since warnings are hidden by default."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        with caplog.at_level(logging.WARNING, logger="mcp_coder.cli.utils"):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
-                resolve_execution_dir(str(tmp_path))
-
-        assert "1132" in caplog.text
-
-    def test_default_does_not_warn(self, tmp_path: Path) -> None:
-        """The project_dir default emits no deprecation warning."""
-        from mcp_coder.cli.utils import resolve_execution_dir
-
-        with warnings.catch_warnings(record=True) as recorded:
-            warnings.simplefilter("always")
-            resolve_execution_dir(None, project_dir=tmp_path)
-
-        assert [w for w in recorded if issubclass(w.category, DeprecationWarning)] == []
 
 
 class TestResolveIssueInteractionFlags:

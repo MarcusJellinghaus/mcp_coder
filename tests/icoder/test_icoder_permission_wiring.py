@@ -273,6 +273,7 @@ def test_icoder_stream_always_provides_manager_tools(
     service = RealLLMService(
         provider="langchain",
         mcp_manager=_FakeMCPManager(["mcp__srv__a", "mcp__srv__b"]),  # type: ignore[arg-type]
+        project_dir="/test/project",
     )
 
     list(service.stream("hi"))
@@ -321,6 +322,7 @@ def test_icoder_path_is_stream_only_never_run_agent(
         provider="langchain",
         mcp_config="/fake/.mcp.json",
         mcp_manager=_FakeMCPManager(["mcp__srv__a"]),  # type: ignore[arg-type]
+        project_dir="/test/project",
     )
 
     events = list(service.stream("hi"))

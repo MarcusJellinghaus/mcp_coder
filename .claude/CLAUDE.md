@@ -127,13 +127,6 @@ mcp-coder gh-tool set-status <label>
 
 **Multi-line commit messages:** use a POSIX heredoc — `git commit -F - <<'EOF' … EOF`. PowerShell here-strings (`@'...'@`) work only in the PowerShell tool; in Bash they silently leave a literal `@` in the subject line.
 
-## Execution directory
-
-- `execution_dir`: where Claude subprocess runs (config discovery)
-- `project_dir`: where source code lives (git ops and file modifications)
-
-Never conflate the two. `execution_dir` defaults to `project_dir`, so Claude discovers the driven project's `CLAUDE.md` and settings. `--execution-dir` still overrides it but is deprecated (removal tracked in #1132).
-
 ## Shared Libraries
 
 This repo uses `mcp-coder-utils` for subprocess execution, logging, and redaction. Three shim modules in `src/mcp_coder/utils/` re-export the upstream API:

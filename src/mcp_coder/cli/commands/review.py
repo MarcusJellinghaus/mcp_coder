@@ -2,7 +2,7 @@
 
 These are thin CLI entry points over :func:`run_review_workflow`. Both verbs
 share one ``_execute_review`` helper that resolves arguments exactly like
-``execute_implement`` (project/execution dirs, LLM method, MCP config, settings,
+``execute_implement`` (project directory, LLM method, MCP config, settings,
 issue-interaction flags) and then dispatches to the shared review engine with
 the appropriate :class:`ReviewConfig` instance. No ``issue_number`` positional
 is accepted; the issue is derived from the current branch inside the workflow.
@@ -23,8 +23,8 @@ from ...workflows.utils import resolve_project_dir
 from ..utils import (
     log_command_startup,
     parse_llm_method_from_args,
+    resolve_claude_cwd,
     resolve_claude_settings_path,
-    resolve_execution_dir,
     resolve_issue_interaction_flags,
     resolve_llm_method,
     resolve_mcp_config_path,
@@ -37,7 +37,7 @@ def execute_review_plan(args: argparse.Namespace) -> int:
     """Execute the ``review-plan`` workflow command.
 
     Args:
-        args: Parsed command line arguments (project/execution dirs, LLM
+        args: Parsed command line arguments (project directory, LLM
             method, MCP config, settings, and issue-interaction flags).
 
     Returns:
@@ -50,7 +50,7 @@ def execute_review_implementation(args: argparse.Namespace) -> int:
     """Execute the ``review-implementation`` workflow command.
 
     Args:
-        args: Parsed command line arguments (project/execution dirs, LLM
+        args: Parsed command line arguments (project directory, LLM
             method, MCP config, settings, and issue-interaction flags).
 
     Returns:
@@ -62,9 +62,9 @@ def execute_review_implementation(args: argparse.Namespace) -> int:
 def _execute_review(args: argparse.Namespace, config: ReviewConfig) -> int:
     """Resolve args and run the shared review workflow for ``config``.
 
-    Mirrors ``execute_implement``: resolves the project and execution
-    directories, LLM method, MCP config, settings file, and issue-interaction
-    flags, then delegates to :func:`run_review_workflow`.
+    Mirrors ``execute_implement``: resolves the project directory, LLM method,
+    MCP config, settings file, and issue-interaction flags, then delegates to
+    :func:`run_review_workflow`.
 
     Args:
         args: Parsed command line arguments.
@@ -80,13 +80,10 @@ def _execute_review(args: argparse.Namespace, config: ReviewConfig) -> int:
         log_command_startup(config.name, project_dir)
         enable_crash_logging(project_dir, config.name)
 
-        # Resolve execution directory
-        execution_dir = resolve_execution_dir(
-            args.execution_dir, project_dir=project_dir
-        )
+        # Resolve the working directory for the Claude subprocess
+        project_dir = resolve_claude_cwd(project_dir)
 
         logger.debug(f"Project directory: {project_dir}")
-        logger.debug(f"Execution directory: {execution_dir}")
 
         # Parse LLM method using shared utility
         llm_method, _ = resolve_llm_method(args.llm_method)
@@ -112,14 +109,12 @@ def _execute_review(args: argparse.Namespace, config: ReviewConfig) -> int:
             provider,
             mcp_config,
             settings_file,
-            execution_dir,
             update_issue_labels,
             post_issue_comments,
         )
 
     except ValueError as e:
-        # Handle invalid execution_dir
-        logger.error(f"Invalid execution directory: {e}")
+        logger.error(f"Invalid project directory: {e}")
         return 1
 
     except KeyboardInterrupt:

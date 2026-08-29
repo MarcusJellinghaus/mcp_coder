@@ -63,7 +63,6 @@ def _call_prompt_in_session(
             env_vars={"KEY": "value"},
             mcp_config="mcp.json",
             settings_file=None,
-            execution_dir=None,
             step_name="conflict_1",
         )
     return result, mock_prompt, mock_store

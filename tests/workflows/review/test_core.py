@@ -192,7 +192,6 @@ def test_tasks_then_dismiss_resumes_reviewer(
         tmp_path,
         mcp_config="cfg.json",
         settings_file="s.json",
-        execution_dir=tmp_path,
     )
 
     assert result == 0
@@ -206,7 +205,6 @@ def test_tasks_then_dismiss_resumes_reviewer(
         tmp_path,
         "claude",
         mcp_config="cfg.json",
-        execution_dir=str(tmp_path),
         settings_file="s.json",
     )
     env.push_changes.assert_called_once()

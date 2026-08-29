@@ -10,6 +10,10 @@ import pytest
 from mcp_coder.llm.interface import LLMTimeoutError, prompt_llm, prompt_llm_stream
 from mcp_coder.utils.subprocess_runner import TimeoutExpired
 
+# prompt_llm normalises project_dir with Path(), so the expected cwd is the
+# normalised form of whatever the test passes in.
+PROJECT_DIR = str(Path("/test/project"))
+
 
 class TestPromptLLMRouting:
     """Test prompt_llm routing to providers."""
@@ -28,14 +32,16 @@ class TestPromptLLMRouting:
             "raw_response": {},
         }
 
-        result = prompt_llm("Test question", provider="claude", timeout=30)
+        result = prompt_llm(
+            "Test question", provider="claude", timeout=30, project_dir=PROJECT_DIR
+        )
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -59,14 +65,14 @@ class TestPromptLLMRouting:
             "raw_response": {},
         }
 
-        result = prompt_llm("Test question")
+        result = prompt_llm("Test question", project_dir=PROJECT_DIR)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -79,7 +85,7 @@ class TestPromptLLMRouting:
     def test_prompt_llm_unsupported_provider_gpt(self) -> None:
         """Test that prompt_llm raises ValueError for unsupported provider."""
         with pytest.raises(ValueError, match="Unsupported provider: gpt"):
-            prompt_llm("Test question", provider="gpt")
+            prompt_llm("Test question", provider="gpt", project_dir=PROJECT_DIR)
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_passes_through_exceptions(
@@ -89,7 +95,7 @@ class TestPromptLLMRouting:
         mock_ask_claude_code_cli.side_effect = RuntimeError("Claude error")
 
         with pytest.raises(RuntimeError, match="Claude error"):
-            prompt_llm("Test question", provider="claude")
+            prompt_llm("Test question", provider="claude", project_dir=PROJECT_DIR)
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_routes_custom_timeout(
@@ -105,14 +111,14 @@ class TestPromptLLMRouting:
             "raw_response": {},
         }
 
-        result = prompt_llm("Test question", timeout=60)
+        result = prompt_llm("Test question", timeout=60, project_dir=PROJECT_DIR)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=60,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -140,6 +146,7 @@ class TestPromptLLMRouting:
             "Test question",
             provider="claude",
             session_id="test-session-123",
+            project_dir=PROJECT_DIR,
         )
 
         mock_ask_claude_code_cli.assert_called_once_with(
@@ -147,7 +154,7 @@ class TestPromptLLMRouting:
             session_id="test-session-123",
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -171,14 +178,14 @@ class TestPromptLLMRouting:
             "raw_response": {},
         }
 
-        result = prompt_llm("Test question")
+        result = prompt_llm("Test question", project_dir=PROJECT_DIR)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -200,7 +207,9 @@ class TestPromptLLMRouting:
             "raw_response": {},
         }
 
-        response = prompt_llm("Test", session_id="some-session")
+        response = prompt_llm(
+            "Test", session_id="some-session", project_dir=PROJECT_DIR
+        )
 
         assert isinstance(response, dict)
         assert response["text"] == "Just the text"
@@ -224,6 +233,7 @@ class TestPromptLLMRouting:
             "Test question",
             provider="claude",
             env_vars=test_env_vars,
+            project_dir=PROJECT_DIR,
         )
 
         mock_ask_claude_code_cli.assert_called_once_with(
@@ -231,7 +241,7 @@ class TestPromptLLMRouting:
             session_id=None,
             timeout=30,
             env_vars=test_env_vars,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -249,7 +259,9 @@ class TestPromptLLMRouting:
         mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
         with pytest.raises(LLMTimeoutError):
-            prompt_llm("Test question", provider="claude", timeout=30)
+            prompt_llm(
+                "Test question", provider="claude", timeout=30, project_dir=PROJECT_DIR
+            )
 
     @patch("mcp_coder.llm.providers.langchain.ask_langchain")
     def test_prompt_llm_asyncio_timeout_reraised_for_langchain(
@@ -259,7 +271,12 @@ class TestPromptLLMRouting:
         mock_ask_langchain.side_effect = asyncio.TimeoutError()
 
         with pytest.raises(LLMTimeoutError):
-            prompt_llm("Test question", provider="langchain", timeout=30)
+            prompt_llm(
+                "Test question",
+                provider="langchain",
+                timeout=30,
+                project_dir=PROJECT_DIR,
+            )
 
 
 class TestLLMTimeoutErrorNormalization:
@@ -273,7 +290,9 @@ class TestLLMTimeoutErrorNormalization:
         mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
         with pytest.raises(LLMTimeoutError) as exc_info:
-            prompt_llm("Test question", provider="claude", timeout=30)
+            prompt_llm(
+                "Test question", provider="claude", timeout=30, project_dir=PROJECT_DIR
+            )
 
         # LLMTimeoutError is also a TimeoutError
         assert isinstance(exc_info.value, TimeoutError)
@@ -289,7 +308,12 @@ class TestLLMTimeoutErrorNormalization:
         mock_ask_langchain.side_effect = asyncio.TimeoutError()
 
         with pytest.raises(LLMTimeoutError) as exc_info:
-            prompt_llm("Test question", provider="langchain", timeout=60)
+            prompt_llm(
+                "Test question",
+                provider="langchain",
+                timeout=60,
+                project_dir=PROJECT_DIR,
+            )
 
         # LLMTimeoutError is also a TimeoutError
         assert isinstance(exc_info.value, TimeoutError)
@@ -298,16 +322,26 @@ class TestLLMTimeoutErrorNormalization:
         assert isinstance(exc_info.value.__cause__, asyncio.TimeoutError)
 
 
-class TestPromptLLMExecutionDirRouting:
-    """Tests for execution_dir parameter routing in prompt_llm."""
+class TestPromptLLMProjectDirRouting:
+    """Tests for project_dir parameter routing in prompt_llm."""
+
+    def test_project_dir_is_required(self) -> None:
+        """prompt_llm without project_dir raises TypeError (no silent cwd fallback)."""
+        with pytest.raises(TypeError):
+            prompt_llm("hi")  # type: ignore[call-arg]  # pylint: disable=missing-kwoa
+
+    def test_prompt_llm_stream_project_dir_is_required(self) -> None:
+        """prompt_llm_stream without project_dir raises TypeError."""
+        with pytest.raises(TypeError):
+            list(prompt_llm_stream("hi"))  # type: ignore[call-arg]  # pylint: disable=missing-kwoa
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_execution_dir_passed_to_provider(
+    def test_project_dir_passed_to_provider(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
-        """execution_dir should be passed as cwd to provider."""
+        """project_dir should be passed as cwd to provider."""
         mock_ask_claude_code_cli.return_value = {
-            "text": "Response with execution_dir",
+            "text": "Response with project_dir",
             "session_id": "test-session",
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
@@ -317,7 +351,7 @@ class TestPromptLLMExecutionDirRouting:
 
         result = prompt_llm(
             "Test question",
-            execution_dir="/custom/execution/dir",
+            project_dir=str(Path("/custom/project/dir")),
         )
 
         mock_ask_claude_code_cli.assert_called_once_with(
@@ -325,7 +359,7 @@ class TestPromptLLMExecutionDirRouting:
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd="/custom/execution/dir",
+            cwd=str(Path("/custom/project/dir")),
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -333,44 +367,13 @@ class TestPromptLLMExecutionDirRouting:
             append_system_prompt=None,
             system_prompt_replace=None,
         )
-        assert result["text"] == "Response with execution_dir"
+        assert result["text"] == "Response with project_dir"
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_execution_dir_none_uses_default(
+    def test_project_dir_accepts_path_object(
         self, mock_ask_claude_code_cli: MagicMock
     ) -> None:
-        """execution_dir=None should let subprocess use CWD."""
-        mock_ask_claude_code_cli.return_value = {
-            "text": "Response with default dir",
-            "session_id": "test-session",
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "provider": "claude",
-            "raw_response": {},
-        }
-
-        result = prompt_llm("Test question", execution_dir=None)
-
-        mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question",
-            session_id=None,
-            timeout=30,
-            env_vars=None,
-            cwd=None,
-            mcp_config=None,
-            settings_file=None,
-            branch_name=None,
-            logs_dir=None,
-            append_system_prompt=None,
-            system_prompt_replace=None,
-        )
-        assert result["text"] == "Response with default dir"
-
-    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_execution_dir_with_absolute_path(
-        self, mock_ask_claude_code_cli: MagicMock
-    ) -> None:
-        """execution_dir with absolute path should be passed through."""
+        """project_dir accepts a Path and is normalised to a str cwd."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Response with absolute path",
             "session_id": "test-session",
@@ -382,7 +385,7 @@ class TestPromptLLMExecutionDirRouting:
 
         result = prompt_llm(
             "Test question",
-            execution_dir="/home/user/workspace",
+            project_dir=Path("/home/user/workspace"),
         )
 
         mock_ask_claude_code_cli.assert_called_once_with(
@@ -390,7 +393,7 @@ class TestPromptLLMExecutionDirRouting:
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd="/home/user/workspace",
+            cwd=str(Path("/home/user/workspace")),
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -416,14 +419,19 @@ class TestIntegration:
             "raw_response": {},
         }
 
-        result = prompt_llm("Integration test question", provider="claude", timeout=25)
+        result = prompt_llm(
+            "Integration test question",
+            provider="claude",
+            timeout=25,
+            project_dir=PROJECT_DIR,
+        )
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Integration test question",
             session_id=None,
             timeout=25,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -437,7 +445,7 @@ class TestIntegration:
         """Test that parameter validation errors propagate correctly."""
         # Test invalid provider
         with pytest.raises(ValueError, match="Unsupported provider"):
-            prompt_llm("Test", provider="invalid")
+            prompt_llm("Test", provider="invalid", project_dir=PROJECT_DIR)
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_full_routing_chain_with_session_id(
@@ -458,6 +466,7 @@ class TestIntegration:
             provider="claude",
             session_id="integration-session-789",
             timeout=25,
+            project_dir=PROJECT_DIR,
         )
 
         mock_ask_claude_code_cli.assert_called_once_with(
@@ -465,7 +474,7 @@ class TestIntegration:
             session_id="integration-session-789",
             timeout=25,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -499,14 +508,14 @@ class TestPromptLLM:
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Test question")
+        result = prompt_llm("Test question", project_dir=PROJECT_DIR)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -535,14 +544,16 @@ class TestPromptLLM:
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Follow up", session_id="existing-session")
+        result = prompt_llm(
+            "Follow up", session_id="existing-session", project_dir=PROJECT_DIR
+        )
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Follow up",
             session_id="existing-session",
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -571,7 +582,7 @@ class TestPromptLLM:
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Test")
+        result = prompt_llm("Test", project_dir=PROJECT_DIR)
 
         assert result["raw_response"]["duration_ms"] == 2801
         assert result["raw_response"]["cost_usd"] == 0.058
@@ -579,27 +590,27 @@ class TestPromptLLM:
     def test_prompt_llm_unsupported_provider(self) -> None:
         """Test error for unsupported provider."""
         with pytest.raises(ValueError, match="Unsupported provider"):
-            prompt_llm("Test", provider="gpt")
+            prompt_llm("Test", provider="gpt", project_dir=PROJECT_DIR)
 
     def test_prompt_llm_empty_question(self) -> None:
         """Test validation for empty question."""
         with pytest.raises(ValueError, match="cannot be empty"):
-            prompt_llm("")
+            prompt_llm("", project_dir=PROJECT_DIR)
 
     def test_prompt_llm_whitespace_only_question(self) -> None:
         """Test validation for whitespace-only question."""
         with pytest.raises(ValueError, match="cannot be empty"):
-            prompt_llm("   ")
+            prompt_llm("   ", project_dir=PROJECT_DIR)
 
     def test_prompt_llm_invalid_timeout(self) -> None:
         """Test validation for invalid timeout."""
         with pytest.raises(ValueError, match="positive number"):
-            prompt_llm("Test", timeout=0)
+            prompt_llm("Test", timeout=0, project_dir=PROJECT_DIR)
 
     def test_prompt_llm_negative_timeout(self) -> None:
         """Test validation for negative timeout."""
         with pytest.raises(ValueError, match="positive number"):
-            prompt_llm("Test", timeout=-5)
+            prompt_llm("Test", timeout=-5, project_dir=PROJECT_DIR)
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
     def test_prompt_llm_custom_timeout(
@@ -616,14 +627,14 @@ class TestPromptLLM:
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Test", timeout=60)
+        result = prompt_llm("Test", timeout=60, project_dir=PROJECT_DIR)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test",
             session_id=None,
             timeout=60,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -648,14 +659,14 @@ class TestPromptLLM:
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Test question")
+        result = prompt_llm("Test question", project_dir=PROJECT_DIR)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -681,14 +692,16 @@ class TestPromptLLM:
         }
         mock_ask_claude_code_cli.return_value = mock_response
 
-        result = prompt_llm("Test question", env_vars=test_env_vars)
+        result = prompt_llm(
+            "Test question", env_vars=test_env_vars, project_dir=PROJECT_DIR
+        )
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=test_env_vars,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -706,7 +719,9 @@ class TestPromptLLM:
         mock_ask_claude_code_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
         with pytest.raises(LLMTimeoutError):
-            prompt_llm("Test question", provider="claude", timeout=30)
+            prompt_llm(
+                "Test question", provider="claude", timeout=30, project_dir=PROJECT_DIR
+            )
 
     @patch("mcp_coder.llm.providers.langchain.ask_langchain")
     def test_prompt_llm_asyncio_timeout_logged_and_reraised(
@@ -716,19 +731,24 @@ class TestPromptLLM:
         mock_ask_langchain.side_effect = asyncio.TimeoutError()
 
         with pytest.raises(LLMTimeoutError):
-            prompt_llm("Test question", provider="langchain", timeout=30)
+            prompt_llm(
+                "Test question",
+                provider="langchain",
+                timeout=30,
+                project_dir=PROJECT_DIR,
+            )
 
 
-class TestPromptLLMExecutionDir:
-    """Tests for execution_dir parameter in prompt_llm."""
+class TestPromptLLMProjectDir:
+    """Tests for project_dir parameter in prompt_llm."""
 
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_execution_dir_with_cli(self, mock_ask_claude_code_cli: MagicMock) -> None:
-        """execution_dir should be passed to CLI provider."""
+    def test_project_dir_with_cli(self, mock_ask_claude_code_cli: MagicMock) -> None:
+        """project_dir should be passed to CLI provider."""
         mock_response = {
             "version": "1.0",
             "timestamp": "2025-10-01T10:30:00",
-            "text": "CLI response with execution_dir",
+            "text": "CLI response with project_dir",
             "session_id": "cli-exec-123",
             "provider": "claude",
             "raw_response": {},
@@ -737,7 +757,7 @@ class TestPromptLLMExecutionDir:
 
         result = prompt_llm(
             "Test question",
-            execution_dir="/custom/execution/path",
+            project_dir=str(Path("/custom/project/path")),
         )
 
         mock_ask_claude_code_cli.assert_called_once_with(
@@ -745,7 +765,7 @@ class TestPromptLLMExecutionDir:
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd="/custom/execution/path",
+            cwd=str(Path("/custom/project/path")),
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -753,39 +773,7 @@ class TestPromptLLMExecutionDir:
             append_system_prompt=None,
             system_prompt_replace=None,
         )
-        assert result["text"] == "CLI response with execution_dir"
-
-    @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_execution_dir_none_defaults_to_cwd(
-        self, mock_ask_claude_code_cli: MagicMock
-    ) -> None:
-        """execution_dir=None should pass None as cwd (subprocess uses CWD)."""
-        mock_response = {
-            "version": "1.0",
-            "timestamp": "2025-10-01T10:30:00",
-            "text": "Response with default execution dir",
-            "session_id": "default-exec-123",
-            "provider": "claude",
-            "raw_response": {},
-        }
-        mock_ask_claude_code_cli.return_value = mock_response
-
-        result = prompt_llm("Test question", execution_dir=None)
-
-        mock_ask_claude_code_cli.assert_called_once_with(
-            "Test question",
-            session_id=None,
-            timeout=30,
-            env_vars=None,
-            cwd=None,
-            mcp_config=None,
-            settings_file=None,
-            branch_name=None,
-            logs_dir=None,
-            append_system_prompt=None,
-            system_prompt_replace=None,
-        )
-        assert result["text"] == "Response with default execution dir"
+        assert result["text"] == "CLI response with project_dir"
 
 
 class TestPromptLLMLogsDirDerivation:
@@ -806,14 +794,16 @@ class TestPromptLLMLogsDirDerivation:
         }
         test_env_vars = {"MCP_CODER_PROJECT_DIR": "/home/user/mcp-coder"}
 
-        result = prompt_llm("Test question", env_vars=test_env_vars)
+        result = prompt_llm(
+            "Test question", env_vars=test_env_vars, project_dir=PROJECT_DIR
+        )
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=test_env_vars,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -838,14 +828,16 @@ class TestPromptLLMLogsDirDerivation:
         }
         test_env_vars = {"OTHER_VAR": "some_value"}
 
-        result = prompt_llm("Test question", env_vars=test_env_vars)
+        result = prompt_llm(
+            "Test question", env_vars=test_env_vars, project_dir=PROJECT_DIR
+        )
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=test_env_vars,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -869,14 +861,14 @@ class TestPromptLLMLogsDirDerivation:
             "raw_response": {},
         }
 
-        result = prompt_llm("Test question", env_vars=None)
+        result = prompt_llm("Test question", env_vars=None, project_dir=PROJECT_DIR)
 
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -900,14 +892,18 @@ class TestPromptLLMStreamLogsDirDerivation:
         mock_stream.return_value = iter([{"type": "done", "usage": {}}])
         test_env_vars = {"MCP_CODER_PROJECT_DIR": "/home/user/mcp-coder"}
 
-        list(prompt_llm_stream("Test question", env_vars=test_env_vars))
+        list(
+            prompt_llm_stream(
+                "Test question", env_vars=test_env_vars, project_dir=PROJECT_DIR
+            )
+        )
 
         mock_stream.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=test_env_vars,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -926,14 +922,18 @@ class TestPromptLLMStreamLogsDirDerivation:
         mock_stream.return_value = iter([{"type": "done", "usage": {}}])
         test_env_vars = {"OTHER_VAR": "some_value"}
 
-        list(prompt_llm_stream("Test question", env_vars=test_env_vars))
+        list(
+            prompt_llm_stream(
+                "Test question", env_vars=test_env_vars, project_dir=PROJECT_DIR
+            )
+        )
 
         mock_stream.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=test_env_vars,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -949,14 +949,14 @@ class TestPromptLLMStreamLogsDirDerivation:
         """When env_vars is None, logs_dir=None (backward compat)."""
         mock_stream.return_value = iter([{"type": "done", "usage": {}}])
 
-        list(prompt_llm_stream("Test question", env_vars=None))
+        list(prompt_llm_stream("Test question", env_vars=None, project_dir=PROJECT_DIR))
 
         mock_stream.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -1004,7 +1004,7 @@ class TestPromptLlmLangchainRouting:
         ) as mock_ask:
             from mcp_coder.llm.interface import prompt_llm
 
-            result = prompt_llm("Hello", provider="langchain")
+            result = prompt_llm("Hello", provider="langchain", project_dir=PROJECT_DIR)
 
         mock_ask.assert_called_once()
         assert result["provider"] == "langchain"
@@ -1024,6 +1024,7 @@ class TestPromptLlmLangchainRouting:
                 provider="langchain",
                 session_id="my-sid",
                 timeout=60,
+                project_dir=PROJECT_DIR,
             )
 
         call_kwargs = mock_ask.call_args
@@ -1041,7 +1042,7 @@ class TestPromptLlmLangchainRouting:
         from mcp_coder.llm.interface import prompt_llm
 
         with pytest.raises(ValueError) as exc_info:
-            prompt_llm("Hello", provider="unsupported_xyz")
+            prompt_llm("Hello", provider="unsupported_xyz", project_dir=PROJECT_DIR)
         assert "langchain" in str(exc_info.value)
 
     def test_unsupported_provider_error_mentions_copilot(self) -> None:
@@ -1049,7 +1050,7 @@ class TestPromptLlmLangchainRouting:
         from mcp_coder.llm.interface import prompt_llm
 
         with pytest.raises(ValueError) as exc_info:
-            prompt_llm("Hello", provider="unsupported_xyz")
+            prompt_llm("Hello", provider="unsupported_xyz", project_dir=PROJECT_DIR)
         assert "copilot" in str(exc_info.value)
 
     def test_explicit_provider_beats_env_var(
@@ -1070,7 +1071,7 @@ class TestPromptLlmLangchainRouting:
         ):
             from mcp_coder.llm.interface import prompt_llm
 
-            result = prompt_llm("Hello", provider="claude")
+            result = prompt_llm("Hello", provider="claude", project_dir=PROJECT_DIR)
 
         mock_langchain.assert_not_called()
         mock_claude.assert_called_once()
@@ -1088,7 +1089,7 @@ class TestPromptLlmLangchainRouting:
         ) as mock_langchain:
             from mcp_coder.llm.interface import prompt_llm
 
-            result = prompt_llm("Hello")
+            result = prompt_llm("Hello", project_dir=PROJECT_DIR)
 
         mock_langchain.assert_called_once()
         assert result["provider"] == "langchain"
@@ -1104,7 +1105,7 @@ class TestPromptLlmLangchainRouting:
         ) as mock_claude:
             from mcp_coder.llm.interface import prompt_llm
 
-            result = prompt_llm("Hello")
+            result = prompt_llm("Hello", project_dir=PROJECT_DIR)
 
         mock_claude.assert_called_once()
         assert result["provider"] == "claude"
@@ -1117,7 +1118,7 @@ class TestPromptLlmLangchainRouting:
         from mcp_coder.llm.interface import prompt_llm
 
         with pytest.raises(ValueError, match="Unsupported provider: unsupported_xyz"):
-            prompt_llm("Hello", provider="unsupported_xyz")
+            prompt_llm("Hello", provider="unsupported_xyz", project_dir=PROJECT_DIR)
 
     def test_passes_mcp_config_to_langchain(self) -> None:
         """mcp_config parameter is forwarded to ask_langchain()."""
@@ -1132,32 +1133,13 @@ class TestPromptLlmLangchainRouting:
                 "Hello",
                 provider="langchain",
                 mcp_config="/path/to/mcp.json",
+                project_dir=PROJECT_DIR,
             )
 
         call_kwargs = mock_ask.call_args
         assert call_kwargs is not None
         _, kwargs = call_kwargs
         assert kwargs.get("mcp_config") == "/path/to/mcp.json"
-
-    def test_passes_execution_dir_to_langchain(self) -> None:
-        """execution_dir parameter is forwarded to ask_langchain()."""
-        expected = self._make_langchain_response()
-        with patch(
-            "mcp_coder.llm.providers.langchain.ask_langchain",
-            return_value=expected,
-        ) as mock_ask:
-            from mcp_coder.llm.interface import prompt_llm
-
-            prompt_llm(
-                "Hello",
-                provider="langchain",
-                execution_dir="/custom/dir",
-            )
-
-        call_kwargs = mock_ask.call_args
-        assert call_kwargs is not None
-        _, kwargs = call_kwargs
-        assert kwargs.get("execution_dir") == "/custom/dir"
 
     def test_passes_env_vars_to_langchain(self) -> None:
         """env_vars parameter is forwarded to ask_langchain()."""
@@ -1173,6 +1155,7 @@ class TestPromptLlmLangchainRouting:
                 "Hello",
                 provider="langchain",
                 env_vars=test_env,
+                project_dir=PROJECT_DIR,
             )
 
         call_kwargs = mock_ask.call_args
@@ -1189,13 +1172,12 @@ class TestPromptLlmLangchainRouting:
         ) as mock_ask:
             from mcp_coder.llm.interface import prompt_llm
 
-            result = prompt_llm("Hello", provider="langchain")
+            result = prompt_llm("Hello", provider="langchain", project_dir=PROJECT_DIR)
 
         call_kwargs = mock_ask.call_args
         assert call_kwargs is not None
         _, kwargs = call_kwargs
         assert kwargs.get("mcp_config") is None
-        assert kwargs.get("execution_dir") is None
         assert kwargs.get("env_vars") is None
         assert result["text"] == "langchain reply"
 
@@ -1208,7 +1190,7 @@ class TestPromptLlmLangchainRouting:
         ):
             from mcp_coder.llm.interface import prompt_llm
 
-            result = prompt_llm("Hello", provider="langchain")
+            result = prompt_llm("Hello", provider="langchain", project_dir=PROJECT_DIR)
         assert result["text"] == "langchain reply"
         assert result["provider"] == "langchain"
 
@@ -1238,7 +1220,7 @@ class TestMlflowConversationIntegration:
             "hello",
             provider="claude",
             session_id="s1",
-            execution_dir="/work",
+            project_dir="/work",
             branch_name="main",
         )
 
@@ -1246,7 +1228,7 @@ class TestMlflowConversationIntegration:
             "hello",
             "claude",
             "s1",
-            {"branch_name": "main", "working_directory": "/work"},
+            {"branch_name": "main", "working_directory": str(Path("/work"))},
         )
         assert result["text"] == "reply"
         assert mock_ctx["response_data"] == mock_cli.return_value
@@ -1269,13 +1251,15 @@ class TestMlflowConversationIntegration:
             "raw_response": {},
         }
 
-        result = prompt_llm("hello", provider="langchain", session_id="lc-s1")
+        result = prompt_llm(
+            "hello", provider="langchain", session_id="lc-s1", project_dir=PROJECT_DIR
+        )
 
         mock_mlflow_cm.assert_called_once_with(
             "hello",
             "langchain",
             "lc-s1",
-            {"branch_name": None, "working_directory": None},
+            {"branch_name": None, "working_directory": PROJECT_DIR},
         )
         assert result["text"] == "lc reply"
         assert mock_ctx["response_data"] == mock_langchain.return_value
@@ -1292,7 +1276,7 @@ class TestMlflowConversationIntegration:
         mock_cli.side_effect = TimeoutExpired(cmd="claude", timeout=30)
 
         with pytest.raises(LLMTimeoutError):
-            prompt_llm("hello", provider="claude", timeout=30)
+            prompt_llm("hello", provider="claude", timeout=30, project_dir=PROJECT_DIR)
 
         # Context manager __exit__ was called (exception propagated through it)
         mock_mlflow_cm.return_value.__exit__.assert_called_once()
@@ -1305,7 +1289,7 @@ class TestMlflowConversationIntegration:
     ) -> None:
         """ValueError for unsupported provider is raised before context manager."""
         with pytest.raises(ValueError, match="Unsupported provider"):
-            prompt_llm("hello", provider="gpt")
+            prompt_llm("hello", provider="gpt", project_dir=PROJECT_DIR)
 
         mock_mlflow_cm.assert_not_called()
 
@@ -1330,20 +1314,23 @@ class TestMlflowConversationIntegration:
         prompt_llm(
             "q",
             provider="claude",
-            execution_dir="/my/dir",
+            project_dir="/my/dir",
             branch_name="feat-x",
         )
 
         _, args, _ = mock_mlflow_cm.mock_calls[0]
         metadata = args[3]
-        assert metadata == {"branch_name": "feat-x", "working_directory": "/my/dir"}
+        assert metadata == {
+            "branch_name": "feat-x",
+            "working_directory": str(Path("/my/dir")),
+        }
 
     @patch("mcp_coder.llm.interface.mlflow_conversation")
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_metadata_defaults_to_none_values(
+    def test_metadata_branch_name_defaults_to_none(
         self, mock_cli: MagicMock, mock_mlflow_cm: MagicMock
     ) -> None:
-        """When branch_name and execution_dir not provided, metadata has None values."""
+        """When branch_name is not provided it is None; working_directory is project_dir."""
         mock_ctx: dict[str, Any] = {"response_data": None, "error": None}
         mock_mlflow_cm.return_value.__enter__ = MagicMock(return_value=mock_ctx)
         mock_mlflow_cm.return_value.__exit__ = MagicMock(return_value=False)
@@ -1356,11 +1343,12 @@ class TestMlflowConversationIntegration:
             "raw_response": {},
         }
 
-        prompt_llm("q")
+        prompt_llm("q", project_dir=PROJECT_DIR)
 
         _, args, _ = mock_mlflow_cm.mock_calls[0]
         metadata = args[3]
-        assert metadata == {"branch_name": None, "working_directory": None}
+        assert metadata["branch_name"] is None
+        assert metadata["working_directory"] == PROJECT_DIR
 
 
 class TestPromptLlmStream:
@@ -1369,27 +1357,27 @@ class TestPromptLlmStream:
     def test_prompt_llm_stream_validates_empty_question(self) -> None:
         """prompt_llm_stream raises ValueError for empty question."""
         with pytest.raises(ValueError, match="cannot be empty"):
-            list(prompt_llm_stream(""))
+            list(prompt_llm_stream("", project_dir=PROJECT_DIR))
 
     def test_prompt_llm_stream_validates_whitespace_question(self) -> None:
         """prompt_llm_stream raises ValueError for whitespace-only question."""
         with pytest.raises(ValueError, match="cannot be empty"):
-            list(prompt_llm_stream("   "))
+            list(prompt_llm_stream("   ", project_dir=PROJECT_DIR))
 
     def test_prompt_llm_stream_validates_timeout_zero(self) -> None:
         """prompt_llm_stream raises ValueError for timeout <= 0."""
         with pytest.raises(ValueError, match="positive number"):
-            list(prompt_llm_stream("Test", timeout=0))
+            list(prompt_llm_stream("Test", timeout=0, project_dir=PROJECT_DIR))
 
     def test_prompt_llm_stream_validates_timeout_negative(self) -> None:
         """prompt_llm_stream raises ValueError for negative timeout."""
         with pytest.raises(ValueError, match="positive number"):
-            list(prompt_llm_stream("Test", timeout=-5))
+            list(prompt_llm_stream("Test", timeout=-5, project_dir=PROJECT_DIR))
 
     def test_prompt_llm_stream_validates_provider(self) -> None:
         """prompt_llm_stream raises ValueError for unsupported provider."""
         with pytest.raises(ValueError, match="Unsupported provider"):
-            list(prompt_llm_stream("Test", provider="gpt"))
+            list(prompt_llm_stream("Test", provider="gpt", project_dir=PROJECT_DIR))
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
@@ -1400,14 +1388,16 @@ class TestPromptLlmStream:
             [{"type": "text_delta", "text": "Hi"}, {"type": "done", "usage": {}}]
         )
 
-        events = list(prompt_llm_stream("Hello", provider="claude"))
+        events = list(
+            prompt_llm_stream("Hello", provider="claude", project_dir=PROJECT_DIR)
+        )
 
         mock_stream.assert_called_once_with(
             "Hello",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -1427,14 +1417,15 @@ class TestPromptLlmStream:
             [{"type": "text_delta", "text": "Hi"}, {"type": "done", "usage": {}}]
         )
 
-        events = list(prompt_llm_stream("Hello", provider="langchain"))
+        events = list(
+            prompt_llm_stream("Hello", provider="langchain", project_dir=PROJECT_DIR)
+        )
 
         mock_stream.assert_called_once_with(
             "Hello",
             session_id=None,
             timeout=30,
             mcp_config=None,
-            execution_dir=None,
             env_vars=None,
             tools=None,
             system_prompt=None,
@@ -1458,7 +1449,9 @@ class TestPromptLlmStream:
                 return_value=iter([{"type": "done", "usage": {}}]),
             ) as mock_claude,
         ):
-            events = list(prompt_llm_stream("Hello", provider="claude"))
+            events = list(
+                prompt_llm_stream("Hello", provider="claude", project_dir=PROJECT_DIR)
+            )
 
         mock_langchain.assert_not_called()
         mock_claude.assert_called_once()
@@ -1473,7 +1466,7 @@ class TestPromptLlmStream:
             "mcp_coder.llm.providers.langchain.ask_langchain_stream",
             return_value=iter([{"type": "done", "usage": {}}]),
         ) as mock_langchain:
-            events = list(prompt_llm_stream("Hello"))
+            events = list(prompt_llm_stream("Hello", project_dir=PROJECT_DIR))
 
         mock_langchain.assert_called_once()
         assert len(events) == 1
@@ -1488,7 +1481,7 @@ class TestPromptLlmStream:
             "ask_claude_code_cli_stream",
             return_value=iter([{"type": "done", "usage": {}}]),
         ) as mock_claude:
-            events = list(prompt_llm_stream("Hello"))
+            events = list(prompt_llm_stream("Hello", project_dir=PROJECT_DIR))
 
         mock_claude.assert_called_once()
         assert len(events) == 1
@@ -1499,7 +1492,11 @@ class TestPromptLlmStream:
         """An explicit unsupported provider raises even with a valid env var set."""
         monkeypatch.setenv("MCP_CODER_LLM_PROVIDER", "langchain")
         with pytest.raises(ValueError, match="Unsupported provider: unsupported_xyz"):
-            list(prompt_llm_stream("Hello", provider="unsupported_xyz"))
+            list(
+                prompt_llm_stream(
+                    "Hello", provider="unsupported_xyz", project_dir=PROJECT_DIR
+                )
+            )
 
     @patch(
         "mcp_coder.llm.providers.claude.claude_code_cli_streaming.ask_claude_code_cli_stream"
@@ -1515,7 +1512,7 @@ class TestPromptLlmStream:
                 session_id="sid",
                 timeout=60,
                 env_vars={"K": "V"},
-                execution_dir="/work",
+                project_dir="/work",
                 mcp_config="/mcp.json",
                 branch_name="main",
             )
@@ -1526,7 +1523,7 @@ class TestPromptLlmStream:
             session_id="sid",
             timeout=60,
             env_vars={"K": "V"},
-            cwd="/work",
+            cwd=str(Path("/work")),
             mcp_config="/mcp.json",
             settings_file=None,
             branch_name="main",
@@ -1550,7 +1547,12 @@ class TestPromptLlmStreamToolsParam:
         fake_tools: list[Any] = [MagicMock(), MagicMock()]
 
         events = list(
-            prompt_llm_stream("Hello", provider="langchain", tools=fake_tools)
+            prompt_llm_stream(
+                "Hello",
+                provider="langchain",
+                tools=fake_tools,
+                project_dir=PROJECT_DIR,
+            )
         )
 
         mock_stream.assert_called_once_with(
@@ -1558,7 +1560,6 @@ class TestPromptLlmStreamToolsParam:
             session_id=None,
             timeout=30,
             mcp_config=None,
-            execution_dir=None,
             env_vars=None,
             tools=fake_tools,
             system_prompt=None,
@@ -1573,14 +1574,13 @@ class TestPromptLlmStreamToolsParam:
         """prompt_llm_stream passes tools=None when no tools argument given."""
         mock_stream.return_value = iter([{"type": "done", "usage": {}}])
 
-        list(prompt_llm_stream("Hello", provider="langchain"))
+        list(prompt_llm_stream("Hello", provider="langchain", project_dir=PROJECT_DIR))
 
         mock_stream.assert_called_once_with(
             "Hello",
             session_id=None,
             timeout=30,
             mcp_config=None,
-            execution_dir=None,
             env_vars=None,
             tools=None,
             system_prompt=None,
@@ -1599,7 +1599,12 @@ class TestPromptLlmStreamToolsParam:
         )
 
         events = list(
-            prompt_llm_stream("Hello", provider="claude", tools=[MagicMock()])
+            prompt_llm_stream(
+                "Hello",
+                provider="claude",
+                tools=[MagicMock()],
+                project_dir=PROJECT_DIR,
+            )
         )
 
         # Claude provider call should NOT include tools kwarg
@@ -1608,7 +1613,7 @@ class TestPromptLlmStreamToolsParam:
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -1619,14 +1624,17 @@ class TestPromptLlmStreamToolsParam:
         assert len(events) == 2
 
 
-class TestPromptLlmProjectDir:
-    """Tests for project_dir parameter in prompt_llm and prompt_llm_stream."""
+class TestPromptLlmInjectPrompts:
+    """Tests for the inject_prompts switch in prompt_llm and prompt_llm_stream."""
 
+    @patch("mcp_coder.prompts.prompt_loader.load_prompts")
     @patch("mcp_coder.llm.interface.ask_claude_code_cli")
-    def test_prompt_llm_project_dir_none_no_prompts_loaded(
-        self, mock_ask_claude_code_cli: MagicMock
+    def test_prompt_llm_no_inject_prompts_loads_nothing(
+        self,
+        mock_ask_claude_code_cli: MagicMock,
+        mock_load_prompts: MagicMock,
     ) -> None:
-        """When project_dir is None, no prompts are loaded (backward compatible)."""
+        """With inject_prompts left at its default, no prompts are loaded."""
         mock_ask_claude_code_cli.return_value = {
             "text": "Response",
             "session_id": "test-session",
@@ -1636,14 +1644,15 @@ class TestPromptLlmProjectDir:
             "raw_response": {},
         }
 
-        prompt_llm("Test question", project_dir=None)
+        prompt_llm("Test question", project_dir=PROJECT_DIR)
 
+        mock_load_prompts.assert_not_called()
         mock_ask_claude_code_cli.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -1681,7 +1690,9 @@ class TestPromptLlmProjectDir:
             "raw_response": {},
         }
 
-        result = prompt_llm("Test question", project_dir="/my/project")
+        result = prompt_llm(
+            "Test question", project_dir="/my/project", inject_prompts=True
+        )
 
         mock_load_prompts.assert_called_once_with(Path("/my/project"))
         expected_combined = (
@@ -1693,7 +1704,7 @@ class TestPromptLlmProjectDir:
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=str(Path("/my/project")),
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -1730,7 +1741,12 @@ class TestPromptLlmProjectDir:
         )
 
         events = list(
-            prompt_llm_stream("Hello", provider="claude", project_dir="/my/project")
+            prompt_llm_stream(
+                "Hello",
+                provider="claude",
+                project_dir="/my/project",
+                inject_prompts=True,
+            )
         )
 
         mock_load_prompts.assert_called_once_with(Path("/my/project"))
@@ -1742,7 +1758,7 @@ class TestPromptLlmProjectDir:
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=str(Path("/my/project")),
             mcp_config=None,
             settings_file=None,
             branch_name=None,
@@ -1782,7 +1798,10 @@ class TestPromptLlmProjectDir:
         }
 
         result = prompt_llm(
-            "Test question", provider="langchain", project_dir="/my/project"
+            "Test question",
+            provider="langchain",
+            project_dir="/my/project",
+            inject_prompts=True,
         )
 
         mock_load_prompts.assert_called_once_with(Path("/my/project"))
@@ -1975,18 +1994,19 @@ class TestPromptLlmCopilotRouting:
             "raw_response": {},
         }
 
-        result = prompt_llm("Test question", provider="copilot", timeout=30)
+        result = prompt_llm(
+            "Test question", provider="copilot", timeout=30, project_dir=PROJECT_DIR
+        )
 
         mock_ask_copilot.assert_called_once_with(
             "Test question",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             logs_dir=None,
             branch_name=None,
             system_prompt=None,
-            execution_dir=None,
         )
         assert result["text"] == "Copilot response"
         assert result["provider"] == "copilot"
@@ -1998,18 +2018,19 @@ class TestPromptLlmCopilotRouting:
             [{"type": "text_delta", "text": "Hi"}, {"type": "done", "usage": {}}]
         )
 
-        events = list(prompt_llm_stream("Hello", provider="copilot"))
+        events = list(
+            prompt_llm_stream("Hello", provider="copilot", project_dir=PROJECT_DIR)
+        )
 
         mock_stream.assert_called_once_with(
             "Hello",
             session_id=None,
             timeout=30,
             env_vars=None,
-            cwd=None,
+            cwd=PROJECT_DIR,
             logs_dir=None,
             branch_name=None,
             system_prompt=None,
-            execution_dir=None,
         )
         assert len(events) == 2
         assert events[0]["type"] == "text_delta"
@@ -2051,6 +2072,7 @@ class TestCopilotSystemPromptHandling:
             "Test question",
             provider="copilot",
             project_dir="/my/project",
+            inject_prompts=True,
         )
 
         call_kwargs = mock_ask_copilot.call_args
@@ -2092,6 +2114,7 @@ class TestCopilotSystemPromptHandling:
             provider="copilot",
             session_id="existing-session",
             project_dir="/my/project",
+            inject_prompts=True,
         )
 
         call_kwargs = mock_ask_copilot.call_args
@@ -2132,6 +2155,7 @@ class TestCopilotSystemPromptHandling:
             "Test question",
             provider="copilot",
             project_dir="/my/project",
+            inject_prompts=True,
         )
 
         call_kwargs = mock_ask_copilot.call_args
@@ -2154,7 +2178,9 @@ class TestCopilotTimeoutHandling:
         mock_ask_copilot.side_effect = TimeoutExpired(cmd="copilot", timeout=30)
 
         with pytest.raises(LLMTimeoutError) as exc_info:
-            prompt_llm("Test question", provider="copilot", timeout=30)
+            prompt_llm(
+                "Test question", provider="copilot", timeout=30, project_dir=PROJECT_DIR
+            )
 
         assert isinstance(exc_info.value, TimeoutError)
         assert "30s" in str(exc_info.value)
@@ -2179,7 +2205,7 @@ class TestCopilotProviderValidation:
         }
 
         # Should not raise
-        result = prompt_llm("Test", provider="copilot")
+        result = prompt_llm("Test", provider="copilot", project_dir=PROJECT_DIR)
         assert result["text"] == "ok"
 
     @patch("mcp_coder.llm.providers.copilot.ask_copilot_cli_stream")
@@ -2190,7 +2216,9 @@ class TestCopilotProviderValidation:
         mock_stream.return_value = iter([{"type": "done", "usage": {}}])
 
         # Should not raise
-        events = list(prompt_llm_stream("Test", provider="copilot"))
+        events = list(
+            prompt_llm_stream("Test", provider="copilot", project_dir=PROJECT_DIR)
+        )
         assert len(events) == 1
 
 
@@ -2200,7 +2228,7 @@ class TestUnsupportedProviderListsAllProviders:
     def test_unsupported_provider_error_lists_all_providers(self) -> None:
         """Error message includes 'copilot', 'claude', 'langchain'."""
         with pytest.raises(ValueError) as exc_info:
-            prompt_llm("Test", provider="invalid")
+            prompt_llm("Test", provider="invalid", project_dir=PROJECT_DIR)
 
         error_msg = str(exc_info.value)
         assert "copilot" in error_msg
@@ -2210,7 +2238,7 @@ class TestUnsupportedProviderListsAllProviders:
     def test_unsupported_provider_stream_error_lists_all_providers(self) -> None:
         """Stream error message includes 'copilot', 'claude', 'langchain'."""
         with pytest.raises(ValueError) as exc_info:
-            list(prompt_llm_stream("Test", provider="invalid"))
+            list(prompt_llm_stream("Test", provider="invalid", project_dir=PROJECT_DIR))
 
         error_msg = str(exc_info.value)
         assert "copilot" in error_msg

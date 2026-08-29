@@ -350,7 +350,7 @@ class TestVerifyOrchestration:
     @patch(f"{_LC_VERIFY}.verify_langchain")
     @patch(f"{_VERIFY}.verify_claude")
     @patch(f"{_VERIFY}.resolve_llm_method")
-    def test_prompt_llm_receives_mcp_config_and_execution_dir(
+    def test_prompt_llm_receives_mcp_config_and_project_dir(
         self,
         mock_provider: MagicMock,
         mock_claude: MagicMock,
@@ -363,7 +363,7 @@ class TestVerifyOrchestration:
         mock_verify_config: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """prompt_llm is called with mcp_config and execution_dir kwargs."""
+        """prompt_llm is called with mcp_config, project_dir and inject_prompts."""
         mock_provider.return_value = ("langchain", "config.toml")
         mock_claude.return_value = _claude_ok()
         mock_lc.return_value = _langchain_ok()
@@ -387,7 +387,9 @@ class TestVerifyOrchestration:
         assert len(test_prompt_calls) == 1
         call_kwargs = test_prompt_calls[0][1]
         assert call_kwargs["mcp_config"] == "/fake/.mcp.json"
-        assert "execution_dir" in call_kwargs
+        assert Path(call_kwargs["project_dir"]) == tmp_path.resolve()
+        # The LLM check deliberately sends the merged system + project prompt.
+        assert call_kwargs["inject_prompts"] is True
 
     @patch(
         f"{_VERIFY}._run_mcp_edit_smoke_test",

@@ -119,7 +119,6 @@ class TestMcpConfigIntegration:
                 llm_method="claude",
                 mcp_config=temp_mcp_config,
                 settings=None,
-                execution_dir=None,
             )
 
             # Execute command

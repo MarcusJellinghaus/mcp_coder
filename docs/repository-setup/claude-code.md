@@ -194,14 +194,8 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 Claude Code normally discovers `.claude/settings.local.json` (and
 `.claude/settings.json`) by walking up from its own working directory. That
-working directory is `--project-dir` by default, so the discovery normally
-lands in your repo — the shell you launched from no longer matters. The one
-remaining way to run the subprocess outside the project root is passing
-`--execution-dir` explicitly, which is deprecated (removal tracked in #1132).
-In that case discovery picks the wrong file or none at all, and the symptom is
-silent: permissions look enabled in your repo but Claude prompts for them
-anyway, or `enabledMcpjsonServers` / `hooks` / `model` from your repo's
-settings are ignored.
+working directory is `--project-dir`, so the discovery normally lands in your
+repo — the shell you launched from no longer matters.
 
 mcp-coder commands that drive Claude Code accept `--settings <path>` to
 forward the settings file explicitly via Claude's native `--settings` flag,
@@ -242,7 +236,7 @@ review it now rather than after the first surprising run.
 
 The same anchoring shift applies to the copilot provider: its
 `_read_settings_allow` (`llm/providers/copilot/copilot_cli.py:230-241`) reads
-`<execution_dir>/.claude/settings.local.json`, which is now the driven
+`<cwd>/.claude/settings.local.json`, which is now the driven
 project's file rather than the launching shell's.
 
 ## Architecture Documentation

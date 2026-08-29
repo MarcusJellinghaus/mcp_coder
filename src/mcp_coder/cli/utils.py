@@ -7,7 +7,6 @@ for parameter parsing and conversion.
 import argparse
 import logging
 import os
-import warnings
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import get_repository_identifier
@@ -34,7 +33,7 @@ __all__ = [
     "resolve_llm_method",
     "resolve_mcp_config_path",
     "resolve_claude_settings_path",
-    "resolve_execution_dir",
+    "resolve_claude_cwd",
 ]
 
 
@@ -417,14 +416,14 @@ def is_outside_project_dir(path: Path, project_dir: str | Path | None) -> bool:
         return False
 
 
-def report_context_root(execution_dir: Path, project_dir: str | Path | None) -> None:
+def report_context_root(project_dir: Path) -> None:
     """Log the Claude working directory and the project instructions in effect.
 
     Logs at OUTPUT level. Warns when no resolved file lies inside project_dir.
     """
-    logger.log(OUTPUT, "Claude working directory: %s", execution_dir)
+    logger.log(OUTPUT, "Claude working directory: %s", project_dir)
 
-    hits = find_context_claude_md(execution_dir)
+    hits = find_context_claude_md(project_dir)
     if not hits:
         logger.log(OUTPUT, "%s none found", _CONTEXT_LABEL)
         return
@@ -447,68 +446,22 @@ def report_context_root(execution_dir: Path, project_dir: str | Path | None) -> 
         )
 
 
-def resolve_execution_dir(
-    execution_dir: str | None,
-    project_dir: str | Path | None = None,
-) -> Path:
-    """Resolve execution directory path to absolute Path object.
+def resolve_claude_cwd(project_dir: str | Path) -> Path:
+    """Resolve the working directory for the Claude subprocess.
+
+    Resolved but deliberately NOT existence-checked - each command validates
+    its own project_dir and owns the error message for a bad one. Cannot raise.
 
     Args:
-        execution_dir: Optional execution directory path (deprecated, see #1132)
-                      - None: Falls back to project_dir, or CWD if not given
-                      - Absolute path: Validates and returns as Path
-                      - Relative path: Resolves relative to CWD
-        project_dir: Optional project directory, used as the default execution
-                     directory. Resolved but deliberately NOT existence-checked -
-                     each command validates its own project_dir and owns the
-                     error message for a bad one.
+        project_dir: The project directory; the one directory Claude runs in.
 
     Returns:
-        Path: Absolute path to execution directory
-
-    Raises:
-        ValueError: If a specified execution_dir doesn't exist
+        Absolute, resolved path — always the project directory.
 
     Examples:
-        >>> resolve_execution_dir(None, project_dir='/my/project')
+        >>> resolve_claude_cwd('/my/project')
         PosixPath('/my/project')
-
-        >>> resolve_execution_dir(None)
-        PosixPath('/current/working/dir')
-
-        >>> resolve_execution_dir('/absolute/path')
-        PosixPath('/absolute/path')
-
-        >>> resolve_execution_dir('./relative')
-        PosixPath('/current/working/dir/relative')
     """
-    if execution_dir is None:
-        resolved = Path.cwd() if project_dir is None else Path(project_dir).resolve()
-        report_context_root(resolved, project_dir)
-        return resolved
-
-    deprecation_message = (
-        "--execution-dir is deprecated; the project directory is used as the "
-        "execution directory by default. Removal is tracked in #1132."
-    )
-    warnings.warn(deprecation_message, DeprecationWarning, stacklevel=2)
-    logger.warning(deprecation_message)
-
-    path = Path(execution_dir)
-
-    # Convert relative paths to absolute
-    if not path.is_absolute():
-        path = Path.cwd() / path
-
-    # Validate that the directory exists
-    if not path.exists():
-        raise ValueError(
-            f"Execution directory does not exist: {path}\n"
-            f"  Original path: {execution_dir}\n"
-            f"  Current directory: {Path.cwd()}"
-        )
-
-    logger.debug(f"Resolved execution directory: {execution_dir} -> {path}")
-    resolved = path.resolve()
-    report_context_root(resolved, project_dir)
+    resolved = Path(project_dir).resolve()
+    report_context_root(resolved)
     return resolved

@@ -31,6 +31,7 @@ class TestCriticalPathIntegration:
             provider="claude",
             timeout=60,  # Increased for real API calls
             env_vars=env_vars,
+            project_dir=Path.cwd(),
         )
         assert isinstance(cli_result, dict)
         assert len(cli_result["text"]) > 0
@@ -43,7 +44,12 @@ class TestCriticalPathIntegration:
         env_vars = prepare_llm_environment(Path.cwd())
 
         # Use prompt_llm to test full response structure
-        result1 = prompt_llm("Remember this: elephant", timeout=60, env_vars=env_vars)
+        result1 = prompt_llm(
+            "Remember this: elephant",
+            timeout=60,
+            env_vars=env_vars,
+            project_dir=Path.cwd(),
+        )
         assert "session_id" in result1
         assert result1["session_id"] is not None
         assert "text" in result1
@@ -55,6 +61,7 @@ class TestCriticalPathIntegration:
             session_id=session_id,
             timeout=60,
             env_vars=env_vars,
+            project_dir=Path.cwd(),
         )
         assert "elephant" in result2["text"].lower()
         assert result2["session_id"] == session_id
@@ -124,6 +131,7 @@ class TestEnvironmentVariablePropagation:
             provider="claude",
             timeout=60,  # Increased for real API calls
             env_vars=env_vars,
+            project_dir=Path.cwd(),
         )
         assert isinstance(result_cli, dict)
         assert len(result_cli["text"]) > 0

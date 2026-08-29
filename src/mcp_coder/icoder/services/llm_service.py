@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, Protocol, runtime_checkable
 
 from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
@@ -49,18 +50,17 @@ class RealLLMService:
         self,
         provider: str = "claude",
         session_id: str | None = None,
-        execution_dir: str | None = None,
         mcp_config: str | None = None,
         settings_file: str | None = None,
         env_vars: dict[str, str] | None = None,
         timeout: int = ICODER_LLM_TIMEOUT_SECONDS,
         mcp_manager: MCPManager | None = None,
-        project_dir: str | None = None,
+        *,
+        project_dir: str | Path,
         gateway: LangchainEnforcementGateway | None = None,
     ) -> None:
         self._provider = provider
         self._session_id = session_id
-        self._execution_dir = execution_dir
         self._mcp_config = mcp_config
         self._settings_file = settings_file
         self._env_vars = env_vars
@@ -106,12 +106,12 @@ class RealLLMService:
             provider=self._provider,
             session_id=self._session_id,
             timeout=self._timeout,
-            execution_dir=self._execution_dir,
             mcp_config=self._mcp_config,
             settings_file=self._settings_file,
             env_vars=self._env_vars,
             tools=tools,
             project_dir=self._project_dir,
+            inject_prompts=True,
         ):
             if event.get("type") == "done":
                 sid = event.get("session_id")

@@ -55,7 +55,6 @@ class CIFixConfig:
     project_dir: Path
     provider: str
     env_vars: dict[str, str]
-    cwd: str
     mcp_config: Optional[str]
     settings_file: str | None = None
     analysis_prompt_header: str = "CI Failure Analysis Prompt"
@@ -128,7 +127,7 @@ def _run_ci_analysis(
             # Pure-LLM site (CI-analysis, no MCP tools): 300s inactivity budget.
             timeout=LLM_CI_ANALYSIS_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
-            execution_dir=config.cwd,
+            project_dir=str(config.project_dir),
             mcp_config=config.mcp_config,
             settings_file=config.settings_file,
             branch_name=branch_name,
@@ -208,7 +207,7 @@ def _run_ci_fix(
             # Tool-using site (CI-fix): inactivity budget, not wall-clock.
             timeout=LLM_INACTIVITY_TIMEOUT_SECONDS,
             env_vars=config.env_vars,
-            execution_dir=config.cwd,
+            project_dir=str(config.project_dir),
             mcp_config=config.mcp_config,
             settings_file=config.settings_file,
             branch_name=branch_name,
@@ -248,7 +247,6 @@ def _run_ci_fix(
         config.project_dir,
         config.provider,
         mcp_config=config.mcp_config,
-        execution_dir=config.cwd,
         settings_file=config.settings_file,
     ):
         logger.warning("Failed to commit CI fix changes")
@@ -479,7 +477,6 @@ def check_and_fix_ci(
     provider: str,
     mcp_config: Optional[str] = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
     *,
     analysis_prompt_header: str = "CI Failure Analysis Prompt",
     fix_prompt_header: str = "CI Fix Prompt",
@@ -493,7 +490,6 @@ def check_and_fix_ci(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess
         analysis_prompt_header: Prompt header used for the CI failure analysis
             phase. Defaults to implement's "CI Failure Analysis Prompt"; an
             automated review workflow overrides it per review round.
@@ -546,14 +542,12 @@ def check_and_fix_ci(
 
     # Phase 2: Fix loop (max 3 attempts)
     env_vars = prepare_llm_environment(project_dir)
-    cwd = str(execution_dir) if execution_dir else str(project_dir)
 
     # Create config for CI fix operations
     config = CIFixConfig(
         project_dir=project_dir,
         provider=provider,
         env_vars=env_vars,
-        cwd=cwd,
         mcp_config=mcp_config,
         settings_file=settings_file,
         analysis_prompt_header=analysis_prompt_header,

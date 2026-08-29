@@ -75,7 +75,6 @@ def run_review_workflow(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-    execution_dir: Path | None = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
 ) -> int:
@@ -88,7 +87,6 @@ def run_review_workflow(
         mcp_config: Optional path to an MCP configuration file (threaded into
             both the reviewer and supervisor sessions).
         settings_file: Optional path to a Claude settings file.
-        execution_dir: Optional working directory for the LLM subprocess.
         update_issue_labels: When True, apply GitHub label transitions.
         post_issue_comments: When True, post a failure comment on the error path.
 
@@ -175,7 +173,6 @@ def run_review_workflow(
                         provider,
                         mcp_config,
                         settings_file,
-                        execution_dir,
                         issue_number,
                         base_branch,
                         round_number=round_number,
@@ -229,7 +226,6 @@ def run_review_workflow(
                     provider,
                     mcp_config,
                     settings_file,
-                    execution_dir,
                     supervisor_sid,
                     supervisor_report,
                     round_number=round_number,
@@ -277,7 +273,6 @@ def run_review_workflow(
                     provider,
                     mcp_config,
                     settings_file,
-                    execution_dir,
                     is_dismiss=True,
                 )
                 # Gate 2 (impl lane): only proven-green CI (PASSED) earns success.
@@ -417,7 +412,6 @@ def run_review_workflow(
                     provider,
                     mcp_config,
                     settings_file,
-                    execution_dir,
                     issue_number,
                     base_branch,
                     round_number=round_number,
@@ -458,7 +452,6 @@ def run_review_workflow(
                 project_dir,
                 provider,
                 mcp_config=mcp_config,
-                execution_dir=str(execution_dir) if execution_dir else None,
                 settings_file=settings_file,
             ):
                 # Looping over an uncommitted round would hide the state from CI
@@ -518,7 +511,6 @@ def run_review_workflow(
                 provider,
                 mcp_config,
                 settings_file,
-                execution_dir,
                 is_dismiss=False,
             )
             if reason == "rebase":

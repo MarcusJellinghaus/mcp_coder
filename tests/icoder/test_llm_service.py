@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Iterator
 
 import pytest
@@ -21,6 +22,9 @@ from mcp_coder.icoder.services.llm_service import (
     RealLLMService,
 )
 from mcp_coder.llm.types import StreamEvent
+
+# prompt_llm_stream is patched out in these tests, so any project dir will do.
+PROJECT_DIR = "/test/project"
 
 
 def test_fake_default_response() -> None:
@@ -73,7 +77,7 @@ def test_fake_session_id_from_done() -> None:
 
 def test_real_service_satisfies_protocol() -> None:
     """Verify RealLLMService is structurally compatible with LLMService."""
-    service = RealLLMService(provider="claude")
+    service = RealLLMService(provider="claude", project_dir=PROJECT_DIR)
     assert hasattr(service, "stream")
     assert hasattr(service, "session_id")
     assert isinstance(service, LLMService)
@@ -97,7 +101,7 @@ def test_real_service_delegates_to_prompt_llm_stream(
         "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
         mock_stream,
     )
-    service = RealLLMService(provider="claude")
+    service = RealLLMService(provider="claude", project_dir=PROJECT_DIR)
     events = list(service.stream("hello"))
     assert events == fake_events
 
@@ -125,7 +129,7 @@ def test_real_service_updates_session_id(
         "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
         mock_stream,
     )
-    service = RealLLMService(provider="claude")
+    service = RealLLMService(provider="claude", project_dir=PROJECT_DIR)
     assert service.session_id is None
     list(service.stream("hello"))
     assert service.session_id == "new-session-42"
@@ -151,7 +155,7 @@ def test_real_llm_service_passes_timeout(
         "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
         mock_stream,
     )
-    service = RealLLMService(provider="claude")
+    service = RealLLMService(provider="claude", project_dir=PROJECT_DIR)
     list(service.stream("hello"))
     assert captured_kwargs["timeout"] == ICODER_LLM_TIMEOUT_SECONDS
 
@@ -183,7 +187,7 @@ def test_real_reset_session(
         "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
         mock_stream,
     )
-    service = RealLLMService(provider="claude")
+    service = RealLLMService(provider="claude", project_dir=PROJECT_DIR)
     list(service.stream("hello"))
     assert service.session_id == "real-session-99"
     service.reset_session()
@@ -193,12 +197,16 @@ def test_real_reset_session(
 def test_protocol_has_reset_session() -> None:
     """Both implementations still satisfy LLMService protocol after adding reset_session."""
     assert isinstance(FakeLLMService(), LLMService)
-    assert isinstance(RealLLMService(provider="claude"), LLMService)
+    assert isinstance(
+        RealLLMService(provider="claude", project_dir=PROJECT_DIR), LLMService
+    )
 
 
 def test_real_set_session_id_replaces_existing() -> None:
     """RealLLMService.set_session_id() replaces an existing session_id."""
-    service = RealLLMService(provider="claude", session_id="abc")
+    service = RealLLMService(
+        provider="claude", session_id="abc", project_dir=PROJECT_DIR
+    )
     service.set_session_id("xyz")
     assert service.session_id == "xyz"
 
@@ -212,7 +220,9 @@ def test_fake_set_session_id_sets_value() -> None:
 
 def test_real_set_session_id_to_none() -> None:
     """RealLLMService.set_session_id(None) clears session_id."""
-    service = RealLLMService(provider="claude", session_id="abc")
+    service = RealLLMService(
+        provider="claude", session_id="abc", project_dir=PROJECT_DIR
+    )
     service.set_session_id(None)
     assert service.session_id is None
 
@@ -228,7 +238,9 @@ def test_fake_set_session_id_to_none() -> None:
 def test_protocol_has_set_session_id() -> None:
     """Both implementations satisfy LLMService protocol after adding set_session_id."""
     assert isinstance(FakeLLMService(), LLMService)
-    assert isinstance(RealLLMService(provider="claude"), LLMService)
+    assert isinstance(
+        RealLLMService(provider="claude", project_dir=PROJECT_DIR), LLMService
+    )
 
 
 def test_fake_provider_property_default() -> None:
@@ -245,7 +257,7 @@ def test_fake_provider_property_custom() -> None:
 
 def test_real_provider_property() -> None:
     """RealLLMService.provider returns the configured provider."""
-    service = RealLLMService(provider="langchain")
+    service = RealLLMService(provider="langchain", project_dir=PROJECT_DIR)
     assert service.provider == "langchain"
 
 
@@ -264,7 +276,7 @@ def test_real_llm_service_custom_timeout(
         "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
         mock_stream,
     )
-    service = RealLLMService(provider="claude", timeout=600)
+    service = RealLLMService(provider="claude", timeout=600, project_dir=PROJECT_DIR)
     list(service.stream("hello"))
     assert captured_kwargs["timeout"] == 600
 
@@ -290,7 +302,11 @@ def test_real_llm_service_passes_tools_from_mcp_manager(
         def tools(self) -> list[str]:
             return fake_tools
 
-    service = RealLLMService(provider="langchain", mcp_manager=FakeMCPManager())  # type: ignore[arg-type]
+    service = RealLLMService(
+        provider="langchain",
+        mcp_manager=FakeMCPManager(),  # type: ignore[arg-type]
+        project_dir=PROJECT_DIR,
+    )
     list(service.stream("hello"))
     assert captured_kwargs["tools"] is fake_tools
 
@@ -310,7 +326,7 @@ def test_real_llm_service_no_manager_passes_none(
         "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
         mock_stream,
     )
-    service = RealLLMService(provider="langchain")
+    service = RealLLMService(provider="langchain", project_dir=PROJECT_DIR)
     list(service.stream("hello"))
     assert captured_kwargs["tools"] is None
 
@@ -335,10 +351,14 @@ def test_real_llm_service_passes_project_dir(
     assert captured_kwargs["project_dir"] == "/tmp/my-project"
 
 
-def test_real_llm_service_project_dir_none(
+def test_real_llm_service_injects_prompts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """RealLLMService passes project_dir=None when not provided (backward compat)."""
+    """RealLLMService asks prompt_llm_stream to inject the system/project prompts.
+
+    iCoder is one of the two sites that opt in deliberately; the headless
+    workflows keep the ``inject_prompts=False`` default.
+    """
     captured_kwargs: dict[str, object] = {}
     fake_events: list[StreamEvent] = [{"type": "done"}]
 
@@ -350,9 +370,9 @@ def test_real_llm_service_project_dir_none(
         "mcp_coder.icoder.services.llm_service.prompt_llm_stream",
         mock_stream,
     )
-    service = RealLLMService(provider="claude")
+    service = RealLLMService(provider="claude", project_dir=PROJECT_DIR)
     list(service.stream("hello"))
-    assert captured_kwargs["project_dir"] is None
+    assert captured_kwargs["inject_prompts"] is True
 
 
 def test_fake_falls_back_to_default_after_canned_exhausted() -> None:
@@ -433,6 +453,7 @@ def test_stream_without_gateway_forwards_all_tools(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=None,
+        project_dir=PROJECT_DIR,
     )
     frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
     list(service.stream("hello", frame=frame))
@@ -451,6 +472,7 @@ def test_stream_with_gateway_drops_never_tools(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=gateway,
+        project_dir=PROJECT_DIR,
     )
     list(service.stream("hello"))
     assert captured["tools"] == ["mcp__srv__keep"]
@@ -468,6 +490,7 @@ def test_stream_enforces_config_never_without_frame(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=gateway,
+        project_dir=PROJECT_DIR,
     )
     list(service.stream("hello", frame=None))
     assert captured["tools"] == ["mcp__srv__keep"]
@@ -485,6 +508,7 @@ def test_stream_does_not_mutate_manager_cache(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=gateway,
+        project_dir=PROJECT_DIR,
     )
     list(service.stream("hello"))
     assert manager.tools() == ["mcp__srv__keep", "mcp__srv__drop"]
@@ -507,6 +531,7 @@ def test_stream_with_empty_config_forwards_all_tools(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=LangchainEnforcementGateway(PermissionConfig()),
+        project_dir=PROJECT_DIR,
     )
     list(service.stream("hello"))
     assert captured["tools"] == ["mcp__srv__a", "mcp__srv__b"]
@@ -528,6 +553,7 @@ def test_stream_sets_per_turn_frame(
         provider="langchain",
         mcp_manager=manager,  # type: ignore[arg-type]
         gateway=gateway,
+        project_dir=PROJECT_DIR,
     )
     frame = PermissionFrame(base="inherit", allow=(Matcher("srv", "a"),))
     list(service.stream("hello", frame=frame))
@@ -565,13 +591,15 @@ def test_fake_service_stream_ignores_frame_content() -> None:
 def test_services_satisfy_protocol_after_widening() -> None:
     """Both implementations still satisfy LLMService protocol after stream widening."""
     assert isinstance(FakeLLMService(), LLMService)
-    assert isinstance(RealLLMService(provider="claude"), LLMService)
+    assert isinstance(
+        RealLLMService(provider="claude", project_dir=PROJECT_DIR), LLMService
+    )
 
 
 @pytest.mark.claude_cli_integration
 def test_real_llm_service_stream_smoke() -> None:
     """Smoke test: RealLLMService.stream() works end-to-end with the live Claude CLI."""
-    service = RealLLMService(provider="claude", timeout=60)
+    service = RealLLMService(provider="claude", timeout=60, project_dir=str(Path.cwd()))
     events = list(service.stream("Reply 'ok'."))
     assert any(e["type"] == "text_delta" for e in events)
     assert any(e["type"] == "done" for e in events)

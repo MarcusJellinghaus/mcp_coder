@@ -61,7 +61,6 @@ def _after_steps(
     provider: str,
     mcp_config: str | None,
     settings_file: str | None,
-    execution_dir: Path | None,
     is_dismiss: bool,
 ) -> str | None:
     """Run the after-steps (rebase + CI) for the implementation lane.
@@ -87,7 +86,6 @@ def _after_steps(
         provider: LLM provider.
         mcp_config: Optional MCP config path.
         settings_file: Optional Claude settings file.
-        execution_dir: Optional LLM subprocess working directory.
         is_dismiss: Whether this runs on the final dismiss gate (vs mid-loop).
             Logged for diagnostics; the caller owns the terminal-vs-finding
             interpretation of a red CI result.
@@ -124,7 +122,6 @@ def _after_steps(
             provider=provider,
             mcp_config=mcp_config,
             settings_file=settings_file,
-            execution_dir=execution_dir,
             session_dir_name=config.session_dir_name,
         )
     except Exception as exc:  # pylint: disable=broad-exception-caught

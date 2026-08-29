@@ -50,7 +50,6 @@ class TestMain:
         issue_number: int = 123,
         provider: str = "claude",
         mcp_config: str | None = None,
-        execution_dir: Path | None = None,
         update_issue_labels: bool = False,
         post_issue_comments: bool = False,
     ) -> int:
@@ -79,7 +78,6 @@ class TestMain:
                 tmp_path,
                 provider,
                 mcp_config,
-                execution_dir=execution_dir,
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,
             )
@@ -92,13 +90,11 @@ class TestMain:
         result = self._run_workflow_with_patches(tmp_path, mock_issue_data)
         assert result == 0
 
-    def test_main_execution_dir_passed_to_prompts(
+    def test_main_session_params_passed_to_prompts(
         self, mock_issue_data: IssueData, tmp_path: Path
     ) -> None:
-        """Test execution_dir parameter is passed to run_planning_prompts."""
+        """Test project_dir and session params are passed to run_planning_prompts."""
         (tmp_path / ".git").mkdir()
-        exec_dir = tmp_path / "execution"
-        exec_dir.mkdir()
 
         with (
             patch(f"{_CORE}.is_working_directory_clean", return_value=True),
@@ -120,13 +116,11 @@ class TestMain:
             ),
             patch(f"{_CORE}.git_push", return_value={"success": True}),
         ):
-            result = run_create_plan_workflow(
-                123, tmp_path, "claude", None, execution_dir=exec_dir
-            )
+            result = run_create_plan_workflow(123, tmp_path, "claude", None)
 
         assert result == 0
         mock_prompts.assert_called_once_with(
-            tmp_path, mock_issue_data, "claude", None, None, exec_dir
+            tmp_path, mock_issue_data, "claude", None, None
         )
 
     def test_main_prerequisites_fail(self, tmp_path: Path) -> None:
@@ -342,6 +336,6 @@ class TestMain:
             tmp_path, 123, "Test Issue", base_branch=None
         )
         mock_prompts.assert_called_once_with(
-            tmp_path, mock_issue_data, "claude", None, None, None
+            tmp_path, mock_issue_data, "claude", None, None
         )
         assert result == 0

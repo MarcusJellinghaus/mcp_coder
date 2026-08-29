@@ -37,7 +37,6 @@ def run_finalisation(
     provider: str,
     mcp_config: Optional[str] = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
 ) -> bool:
     """Run implementation finalisation to verify and complete remaining tasks.
 
@@ -46,7 +45,6 @@ def run_finalisation(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess
 
     Returns:
         bool: True if finalisation succeeded or was skipped (no tasks), False on error
@@ -86,7 +84,7 @@ def run_finalisation(
             # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=LLM_FINALISATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            execution_dir=str(execution_dir) if execution_dir else None,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,
@@ -144,7 +142,6 @@ def run_finalisation(
         success, llm_message, error = generate_commit_message_with_llm(
             project_dir,
             provider=provider,
-            execution_dir=str(execution_dir) if execution_dir else None,
             mcp_config=mcp_config,
             settings_file=settings_file,
         )

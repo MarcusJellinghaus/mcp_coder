@@ -28,7 +28,6 @@ def prepare_task_tracker(
     provider: str,
     mcp_config: Optional[str] = None,
     settings_file: str | None = None,
-    execution_dir: Optional[Path] = None,
 ) -> bool:
     """Prepare task tracker by populating it if it has no implementation steps.
 
@@ -37,8 +36,6 @@ def prepare_task_tracker(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        execution_dir: Optional working directory for Claude subprocess.
-            Default: None (uses caller's working directory)
 
     Returns:
         bool: True if task tracker is ready (already had tasks or successfully updated), False on error
@@ -81,7 +78,7 @@ def prepare_task_tracker(
             # Inactivity budget (was wall-clock), kept below the CI step cap.
             timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
             env_vars=env_vars,
-            execution_dir=str(execution_dir) if execution_dir else None,
+            project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
             branch_name=branch_name,

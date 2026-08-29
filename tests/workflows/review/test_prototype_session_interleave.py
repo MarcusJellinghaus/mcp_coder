@@ -91,6 +91,7 @@ def _timed_prompt(
         session_id=session_id,
         timeout=_ROUND_TRIP_TIMEOUT,
         env_vars=env_vars,
+        project_dir=Path.cwd(),
     )
     end = time.monotonic()
     intervals.append(_CallInterval(label=label, start=start, end=end))

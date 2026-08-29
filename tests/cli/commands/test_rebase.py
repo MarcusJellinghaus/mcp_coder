@@ -58,7 +58,6 @@ class TestExecuteRebase:
     def _make_args(self) -> MagicMock:
         args = MagicMock()
         args.project_dir = "/test/project"
-        args.execution_dir = None
         args.llm_method = "claude"
         args.mcp_config = None
         args.settings = None
@@ -70,7 +69,7 @@ class TestExecuteRebase:
     @patch("mcp_coder.cli.commands.rebase.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.rebase.parse_llm_method_from_args")
     @patch("mcp_coder.cli.commands.rebase.resolve_llm_method")
-    @patch("mcp_coder.cli.commands.rebase.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.rebase.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.rebase.resolve_project_dir")
     def test_execute_rebase_passes_args_and_returns_exit_code(
         self,
@@ -84,9 +83,8 @@ class TestExecuteRebase:
     ) -> None:
         """execute_rebase wires resolved args into run_rebase_workflow."""
         project_dir = Path("/test/project")
-        execution_dir = Path("/exec/dir")
         mock_project.return_value = project_dir
-        mock_exec.return_value = execution_dir
+        mock_exec.return_value = project_dir
         mock_resolve_llm.return_value = ("claude", "cli argument")
         mock_parse_llm.return_value = "claude"
         mock_mcp.return_value = None
@@ -101,25 +99,21 @@ class TestExecuteRebase:
             "main",
             None,
             "/tmp/rebase-settings.json",
-            execution_dir,
         )
 
-    @patch("mcp_coder.cli.commands.rebase.resolve_execution_dir")
     @patch("mcp_coder.cli.commands.rebase.resolve_project_dir")
-    def test_invalid_execution_dir_returns_two(
+    def test_invalid_project_dir_returns_two(
         self,
         mock_project: MagicMock,
-        mock_exec: MagicMock,
     ) -> None:
         """A ValueError from directory resolution returns exit code 2 (error)."""
-        mock_project.return_value = Path("/test/project")
-        mock_exec.side_effect = ValueError("Directory does not exist")
+        mock_project.side_effect = ValueError("Directory does not exist")
 
         result = execute_rebase(self._make_args())
 
         assert result == 2
 
-    @patch("mcp_coder.cli.commands.rebase.resolve_execution_dir")
+    @patch("mcp_coder.cli.commands.rebase.resolve_claude_cwd")
     @patch("mcp_coder.cli.commands.rebase.resolve_project_dir")
     def test_unexpected_exception_boundary_returns_two(
         self,

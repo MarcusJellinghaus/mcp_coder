@@ -227,14 +227,14 @@ def build_copilot_command(
     return command
 
 
-def _read_settings_allow(execution_dir: str | None) -> list[str] | None:
+def _read_settings_allow(cwd: str | None) -> list[str] | None:
     """Read permissions.allow from .claude/settings.local.json.
 
     Returns:
         List of allow entries, or None if file not found.
     """
-    if execution_dir:
-        base_dir = Path(execution_dir)
+    if cwd:
+        base_dir = Path(cwd)
     else:
         base_dir = Path.cwd()
 
@@ -268,7 +268,6 @@ def ask_copilot_cli(
     logs_dir: str | None = None,
     branch_name: str | None = None,
     system_prompt: str | None = None,
-    execution_dir: str | None = None,
 ) -> LLMResponseDict:
     """Ask Copilot CLI with session support and JSONL logging.
 
@@ -277,11 +276,11 @@ def ask_copilot_cli(
         session_id: Optional session ID to resume (skips system_prompt if set)
         timeout: Timeout in seconds
         env_vars: Environment variables for subprocess
-        cwd: Working directory (Copilot discovers .mcp.json from here)
+        cwd: Working directory (Copilot discovers .mcp.json from here); also
+            the directory .claude/settings.local.json is read from
         logs_dir: Log directory for JSONL files
         branch_name: Git branch for log filename context
         system_prompt: System prompt to prepend to question (skipped on resume)
-        execution_dir: Directory to read .claude/settings.local.json from
 
     Returns:
         LLMResponseDict with text, session_id, provider="copilot", raw_response
@@ -314,7 +313,7 @@ def ask_copilot_cli(
     # Read settings and convert to tool flags
     available_tools: list[str] | None = None
     allow_tools: list[str] | None = None
-    settings_allow = _read_settings_allow(execution_dir)
+    settings_allow = _read_settings_allow(cwd)
     if settings_allow is not None:
         tool_flags = convert_settings_to_copilot_tools(settings_allow)
         available_tools = tool_flags["available_tools"] or None

@@ -213,17 +213,15 @@ class TestCIWaitingLogic:
         )
         mock_collect.return_value = sample_report
 
-        # execution_dir=None means the real resolve_execution_dir runs (it is
-        # resolved once per run, not only under --fix) and defaults to
-        # project_dir. "/test/project" does not exist, which is fine: that
-        # default is deliberately not existence-validated (see
-        # resolve_execution_dir in cli/utils.py).
+        # The real resolve_claude_cwd runs (it is resolved once per run, not
+        # only under --fix). "/test/project" does not exist, which is fine:
+        # project_dir is deliberately not existence-validated there (see
+        # cli/utils.py).
         args = argparse.Namespace(
             project_dir="/test/project",
             ci_timeout=180,
             fix=0,
             llm_truncate=False,
-            execution_dir=None,
         )
 
         result = execute_check_branch_status(args)

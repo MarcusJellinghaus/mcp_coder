@@ -445,72 +445,25 @@ class TestCoordinatorCommand:
         assert result == 1
 
 
-class TestExecutionDirArgument:
-    """Tests for --execution-dir CLI argument."""
-
-    def test_execution_dir_defaults_to_none(self) -> None:
-        """--execution-dir should default to None when not specified."""
-        parser = create_parser()
-        args = parser.parse_args(["prompt", "test prompt", "--project-dir", "."])
-        assert args.execution_dir is None
-
-    def test_execution_dir_accepts_absolute_path(self) -> None:
-        """--execution-dir should accept absolute paths."""
-        parser = create_parser()
-        args = parser.parse_args(
-            ["prompt", "test prompt", "--execution-dir", "/tmp/workspace"]
-        )
-        assert args.execution_dir == "/tmp/workspace"
-
-    def test_execution_dir_accepts_relative_path(self) -> None:
-        """--execution-dir should accept relative paths."""
-        parser = create_parser()
-        args = parser.parse_args(
-            ["prompt", "test prompt", "--execution-dir", "./subdir"]
-        )
-        assert args.execution_dir == "./subdir"
-
-    def test_execution_dir_on_prompt_command(self) -> None:
-        """Verify --execution-dir works with prompt command."""
-        parser = create_parser()
-        args = parser.parse_args(
-            ["prompt", "test prompt", "--execution-dir", "/workspace"]
-        )
-        assert args.command == "prompt"
-        assert args.execution_dir == "/workspace"
-        assert args.prompt == "test prompt"
-
-    def test_execution_dir_on_commit_auto(self) -> None:
-        """Verify --execution-dir works with commit auto command."""
-        parser = create_parser()
-        args = parser.parse_args(["commit", "auto", "--execution-dir", "/workspace"])
-        assert args.command == "commit"
-        assert args.commit_mode == "auto"
-        assert args.execution_dir == "/workspace"
-
-    def test_execution_dir_on_implement(self) -> None:
-        """Verify --execution-dir works with implement command."""
-        parser = create_parser()
-        args = parser.parse_args(["implement", "--execution-dir", "/workspace"])
-        assert args.command == "implement"
-        assert args.execution_dir == "/workspace"
-
-    def test_execution_dir_on_create_plan(self) -> None:
-        """Verify --execution-dir works with create-plan command."""
-        parser = create_parser()
-        args = parser.parse_args(
-            ["create-plan", "123", "--execution-dir", "/workspace"]
-        )
-        assert args.command == "create-plan"
-        assert args.execution_dir == "/workspace"
-        assert args.issue_number == 123
-
-    def test_execution_dir_on_create_pr(self) -> None:
-        """Verify --execution-dir works with create-pr command."""
-        parser = create_parser()
-        args = parser.parse_args(["create-pr", "--execution-dir", "/workspace"])
-        assert args.command == "create-pr"
-        assert args.execution_dir == "/workspace"
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["prompt", "hi", "--execution-dir", "/tmp/x"],
+        ["commit", "auto", "--execution-dir", "/tmp/x"],
+        ["implement", "--execution-dir", "/tmp/x"],
+        ["review-plan", "--execution-dir", "/tmp/x"],
+        ["review-implementation", "--execution-dir", "/tmp/x"],
+        ["create-plan", "123", "--execution-dir", "/tmp/x"],
+        ["rebase", "--execution-dir", "/tmp/x"],
+        ["create-pr", "--execution-dir", "/tmp/x"],
+        ["check", "branch-status", "--execution-dir", "/tmp/x"],
+        ["icoder", "--execution-dir", "/tmp/x"],
+    ],
+)
+def test_execution_dir_flag_rejected(argv: list[str]) -> None:
+    """The removed flag must fail loudly, not be silently ignored."""
+    with pytest.raises(SystemExit):
+        create_parser().parse_args(argv)
 
 
 class TestCoordinatorRunCommand:
@@ -628,7 +581,6 @@ class TestCheckBranchStatusCommand:
         assert args.llm_truncate is False
         assert args.llm_method is None  # None = resolve at runtime from config
         assert args.mcp_config is None
-        assert args.execution_dir is None
 
     def test_check_branch_status_with_fix_flag(self) -> None:
         """Test check branch-status command with --fix flag."""
@@ -680,17 +632,6 @@ class TestCheckBranchStatusCommand:
         assert args.check_subcommand == "branch-status"
         assert args.mcp_config == ".mcp.linux.json"
 
-    def test_check_branch_status_with_execution_dir(self) -> None:
-        """Test check branch-status command with execution directory."""
-        parser = create_parser()
-        args = parser.parse_args(
-            ["check", "branch-status", "--execution-dir", "/workspace"]
-        )
-
-        assert args.command == "check"
-        assert args.check_subcommand == "branch-status"
-        assert args.execution_dir == "/workspace"
-
     def test_check_branch_status_with_all_flags(self) -> None:
         """Test check branch-status command with all flags combined."""
         parser = create_parser()
@@ -706,8 +647,6 @@ class TestCheckBranchStatusCommand:
                 "claude",
                 "--mcp-config",
                 ".mcp.test.json",
-                "--execution-dir",
-                "/tmp/workspace",
             ]
         )
 
@@ -718,7 +657,6 @@ class TestCheckBranchStatusCommand:
         assert args.llm_truncate is True
         assert args.llm_method == "claude"
         assert args.mcp_config == ".mcp.test.json"
-        assert args.execution_dir == "/tmp/workspace"
 
     @patch("mcp_coder.cli.commands.check_branch_status.execute_check_branch_status")
     def test_check_branch_status_routing(self, mock_execute: Mock) -> None:

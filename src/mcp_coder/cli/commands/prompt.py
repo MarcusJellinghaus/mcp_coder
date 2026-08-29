@@ -20,8 +20,8 @@ from ...utils.git_utils import get_branch_name_for_logging
 from ...utils.log_utils import OUTPUT
 from ..utils import (
     parse_llm_method_from_args,
+    resolve_claude_cwd,
     resolve_claude_settings_path,
-    resolve_execution_dir,
     resolve_llm_method,
     resolve_mcp_config_path,
 )
@@ -65,17 +65,10 @@ def execute_prompt(
             logger.warning(f"Could not prepare environment: {e}")
             env_vars = None
 
-        # Extract and validate execution_dir. Resolved after the block above so
-        # project_dir is in scope; project_dir stays bound even when
-        # prepare_llm_environment raises RuntimeError.
-        try:
-            execution_dir = resolve_execution_dir(
-                getattr(args, "execution_dir", None), project_dir=project_dir
-            )
-            logger.debug(f"Execution directory: {execution_dir}")
-        except ValueError as e:
-            logger.error(f"Invalid execution directory: {e}")
-            return 1
+        # Resolved after the block above so project_dir is in scope;
+        # project_dir stays bound even when prepare_llm_environment raises
+        # RuntimeError.
+        project_dir = resolve_claude_cwd(project_dir)
 
         # Resolve LLM method early (CLI arg > config > default)
         raw_llm_method = getattr(args, "llm_method", None)
@@ -128,10 +121,8 @@ def execute_prompt(
                     "Using explicit session ID (ignoring file-based continuation)",
                 )
 
-        # Determine whether to pass project_dir for prompt loading
-        prompt_project_dir = (
-            str(project_dir) if getattr(args, "add_system_prompts", False) else None
-        )
+        # Determine whether the system/project prompts should be injected
+        inject_prompts = getattr(args, "add_system_prompts", False)
 
         # Get user-specified timeout, output_format, and mcp_config
         timeout = getattr(args, "timeout", 30)
@@ -153,11 +144,11 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                execution_dir=str(execution_dir),
+                project_dir=str(project_dir),
                 mcp_config=mcp_config,
                 settings_file=settings_file,
                 branch_name=branch_name,
-                project_dir=prompt_project_dir,
+                inject_prompts=inject_prompts,
             ):
                 assembler.add(event)
                 print_stream_event(event, output_format)
@@ -167,7 +158,7 @@ def execute_prompt(
             # MLflow logging (mirrors non-streaming path)
             metadata = {
                 "branch_name": branch_name,
-                "working_directory": str(execution_dir),
+                "working_directory": str(project_dir),
             }
             with mlflow_conversation(
                 args.prompt, provider, resume_session_id, metadata
@@ -193,10 +184,10 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                execution_dir=str(execution_dir),
+                project_dir=str(project_dir),
                 mcp_config=mcp_config,
                 settings_file=settings_file,
-                project_dir=prompt_project_dir,
+                inject_prompts=inject_prompts,
             )
 
             session_id = response_dict.get("session_id", "")
@@ -216,11 +207,11 @@ def execute_prompt(
                 timeout=timeout,
                 session_id=resume_session_id,
                 env_vars=env_vars,
-                execution_dir=str(execution_dir),
+                project_dir=str(project_dir),
                 mcp_config=mcp_config,
                 settings_file=settings_file,
                 branch_name=branch_name,
-                project_dir=prompt_project_dir,
+                inject_prompts=inject_prompts,
             )
             # Output complete response as JSON (includes session_id)
             print(json.dumps(response_dict, indent=2, default=str))

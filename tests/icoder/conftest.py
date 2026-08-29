@@ -41,7 +41,6 @@ FAKE_RUNTIME_INFO = RuntimeInfo(
 def make_icoder_args(tmp_path: Path) -> MagicMock:
     """Create a mock args namespace for execute_icoder."""
     args = MagicMock()
-    args.execution_dir = None
     args.project_dir = str(tmp_path)
     args.llm_method = None
     args.mcp_config = None

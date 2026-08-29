@@ -6,7 +6,6 @@ import sys
 from io import StringIO
 from pathlib import Path
 from typing import Any
-from unittest import mock
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -113,9 +112,7 @@ class TestExecuteCommitAuto:
         # Verify function calls
         mock_validate.assert_called_once()
         mock_parse_llm.assert_called_once_with("claude")
-        mock_generate.assert_called_once_with(
-            Path.cwd(), "claude", execution_dir=mock.ANY
-        )
+        mock_generate.assert_called_once_with(Path.cwd(), "claude")
         mock_commit.assert_called_once_with("feat: add new feature", Path.cwd())
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
@@ -783,14 +780,14 @@ class TestGenerateCommitMessageWithLLMExtended:
         assert "invalid for git commits" in error_str
 
 
-class TestCommitAutoExecutionDir:
-    """Tests for execution_dir handling in commit auto command."""
+class TestCommitAutoClaudeCwd:
+    """Tests for Claude working directory handling in commit auto command."""
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
     @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
-    def test_default_execution_dir_uses_cwd(
+    def test_no_project_dir_uses_cwd(
         self,
         mock_commit: Mock,
         mock_generate: Mock,
@@ -798,7 +795,7 @@ class TestCommitAutoExecutionDir:
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test default execution_dir should use current working directory."""
+        """With no --project-dir the current working directory is used."""
         # Setup mocks
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
@@ -813,85 +810,19 @@ class TestCommitAutoExecutionDir:
             preview=False,
             llm_method="claude",
             project_dir=None,
-            execution_dir=None,  # No explicit execution_dir
         )
 
         result = execute_commit_auto(args)
 
         assert result == 0
-        # Verify generate_commit_message_with_llm was called
-        # Note: The actual execution_dir handling will be added to the function
         mock_generate.assert_called_once()
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
     @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
-    def test_explicit_execution_dir_validated(
-        self,
-        mock_commit: Mock,
-        mock_generate: Mock,
-        mock_parse_llm: Mock,
-        mock_validate: Mock,
-        tmp_path: Path,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Test explicit execution_dir should be validated and used."""
-        # Setup mocks
-        mock_validate.return_value = (True, None)
-        mock_parse_llm.return_value = "claude"
-        mock_generate.return_value = (True, "feat: add new feature", None)
-        mock_commit.return_value = {
-            "success": True,
-            "commit_hash": "abc1234",
-            "error": None,
-        }
-
-        # Create a valid temporary directory
-        execution_dir = tmp_path / "exec_dir"
-        execution_dir.mkdir()
-
-        args = argparse.Namespace(
-            preview=False,
-            llm_method="claude",
-            project_dir=None,
-            execution_dir=str(execution_dir),
-        )
-
-        with caplog.at_level(logging.DEBUG):
-            result = execute_commit_auto(args)
-
-        assert result == 0
-        assert "SUCCESS: Commit created: abc1234" in caplog.text
-
-    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    def test_invalid_execution_dir_returns_error(
-        self,
-        mock_validate: Mock,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        """Test invalid execution_dir should return error code 1."""
-        mock_validate.return_value = (True, None)
-
-        args = argparse.Namespace(
-            preview=False,
-            llm_method="claude",
-            project_dir=None,
-            execution_dir="/nonexistent/invalid/path",
-        )
-
-        with caplog.at_level(logging.DEBUG):
-            result = execute_commit_auto(args)
-
-        assert result == 1
-        assert "execution directory" in caplog.text.lower()
-
-    @patch("mcp_coder.cli.commands.commit.validate_git_repository")
-    @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
-    @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
-    @patch("mcp_coder.cli.commands.commit.commit_staged_files")
     @patch("builtins.input")
-    def test_execution_dir_with_preview_mode(
+    def test_claude_cwd_with_preview_mode(
         self,
         mock_input: Mock,
         mock_commit: Mock,
@@ -902,7 +833,7 @@ class TestCommitAutoExecutionDir:
         capsys: pytest.CaptureFixture[str],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test execution_dir works with preview mode (no conflicts)."""
+        """Resolving the Claude cwd works with preview mode (no conflicts)."""
         # Setup mocks
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
@@ -914,15 +845,13 @@ class TestCommitAutoExecutionDir:
         }
         mock_input.return_value = "y"
 
-        # Create a valid temporary directory
-        execution_dir = tmp_path / "exec_dir"
-        execution_dir.mkdir()
+        project_dir = tmp_path / "repo"
+        project_dir.mkdir()
 
         args = argparse.Namespace(
             preview=True,
             llm_method="claude",
-            project_dir=None,
-            execution_dir=str(execution_dir),
+            project_dir=str(project_dir),
         )
 
         with caplog.at_level(logging.DEBUG):
@@ -938,7 +867,7 @@ class TestCommitAutoExecutionDir:
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")
     @patch("mcp_coder.cli.commands.commit.generate_commit_message_with_llm")
     @patch("mcp_coder.cli.commands.commit.commit_staged_files")
-    def test_default_execution_dir_uses_project_dir(
+    def test_claude_cwd_is_project_dir(
         self,
         mock_commit: Mock,
         mock_generate: Mock,
@@ -947,7 +876,7 @@ class TestCommitAutoExecutionDir:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """No --execution-dir: execution_dir is project_dir, not the shell's cwd."""
+        """Claude's working directory is project_dir, not the shell's cwd."""
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (True, "feat: add new feature", None)
@@ -966,7 +895,6 @@ class TestCommitAutoExecutionDir:
             preview=False,
             llm_method="claude",
             project_dir=str(project_dir),
-            execution_dir=None,  # No explicit execution_dir
         )
 
         # Stand outside the project directory before resolving.
@@ -975,8 +903,8 @@ class TestCommitAutoExecutionDir:
         result = execute_commit_auto(args)
 
         assert result == 0
-        assert mock_generate.call_args[1]["execution_dir"] == str(project_dir)
-        assert mock_generate.call_args[1]["execution_dir"] != str(Path.cwd())
+        assert mock_generate.call_args[0][0] == project_dir.resolve()
+        assert mock_generate.call_args[0][0] != Path.cwd()
 
 
 MODULE = "mcp_coder.cli.commands.commit"
@@ -1150,14 +1078,15 @@ class TestCommitAutoPush:
         mock_validate: Mock,
     ) -> None:
         """Push is called after successful commit when --push is set."""
-        # "/repo" need not exist: the project_dir execution-dir default is unvalidated
+        # "/repo" need not exist: resolve_claude_cwd does not validate it
         args = argparse.Namespace(
             preview=False, llm_method="claude", project_dir="/repo", push=True
         )
         result = execute_commit_auto(args)
 
         assert result == 0
-        mock_push.assert_called_once_with(Path("/repo"))
+        # resolve_claude_cwd resolves project_dir before the push
+        mock_push.assert_called_once_with(Path("/repo").resolve())
 
     @patch(f"{MODULE}.validate_git_repository", return_value=(True, None))
     @patch(f"{MODULE}.resolve_llm_method", return_value=("claude", "cli"))
@@ -1181,7 +1110,7 @@ class TestCommitAutoPush:
         mock_validate: Mock,
     ) -> None:
         """Push failure propagates its exit code."""
-        # "/repo" need not exist: the project_dir execution-dir default is unvalidated
+        # "/repo" need not exist: resolve_claude_cwd does not validate it
         args = argparse.Namespace(
             preview=False, llm_method="claude", project_dir="/repo", push=True
         )
@@ -1211,7 +1140,7 @@ class TestCommitAutoPush:
         mock_validate: Mock,
     ) -> None:
         """Push is NOT called when --push is False."""
-        # "/repo" need not exist: the project_dir execution-dir default is unvalidated
+        # "/repo" need not exist: resolve_claude_cwd does not validate it
         args = argparse.Namespace(
             preview=False, llm_method="claude", project_dir="/repo", push=False
         )
@@ -1237,7 +1166,7 @@ class TestCommitAutoPush:
         mock_validate: Mock,
     ) -> None:
         """Push is NOT called when commit generation fails."""
-        # "/repo" need not exist: the project_dir execution-dir default is unvalidated
+        # "/repo" need not exist: resolve_claude_cwd does not validate it
         args = argparse.Namespace(
             preview=False, llm_method="claude", project_dir="/repo", push=True
         )

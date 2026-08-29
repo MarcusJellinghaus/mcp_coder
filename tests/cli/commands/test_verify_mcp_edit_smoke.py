@@ -113,7 +113,7 @@ class TestMcpEditSmokeTest:
         mock_prompt_llm.side_effect = fake_llm
 
         result = _run_mcp_edit_smoke_test(
-            tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
         assert "[OK]" in result
@@ -129,7 +129,7 @@ class TestMcpEditSmokeTest:
         mock_prompt_llm.return_value = {"text": "done"}
 
         result = _run_mcp_edit_smoke_test(
-            tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
         assert "[WARN]" in result
@@ -145,7 +145,7 @@ class TestMcpEditSmokeTest:
         mock_prompt_llm.side_effect = TimeoutError("timed out")
 
         result = _run_mcp_edit_smoke_test(
-            tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
         assert "[WARN]" in result
@@ -206,7 +206,7 @@ class TestMcpEditSmokeTest:
         mock_prompt_llm.return_value = {"text": "done"}
 
         _run_mcp_edit_smoke_test(
-            tmp_path, "langchain", "/fake/.mcp.json", str(tmp_path), self._symbols()
+            tmp_path, "langchain", "/fake/.mcp.json", self._symbols()
         )
 
         assert not (tmp_path / ".mcp_coder_verify.md").exists()

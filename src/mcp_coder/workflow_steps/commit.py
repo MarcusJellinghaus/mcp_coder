@@ -61,7 +61,6 @@ def commit_changes(
     provider: str = "claude",
     *,
     mcp_config: str | None = None,
-    execution_dir: str | None = None,
     settings_file: str | None = None,
 ) -> bool:
     """Commit changes using existing git operations and return success status.
@@ -71,7 +70,6 @@ def commit_changes(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional MCP config path; forwarded to commit-message
             generation so the LLM call runs scoped like the workflow's main sessions
-        execution_dir: Optional working directory for the LLM subprocess
         settings_file: Optional Claude settings file; forwarded to message generation
 
     Returns:
@@ -101,7 +99,6 @@ def commit_changes(
                 project_dir,
                 provider,
                 mcp_config=mcp_config,
-                execution_dir=execution_dir,
                 settings_file=settings_file,
             )
 

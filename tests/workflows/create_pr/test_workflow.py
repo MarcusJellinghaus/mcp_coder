@@ -54,7 +54,7 @@ class TestRunCreatePrWorkflow:
         # Verify
         assert result == 0
         mock_prereqs.assert_called_once_with(Path("/test"))
-        mock_generate.assert_called_once_with(Path("/test"), "claude", None, None, None)
+        mock_generate.assert_called_once_with(Path("/test"), "claude", None, None)
         mock_create_pr.assert_called_once_with(Path("/test"), "Test Title", "Test Body")
         mock_cleanup.assert_called_once_with(Path("/test"))
         mock_commit.assert_called_once()
@@ -127,7 +127,7 @@ class TestRunCreatePrWorkflow:
         result = run_create_pr_workflow(Path("/test"), "claude")
 
         assert result == 1
-        mock_generate.assert_called_once_with(Path("/test"), "claude", None, None, None)
+        mock_generate.assert_called_once_with(Path("/test"), "claude", None, None)
         mock_handle_failure.assert_called_once()
         assert mock_handle_failure.call_args.kwargs["stage"] == "summary_generation"
 
@@ -140,7 +140,7 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
-    def test_workflow_execution_dir_passed_to_generate_summary(
+    def test_workflow_session_params_passed_to_generate_summary(
         self,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
@@ -153,11 +153,7 @@ class TestRunCreatePrWorkflow:
         mock_prereqs: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test execution_dir parameter is passed to generate_pr_summary."""
-        # Create execution_dir
-        exec_dir = tmp_path / "execution"
-        exec_dir.mkdir()
-
+        """Test project_dir and session params are passed to generate_pr_summary."""
         # Setup mocks
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
@@ -171,15 +167,11 @@ class TestRunCreatePrWorkflow:
         mock_get_branch.return_value = "feature-branch"
         mock_detect_base.return_value = "main"
 
-        # Execute with execution_dir
-        result = run_create_pr_workflow(
-            tmp_path, "claude", None, execution_dir=exec_dir
-        )
+        result = run_create_pr_workflow(tmp_path, "claude", None)
 
         # Verify
         assert result == 0
-        # Verify execution_dir was passed to generate_pr_summary
-        mock_generate.assert_called_once_with(tmp_path, "claude", None, None, exec_dir)
+        mock_generate.assert_called_once_with(tmp_path, "claude", None, None)
 
     @patch("mcp_coder.workflows.create_pr.core.update_workflow_label")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")

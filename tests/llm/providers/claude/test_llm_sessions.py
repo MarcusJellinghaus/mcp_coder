@@ -20,6 +20,9 @@ from mcp_coder import (
 )
 from mcp_coder.llm.types import LLMResponseDict
 
+# The Claude CLI is mocked throughout, so any project directory will do.
+PROJECT_DIR = str(Path("/test/project"))
+
 
 class MockClaudeCLI:
     """Mock for Claude CLI that simulates real behavior."""
@@ -110,7 +113,7 @@ class TestSessionContinuity:
                 }
             )
 
-            result1 = prompt_llm("My favorite color is blue")
+            result1 = prompt_llm("My favorite color is blue", project_dir=PROJECT_DIR)
             session_id = result1["session_id"]
             assert session_id == "session-123"
 
@@ -126,7 +129,11 @@ class TestSessionContinuity:
                 }
             )
 
-            result2 = prompt_llm("What's my favorite color?", session_id=session_id)
+            result2 = prompt_llm(
+                "What's my favorite color?",
+                session_id=session_id,
+                project_dir=PROJECT_DIR,
+            )
 
             # Validate session continuity
             assert result2["session_id"] == session_id
@@ -152,7 +159,7 @@ class TestSessionContinuity:
                     "raw_response": {},
                 }
             )
-            result1 = prompt_llm("My name is Alice")
+            result1 = prompt_llm("My name is Alice", project_dir=PROJECT_DIR)
 
             # Turn 2
             mock_claude_cli.set_response_dict(
@@ -165,7 +172,11 @@ class TestSessionContinuity:
                     "raw_response": {},
                 }
             )
-            result2 = prompt_llm("My favorite color is green", session_id=session_id)
+            result2 = prompt_llm(
+                "My favorite color is green",
+                session_id=session_id,
+                project_dir=PROJECT_DIR,
+            )
 
             # Turn 3
             mock_claude_cli.set_response_dict(
@@ -178,7 +189,11 @@ class TestSessionContinuity:
                     "raw_response": {},
                 }
             )
-            result3 = prompt_llm("What's my name and color?", session_id=session_id)
+            result3 = prompt_llm(
+                "What's my name and color?",
+                session_id=session_id,
+                project_dir=PROJECT_DIR,
+            )
 
             # All should have same session_id
             assert result1["session_id"] == session_id
@@ -213,7 +228,7 @@ class TestSerialization:
                 }
             )
 
-            result = prompt_llm("Test question")
+            result = prompt_llm("Test question", project_dir=PROJECT_DIR)
 
             # Save to file
             filepath = tmp_path / "conversation.json"
@@ -248,7 +263,7 @@ class TestSerialization:
                     "raw_response": {},
                 }
             )
-            result1 = prompt_llm("Start conversation")
+            result1 = prompt_llm("Start conversation", project_dir=PROJECT_DIR)
 
             # Save session
             filepath = tmp_path / f"{result1['session_id']}.json"
@@ -268,7 +283,9 @@ class TestSerialization:
                     "raw_response": {},
                 }
             )
-            result2 = prompt_llm("Continue", session_id=session_id)
+            result2 = prompt_llm(
+                "Continue", session_id=session_id, project_dir=PROJECT_DIR
+            )
 
             assert result2["session_id"] == session_id
 
@@ -294,7 +311,7 @@ class TestParallelSafety:
                     "raw_response": {},
                 }
             )
-            result1a = prompt_llm("My color is blue")
+            result1a = prompt_llm("My color is blue", project_dir=PROJECT_DIR)
             session1_id = result1a["session_id"]
 
             # Session 2: Color is red
@@ -308,7 +325,7 @@ class TestParallelSafety:
                     "raw_response": {},
                 }
             )
-            result2a = prompt_llm("My color is red")
+            result2a = prompt_llm("My color is red", project_dir=PROJECT_DIR)
             session2_id = result2a["session_id"]
 
             # Sessions should have different IDs
@@ -325,7 +342,9 @@ class TestParallelSafety:
                     "raw_response": {},
                 }
             )
-            result1b = prompt_llm("What was my color?", session_id=session1_id)
+            result1b = prompt_llm(
+                "What was my color?", session_id=session1_id, project_dir=PROJECT_DIR
+            )
 
             # Continue session 2
             mock_claude_cli.set_response_dict(
@@ -338,7 +357,9 @@ class TestParallelSafety:
                     "raw_response": {},
                 }
             )
-            result2b = prompt_llm("What was my color?", session_id=session2_id)
+            result2b = prompt_llm(
+                "What was my color?", session_id=session2_id, project_dir=PROJECT_DIR
+            )
 
             # Each session maintains its own context
             assert result1b["session_id"] == session1_id
@@ -380,7 +401,7 @@ class TestMetadataTracking:
             )
 
             # Get response
-            result = prompt_llm("Test with metadata")
+            result = prompt_llm("Test with metadata", project_dir=PROJECT_DIR)
 
             # Verify metadata present
             assert result["raw_response"]["duration_ms"] == 2801
@@ -420,7 +441,7 @@ class TestMetadataTracking:
                     "raw_response": {"cost_usd": 0.025},
                 }
             )
-            result1 = prompt_llm("Question 1")
+            result1 = prompt_llm("Question 1", project_dir=PROJECT_DIR)
             cost1 = result1["raw_response"].get("cost_usd", 0)
             assert isinstance(cost1, (int, float))
             total_cost += float(cost1)
@@ -436,7 +457,9 @@ class TestMetadataTracking:
                     "raw_response": {"cost_usd": 0.033},
                 }
             )
-            result2 = prompt_llm("Question 2", session_id=session_id)
+            result2 = prompt_llm(
+                "Question 2", session_id=session_id, project_dir=PROJECT_DIR
+            )
             cost2 = result2["raw_response"].get("cost_usd", 0)
             assert isinstance(cost2, (int, float))
             total_cost += float(cost2)
@@ -459,7 +482,11 @@ class TestErrorHandling:
 
             # Attempting to use non-existent session
             with pytest.raises(ValueError, match="Invalid session_id"):
-                prompt_llm("Test", session_id="nonexistent-session")
+                prompt_llm(
+                    "Test",
+                    session_id="nonexistent-session",
+                    project_dir=PROJECT_DIR,
+                )
 
     def test_missing_fields_in_serialized_data(self, tmp_path: Path) -> None:
         """Test handling of incomplete serialized data."""
@@ -488,7 +515,7 @@ class TestBackwardCompatibility:
         with patch("mcp_coder.llm.interface.ask_claude_code_cli", mock_claude_cli):
             mock_claude_cli.set_response("Simple response")
 
-            response = prompt_llm("Simple question")
+            response = prompt_llm("Simple question", project_dir=PROJECT_DIR)
 
             # Should return dict
             assert isinstance(response, dict)
@@ -501,6 +528,8 @@ class TestBackwardCompatibility:
         with patch("mcp_coder.llm.interface.ask_claude_code_cli", mock_claude_cli):
             mock_claude_cli.set_response("No session needed")
 
-            response = prompt_llm("Question", provider="claude", timeout=30)
+            response = prompt_llm(
+                "Question", provider="claude", timeout=30, project_dir=PROJECT_DIR
+            )
 
             assert response["text"] == "No session needed"
