@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Details: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add the two tests to `TestLangchainSessionStorage` in `tests/llm/storage/test_session_storage.py`, then add `require_langchain_history()` to `src/mcp_coder/llm/storage/session_storage.py` and its name to `__all__`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add the two tests to `TestLangchainSessionStorage` in `tests/llm/storage/test_session_storage.py`, then add `require_langchain_history()` to `src/mcp_coder/llm/storage/session_storage.py` and its name to `__all__`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (pylint + mypy clean; pytest blocked repo-wide by a pre-existing `ModuleNotFoundError: mcp_workspace.checks.branch_status_rendering` from `src/mcp_coder/checks/branch_status.py:17` — the venv's `mcp_workspace` is stale, unrelated to this change)
+- [x] Commit message prepared
 
 ### Step 2: Guard both langchain entry points (+ docs)
 
