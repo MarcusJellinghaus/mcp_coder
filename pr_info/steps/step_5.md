@@ -49,10 +49,23 @@ def _ask_agent_stream(..., approval_bridge: ApprovalBridge | None = None) -> Ite
 * **`ask_langchain_stream`** — forward to `_ask_agent_stream`; the `_ask_text_stream` branch
   ignores it entirely (**no-op**, R13: non-iCoder CLI callers pass nothing and must keep working).
 * **`_ask_agent_stream`** — three edits:
-  1. `approval_bridge.attach(q.put)` immediately after `q` is created, inside the existing
-     `try`; `approval_bridge.detach()` in the existing `finally` (next to `thread.join`). That
-     `finally` runs on normal completion **and** on `GeneratorExit`, which is the cancel path —
-     one lifecycle site, per summary §2.10.
+  1. Attach/detach, **inside one try/finally**. `q` is created ~33 lines above the existing
+     `try:` (`__init__.py:557` vs `:590`), so "right after `q` is created" and "inside the
+     existing `try`" cannot both hold. Resolve it by **widening the existing `try` upwards** so
+     it starts immediately after `q` is created, then put `approval_bridge.attach(q.put)` as its
+     first statement. Everything currently between (`error_holder`, `_run`, `_thread_main`,
+     `thread.start()`) moves inside that `try` unchanged. This is what guarantees that a failure
+     between attach and the consumer loop — `thread.start()` raising, for instance — still runs
+     `detach()` instead of leaving the engine attached to a dead turn.
+     In the `finally`, the order is **`approval_bridge.detach()` first, `thread.join(timeout=5)`
+     second** — not merely "next to". `detach()` cancels every still-pending future
+     (Step 2), which is the only thing that can unpark an interceptor blocked in
+     `await fut`; joining first would instead burn the full 5s, expire with the agent thread
+     still parked, and break test 5's `thread.is_alive() is False` assertion. Detach-before-join
+     is a no-op on the normal-completion path (the registry is already empty) and is what makes
+     the join meaningful on the `GeneratorExit`-while-pending path. That `finally` runs on normal
+     completion **and** on `GeneratorExit`, which is the cancel path — one lifecycle site, per
+     summary §2.10.
   2. Pause: a **timestamped pending window**. Sample `approval_bridge.pending()` at every loop
      point (after `q.get` returns *and* on `queue.Empty`); opening the window records
      `pause_began`, closing it credits the real wall time to `paused`. On `queue.Empty` with the
@@ -165,8 +178,11 @@ Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
 >
 > Thread an optional `approval_bridge: ApprovalBridge | None = None` through
 > `prompt_llm_stream` → `ask_langchain_stream` → `_ask_agent_stream` (a no-op on the
-> `_ask_text_stream` branch). In `_ask_agent_stream`: `attach(q.put)` right after `q` is created
-> and `detach()` in the existing `finally` next to `thread.join` — **one** lifecycle site; make the
+> `_ask_text_stream` branch). In `_ask_agent_stream`: widen the existing `try` so it starts
+> right after `q` is created, make `attach(q.put)` its first statement, and in the `finally` call
+> `detach()` **before** `thread.join(timeout=5)` (detach cancels the pending futures, which is the
+> only thing that unparks a blocked interceptor; joining first burns the full 5s and leaves the
+> agent thread alive) — **one** lifecycle site; make the
 > consumer treat `queue.Empty` as "re-wait" while `pending() > 0` and track the pause as a
 > **timestamped window** (sample `pending()` at every loop point, credit real wall time when the
 > window closes, subtract the still-open window in the cap check) — do **not** accumulate

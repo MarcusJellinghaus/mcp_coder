@@ -1,10 +1,19 @@
-# Step 7 — Wiring: CLI → gateway / `RealLLMService` / `AppCore` (+ R16 gate)
+# Step 7 — Wiring: CLI → gateway / `RealLLMService` / `AppCore` (+ R16 gate, + UI branch)
 
 **Depends on:** Steps 2, 4, 5.
 
 One long-lived engine, constructed at startup and injected into all three holders, so the UI can
-*reach* it (Step 8) from the modal callback and from cancel — and so a cancelled-while-pending turn
+*reach* it from the modal callback and from cancel — and so a cancelled-while-pending turn
 leaves no session record.
+
+**The UI `approval_request` branch ships in this same commit, not in Step 8.** Wiring the engine
+is what makes the gateway's `AFTER_APPROVAL` branch actually emit and `await`. If the UI has no
+branch yet, the first `ask`-gated tool call wedges the turn **permanently**: the pause suppresses
+both the 300s inactivity timeout and `_AGENT_OVERALL_TIMEOUT` (Step 5), `_cancel_event` is inert
+because it is only checked after an event arrives from the generator (`ui/app.py:290`), and the
+Textual thread worker is a non-daemon executor thread, so the app cannot even be quit cleanly.
+There is no ordering of these two changes that leaves a usable app in between, so they are one
+commit.
 
 ---
 
@@ -15,9 +24,11 @@ leaves no session record.
 | `src/mcp_coder/cli/commands/icoder.py` | **modify** — construct + inject |
 | `src/mcp_coder/icoder/services/llm_service.py` | **modify** — `approval_bridge` param, forwarded |
 | `src/mcp_coder/icoder/core/app_core.py` | **modify** — handles, delegators, R5 carve-out, R16 gate |
+| `src/mcp_coder/icoder/ui/app.py` | **modify** — `approval_request` branch (interim deny) + cancel channel |
 | `.importlinter` | **modify** — `layered_architecture` ignore entry |
 | `tests/icoder/test_approval_wiring.py` | **create** |
 | `tests/icoder/test_icoder_permission_wiring.py` | **modify** — assert the engine reaches all three |
+| `tests/icoder/test_app_pilot.py` | **modify** — UI branch + cancel cases |
 
 ## WHAT
 
@@ -33,6 +44,15 @@ permission_gateway: LangchainEnforcementGateway | None = None,
 def resolve_pending(self, approval_id: str, decision: ApprovalDecision) -> None: ...
 def cancel_pending_approvals(self) -> None: ...
 def add_runtime_rule(self, rule: Rule) -> None: ...     # I3.3 calls this on the UI thread
+
+# icoder/ui/app.py
+def _handle_stream_event(self, event, *, replay_mode=False) -> None:
+    if event.get("type") == "approval_request":
+        ...                      # early return, mirroring the permission_warning precedent
+        return
+
+def action_cancel_stream(self) -> None:
+    """Cancel the stream AND any pending approval (the direct UI→engine channel)."""
 ```
 
 ## HOW
@@ -67,6 +87,40 @@ def add_runtime_rule(self, rule: Rule) -> None: ...     # I3.3 calls this on the
 * All three `AppCore` delegators are no-ops when their handle is `None` (non-langchain providers
   construct neither engine nor gateway).
 * `AppCore` must **not** import `textual`; it does not today and must not start.
+* **`ui/app.py` — `approval_request` branch** (moved here from Step 8 so no commit ships a
+  wedgeable app). Copy the shape of the existing `permission_warning` early return at the top of
+  `_handle_stream_event`. Until I3.3/#1046 lands, resolve immediately and fail-closed:
+
+  ```python
+  _DENY_NO_UI = (
+      "This tool requires approval, but the approval prompt is not available yet, "
+      "so the call was refused without asking the user. Choose a different approach "
+      "or ask the user how to proceed."
+  )
+
+  approval_id = str(event.get("approval_id", ""))
+  # I3.3/#1046 replaces this with the modal (ModalScreen[ApprovalDecision]).
+  # Until then, fail closed: a live `ask` rule would otherwise wedge the turn.
+  # Its own `reason` — never the gateway's R11 user-deny wording, because no user
+  # was asked and the model must not be told one refused (summary §2.11).
+  self._core.resolve_pending(
+      approval_id, ApprovalDecision("deny", "once", reason=_DENY_NO_UI)
+  )
+  return
+  ```
+
+  Mark it with a `TODO(#1046)`. Importing `ApprovalDecision` from `icoder.permissions.approval`
+  into `icoder.ui` is legal (the leaf contract forbids the *reverse* direction).
+* **`ui/app.py` — cancel channel.** `action_cancel_stream` keeps `self._cancel_event.set()` **and**
+  adds `self._core.cancel_pending_approvals()`. Comment why (FINDINGS §4): all three generic paths
+  are gated on an event arriving from the generator, and a blocked interceptor emits none, so none
+  of them can *trigger* a cancel while the consumer is waiting in `q.get`. They stay wired as the
+  post-resolution backstop. Do **not** write that `GeneratorExit` is unreachable while an approval
+  is pending (summary §2.3) — it is reachable at the `yield` that delivered the event, and
+  `detach()`'s cancel-then-clear covers it.
+* **Do not** add a modal, scopes, or any persist write-back — that is #1046. The `on_unmount`
+  shutdown hook stays in Step 8; with the interim auto-deny above, no approval is ever left
+  pending across a quit in this commit.
 
 ## ALGORITHM
 
@@ -105,9 +159,17 @@ app_core   = AppCore(..., approval_engine=approval_engine, permission_gateway=ga
 7. **`scope=session` end to end (engine-free):** `AppCore.add_runtime_rule(...)` →
    `gateway.interceptor` resolves `ALWAYS` for that tool on a **subsequent** turn.
 
+UI (`tests/icoder/test_app_pilot.py`, `textual_integration`):
+
+8. An `approval_request` event routes to `resolve_pending` with a deny carrying `_DENY_NO_UI` and
+   renders nothing; `ResponseAssembler` and the event log are unaffected.
+9. `action_cancel_stream` calls `cancel_pending_approvals()` **and** sets `_cancel_event`.
+
 ## CHECKS
 
-`run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check` — all green.
+`run_pylint_check`, `run_mypy_check`, `run_pytest_check` (fast selection) **plus**
+`run_pytest_check(markers=["textual_integration"], extra_args=["-n","auto"])` for the pilot tests,
+**plus** `run_lint_imports_check` — all green.
 
 ---
 
@@ -131,10 +193,21 @@ app_core   = AppCore(..., approval_engine=approval_engine, permission_gateway=ga
 > `— Cancelled —` marker off `in_flight`, so gating only `store_session` would leave this turn the
 > single cancel that replays without a marker.
 >
+> In the **same commit**, add the `ui/app.py` side: an `approval_request` early-return branch in
+> `_handle_stream_event` (mirroring the existing `permission_warning` precedent) that resolves the
+> approval immediately with `ApprovalDecision("deny", "once", reason=_DENY_NO_UI)` via
+> `self._core.resolve_pending` — a module-level reason string of its own, **never** the gateway's
+> `_DENY_USER` R11 wording, because no user was asked — marked `TODO(#1046)`; and make
+> `action_cancel_stream` also call `self._core.cancel_pending_approvals()`. Without both, this
+> commit ships an app where the first `ask`-gated call wedges the turn permanently (both timeouts
+> suppressed by the pause, `_cancel_event` inert, non-daemon worker thread). Do not add a modal,
+> scopes, or any persist write-back — that is #1046.
+>
 > Do **not** add an attach/detach `try/finally` in `RealLLMService.stream` — Step 5 owns the single
 > lifecycle site. Do not import `textual` into `AppCore`.
 >
-> Write the seven test cases listed in the step first (assert engine **identity**, not equality).
+> Write the nine test cases listed in the step first (assert engine **identity**, not equality).
 >
-> Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and
-> `run_lint_imports_check` all green, then one commit.
+> Use MCP tools only. Run the fast suite **and** the `textual_integration` marker. Finish with
+> `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and `run_lint_imports_check` all green,
+> then one commit.

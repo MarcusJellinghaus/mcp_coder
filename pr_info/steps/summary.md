@@ -47,9 +47,10 @@ there, and `resolve_pending` / `cancel_all` only ever hand their bodies over wit
 so rather than claim blanket single-threadedness:
 
 * `attach()` / `detach()` mutate `_pending`, `_emit`, `_loop` (and `_cancelled`, on `attach`)
-  from the **consumer thread** — `_ask_agent_stream`'s body and its `finally`. `detach()` is
-  *not* guaranteed to run after the agent loop is dead: it follows `thread.join(timeout=5)`, and
-  that join can expire with the loop still live (§2.3);
+  from the **consumer thread** — `_ask_agent_stream`'s body and its `finally`. `detach()` runs
+  **before** `thread.join(timeout=5)` (§2.10), i.e. deliberately while the agent loop is still
+  live: cancelling the pending futures is precisely what lets that join succeed. So `detach()`
+  can race an interceptor coroutine that is still unwinding on the agent loop;
 * `cancel_all()` sets `_cancelled = True` on the **Textual thread** before scheduling the future
   cancellations onto the loop;
 * `pending()` is read cross-thread from the consumer thread.
@@ -57,9 +58,10 @@ so rather than claim blanket single-threadedness:
 Each of those is one attribute rebind or a `len(dict)` read — atomic under the GIL — so no lock
 is needed. Two consequences must be *coded*, not assumed:
 
-* the `finally: _emit_front()` in `request_approval` guards on `self._emit is None`: after a
-  `detach()` that raced an expiring join, the sink is gone and promoting the next entry must be
-  a no-op rather than an `AttributeError` on a dead turn;
+* the `finally: _emit_front()` in `request_approval` guards on `self._emit is None`: `detach()`
+  runs on the consumer thread while this coroutine is still unwinding on the agent loop, so the
+  sink may already be gone and promoting the next entry must be a no-op rather than an
+  `AttributeError` on a dead turn;
 * `detach()` **cancels** the futures it drops (§2.3) instead of merely clearing them.
 
 Consequence: **no lock, no deque, no separate counter.** One `dict[approval_id → _PendingApproval]`
@@ -97,12 +99,14 @@ pending count. Serialisation is achieved by emitting only for the front entry:
   dispatches through `call_from_thread` and blocks until the UI handler returns. Under
   I3.3/#1046 that is the entire open-modal window. An exception in that handler (or any other
   consumer-side abort) leaves the `for` loop, closes the generator, and delivers `GeneratorExit`
-  at the `yield` **with an approval still pending**; that path runs `cancel.set()` →
-  `thread.join(timeout=5)` → `detach()`, and the join expires because the agent thread is parked
-  on the future. **Required behaviour for that path:** `detach()` cancels every future it is
-  about to drop (`call_soon_threadsafe(fut.cancel)`) before clearing `_pending`, so the parked
-  interceptor unwinds and the daemon agent thread dies instead of leaking for the process
-  lifetime with a future nothing can resolve.
+  at the `yield` **with an approval still pending**; that path runs `cancel.set()` → the
+  `finally`, and `cancel` is inert against an interceptor parked on a future.
+  **Required behaviour for that path:** the `finally` calls `detach()` **before**
+  `thread.join(timeout=5)` (§2.10), and `detach()` cancels every future it is about to drop
+  (`call_soon_threadsafe(fut.cancel)`) before clearing `_pending`. The parked interceptor then
+  unwinds while the join is waiting, so the agent thread is dead when the join returns instead of
+  leaking for the process lifetime with a future nothing can resolve. Joining first would expire
+  the full 5s with the thread still parked.
 * **Timeout suspension is pause, not keepalives** (FINDINGS §3, D1): the consumer treats
   `queue.Empty` as "re-wait" while `pending() > 0`, and the overall cap compares
   `elapsed − paused`. `paused` is measured from a **timestamped pending window** — the wall time
@@ -201,23 +205,33 @@ call by tool name + args, as its own criteria already describe.
 ### 2.10 Attach/detach: one lifecycle site
 
 The emit sink is `q`, a **local of `_ask_agent_stream`**, so `RealLLMService.stream` cannot reach
-it. Attach/detach therefore happens in `_ask_agent_stream`'s existing `try/finally` — the one
+it. Attach/detach therefore happens in `_ask_agent_stream`'s `try/finally` — the one
 already holding `thread.join(timeout=5)`, which runs on both normal completion **and**
 `GeneratorExit` (the cancel path). One site, one test. This is the observable requirement of the
 `detach()`-clears-the-registry criterion; a second defensive detach in `RealLLMService.stream`
 is deliberately **not** added (two lifecycle sites rot).
+
+**Ordering, both ends (Step 5 spells out the edit).** `q` is created ~33 lines *above* that
+`try:`, so the `try` is widened upwards to start right after `q` and `attach(q.put)` becomes its
+first statement — otherwise a failure between attach and the loop (`thread.start()` raising)
+would leave the engine attached to a dead turn with no `detach()`. In the `finally`,
+`detach()` runs **before** `thread.join(timeout=5)`, never after.
 
 Because that `finally` is also the `GeneratorExit` path, and `GeneratorExit` *is* reachable with
 an approval pending (§2.3), `detach()` must **cancel then clear**: schedule
 `fut.cancel` for every remaining entry onto `_loop` with `call_soon_threadsafe`, then drop
 `_pending`, `_emit`, `_loop`. Clearing alone would strand the parked interceptor on a future no
 longer reachable from any registry, keeping the daemon agent thread alive for the process lifetime.
+Cancelling *after* the join is just as bad in practice: the interceptor is still parked while the
+join runs, so the join burns its full 5s and returns with the agent thread alive — which is
+exactly what the "`thread.is_alive()` is `False` after the existing 5s join" criterion forbids.
 
 ### 2.11 Interim behaviour until I3.3 lands
 
 Nothing answers an `approval_request` until the modal exists. The `ui/app.py` branch therefore
 resolves immediately with a deny — fail-closed, a few lines, replaced by the modal in #1046.
-Without it, a live `ask` rule would wedge a turn until the user cancels.
+Without it, a live `ask` rule would wedge a turn *and* the cancel paths that could rescue it are
+inert, so this branch ships in **Step 7**, in the same commit as the engine wiring (§4).
 
 That deny must **not** reach the model as the gateway's R11 user-deny wording ("Tool call denied
 by the user…"): no user was asked. `ApprovalDecision` therefore carries an optional `reason`, the
@@ -249,7 +263,7 @@ UI passes its own `_DENY_NO_UI` string, and the gateway prefers `decision.reason
 | `src/mcp_coder/icoder/permissions/gateway.py` | Keep the whole `Decision`; real `AFTER_APPROVAL` branch; degraded deny; fail-closed fallback; `add_runtime_rule`. |
 | `src/mcp_coder/icoder/core/app_core.py` | `approval_engine` / `permission_gateway` params + 3 delegating methods; `_TRANSIENT_EVENT_TYPES`; R16 gate. |
 | `src/mcp_coder/icoder/services/llm_service.py` | `approval_bridge` ctor param, forwarded to `prompt_llm_stream`. |
-| `src/mcp_coder/icoder/ui/app.py` | `approval_request` branch; cancel channel; `on_unmount` hook; pairing deque. |
+| `src/mcp_coder/icoder/ui/app.py` | `approval_request` branch; cancel channel; `on_unmount` hook + closed-app guard around `_stream_llm`'s `call_from_thread` calls; pairing deque. |
 | `src/mcp_coder/cli/commands/icoder.py` | Construct the engine; inject into gateway / service / core. |
 | `src/mcp_coder/llm/types.py` | `_TRANSIENT_EVENT_TYPES`; `ResponseAssembler` carve-out; StreamEvent docs. |
 | `src/mcp_coder/llm/interface.py` | Optional `approval_bridge` param (langchain only). |
@@ -285,8 +299,14 @@ UI passes its own `_DENY_NO_UI` string, and the gateway prefers `decision.reason
 | 4 | Gateway: real `AFTER_APPROVAL` branch + `add_runtime_rule` | 2, 3 |
 | 5 | Provider plumbing: bridge param, pause, cancel catch, transient events | 2 |
 | 6 | Tool-unit pairing on `tool_run_id` (R18/R1) | — |
-| 7 | Wiring: CLI → gateway / service / `AppCore` (+ R16 gate) | 2, 4, 5 |
-| 8 | UI branch, cancel channel, shutdown hook, integration test, spike deletion | 7 |
+| 7 | Wiring: CLI → gateway / service / `AppCore` (+ R16 gate) **+ UI `approval_request` branch and cancel channel** | 2, 4, 5 |
+| 8 | Shutdown hook + closed-app guard, integration test, spike deletion | 7 |
+
+The UI branch is **not** deferred to Step 8. Step 7 is what makes the gateway actually emit and
+`await`; a commit that wires the engine without a UI branch ships an app where the first
+`ask`-gated call wedges the turn permanently — the pause suppresses both timeouts, `_cancel_event`
+is only checked after an event arrives from the generator (`ui/app.py:290`), and the Textual
+thread worker is non-daemon, so the app cannot be quit cleanly. The two changes are one commit.
 
 Each step is one commit: tests + implementation + **all** checks green
 (`run_pylint_check`, `run_pytest_check`, `run_mypy_check`, plus `lint-imports` where noted).

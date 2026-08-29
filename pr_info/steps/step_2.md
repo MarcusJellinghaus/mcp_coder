@@ -77,7 +77,9 @@ class ApprovalEngine:
   (`resolve_pending` / `cancel_all` only `call_soon_threadsafe`), but three members are touched
   off that loop and the docstring must name them: `attach()` / `detach()` mutate `_pending`,
   `_emit`, `_loop` (and `_cancelled`, on `attach`) from the **consumer thread**, and `detach()`
-  follows a `thread.join(timeout=5)` that **may expire with the agent loop still live**;
+  runs **before** the `thread.join(timeout=5)` (Step 5), i.e. deliberately **while the agent loop
+  is still live** — cancelling the pending futures is what lets that join succeed, so `detach()`
+  can race an interceptor coroutine that is still unwinding;
   `cancel_all()` sets `_cancelled` from the **Textual thread**; `pending()` is a cross-thread
   `len()` read. Each is one attribute rebind or one `len()`, atomic under the GIL — hence no
   lock — but the `_emit is None` guard and the cancel-then-clear `detach()` below are what make
@@ -109,8 +111,8 @@ async def request_approval(self, *, tool_name, args, source):
 ```
 
 The `self._emit is not None` half of that guard is not defensive padding: `detach()` runs on the
-consumer thread after a `thread.join(timeout=5)` that can expire while this coroutine is still
-alive, so the sink may already be gone when the `finally` runs.
+consumer thread **before** the `thread.join(timeout=5)`, i.e. while this coroutine is still
+unwinding on the agent loop, so the sink may already be gone when the `finally` runs.
 
 ```python
 def resolve_pending(self, approval_id, decision):     # Textual thread
@@ -127,7 +129,9 @@ def detach(self):                                     # consumer thread
     # Cancel BEFORE clearing: after the clear nothing can reach these futures again,
     # and an interceptor parked on one keeps the daemon agent thread alive for the
     # rest of the process (summary §2.3/§2.10 — GeneratorExit *is* reachable while
-    # an approval is pending, and the 5s join then expires).
+    # an approval is pending). The caller must in turn run detach() BEFORE
+    # thread.join(timeout=5), so the parked interceptor unwinds while the join
+    # waits; joining first burns the full 5s and returns with the thread alive.
     loop = self._loop
     if loop is not None:
         for entry in list(self._pending.values()):
