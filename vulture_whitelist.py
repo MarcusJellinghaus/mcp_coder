@@ -407,3 +407,17 @@ _._clear_redirects
 # tests/prompts/test_prompt_loader.py - autouse fixture isolating the module-level
 # warn-once cache from test ordering.
 _._clear_prompt_warning_cache
+
+# tests/llm/providers/langchain/conftest.py - autouse fixture redirecting
+# Path.home() to tmp_path so tests reaching langchain_history_exists stat a
+# temporary home rather than the developer's real ~/.mcp_coder.
+_._tmp_home
+
+# tests/llm/providers/langchain/conftest.py - opt-in fixture neutralising the
+# langchain resume guard for unit tests that resume a synthetic session id.
+_.skip_langchain_history_guard
+
+# tests/llm/providers/test_langchain_session_guard.py - fixture supplying a
+# configured langchain backend so the guard is reached rather than the
+# "backend not configured" raise.
+_.configured_backend
