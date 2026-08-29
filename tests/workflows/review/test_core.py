@@ -39,7 +39,7 @@ _REPORT_LOW = "foo.py:1 — low — a minor nit"
 _REPORT_NO_SEVERITY = "general prose about the code with no finding lines"
 
 
-def _resp(text: str, session_id: str = "sup-1") -> dict[str, Any]:
+def _resp(text: str, session_id: str | None = "sup-1") -> dict[str, Any]:
     """Build a minimal LLMResponseDict-shaped mock response."""
     return {
         "text": text,
@@ -51,7 +51,7 @@ def _resp(text: str, session_id: str = "sup-1") -> dict[str, Any]:
     }
 
 
-def _reviewer(text: str = _REPORT, session_id: str = "rev-1") -> dict[str, Any]:
+def _reviewer(text: str = _REPORT, session_id: str | None = "rev-1") -> dict[str, Any]:
     """Reviewer response (distinct session id from the supervisor)."""
     return _resp(text, session_id=session_id)
 
@@ -262,6 +262,31 @@ def test_unparseable_verdict_fails_after_repairs(
 
     assert result == 1
     assert env.prompt_llm.call_count == 4  # reviewer + supervisor + 2 repairs
+    env.handle_workflow_failure.assert_called_once()
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == REVIEW_PLAN.failure_labels["general"]
+
+
+def test_tasks_verdict_without_reviewer_session_fails(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A report turn that reports no session id fails instead of resuming blank.
+
+    A provider reports no session id when the turn was not recorded (langchain
+    drops an id nothing was stored under). Applying the fix tasks with
+    ``session_id=None`` would start a blank reviewer conversation that never saw
+    the diff or the report, so the round fails with the general label.
+    """
+    env.prompt_llm.side_effect = [
+        _reviewer(session_id=None),  # reviewer turn was not recorded
+        _resp(_TASKS),  # supervisor -> tasks
+    ]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    # Only reviewer + supervisor ran: the apply-tasks resume never happened.
+    assert env.prompt_llm.call_count == 2
     env.handle_workflow_failure.assert_called_once()
     failure = env.handle_workflow_failure.call_args.args[0]
     assert failure.category == REVIEW_PLAN.failure_labels["general"]

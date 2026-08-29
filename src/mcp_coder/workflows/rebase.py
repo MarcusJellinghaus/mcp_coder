@@ -313,7 +313,10 @@ def _prompt_in_session(
 
     Returns:
         ``(response_text, new_session_id)`` — the caller threads the session
-        id into the next call.
+        id into the next call. A provider that reports no session id (the turn
+        was not recorded, e.g. langchain drops an id nothing was stored under)
+        never clears the id passed in: that conversation is still on disk, so
+        the next step resumes it rather than silently starting a blank one.
     """
     branch_name = get_branch_name_for_logging(project_dir)
     response = prompt_llm(
@@ -338,7 +341,14 @@ def _prompt_in_session(
         )
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.warning("Failed to store rebase session: %s", exc)
-    return response.get("text", "") or "", response.get("session_id")
+    new_session_id = response.get("session_id")
+    if new_session_id is None:
+        logger.warning(
+            "Step %s returned no resumable session id; keeping the current one",
+            step_name,
+        )
+        new_session_id = session_id
+    return response.get("text", "") or "", new_session_id
 
 
 def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:

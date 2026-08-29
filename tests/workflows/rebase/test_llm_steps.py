@@ -104,6 +104,30 @@ class TestPromptInSession:
         )
         assert result == ("", "sid-9")
 
+    def test_missing_session_id_keeps_the_threaded_id(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A turn that reports no session id never clears the resumed one.
+
+        Overwriting it with None would make the next step start a fresh,
+        context-free conversation instead of the rebase session.
+        """
+        with caplog.at_level(logging.WARNING, logger="mcp_coder.workflows.rebase"):
+            result, _, _ = _call_prompt_in_session(
+                tmp_path,
+                session_id="sid-old",
+                response=_response(session_id=None),
+            )
+        assert result == ("done", "sid-old")
+        assert any("no resumable session id" in r.message for r in caplog.records)
+
+    def test_missing_session_id_on_first_call_stays_none(self, tmp_path: Path) -> None:
+        """With nothing to keep, no id is invented for the next step."""
+        result, _, _ = _call_prompt_in_session(
+            tmp_path, session_id=None, response=_response(session_id=None)
+        )
+        assert result == ("done", None)
+
     def test_store_session_receives_rebase_store_path(self, tmp_path: Path) -> None:
         """The exchange is persisted under .mcp-coder/rebase_sessions."""
         _, _, mock_store = _call_prompt_in_session(tmp_path)
