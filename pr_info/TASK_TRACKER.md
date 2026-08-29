@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `require_langchain_history()` in the storage layer
+
+Details: [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: add the two tests to `TestLangchainSessionStorage` in `tests/llm/storage/test_session_storage.py`, then add `require_langchain_history()` to `src/mcp_coder/llm/storage/session_storage.py` and its name to `__all__`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Guard both langchain entry points (+ docs)
+
+Details: [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: add `_resolve_session_id()` in `src/mcp_coder/llm/providers/langchain/__init__.py` and swap both call sites (2a/2b); add the opt-in `skip_langchain_history_guard` fixture and apply it, plus the `store_langchain_history` seed in `test_langchain_integration.py` (2c); add `tests/llm/providers/test_langchain_session_guard.py` (2d) and the CLI exit-code test in `tests/cli/commands/test_prompt.py` (2e); update the three docs (2f)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: verify acceptance items in [summary.md](./steps/summary.md) are met
+- [ ] PR summary prepared
