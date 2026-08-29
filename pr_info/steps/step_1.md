@@ -125,16 +125,28 @@ already unused and annotated as such. Part of #1132.
 
 ## Implementation note (blocked quality gate)
 
-Implementation is complete. `run_format_code` (clean), `run_pylint_check` and
-`run_mypy_check` were run and report **nothing** on the files touched by this step —
-pylint does analyse the langchain modules (it emits the usual optional-dependency
-`E0401`s there), so the forwarding chain has no `unexpected-keyword-arg`.
+Implementation is complete and re-verified: `execution_dir` is gone from every file under
+`src/mcp_coder/llm/providers/langchain/` and `tests/llm/providers/langchain/` (project-wide
+search: zero hits), the two langchain branches in `interface.py` no longer forward it, and
+`prompt_llm`/`prompt_llm_stream` keep their own parameter for the Claude and Copilot
+branches as this step requires. In `tests/llm/test_interface.py`,
+`test_passes_execution_dir_to_langchain` is deleted and the three `ask_langchain_stream`
+kwarg dicts no longer carry `execution_dir=None`; the surviving occurrences are the
+Claude (`TestPromptLLMExecutionDirRouting`, `TestPromptLLMExecutionDir`), Copilot and
+mlflow-metadata assertions, which belong to steps 2 and 4.
 
-`run_pytest_check` could **not** be executed: the `.venv` has a stale `mcp-workspace`
+Quality gate, re-run: `run_format_code --check` — black clean (637 files unchanged); the
+single isort complaint is `tests/workflows/vscodeclaude/test_assessment_issue_facts.py`,
+untouched by this step. `run_pylint_check` and `run_mypy_check` report **nothing** on the
+files touched here — pylint does analyse the langchain modules (it emits the usual
+optional-dependency `E0401`s there), so the forwarding chain has no `unexpected-keyword-arg`.
+
+`run_pytest_check` still could **not** be executed: the `.venv` has a stale `mcp-workspace`
 install, so `src/mcp_coder/checks/branch_status.py:17` fails with
 `ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`.
 That import runs from `mcp_coder/__init__.py`, so *every* test module fails to collect.
-The same staleness produces the only pylint/mypy errors reported
-(`fail_on_reviews`, `pr_feedback_undeterminable`, `add_assignees`). All of this is
-pre-existing and unrelated to this step; refreshing the venv
+The module does exist in the mcp-workspace sources, confirming the installed copy — not
+this repo — is out of date. The same staleness produces every pylint/mypy error reported
+(`fail_on_reviews`, `pr_feedback_undeterminable`, `add_assignees`, the missing-module
+import). All of this is pre-existing and unrelated to this step; refreshing the venv
 (`[tool.mcp-coder.install-from-github]` in `pyproject.toml`) unblocks it.
