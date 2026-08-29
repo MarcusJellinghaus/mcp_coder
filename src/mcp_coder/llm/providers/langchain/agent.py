@@ -401,7 +401,7 @@ async def run_agent(
     env_vars: dict[str, str] | None = None,
     timeout: int = 30,
     system_messages: list[Any] | None = None,
-) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+) -> tuple[str, list[dict[str, Any]], dict[str, Any], str | None]:
     """Run a LangGraph ReAct agent with MCP tools (non-streaming).
 
     A thin drainer of :func:`run_agent_stream`: it consumes that generator and
@@ -430,11 +430,14 @@ async def run_agent(
             conversation.
 
     Returns:
-        ``(final_text, stored_messages, stats_dict)``.
+        ``(final_text, stored_messages, stats_dict, session_id)``.
         *stats_dict* contains: ``agent_steps``, ``total_tool_calls``,
         ``tool_trace`` and ``usage`` — all but ``usage`` are omitted when the
         run produced no terminal graph event, since they are derived from the
         final message list that is missing in that case.
+        *session_id* is whatever the terminal ``done`` event carries, i.e.
+        ``None`` when that event dropped the id as unresumable. The drainer
+        reports the stream's decision rather than making its own.
 
     Raises:
         LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
@@ -443,10 +446,11 @@ async def run_agent(
     """  # noqa: DOC502 - both propagate: LLMMCPLaunchError from the drained
     # generator, asyncio.TimeoutError from the asyncio.wait_for below.
 
-    async def _drain() -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+    async def _drain() -> tuple[str, list[dict[str, Any]], dict[str, Any], str | None]:
         final_text = ""
         stored: list[dict[str, Any]] = []
         stats: dict[str, Any] = {}
+        resumable_sid: str | None = None
         async for event in run_agent_stream(
             question=question,
             chat_model=chat_model,
@@ -461,7 +465,10 @@ async def run_agent(
                 final_text = str(event.get("result", ""))
                 stored = cast(list[dict[str, Any]], event.get("messages", []))
                 stats = cast(dict[str, Any], event.get("stats", {}))
-        return (final_text, stored, stats)
+                # Absent when the stream judged the id unresumable.
+                raw_sid = event.get("session_id")
+                resumable_sid = raw_sid if isinstance(raw_sid, str) else None
+        return (final_text, stored, stats, resumable_sid)
 
     return await asyncio.wait_for(_drain(), timeout=float(timeout))
 
@@ -507,7 +514,9 @@ async def run_agent_stream(
         Without a terminal graph event (cancelled turn, or no ``on_chain_end``
         matching the root ``run_id``) ``stats`` carries ``usage`` alone: the
         tool stats come from the final message list, so they are omitted
-        rather than reported as zeros.
+        rather than reported as zeros. Such a turn also drops ``session_id``
+        unless a history file already exists for it — nothing was stored, so
+        the id is not resumable and chaining it would fail the next turn.
 
     Raises:
         LLMMCPLaunchError: If an MCP server fails to launch (e.g. executable
@@ -680,19 +689,27 @@ async def run_agent_stream(
                 "%s; history not stored (the turn is not recorded)",
                 session_id,
             )
+        from mcp_coder.llm.storage.session_storage import langchain_history_exists
+
         # Tool stats are derived from the final message list, which is exactly
         # what is missing here. Reporting zeros would claim "no tools ran" for a
         # turn that may have made several calls, so the three tool-stat keys are
         # omitted entirely and only `usage` — which the stream accumulated
         # itself and therefore does know — is reported.
-        yield {
+        done: StreamEvent = {
             "type": "done",
-            "session_id": session_id,
             "usage": accumulated_usage,
             "messages": [],
             "result": accumulated_text,
             "stats": {"usage": accumulated_usage},
         }
+        # The id is only handed back when it is actually resumable. A brand-new
+        # session stored nothing, so advertising it would make the next turn
+        # raise on the missing history file instead of continuing. A resumed
+        # session keeps its id: the prior history is still on disk.
+        if langchain_history_exists(session_id):
+            done["session_id"] = session_id
+        yield done
         return
 
     # The graph's own final message list is the persisted history; the shared

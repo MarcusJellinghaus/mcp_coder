@@ -22,6 +22,8 @@ __all__ = [
     "extract_langchain_session_id",
     "store_langchain_history",
     "load_langchain_history",
+    "langchain_history_exists",
+    "require_langchain_history",
 ]
 
 
@@ -219,3 +221,54 @@ def load_langchain_history(
     if not path.exists():
         return []
     return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+
+
+def langchain_history_exists(
+    session_id: str,
+    base_dir: Optional[str] = None,
+) -> bool:
+    """Report whether *session_id* has a history file on disk.
+
+    A session id is only resumable once its history file exists, so producers
+    of a session id use this to decide whether to hand it back to a caller
+    that may chain it into a later turn.
+
+    Args:
+        session_id: Session identifier to check.
+        base_dir: Optional custom base directory for session files.
+            Production never passes this; tests use it to point at a tmp dir.
+
+    Returns:
+        True if a history file exists for *session_id*, False otherwise.
+    """
+    return _langchain_session_path(session_id, base_dir).exists()
+
+
+def require_langchain_history(
+    session_id: str,
+    base_dir: Optional[str] = None,
+) -> None:
+    """Raise when *session_id* has no history file on disk.
+
+    Guards an explicitly requested session resume. Without this check a
+    missing history file is indistinguishable from an empty conversation:
+    load_langchain_history() returns [] either way, so the resume would
+    silently answer from a blank conversation.
+
+    Args:
+        session_id: Session identifier the caller asked to resume.
+        base_dir: Optional custom base directory for session files.
+            Production never passes this; tests use it to point at a tmp dir.
+
+    Raises:
+        ValueError: If no history file exists for *session_id*. The message
+            names the requested id and the expected path, so a resume from a
+            copied file elsewhere is not misreported as a non-existent id.
+    """
+    path = _langchain_session_path(session_id, base_dir)
+    if path.exists():
+        return
+    raise ValueError(
+        f"Session {session_id!r} has no langchain history. "
+        f"Expected history file: {path}"
+    )

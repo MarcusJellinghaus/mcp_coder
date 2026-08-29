@@ -111,7 +111,9 @@ class _FakeStore:
 class TestTextPathMultiTurn:
     """Two turns on one session must not accumulate system messages."""
 
-    def test_two_turns_store_no_system_messages_and_send_one(self) -> None:
+    def test_two_turns_store_no_system_messages_and_send_one(
+        self, skip_langchain_history_guard: None
+    ) -> None:
         """Stored history stays system-free; each call sends one leading system."""
         from langchain_core.messages import SystemMessage
 
@@ -259,7 +261,9 @@ class TestSingleSystemProviderRejection:
     ``system messages must be at the beginning`` rather than silently.
     """
 
-    def test_text_path_two_turns_never_sends_two_systems(self) -> None:
+    def test_text_path_two_turns_never_sends_two_systems(
+        self, skip_langchain_history_guard: None
+    ) -> None:
         """``mcp-coder prompt --add-system-prompts``, twice on one session."""
         store = _FakeStore()
         mock_model = MagicMock()
@@ -347,7 +351,7 @@ class TestSingleSystemProviderRejection:
         ]
 
     def test_icoder_agent_flow_two_turns_never_sends_two_systems(
-        self, tmp_path: Path
+        self, tmp_path: Path, skip_langchain_history_guard: None
     ) -> None:
         """The full icoder call chain, including a real session-file round trip.
 

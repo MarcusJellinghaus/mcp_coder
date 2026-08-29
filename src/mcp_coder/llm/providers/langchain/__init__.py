@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 from mcp_coder.llm.storage.session_storage import (
     load_langchain_history,
+    require_langchain_history,
     store_langchain_history,
 )
 from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEvent
@@ -261,6 +262,21 @@ def _create_chat_model(
     )
 
 
+def _resolve_session_id(session_id: str | None) -> str:
+    """Return the session id to use, validating an explicitly requested one.
+
+    Args:
+        session_id: Id the caller asked to resume, or None for a new session.
+
+    Returns:
+        The requested id, or a freshly minted UUID when none was requested.
+    """  # Also raises ValueError via require_langchain_history for an unknown id.
+    if not session_id:
+        return str(uuid.uuid4())
+    require_langchain_history(session_id)
+    return session_id
+
+
 def ask_langchain(
     question: str,
     session_id: str | None = None,
@@ -291,7 +307,8 @@ def ask_langchain(
         LLMResponseDict with the model's response.
 
     Raises:
-        ValueError: If the langchain backend is not configured.
+        ValueError: If the langchain backend is not configured, or if
+            *session_id* was supplied but has no history file.
     """
     config = _load_langchain_config()
     backend = config["backend"]
@@ -303,7 +320,7 @@ def ask_langchain(
             "or MCP_CODER_LLM_LANGCHAIN_BACKEND env var."
         )
 
-    sid = session_id or str(uuid.uuid4())
+    sid = _resolve_session_id(session_id)
     sys_msgs = _build_system_messages(system_prompt, project_prompt)
 
     if mcp_config:
@@ -413,7 +430,9 @@ def _ask_agent(
 
     Returns:
         LLMResponseDict with the agent's text response and tool usage stats.
-
+        ``session_id`` is None when no history file exists for the session; a
+        resumed session whose turn stored nothing keeps its id. The rule lives
+        in ``run_agent_stream``'s done event and ``run_agent`` relays it.
     """  # Also raises LLMAuthError / LLMConnectionError via _handle_provider_error.
     from .agent import _check_agent_dependencies, run_agent
 
@@ -425,7 +444,7 @@ def _ask_agent(
 
     agent_backend = config.get("backend")
     try:
-        text, messages, stats = asyncio.run(
+        text, messages, stats, resumable_sid = asyncio.run(
             run_agent(
                 question=question,
                 chat_model=chat_model,
@@ -455,7 +474,7 @@ def _ask_agent(
         version=LLM_RESPONSE_VERSION,
         timestamp=datetime.now().isoformat(),
         text=text,
-        session_id=session_id,
+        session_id=resumable_sid,
         provider="langchain",
         raw_response=raw_response,
     )
@@ -623,7 +642,8 @@ def ask_langchain_stream(
         StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error, raw_line
 
     Raises:
-        ValueError: If the langchain backend is not configured.
+        ValueError: If the langchain backend is not configured, or if
+            *session_id* was supplied but has no history file.
     """
     config = _load_langchain_config()
     backend = config["backend"]
@@ -635,7 +655,7 @@ def ask_langchain_stream(
             "or MCP_CODER_LLM_LANGCHAIN_BACKEND env var."
         )
 
-    sid = session_id or str(uuid.uuid4())
+    sid = _resolve_session_id(session_id)
     sys_msgs = _build_system_messages(system_prompt, project_prompt)
 
     if mcp_config:

@@ -97,7 +97,7 @@ class TestAskLangchainStreamTextYieldsRawLines:
 class TestAskLangchainStreamTextYieldsDone:
     """ask_langchain_stream yields a done event with session_id."""
 
-    def test_text_yields_done(self) -> None:
+    def test_text_yields_done(self, skip_langchain_history_guard: None) -> None:
         """Stream ends with a done event containing the session_id."""
         mock_model = MagicMock()
         mock_model.stream.return_value = iter([_mock_chunk("x")])
@@ -120,7 +120,7 @@ class TestAskLangchainStreamTextYieldsDone:
 class TestAskLangchainStreamTextStoresHistory:
     """ask_langchain_stream stores session history after streaming."""
 
-    def test_text_stores_history(self) -> None:
+    def test_text_stores_history(self, skip_langchain_history_guard: None) -> None:
         """store_langchain_history is called with correct messages."""
         chunks = [_mock_chunk("answer")]
         mock_model = MagicMock()
@@ -247,7 +247,7 @@ class TestAskLangchainStreamAgentReal:
         raw_lines = [e for e in events if e["type"] == "raw_line"]
         assert len(raw_lines) == 1
 
-    def test_agent_streams_done_event(self) -> None:
+    def test_agent_streams_done_event(self, skip_langchain_history_guard: None) -> None:
         """Agent mode ends with done event."""
         stream_events: list[dict[str, object]] = [
             {"type": "text_delta", "text": "Hi"},

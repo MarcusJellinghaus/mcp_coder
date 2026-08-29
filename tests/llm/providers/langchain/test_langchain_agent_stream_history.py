@@ -12,8 +12,10 @@ cross the provider boundary.
 """
 
 import threading
+import uuid
 from collections.abc import AsyncIterator
-from typing import Any
+from pathlib import Path
+from typing import Any, Optional, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -128,7 +130,11 @@ class TestRunAgentStreamHistory:
         assert stats["usage"] == done["usage"]
 
     async def test_cancel_persists_nothing(self) -> None:
-        """A cancelled turn stores nothing but still emits done."""
+        """A cancelled turn stores nothing but still emits done.
+
+        Nothing was stored under ``s1``, so the done event must not advertise
+        it either - chaining it would fail the next turn on the resume guard.
+        """
         cancel = threading.Event()
         events = graph_events(
             [MagicMock()],
@@ -156,7 +162,7 @@ class TestRunAgentStreamHistory:
         done_events = [e for e in collected if e["type"] == "done"]
         assert len(done_events) == 1
         assert done_events[0]["messages"] == []
-        assert done_events[0]["session_id"] == "s1"
+        assert "session_id" not in done_events[0]
 
     async def test_cancel_done_carries_partial_text(self) -> None:
         """The text streamed before the cancel survives on done['result']."""
@@ -242,6 +248,47 @@ class TestRunAgentStreamHistory:
         # they are omitted rather than reported as zeros — a zeroed trace would
         # claim "no tools ran" for a turn that may have called several.
         assert done["stats"] == {"usage": {}}
+
+    async def test_no_terminal_event_omits_unresumable_session_id(
+        self, tmp_path: Path
+    ) -> None:
+        """A turn that stored nothing under a new id does not report that id.
+
+        Reporting it would wedge the caller: the next turn resumes the id, the
+        resume guard finds no history file and raises, so icoder errors until
+        ``/clear`` and a chained workflow turn aborts mid-run. Dropping the id
+        makes the next turn start a fresh conversation instead.
+        """
+        store_mock = MagicMock()
+
+        result = await _collect([_text_delta_event("streamed answer")], store_mock)
+
+        store_mock.assert_not_called()
+        assert not list(tmp_path.rglob("*.json"))
+        done = [e for e in result if e["type"] == "done"][-1]
+        assert "session_id" not in done
+
+        from mcp_coder.llm.providers.langchain import _resolve_session_id
+
+        next_sid = _resolve_session_id(cast(Optional[str], done.get("session_id")))
+        uuid.UUID(next_sid)
+
+    async def test_no_terminal_event_keeps_session_id_of_stored_session(self) -> None:
+        """A resumed session keeps its id even when the turn is not recorded.
+
+        The prior history is still on disk, so the id stays resumable - only an
+        id nothing was ever stored under is dropped.
+        """
+        from mcp_coder.llm.storage.session_storage import store_langchain_history
+
+        store_langchain_history("s1", [])
+        store_mock = MagicMock()
+
+        result = await _collect([_text_delta_event("streamed answer")], store_mock)
+
+        store_mock.assert_not_called()
+        done = [e for e in result if e["type"] == "done"][-1]
+        assert done["session_id"] == "s1"
 
 
 class TestAskAgentStreamBoundary:

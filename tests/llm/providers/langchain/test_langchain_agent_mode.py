@@ -1,5 +1,6 @@
 """Tests for agent mode routing and MLflow logging in langchain provider."""
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -28,6 +29,7 @@ class TestAskLangchainAgentMode:
                 "agent answer",
                 [{"type": "human", "content": "q"}],
                 {"agent_steps": 1, "total_tool_calls": 0, "tool_trace": []},
+                "sid",
             )
         )
         with (
@@ -57,6 +59,50 @@ class TestAskLangchainAgentMode:
             result = ask_langchain("question", mcp_config="/path/to/.mcp.json")
         assert result["text"] == "agent answer"
         mock_run_agent.assert_called_once()
+
+    def test_omits_session_id_when_turn_stored_no_history(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A turn that persisted nothing reports no resumable session id.
+
+        ``run_agent`` relays the done event's verdict (``None`` here); the
+        provider passes it straight through rather than second-guessing it.
+        create_plan / review / rebase chain ``result["session_id"]`` into the
+        next prompt_llm call, so handing back an id with no history file would
+        abort that turn with the resume guard's ValueError.
+        """
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        mock_run_agent = AsyncMock(
+            return_value=("agent answer", [], {"usage": {}}, None)
+        )
+        with (
+            patch(
+                "mcp_coder.llm.providers.langchain._load_langchain_config",
+                return_value=_make_config(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.agent._check_agent_dependencies",
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.agent.run_agent",
+                mock_run_agent,
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain._create_chat_model",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "mcp_coder.llm.providers.langchain.load_langchain_history",
+                return_value=[],
+            ),
+        ):
+            from mcp_coder.llm.providers.langchain import ask_langchain
+
+            result = ask_langchain("question", mcp_config="/path/to/.mcp.json")
+
+        assert result["text"] == "agent answer"
+        assert not list(tmp_path.rglob("*.json"))
+        assert result["session_id"] is None
 
     def test_routes_to_text_mode_when_mcp_config_none(self) -> None:
         """When mcp_config is None, _create_chat_model dispatch used."""
@@ -105,7 +151,9 @@ class TestAskLangchainAgentMode:
             with pytest.raises(ImportError, match="langchain-mcp-adapters"):
                 ask_langchain("question", mcp_config="/path/to/.mcp.json")
 
-    def test_agent_mode_does_not_store_history(self) -> None:
+    def test_agent_mode_does_not_store_history(
+        self, skip_langchain_history_guard: None
+    ) -> None:
         """Agent mode never stores: run_agent_stream is the single storage site.
 
         ``_ask_agent`` dropped its ``store_langchain_history`` call, so storing
@@ -123,6 +171,7 @@ class TestAskLangchainAgentMode:
                 "Here is the answer",
                 serialized_messages,
                 {"agent_steps": 1, "total_tool_calls": 1, "tool_trace": []},
+                "sid",
             )
         )
         store_mock = MagicMock()
@@ -168,7 +217,7 @@ class TestAskLangchainAgentMode:
             "tool_trace": [{"name": "t", "args": {}, "result": "r"}],
         }
         mock_run_agent = AsyncMock(
-            return_value=("answer", [{"type": "ai", "content": "answer"}], stats)
+            return_value=("answer", [{"type": "ai", "content": "answer"}], stats, "sid")
         )
         with (
             patch(

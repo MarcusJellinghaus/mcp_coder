@@ -322,7 +322,11 @@ class TestRunPlanningPrompts:
         assert result[1].stage == "Prompt 1 (empty response)"
 
     def test_run_planning_prompts_no_session_id(self, tmp_path: Path) -> None:
-        """Test run_planning_prompts when first response has no session_id."""
+        """A response with no session_id fails at the turn that must resume it.
+
+        Prompt 1 runs with ``session_id=None``, so a missing id is not a
+        prompt 1 failure; prompts 2 and 3 are the ones that cannot continue.
+        """
         issue_data = _make_issue_data()
 
         mock_response = {"text": "Response text"}  # Missing session_id
@@ -331,13 +335,42 @@ class TestRunPlanningPrompts:
             with patch(
                 f"{_CORE}.prompt_llm",
                 return_value=mock_response,
-            ):
+            ) as mock_prompt_llm:
                 result = run_planning_prompts(tmp_path, issue_data, "claude")
 
         assert result[0] is False
         assert result[1] is not None
-        assert result[1].stage == "Prompt 1 (no session_id)"
+        assert result[1].stage == "Prompt 2 (no session to resume)"
         assert "session_id" in result[1].message
+        # Prompt 1 itself succeeded - only the resuming turn is blocked.
+        assert mock_prompt_llm.call_count == 1
+
+    def test_run_planning_prompts_langchain_turn_not_recorded(
+        self, tmp_path: Path
+    ) -> None:
+        """A langchain turn that stored no history reports session_id None.
+
+        ``_ask_agent`` relays ``session_id=None`` when the agent turn ended
+        without a terminal graph event, so nothing was persisted under the id.
+        The chain must stop naming that cause rather than resume a blank
+        conversation or blame prompt 1 for an answer it did produce.
+        """
+        issue_data = _make_issue_data()
+
+        mock_response = {"text": "Response 1", "session_id": None}
+
+        with patch(f"{_CORE}.get_prompt", return_value="Test prompt"):
+            with patch(
+                f"{_CORE}.prompt_llm",
+                return_value=mock_response,
+            ) as mock_prompt_llm:
+                result = run_planning_prompts(tmp_path, issue_data, "langchain")
+
+        assert result[0] is False
+        assert result[1] is not None
+        assert result[1].stage == "Prompt 2 (no session to resume)"
+        assert "not recorded" in result[1].message
+        assert mock_prompt_llm.call_count == 1
 
     def test_run_planning_prompts_invalid_llm_method(self, tmp_path: Path) -> None:
         """Test run_planning_prompts with invalid LLM method."""

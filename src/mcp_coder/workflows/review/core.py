@@ -369,6 +369,42 @@ def run_review_workflow(
                 )
 
             # decision == "tasks": resume the reviewer to apply the fixes.
+            # That resume needs the reviewer's own report session. A provider
+            # reports no session id when the turn was not recorded (langchain
+            # drops an id nothing was stored under); resuming with None would
+            # apply the fixes in a blank conversation that never saw the diff
+            # or the report, so fail the round naming that cause instead.
+            if reviewer_sid is None:
+                logger.error(
+                    "Round %d: the reviewer turn was not recorded by provider "
+                    "'%s' and left no resumable session, so the %d fix task(s) "
+                    "cannot be applied to that conversation",
+                    round_number,
+                    provider,
+                    len(verdict.tasks),
+                )
+                write_round_log(
+                    project_dir,
+                    config,
+                    run_number,
+                    round_number,
+                    findings=report,
+                    decisions=str(verdict),
+                    changes="no-reviewer-session",
+                    escalate_reason="no-reviewer-session",
+                )
+                _flush_round_log(project_dir)
+                return _fail(
+                    config,
+                    project_dir,
+                    "general",
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                    round_number=round_number,
+                    verdict=last_verdict,
+                    elapsed=time.time() - start_time,
+                )
+
             logger.info(
                 "Round %d: applying %d fix task(s)",
                 round_number,

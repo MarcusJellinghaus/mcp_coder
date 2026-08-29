@@ -264,17 +264,10 @@ def run_planning_prompts(
                 ),
             )
 
+        # A missing id is not a prompt 1 failure: prompt 1 answered, and its
+        # conversation is still worth storing below. Only prompts 2 and 3,
+        # which resume it, cannot proceed - see the check before prompt 2.
         session_id = response_1.get("session_id")
-        if not session_id:
-            logger.error("Prompt 1 did not return session_id")
-            return (
-                False,
-                WorkflowFailure(
-                    category=FAILURE_LABELS["general"],
-                    stage="Prompt 1 (no session_id)",
-                    message="Prompt 1 did not return session_id",
-                ),
-            )
 
         logger.info(f"Prompt 1 completed (session: {session_id})")
 
@@ -295,6 +288,29 @@ def run_planning_prompts(
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 1: {e}")
         return (False, _prompt_failure(1, e))
+
+    # Prompt 2 reviews prompt 1's answer, so it must resume that conversation.
+    # A provider reports no session id when the turn was not recorded (langchain
+    # drops an id nothing was stored under); resuming with None would quietly
+    # review a blank conversation instead of prompt 1's output.
+    if not session_id:
+        logger.error(
+            "Prompt 1 produced no resumable session; the turn was not recorded "
+            "by provider '%s', so prompts 2 and 3 cannot continue it",
+            provider,
+        )
+        return (
+            False,
+            WorkflowFailure(
+                category=FAILURE_LABELS["general"],
+                stage="Prompt 2 (no session to resume)",
+                message=(
+                    "Prompt 1 returned no resumable session_id: the turn was "
+                    "not recorded, so the Simplification Review cannot "
+                    "continue that conversation"
+                ),
+            ),
+        )
 
     # Execute second prompt with session continuation
     logger.info("Executing prompt 2: Simplification Review...")

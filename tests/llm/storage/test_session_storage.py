@@ -11,7 +11,9 @@ import pytest
 from mcp_coder.llm.storage.session_storage import (
     extract_langchain_session_id,
     extract_session_id,
+    langchain_history_exists,
     load_langchain_history,
+    require_langchain_history,
     store_langchain_history,
     store_session,
 )
@@ -386,6 +388,25 @@ class TestLangchainSessionStorage:
             tmp_path / ".mcp_coder" / "sessions" / "langchain" / f"{session_id}.json"
         )
         assert expected.exists()
+
+    def test_require_history_raises_when_file_missing(self, tmp_path: Path) -> None:
+        """Requiring an id with no history file names the id and expected path."""
+        with pytest.raises(ValueError) as exc_info:
+            require_langchain_history("ghost-id", base_dir=str(tmp_path))
+        message = str(exc_info.value)
+        assert "ghost-id" in message
+        assert "ghost-id.json" in message
+
+    def test_require_history_passes_when_file_exists(self, tmp_path: Path) -> None:
+        """An empty history file is a valid session - the guard stays silent."""
+        store_langchain_history("sid", [], base_dir=str(tmp_path))
+        require_langchain_history("sid", base_dir=str(tmp_path))
+
+    def test_history_exists_tracks_the_file_on_disk(self, tmp_path: Path) -> None:
+        """The predicate is False until the history file is written."""
+        assert not langchain_history_exists("sid", base_dir=str(tmp_path))
+        store_langchain_history("sid", [], base_dir=str(tmp_path))
+        assert langchain_history_exists("sid", base_dir=str(tmp_path))
 
 
 class TestExtractLangchainSessionId:

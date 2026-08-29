@@ -11,6 +11,7 @@ directories that may need real langchain imports.
 import importlib.util
 import sys
 from collections.abc import AsyncIterator, Sequence
+from pathlib import Path
 from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
@@ -89,6 +90,56 @@ async def async_events(
     """
     for item in items:
         yield item
+
+
+@pytest.fixture(autouse=True)
+def _tmp_home(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Point ``Path.home()`` at *tmp_path* for the unit tests in this directory.
+
+    Session storage resolves ``~/.mcp_coder/sessions/langchain`` through
+    ``Path.home()`` at call time, so every test that reaches
+    ``langchain_history_exists`` - which is every ``run_agent_stream`` test
+    whose event list has no terminal ``on_chain_end`` - otherwise reads the
+    developer's real home directory. Patching that test by test was
+    whack-a-mole; one redirect for the directory closes the class.
+
+    The fixture requests the same function-scoped ``tmp_path`` the test gets,
+    so a test can still seed history with ``store_langchain_history`` and then
+    find (or assert the absence of) the file under its own ``tmp_path``.
+
+    This only moves the home directory. It does not touch the resume guard,
+    which stays opt-in through ``skip_langchain_history_guard``.
+
+    Args:
+        request: Used to exempt ``langchain_integration`` tests. Those load
+            real credentials from ``~/.mcp_coder/config.toml``, and a
+            redirected home would turn the whole suite into silent skips.
+        monkeypatch: Undoes the redirect after the test.
+        tmp_path: The per-test directory that stands in for the home directory.
+    """
+    if request.node.get_closest_marker("langchain_integration"):
+        return
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+
+
+@pytest.fixture
+def skip_langchain_history_guard() -> Generator[None, None, None]:
+    """Neutralise the resume guard for tests that use synthetic session ids.
+
+    Opt-in on purpose: an autouse version would also disable the guard for
+    the langchain_integration resume tests in test_langchain_integration.py,
+    which are the only end-to-end path where a real history file is written
+    and then resumed. Those tests must run with the guard live.
+
+    Yields:
+        None, with the guard patched out for the duration of the test.
+    """
+    with patch("mcp_coder.llm.providers.langchain.require_langchain_history"):
+        yield
 
 
 @pytest.fixture(autouse=True, scope="session")

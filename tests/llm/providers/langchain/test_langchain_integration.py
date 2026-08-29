@@ -213,10 +213,17 @@ class TestAgentModeIntegration:
         """
         _require_langchain_config()
         from mcp_coder.llm.providers.langchain import ask_langchain_stream
-        from mcp_coder.llm.storage.session_storage import load_langchain_history
+        from mcp_coder.llm.storage.session_storage import (
+            load_langchain_history,
+            store_langchain_history,
+        )
 
         mcp_config, _ = _create_agent_mcp_config(tmp_path)
         session_id = f"itest-stream-{uuid.uuid4()}"
+        # This id is minted here rather than taken from a previous turn, so
+        # seed an empty history file: the resume guard keys on file existence,
+        # never on content, so turn 1 behaves exactly as before.
+        store_langchain_history(session_id, [])
 
         histories: list[list[dict[str, object]]] = []
         for question in (

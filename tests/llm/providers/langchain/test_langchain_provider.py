@@ -239,7 +239,9 @@ class TestAskLangchain:
         # Must be a valid UUID
         uuid.UUID(str(result["session_id"]))
 
-    def test_preserves_provided_session_id(self) -> None:
+    def test_preserves_provided_session_id(
+        self, skip_langchain_history_guard: None
+    ) -> None:
         """When session_id is passed, it is preserved in the response."""
         sid = "my-session-123"
         with (
@@ -296,7 +298,9 @@ class TestAskLangchain:
             with pytest.raises(ValueError, match="backend"):
                 ask_langchain("question")
 
-    def test_history_is_updated_and_stored(self) -> None:
+    def test_history_is_updated_and_stored(
+        self, skip_langchain_history_guard: None
+    ) -> None:
         """After a call, history is stored in messages_from_dict format."""
         store_mock = MagicMock()
         # Provide prior history in the new serialized format
