@@ -171,3 +171,74 @@ and `_update_token_display` has exactly one caller, so leaving it behind would h
 rather than merely failing mypy.
 
 **Status**: committed
+
+## Round 3 — 2026-08-30
+
+Reviewed at `48859af`.
+
+**Findings**: none material.
+
+The round re-verified round 2's own edits against source rather than trusting the plan's prose:
+
+- **Step 1's re-pointed patch targets are correct and complete.** `require_langchain_history` is patched
+  at exactly one site (`tests/llm/providers/langchain/conftest.py:141`) and `get_config_values` at five
+  (`test_langchain_provider.py:16, 49, 72, 130, 156`) — the plan's "~6". A sweep of every other name the
+  moved functions consume (`validate`, `dialed_url`, `raise_auth_error`, `raise_connection_error`,
+  `is_google_auth_error`, `_auth_errors_for_backend`, `_BACKEND_ERROR_PARAMS`) found zero
+  package-namespace patches, so the table in `step_1.md:58-61` is exhaustive rather than illustrative.
+- **Step 2's moved set now type-checks.** The moved run (`app.py:276-503` plus `_update_token_display`
+  at `:521`) references nothing outside `self._core`, `query_one` and members inside the set; all seven
+  per-turn attributes exist in `ICoderApp.__init__`; `ui/replay.py` reaches exactly the seven named
+  members and touches no moved state directly.
+- Re-confirmed at HEAD: file sizes, the `q`→`try:` gap, `_resolve_config`'s 4-key sort and `Policy.rank`
+  ordering (which is what makes Step 5's amended bound correct on all four shapes), the gateway's
+  live-`self._config` reads, R18's `run_id`-vs-model-id premise, the renderer's `_pending` type, R5/R16
+  anchors in `AppCore.stream_llm`, and `.importlinter`'s per-import whitelist.
+- Acceptance-criteria coverage maps onto all 11 steps with no criterion uncovered; every `Step N`
+  cross-reference resolves after the renumbering.
+
+**Decisions**:
+- One low note **deliberately not applied**, recorded here instead. `step_2.md:70` already instructs
+  "check before deleting" for the two style constants. The answer is that `icoder/ui/startup.py:10` does
+  `from .app import STYLE_CANCELLED`, so Step 2 must leave a re-export in `app.py` — and because
+  `STYLE_CANCELLED` has no remaining use there after the move, it needs the `import X as X` form (as at
+  `langchain/__init__.py:31`) or pylint flags it unused. The plan already prescribes the correct action,
+  so writing the answer in would trigger another full review round for one sentence. Implementers of
+  Step 2 should read this note.
+
+**Changes**: none.
+
+**Status**: no changes needed — loop exit.
+
+---
+
+## Final Status
+
+**Rounds run**: 3 (this run). Run 1 previously completed 5 rounds; 8 in total across both runs.
+
+**Commits produced**:
+
+| SHA | Contents |
+|---|---|
+| `8b298c3` | Round 1 — file-size prep steps, resolver runtime bound, 10 straightforward fixes; plan renumbered to 11 steps |
+| `48859af` | Round 2 — Step 1 test-edit promise, Step 2 moved set, 5 smaller corrections |
+
+Plus `d706f73`, reverting a stray import reformat that was failing the isort CI job (unrelated to the
+plan; it had ridden along in a docs commit).
+
+**User decisions taken this run**:
+
+- **D-A1** — clear the 750-line file-size CI gate with two preparatory extraction commits, not
+  `.large-files-allowlist` entries.
+- **D-A2** — key the resolver's runtime short-circuit on the *winning* authored candidate rather than any
+  matching authored `never`, so a broad `never` beside a specific `ask` no longer voids a `scope=session`
+  grant.
+- **D-F1** — re-point the patch strings that follow the Step 1 move, rather than shrinking the move to
+  preserve a "no test edits" promise.
+
+**Outcome**: the plan is ready for approval. Eleven steps, each one commit, each leaving the checks green.
+
+**Carried forward — blocks implementation, not approval**: the project venv is unusable for verification.
+`pytest` and `pylint` are not importable and `mypy` times out (`black`/`isort` work). Every step in this
+plan has "all checks green" as its exit criterion, and Step 3 is a real-path `CancelledError` probe that
+cannot run at all until this is fixed. All three review rounds this run were static-only as a result.
