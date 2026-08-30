@@ -844,3 +844,21 @@ flip a `0` to a `1`. None do today.
 > `GITHUB_TOKEN_HINT`, `CIStatus`, `TaskTrackerStatus`, `WaitContext`,
 > `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). Reinstalling
 > would not help — the names are absent from `main` itself. No code written.
+
+> **Twenty-eighth re-check after `git fetch` (2026-08-30) — still blocked.** `origin/main` of
+> mcp-workspace is *still* `b9106c4` ("chore(pyproject): drop unused config extra (#275)") and
+> `git branch -r --merged origin/main` still lists only `origin/main` and `origin/HEAD`, so
+> `origin/268-...` remains **unmerged**. Its head *has* advanced this time (`cdae676` ->
+> `dbf3a81`, "docs(pr_info): update commit message for isort fix"), so the API shape was
+> re-verified against that blob rather than assumed: `class LinkedBranchStatus(str, Enum)` still
+> has exactly the six members `OK`/`MISMATCH`/`AMBIGUOUS`/`NOT_LINKED`/`UNKNOWN`/`NOT_CHECKED`
+> and `linked_branch_blocks(status)` still returns
+> `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`. Sections 2a-2d need
+> no revision.
+> `git show origin/main:src/mcp_workspace/checks/branch_status_rendering.py` matches
+> `GITHUB_TOKEN_HINT` and `class CIStatus` but **zero** occurrences of `LinkedBranchStatus` or
+> `linked_branch_blocks`; a repo-wide grep of the mcp-workspace tree still returns 0 matches,
+> and the module the MCP tooling process resolves still exports neither name (only
+> `GITHUB_TOKEN_HINT`, `CIStatus`, `TaskTrackerStatus`, `WaitContext`, `format_report_for_human`,
+> `format_report_for_llm`, `truncate_ci_details`). Reinstalling would not help — the names are
+> absent from `main` itself. No code written.
