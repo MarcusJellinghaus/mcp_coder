@@ -1695,7 +1695,7 @@ class _ApprovalPendingLLMService:
         async def _ask() -> None:
             try:
                 await self._engine.request_approval(
-                    tool_name="mcp__srv__do_it", args={}, source="layer:project"
+                    tool_name="mcp__srv__do_it", args={}, source="project"
                 )
             finally:
                 q.put(None)  # sentinel, like the provider's producer half
@@ -1804,9 +1804,9 @@ async def test_quit_with_approval_pending_exits_and_unwinds_worker(
     assert not app.is_running, "the app did not exit"
     assert engine.cancelled, "on_unmount never reached the engine"
     # Both halves of R9 in one pair of asserts. Without the closed-app guard the
-    # tail's ``call_from_thread(self._reset_busy_indicator)`` reaches a
-    # torn-down app: either it blocks on a loop this (blocking) wait is keeping
-    # busy, or it runs and explodes on the cleared widget tree.
+    # worker tail's ``call_from_thread`` hops reach a torn-down app: either they
+    # block on a loop this (blocking) wait is keeping busy, or they run and
+    # explode on the cleared widget tree.
     assert worker_done.wait(timeout=10.0), "the _stream_llm worker body never returned"
     assert worker_error == [], f"the worker tail hit a torn-down app: {worker_error!r}"
     assert service.agent_thread is not None

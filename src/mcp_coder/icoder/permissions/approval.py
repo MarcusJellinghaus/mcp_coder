@@ -116,7 +116,9 @@ class ApprovalEngine:
     * :meth:`cancel_all` sets ``_cancelled`` from the **Textual thread** before
       scheduling the cancellations onto the loop.
     * :meth:`pending` is a cross-thread ``len()`` read (the consumer thread uses
-      it to suspend the two streaming timeouts).
+      it to suspend the two streaming timeouts), and :attr:`turn_aborted` is a
+      cross-thread ``bool`` read (``AppCore`` uses it to decide whether the turn
+      may be recorded).
 
     Each of those is a single attribute rebind or one ``len()`` — atomic under
     the GIL — so no lock is needed. Two consequences are *coded*, not assumed:
@@ -156,6 +158,7 @@ class ApprovalEngine:
         self._emit: Callable[[StreamEvent], None] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._cancelled = False
+        self._turn_aborted = False
 
     # -- per-turn lifecycle (consumer thread) --------------------------------
 
@@ -169,6 +172,7 @@ class ApprovalEngine:
         self._emit = emit
         self._loop = None
         self._cancelled = False
+        self._turn_aborted = False
 
     def detach(self) -> None:
         """Cancel still-pending approvals, unbind the sink, clear the registry.
@@ -181,9 +185,9 @@ class ApprovalEngine:
         interceptor unwinds while the join waits; joining first burns the full
         five seconds and returns with the thread still alive.
 
-        ``_cancelled`` deliberately survives: ``AppCore.stream_llm`` reads it
-        *after* this has already run, to decide whether the turn may be
-        recorded.
+        ``_cancelled`` and ``_turn_aborted`` deliberately survive:
+        ``AppCore.stream_llm`` reads the latter *after* this has already run, to
+        decide whether the turn may be recorded.
         """
         loop = self._loop
         if loop is not None:
@@ -232,14 +236,41 @@ class ApprovalEngine:
 
     @property
     def cancelled(self) -> bool:
-        """Whether this turn was cancelled through :meth:`cancel_all`.
+        """Whether a cancel was *requested* for this turn.
 
-        Reset by :meth:`attach`, **not** by :meth:`detach`.
+        Set by every :meth:`cancel_all`, including one that found nothing to
+        cancel. It stops further emits and fail-closes later approval requests,
+        so it is a statement about the channel, not about the turn's outcome —
+        use :attr:`turn_aborted` for that. Reset by :meth:`attach`, **not** by
+        :meth:`detach`.
 
         Returns:
             ``True`` once :meth:`cancel_all` ran for the current turn.
         """
         return self._cancelled
+
+    @property
+    def turn_aborted(self) -> bool:
+        """Whether this turn was actually unwound by the direct cancel channel.
+
+        Narrower than :attr:`cancelled` on purpose, and the two must not be
+        conflated. A cancel only unwinds the provider generator — skipping its
+        ``done`` event, which is the entire reason ``AppCore`` gates the turn
+        record on this — when there was a parked interceptor to unpark. A
+        :meth:`cancel_all` with nothing pending changes nothing about the turn:
+        it is an idle key press, or app shutdown while an ordinary turn is still
+        streaming, and that turn either completes normally (and must be
+        recorded) or is torn down by the generic cancel path, whose teardown
+        never reaches the gate anyway.
+
+        Reset by :meth:`attach`, **not** by :meth:`detach` — the read happens
+        after ``detach()`` has already run in the provider's ``finally``.
+
+        Returns:
+            ``True`` once at least one pending approval was cancelled through
+            :meth:`cancel_all` during the current turn.
+        """
+        return self._turn_aborted
 
     # -- the agent loop side --------------------------------------------------
 
@@ -289,6 +320,13 @@ class ApprovalEngine:
         # to a single-threaded type checker, which is precisely the assumption
         # this re-check exists to deny.)
         if self._cancelled or not self.is_attached():
+            if self.cancelled:
+                # The cancel channel unparks this interceptor after all, so the
+                # turn really is aborted — ``_cancel_all_on_loop`` could not
+                # record that for an entry it never saw. Read through the
+                # property for the same reason ``is_attached()`` exists above:
+                # a bare ``self._cancelled`` re-test is narrowed to unreachable.
+                self._turn_aborted = True
             future.cancel()
         elif len(self._pending) == 1:  # only the front entry is ever emitted
             self._emit_front()
@@ -318,12 +356,17 @@ class ApprovalEngine:
             loop.call_soon_threadsafe(_set_if_pending, entry.future, decision)
 
     def cancel_all(self) -> None:
-        """Abort every pending approval and mark the turn cancelled.
+        """Abort every pending approval.
 
         The direct UI → engine cancel channel: the generic cancel paths cannot
         reach an interceptor parked on an approval. Sets ``_cancelled`` on the
         Textual thread (which also stops any further emit), then cancels the
         futures **on the agent loop**.
+
+        Marking the *turn* aborted is left to the two sites that know whether
+        anything was actually unparked (see :attr:`turn_aborted`) — this method
+        is also called on a bare key press and on app shutdown, neither of which
+        need have a turn to abort.
         """
         self._cancelled = True
         loop = self._loop
@@ -333,7 +376,16 @@ class ApprovalEngine:
     # -- internals ------------------------------------------------------------
 
     def _cancel_all_on_loop(self) -> None:
-        """Cancel every registered future; runs on the agent loop."""
+        """Cancel every registered future; runs on the agent loop.
+
+        Also raises ``_turn_aborted`` when it finds anything to cancel. This is
+        the authoritative site rather than :meth:`cancel_all`: it reads the
+        registry *on the loop that owns it*, at the moment of the cancellation,
+        so it cannot mistake an approval registered a moment later for one this
+        cancel unparked (nor the reverse).
+        """
+        if self._pending:
+            self._turn_aborted = True
         for entry in list(self._pending.values()):
             entry.future.cancel()
 

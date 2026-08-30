@@ -124,11 +124,11 @@ class _Handler:
         return self.result
 
 
-class _CancelledEngine(ApprovalEngine):
-    """Engine stub reporting a cancelled turn (subclassed, so the type holds)."""
+class _AbortedEngine(ApprovalEngine):
+    """Engine stub reporting an aborted turn (subclassed, so the type holds)."""
 
     @property
-    def cancelled(self) -> bool:
+    def turn_aborted(self) -> bool:
         return True
 
 
@@ -271,7 +271,7 @@ def test_stream_forwards_none_without_a_bridge(
 def test_cancelled_turn_writes_no_request_end_and_no_session(
     fake_llm: FakeLLMService, event_log: EventLog, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R16: engine reports cancelled -> no ``llm_request_end``, no store."""
+    """R16: engine reports the turn aborted -> no ``llm_request_end``, no store."""
     stored: list[tuple[Any, ...]] = []
     monkeypatch.setattr(
         "mcp_coder.icoder.core.app_core.store_session",
@@ -280,13 +280,41 @@ def test_cancelled_turn_writes_no_request_end_and_no_session(
     core = AppCore(
         llm_service=fake_llm,
         event_log=event_log,
-        approval_engine=_CancelledEngine(),
+        approval_engine=_AbortedEngine(),
     )
 
     list(core.stream_llm("hi"))
 
     assert stored == []
     assert not any(e.event == "llm_request_end" for e in event_log.entries)
+
+
+def test_shutdown_cancel_with_nothing_pending_still_records_the_turn(
+    fake_llm: FakeLLMService, event_log: EventLog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Quitting during an approval-free turn must not discard its record.
+
+    ``on_unmount`` fires ``cancel_all()`` on every quit, so gating R16 on
+    ``cancelled`` would drop the ``llm_request_end`` and the session record of a
+    turn that finished normally. ``turn_aborted`` stays down because nothing was
+    parked, so this turn is recorded like any other.
+    """
+    stored: list[tuple[Any, ...]] = []
+    monkeypatch.setattr(
+        "mcp_coder.icoder.core.app_core.store_session",
+        lambda *a, **kw: stored.append(a),
+    )
+    engine = ApprovalEngine()
+    engine.attach(lambda event: None)
+    engine.cancel_all()  # the shutdown hook, with no approval in flight
+    core = AppCore(llm_service=fake_llm, event_log=event_log, approval_engine=engine)
+
+    list(core.stream_llm("hi"))
+
+    assert engine.cancelled is True
+    assert engine.turn_aborted is False
+    assert len(stored) == 1
+    assert any(e.event == "llm_request_end" for e in event_log.entries)
 
 
 @pytest.mark.parametrize("with_engine", [False, True])

@@ -271,10 +271,15 @@ class AppCore:
         # clears ``in_flight`` on ``llm_request_end`` and appends the
         # "— Cancelled —" marker only while ``in_flight`` is still true at EOF,
         # so gating the store alone would make this the one cancel that replays
-        # without a marker. The flag is set by ``cancel_all()`` and reset by the
-        # next ``attach()`` — never by ``detach()``, which already ran inside
-        # the provider's ``finally`` before this line is reached.
-        if self._approval_engine is not None and self._approval_engine.cancelled:
+        # without a marker.
+        #
+        # The gate is ``turn_aborted``, NOT ``cancelled``: the latter is raised
+        # by every ``cancel_all()``, including the one ``on_unmount`` fires on
+        # app shutdown. A turn that finishes normally while the user is quitting
+        # was never unwound and must still be recorded. ``turn_aborted`` is
+        # reset by the next ``attach()`` — never by ``detach()``, which already
+        # ran inside the provider's ``finally`` before this line is reached.
+        if self._approval_engine is not None and self._approval_engine.turn_aborted:
             return
 
         self._event_log.emit("llm_request_end")

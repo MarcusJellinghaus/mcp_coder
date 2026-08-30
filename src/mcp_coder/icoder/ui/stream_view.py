@@ -85,17 +85,27 @@ class StreamViewApp(App[None]):
         self._shutting_down = threading.Event()
 
     def on_unmount(self) -> None:
-        """Cancel pending approvals so quitting never stalls (R9).
+        """Stop the streaming worker so quitting never stalls (R9).
 
-        Two halves, both required. Raising ``_shutting_down`` closes the UI
+        Three halves, all required. Raising ``_shutting_down`` closes the UI
         door before the unwind starts (see
-        :meth:`_call_from_thread_if_running`); ``cancel_pending_approvals()``
-        then starts the unwind itself. Without the cancel, a worker parked in
-        ``q.get`` behind an unanswered approval waits out the provider's 300s
-        inactivity timeout, because an interceptor blocked on a future emits
-        no event and so none of the generic cancel paths can reach it.
+        :meth:`_call_from_thread_if_running`); the other two start the unwind
+        itself, and they cover *different* turns:
+
+        * ``cancel_pending_approvals()`` is the only thing that reaches a
+          worker parked in ``q.get`` behind an unanswered approval — an
+          interceptor blocked on a future emits no event, so none of the
+          generic cancel paths can fire, and the turn would otherwise wait out
+          the provider's 300s inactivity timeout;
+        * ``_cancel_event`` covers the ordinary approval-free turn, where there
+          is no pending future to cancel. The worker's ``for`` loop tests it on
+          the next event and breaks, which closes the provider generator and
+          runs its ``GeneratorExit`` path (``cancel.set()`` -> ``detach()`` ->
+          ``join``). Without it the worker drains the whole remaining turn while
+          the non-daemon thread-pool keeps the process alive at exit.
         """
         self._shutting_down.set()
+        self._cancel_event.set()
         self._core.cancel_pending_approvals()
 
     def _call_from_thread_if_running(
@@ -165,9 +175,6 @@ class StreamViewApp(App[None]):
                 self._call_from_thread_if_running(self._reset_busy_indicator)
                 self._call_from_thread_if_running(self._append_blank_line)
             elif not _error_handled:
-                # ``on_unmount`` does not set ``_cancel_event``, so a turn
-                # unwound by quitting lands HERE — the one call the closed-app
-                # guard has to swallow to let the worker thread finish.
                 self._call_from_thread_if_running(self._reset_busy_indicator)
 
     def _append_blank_line(self) -> None:

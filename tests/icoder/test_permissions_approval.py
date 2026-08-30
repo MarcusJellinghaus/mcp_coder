@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Callable
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -35,12 +36,44 @@ async def _wait_until(predicate: Callable[[], bool], timeout: float = 2.0) -> No
 def _ask(
     engine: ApprovalEngine, tool_name: str = "mcp__srv__tool"
 ) -> "asyncio.Task[ApprovalDecision]":
-    """Start one approval request as a task on the running loop."""
+    """Start one approval request as a task on the running loop.
+
+    ``source`` carries the bare layer name, which is what the only producer
+    (``gateway._source_label``) emits for a ``Layer`` — the other two shapes it
+    can produce are ``"frame"`` and ``"default"``.
+    """
     return asyncio.create_task(
         engine.request_approval(
-            tool_name=tool_name, args={"path": "x"}, source="layer:project"
+            tool_name=tool_name, args={"path": "x"}, source="project"
         )
     )
+
+
+def _teardown_during_insert(
+    monkeypatch: pytest.MonkeyPatch, teardown: Callable[[], None]
+) -> None:
+    """Run *teardown* inside ``request_approval``'s guard-to-insert window.
+
+    Both teardown paths walk the registry from another thread, so either can run
+    after ``request_approval``'s opening guard but before the insert that
+    follows it — seeing an empty registry, and therefore missing the entry that
+    is about to be added. ``uuid4()`` is called in exactly that window, so
+    hooking it turns the race into a deterministic interleaving.
+
+    Args:
+        monkeypatch: The active monkeypatch fixture.
+        teardown: The engine teardown to interleave. Run exactly once, so the
+            request's own ``finally`` is not re-entered.
+    """
+    fired: list[None] = []
+
+    def _hook() -> UUID:
+        if not fired:
+            fired.append(None)
+            teardown()
+        return uuid4()
+
+    monkeypatch.setattr("mcp_coder.icoder.permissions.approval.uuid4", _hook)
 
 
 def _approval_id(event: StreamEvent) -> str:
@@ -62,7 +95,7 @@ async def test_allow_decision_resolved_from_another_thread() -> None:
     assert events[0]["type"] == "approval_request"
     assert events[0]["tool_name"] == "mcp__srv__tool"
     assert events[0]["args"] == {"path": "x"}
-    assert events[0]["source"] == "layer:project"
+    assert events[0]["source"] == "project"
 
     await asyncio.to_thread(
         engine.resolve_pending,
@@ -179,7 +212,79 @@ async def test_cancel_all_unwinds_every_awaiting_coroutine() -> None:
         await second
 
     assert engine.cancelled is True
+    assert engine.turn_aborted is True  # interceptors were actually unparked
     assert len(events) == 1  # the queued sibling is never promoted
+    assert engine.pending() == 0
+
+    engine.attach(events.append)  # the next turn starts clean
+    assert engine.turn_aborted is False
+
+
+def test_cancel_all_with_nothing_pending_does_not_abort_the_turn() -> None:
+    """An idle cancel — or the shutdown hook — leaves the turn recordable.
+
+    ``cancelled`` rises either way: it is what stops further emits and
+    fail-closes later requests. But only a cancel that actually unparked an
+    interceptor unwinds the provider generator past its ``done`` event, and only
+    that turn must go unrecorded (R16). ``on_unmount`` fires ``cancel_all()`` on
+    *every* quit, so conflating the two would discard the session record of a
+    turn that finished normally while the user was quitting.
+    """
+    engine = ApprovalEngine()
+    engine.attach(lambda event: None)
+
+    engine.cancel_all()
+
+    assert engine.cancelled is True
+    assert engine.turn_aborted is False
+
+
+async def test_detach_racing_the_insert_cancels_the_new_future(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A teardown that misses the entry must not leave the interceptor parked.
+
+    ``detach()`` runs on the consumer thread and walks the registry, so it can
+    land after ``request_approval``'s opening guard and before the insert — it
+    then cancels nothing, unbinds the sink, and the entry appears in a registry
+    nobody will look at again. Without the post-insert re-check the caller parks
+    on a future that no ``resolve_pending``, ``cancel_all`` or ``detach`` can
+    reach, and because ``pending()`` is non-zero both streaming timeouts stay
+    suspended — so the turn wedges permanently rather than erroring.
+    """
+    engine = ApprovalEngine()
+    events: list[StreamEvent] = []
+    engine.attach(events.append)
+    _teardown_during_insert(monkeypatch, engine.detach)
+
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(_ask(engine), timeout=2)
+
+    assert events == []  # nothing is emitted onto a turn whose sink is gone
+    assert engine.pending() == 0  # and no entry is leaked into the registry
+
+
+async def test_cancel_all_racing_the_insert_cancels_the_new_future(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same window, entered by the direct cancel channel.
+
+    ``cancel_all()`` hands the cancellation to the agent loop, so it walks a
+    registry this entry has not reached yet and cannot cancel it. Without the
+    re-check the engine goes on to *emit* an ``approval_request`` for a turn the
+    user has already cancelled — pushing a modal that must never appear — and
+    only unparks the caller later, once the deferred sweep happens to run.
+    """
+    engine = ApprovalEngine()
+    events: list[StreamEvent] = []
+    engine.attach(events.append)
+    _teardown_during_insert(monkeypatch, engine.cancel_all)
+
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(_ask(engine), timeout=2)
+
+    assert events == []
+    assert engine.turn_aborted is True  # this turn really was unwound
     assert engine.pending() == 0
 
 
@@ -256,9 +361,7 @@ def test_detach_on_a_closed_agent_loop_does_not_raise() -> None:
 def test_unattached_engine_denies_without_awaiting() -> None:
     """A detached engine fails closed immediately, with its own deny reason."""
     engine = ApprovalEngine()
-    coro = engine.request_approval(
-        tool_name="mcp__srv__tool", args={}, source="layer:user"
-    )
+    coro = engine.request_approval(tool_name="mcp__srv__tool", args={}, source="user")
 
     with pytest.raises(StopIteration) as excinfo:
         coro.send(None)  # returns on the first step -> it never awaited
