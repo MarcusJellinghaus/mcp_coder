@@ -1,10 +1,10 @@
-# Step 5 — Provider plumbing: bridge param, pause, `CancelledError` catch, transient events
+# Step 5 — Resolver: `runtime` becomes its own stage (R14) + degraded docstring (R15)
 
-**Depends on:** Step 2 (the `ApprovalBridge` Protocol).
+**Depends on:** nothing (independent of Steps 1–4; may run in parallel).
 
-Threads the bridge down to where `q` lives, makes the consumer survive a human pause, stops a
-cancel from printing a traceback onto a live Textual screen, and keeps `approval_request` out of
-the two persistence sinks.
+Without this, the `scope=session` acceptance criterion is **unsatisfiable** for its canonical case:
+a session grant loses to an authored `ask` at equal specificity, which is the single most common
+way a tool becomes gated in the first place.
 
 ---
 
@@ -12,256 +12,154 @@ the two persistence sinks.
 
 | Path | Action |
 |---|---|
-| `src/mcp_coder/llm/types.py` | **modify** — `_TRANSIENT_EVENT_TYPES`, `ResponseAssembler.add`, StreamEvent docs |
-| `src/mcp_coder/llm/interface.py` | **modify** — optional `approval_bridge` param |
-| `src/mcp_coder/llm/providers/langchain/__init__.py` | **modify** — `ask_langchain_stream`, `_ask_agent_stream` |
-| `tests/llm/providers/langchain/test_approval_stream_bridge.py` | **create** |
-| `tests/llm/test_types.py` *(or the existing assembler test module)* | **modify** |
+| `src/mcp_coder/icoder/permissions/resolver.py` | **modify** — `_resolve_config`, `_resolve_frame` docstring, module docstring |
+| `tests/icoder/test_permissions_resolver.py` | **modify** — add R14 cases |
 
 ## WHAT
 
+Two changes, both small.
+
+**1. `_resolve_config` — partition candidates before the specificity contest.**
+
+The existing 4-key sort lambda is lifted to a module-level `_rule_sort_key(ir)` so the partition
+can reuse it; the `max(...)` call itself is unchanged apart from taking the named key.
+
 ```python
-# llm/types.py
-_TRANSIENT_EVENT_TYPES: frozenset[str] = frozenset({"raw_line", "approval_request"})
-"""Event types that are neither persisted nor replayed (R5)."""
-# ResponseAssembler.add: `if event_type != "raw_line"` -> `if event_type not in _TRANSIENT_EVENT_TYPES`
-
-# llm/interface.py
-def prompt_llm_stream(..., approval_bridge: "ApprovalBridge | None" = None) -> Iterator[StreamEvent]
-
-# llm/providers/langchain/__init__.py
-def ask_langchain_stream(..., approval_bridge: ApprovalBridge | None = None) -> Iterator[StreamEvent]
-def _ask_agent_stream(..., approval_bridge: ApprovalBridge | None = None) -> Iterator[StreamEvent]
+def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision:
+    # unchanged: degraded short-circuit, candidate collection
+    runtime = [ir for ir in cands if ir[1].layer == "runtime"]
+    authored = [ir for ir in cands if ir[1].layer != "runtime"]
+    # Key the bound on the WINNING authored rule, not on "any authored never".
+    top_authored = max(authored, key=_rule_sort_key) if authored else None
+    blocked = top_authored is not None and top_authored[1].policy is Policy.NEVER
+    if runtime and not blocked:          # runtime wins as a GROUP, before specificity ...
+        cands = runtime                  # ... unless an authored `never` actually wins
+    # unchanged: max(cands, key=_rule_sort_key), Decision construction
 ```
+
+**2. `_resolve_frame` docstring — remove the now-false "degrade loosens" claim.**
+
+The `base == "none"` + `config.degraded` branch returns `AFTER_APPROVAL` with a `Degraded` source
+specifically so approval could rescue a sandboxed tool. Step 6 (R15) makes source-based denial
+collapse that to an effective `NEVER`. The behaviour is unchanged from M2, so nothing breaks — but
+the docstring stops describing unreachable intent. Update the module docstring's precedence
+sentence in the same edit (`user->project->local->runtime` is no longer a flat ordering).
 
 ## HOW
 
-* **`llm/types.py`** — export `_TRANSIENT_EVENT_TYPES` (module-private by name but imported by
-  `AppCore` in Step 7; add it to `__all__` only if the project's convention requires it). Extend
-  the `StreamEvent` docstring with three entries: the new `approval_request` event, the existing
-  **undocumented** `tool_call_id` (model's `call_N` id on `tool_result`, langgraph `run_id` on
-  `tool_use_start`), and `tool_run_id` (Step 6 adds it; document it here in one pass).
-* **`llm/interface.py`** — annotate the new parameter under `if TYPE_CHECKING:` with a string
-  annotation so the module-level import of the langchain package is **not** made eager (the
-  existing `ask_langchain_stream` import is deliberately function-local). Document it exactly like
-  the neighbouring `tools` parameter: *"langchain provider only"*. Forward it only in the
-  `provider == "langchain"` branch.
-* **`ask_langchain_stream`** — forward to `_ask_agent_stream`; the `_ask_text_stream` branch
-  ignores it entirely (**no-op**, R13: non-iCoder CLI callers pass nothing and must keep working).
-* **`_ask_agent_stream`** — three edits:
-  1. Attach/detach, **inside one try/finally**. `q` is created ~33 lines above the existing
-     `try:` (`__init__.py:557` vs `:590`), so "right after `q` is created" and "inside the
-     existing `try`" cannot both hold. Resolve it by **widening the existing `try` upwards** so
-     it starts immediately after `q` is created, then put `approval_bridge.attach(q.put)` as its
-     first statement. Everything currently between (`error_holder`, `_run`, `_thread_main`,
-     `thread.start()`) moves inside that `try` unchanged. This is what guarantees that a failure
-     between attach and the consumer loop — `thread.start()` raising, for instance — still runs
-     `detach()` instead of leaving the engine attached to a dead turn.
-     In the `finally`, the order is **`approval_bridge.detach()` first, `thread.join(timeout=5)`
-     second** — not merely "next to". `detach()` cancels every still-pending future
-     (Step 2), which is the only thing that can unpark an interceptor blocked in
-     `await fut`; joining first would instead burn the full 5s, expire with the agent thread
-     still parked, and break test 5's `thread.is_alive() is False` assertion. Detach-before-join
-     is a no-op on the normal-completion path (the registry is already empty) and is what makes
-     the join meaningful on the `GeneratorExit`-while-pending path. That `finally` runs on normal
-     completion **and** on `GeneratorExit`, which is the cancel path — one lifecycle site, per
-     summary §2.10.
-     **Guard both `finally` statements — the widening makes them conditional.** `thread` is now
-     bound *inside* the `try`, so the `finally` must survive the two failure modes the widening
-     exists to cover: `attach(q.put)` raising as the first statement leaves `thread` **unbound**
-     (`UnboundLocalError` from the `finally`), and `thread.start()` raising leaves it **created
-     but not started** (`RuntimeError: cannot join thread before it is started`). Either one would
-     raise out of the `finally` and mask the original exception — the very failure the widening is
-     justified by. So each cleanup step is conditioned on its own setup having succeeded:
-     `detach()` only when `attach()` returned (a flag set immediately after the attach call, not
-     `approval_bridge is not None` — attach may itself have raised), and `thread.join(timeout=5)`
-     only when `thread` is bound **and** was started (`thread.ident is not None`, or an explicit
-     `thread = None` pre-binding above the `try` plus a started flag). The `finally` must not be
-     able to raise.
-  2. Pause: a **timestamped pending window**. Sample `approval_bridge.pending()` at every loop
-     point (after `q.get` returns *and* on `queue.Empty`); opening the window records
-     `pause_began`, closing it credits the real wall time to `paused` **and bumps a
-     `pause_epoch` counter**. On `queue.Empty` with the window open, `continue` instead of
-     raising the inactivity timeout. The overall cap is
-     compared against `elapsed − paused − (the currently open window)`. Do **not** accumulate
-     `paused += timeout` in the `queue.Empty` branch only: with a 300s inactivity timeout every
-     pause shorter than 300s would produce no `Empty` at all and would be charged in full against
-     the 3600s cap.
+* Keep `_LAYER_ORDER` exactly as it is — it still orders `user`/`project`/`local` **within** the
+  non-runtime group, and orders runtime rules among themselves (a no-op today, but I4.2/#1048
+  writes several runtime rules that must resolve against each other normally).
+* Explain **why** in a comment: `_LAYER_ORDER` is only the *third* sort key and
+  `Policy.rank` puts `AFTER_APPROVAL` (1) above `ALWAYS` (0), so without the partition a runtime
+  `ALWAYS` loses to an authored `ask` on the same matcher.
+* **Bound the widening, and comment why.** R14 asks for a runtime `always` to
+  beat an authored `ask`; an unbounded group short-circuit would also let a **broad** runtime
+  `always` shadow a **specific** authored `never`, which is a security-relevant widening this
+  issue does not need. With the guard an authored `never` falls through to the ordinary 4-key
+  contest, so it loses only to a *strictly more specific* runtime rule, never to a broader one.
+  The bound is close to free: `filter_tools` hides `never` tools from a turn-start snapshot, so a
+  runtime grant cannot make such a tool callable in that turn anyway — without the bound the
+  resolver would simply disagree with the tool list the model was given.
+  Residual, recorded for #1048 (`/allow` quick commands, which carry no never-override confirm):
+  a *specific* runtime grant still overrides a broader authored `never`.
+* **The bound is keyed on the *winning* authored rule, not on "any matching authored `never`".**
+  A rule set can hold both, and "any" then breaks R14's own headline case:
 
-     **The inactivity budget must be restarted, not merely suspended.** "Re-wait while
-     `pending() > 0`" is not sufficient: `q.get(timeout=timeout)` starts a fresh 300s budget on
-     every call, and a pause that *opens and closes inside one such wait* still consumes that
-     budget. Concretely — the `approval_request` is dequeued at t=0, the user answers at t=250,
-     the approved tool then runs quietly for 60s: at t=300 `q.get` raises `Empty` with
-     `pending() == 0`, so the window-open check fails and the turn dies with
-     `TimeoutError("no response for 300s. Connection closed.")` after only 50s of real
-     inactivity. So: snapshot `pause_epoch` immediately **before** each `q.get`, and on
-     `queue.Empty` re-wait when the window is open **or** when `pause_epoch` has advanced since
-     that snapshot — i.e. any pause overlapping the current wait buys a full fresh `timeout`.
-     Only a wait that contained no pause at all may raise the inactivity `TimeoutError`.
-     A pause can never go unobserved: the registry entry is created *before* the emit
-     (summary §2.2), so `pending()` is already `> 0` on the loop point that dequeues the
-     `approval_request`, and the window is always opened there.
-  3. `_run` gains `except asyncio.CancelledError:` **before** the `except Exception`, which does
-     **not** append to `error_holder`; the `finally` still puts the sentinel.
-* **Comments to carry (D9):** why pause and not keepalives — the overall cap is checked *inside*
-  the consumer loop after `q.get()` returns, so keepalives **arm** it rather than reset it, and
-  they would reach the session `.jsonl` and replay. Why `_run` catches `CancelledError` —
-  it is a `BaseException`, so `agent.py`'s and `_run`'s `except Exception` both miss it and
-  `_thread_main` is a bare `asyncio.run`, which would put a traceback on stderr, into a live
-  Textual screen.
+  ```
+  project layer:  "never": ["mcp__s__*"]     (broad)
+                  "ask":   ["mcp__s__t"]     (specific)
+  runtime grant:  Rule(Matcher("s","t"), ALWAYS, "runtime")
+  ```
+
+  The broad `never` matches, so "any" skips the short-circuit; the specific authored `ask` then
+  beats the runtime `always` on `Policy.rank` (`AFTER_APPROVAL` 1 > `ALWAYS` 0 at equal
+  specificity), and the `scope=session` grant silently does nothing — the user is re-prompted
+  every turn, contradicting the acceptance criterion this step exists for. Sorting the authored
+  candidates first and testing only the **top** one costs one extra `max()` over a list the
+  resolver already knows how to order.
+* Do **not** touch `resolve()`, `_resolve_frame`'s logic, `matcher.py`, or `model.py`.
 
 ## ALGORITHM
 
-```python
-# _ask_agent_stream consumer loop
-start, paused, pause_began, pause_epoch = time.monotonic(), 0.0, None, 0
-
-def _sync_pause() -> None:
-    """Open/close the pending window from the bridge's count (consumer thread)."""
-    nonlocal paused, pause_began, pause_epoch
-    waiting = approval_bridge is not None and approval_bridge.pending() > 0
-    now = time.monotonic()
-    if waiting and pause_began is None:
-        pause_began = now                       # window opens
-    elif not waiting and pause_began is not None:
-        paused += now - pause_began             # window closes, real wall time credited
-        pause_began = None
-        pause_epoch += 1                        # ... and the inactivity budget is void
-
-def _elapsed() -> float:
-    now = time.monotonic()
-    open_window = now - pause_began if pause_began is not None else 0.0
-    return (now - start) - paused - open_window
-
-while True:
-    epoch_at_wait_start = pause_epoch           # snapshot BEFORE the wait
-    try:
-        event = q.get(timeout=timeout)
-    except queue.Empty as exc:
-        _sync_pause()
-        # Re-wait on a still-open pause, and equally on one that opened and
-        # closed inside this wait: `q.get` gives every call a fresh `timeout`,
-        # so a pause overlapping the wait would otherwise eat the whole budget
-        # and trip the inactivity error moments after the user approved.
-        if pause_began is not None or pause_epoch != epoch_at_wait_start:
-            continue
-        cancel.set(); raise TimeoutError(...) from exc
-    _sync_pause()                               # sampled BEFORE the yield blocks on the UI
-    if event is None: break
-    if _elapsed() > _AGENT_OVERALL_TIMEOUT:
-        cancel.set(); raise TimeoutError(...)
-    yield event
 ```
+KEY = (specificity, policy.rank, _LAYER_ORDER[layer], -index)   # lifted to _rule_sort_key
 
-The window opens on the iteration that dequeues the `approval_request` itself — the registry
-entry is created *before* the emit (summary §2.2), so `pending()` is already `> 0` there — and
-closes on the first event (or `queue.Empty`) that follows the decision. It therefore covers the
-whole human wait, including the part spent suspended at `yield` while the UI handles the event,
-and works for pauses far shorter than `timeout`.
-
-`pause_epoch` covers the other half: the window feeds the **overall cap**, the epoch protects the
-**inactivity budget**. Closing a window voids the `q.get` wait it overlapped, so the consumer
-re-waits with a fresh `timeout` instead of raising — which is the only thing standing between a
-user who answers late in a wait and a spurious "Connection closed" on the next quiet stretch.
+collect cands = [(index, rule) for matching rules]          # unchanged
+runtime  = [c for c in cands if c.rule.layer == "runtime"]
+authored = [c for c in cands if c.rule.layer != "runtime"]
+top_authored = max(authored, key=KEY) if authored else None
+if runtime and not (top_authored and top_authored.rule.policy is NEVER):
+    cands = runtime                                          # top-priority stage, bounded
+best = max(cands, key=KEY)                                   # unchanged
+return Decision(best.policy, Layer(best.layer), matched, None)                    # unchanged
+```
 
 ## DATA
 
-* `approval_bridge.attach(q.put)` — `q` is `queue.Queue[StreamEvent | None]`, so `q.put`
-  satisfies `Callable[[StreamEvent], None]` (contravariant parameter, extra params have defaults).
-* `paused` and `pause_began` are floats in seconds (`pause_began` is `float | None`, `None` when
-  no approval is pending); `pause_epoch` is an `int` bumped once per closed window and is only
-  ever compared for inequality against a snapshot taken before `q.get`. The inactivity `timeout`
-  is iCoder's **300s**
-  (`ICODER_LLM_TIMEOUT_SECONDS`), not the 30s default, and `_AGENT_OVERALL_TIMEOUT` is **3600s** —
-  tests must monkeypatch both to small values, and must cover a pause **shorter** than the
-  inactivity timeout, where no `queue.Empty` ever occurs, **and** a pause that opens and closes
-  inside a single `q.get` wait which is then followed by a quiet stretch.
-* Yielded events are unchanged; `approval_request` passes through the generator like any other.
+No new types. `Decision.source` for a runtime win is `Layer("runtime")` — which Step 6 flattens to
+the plain string `"runtime"` for the `approval_request` payload.
 
 ## TESTS (write first)
 
-Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 1.
-
-1. **Pause defeats both timeouts:** a tool that blocks for longer than *both* a small
-   monkeypatched `timeout` and a small monkeypatched `_AGENT_OVERALL_TIMEOUT` still completes when
-   a bridge reports `pending() > 0`.
-2. **Sub-inactivity pause is still excluded from the overall cap:** with `timeout` large enough
-   that **no `queue.Empty` ever fires** and `_AGENT_OVERALL_TIMEOUT` smaller than the pause, a
-   bridge reporting `pending() > 0` across the wait still completes. This is the case the
-   `queue.Empty`-only accumulation got wrong; test 1 cannot detect it.
-2b. **A pause that ends mid-wait does not consume the inactivity budget:** with a small
-   monkeypatched `timeout` (and `_AGENT_OVERALL_TIMEOUT` large), the bridge reports
-   `pending() > 0` for ~0.8 × `timeout`, then drops to `0`, and **no event follows for another
-   ~0.8 × `timeout`** before the tool finally emits. The turn must complete: the `Empty` raised
-   at the end of that first wait sees `pending() == 0` but an advanced `pause_epoch`, so the
-   consumer re-waits with a fresh budget. Without the epoch this raises
-   `TimeoutError("no response for …")` — the 250s-answer + 60s-tool scenario. Tests 1–3 cannot
-   detect it: test 1 keeps `pending() > 0` for the whole wait, test 2 sets `timeout` so no
-   `queue.Empty` ever fires, and test 3 has no pause at all.
-3. **Negative control:** the same setup with `approval_bridge=None` raises `TimeoutError` — proves
-   the pause is load-bearing, not vacuous.
-4. **Attach/detach lifecycle:** `attach` is called with a callable that puts onto *this* turn's
-   queue; `detach` is called on normal completion **and** on generator close (cancel path). Two
-   consecutive turns never share a queue (the stale-`q` failure mode).
-5. **Generator closed while an approval is pending:** close the consumer generator at the `yield`
-   that delivered `approval_request` (the reachable `GeneratorExit`, summary §2.3). `detach()`
-   runs, the pending future is cancelled, and the agent thread is dead after the 5s join
-   (`thread.is_alive() is False`) — it does not survive parked on the future.
-6. **`CancelledError` in `_run`:** `error_holder` stays empty, the sentinel is still put, the
-   generator ends normally, and nothing is re-raised.
-7. **No-op on the text branch:** `ask_langchain_stream` without `mcp_config` and with a bridge
-   ignores it and never calls `attach`.
-8. **`ResponseAssembler`:** an `approval_request` event is absent from
-   `result()["raw_response"]["events"]`; `raw_line` exclusion still holds; all other event types
-   still accumulate.
+1. **Canonical R14 case:** project layer `"ask": ["mcp__s__t"]` + runtime
+   `Rule(Matcher("s","t"), Policy.ALWAYS, "runtime")` → resolves `ALWAYS` with `Layer("runtime")`.
+   (Assert this fails before the change — it currently resolves `AFTER_APPROVAL`.)
+2. A runtime rule wins even when a **more specific** authored `ask`/`allow` rule exists (the
+   group is consulted before the specificity contest) — intended widening, per R14's note.
+3. **Bound:** a *broad* runtime `always` (e.g. `Matcher("s", None)`) does **not** shadow a
+   *specific* authored `never` (`"never": ["mcp__s__t"]`) → still `NEVER`.
+4. **Bound, other side:** a runtime `always` on the same matcher as an authored `never` also
+   loses (equal specificity, `Policy.rank` favours `NEVER`), while a *strictly more specific*
+   runtime `always` against a broader authored `never` wins — the documented residual.
+4b. **The bound reads the winning authored rule, not any authored rule.** Project layer with
+    **both** `"never": ["mcp__s__*"]` and `"ask": ["mcp__s__t"]`, plus runtime
+    `Rule(Matcher("s","t"), ALWAYS, "runtime")` → resolves `ALWAYS` with `Layer("runtime")`.
+    The specific `ask` outranks the broad `never` among the authored candidates, so the bound
+    does not engage. An `any`-matching bound resolves `AFTER_APPROVAL` here and re-prompts on
+    every turn; tests 1 and 3 both pass under that bug, so this case is the only one that catches
+    it.
+5. Runtime rules contest **among themselves** normally: two runtime rules of different
+   specificity → the more specific wins.
+6. No runtime rules present → behaviour is byte-identical to today.
+7. **Regression:** existing
+   `test_later_layer_wins_at_equal_specificity_and_policy` stays green (verify, do not edit).
 
 ## CHECKS
 
-`run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check` — all green.
+`run_pylint_check`, `run_pytest_check`, `run_mypy_check` — all green.
 
 ---
 
 ## LLM PROMPT
 
-> Read `pr_info/steps/summary.md` (§2.3, §2.7, §2.10) and `pr_info/steps/step_5.md`, then implement
+> Read `pr_info/steps/summary.md` (§2.4 and §2.5) and `pr_info/steps/step_5.md`, then implement
 > Step 5 only.
 >
-> Thread an optional `approval_bridge: ApprovalBridge | None = None` through
-> `prompt_llm_stream` → `ask_langchain_stream` → `_ask_agent_stream` (a no-op on the
-> `_ask_text_stream` branch). In `_ask_agent_stream`: widen the existing `try` so it starts
-> right after `q` is created, make `attach(q.put)` its first statement, and in the `finally` call
-> `detach()` **before** `thread.join(timeout=5)` (detach cancels the pending futures, which is the
-> only thing that unparks a blocked interceptor; joining first burns the full 5s and leaves the
-> agent thread alive) — **one** lifecycle site. Guard both `finally` statements, because the
-> widening puts `thread` inside the `try`: call `detach()` only when `attach()` returned, and
-> `thread.join(timeout=5)` only when the thread is bound and was started, so an `attach(q.put)`
-> failure (`UnboundLocalError`) or a `thread.start()` failure (`RuntimeError: cannot join thread
-> before it is started`) cannot raise out of the `finally` and mask the original exception. Make the
-> consumer treat `queue.Empty` as "re-wait" while `pending() > 0` and track the pause as a
-> **timestamped window** (sample `pending()` at every loop point, credit real wall time when the
-> window closes, subtract the still-open window in the cap check) — do **not** accumulate
-> `paused += timeout` in the `queue.Empty` branch only, or pauses shorter than the 300s inactivity
-> timeout are charged in full against the 3600s cap. Also bump a `pause_epoch` counter whenever a
-> window **closes**, snapshot it before each `q.get`, and re-wait on `queue.Empty` when the window
-> is open **or** the epoch advanced during that wait: `q.get` restarts its full `timeout` on every
-> call, so a pause that opens and closes inside one wait would otherwise eat the whole inactivity
-> budget and kill the turn with "no response for 300s. Connection closed." moments after the user
-> approved. Add `except asyncio.CancelledError`
-> to `_run` that does not append to `error_holder` while the `finally` still puts the sentinel.
+> In `src/mcp_coder/icoder/permissions/resolver.py`, make the `runtime` layer its own top-priority
+> stage in `_resolve_config`: lift the existing 4-key sort lambda to a module-level
+> `_rule_sort_key`, partition the matching candidates on `rule.layer == "runtime"`, and contest
+> within the runtime group when it is non-empty **and the top-ranked authored (non-runtime)
+> candidate is not `never`**, otherwise contest the rest. Leave `_LAYER_ORDER`,
+> the sort keys themselves, and every other code path untouched. Add a comment explaining that
+> layer is only the third sort key and `Policy.rank` ranks `AFTER_APPROVAL` above `ALWAYS`, which
+> is why a session grant would otherwise lose to an authored `ask` — and a second comment
+> explaining the bound: R14 only needs runtime to beat `ask`, and letting a broad runtime
+> `always` shadow a specific authored `never` would be a security-relevant widening this issue
+> does not need (an authored `never` then loses only to a strictly more specific runtime rule).
 >
-> In `llm/types.py`, add `_TRANSIENT_EVENT_TYPES = frozenset({"raw_line", "approval_request"})`,
-> use it in `ResponseAssembler.add` in place of the `!= "raw_line"` literal, and document
-> `approval_request`, `tool_call_id` and `tool_run_id` in the `StreamEvent` docstring. In
-> `llm/interface.py` annotate the new parameter under `TYPE_CHECKING` so no eager langchain import
-> is introduced, and document it as "langchain provider only" like the neighbouring `tools` param.
+> Key the bound on the **winning** authored rule, not on "any matching authored `never`". A config
+> holding a broad `"never": ["mcp__s__*"]` **and** a specific `"ask": ["mcp__s__t"]` would
+> otherwise skip the short-circuit, the `ask` would beat the runtime `always` on `Policy.rank`,
+> and the `scope=session` grant would silently never take effect. Test case 4b covers exactly
+> that shape.
 >
-> Write the nine test cases listed in the step first (1, 2, 2b, 3–8), reusing the Step 1 harness;
-> monkeypatch both
-> timeouts to small values, and include the sub-inactivity pause case (no `queue.Empty` at all),
-> the pause-ends-mid-wait case (2b — pause, then a quiet stretch, both under one `timeout`) and
-> the generator-closed-while-pending case. Carry the "pause not keepalives" and "CancelledError is
-> a BaseException" rationale into code comments.
+> Also correct the `_resolve_frame` docstring's "the one place degrade loosens" claim and the
+> module docstring's precedence sentence — Step 6 (R15) makes degraded configs deny outright, so
+> that branch is no longer a loosening.
 >
-> Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and
-> `run_lint_imports_check` all green, then one commit.
+> Write the eight test cases listed in the step first; confirm case 1 fails before the change and
+> that the existing `test_later_layer_wins_at_equal_specificity_and_policy` stays green.
+>
+> Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` all
+> green, then one commit.

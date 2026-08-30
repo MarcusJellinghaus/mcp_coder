@@ -1,10 +1,9 @@
-# Step 6 — Tool-unit pairing on `tool_run_id` (R18 / R1)
+# Step 6 — Gateway: real `AFTER_APPROVAL` branch + runtime-rule store
 
-**Depends on:** nothing (independent; may run in parallel with Steps 1–5).
+**Depends on:** Step 4 (engine), Step 5 (runtime stage).
 
-A human pause makes same-tool mis-pairing near-certain rather than rare: an ungated call finishes
-while a gated call of the **same tool name** is still awaiting approval, so the positional FIFO
-attaches the result to the wrong row — and the elapsed time to a third row.
+Replaces I2.3's `AFTER_APPROVAL` → deny placeholder with the real branch, and adds the
+runtime-rules store that I3.3/#1046 will write to.
 
 ---
 
@@ -12,133 +11,137 @@ attaches the result to the wrong row — and the elapsed time to a third row.
 
 | Path | Action |
 |---|---|
-| `src/mcp_coder/llm/providers/langchain/agent.py` | **modify** — emit `tool_run_id` on both tool events |
-| `src/mcp_coder/llm/formatting/render_actions.py` | **modify** — trailing optional field |
-| `src/mcp_coder/llm/formatting/stream_renderer.py` | **modify** — `pop_pending_tool`, id-keyed pairing |
-| `src/mcp_coder/icoder/ui/app.py` | **modify** — `_open_tool_units` becomes a single deque |
-| `tests/llm/formatting/test_stream_renderer_tool_format.py` | **modify** |
-| `tests/icoder/test_app_pilot.py` | **modify** — add the same-tool gated/ungated case |
+| `src/mcp_coder/icoder/permissions/gateway.py` | **modify** |
+| `tests/icoder/test_permissions_gateway.py` | **modify** |
 
 ## WHAT
 
 ```python
-# render_actions.py — declared LAST, with a default, on BOTH dataclasses
-tool_run_id: str | None = None
+_DENY_NEVER = "This tool is disabled by permission policy."           # unchanged
+_DENY_ASK = "This tool requires approval — not yet available."        # REPURPOSED: fail-closed fallback
+_DENY_USER = (                        # R11 — canonical wording; used unless the decision
+                                      # carries its own `reason` (see the AFTER_APPROVAL branch)
+    "Tool call denied by the user. Do not retry this call — choose a "
+    "different approach, or ask the user what they would prefer."
+)
 
-# stream_renderer.py — one module-level helper, shared by both call sites
-def pop_pending_tool(
-    pending: deque[tuple[str | None, str, Any]],   # (tool_run_id, raw_name, payload)
-    run_id: str | None,
-    name: str,
-) -> tuple[str | None, str, Any] | None:
-    """Pop by ``tool_run_id``; fall back to name-FIFO **only** when *run_id* is ``None``."""
+class LangchainEnforcementGateway:
+    def __init__(
+        self,
+        config: PermissionConfig,
+        approval_engine: ApprovalEngine | None = None,
+    ) -> None: ...
+
+    def add_runtime_rule(self, rule: Rule) -> None:
+        """Append a rule to the in-memory ``runtime`` layer (I3.3 writes; engine never does)."""
+
+    async def interceptor(self, request: Any, handler: ...) -> Any: ...   # rewritten branch
+
+def _source_label(source: Source) -> str:
+    """Flatten a Decision.Source to a JSON-safe plain string for the event payload."""
 ```
 
 ## HOW
 
-* **`agent.py`** — two one-line additions: `"tool_run_id": run_id` on the `on_tool_start` yield and
-  on the `on_tool_end` yield. **Do not touch `tool_call_id`** — #1118 depends on `on_tool_end`
-  carrying the model's `call_N` id, and two existing assertions
-  (`test_langchain_agent_streaming.py` `== "run-1"`, `test_langchain_agent_streaming_tool_output.py`
-  `== "tc-123"`) must stay green.
-* **`render_actions.py`** — `tool_run_id: str | None = None` **last** on `ToolStart` and
-  `ToolResult`. This is what keeps `output_log.py`'s
-  `ToolStart(display_name=…, raw_name="", args=…)` call site compiling, so `output_log.py` is
-  **not** modified.
-* **`stream_renderer.py`** — `_pending` becomes
-  `deque[tuple[str | None, str, float]]` (run_id, raw_name, monotonic start). `_pair_pending` is
-  replaced by a call to `pop_pending_tool`; `cleanup_pending` carries `tool_run_id` onto each
-  synthesized `ToolResult`. Keep the class docstring's "callers MUST invoke `cleanup_pending`"
-  contract.
-* **`ui/app.py`** — `_open_tool_units: dict[str, deque[str]]` becomes
-  `deque[tuple[str | None, str, str]]` (run_id, raw_name, unit_id). Three call sites change:
-  the `ToolStart` append, the `ToolResult` lookup, and `_cleanup_orphan_tools`. The FIFO-desync
-  WARN log stays (it becomes "N entries left over after cleanup"). `ui/app.py` already imports
-  from `llm.formatting`, so importing `pop_pending_tool` adds no new dependency edge.
-* **Fallback is required, but only for the id-less shape:** `claude_code_cli_streaming.py` and
-  `copilot_cli_streaming.py` emit neither field, and replayed pre-change logs carry neither — so
-  `run_id=None` must degrade to name-FIFO exactly as today. When a `run_id` **is** supplied and
-  matches nothing pending, return `None` instead: both langchain tool events carry the same
-  `run_id`, so a miss means a genuine desync, and falling through to name-FIFO there would attach
-  the result to some *other* call of the same tool — the exact defect R1/R18 exist to fix. An
-  unpaired result is already handled (`duration_ms is None`; the "no open tool unit" WARN in
-  `ui/app.py`). Say both halves in the helper's docstring.
-* Blast radius check already done: `cleanup_pending` has **one** production caller
-  (`_cleanup_orphan_tools`), which has four callers (`app.py` error / cancel / `StreamDone`, and
-  `replay.py`). None of their signatures change.
+* `interceptor` must keep the **whole `Decision`**, not just `.policy` — R15 branches on
+  `isinstance(decision.source, Degraded)`.
+* `add_runtime_rule` is `self._config = replace(self._config, rules=self._config.rules + (rule,))`.
+  `PermissionConfig` is frozen; the rebind is atomic under the GIL, so **no lock**. Both
+  `filter_tools` and `interceptor` already read `self._config` live — verify they never capture it
+  into a local across calls.
+* The deny `ToolMessage` is built **here** via `build_deny_tool_message(text, request.name,
+  tool_call_id)`, never in the engine (R6 — the engine must not import `permission_bridge`).
+* `CancelledError` from `engine.request_approval` must **propagate**, not be caught: it unwinds the
+  turn. Note that in a comment so nobody adds a `try/except` later.
+* `_source_label`: `Layer` → `.name`; `Default()` → `"default"`; `Frame()` → `"frame"`.
+  `Degraded` cannot reach the emit (R15) — assert that with a comment, not a branch.
+* Update the class/module docstring: the `AFTER_APPROVAL` line currently says it returns a deny.
 
 ## ALGORITHM
 
 ```python
-def pop_pending_tool(pending, run_id, name):
-    if run_id:                                   # id-keyed: a miss is a MISS, not a name match
-        for i, entry in enumerate(pending):
-            if entry[0] == run_id:
-                del pending[i]; return entry
-        return None
-    for i, entry in enumerate(pending):          # no id at all: first match by name, FIFO
-        if entry[1] == name:
-            del pending[i]; return entry
-    return None
+canonical = f"mcp__{request.server_name}__{request.name}"
+decision = resolve(canonical, request.args, self._frame, self._config)
+tool_call_id = getattr(getattr(request, "runtime", None), "tool_call_id", None) or ""
+
+if decision.policy is Policy.ALWAYS:
+    return await handler(request)
+if decision.policy is Policy.NEVER:
+    return build_deny_tool_message(_DENY_NEVER, request.name, tool_call_id)
+
+# AFTER_APPROVAL
+if isinstance(decision.source, Degraded):                       # R15 — no prompt, ever
+    return build_deny_tool_message(_DENY_NEVER, request.name, tool_call_id)
+if self._engine is None or not self._engine.is_attached():      # fail closed, never await
+    return build_deny_tool_message(_DENY_ASK, request.name, tool_call_id)
+approved = await self._engine.request_approval(                 # CancelledError propagates
+    tool_name=canonical, args=request.args, source=_source_label(decision.source)
+)
+if approved.outcome == "allow":
+    return await handler(request)
+# `reason` lets the answering side override the wording. Step 9's interim UI
+# auto-deny and the engine's own fail-closed deny both use it, so a call nobody
+# was asked about is not reported to the model as a user denial.
+return build_deny_tool_message(approved.reason or _DENY_USER, request.name, tool_call_id)
 ```
 
 ## DATA
 
-* `tool_use_start` / `tool_result` events gain `"tool_run_id": <langgraph run_id>`;
-  `tool_call_id` is unchanged on both.
-* `ToolStart.tool_run_id` / `ToolResult.tool_run_id`: `str | None`, default `None`.
-* `pop_pending_tool` returns the matched tuple or `None` (unpaired → `duration_ms is None`,
-  or the existing "no open tool unit" WARN in `ui/app.py`). A supplied-but-unmatched `run_id`
-  returns `None`; only a `run_id` of `None` reaches the name-FIFO branch.
+* Returns unchanged in shape: the real handler result, or a `ToolMessage(status="error")` carrying
+  the **real** `tool_call_id` (the empty-id wedge is FINDINGS §10; #1118 fixed the source).
+* `add_runtime_rule` returns `None` and mutates one attribute.
+* A rule added mid-turn **is** visible to later call-level `resolve()`s in the same turn; it
+  **cannot** un-hide a `never` tool mid-turn, because `filter_tools` is a turn-start snapshot.
+  State that in the `add_runtime_rule` docstring.
 
 ## TESTS (write first)
 
-1. **Renderer, id-keyed:** two `tool_use_start` for the **same** name with different
-   `tool_run_id`s; results arrive **out of order** → each `duration_ms` is attributed to the
-   correct start (assert with monkeypatched `time.monotonic` or ordering, not wall-clock values).
-2. **Renderer, fallback:** events with no `tool_run_id` (the Claude/Copilot shape) pair by
-   name-FIFO exactly as today — existing tests in the file stay green unchanged.
-3. **Renderer, id miss does not mis-pair:** a `tool_result` whose `tool_run_id` matches nothing
-   pending leaves the pending same-name start **untouched** and reports `duration_ms is None`;
-   the later matching result still pairs correctly.
-4. **Renderer, cleanup:** `cleanup_pending` returns `ToolResult`s carrying their `tool_run_id`.
-5. **`agent.py`:** both tool events carry `tool_run_id == run_id`; the two existing `tool_call_id`
-   assertions still pass.
-6. **UI (`test_app_pilot.py`, `textual_integration`):** one turn with two calls to the **same**
-   tool, results out of order → each `tool_result` updates the correct unit; the desync WARN is
-   not emitted.
-7. **UI orphan cleanup:** a cancelled turn with one open same-name unit still resolves the right row.
+Extend the existing fake-request / fake-handler style already in the file (it stubs the deny
+bridge via an autouse fixture, so no `langchain_core` is needed).
+
+1. `AFTER_APPROVAL` + engine returning **allow** → the real handler is awaited.
+2. `AFTER_APPROVAL` + engine returning **deny** → `ToolMessage` with `_DENY_USER` and the real
+   `tool_call_id`; the handler is **not** awaited; nothing raises.
+2b. `AFTER_APPROVAL` + a deny carrying `reason="…"` → the `ToolMessage` uses that text, not
+   `_DENY_USER` (Step 9's interim auto-deny and the engine's fail-closed deny both depend on it).
+3. `AFTER_APPROVAL` + engine raising `CancelledError` → it propagates out of `interceptor`.
+4. **Degraded config** → deny, and `request_approval` was **never called** (assert on a spy).
+5. **No engine** and **engine not attached** → `_DENY_ASK` deny with the real `tool_call_id`, and
+   no `await` on any future (two separate cases).
+6. `NEVER` and `ALWAYS` paths unchanged (existing tests stay green).
+7. `add_runtime_rule` → a subsequent `interceptor` call for the same tool resolves `ALWAYS`
+   (the R14 + store combination; this is the engine-free half of the `scope=session` criterion).
+8. `_source_label` maps `Layer("project")`/`Default()`/`Frame()` to `"project"`/`"default"`/`"frame"`.
 
 ## CHECKS
 
-`run_pylint_check`, `run_mypy_check`, `run_pytest_check` (fast selection) **plus**
-`run_pytest_check(markers=["textual_integration"], extra_args=["-n","auto"])` for the pilot tests.
+`run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check` — all green.
 
 ---
 
 ## LLM PROMPT
 
-> Read `pr_info/steps/summary.md` (§2.9) and `pr_info/steps/step_6.md`, then implement Step 6 only.
+> Read `pr_info/steps/summary.md` (§2.5, §2.6) and `pr_info/steps/step_6.md`, then implement
+> Step 6 only.
 >
-> Add a new `tool_run_id` field carrying the langgraph `run_id` to both the `tool_use_start` and
-> `tool_result` events in `llm/providers/langchain/agent.py`, **leaving `tool_call_id` untouched**
-> (#1118 depends on it and two existing assertions must stay green). Add
-> `tool_run_id: str | None = None` as the **last** field of `ToolStart` and `ToolResult` in
-> `render_actions.py` — with the default, `icoder/ui/widgets/output_log.py` needs no change, so do
-> not modify it.
+> Rewrite the `AFTER_APPROVAL` branch of
+> `src/mcp_coder/icoder/permissions/gateway.py::LangchainEnforcementGateway.interceptor` per the
+> step's pseudocode: keep the whole `Decision` (not just `.policy`), deny outright when
+> `decision.source` is `Degraded` **without emitting an approval request**, fail closed with
+> `_DENY_ASK` when no engine is attached (never awaiting a Future nobody will resolve), otherwise
+> await `engine.request_approval(...)` and allow, or deny with `decision.reason` when the decision
+> carries one and the canonical R11 wording otherwise. Let
+> `CancelledError` propagate. Add `add_runtime_rule(rule)` using `dataclasses.replace`, and a
+> `_source_label` helper that flattens `Decision.Source` to a plain JSON-safe string.
 >
-> Add one module-level helper `pop_pending_tool(pending, run_id, name)` in `stream_renderer.py`
-> (id-keyed, with a name-FIFO fallback **only when `run_id is None`** — the fallback is required
-> because the Claude and Copilot streaming paths and replayed pre-change logs carry neither field,
-> but a supplied-and-unmatched `run_id` must return `None` rather than fall through, or a lookup
-> miss silently mis-pairs two calls of the same tool). Use it from
-> `StreamEventRenderer` (whose `_pending` becomes a deque of `(run_id, raw_name, start)`) and from
-> `icoder/ui/app.py`, whose `_open_tool_units` collapses from `dict[str, deque[str]]` to a single
-> deque of `(run_id, raw_name, unit_id)`. Do not build a generic container class. Thread
-> `tool_run_id` through `cleanup_pending`; no caller signature changes.
+> Add an `approval_engine: ApprovalEngine | None = None` constructor parameter. The deny
+> `ToolMessage` is constructed here, never in the engine.
 >
-> Write the seven test cases listed in the step first, including the same-tool gated/ungated
-> out-of-order case at both sites and the id-miss case.
+> Write the nine test cases listed in the step first (including the `reason`-override case),
+> extending
+> `tests/icoder/test_permissions_gateway.py` in its existing style (the autouse fixture already
+> stubs the deny bridge). Update the module/class docstrings, which currently say
+> `AFTER_APPROVAL` returns a deny.
 >
-> Use MCP tools only. Run the fast suite **and** the `textual_integration` marker. Finish with
-> `run_pylint_check`, `run_pytest_check`, `run_mypy_check` all green, then one commit.
+> Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and
+> `run_lint_imports_check` all green, then one commit.

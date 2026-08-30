@@ -1,10 +1,15 @@
-# Step 3 — Resolver: `runtime` becomes its own stage (R14) + degraded docstring (R15)
+# Step 3 — Real-path `CancelledError` probe (decision gate)
 
-**Depends on:** nothing (independent of Steps 1–2; may run in parallel).
+**Depends on:** nothing. **Must run before any engine code** (Steps 1–2 are behaviour-neutral
+prep and can land in any order relative to this one).
 
-Without this, the `scope=session` acceptance criterion is **unsatisfiable** for its canonical case:
-a session grant loses to an authored `ask` at equal specificity, which is the single most common
-way a tool becomes gated in the first place.
+R7 adopts *hard cancel* (`Future.cancel()` → `CancelledError` unwinds the turn), but #1044 only
+demonstrated that in **Tier A (pure asyncio)**. Every real-langgraph spike scenario resolved with
+`set_result`. Before any engine code is written, prove that a `CancelledError` raised inside a tool
+coroutine escapes `ToolNode` → `astream_events` → `_run` intact.
+
+This is **not** throwaway work: it is the harness and the regression test that the
+"cancel-while-pending … `thread.is_alive() is False`" acceptance criterion requires.
 
 ---
 
@@ -12,117 +17,156 @@ way a tool becomes gated in the first place.
 
 | Path | Action |
 |---|---|
-| `src/mcp_coder/icoder/permissions/resolver.py` | **modify** — `_resolve_config`, `_resolve_frame` docstring, module docstring |
-| `tests/icoder/test_permissions_resolver.py` | **modify** — add R14 cases |
+| `tests/llm/providers/langchain/approval_harness.py` | **create** — shared typed fixture module |
+| `tests/llm/providers/langchain/test_approval_cancel_path.py` | **create** — the probe |
+
+Both live under `tests/llm/providers/langchain/` on purpose:
+
+* `test_module_independence` in `.importlinter` forbids `tests.icoder` ↔ `tests.llm` imports, and
+  Steps 7/11 reuse this harness from the same directory;
+* that directory's `conftest.py` has an **autouse `_tmp_home` fixture** redirecting `Path.home()`
+  to `tmp_path`, which already satisfies **R12** (`run_agent_stream` writes session history to
+  `~/.mcp_coder/sessions/langchain/` unconditionally) — no extra isolation code needed.
+
+`approval_harness.py` is not named `test_*`, so pytest does not collect it.
 
 ## WHAT
 
-Two changes, both small.
-
-**1. `_resolve_config` — partition candidates before the specificity contest.**
-
 ```python
-def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision:
-    # unchanged: degraded short-circuit, candidate collection
-    runtime = [ir for ir in cands if ir[1].layer == "runtime"]
-    authored_never = any(
-        ir[1].layer != "runtime" and ir[1].policy is Policy.NEVER for ir in cands
-    )
-    if runtime and not authored_never:   # runtime wins as a GROUP, before specificity ...
-        cands = runtime                  # ... but never as a shortcut past an authored `never`
-    # unchanged: max(...) over the existing 4-key sort, Decision construction
+# tests/llm/providers/langchain/approval_harness.py
+
+def make_fake_chat_model() -> Any:
+    """Build a two-invoke fake model: one tool_call, then plain text 'done'.
+
+    langchain is imported and `BaseChatModel` is subclassed *inside* this
+    function — see HOW for why neither may happen at module scope.
+    """
+    pytest.importorskip("langchain_core")
+
+    from langchain_core.language_models.chat_models import BaseChatModel
+
+    class _FakeChatModel(BaseChatModel):  # type: ignore[misc]
+        invoke_count: int = 0
+        def bind_tools(self, tools: Any, **kw: Any) -> "_FakeChatModel": ...
+        async def _agenerate(self, messages, stop=None, run_manager=None, **kw): ...
+        def _generate(self, messages, stop=None, run_manager=None, **kw): ...
+        @property
+        def _llm_type(self) -> str: ...
+
+    return _FakeChatModel()
+
+@dataclass
+class Gate:
+    """Captures the agent loop + the Future a blocking tool awaits."""
+    loop: asyncio.AbstractEventLoop | None = None
+    future: asyncio.Future[str] | None = None
+    fired: bool = False
+
+def make_blocking_tool(gate: Gate, name: str = "ping") -> Any:
+    """StructuredTool whose coroutine captures the loop and awaits gate.future."""
+
+def wait_for(pred: Callable[[], bool], timeout: float = 5.0) -> bool:
+    """Poll *pred* until true or *timeout*; returns whether it became true."""
 ```
 
-**2. `_resolve_frame` docstring — remove the now-false "degrade loosens" claim.**
+```python
+# tests/llm/providers/langchain/test_approval_cancel_path.py
 
-The `base == "none"` + `config.degraded` branch returns `AFTER_APPROVAL` with a `Degraded` source
-specifically so approval could rescue a sandboxed tool. Step 4 (R15) makes source-based denial
-collapse that to an effective `NEVER`. The behaviour is unchanged from M2, so nothing breaks — but
-the docstring stops describing unreachable intent. Update the module docstring's precedence
-sentence in the same edit (`user->project->local->runtime` is no longer a flat ordering).
+def test_cancelled_error_escapes_the_agent_stream() -> None: ...
+def test_cancel_leaves_no_error_and_kills_the_thread() -> None: ...
+```
 
 ## HOW
 
-* Keep `_LAYER_ORDER` exactly as it is — it still orders `user`/`project`/`local` **within** the
-  non-runtime group, and orders runtime rules among themselves (a no-op today, but I4.2/#1048
-  writes several runtime rules that must resolve against each other normally).
-* Explain **why** in a comment: `_LAYER_ORDER` is only the *third* sort key and
-  `Policy.rank` puts `AFTER_APPROVAL` (1) above `ALWAYS` (0), so without the partition a runtime
-  `ALWAYS` loses to an authored `ask` on the same matcher.
-* **Bound the widening (`authored_never`), and comment why.** R14 asks for a runtime `always` to
-  beat an authored `ask`; an unbounded group short-circuit would also let a **broad** runtime
-  `always` shadow a **specific** authored `never`, which is a security-relevant widening this
-  issue does not need. With the guard an authored `never` falls through to the ordinary 4-key
-  contest, so it loses only to a *strictly more specific* runtime rule, never to a broader one.
-  The bound is close to free: `filter_tools` hides `never` tools from a turn-start snapshot, so a
-  runtime grant cannot make such a tool callable in that turn anyway — without the bound the
-  resolver would simply disagree with the tool list the model was given.
-  Residual, recorded for #1048 (`/allow` quick commands, which carry no never-override confirm):
-  a *specific* runtime grant still overrides a broader authored `never`.
-* Do **not** touch `resolve()`, `_resolve_frame`'s logic, `matcher.py`, or `model.py`.
+* **Every `pytest.importorskip` and every langchain import goes *inside* a function, and
+  `BaseChatModel` is subclassed inside one too.** Follow the working precedent at
+  `tests/icoder/test_icoder_permission_wiring.py` — read it first — which does exactly this:
+  `importorskip` calls, then function-local `from langchain_core… import …`, then
+  `class _ScriptedModel(BaseChatModel):  # type: ignore[misc]`. Two CI jobs make the obvious
+  module-scope version fail:
+  * `isort --check --profile=black --float-to-top` **floats imports above module-level
+    statements**, so a module-level `importorskip` would end up *below* the langchain import it
+    was meant to guard, and would guard nothing. No module in this repo uses one.
+  * the `mypy` job installs only `.[typecheck]`, so langchain is absent, `BaseChatModel` resolves
+    to `Any`, and a module-scope subclass trips `disallow_subclassing_any` under `--strict`. The
+    `# type: ignore[misc]` on the class line is what the precedent uses.
+
+  The directory conftest injects `MagicMock` modules when langchain is genuinely absent, and this
+  test needs the **real** packages — hence `importorskip` rather than a plain import. No
+  credentials and no network are needed, so the test stays **unmarked** and runs in the fast suite.
+* The fake model must implement the **async** `_agenerate` (FINDINGS gotcha 3):
+  `BaseChatModel`'s default delegates to `run_in_executor`, a thread with no running loop, where
+  `asyncio.get_running_loop()` raises and the loop reference is destroyed.
+* Tool args must satisfy the tool schema or `ToolNode` rejects the call **before** the coroutine
+  runs (FINDINGS gotcha 2). The blocking tool takes **no** arguments and the fake emits `args={}`.
+* Drive `run_agent_stream(...)` through a local copy of the `_ask_agent_stream` consumer shape
+  (thread + `asyncio.run(_run())` + `queue.Queue` + sentinel), so the probe measures the real
+  production topology.
 
 ## ALGORITHM
 
 ```
-collect cands = [(index, rule) for matching rules]          # unchanged
-runtime = [c for c in cands if c.rule.layer == "runtime"]
-authored_never = any(c.rule.layer != "runtime" and c.rule.policy is NEVER for c in cands)
-if runtime and not authored_never: cands = runtime           # top-priority stage, bounded
-best = max(cands, key=(specificity, policy.rank, _LAYER_ORDER[layer], -index))   # unchanged
-return Decision(best.policy, Layer(best.layer), matched, None)                    # unchanged
+start agent thread: asyncio.run(_run())   # _run drains run_agent_stream into q
+wait_for(gate.fired)                      # tool coroutine is parked on await gate.future
+gate.loop.call_soon_threadsafe(gate.future.cancel)   # the direct cancel channel
+consume q until the None sentinel
+thread.join(timeout=5)
+assert thread.is_alive() is False and no exception was recorded other than CancelledError
 ```
 
 ## DATA
 
-No new types. `Decision.source` for a runtime win is `Layer("runtime")` — which Step 4 flattens to
-the plain string `"runtime"` for the `approval_request` payload.
+* The fake model's `invoke_count` — `1` after a cancelled run (the model is never re-invoked),
+  which is the discriminator for "the turn did not re-plan".
+* The probe records what `_run`'s `except Exception` sees. **Expected: nothing** —
+  `CancelledError` is a `BaseException`. Assert that the caught-exception list is empty and that
+  the escaping exception is `asyncio.CancelledError`.
+* `run_agent_stream` yields `done` unconditionally on the *backstop* path but **not** here: under
+  hard cancel the yield is never reached (F15, as corrected in #1045's round-2 addendum). Do not
+  assert on the presence/absence of `done`.
 
-## TESTS (write first)
+## GATE — read before proceeding
 
-1. **Canonical R14 case:** project layer `"ask": ["mcp__s__t"]` + runtime
-   `Rule(Matcher("s","t"), Policy.ALWAYS, "runtime")` → resolves `ALWAYS` with `Layer("runtime")`.
-   (Assert this fails before the change — it currently resolves `AFTER_APPROVAL`.)
-2. A runtime rule wins even when a **more specific** authored `ask`/`allow` rule exists (the
-   group is consulted before the specificity contest) — intended widening, per R14's note.
-3. **Bound:** a *broad* runtime `always` (e.g. `Matcher("s", None)`) does **not** shadow a
-   *specific* authored `never` (`"never": ["mcp__s__t"]`) → still `NEVER`.
-4. **Bound, other side:** a runtime `always` on the same matcher as an authored `never` also
-   loses (equal specificity, `Policy.rank` favours `NEVER`), while a *strictly more specific*
-   runtime `always` against a broader authored `never` wins — the documented residual.
-5. Runtime rules contest **among themselves** normally: two runtime rules of different
-   specificity → the more specific wins.
-6. No runtime rules present → behaviour is byte-identical to today.
-7. **Regression:** existing
-   `test_later_layer_wins_at_equal_specificity_and_policy` stays green (verify, do not edit).
+* **Probe passes** → continue to Step 4 as planned.
+* **Probe fails** (langgraph absorbs or converts the `CancelledError`; CPython 3.11 marks a task
+  CANCELLED when it ends with `CancelledError` while un-cancelled) → switch to the
+  **pre-authorised fallback**, no new decision needed:
+  resolve the Future with a `"cancelled"` outcome, return a deny-shaped `ToolMessage`, and rely on
+  the `cancel_event` backstop to break the loop (demonstrated by
+  `spikes/i3-1-approval/tier_b_cancel.py::scenario_backstop`). Record the switch at the top of
+  `pr_info/steps/summary.md` and adjust Steps 4, 7 and 9 accordingly (R7's `_run` catch and R16's
+  cancelled-flag gate become unnecessary; the `done` event then *is* yielded).
 
 ## CHECKS
 
-`run_pylint_check`, `run_pytest_check`, `run_mypy_check` — all green.
+`run_pylint_check`, `run_mypy_check`, `run_pytest_check` (fast selection) — all green.
 
 ---
 
 ## LLM PROMPT
 
-> Read `pr_info/steps/summary.md` (§2.4 and §2.5) and `pr_info/steps/step_3.md`, then implement
-> Step 3 only.
+> Read `pr_info/steps/summary.md` (especially §2.3 and §2.10) and `pr_info/steps/step_3.md`, then
+> implement Step 3 only.
 >
-> In `src/mcp_coder/icoder/permissions/resolver.py`, make the `runtime` layer its own top-priority
-> stage in `_resolve_config`: partition the matching candidates on `rule.layer == "runtime"` and
-> contest within that group when it is non-empty **and no authored (non-runtime) matching rule is
-> `never`**, otherwise contest the rest. Leave `_LAYER_ORDER`,
-> the 4-key sort, and every other code path untouched. Add a comment explaining that layer is only
-> the third sort key and `Policy.rank` ranks `AFTER_APPROVAL` above `ALWAYS`, which is why a
-> session grant would otherwise lose to an authored `ask` — and a second comment explaining the
-> `authored_never` bound: R14 only needs runtime to beat `ask`, and letting a broad runtime
-> `always` shadow a specific authored `never` would be a security-relevant widening this issue
-> does not need (an authored `never` then loses only to a strictly more specific runtime rule).
+> Write the shared typed harness `tests/llm/providers/langchain/approval_harness.py` and the probe
+> `tests/llm/providers/langchain/test_approval_cancel_path.py`. Prove that a `CancelledError`
+> raised in a tool coroutine (via `loop.call_soon_threadsafe(future.cancel)` from another thread)
+> escapes `ToolNode` / `astream_events` / the `_run` drainer intact, that the agent thread is dead
+> after the existing 5s join (`thread.is_alive() is False`), and that the model was not re-invoked.
 >
-> Also correct the `_resolve_frame` docstring's "the one place degrade loosens" claim and the
-> module docstring's precedence sentence — Step 4 (R15) makes degraded configs deny outright, so
-> that branch is no longer a loosening.
+> Constraints: use MCP tools only; `mypy --strict` must pass (the spike code this is modelled on
+> was never type-checked — rewrite, do not copy); implement the **async** `_agenerate`; use a
+> no-argument blocking tool; leave the test unmarked. Do not touch any production file.
 >
-> Write the seven test cases listed in the step first; confirm case 1 fails before the change and
-> that the existing `test_later_layer_wins_at_equal_specificity_and_policy` stays green.
+> Put **every** `pytest.importorskip("langgraph")` / `("langchain_core")`, every langchain import
+> and the `BaseChatModel` subclass **inside a function**, following
+> `tests/icoder/test_icoder_permission_wiring.py` (read it first) — including its
+> `# type: ignore[misc]` on the class line. A module-level guard does not work here: CI's
+> `isort --float-to-top` floats imports above module-level statements so the guard would land
+> below the import, and the CI mypy job installs no langchain, so a module-scope
+> `class X(BaseChatModel)` trips `disallow_subclassing_any` under `--strict`.
 >
-> Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` all
-> green, then one commit.
+> Report the probe outcome explicitly. If it fails, stop and report — do not improvise; the
+> fallback is specified in the step's GATE section.
+>
+> Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` all green, then one commit.

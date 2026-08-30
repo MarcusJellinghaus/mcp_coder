@@ -1,19 +1,11 @@
-# Step 7 — Wiring: CLI → gateway / `RealLLMService` / `AppCore` (+ R16 gate, + UI branch)
+# Step 7 — Provider plumbing: bridge param, pause, `CancelledError` catch, transient events
 
-**Depends on:** Steps 2, 4, 5.
+**Depends on:** Step 4 (the `ApprovalBridge` Protocol) and Step 1 (which frees the ~60 lines this
+step adds to `llm/providers/langchain/__init__.py` under the 750-line CI gate).
 
-One long-lived engine, constructed at startup and injected into all three holders, so the UI can
-*reach* it from the modal callback and from cancel — and so a cancelled-while-pending turn
-leaves no session record.
-
-**The UI `approval_request` branch ships in this same commit, not in Step 8.** Wiring the engine
-is what makes the gateway's `AFTER_APPROVAL` branch actually emit and `await`. If the UI has no
-branch yet, the first `ask`-gated tool call wedges the turn **permanently**: the pause suppresses
-both the 300s inactivity timeout and `_AGENT_OVERALL_TIMEOUT` (Step 5), `_cancel_event` is inert
-because it is only checked after an event arrives from the generator (`ui/app.py:290`), and the
-Textual thread worker is a non-daemon executor thread, so the app cannot even be quit cleanly.
-There is no ordering of these two changes that leaves a usable app in between, so they are one
-commit.
+Threads the bridge down to where `q` lives, makes the consumer survive a human pause, stops a
+cancel from printing a traceback onto a live Textual screen, and keeps `approval_request` out of
+the two persistence sinks.
 
 ---
 
@@ -21,195 +13,262 @@ commit.
 
 | Path | Action |
 |---|---|
-| `src/mcp_coder/cli/commands/icoder.py` | **modify** — construct + inject |
-| `src/mcp_coder/icoder/services/llm_service.py` | **modify** — `approval_bridge` param, forwarded |
-| `src/mcp_coder/icoder/core/app_core.py` | **modify** — handles, delegators, R5 carve-out, R16 gate |
-| `src/mcp_coder/icoder/ui/app.py` | **modify** — `approval_request` branch (interim deny) + cancel channel |
-| `.importlinter` | **modify** — `layered_architecture` ignore entry |
-| `tests/icoder/test_approval_wiring.py` | **create** |
-| `tests/icoder/test_icoder_permission_wiring.py` | **modify** — assert the engine reaches all three |
-| `tests/icoder/test_app_pilot.py` | **modify** — UI branch + cancel cases |
+| `src/mcp_coder/llm/types.py` | **modify** — `TRANSIENT_EVENT_TYPES`, `ResponseAssembler.add`, StreamEvent docs |
+| `src/mcp_coder/llm/interface.py` | **modify** — optional `approval_bridge` param |
+| `src/mcp_coder/llm/providers/langchain/__init__.py` | **modify** — `ask_langchain_stream`, `_ask_agent_stream` |
+| `tests/llm/providers/langchain/test_approval_stream_bridge.py` | **create** |
+| `tests/llm/test_types.py` *(or the existing assembler test module)* | **modify** |
 
 ## WHAT
 
 ```python
-# services/llm_service.py — RealLLMService.__init__
-approval_bridge: ApprovalBridge | None = None      # forwarded to prompt_llm_stream(...)
+# llm/types.py
+TRANSIENT_EVENT_TYPES: frozenset[str] = frozenset({"raw_line", "approval_request"})
+"""Event types that are neither persisted nor replayed (R5)."""
+# ResponseAssembler.add: `if event_type != "raw_line"` -> `if event_type not in TRANSIENT_EVENT_TYPES`
 
-# core/app_core.py — AppCore.__init__
-approval_engine: ApprovalEngine | None = None,
-permission_gateway: LangchainEnforcementGateway | None = None,
+# llm/interface.py
+def prompt_llm_stream(..., approval_bridge: "ApprovalBridge | None" = None) -> Iterator[StreamEvent]
 
-# core/app_core.py — three thin delegators (the UI's only route to the engine/gateway)
-def resolve_pending(self, approval_id: str, decision: ApprovalDecision) -> None: ...
-def cancel_pending_approvals(self) -> None: ...
-def add_runtime_rule(self, rule: Rule) -> None: ...     # I3.3 calls this on the UI thread
-
-# icoder/ui/app.py
-def _handle_stream_event(self, event, *, replay_mode=False) -> None:
-    if event.get("type") == "approval_request":
-        ...                      # early return, mirroring the permission_warning precedent
-        return
-
-def action_cancel_stream(self) -> None:
-    """Cancel the stream AND any pending approval (the direct UI→engine channel)."""
+# llm/providers/langchain/__init__.py
+def ask_langchain_stream(..., approval_bridge: ApprovalBridge | None = None) -> Iterator[StreamEvent]
+def _ask_agent_stream(..., approval_bridge: ApprovalBridge | None = None) -> Iterator[StreamEvent]
 ```
 
 ## HOW
 
-* **`cli/commands/icoder.py`** — inside the existing
-  `if provider == "langchain" and mcp_config:` block, next to the gateway:
-  `approval_engine = ApprovalEngine()`, passed to `LangchainEnforcementGateway(config,
-  approval_engine)`. Keep the `ApprovalEngine | None` variable hoisted to outer scope like
-  `gateway` and `permission_degraded` already are, then pass it to `RealLLMService(...)` and
-  `AppCore(...)`. One instance, three references.
-* **`.importlinter`** — add
-  `mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.approval` to
-  `layered_architecture`'s `ignore_imports` (`cli` and `icoder` share one layer line, so every such
-  import is whitelisted individually). Add it in **this** step, where the import first exists.
-* **`RealLLMService.stream`** — pass `approval_bridge=self._approval_bridge` to
-  `prompt_llm_stream`. **Do not** add an attach/detach `try/finally` here: the sink is `q`, a local
-  of `_ask_agent_stream`, and Step 5 already owns the single lifecycle site (summary §2.10).
-* **`AppCore.stream_llm`** — two edits:
-  1. the event-log carve-out becomes
-     `if event.get("type") not in _TRANSIENT_EVENT_TYPES:` (imported from `llm.types`, the shared
-     constant from Step 5);
-  2. gate the tail on the engine's per-turn flag:
-     ```python
-     if self._approval_engine is not None and self._approval_engine.cancelled:
-         return                       # no llm_request_end, no store_session (R16)
-     self._event_log.emit("llm_request_end")
-     store_session(...)
-     ```
-     Comment **why both**: `ui/replay.py` clears `in_flight` on `llm_request_end` and appends the
-     `— Cancelled —` marker only when `in_flight` is still true at EOF, so gating only
-     `store_session` would make this turn the one cancel that replays without a marker.
-* All three `AppCore` delegators are no-ops when their handle is `None` (non-langchain providers
-  construct neither engine nor gateway).
-* `AppCore` must **not** import `textual`; it does not today and must not start.
-* **`ui/app.py` — `approval_request` branch** (moved here from Step 8 so no commit ships a
-  wedgeable app). Copy the shape of the existing `permission_warning` early return at the top of
-  `_handle_stream_event`. Until I3.3/#1046 lands, resolve immediately and fail-closed:
+* **`llm/types.py`** — add `TRANSIENT_EVENT_TYPES`, **public, no leading underscore**: `AppCore`
+  imports it cross-module in Step 9, so an underscore name would advertise privacy the code does
+  not honour. Add it to `__all__` if the module has one. Extend
+  the `StreamEvent` docstring with three entries: the new `approval_request` event, the existing
+  **undocumented** `tool_call_id` (model's `call_N` id on `tool_result`, langgraph `run_id` on
+  `tool_use_start`), and `tool_run_id` (Step 8 adds it; document it here in one pass).
+* **`llm/interface.py`** — annotate the new parameter under `if TYPE_CHECKING:` with a string
+  annotation so the module-level import of the langchain package is **not** made eager (the
+  existing `ask_langchain_stream` import is deliberately function-local). Document it exactly like
+  the neighbouring `tools` parameter: *"langchain provider only"*. Forward it only in the
+  `provider == "langchain"` branch.
+* **`ask_langchain_stream`** — forward to `_ask_agent_stream`; the `_ask_text_stream` branch
+  ignores it entirely (**no-op**, R13: non-iCoder CLI callers pass nothing and must keep working).
+* **`_ask_agent_stream`** — three edits:
+  1. Attach/detach, **inside one try/finally**. In `_ask_agent_stream`, `q` is created ~32 lines
+     above the existing `try:` — navigate by symbol, not by line: Step 1 moves ~220 lines out of
+     this file, so every line number in #1045's caveat block is stale by the time this step runs.
+     "Right after `q` is created" and "inside the
+     existing `try`" therefore cannot both hold. Resolve it by **widening the existing `try` upwards** so
+     it starts immediately after `q` is created, then put `approval_bridge.attach(q.put)` as its
+     first statement. Everything currently between (`error_holder`, `_run`, `_thread_main`,
+     `thread.start()`) moves inside that `try` unchanged. This is what guarantees that a failure
+     between attach and the consumer loop — `thread.start()` raising, for instance — still runs
+     `detach()` instead of leaving the engine attached to a dead turn.
+     In the `finally`, the order is **`approval_bridge.detach()` first, `thread.join(timeout=5)`
+     second** — not merely "next to". `detach()` cancels every still-pending future
+     (Step 4), which is the only thing that can unpark an interceptor blocked in
+     `await fut`; joining first would instead burn the full 5s, expire with the agent thread
+     still parked, and break test 5's `thread.is_alive() is False` assertion. Detach-before-join
+     is a no-op on the normal-completion path (the registry is already empty) and is what makes
+     the join meaningful on the `GeneratorExit`-while-pending path. That `finally` runs on normal
+     completion **and** on `GeneratorExit`, which is the cancel path — one lifecycle site, per
+     summary §2.10.
+     **Guard both `finally` statements — the widening makes them conditional.** `thread` is now
+     bound *inside* the `try`, so the `finally` must survive the two failure modes the widening
+     exists to cover: `attach(q.put)` raising as the first statement leaves `thread` **unbound**
+     (`UnboundLocalError` from the `finally`), and `thread.start()` raising leaves it **created
+     but not started** (`RuntimeError: cannot join thread before it is started`). Either one would
+     raise out of the `finally` and mask the original exception — the very failure the widening is
+     justified by. So each cleanup step is conditioned on its own setup having succeeded:
+     `detach()` only when `attach()` returned (a flag set immediately after the attach call, not
+     `approval_bridge is not None` — attach may itself have raised), and `thread.join(timeout=5)`
+     only when `thread` is bound **and** was started (`thread.ident is not None`, or an explicit
+     `thread = None` pre-binding above the `try` plus a started flag). The `finally` must not be
+     able to raise.
+  2. Pause: a **timestamped pending window**. Sample `approval_bridge.pending()` at every loop
+     point (after `q.get` returns *and* on `queue.Empty`); opening the window records
+     `pause_began`, closing it credits the real wall time to `paused` **and bumps a
+     `pause_epoch` counter**. On `queue.Empty` with the window open, `continue` instead of
+     raising the inactivity timeout. The overall cap is
+     compared against `elapsed − paused − (the currently open window)`. Do **not** accumulate
+     `paused += timeout` in the `queue.Empty` branch only: with a 300s inactivity timeout every
+     pause shorter than 300s would produce no `Empty` at all and would be charged in full against
+     the 3600s cap.
 
-  ```python
-  _DENY_NO_UI = (
-      "This tool requires approval, but the approval prompt is not available yet, "
-      "so the call was refused without asking the user. Choose a different approach "
-      "or ask the user how to proceed."
-  )
-
-  approval_id = str(event.get("approval_id", ""))
-  # I3.3/#1046 replaces this with the modal (ModalScreen[ApprovalDecision]).
-  # Until then, fail closed: a live `ask` rule would otherwise wedge the turn.
-  # Its own `reason` — never the gateway's R11 user-deny wording, because no user
-  # was asked and the model must not be told one refused (summary §2.11).
-  self._core.resolve_pending(
-      approval_id, ApprovalDecision("deny", "once", reason=_DENY_NO_UI)
-  )
-  return
-  ```
-
-  Mark it with a `TODO(#1046)`. Importing `ApprovalDecision` from `icoder.permissions.approval`
-  into `icoder.ui` is legal (the leaf contract forbids the *reverse* direction).
-* **`ui/app.py` — cancel channel.** `action_cancel_stream` keeps `self._cancel_event.set()` **and**
-  adds `self._core.cancel_pending_approvals()`. Comment why (FINDINGS §4): all three generic paths
-  are gated on an event arriving from the generator, and a blocked interceptor emits none, so none
-  of them can *trigger* a cancel while the consumer is waiting in `q.get`. They stay wired as the
-  post-resolution backstop. Do **not** write that `GeneratorExit` is unreachable while an approval
-  is pending (summary §2.3) — it is reachable at the `yield` that delivered the event, and
-  `detach()`'s cancel-then-clear covers it.
-* **Do not** add a modal, scopes, or any persist write-back — that is #1046. The `on_unmount`
-  shutdown hook stays in Step 8; with the interim auto-deny above, no approval is ever left
-  pending across a quit in this commit. Consequence for Step 8: its R9 pilot test must suppress
-  this auto-deny (monkeypatching `AppCore.resolve_pending` to a no-op) to reach the pending state
-  at all — see `step_8.md` test 8.
+     **The inactivity budget must be restarted, not merely suspended.** "Re-wait while
+     `pending() > 0`" is not sufficient: `q.get(timeout=timeout)` starts a fresh 300s budget on
+     every call, and a pause that *opens and closes inside one such wait* still consumes that
+     budget. Concretely — the `approval_request` is dequeued at t=0, the user answers at t=250,
+     the approved tool then runs quietly for 60s: at t=300 `q.get` raises `Empty` with
+     `pending() == 0`, so the window-open check fails and the turn dies with
+     `TimeoutError("no response for 300s. Connection closed.")` after only 50s of real
+     inactivity. So: snapshot `pause_epoch` immediately **before** each `q.get`, and on
+     `queue.Empty` re-wait when the window is open **or** when `pause_epoch` has advanced since
+     that snapshot — i.e. any pause overlapping the current wait buys a full fresh `timeout`.
+     Only a wait that contained no pause at all may raise the inactivity `TimeoutError`.
+     A pause can never go unobserved: the registry entry is created *before* the emit
+     (summary §2.2), so `pending()` is already `> 0` on the loop point that dequeues the
+     `approval_request`, and the window is always opened there.
+  3. `_run` gains `except asyncio.CancelledError:` **before** the `except Exception`, which does
+     **not** append to `error_holder`; the `finally` still puts the sentinel.
+* **Comments to carry (D9):** why pause and not keepalives — the overall cap is checked *inside*
+  the consumer loop after `q.get()` returns, so keepalives **arm** it rather than reset it, and
+  they would reach the session `.jsonl` and replay. Why `_run` catches `CancelledError` —
+  it is a `BaseException`, so `agent.py`'s and `_run`'s `except Exception` both miss it and
+  `_thread_main` is a bare `asyncio.run`, which would put a traceback on stderr, into a live
+  Textual screen.
 
 ## ALGORITHM
 
 ```python
-# cli/commands/icoder.py (inside the existing langchain+mcp_config gate)
-config = load_permission_config(project_dir)
-approval_engine = ApprovalEngine()
-gateway = LangchainEnforcementGateway(config, approval_engine)
-mcp_manager = MCPManager(server_config, tool_interceptors=[gateway.interceptor])
-...
-llm_service = RealLLMService(..., gateway=gateway, approval_bridge=approval_engine)
-app_core   = AppCore(..., approval_engine=approval_engine, permission_gateway=gateway)
+# _ask_agent_stream consumer loop
+start, paused, pause_began, pause_epoch = time.monotonic(), 0.0, None, 0
+
+def _sync_pause() -> None:
+    """Open/close the pending window from the bridge's count (consumer thread)."""
+    nonlocal paused, pause_began, pause_epoch
+    waiting = approval_bridge is not None and approval_bridge.pending() > 0
+    now = time.monotonic()
+    if waiting and pause_began is None:
+        pause_began = now                       # window opens
+    elif not waiting and pause_began is not None:
+        paused += now - pause_began             # window closes, real wall time credited
+        pause_began = None
+        pause_epoch += 1                        # ... and the inactivity budget is void
+
+def _elapsed() -> float:
+    now = time.monotonic()
+    open_window = now - pause_began if pause_began is not None else 0.0
+    return (now - start) - paused - open_window
+
+while True:
+    epoch_at_wait_start = pause_epoch           # snapshot BEFORE the wait
+    try:
+        event = q.get(timeout=timeout)
+    except queue.Empty as exc:
+        _sync_pause()
+        # Re-wait on a still-open pause, and equally on one that opened and
+        # closed inside this wait: `q.get` gives every call a fresh `timeout`,
+        # so a pause overlapping the wait would otherwise eat the whole budget
+        # and trip the inactivity error moments after the user approved.
+        if pause_began is not None or pause_epoch != epoch_at_wait_start:
+            continue
+        cancel.set(); raise TimeoutError(...) from exc
+    _sync_pause()                               # sampled BEFORE the yield blocks on the UI
+    if event is None: break
+    if _elapsed() > _AGENT_OVERALL_TIMEOUT:
+        cancel.set(); raise TimeoutError(...)
+    yield event
 ```
+
+The window opens on the iteration that dequeues the `approval_request` itself — the registry
+entry is created *before* the emit (summary §2.2), so `pending()` is already `> 0` there — and
+closes on the first event (or `queue.Empty`) that follows the decision. It therefore covers the
+whole human wait, including the part spent suspended at `yield` while the UI handles the event,
+and works for pauses far shorter than `timeout`.
+
+`pause_epoch` covers the other half: the window feeds the **overall cap**, the epoch protects the
+**inactivity budget**. Closing a window voids the `q.get` wait it overlapped, so the consumer
+re-waits with a fresh `timeout` instead of raising — which is the only thing standing between a
+user who answers late in a wait and a spurious "Connection closed" on the next quiet stretch.
 
 ## DATA
 
-* `AppCore.resolve_pending` / `cancel_pending_approvals` / `add_runtime_rule` all return `None`.
-* The engine instance is shared by reference across gateway, service and core — assert **identity**
-  (`is`) in the wiring test, not equality.
-* `cancelled` survives `detach()` and is reset by the next `attach()` — that ordering is exactly
-  what makes the R16 gate readable after the generator has finished (summary §2.8).
+* `approval_bridge.attach(q.put)` — `q` is `queue.Queue[StreamEvent | None]`, so `q.put`
+  satisfies `Callable[[StreamEvent], None]` (contravariant parameter, extra params have defaults).
+* `paused` and `pause_began` are floats in seconds (`pause_began` is `float | None`, `None` when
+  no approval is pending); `pause_epoch` is an `int` bumped once per closed window and is only
+  ever compared for inequality against a snapshot taken before `q.get`. The inactivity `timeout`
+  is iCoder's **300s**
+  (`ICODER_LLM_TIMEOUT_SECONDS`), not the 30s default, and `_AGENT_OVERALL_TIMEOUT` is **3600s** —
+  tests must monkeypatch both to small values, and must cover a pause **shorter** than the
+  inactivity timeout, where no `queue.Empty` ever occurs, **and** a pause that opens and closes
+  inside a single `q.get` wait which is then followed by a quiet stretch.
+* Yielded events are unchanged; `approval_request` passes through the generator like any other.
 
 ## TESTS (write first)
 
-1. **Identity wiring:** the CLI builds **one** `ApprovalEngine`, and gateway / service / core all
-   hold the same object (`is`).
-2. **Non-langchain / no-mcp_config:** engine and gateway stay `None`; `AppCore` delegators are
-   safe no-ops; `RealLLMService` passes `approval_bridge=None`.
-3. **`RealLLMService.stream` forwards** `approval_bridge` to `prompt_llm_stream` (monkeypatch and
-   assert on the kwarg).
-4. **R16 — cancelled turn stores nothing:** with a fake engine reporting `cancelled=True`,
-   `AppCore.stream_llm` emits **no** `llm_request_end` and calls **no** `store_session`.
-5. **R16 — normal turn unchanged:** `cancelled=False` (and engine `None`) both store as today.
-6. **R5 — event-log carve-out:** an `approval_request` in the stream is **absent** from the session
-   `.jsonl`; `raw_line` exclusion still holds; every other event type is still logged.
-7. **`scope=session` end to end (engine-free):** `AppCore.add_runtime_rule(...)` →
-   `gateway.interceptor` resolves `ALWAYS` for that tool on a **subsequent** turn.
+Reuse `tests/llm/providers/langchain/approval_harness.py` from Step 3.
 
-UI (`tests/icoder/test_app_pilot.py`, `textual_integration`):
-
-8. An `approval_request` event routes to `resolve_pending` with a deny carrying `_DENY_NO_UI` and
-   renders nothing; `ResponseAssembler` and the event log are unaffected.
-9. `action_cancel_stream` calls `cancel_pending_approvals()` **and** sets `_cancel_event`.
+1. **Pause defeats both timeouts:** a tool that blocks for longer than *both* a small
+   monkeypatched `timeout` and a small monkeypatched `_AGENT_OVERALL_TIMEOUT` still completes when
+   a bridge reports `pending() > 0`.
+2. **Sub-inactivity pause is still excluded from the overall cap:** with `timeout` large enough
+   that **no `queue.Empty` ever fires** and `_AGENT_OVERALL_TIMEOUT` smaller than the pause, a
+   bridge reporting `pending() > 0` across the wait still completes. This is the case the
+   `queue.Empty`-only accumulation got wrong; test 1 cannot detect it.
+2b. **A pause that ends mid-wait does not consume the inactivity budget:** with a small
+   monkeypatched `timeout` (and `_AGENT_OVERALL_TIMEOUT` large), the bridge reports
+   `pending() > 0` for ~0.8 × `timeout`, then drops to `0`, and **no event follows for another
+   ~0.8 × `timeout`** before the tool finally emits. The turn must complete: the `Empty` raised
+   at the end of that first wait sees `pending() == 0` but an advanced `pause_epoch`, so the
+   consumer re-waits with a fresh budget. Without the epoch this raises
+   `TimeoutError("no response for …")` — the 250s-answer + 60s-tool scenario. Tests 1–3 cannot
+   detect it: test 1 keeps `pending() > 0` for the whole wait, test 2 sets `timeout` so no
+   `queue.Empty` ever fires, and test 3 has no pause at all.
+3. **Negative control:** the same setup with `approval_bridge=None` raises `TimeoutError` — proves
+   the pause is load-bearing, not vacuous.
+4. **Attach/detach lifecycle:** `attach` is called with a callable that puts onto *this* turn's
+   queue; `detach` is called on normal completion **and** on generator close (cancel path). Two
+   consecutive turns never share a queue (the stale-`q` failure mode).
+5. **Generator closed while an approval is pending:** close the consumer generator at the `yield`
+   that delivered `approval_request` (the reachable `GeneratorExit`, summary §2.3). `detach()`
+   runs, the pending future is cancelled, and the agent thread is dead after the 5s join
+   (`thread.is_alive() is False`) — it does not survive parked on the future.
+6. **`CancelledError` in `_run`:** `error_holder` stays empty, the sentinel is still put, the
+   generator ends normally, and nothing is re-raised.
+7. **No-op on the text branch:** `ask_langchain_stream` without `mcp_config` and with a bridge
+   ignores it and never calls `attach`.
+8. **`ResponseAssembler`:** an `approval_request` event is absent from
+   `result()["raw_response"]["events"]`; `raw_line` exclusion still holds; all other event types
+   still accumulate.
 
 ## CHECKS
 
-`run_pylint_check`, `run_mypy_check`, `run_pytest_check` (fast selection) **plus**
-`run_pytest_check(markers=["textual_integration"], extra_args=["-n","auto"])` for the pilot tests,
-**plus** `run_lint_imports_check` — all green.
+`run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check`, **and the
+file-size gate** (`check_file_size(max_lines=750)` must not list
+`llm/providers/langchain/__init__.py`) — all green.
 
 ---
 
 ## LLM PROMPT
 
-> Read `pr_info/steps/summary.md` (§2.6, §2.7, §2.8, §2.10) and `pr_info/steps/step_7.md`, then
-> implement Step 7 only.
+> Read `pr_info/steps/summary.md` (§2.3, §2.7, §2.10) and `pr_info/steps/step_7.md`, then implement
+> Step 7 only.
 >
-> Construct **one** `ApprovalEngine` in `src/mcp_coder/cli/commands/icoder.py` beside the gateway
-> (inside the existing `provider == "langchain" and mcp_config` gate) and inject the same instance
-> into `LangchainEnforcementGateway`, `RealLLMService` (as `approval_bridge`, forwarded to
-> `prompt_llm_stream`) and `AppCore` (as `approval_engine`, alongside a `permission_gateway`
-> handle). Add `mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.approval` to
-> `layered_architecture`'s `ignore_imports` in `.importlinter`.
+> Thread an optional `approval_bridge: ApprovalBridge | None = None` through
+> `prompt_llm_stream` → `ask_langchain_stream` → `_ask_agent_stream` (a no-op on the
+> `_ask_text_stream` branch). In `_ask_agent_stream`: widen the existing `try` so it starts
+> right after `q` is created, make `attach(q.put)` its first statement, and in the `finally` call
+> `detach()` **before** `thread.join(timeout=5)` (detach cancels the pending futures, which is the
+> only thing that unparks a blocked interceptor; joining first burns the full 5s and leaves the
+> agent thread alive) — **one** lifecycle site. Guard both `finally` statements, because the
+> widening puts `thread` inside the `try`: call `detach()` only when `attach()` returned, and
+> `thread.join(timeout=5)` only when the thread is bound and was started, so an `attach(q.put)`
+> failure (`UnboundLocalError`) or a `thread.start()` failure (`RuntimeError: cannot join thread
+> before it is started`) cannot raise out of the `finally` and mask the original exception. Make the
+> consumer treat `queue.Empty` as "re-wait" while `pending() > 0` and track the pause as a
+> **timestamped window** (sample `pending()` at every loop point, credit real wall time when the
+> window closes, subtract the still-open window in the cap check) — do **not** accumulate
+> `paused += timeout` in the `queue.Empty` branch only, or pauses shorter than the 300s inactivity
+> timeout are charged in full against the 3600s cap. Also bump a `pause_epoch` counter whenever a
+> window **closes**, snapshot it before each `q.get`, and re-wait on `queue.Empty` when the window
+> is open **or** the epoch advanced during that wait: `q.get` restarts its full `timeout` on every
+> call, so a pause that opens and closes inside one wait would otherwise eat the whole inactivity
+> budget and kill the turn with "no response for 300s. Connection closed." moments after the user
+> approved. Add `except asyncio.CancelledError`
+> to `_run` that does not append to `error_holder` while the `finally` still puts the sentinel.
 >
-> Give `AppCore` three thin delegating methods — `resolve_pending`, `cancel_pending_approvals`,
-> `add_runtime_rule` — each a safe no-op when its handle is `None`. In `AppCore.stream_llm`,
-> replace the `!= "raw_line"` event-log check with the shared `_TRANSIENT_EVENT_TYPES` constant
-> from `llm/types.py`, and skip **both** `llm_request_end` **and** `store_session` when the
-> injected engine reports `cancelled` — with a comment explaining that `ui/replay.py` keys its
-> `— Cancelled —` marker off `in_flight`, so gating only `store_session` would leave this turn the
-> single cancel that replays without a marker.
+> In `llm/types.py`, add a **public** `TRANSIENT_EVENT_TYPES = frozenset({"raw_line",
+> "approval_request"})` — `AppCore` imports it cross-module in Step 9, so it gets no leading
+> underscore — use it in `ResponseAssembler.add` in place of the `!= "raw_line"` literal, and document
+> `approval_request`, `tool_call_id` and `tool_run_id` in the `StreamEvent` docstring. In
+> `llm/interface.py` annotate the new parameter under `TYPE_CHECKING` so no eager langchain import
+> is introduced, and document it as "langchain provider only" like the neighbouring `tools` param.
 >
-> In the **same commit**, add the `ui/app.py` side: an `approval_request` early-return branch in
-> `_handle_stream_event` (mirroring the existing `permission_warning` precedent) that resolves the
-> approval immediately with `ApprovalDecision("deny", "once", reason=_DENY_NO_UI)` via
-> `self._core.resolve_pending` — a module-level reason string of its own, **never** the gateway's
-> `_DENY_USER` R11 wording, because no user was asked — marked `TODO(#1046)`; and make
-> `action_cancel_stream` also call `self._core.cancel_pending_approvals()`. Without both, this
-> commit ships an app where the first `ask`-gated call wedges the turn permanently (both timeouts
-> suppressed by the pause, `_cancel_event` inert, non-daemon worker thread). Do not add a modal,
-> scopes, or any persist write-back — that is #1046.
+> Write the nine test cases listed in the step first (1, 2, 2b, 3–8), reusing the Step 3 harness;
+> monkeypatch both
+> timeouts to small values, and include the sub-inactivity pause case (no `queue.Empty` at all),
+> the pause-ends-mid-wait case (2b — pause, then a quiet stretch, both under one `timeout`) and
+> the generator-closed-while-pending case. Carry the "pause not keepalives" and "CancelledError is
+> a BaseException" rationale into code comments.
 >
-> Do **not** add an attach/detach `try/finally` in `RealLLMService.stream` — Step 5 owns the single
-> lifecycle site. Do not import `textual` into `AppCore`.
->
-> Write the nine test cases listed in the step first (assert engine **identity**, not equality).
->
-> Use MCP tools only. Run the fast suite **and** the `textual_integration` marker. Finish with
-> `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and `run_lint_imports_check` all green,
-> then one commit.
+> Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check`,
+> `run_lint_imports_check` and `check_file_size(max_lines=750)` all green, then one commit.

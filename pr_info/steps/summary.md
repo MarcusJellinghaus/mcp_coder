@@ -4,7 +4,7 @@ Implementation summary for the M3 in-band approval engine on the **langchain pro
 
 **Read first:** epic #1038, design reference #1037 (§8.1 gotchas #1–#5, §8.3, §10.2 D-E/D-K,
 §10.6.2 D-N), issue #1045 (all refinement passes: R1–R18), sibling #1046 (I3.3),
-`spikes/i3-1-approval/FINDINGS.md` (deleted by Step 8 of this plan).
+`spikes/i3-1-approval/FINDINGS.md` (deleted by Step 11 of this plan).
 
 ---
 
@@ -94,13 +94,19 @@ pending count. Serialisation is achieved by emitting only for the front entry:
 * **`GeneratorExit` while an approval is pending is rare, not impossible — do not design as if it
   cannot happen.** It cannot be raised from the consumer's own `q.get` (CPython refuses
   `gen.close()` on an executing frame), but the consumer is **not** in `q.get` for the whole
-  pending window: it yields the `approval_request` and is then suspended at that `yield` while
-  the event is handled — `AppCore.stream_llm` passes it to `ui/app.py::_stream_llm`, which
-  dispatches through `call_from_thread` and blocks until the UI handler returns. Under
-  I3.3/#1046 that is the entire open-modal window. An exception in that handler (or any other
-  consumer-side abort) leaves the `for` loop, closes the generator, and delivers `GeneratorExit`
+  pending window: it yields the `approval_request` and is then suspended at that `yield` for as
+  long as the `for`-loop body runs — `AppCore.stream_llm` passes the event to `_stream_llm`, which
+  dispatches through `call_from_thread` and blocks until the UI handler returns, and then tests
+  `_cancel_event` before pulling the next event. That window is **not** the open-modal window:
+  `_handle_stream_event` is synchronous and `push_screen` returns immediately, so under I3.3/#1046
+  the handler ends as soon as the modal is pushed and the consumer goes straight back into
+  `q.get`. It is a `call_from_thread` round-trip — narrow, but real, and it is a window in which
+  an approval is pending. An exception in that handler, or the `break` on a `_cancel_event` set
+  between events, leaves the `for` loop, closes the generator, and delivers `GeneratorExit`
   at the `yield` **with an approval still pending**; that path runs `cancel.set()` → the
   `finally`, and `cancel` is inert against an interceptor parked on a future.
+  *(The `push_screen` half is analytical — read off its non-awaited call sites in `ui/app.py`,
+  not executed.)*
   **Required behaviour for that path:** the `finally` calls `detach()` **before**
   `thread.join(timeout=5)` (§2.10), and `detach()` cancels every future it is about to drop
   (`call_soon_threadsafe(fut.cancel)`) before clearing `_pending`. The parked interceptor then
@@ -134,14 +140,23 @@ only the **third** key and `Policy.rank` puts `AFTER_APPROVAL` above `ALWAYS`, s
 `"ask": ["mcp__s__t"]`. Runtime rules now contest among themselves and win **as a group**.
 `_LAYER_ORDER` keeps its meaning for the other three layers.
 
-**Bound on the widening (security):** the group short-circuit is skipped when any *authored*
-(non-runtime) matching rule is `never`. R14's canonical case is a runtime `always` beating an
+**Bound on the widening (security):** the authored (non-runtime) candidates are sorted by the
+existing 4-key ordering first, and the group short-circuit is skipped only when the **top** one is
+`never`. R14's canonical case is a runtime `always` beating an
 authored `ask`; letting a **broad** runtime `always` also shadow a **specific** authored `never`
 is a widening this issue does not need. With the bound, an authored `never` falls through to the
 ordinary 4-key contest, where it loses only to a *strictly more specific* runtime rule — never to
 a broader one. The bound is close to free: `filter_tools` hides `never` tools at turn start from
 a snapshot, so a runtime grant cannot make such a tool callable in that turn anyway; without the
 bound the resolver would merely disagree with the tool list.
+
+**The bound is keyed on the winning authored rule, not on "any matching authored `never`".** A
+config can hold both a broad `"never": ["mcp__s__*"]` and a specific `"ask": ["mcp__s__t"]`. An
+"any" test skips the short-circuit there, and the specific `ask` then beats a runtime
+`Rule(Matcher("s","t"), ALWAYS, "runtime")` on `Policy.rank` — so the `scope=session` grant
+silently does nothing and the user is re-prompted every turn, contradicting the acceptance
+criterion this stage exists for. Testing only the top-ranked authored candidate costs one extra
+`max()` over an ordering the resolver already computes.
 
 *Ripple to mirror (not implemented here):* this is a semantic change to I2.1/#1041's resolver.
 #1048's `/allow` quick commands carry no never-override confirm; with the bound above they do not
@@ -174,8 +189,9 @@ does, inline, before calling `resolve_pending`.
 
 Every non-`raw_line` StreamEvent is persisted **twice** (session `.jsonl` + `raw_response["events"]`)
 and `ui/replay.py` re-feeds it to `_handle_stream_event` — i.e. replay would pop an unanswerable
-modal. A shared `_TRANSIENT_EVENT_TYPES` constant in `llm/types.py` replaces the two literal
-`!= "raw_line"` checks so they cannot drift.
+modal. A shared `TRANSIENT_EVENT_TYPES` constant in `llm/types.py` replaces the two literal
+`!= "raw_line"` checks so they cannot drift. It is **public** — `AppCore` imports it cross-module,
+so an underscore name would advertise privacy the code does not honour.
 
 ### 2.8 Cancel-while-pending writes no session record (R16)
 
@@ -205,8 +221,9 @@ pre-change logs carry neither. When an id *is* supplied and matches nothing pend
 returns `None` (unpaired: `duration_ms is None`, or the existing "no open tool unit" WARN) rather
 than falling through to name-FIFO — falling through there would silently attach the result to
 some other call of the same tool, which is precisely the defect R1/R18 exist to fix.
-One short module-level function `pop_pending_tool()` serves both sites; `ui/app.py`'s
-`_open_tool_units` collapses from `dict[str, deque[str]]` to a single `deque`.
+One short module-level function `pop_pending_tool()` serves both sites; the UI's
+`_open_tool_units` (in `ui/stream_view.py` after Step 2) collapses from `dict[str, deque[str]]`
+to a single `deque`.
 
 *Not fixed (R17, recorded):* there is **no** correlation key between `approval_request` and the
 on-screen tool unit — the interceptor has only the model's `call_N` id. I3.3 must identify the
@@ -221,7 +238,7 @@ already holding `thread.join(timeout=5)`, which runs on both normal completion *
 `detach()`-clears-the-registry criterion; a second defensive detach in `RealLLMService.stream`
 is deliberately **not** added (two lifecycle sites rot).
 
-**Ordering, both ends (Step 5 spells out the edit).** `q` is created ~33 lines *above* that
+**Ordering, both ends (Step 7 spells out the edit).** `q` is created ~32 lines *above* that
 `try:`, so the `try` is widened upwards to start right after `q` and `attach(q.put)` becomes its
 first statement — otherwise a failure between attach and the loop (`thread.start()` raising)
 would leave the engine attached to a dead turn with no `detach()`. In the `finally`,
@@ -233,7 +250,7 @@ raise *out of the `finally`* and mask the original exception: `attach(q.put)` ra
 statement leaves `thread` unbound (`UnboundLocalError`), and `thread.start()` raising leaves it
 created but unstarted (`RuntimeError: cannot join thread before it is started`). Each cleanup step
 is therefore conditioned on its own setup having succeeded — `detach()` only when `attach()`
-returned, `thread.join(timeout=5)` only when the thread is bound and was started. Step 5 spells
+returned, `thread.join(timeout=5)` only when the thread is bound and was started. Step 7 spells
 out the mechanics; the invariant is that the `finally` cannot raise.
 
 Because that `finally` is also the `GeneratorExit` path, and `GeneratorExit` *is* reachable with
@@ -245,17 +262,27 @@ Cancelling *after* the join is just as bad in practice: the interceptor is still
 join runs, so the join burns its full 5s and returns with the agent thread alive — which is
 exactly what the "`thread.is_alive()` is `False` after the existing 5s join" criterion forbids.
 
+The scheduling is itself guarded: on the normal path the agent loop is often already closed by
+the time `detach()` runs, and `call_soon_threadsafe` raises `RuntimeError` on a closed loop —
+which would escape the `finally` this section requires cannot raise. Catch it and stop: a closed
+loop means nothing is parked, so there is nothing to cancel.
+
 ### 2.11 Interim behaviour until I3.3 lands
 
-Nothing answers an `approval_request` until the modal exists. The `ui/app.py` branch therefore
+Nothing answers an `approval_request` until the modal exists. The UI branch therefore
 resolves immediately with a deny — fail-closed, a few lines, replaced by the modal in #1046.
 Without it, a live `ask` rule would wedge a turn *and* the cancel paths that could rescue it are
-inert, so this branch ships in **Step 7**, in the same commit as the engine wiring (§4).
+inert, so this branch ships in **Step 9**, in the same commit as the engine wiring (§4).
 
 That deny must **not** reach the model as the gateway's R11 user-deny wording ("Tool call denied
 by the user…"): no user was asked. `ApprovalDecision` therefore carries an optional `reason`, the
 UI passes its own `_DENY_NO_UI` string, and the gateway prefers `decision.reason` over
 `_DENY_USER`. #1046 drops the `reason` when a real user answers, and the R11 wording applies again.
+
+The same rule binds the **engine's own** fail-closed deny (`request_approval` returning without
+awaiting because it is detached or cancelled): it carries `_DENY_UNAVAILABLE`. A bare
+`ApprovalDecision("deny", "once")` with no `reason` would fall through to `_DENY_USER` and tell
+the model a user refused a call nobody was asked about.
 
 ---
 
@@ -265,10 +292,12 @@ UI passes its own `_DENY_NO_UI` string, and the gateway prefers `decision.reason
 
 | Path | Purpose |
 |---|---|
+| `src/mcp_coder/llm/providers/langchain/_setup.py` | **Step 1, pure move:** config load, chat-model factory, session id, provider-error mapping. |
+| `src/mcp_coder/icoder/ui/stream_view.py` | **Step 2, pure move:** `StreamViewApp` — stream worker + stream-event dispatch, base class of `ICoderApp`. |
 | `src/mcp_coder/llm/providers/langchain/approval_bridge.py` | `ApprovalBridge` Protocol (the seam). No langchain import. |
 | `src/mcp_coder/icoder/permissions/approval.py` | `ApprovalDecision`, `ApprovalEngine`. |
 | `tests/icoder/test_permissions_approval.py` | Engine unit tests (pure asyncio, no langchain). |
-| `tests/llm/providers/langchain/approval_harness.py` | Typed fixture: `FakeChatModel` + blocking tool + bridge driver. |
+| `tests/llm/providers/langchain/approval_harness.py` | Typed fixture: fake chat model factory + blocking tool + bridge driver. |
 | `tests/llm/providers/langchain/test_approval_cancel_path.py` | R7 probe + real-path cancel regression test. |
 | `tests/llm/providers/langchain/test_approval_stream_bridge.py` | Pause / attach-detach / transient-event tests. |
 | `tests/llm/providers/langchain/test_approval_integration.py` | End-to-end allow/deny through the real agent path. |
@@ -280,18 +309,19 @@ UI passes its own `_DENY_NO_UI` string, and the gateway prefers `decision.reason
 |---|---|
 | `src/mcp_coder/icoder/permissions/resolver.py` | R14 runtime stage; R15 docstring correction. |
 | `src/mcp_coder/icoder/permissions/gateway.py` | Keep the whole `Decision`; real `AFTER_APPROVAL` branch; degraded deny; fail-closed fallback; `add_runtime_rule`. |
-| `src/mcp_coder/icoder/core/app_core.py` | `approval_engine` / `permission_gateway` params + 3 delegating methods; `_TRANSIENT_EVENT_TYPES`; R16 gate. |
+| `src/mcp_coder/icoder/core/app_core.py` | `approval_engine` / `permission_gateway` params + 3 delegating methods; `TRANSIENT_EVENT_TYPES`; R16 gate. |
 | `src/mcp_coder/icoder/services/llm_service.py` | `approval_bridge` ctor param, forwarded to `prompt_llm_stream`. |
-| `src/mcp_coder/icoder/ui/app.py` | `approval_request` branch; cancel channel; `on_unmount` hook + closed-app guard around `_stream_llm`'s `call_from_thread` calls; pairing deque. |
+| `src/mcp_coder/icoder/ui/stream_view.py` | `approval_request` branch; `on_unmount` hook + closed-app guard around `_stream_llm`'s `call_from_thread` calls; pairing deque. |
+| `src/mcp_coder/icoder/ui/app.py` | Cancel channel in `action_cancel_stream`. |
 | `src/mcp_coder/cli/commands/icoder.py` | Construct the engine; inject into gateway / service / core. |
-| `src/mcp_coder/llm/types.py` | `_TRANSIENT_EVENT_TYPES`; `ResponseAssembler` carve-out; StreamEvent docs. |
+| `src/mcp_coder/llm/types.py` | `TRANSIENT_EVENT_TYPES`; `ResponseAssembler` carve-out; StreamEvent docs. |
 | `src/mcp_coder/llm/interface.py` | Optional `approval_bridge` param (langchain only). |
 | `src/mcp_coder/llm/providers/langchain/__init__.py` | Bridge param + attach/detach; pause-based timeout suspension; `CancelledError` catch. |
 | `src/mcp_coder/llm/providers/langchain/agent.py` | Emit `tool_run_id` on both tool events. |
 | `src/mcp_coder/llm/formatting/render_actions.py` | Trailing optional `tool_run_id` on `ToolStart` / `ToolResult`. |
 | `src/mcp_coder/llm/formatting/stream_renderer.py` | `pop_pending_tool()`; id-keyed pairing; `tool_run_id` on cleanup results. |
 | `.importlinter` | `permissions_leaf_isolation` + `layered_architecture` entries. |
-| existing test files | `test_permissions_resolver.py`, `test_permissions_gateway.py`, `test_stream_renderer_tool_format.py`, `tests/icoder/test_app_pilot.py`. |
+| existing test files | `tests/icoder/test_permissions_resolver.py`, `tests/icoder/test_permissions_gateway.py`, `tests/icoder/test_icoder_permission_wiring.py`, `tests/icoder/test_app_pilot.py`, `tests/llm/test_types.py`, `tests/llm/formatting/test_stream_renderer_tool_format.py`. |
 
 ### Deleted
 
@@ -304,7 +334,8 @@ UI passes its own `_DENY_NO_UI` string, and the gateway prefers `decision.reason
 * `src/mcp_coder/icoder/ui/widgets/output_log.py` — `tool_run_id` is declared **last with a
   default**, so its `ToolStart(display_name=…, raw_name="", args=…)` call site still compiles.
 * `src/mcp_coder/icoder/ui/replay.py` — it calls `_cleanup_orphan_tools()`, whose signature is
-  unchanged.
+  unchanged. Step 2's extraction is a base-class split, not a rename, so every `app._…` member it
+  reaches keeps working untouched — that is why the extraction takes that shape.
 
 ---
 
@@ -312,19 +343,28 @@ UI passes its own `_DENY_NO_UI` string, and the gateway prefers `decision.reason
 
 | Step | Title | Depends on |
 |---|---|---|
-| 1 | Real-path `CancelledError` probe (**decision gate**) | — |
-| 2 | `ApprovalBridge` Protocol + `ApprovalEngine` | 1 |
-| 3 | Resolver: `runtime` stage (R14) + degraded docstring | — |
-| 4 | Gateway: real `AFTER_APPROVAL` branch + `add_runtime_rule` | 2, 3 |
-| 5 | Provider plumbing: bridge param, pause, cancel catch, transient events | 2 |
-| 6 | Tool-unit pairing on `tool_run_id` (R18/R1) | — |
-| 7 | Wiring: CLI → gateway / service / `AppCore` (+ R16 gate) **+ UI `approval_request` branch and cancel channel** | 2, 4, 5 |
-| 8 | Shutdown hook + closed-app guard, integration test, spike deletion | 7 |
+| 1 | **Prep:** extract `langchain/_setup.py` out of the provider `__init__` (pure move) | — |
+| 2 | **Prep:** extract `icoder/ui/stream_view.py` out of `ui/app.py` (pure move) | — |
+| 3 | Real-path `CancelledError` probe (**decision gate**) | — |
+| 4 | `ApprovalBridge` Protocol + `ApprovalEngine` | 3 |
+| 5 | Resolver: `runtime` stage (R14) + degraded docstring | — |
+| 6 | Gateway: real `AFTER_APPROVAL` branch + `add_runtime_rule` | 4, 5 |
+| 7 | Provider plumbing: bridge param, pause, cancel catch, transient events | 1, 4 |
+| 8 | Tool-unit pairing on `tool_run_id` (R18/R1) | 2 |
+| 9 | Wiring: CLI → gateway / service / `AppCore` (+ R16 gate) **+ UI `approval_request` branch and cancel channel** | 2, 4, 6, 7 |
+| 10 | Shutdown hook + closed-app guard (R9) | 9 |
+| 11 | End-to-end integration test + spike deletion | 10 |
 
-The UI branch is **not** deferred to Step 8. Step 7 is what makes the gateway actually emit and
+**Steps 1–2 exist for the CI file-size gate, not for the feature.** `ui/app.py` (740) and
+`llm/providers/langchain/__init__.py` (739) are both within 11 lines of the 750-line limit, and
+Steps 7–10 add roughly 60 and 50 lines to them. Both are behaviour-neutral pure moves that leave
+every check green and every existing test unedited. The `.large-files-allowlist` is deliberately
+**not** used: it is grandfathering to be reduced (#353), not an escape hatch.
+
+The UI branch is **not** deferred to Step 10. Step 9 is what makes the gateway actually emit and
 `await`; a commit that wires the engine without a UI branch ships an app where the first
-`ask`-gated call wedges the turn permanently — the pause suppresses both timeouts, `_cancel_event`
-is only checked after an event arrives from the generator (`ui/app.py:290`), and the Textual
+`ask`-gated call wedges the turn permanently — the pause suppresses both timeouts, `_stream_llm`'s
+`for` loop only tests `_cancel_event` after an event arrives from the generator, and the Textual
 thread worker is non-daemon, so the app cannot be quit cleanly. The two changes are one commit.
 
 Each step is one commit: tests + implementation + **all** checks green
@@ -339,6 +379,17 @@ Each step is one commit: tests + implementation + **all** checks green
   `run_pytest_check(extra_args=["-n","auto","-m","not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration"])`
 * `mypy --strict` must pass. Anything lifted from `spikes/` was never linted or type-checked —
   rewrite it, do not copy it.
+* **The file-size gate is a CI job, and this plan runs close to it.** CI runs
+  `mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist`. Every step
+  that touches `llm/providers/langchain/__init__.py`, `llm/providers/langchain/agent.py` (732),
+  `icoder/ui/app.py` or `icoder/ui/stream_view.py` finishes with `check_file_size(max_lines=750)`
+  clean. Do **not** add a file to `.large-files-allowlist` to get past it — Steps 1–2 exist
+  precisely so nobody has to.
+* **Test modules land in langchain-free CI jobs.** Put every `pytest.importorskip` and every
+  langchain import (and any `BaseChatModel` subclass) **inside a function**, per the precedent at
+  `tests/icoder/test_icoder_permission_wiring.py`: CI's `isort --float-to-top` moves module-level
+  imports above module-level statements, and the mypy job installs no langchain, so a module-scope
+  subclass trips `disallow_subclassing_any`.
 * Navigate production code **by symbol, not by line number**; every line anchor in #1045 has drifted.
 * Docstrings on every public symbol (ruff `D`/`DOC` rules are active).
 * Carry the load-bearing FINDINGS rationale into code comments where the step says so — that is

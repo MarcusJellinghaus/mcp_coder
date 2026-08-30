@@ -1,14 +1,12 @@
-# Step 1 — Real-path `CancelledError` probe (decision gate)
+# Step 1 — Prep: extract the langchain setup helpers out of the provider `__init__`
 
-**Depends on:** nothing. **Must run first.**
+**Depends on:** nothing. **Behaviour-neutral — pure move, no new feature.**
 
-R7 adopts *hard cancel* (`Future.cancel()` → `CancelledError` unwinds the turn), but #1044 only
-demonstrated that in **Tier A (pure asyncio)**. Every real-langgraph spike scenario resolved with
-`set_result`. Before any engine code is written, prove that a `CancelledError` raised inside a tool
-coroutine escapes `ToolNode` → `astream_events` → `_run` intact.
-
-This is **not** throwaway work: it is the harness and the regression test that the
-"cancel-while-pending … `thread.is_alive() is False`" acceptance criterion requires.
+`src/mcp_coder/llm/providers/langchain/__init__.py` is **739** lines and CI runs
+`mcp-coder check file-size --max-lines 750`. Step 7 adds roughly +60 lines to `_ask_agent_stream`
+and `ask_langchain_stream`, so that job would fail. The file is **not** in
+`.large-files-allowlist` and must not be added to it: the allowlist is grandfathering to be
+reduced (#353), not an escape hatch. This step buys the headroom by moving a cohesive block out.
 
 ---
 
@@ -16,124 +14,82 @@ This is **not** throwaway work: it is the harness and the regression test that t
 
 | Path | Action |
 |---|---|
-| `tests/llm/providers/langchain/approval_harness.py` | **create** — shared typed fixture module |
-| `tests/llm/providers/langchain/test_approval_cancel_path.py` | **create** — the probe |
-
-Both live under `tests/llm/providers/langchain/` on purpose:
-
-* `test_module_independence` in `.importlinter` forbids `tests.icoder` ↔ `tests.llm` imports, and
-  Steps 5/8 reuse this harness from the same directory;
-* that directory's `conftest.py` has an **autouse `_tmp_home` fixture** redirecting `Path.home()`
-  to `tmp_path`, which already satisfies **R12** (`run_agent_stream` writes session history to
-  `~/.mcp_coder/sessions/langchain/` unconditionally) — no extra isolation code needed.
-
-`approval_harness.py` is not named `test_*`, so pytest does not collect it.
+| `src/mcp_coder/llm/providers/langchain/_setup.py` | **create** — the moved block |
+| `src/mcp_coder/llm/providers/langchain/__init__.py` | **modify** — delete the block, re-export it |
 
 ## WHAT
 
-```python
-# tests/llm/providers/langchain/approval_harness.py
+Move these seven module-level symbols, **unchanged**, into `_setup.py`:
 
-class FakeChatModel(BaseChatModel):
-    """Two-invoke fake: first emits one tool_call, then plain text 'done'."""
-    invoke_count: int
-    async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult: ...
-    @property
-    def _llm_type(self) -> str: ...
-
-@dataclass
-class Gate:
-    """Captures the agent loop + the Future a blocking tool awaits."""
-    loop: asyncio.AbstractEventLoop | None = None
-    future: asyncio.Future[str] | None = None
-    fired: bool = False
-
-def make_blocking_tool(gate: Gate, name: str = "ping") -> Any:
-    """StructuredTool whose coroutine captures the loop and awaits gate.future."""
-
-def wait_for(pred: Callable[[], bool], timeout: float = 5.0) -> bool:
-    """Poll *pred* until true or *timeout*; returns whether it became true."""
+```
+_build_system_messages      _BACKEND_ERROR_PARAMS      _auth_errors_for_backend
+_handle_provider_error      _load_langchain_config     _create_chat_model
+_resolve_session_id
 ```
 
-```python
-# tests/llm/providers/langchain/test_approval_cancel_path.py
+They form one unit: *turn user config into a ready `BaseChatModel`, a session id and system
+messages, and map backend exceptions to `LLMAuthError` / `LLMConnectionError`.* All four call
+paths (text, text-stream, agent, agent-stream) sit above them and none of them calls anything
+defined later in `__init__.py`, so the move is strictly downward.
 
-def test_cancelled_error_escapes_the_agent_stream() -> None: ...
-def test_cancel_leaves_no_error_and_kills_the_thread() -> None: ...
-```
+`_AGENT_OVERALL_TIMEOUT` stays in `__init__.py` — it belongs to the consumer loop, not to setup.
 
 ## HOW
 
-* Module-level `pytest.importorskip("langgraph")` and `pytest.importorskip("langchain_core")` —
-  the directory conftest injects `MagicMock` modules when langchain is genuinely absent, and this
-  test needs the **real** packages. No credentials and no network are needed, so the test stays
-  **unmarked** and runs in the fast suite.
-* `FakeChatModel` must implement the **async** `_agenerate` (FINDINGS gotcha 3):
-  `BaseChatModel`'s default delegates to `run_in_executor`, a thread with no running loop, where
-  `asyncio.get_running_loop()` raises and the loop reference is destroyed.
-* Tool args must satisfy the tool schema or `ToolNode` rejects the call **before** the coroutine
-  runs (FINDINGS gotcha 2). The blocking tool takes **no** arguments and the fake emits `args={}`.
-* Drive `run_agent_stream(...)` through a local copy of the `_ask_agent_stream` consumer shape
-  (thread + `asyncio.run(_run())` + `queue.Queue` + sentinel), so the probe measures the real
-  production topology.
-
-## ALGORITHM
-
-```
-start agent thread: asyncio.run(_run())   # _run drains run_agent_stream into q
-wait_for(gate.fired)                      # tool coroutine is parked on await gate.future
-gate.loop.call_soon_threadsafe(gate.future.cancel)   # the direct cancel channel
-consume q until the None sentinel
-thread.join(timeout=5)
-assert thread.is_alive() is False and no exception was recorded other than CancelledError
-```
+* **Direction matters.** The *consumer loop* (`_ask_agent_stream`) is the obvious thing to move,
+  and it is wrong here: it is the file's **top** layer and calls `_create_chat_model` and
+  `_handle_provider_error`, so a `_agent_stream.py` would have to import its own parent package
+  back and would read a half-initialised module. Moving the **bottom** layer has no cycle.
+* **Re-export, and keep the call sites in `__init__.py`.** `__init__.py` gains
+  `from ._setup import _build_system_messages, _create_chat_model, _handle_provider_error,
+  _load_langchain_config, _resolve_session_id` (plus the two remaining names if anything reads
+  them). This is load-bearing, not cosmetic: five test modules patch
+  `mcp_coder.llm.providers.langchain._load_langchain_config` and
+  `…._create_chat_model` (`test_langchain_agent_mode.py`, `test_langchain_coverage_gaps.py`,
+  `test_langchain_provider.py`, `test_langchain_session_guard.py`,
+  `tests/cli/commands/test_prompt.py`). Because every caller stays in `__init__.py` and resolves
+  the name through that module's globals, those patches keep working **unchanged**. Do not move a
+  call site into `_setup.py`.
+* Move the imports the block needs (`uuid`, `Mapping`, `get_config_values`,
+  `require_langchain_history`, `validate`, the `._exceptions` names, the `TYPE_CHECKING`
+  `BaseChatModel`) and delete the ones `__init__.py` no longer uses. `_setup.py` gets its own
+  `logger = logging.getLogger(__name__)` — `_load_langchain_config`'s warning is the only user.
+* **Do not** rename anything, change a signature, reflow a docstring, or "improve" the moved code.
+  A reviewer must be able to diff the two halves and see a move.
 
 ## DATA
 
-* `FakeChatModel.invoke_count` — `1` after a cancelled run (the model is never re-invoked),
-  which is the discriminator for "the turn did not re-plan".
-* The probe records what `_run`'s `except Exception` sees. **Expected: nothing** —
-  `CancelledError` is a `BaseException`. Assert that the caught-exception list is empty and that
-  the escaping exception is `asyncio.CancelledError`.
-* `run_agent_stream` yields `done` unconditionally on the *backstop* path but **not** here: under
-  hard cancel the yield is never reached (F15, as corrected in #1045's round-2 addendum). Do not
-  assert on the presence/absence of `done`.
+No behaviour, no types, no public API change. `__init__.py` lands at roughly **525** lines, so it
+is still under 600 after Step 7's additions.
 
-## GATE — read before proceeding
+## TESTS
 
-* **Probe passes** → continue to Step 2 as planned.
-* **Probe fails** (langgraph absorbs or converts the `CancelledError`; CPython 3.11 marks a task
-  CANCELLED when it ends with `CancelledError` while un-cancelled) → switch to the
-  **pre-authorised fallback**, no new decision needed:
-  resolve the Future with a `"cancelled"` outcome, return a deny-shaped `ToolMessage`, and rely on
-  the `cancel_event` backstop to break the loop (demonstrated by
-  `spikes/i3-1-approval/tier_b_cancel.py::scenario_backstop`). Record the switch at the top of
-  `pr_info/steps/summary.md` and adjust Steps 2, 5 and 8 accordingly (R7's `_run` catch and R16's
-  cancelled-flag gate become unnecessary; the `done` event then *is* yielded).
+**None new.** The whole point is that the existing suite passes untouched. If a test needs an
+edit, the move was not pure — revert and rethink.
 
 ## CHECKS
 
-`run_pylint_check`, `run_mypy_check`, `run_pytest_check` (fast selection) — all green.
+`run_pylint_check`, `run_mypy_check`, `run_pytest_check` (fast selection),
+`run_lint_imports_check`, **and the file-size gate**
+(`check_file_size(max_lines=750)` must not list `llm/providers/langchain/__init__.py`) — all green.
 
 ---
 
 ## LLM PROMPT
 
-> Read `pr_info/steps/summary.md` (especially §2.3 and §2.10) and `pr_info/steps/step_1.md`, then
-> implement Step 1 only.
+> Read `pr_info/steps/summary.md` (§4 and §5) and `pr_info/steps/step_1.md`, then implement Step 1
+> only.
 >
-> Write the shared typed harness `tests/llm/providers/langchain/approval_harness.py` and the probe
-> `tests/llm/providers/langchain/test_approval_cancel_path.py`. Prove that a `CancelledError`
-> raised in a tool coroutine (via `loop.call_soon_threadsafe(future.cancel)` from another thread)
-> escapes `ToolNode` / `astream_events` / the `_run` drainer intact, that the agent thread is dead
-> after the existing 5s join (`thread.is_alive() is False`), and that the model was not re-invoked.
+> Create `src/mcp_coder/llm/providers/langchain/_setup.py` and move `_build_system_messages`,
+> `_BACKEND_ERROR_PARAMS`, `_auth_errors_for_backend`, `_handle_provider_error`,
+> `_load_langchain_config`, `_create_chat_model` and `_resolve_session_id` into it **verbatim**.
+> Re-export them from `__init__.py` and leave every call site there, so the existing
+> `mcp_coder.llm.providers.langchain._load_langchain_config` / `._create_chat_model` patches in
+> five test modules keep working. This is a pure move: no rename, no signature change, no new
+> tests, no behaviour change.
 >
-> Constraints: use MCP tools only; `mypy --strict` must pass (the spike code this is modelled on
-> was never type-checked — rewrite, do not copy); implement the **async** `_agenerate`; use a
-> no-argument blocking tool; guard the module with `pytest.importorskip` for the real
-> `langgraph`/`langchain_core`; leave the test unmarked. Do not touch any production file.
+> The point is the CI file-size gate (`--max-lines 750`): the file is at 739 and Step 7 adds ~60.
+> Do **not** add it to `.large-files-allowlist`.
 >
-> Report the probe outcome explicitly. If it fails, stop and report — do not improvise; the
-> fallback is specified in the step's GATE section.
->
-> Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` all green, then one commit.
+> Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check`,
+> `run_lint_imports_check` and `check_file_size(max_lines=750)` all green, then one commit.

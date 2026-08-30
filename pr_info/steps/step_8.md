@@ -1,13 +1,12 @@
-# Step 8 — Shutdown hook, integration test, spike deletion
+# Step 8 — Tool-unit pairing on `tool_run_id` (R18 / R1)
 
-**Depends on:** Step 7 (and therefore all earlier steps).
+**Depends on:** Step 2 only (which moves `_open_tool_units` / `_cleanup_orphan_tools` /
+`_handle_stream_event` into `icoder/ui/stream_view.py`). Otherwise independent of Steps 3–7 and
+may run in parallel with them.
 
-Closes the loop: quitting with an approval pending does not stall, and the whole path is proven
-end to end through the real agent. Then the spike is consumed and deleted.
-
-The `approval_request` branch, its interim fail-closed deny and the direct cancel channel moved
-into **Step 7** — they must land in the same commit as the engine wiring, or that commit ships an
-app whose first `ask`-gated call wedges the turn permanently.
+A human pause makes same-tool mis-pairing near-certain rather than rare: an ungated call finishes
+while a gated call of the **same tool name** is still awaiting approval, so the positional FIFO
+attaches the result to the wrong row — and the elapsed time to a third row.
 
 ---
 
@@ -15,165 +14,138 @@ app whose first `ask`-gated call wedges the turn permanently.
 
 | Path | Action |
 |---|---|
-| `src/mcp_coder/icoder/ui/app.py` | **modify** — `on_unmount` hook + closed-app guard in `_stream_llm` |
-| `tests/llm/providers/langchain/test_approval_integration.py` | **create** |
-| `tests/icoder/test_app_pilot.py` | **modify** — shutdown case |
-| `spikes/i3-1-approval/` | **delete** (8 files) |
+| `src/mcp_coder/llm/providers/langchain/agent.py` | **modify** — emit `tool_run_id` on both tool events |
+| `src/mcp_coder/llm/formatting/render_actions.py` | **modify** — trailing optional field |
+| `src/mcp_coder/llm/formatting/stream_renderer.py` | **modify** — `pop_pending_tool`, id-keyed pairing |
+| `src/mcp_coder/icoder/ui/stream_view.py` | **modify** — `_open_tool_units` becomes a single deque |
+| `tests/llm/formatting/test_stream_renderer_tool_format.py` | **modify** |
+| `tests/icoder/test_app_pilot.py` | **modify** — add the same-tool gated/ungated case |
 
 ## WHAT
 
 ```python
-# icoder/ui/app.py
-def on_unmount(self) -> None:
-    """Cancel pending approvals so quitting never stalls on the 300s inactivity timeout."""
+# render_actions.py — declared LAST, with a default, on BOTH dataclasses
+tool_run_id: str | None = None
 
-def _call_from_thread_if_running(self, callback, *args) -> None:
-    """Run *callback* on the UI thread, or drop it when the app is shutting down."""
+# stream_renderer.py — one module-level helper, shared by both call sites
+def pop_pending_tool(
+    pending: deque[tuple[str | None, str, Any]],   # (tool_run_id, raw_name, payload)
+    run_id: str | None,
+    name: str,
+) -> tuple[str | None, str, Any] | None:
+    """Pop by ``tool_run_id``; fall back to name-FIFO **only** when *run_id* is ``None``."""
 ```
 
 ## HOW
 
-* **Shutdown hook** — add `on_unmount` calling `self._core.cancel_pending_approvals()`.
-  `_stream_llm` runs via `run_worker(..., thread=True)` and a thread blocked in `q.get` cannot be
-  interrupted; nothing in `app.py` overrides `on_unmount` or `action_quit` today.
-* **Closed-app guard — the other half of R9, and the part the hook alone does not give you.**
-  Cancelling the futures only *starts* the unwind; the worker thread still has to finish, and its
-  tail runs `call_from_thread` against an app that is already shutting down. `App._shutdown()`
-  dispatches `Unmount` **after** `_close_all()` / `_close_messages()`, so by the time the unwound
-  worker reaches `_stream_llm`'s `finally` — `self.call_from_thread(self._reset_busy_indicator)`
-  at `ui/app.py:313`, on the `elif not _error_handled` branch, since `on_unmount` does not set
-  `_cancel_event` — the message pump may be gone. `call_from_thread` schedules onto `self._loop`
-  and blocks on the result; on a stopped-but-not-closed loop that callback never runs and the
-  worker blocks **forever**. Textual's thread workers run in a `ThreadPoolExecutor`, whose threads
-  are non-daemon and are joined by `concurrent.futures`' atexit hook, so that is a hung process,
-  not a hung thread.
-  Route **every** `call_from_thread` in `_stream_llm` (the `except` block, the `finally` block and
-  the per-event dispatch) through one small helper that no-ops once the app is shutting down —
-  e.g. an `on_unmount`-set `threading.Event` (`self._shutting_down`), checked before the call, with
-  `RuntimeError` from `call_from_thread` caught and logged as the race backstop. Do not swallow
-  other exceptions.
-* **Do not** add a modal, scopes, or any persist write-back — that is #1046.
-* **Spike deletion** — before deleting, confirm the load-bearing rationale from
-  `FINDINGS.md` §2 (loop handle), §3 (pause over keepalives), §4 (direct cancel channel), §5
-  (stale-`q`) and §10 (deny `tool_call_id`) is present in production docstrings/comments from
-  Steps 2, 4 and 5. Then delete the directory with `delete_directory(recursive=True)`.
+* **`agent.py`** — two one-line additions: `"tool_run_id": run_id` on the `on_tool_start` yield and
+  on the `on_tool_end` yield. **Do not touch `tool_call_id`** — #1118 depends on `on_tool_end`
+  carrying the model's `call_N` id, and two existing assertions
+  (`test_langchain_agent_streaming.py` `== "run-1"`, `test_langchain_agent_streaming_tool_output.py`
+  `== "tc-123"`) must stay green.
+* **`render_actions.py`** — `tool_run_id: str | None = None` **last** on `ToolStart` and
+  `ToolResult`. This is what keeps `output_log.py`'s
+  `ToolStart(display_name=…, raw_name="", args=…)` call site compiling, so `output_log.py` is
+  **not** modified.
+* **`stream_renderer.py`** — `_pending` becomes
+  `deque[tuple[str | None, str, float]]` (run_id, raw_name, monotonic start). `_pair_pending` is
+  replaced by a call to `pop_pending_tool`; `cleanup_pending` carries `tool_run_id` onto each
+  synthesized `ToolResult`. Keep the class docstring's "callers MUST invoke `cleanup_pending`"
+  contract.
+* **`ui/stream_view.py`** (Step 2 moved it out of `ui/app.py`) — `_open_tool_units:
+  dict[str, deque[str]]` becomes
+  `deque[tuple[str | None, str, str]]` (run_id, raw_name, unit_id). Three call sites change:
+  the `ToolStart` append, the `ToolResult` lookup, and `_cleanup_orphan_tools`. The FIFO-desync
+  WARN log stays (it becomes "N entries left over after cleanup"). The module already imports
+  from `llm.formatting`, so importing `pop_pending_tool` adds no new dependency edge.
+* **Fallback is required, but only for the id-less shape:** `claude_code_cli_streaming.py` and
+  `copilot_cli_streaming.py` emit neither field, and replayed pre-change logs carry neither — so
+  `run_id=None` must degrade to name-FIFO exactly as today. When a `run_id` **is** supplied and
+  matches nothing pending, return `None` instead: both langchain tool events carry the same
+  `run_id`, so a miss means a genuine desync, and falling through to name-FIFO there would attach
+  the result to some *other* call of the same tool — the exact defect R1/R18 exist to fix. An
+  unpaired result is already handled (`duration_ms is None`; the "no open tool unit" WARN in
+  `ui/app.py`). Say both halves in the helper's docstring.
+* Blast radius check already done: `cleanup_pending` has **one** production caller
+  (`_cleanup_orphan_tools`), which has four callers (`app.py` error / cancel / `StreamDone`, and
+  `replay.py`). None of their signatures change.
 
 ## ALGORITHM
 
-```
-# integration test, real agent path
-build FakeChatModel + gated MCP-shaped tool + gateway(config with an `ask` rule) + ApprovalEngine
-run _ask_agent_stream(..., approval_bridge=engine) on the consumer thread
-read events until type == "approval_request"; capture approval_id
-engine.resolve_pending(approval_id, ApprovalDecision("allow", "once"))   # from the test thread
-assert the tool ran, the turn completed, and the model was invoked twice
+```python
+def pop_pending_tool(pending, run_id, name):
+    if run_id:                                   # id-keyed: a miss is a MISS, not a name match
+        for i, entry in enumerate(pending):
+            if entry[0] == run_id:
+                del pending[i]; return entry
+        return None
+    for i, entry in enumerate(pending):          # no id at all: first match by name, FIFO
+        if entry[1] == name:
+            del pending[i]; return entry
+    return None
 ```
 
 ## DATA
 
-* The `approval_request` event reaching `_handle_stream_event` is
-  `{"type","approval_id","tool_name","args","source"}` with `source` a plain string.
-* It **necessarily arrives after** `tool_use_start` (the interceptor runs inside the tool coroutine
-  and `on_tool_start` fires first) — assert this ordering in the integration test; #1045 flags it
-  as a scheduling claim that was never verified at HEAD, so verify it here. A wrong result is
-  cosmetic only (a modal for a row not yet drawn) — report it, do not block on it.
-* R17 stands: there is **no** correlation key between `approval_request` and the on-screen tool
-  unit. Do not invent one.
+* `tool_use_start` / `tool_result` events gain `"tool_run_id": <langgraph run_id>`;
+  `tool_call_id` is unchanged on both.
+* `ToolStart.tool_run_id` / `ToolResult.tool_run_id`: `str | None`, default `None`.
+* `pop_pending_tool` returns the matched tuple or `None` (unpaired → `duration_ms is None`,
+  or the existing "no open tool unit" WARN in `ui/stream_view.py`). A supplied-but-unmatched `run_id`
+  returns `None`; only a `run_id` of `None` reaches the name-FIFO branch.
 
 ## TESTS (write first)
 
-Integration (`tests/llm/providers/langchain/test_approval_integration.py`, real langgraph via
-`pytest.importorskip`, session storage already isolated by the directory's autouse `_tmp_home`
-fixture — R12):
-
-1. **Allow:** gated call blocks, is approved, then runs; the agent continues; nothing raises.
-2. **Deny:** returns a clean `ToolMessage(status="error")` carrying the real `tool_call_id`; the
-   agent continues.
-3. **Ungated calls are not blocked** behind a pending approval.
-4. **Cancel-while-pending:** `cancel_all()` → the turn unwinds without re-planning
-   (`model.invoke_count == 1`), `thread.is_alive() is False` after the 5s join, nothing on stderr,
-   `error_holder` empty.
-5. **Backstop still works:** with no approval pending, `cancel_event` / generator close still stop
-   the turn.
-6. **Ordering:** `approval_request` arrives after that tool's `tool_use_start`.
-7. **Interim deny wording:** the deny `ToolMessage` produced by the `ui/app.py` auto-deny carries
-   `_DENY_NO_UI`, **not** the gateway's `_DENY_USER` text — no user was asked.
-
-UI (`tests/icoder/test_app_pilot.py`, `textual_integration`) — cases 8/9 of the previous draft
-(the `approval_request` branch and the cancel channel) moved to Step 7:
-
-8. **R9, the real exit path — not a proxy.** Start a turn whose tool is gated, let it reach the
-   pending state (bridge reports `pending() > 0`, worker parked in `q.get`), then quit the app
-   (`pilot.press("ctrl+q")` / `app.exit()`) **without** answering. Assert, under a hard test
-   timeout well below the 300s inactivity value: the engine's futures are cancelled,
-   `run_test()` returns (the app actually exits), and the `_stream_llm` worker thread is no longer
-   alive afterwards. Asserting only that `on_unmount` called `cancel_pending_approvals()` is a
-   proxy for the hook, not for R9's "the process exits without stalling", and would stay green
-   while the worker blocked forever in `call_from_thread`.
-
-   **Reaching the pending state — required, because Step 7's interim auto-deny would otherwise
-   answer instantly.** `_handle_stream_event`'s `approval_request` branch resolves every request
-   synchronously via `self._core.resolve_pending(...)` (`step_7.md`, §2.11), so a plain turn
-   leaves nothing pending — which is exactly why Step 7 can defer the shutdown hook, and exactly
-   why this test needs an explicit way to hold the approval open. Use the delegator as the patch
-   point: **monkeypatch `AppCore.resolve_pending` to a no-op for this test only.** The UI branch
-   still runs unchanged (event dispatched, `TODO(#1046)` path taken), but nothing answers, so the
-   engine keeps the future registered and `pending()` stays `> 0` for the quit. Do **not** patch
-   `_handle_stream_event` itself — that would bypass the very branch whose interaction with
-   shutdown is under test.
-
-   Build the turn from: a real `ApprovalEngine` injected into the pilot's `AppCore` (Step 7
-   wiring) and a fake LLM service whose `stream` runs `request_approval` on a background
-   thread + `asyncio.run` loop and yields the emitted `approval_request` — i.e. the Step 1
-   harness's consumer shape, without langgraph. That reproduces the two-loop topology R9 is
-   about (worker thread parked, future on another loop) without needing a real agent.
-
-   Add a `TODO(#1046)` next to the monkeypatch: once I3.3 replaces the auto-deny with a modal, a
-   pending approval is the *natural* state while the modal is open, and the patch point is
-   deleted rather than replaced.
-9. **Closed-app guard, directly:** with `_shutting_down` set, the `_stream_llm` tail issues no
-   `call_from_thread` (spy on it) and returns; a `RuntimeError` raised by `call_from_thread` in the
-   race window is caught and logged rather than propagated out of the worker.
+1. **Renderer, id-keyed:** two `tool_use_start` for the **same** name with different
+   `tool_run_id`s; results arrive **out of order** → each `duration_ms` is attributed to the
+   correct start (assert with monkeypatched `time.monotonic` or ordering, not wall-clock values).
+2. **Renderer, fallback:** events with no `tool_run_id` (the Claude/Copilot shape) pair by
+   name-FIFO exactly as today — existing tests in the file stay green unchanged.
+3. **Renderer, id miss does not mis-pair:** a `tool_result` whose `tool_run_id` matches nothing
+   pending leaves the pending same-name start **untouched** and reports `duration_ms is None`;
+   the later matching result still pairs correctly.
+4. **Renderer, cleanup:** `cleanup_pending` returns `ToolResult`s carrying their `tool_run_id`.
+5. **`agent.py`:** both tool events carry `tool_run_id == run_id`; the two existing `tool_call_id`
+   assertions still pass.
+6. **UI (`test_app_pilot.py`, `textual_integration`):** one turn with two calls to the **same**
+   tool, results out of order → each `tool_result` updates the correct unit; the desync WARN is
+   not emitted.
+7. **UI orphan cleanup:** a cancelled turn with one open same-name unit still resolves the right row.
 
 ## CHECKS
 
 `run_pylint_check`, `run_mypy_check`, `run_pytest_check` (fast selection) **plus**
-`run_pytest_check(markers=["textual_integration"], extra_args=["-n","auto"])`, **plus**
-`run_lint_imports_check`. After deleting the spike, re-run the full fast suite to confirm nothing
-imported it.
+`run_pytest_check(markers=["textual_integration"], extra_args=["-n","auto"])` for the pilot tests,
+**plus the file-size gate** (`check_file_size(max_lines=750)`; `agent.py` is at 732 and gains two
+lines here, so watch it as well as `icoder/ui/`).
 
 ---
 
 ## LLM PROMPT
 
-> Read `pr_info/steps/summary.md` (§2.3, §2.11) and `pr_info/steps/step_8.md`, then implement
-> Step 8 only.
+> Read `pr_info/steps/summary.md` (§2.9) and `pr_info/steps/step_8.md`, then implement Step 8 only.
 >
-> In `src/mcp_coder/icoder/ui/app.py`: add an `on_unmount` hook calling
-> `self._core.cancel_pending_approvals()` so quitting with an approval pending does not stall on
-> the 300s inactivity timeout, and add the closed-app guard that makes the hook sufficient — route
-> every `call_from_thread` in `_stream_llm` through one helper that no-ops once the app is shutting
-> down (an `on_unmount`-set `threading.Event`), catching and logging `RuntimeError` for the race
-> window. Without it the unwound worker still reaches
-> `self.call_from_thread(self._reset_busy_indicator)` (`ui/app.py:313`) after `App._shutdown()` has
-> dispatched `Unmount`, blocks on a stopped loop, and hangs the process at exit (Textual thread
-> workers run on non-daemon `ThreadPoolExecutor` threads). The `approval_request` branch and the
-> cancel channel are **not** part of this step — they shipped in Step 7. Do not add a modal,
-> scopes, or any persist write-back — that is #1046.
+> Add a new `tool_run_id` field carrying the langgraph `run_id` to both the `tool_use_start` and
+> `tool_result` events in `llm/providers/langchain/agent.py`, **leaving `tool_call_id` untouched**
+> (#1118 depends on it and two existing assertions must stay green). Add
+> `tool_run_id: str | None = None` as the **last** field of `ToolStart` and `ToolResult` in
+> `render_actions.py` — with the default, `icoder/ui/widgets/output_log.py` needs no change, so do
+> not modify it.
 >
-> Write `tests/llm/providers/langchain/test_approval_integration.py` (cases 1–7 in the step, real
-> agent path, reusing the Step 1 harness) and the two UI pilot cases first. Pilot case 8 must
-> assert the real exit path (the app quits with an approval pending and the worker thread is gone),
-> not merely that `on_unmount` called the delegator. To reach the pending state, monkeypatch
-> `AppCore.resolve_pending` to a no-op for that test — Step 7's interim auto-deny answers every
-> `approval_request` synchronously, so without that patch point nothing is ever pending at quit
-> time and the test cannot exercise R9 at all. Leave the `_handle_stream_event` branch itself
-> unpatched, and mark the patch `TODO(#1046)` (the modal makes the pending state natural).
+> Add one module-level helper `pop_pending_tool(pending, run_id, name)` in `stream_renderer.py`
+> (id-keyed, with a name-FIFO fallback **only when `run_id is None`** — the fallback is required
+> because the Claude and Copilot streaming paths and replayed pre-change logs carry neither field,
+> but a supplied-and-unmatched `run_id` must return `None` rather than fall through, or a lookup
+> miss silently mis-pairs two calls of the same tool). Use it from
+> `StreamEventRenderer` (whose `_pending` becomes a deque of `(run_id, raw_name, start)`) and from
+> `icoder/ui/stream_view.py` (Step 2 moved it there), whose `_open_tool_units` collapses from
+> `dict[str, deque[str]]` to a single
+> deque of `(run_id, raw_name, unit_id)`. Do not build a generic container class. Thread
+> `tool_run_id` through `cleanup_pending`; no caller signature changes.
 >
-> Then, once you have confirmed that the FINDINGS §2/§3/§4/§5/§10 rationale is present in the
-> production docstrings and comments added by Steps 2, 4 and 5, delete `spikes/i3-1-approval/`
-> (D9 consume-and-delete handoff) and re-run the full fast suite.
+> Write the seven test cases listed in the step first, including the same-tool gated/ungated
+> out-of-order case at both sites and the id-miss case.
 >
-> Use MCP tools only (`delete_directory` with `recursive=True` for the spike). Finish with
-> `run_pylint_check`, `run_pytest_check` (fast selection **and** the `textual_integration` marker),
-> `run_mypy_check` and `run_lint_imports_check` all green, then one commit.
+> Use MCP tools only. Run the fast suite **and** the `textual_integration` marker. Finish with
+> `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and `check_file_size(max_lines=750)`
+> all green, then one commit.

@@ -1,9 +1,10 @@
-# Step 4 — Gateway: real `AFTER_APPROVAL` branch + runtime-rule store
+# Step 4 — `ApprovalBridge` Protocol + `ApprovalEngine`
 
-**Depends on:** Step 2 (engine), Step 3 (runtime stage).
+**Depends on:** Step 3 (its outcome fixes the cancel mechanism).
 
-Replaces I2.3's `AFTER_APPROVAL` → deny placeholder with the real branch, and adds the
-runtime-rules store that I3.3/#1046 will write to.
+The core of the issue: the seam Protocol in the `llm` layer and the engine in the `icoder` layer,
+plus the import-linter entry that keeps the engine a leaf forever. Pure asyncio — no langchain,
+no Textual, no `AppCore`.
 
 ---
 
@@ -11,136 +12,233 @@ runtime-rules store that I3.3/#1046 will write to.
 
 | Path | Action |
 |---|---|
-| `src/mcp_coder/icoder/permissions/gateway.py` | **modify** |
-| `tests/icoder/test_permissions_gateway.py` | **modify** |
+| `src/mcp_coder/llm/providers/langchain/approval_bridge.py` | **create** |
+| `src/mcp_coder/icoder/permissions/approval.py` | **create** |
+| `.importlinter` | **modify** — add `approval` to `permissions_leaf_isolation` |
+| `tests/icoder/test_permissions_approval.py` | **create** |
 
 ## WHAT
 
 ```python
-_DENY_NEVER = "This tool is disabled by permission policy."           # unchanged
-_DENY_ASK = "This tool requires approval — not yet available."        # REPURPOSED: fail-closed fallback
-_DENY_USER = (                        # R11 — canonical wording; used unless the decision
-                                      # carries its own `reason` (see the AFTER_APPROVAL branch)
-    "Tool call denied by the user. Do not retry this call — choose a "
-    "different approach, or ask the user what they would prefer."
+# llm/providers/langchain/approval_bridge.py  —  NO langchain import at any scope
+
+class ApprovalBridge(Protocol):
+    """Seam between the langchain consumer loop and the approval engine."""
+
+    def attach(self, emit: Callable[[StreamEvent], None]) -> None:
+        """Bind the per-turn event sink and reset per-turn state."""
+
+    def detach(self) -> None:
+        """Cancel still-pending approvals, unbind the sink, clear the registry (stale-`q` guard)."""
+
+    def pending(self) -> int:
+        """Number of approvals awaiting a human decision (read cross-thread)."""
+```
+
+```python
+# icoder/permissions/approval.py
+
+_DENY_UNAVAILABLE = (
+    "This tool requires approval, but no approval prompt was reachable, so the "
+    "call was refused without asking the user. Choose a different approach or "
+    "ask the user how to proceed."
 )
 
-class LangchainEnforcementGateway:
-    def __init__(
-        self,
-        config: PermissionConfig,
-        approval_engine: ApprovalEngine | None = None,
-    ) -> None: ...
+@dataclass(frozen=True)
+class ApprovalDecision:
+    outcome: Literal["allow", "deny"]
+    scope: Literal["once", "session", "persist"] = "once"
+    reason: str | None = None                     # deny text override; None -> gateway's R11 wording
+    def __post_init__(self) -> None: ...          # deny is once-only in v1 (§10.2 D-K)
 
-    def add_runtime_rule(self, rule: Rule) -> None:
-        """Append a rule to the in-memory ``runtime`` layer (I3.3 writes; engine never does)."""
-
-    async def interceptor(self, request: Any, handler: ...) -> Any: ...   # rewritten branch
-
-def _source_label(source: Source) -> str:
-    """Flatten a Decision.Source to a JSON-safe plain string for the event payload."""
+class ApprovalEngine:
+    def attach(self, emit: Callable[[StreamEvent], None]) -> None: ...
+    def detach(self) -> None: ...
+    def pending(self) -> int: ...
+    def is_attached(self) -> bool: ...
+    async def request_approval(
+        self, *, tool_name: str, args: Mapping[str, object], source: str
+    ) -> ApprovalDecision: ...                    # agent loop only
+    def resolve_pending(self, approval_id: str, decision: ApprovalDecision) -> None: ...  # UI thread
+    def cancel_all(self) -> None: ...                                                     # UI thread
+    def pending_ids(self) -> tuple[str, ...]: ...
+    @property
+    def cancelled(self) -> bool: ...
 ```
 
 ## HOW
 
-* `interceptor` must keep the **whole `Decision`**, not just `.policy` — R15 branches on
-  `isinstance(decision.source, Degraded)`.
-* `add_runtime_rule` is `self._config = replace(self._config, rules=self._config.rules + (rule,))`.
-  `PermissionConfig` is frozen; the rebind is atomic under the GIL, so **no lock**. Both
-  `filter_tools` and `interceptor` already read `self._config` live — verify they never capture it
-  into a local across calls.
-* The deny `ToolMessage` is built **here** via `build_deny_tool_message(text, request.name,
-  tool_call_id)`, never in the engine (R6 — the engine must not import `permission_bridge`).
-* `CancelledError` from `engine.request_approval` must **propagate**, not be caught: it unwinds the
-  turn. Note that in a comment so nobody adds a `try/except` later.
-* `_source_label`: `Layer` → `.name`; `Default()` → `"default"`; `Frame()` → `"frame"`.
-  `Degraded` cannot reach the emit (R15) — assert that with a comment, not a branch.
-* Update the class/module docstring: the `AFTER_APPROVAL` line currently says it returns a deny.
+* **Typing-only downward import.** In `approval.py` import `ApprovalBridge` under
+  `if TYPE_CHECKING:` and prove conformance in the test with
+  `bridge: ApprovalBridge = ApprovalEngine()` (mypy checks it). A runtime import would eagerly
+  execute the langchain package `__init__` for every importer of `icoder.permissions`.
+  Import-linter still sees the edge (grimp is AST-based) — and it is legal: importing a
+  *submodule* creates no edge to its parent package, and `approval_bridge` imports no
+  `langchain_*`.
+* **`.importlinter`:** add `mcp_coder.icoder.permissions.approval` to the
+  `permissions_leaf_isolation` `source_modules` list. Add nothing else yet — the
+  `layered_architecture` entry belongs in Step 7, where the CLI import actually appears.
+* **No lock, no deque, no counter** (summary §2.2). Document *why* in the class docstring, and
+  document it **accurately** — the registry is mutated on the agent loop in the normal case
+  (`resolve_pending` / `cancel_all` only `call_soon_threadsafe`), but three members are touched
+  off that loop and the docstring must name them: `attach()` / `detach()` mutate `_pending`,
+  `_emit`, `_loop` (and `_cancelled`, on `attach`) from the **consumer thread**, and `detach()`
+  runs **before** the `thread.join(timeout=5)` (Step 7), i.e. deliberately **while the agent loop
+  is still live** — cancelling the pending futures is what lets that join succeed, so `detach()`
+  can race an interceptor coroutine that is still unwinding;
+  `cancel_all()` sets `_cancelled` from the **Textual thread**; `pending()` is a cross-thread
+  `len()` read. Each is one attribute rebind or one `len()`, atomic under the GIL — hence no
+  lock — but the `_emit is None` guard and the cancel-then-clear `detach()` below are what make
+  that safe. Do **not** write "everything runs single-threaded on the agent loop".
+* **Carry the FINDINGS rationale as docstrings** (D9 handoff): `get_running_loop()` inside the
+  coroutine and never a build-time handle (§2); why the direct cancel channel exists (§4); why
+  `detach()` clearing the registry is load-bearing — `asyncio.run` is called per turn so the loop
+  object differs every turn (§5 stale-`q`).
+* Record the **R3 mechanism deviation** in the class docstring (guarantee preserved, lock removed).
 
 ## ALGORITHM
 
 ```python
-canonical = f"mcp__{request.server_name}__{request.name}"
-decision = resolve(canonical, request.args, self._frame, self._config)
-tool_call_id = getattr(getattr(request, "runtime", None), "tool_call_id", None) or ""
+async def request_approval(self, *, tool_name, args, source):
+    if self._cancelled or self._emit is None:
+        # Fail closed, never await — and carry a reason of our own. Without it the
+        # gateway falls back to `_DENY_USER` and tells the model "denied by the
+        # user", although nobody was asked (same fix as the UI's `_DENY_NO_UI`).
+        return ApprovalDecision("deny", "once", reason=_DENY_UNAVAILABLE)
+    self._loop = asyncio.get_running_loop()          # FINDINGS §2 — inside the coroutine
+    approval_id = uuid4().hex
+    fut = self._loop.create_future()
+    self._pending[approval_id] = _PendingApproval(fut, self._payload(approval_id, ...))
+    if len(self._pending) == 1:                      # only the front entry is ever emitted
+        self._emit_front()
+    try:
+        return await fut                             # CancelledError propagates to the gateway
+    finally:
+        self._pending.pop(approval_id, None)
+        if not self._cancelled and self._emit is not None:
+            self._emit_front()                       # promote next, FIFO by arrival order
+```
 
-if decision.policy is Policy.ALWAYS:
-    return await handler(request)
-if decision.policy is Policy.NEVER:
-    return build_deny_tool_message(_DENY_NEVER, request.name, tool_call_id)
+The `self._emit is not None` half of that guard is not defensive padding: `detach()` runs on the
+consumer thread **before** the `thread.join(timeout=5)`, i.e. while this coroutine is still
+unwinding on the agent loop, so the sink may already be gone when the `finally` runs.
 
-# AFTER_APPROVAL
-if isinstance(decision.source, Degraded):                       # R15 — no prompt, ever
-    return build_deny_tool_message(_DENY_NEVER, request.name, tool_call_id)
-if self._engine is None or not self._engine.is_attached():      # fail closed, never await
-    return build_deny_tool_message(_DENY_ASK, request.name, tool_call_id)
-approved = await self._engine.request_approval(                 # CancelledError propagates
-    tool_name=canonical, args=request.args, source=_source_label(decision.source)
-)
-if approved.outcome == "allow":
-    return await handler(request)
-# `reason` lets the answering side override the wording. Step 8's interim auto-deny
-# uses it so an unanswered call is not reported to the model as a user denial.
-return build_deny_tool_message(approved.reason or _DENY_USER, request.name, tool_call_id)
+```python
+def resolve_pending(self, approval_id, decision):     # Textual thread
+    entry, loop = self._pending.get(approval_id), self._loop
+    if entry and loop:
+        loop.call_soon_threadsafe(_set_if_pending, entry.future, decision)
+
+def cancel_all(self):                                 # Textual thread
+    self._cancelled = True
+    if self._loop:
+        self._loop.call_soon_threadsafe(self._cancel_all_on_loop)   # iterate ON the loop
+
+def detach(self):                                     # consumer thread
+    # Cancel BEFORE clearing: after the clear nothing can reach these futures again,
+    # and an interceptor parked on one keeps the daemon agent thread alive for the
+    # rest of the process (summary §2.3/§2.10 — GeneratorExit *is* reachable while
+    # an approval is pending). The caller must in turn run detach() BEFORE
+    # thread.join(timeout=5), so the parked interceptor unwinds while the join
+    # waits; joining first burns the full 5s and returns with the thread alive.
+    #
+    # The scheduling itself is guarded: detach() runs inside `_ask_agent_stream`'s
+    # `finally`, which summary §2.10 requires cannot raise, and the agent loop may
+    # already be closed (`asyncio.run` returned because the turn finished on its own)
+    # — `call_soon_threadsafe` raises RuntimeError on a closed loop. A closed loop
+    # means nothing is parked, so swallowing it is correct, not merely convenient.
+    loop = self._loop
+    if loop is not None:
+        for entry in list(self._pending.values()):
+            try:
+                loop.call_soon_threadsafe(entry.future.cancel)
+            except RuntimeError:              # loop already closed -> nothing parked
+                logger.debug("detach(): agent loop already closed; nothing to cancel")
+                break
+    self._pending.clear()
+    self._emit = None
+    self._loop = None                                 # `_cancelled` survives (summary §2.8)
 ```
 
 ## DATA
 
-* Returns unchanged in shape: the real handler result, or a `ToolMessage(status="error")` carrying
-  the **real** `tool_call_id` (the empty-id wedge is FINDINGS §10; #1118 fixed the source).
-* `add_runtime_rule` returns `None` and mutates one attribute.
-* A rule added mid-turn **is** visible to later call-level `resolve()`s in the same turn; it
-  **cannot** un-hide a `never` tool mid-turn, because `filter_tools` is a turn-start snapshot.
-  State that in the `add_runtime_rule` docstring.
+* `_PendingApproval = NamedTuple("_PendingApproval", [("future", asyncio.Future[ApprovalDecision]),
+  ("payload", StreamEvent)])`.
+* Emitted payload (JSON-safe — `source` is a **plain string**, never a `Decision.Source`
+  dataclass):
+  `{"type": "approval_request", "approval_id": str, "tool_name": str, "args": dict, "source": str}`
+* `pending_ids()` returns arrival order (insertion precedes any `await`), so FIFO assertions are
+  non-circular.
+* State lifecycle: `attach()` clears `_pending`, `_loop`, **and `_cancelled`**; `detach()`
+  **cancels** every still-pending future (via `call_soon_threadsafe`) and then clears `_pending`,
+  `_emit`, `_loop`, but **keeps `_cancelled`** — `AppCore.stream_llm` reads it *after*
+  `_ask_agent_stream`'s `finally` has already detached (summary §2.8). Assert this in a test.
+* `ApprovalDecision.__post_init__` raises `ValueError` for `deny` + `session|persist`.
+* `ApprovalDecision.reason` is an optional deny-text override, carried through to the gateway,
+  which uses it in place of `_DENY_USER` (Step 6). Two producers until #1046: the engine's own
+  fail-closed deny (`_DENY_UNAVAILABLE`, above) and Step 9's interim UI auto-deny (`_DENY_NO_UI`).
+  Neither may reach the model as "denied by the user" — nobody was asked in either case. `reason`
+  on an `allow` is ignored.
 
 ## TESTS (write first)
 
-Extend the existing fake-request / fake-handler style already in the file (it stubs the deny
-bridge via an autouse fixture, so no `langchain_core` is needed).
-
-1. `AFTER_APPROVAL` + engine returning **allow** → the real handler is awaited.
-2. `AFTER_APPROVAL` + engine returning **deny** → `ToolMessage` with `_DENY_USER` and the real
-   `tool_call_id`; the handler is **not** awaited; nothing raises.
-2b. `AFTER_APPROVAL` + a deny carrying `reason="…"` → the `ToolMessage` uses that text, not
-   `_DENY_USER` (Step 8's interim auto-deny depends on it).
-3. `AFTER_APPROVAL` + engine raising `CancelledError` → it propagates out of `interceptor`.
-4. **Degraded config** → deny, and `request_approval` was **never called** (assert on a spy).
-5. **No engine** and **engine not attached** → `_DENY_ASK` deny with the real `tool_call_id`, and
-   no `await` on any future (two separate cases).
-6. `NEVER` and `ALWAYS` paths unchanged (existing tests stay green).
-7. `add_runtime_rule` → a subsequent `interceptor` call for the same tool resolves `ALWAYS`
-   (the R14 + store combination; this is the engine-free half of the `scope=session` criterion).
-8. `_source_label` maps `Layer("project")`/`Default()`/`Frame()` to `"project"`/`"default"`/`"frame"`.
+1. Allow: `request_approval` returns the decision resolved from another thread.
+2. Deny: same, with `ApprovalDecision("deny", "once")`.
+3. Two concurrent asks: **exactly one** `approval_request` emitted; answering #1 emits #2;
+   each future resolves via its own `approval_id`, no cross-wiring; `pending_ids()` order equals
+   arrival order.
+4. `pending()` reflects the registry and is `> 0` from before the first emit until the answer.
+5. `cancel_all()` → every awaiting coroutine raises `CancelledError`; **no** further
+   `approval_request` is emitted for a queued sibling; `cancelled` is `True`.
+6. `detach()` clears the registry; `attach()` resets `cancelled`; `detach()` does **not**.
+7. **`detach()` with an approval still pending cancels it:** the awaiting coroutine raises
+   `CancelledError` (it does not hang), and the registry is empty afterwards. This is the
+   turn-ends-while-pending case from summary §2.3 — without it the coroutine parks forever on a
+   future no registry can reach.
+7b. **`detach()` on a closed agent loop does not raise:** with `_loop` closed and an entry still
+    registered, `detach()` returns normally (summary §2.10 — it runs inside a `finally` that must
+    not raise).
+8. Unattached engine → `request_approval` returns a deny immediately, never awaits, and carries
+   `_DENY_UNAVAILABLE` as its `reason` (not `None`, which the gateway would render as a user deny).
+9. `ApprovalDecision("deny", "session")` raises `ValueError`.
+10. `ApprovalDecision("deny", "once", reason="…")` round-trips its `reason` back to the caller of
+    `request_approval`.
+11. Static conformance: `bridge: ApprovalBridge = ApprovalEngine()`.
 
 ## CHECKS
 
-`run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check` — all green.
+`run_pylint_check`, `run_pytest_check`, `run_mypy_check`, **and `run_lint_imports_check`** — all green.
 
 ---
 
 ## LLM PROMPT
 
-> Read `pr_info/steps/summary.md` (§2.5, §2.6) and `pr_info/steps/step_4.md`, then implement
-> Step 4 only.
+> Read `pr_info/steps/summary.md` (especially §2.1–§2.3 and §2.8) and `pr_info/steps/step_4.md`,
+> then implement Step 4 only.
 >
-> Rewrite the `AFTER_APPROVAL` branch of
-> `src/mcp_coder/icoder/permissions/gateway.py::LangchainEnforcementGateway.interceptor` per the
-> step's pseudocode: keep the whole `Decision` (not just `.policy`), deny outright when
-> `decision.source` is `Degraded` **without emitting an approval request**, fail closed with
-> `_DENY_ASK` when no engine is attached (never awaiting a Future nobody will resolve), otherwise
-> await `engine.request_approval(...)` and allow, or deny with `decision.reason` when the decision
-> carries one and the canonical R11 wording otherwise. Let
-> `CancelledError` propagate. Add `add_runtime_rule(rule)` using `dataclasses.replace`, and a
-> `_source_label` helper that flattens `Decision.Source` to a plain JSON-safe string.
+> Create `src/mcp_coder/llm/providers/langchain/approval_bridge.py` (the `ApprovalBridge` Protocol —
+> **no langchain import at any scope**) and `src/mcp_coder/icoder/permissions/approval.py`
+> (`ApprovalDecision` + `ApprovalEngine`). Add `mcp_coder.icoder.permissions.approval` to the
+> `permissions_leaf_isolation` contract in `.importlinter`. Write
+> `tests/icoder/test_permissions_approval.py` first, covering all twelve cases listed in the step.
 >
-> Add an `approval_engine: ApprovalEngine | None = None` constructor parameter. The deny
-> `ToolMessage` is constructed here, never in the engine.
+> The engine holds **one insertion-ordered dict** — no `asyncio.Lock`, no `deque`, no separate
+> counter. Follow the pseudocode in the step exactly, including the `self._emit is not None` guard
+> in `request_approval`'s `finally`, the **cancel-then-clear** `detach()` with its closed-loop
+> `RuntimeError` guard, and the `_DENY_UNAVAILABLE` reason on the fail-closed deny (without it the
+> gateway reports "denied by the user" for a call nobody was asked about). Document in the class
+> docstring: why no lock is needed **and which members are mutated off the agent loop**
+> (`attach`/`detach` on the consumer thread — `detach()` runs **before** the
+> `thread.join(timeout=5)`, i.e. deliberately while the agent loop is still live, so it can race an
+> interceptor that is still unwinding; `cancel_all`'s `_cancelled` on the Textual thread;
+> `pending()` read cross-thread) — do not claim everything runs
+> single-threaded on the agent loop; why the loop handle comes from `get_running_loop()` inside the
+> coroutine; why the direct cancel channel exists; why `detach()` must cancel and then clear the
+> registry; and that this preserves R3's guarantee while dropping its lock mechanism.
 >
-> Write the nine test cases listed in the step first (including the `reason`-override case),
-> extending
-> `tests/icoder/test_permissions_gateway.py` in its existing style (the autouse fixture already
-> stubs the deny bridge). Update the module/class docstrings, which currently say
-> `AFTER_APPROVAL` returns a deny.
+> `approval.py` must import `ApprovalBridge` only under `TYPE_CHECKING`, and must never import
+> `permission_bridge`, `langchain_core`, `textual`, or anything from `icoder.core` / `icoder.ui` /
+> `icoder.services`.
 >
 > Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and
 > `run_lint_imports_check` all green, then one commit.
