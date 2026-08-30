@@ -136,3 +136,73 @@ list `icoder/ui/stream_view.py`) — all green.
 > Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check` (fast selection **and**
 > the `textual_integration` marker), `run_mypy_check`, `run_lint_imports_check` and
 > `check_file_size(max_lines=750)` all green, then one commit.
+
+---
+
+## Implementation note (written after the step landed)
+
+### 1. Shape deviations
+
+None of substance. Two small additions worth recording:
+
+* `on_unmount` sets `_shutting_down` **before** calling `cancel_pending_approvals()`. The order is
+  load-bearing: the cancel is what starts the unwind, so the guard has to be up first, otherwise
+  a fast unwind could reach the tail while the flag is still down.
+* The guard helper takes `Callable[..., None]` (not `Callable[..., object]`); every callback it is
+  handed returns `None`, and the narrower type lets mypy solve Textual's `CallThreadReturnType`
+  without a cast.
+
+### 2. Case 1: what the pilot can and cannot observe — and how the test stays honest
+
+Two facts about the harness shape the assertions, and both differ from the plain reading of the
+step:
+
+* **`thread.is_alive()` is not available for the Textual worker.** `Worker._run_threaded` ends in
+  `loop.run_in_executor(None, runner, …)`, i.e. the *default* `ThreadPoolExecutor`, whose threads
+  are pooled and reused — the thread object stays alive whether or not the worker body returned.
+  So the test wraps `app._stream_llm` (the real body still runs, unmodified) and asserts a
+  `threading.Event` set in the wrapper's `finally`. It *does* assert `is_alive() is False` on the
+  fake service's **agent** thread, which is a real, non-pooled thread and therefore a genuine
+  "the parked future was cancelled" signal.
+* **Under a pilot, an unguarded tail does not hang the way it hangs in production.** `App._loop`
+  is pytest-asyncio's loop, which keeps running after the app exits, so `call_from_thread` would
+  actually deliver the callback instead of blocking forever. The test therefore also records what
+  escaped the worker (`worker_error`), so an unguarded tail is caught either way.
+
+Both halves were confirmed **red** against a deliberately broken guard (early return disabled):
+
+| Test | Failure without the guard |
+|---|---|
+| `test_quit_with_approval_pending_exits_and_unwinds_worker` | `AssertionError: the _stream_llm worker body never returned` — the tail deadlocked on the loop that the test's own blocking `worker_done.wait()` was occupying. This is R9's real failure mode, reproduced. |
+| `test_shutdown_guard_drops_every_ui_call_from_worker_tail` | three leaked `call_from_thread` callbacks (two `_handle_stream_event`, one `_reset_busy_indicator`) |
+
+`test_shutdown_race_runtime_error_is_logged_not_propagated` covers the second half of case 2; it
+is trivially red without the `except RuntimeError` (the error propagates straight out of the
+worker), so it was not separately broken to prove it.
+
+The `AppCore.resolve_pending` monkeypatch went in exactly as specified, carrying its
+`TODO(#1046)`; `_handle_stream_event` is untouched, so Step 9's branch really runs.
+
+### 3. Local environment caveats for the checks (all pre-existing, none caused by this step)
+
+1. The stale installed `mcp_workspace` still breaks pytest collection repo-wide; every run below
+   used `PYTHONPATH=C:\Users\Marcus\Documents\GitHub\mcp-workspace\src`.
+2. `pytest-textual-snapshot` is still not installed here, so `tests/icoder/test_snapshots.py`
+   cannot run (unchanged by this step, which adds no snapshot).
+3. `-n auto` on `tests/icoder/test_app_pilot.py` exceeds the 300s tool timeout on this box (xdist
+   worker startup), so the `textual_integration` runs used `-n 0`.
+
+### 4. Checks (all green)
+
+* `run_pylint_check(["src/mcp_coder/icoder", "tests/icoder"])` — clean.
+* `run_mypy_check(["src/mcp_coder/icoder", "tests/icoder"])` — clean (one `arg-type` on the fake
+  service was fixed by adding the `set_session_id` member the `LLMService` Protocol requires).
+* `run_pytest_check` fast selection, `tests/icoder` minus `textual_integration` — **673 passed**.
+* `run_pytest_check(markers=["textual_integration"])` on `tests/icoder/test_app_pilot.py` —
+  **65 passed** (the 62 pre-existing plus the 3 new).
+* `run_pytest_check(markers=["textual_integration"])` on `tests/icoder/ui` + `test_replay.py` —
+  **97 passed**.
+* `run_lint_imports_check` — 21 kept, 0 broken.
+* `check_file_size(max_lines=750)` — clean; `icoder/ui/stream_view.py` is 377 lines.
+* `run_format_code(check_only=True)` — black clean (the isort console-encoding warnings are a
+  pre-existing Windows codepage artifact, not a formatting diff).

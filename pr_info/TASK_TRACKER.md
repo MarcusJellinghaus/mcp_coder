@@ -156,9 +156,18 @@ pre-existing `tests/llm` failure with `httpx` absent).
 
 Details: [step_10.md](./steps/step_10.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: implemented as specified — no shape deviations. Two harness facts forced case 1 to assert
+differently than its plain reading (Textual thread workers run on *pooled* threads, so
+`is_alive()` says nothing about the worker body; and under a pilot the event loop outlives the
+app, so an unguarded tail errors rather than hangs) — see the "Implementation note" at the end of
+[step_10.md](./steps/step_10.md), which also records that both guard tests were confirmed **red**
+against a deliberately broken guard, and the unchanged local environment caveats (stale installed
+`mcp_workspace` forcing a `PYTHONPATH` workaround; no `pytest-textual-snapshot`; `-n auto` on the
+pilot file times out locally, so the `textual_integration` runs used `-n 0`).
 
 ### Step 11: End-to-end integration test + spike deletion
 

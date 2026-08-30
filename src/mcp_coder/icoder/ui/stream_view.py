@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections import deque
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -79,6 +80,53 @@ class StreamViewApp(App[None]):
         self._open_tool_units: deque[tuple[str | None, str, str]] = deque()
         self._unit_counter: int = 0
         self._cancel_event = threading.Event()
+        # Set exactly once by ``on_unmount``, never cleared: the worker thread
+        # outlives the message pump, so its tail must stop talking to it.
+        self._shutting_down = threading.Event()
+
+    def on_unmount(self) -> None:
+        """Cancel pending approvals so quitting never stalls (R9).
+
+        Two halves, both required. Raising ``_shutting_down`` closes the UI
+        door before the unwind starts (see
+        :meth:`_call_from_thread_if_running`); ``cancel_pending_approvals()``
+        then starts the unwind itself. Without the cancel, a worker parked in
+        ``q.get`` behind an unanswered approval waits out the provider's 300s
+        inactivity timeout, because an interceptor blocked on a future emits
+        no event and so none of the generic cancel paths can reach it.
+        """
+        self._shutting_down.set()
+        self._core.cancel_pending_approvals()
+
+    def _call_from_thread_if_running(
+        self, callback: Callable[..., None], *args: Any
+    ) -> None:
+        """Run *callback* on the UI thread, or drop it when the app is shutting down.
+
+        ``App._shutdown()`` dispatches ``Unmount`` **after** ``_close_all()``
+        and ``_close_messages()``, so a worker unwound by ``on_unmount`` reaches
+        its tail against a message pump that is already gone.
+        ``call_from_thread`` schedules onto ``App._loop`` and blocks on the
+        result, and on a stopped-but-not-closed loop that callback never runs —
+        the worker would block *forever*. Textual thread workers live in a
+        ``ThreadPoolExecutor`` whose non-daemon threads are joined by
+        ``concurrent.futures``' atexit hook, so that is a hung process, not a
+        hung thread.
+
+        The ``RuntimeError`` catch is the backstop for the race window only
+        (``call_from_thread`` raises it once ``App._loop`` is gone). Every other
+        exception is left to propagate.
+
+        Args:
+            callback: UI-thread callable to invoke.
+            *args: Positional arguments forwarded to *callback*.
+        """
+        if self._shutting_down.is_set():
+            return
+        try:
+            self.call_from_thread(callback, *args)
+        except RuntimeError as exc:
+            logger.debug("call_from_thread dropped during shutdown: %s", exc)
 
     def _stream_llm(self, text: str, skill_name: str | None = None) -> None:
         """Worker target: stream LLM response in background thread.
@@ -96,28 +144,31 @@ class StreamViewApp(App[None]):
             for event in self._core.stream_llm(text, skill_name):
                 if self._cancel_event.is_set():
                     break
-                self.call_from_thread(self._handle_stream_event, event)
+                self._call_from_thread_if_running(self._handle_stream_event, event)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             _error_handled = True
-            self.call_from_thread(self._flush_buffer)
-            self.call_from_thread(self._finalize_turn)
-            self.call_from_thread(self._cleanup_orphan_tools)
-            self.call_from_thread(self._show_error, str(exc))
-            self.call_from_thread(self._reset_busy_indicator)
-            self.call_from_thread(self._append_blank_line)
+            self._call_from_thread_if_running(self._flush_buffer)
+            self._call_from_thread_if_running(self._finalize_turn)
+            self._call_from_thread_if_running(self._cleanup_orphan_tools)
+            self._call_from_thread_if_running(self._show_error, str(exc))
+            self._call_from_thread_if_running(self._reset_busy_indicator)
+            self._call_from_thread_if_running(self._append_blank_line)
         finally:
             if self._cancel_event.is_set() and not _error_handled:
                 # Strict order: flush partial text, close the turn, then
                 # resolve orphaned tool units as cancelled BEFORE the
                 # cancelled marker (so the marker lands below patched blocks).
-                self.call_from_thread(self._flush_buffer)
-                self.call_from_thread(self._finalize_turn)
-                self.call_from_thread(self._cleanup_orphan_tools)
-                self.call_from_thread(self._append_cancelled_marker)
-                self.call_from_thread(self._reset_busy_indicator)
-                self.call_from_thread(self._append_blank_line)
+                self._call_from_thread_if_running(self._flush_buffer)
+                self._call_from_thread_if_running(self._finalize_turn)
+                self._call_from_thread_if_running(self._cleanup_orphan_tools)
+                self._call_from_thread_if_running(self._append_cancelled_marker)
+                self._call_from_thread_if_running(self._reset_busy_indicator)
+                self._call_from_thread_if_running(self._append_blank_line)
             elif not _error_handled:
-                self.call_from_thread(self._reset_busy_indicator)
+                # ``on_unmount`` does not set ``_cancel_event``, so a turn
+                # unwound by quitting lands HERE — the one call the closed-app
+                # guard has to swallow to let the worker thread finish.
+                self._call_from_thread_if_running(self._reset_busy_indicator)
 
     def _append_blank_line(self) -> None:
         """Write an empty line to the output log for visual spacing."""
