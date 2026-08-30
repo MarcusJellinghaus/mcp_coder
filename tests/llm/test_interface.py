@@ -1430,6 +1430,7 @@ class TestPromptLlmStream:
             tools=None,
             system_prompt=None,
             project_prompt=None,
+            approval_bridge=None,
         )
         assert len(events) == 2
 
@@ -1564,6 +1565,7 @@ class TestPromptLlmStreamToolsParam:
             tools=fake_tools,
             system_prompt=None,
             project_prompt=None,
+            approval_bridge=None,
         )
         assert len(events) == 2
 
@@ -1585,6 +1587,7 @@ class TestPromptLlmStreamToolsParam:
             tools=None,
             system_prompt=None,
             project_prompt=None,
+            approval_bridge=None,
         )
 
     @patch(

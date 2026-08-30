@@ -111,9 +111,15 @@ runs time out locally, so verification used targeted per-file runs).
 
 Details: [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: implemented as specified, with one micro-deviation (`error_holder` / `cancelled` stay
+*above* the widened `try`) and two strengthened test assertions — see the "Implementation note"
+at the end of [step_7.md](./steps/step_7.md), which also records that each of tests 1, 2, 2b, 5
+and 6 was confirmed **red** against a deliberately broken variant of the production code, and the
+unchanged local environment caveats.
 
 ### Step 8: Tool-unit pairing on `tool_run_id` (R18 / R1)
 

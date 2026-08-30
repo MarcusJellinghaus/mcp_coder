@@ -38,6 +38,7 @@ from ._setup import _handle_provider_error as _handle_provider_error
 from ._setup import _load_langchain_config as _load_langchain_config
 from ._setup import _resolve_session_id as _resolve_session_id
 from ._usage import _extract_usage
+from .approval_bridge import ApprovalBridge
 
 # Agent streaming timeout constants (seconds)
 _AGENT_OVERALL_TIMEOUT = 3600  # 60 minutes
@@ -282,6 +283,7 @@ def _ask_agent_stream(
     timeout: int = 30,
     tools: list[Any] | None = None,
     system_messages: list[Any] | None = None,
+    approval_bridge: ApprovalBridge | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream agent events via thread+queue bridge from async to sync.
 
@@ -298,6 +300,10 @@ def _ask_agent_stream(
         tools: Optional pre-built LangChain tools (e.g. from MCPManager).
             When provided, skips MultiServerMCPClient creation.
         system_messages: Optional list of system messages to prepend.
+        approval_bridge: Optional runtime approval engine. Attached to this
+            turn's queue for the whole turn, so an ``ask``-gated tool call can
+            emit an ``approval_request`` and park on a human decision. Both
+            streaming timeouts are suspended while it reports pending work.
 
     Yields:
         StreamEvent dicts from the agent.
@@ -315,48 +321,109 @@ def _ask_agent_stream(
     q: queue.Queue[StreamEvent | None] = queue.Queue()
     error_holder: list[Exception] = []
     cancel = threading.Event()
-
-    async def _run() -> None:
-        try:
-            async for event in run_agent_stream(
-                question=question,
-                chat_model=chat_model,
-                messages=history,
-                mcp_config_path=mcp_config,
-                session_id=session_id,
-                cancel_event=cancel,
-                env_vars=env_vars,
-                tools=tools,
-                system_messages=system_messages,
-            ):
-                q.put(_strip_internal_done_keys(event))
-        except Exception as exc:  # pylint: disable=broad-except
-            error_holder.append(exc)
-        finally:
-            q.put(None)  # sentinel
-
-    def _thread_main() -> None:
-        asyncio.run(_run())
-
-    thread = threading.Thread(target=_thread_main, daemon=True)
-    thread.start()
-
     cancelled = False
+
+    # Cleanup is conditioned on its own setup having succeeded: `thread` is bound
+    # inside the `try` below, so an `attach()` failure would leave it unbound and
+    # a `thread.start()` failure would leave it unstarted — either would raise
+    # out of the `finally` and mask the original exception.
+    thread: threading.Thread | None = None
+    thread_started = False
+    attached = False
+
+    # A pending approval suspends both timeouts as a timestamped *window*, not as
+    # keepalive events: the overall cap is checked inside the consumer loop after
+    # `q.get()` returns, so keepalives would arm it rather than reset it, and they
+    # would also reach the session .jsonl and the replay path.
     start = time.monotonic()
+    paused = 0.0
+    pause_began: float | None = None
+    pause_epoch = 0
+
+    def _sync_pause() -> None:
+        """Open or close the pending window from the bridge's count."""
+        nonlocal paused, pause_began, pause_epoch
+        waiting = approval_bridge is not None and approval_bridge.pending() > 0
+        now = time.monotonic()
+        if waiting and pause_began is None:
+            pause_began = now
+        elif not waiting and pause_began is not None:
+            paused += now - pause_began  # real wall time, not `timeout` units
+            pause_began = None
+            # ... and the inactivity budget of any wait this window overlapped
+            # is void (see the `queue.Empty` branch).
+            pause_epoch += 1
+
+    def _elapsed() -> float:
+        """Return the turn's elapsed time with every human pause deducted."""
+        now = time.monotonic()
+        open_window = now - pause_began if pause_began is not None else 0.0
+        return (now - start) - paused - open_window
 
     try:
+        # First statement in the try: everything below can fail, and the engine
+        # must never stay attached to a dead turn.
+        if approval_bridge is not None:
+            approval_bridge.attach(q.put)
+            attached = True
+
+        async def _run() -> None:
+            try:
+                async for event in run_agent_stream(
+                    question=question,
+                    chat_model=chat_model,
+                    messages=history,
+                    mcp_config_path=mcp_config,
+                    session_id=session_id,
+                    cancel_event=cancel,
+                    env_vars=env_vars,
+                    tools=tools,
+                    system_messages=system_messages,
+                ):
+                    q.put(_strip_internal_done_keys(event))
+            except asyncio.CancelledError:
+                # Hard cancel: the approval engine cancelled the future a parked
+                # interceptor was awaiting, which unwinds the whole turn. This is
+                # expected, not an error, so `error_holder` stays empty. It needs
+                # its own clause because `CancelledError` is a `BaseException`:
+                # `agent.py`'s `except Exception` misses it and so does the one
+                # below, and `_thread_main` is a bare `asyncio.run`, which would
+                # print the traceback on stderr — i.e. onto a live Textual screen.
+                pass
+            except Exception as exc:  # pylint: disable=broad-except
+                error_holder.append(exc)
+            finally:
+                q.put(None)  # sentinel
+
+        def _thread_main() -> None:
+            asyncio.run(_run())
+
+        thread = threading.Thread(target=_thread_main, daemon=True)
+        thread.start()
+        thread_started = True
+
         while True:
+            epoch_at_wait_start = pause_epoch  # snapshot BEFORE the wait
             try:
                 event = q.get(timeout=timeout)
             except queue.Empty as exc:
+                _sync_pause()
+                # Re-wait on a still-open pause, and equally on one that opened
+                # and closed inside this wait: `q.get` gives every call a fresh
+                # `timeout`, so a pause overlapping the wait would otherwise eat
+                # the whole budget and trip the inactivity error moments after
+                # the user approved. Only a wait with no pause at all may raise.
+                if pause_began is not None or pause_epoch != epoch_at_wait_start:
+                    continue
                 cancel.set()
                 raise TimeoutError(
                     f"LLM inactivity timeout (langchain): no response for {timeout}s. "
                     "Connection closed. You can retry, or use --timeout to increase the limit."
                 ) from exc
+            _sync_pause()  # sampled before the yield blocks on the UI
             if event is None:
                 break
-            if time.monotonic() - start > _AGENT_OVERALL_TIMEOUT:
+            if _elapsed() > _AGENT_OVERALL_TIMEOUT:
                 cancel.set()
                 raise TimeoutError(
                     f"Agent execution exceeded {_AGENT_OVERALL_TIMEOUT}s overall timeout"
@@ -366,7 +433,15 @@ def _ask_agent_stream(
         cancel.set()
         cancelled = True
     finally:
-        thread.join(timeout=5)
+        # Detach BEFORE the join, never after: detach cancels every still-pending
+        # future, which is the only thing that can unpark an interceptor blocked
+        # on one. Joining first would burn the full 5s and return with the agent
+        # thread still parked. On the normal path the registry is already empty
+        # and this is a no-op.
+        if attached and approval_bridge is not None:
+            approval_bridge.detach()
+        if thread is not None and thread_started:
+            thread.join(timeout=5)
 
     # If the async thread raised an exception but the consumer exited
     # normally (sentinel received), re-raise that error. Skipped when
@@ -386,6 +461,7 @@ def ask_langchain_stream(
     tools: list[Any] | None = None,
     system_prompt: str | None = None,
     project_prompt: str | None = None,
+    approval_bridge: ApprovalBridge | None = None,
 ) -> Iterator[StreamEvent]:
     """Stream LangChain responses as events.
 
@@ -393,6 +469,11 @@ def ask_langchain_stream(
     routes to _ask_text_stream() for real streaming. For agent mode
     (mcp_config present), routes to _ask_agent_stream() for real
     streaming via thread+queue bridge.
+
+    ``approval_bridge`` is the optional runtime approval engine; it only
+    reaches the agent branch. The text branch has no tools to gate, so it
+    ignores the bridge entirely — non-iCoder CLI callers pass nothing and keep
+    working unchanged.
 
     Yields:
         StreamEvent dicts: text_delta, tool_use_start, tool_result, done, error, raw_line
@@ -424,6 +505,7 @@ def ask_langchain_stream(
             timeout=timeout,
             tools=tools,
             system_messages=sys_msgs,
+            approval_bridge=approval_bridge,
         )
         return
 

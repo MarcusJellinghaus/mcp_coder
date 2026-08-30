@@ -16,6 +16,10 @@ from .providers.claude.claude_code_cli import ask_claude_code_cli
 from .types import SUPPORTED_PROVIDERS, LLMResponseDict, StreamEvent
 
 if TYPE_CHECKING:
+    # String-annotated below: the langchain provider package must stay lazily
+    # imported (every `ask_langchain*` import in this module is function-local
+    # on purpose), so this one may not become an eager module-level import.
+    from mcp_coder.llm.providers.langchain.approval_bridge import ApprovalBridge
     from mcp_coder.utils.pyproject_config import PromptsConfig
 
 
@@ -303,6 +307,7 @@ def prompt_llm_stream(
     branch_name: str | None = None,
     tools: list[Any] | None = None,
     inject_prompts: bool = False,
+    approval_bridge: "ApprovalBridge | None" = None,
 ) -> Iterator[StreamEvent]:
     """Stream LLM responses as events.
 
@@ -332,6 +337,9 @@ def prompt_llm_stream(
         inject_prompts: When True, load the system and project prompts from
             project_dir and pass them to the provider. Default False: headless
             runs inject nothing.
+        approval_bridge: Optional runtime approval engine (langchain provider
+            only). Attached for the duration of the turn so an ``ask``-gated
+            tool call can pause the stream on a human decision.
 
     Yields:
         StreamEvent dicts from the underlying provider.
@@ -382,6 +390,7 @@ def prompt_llm_stream(
             tools=tools,
             system_prompt=system_prompt,
             project_prompt=project_prompt,
+            approval_bridge=approval_bridge,
         )
     elif provider == "copilot":
         from .providers.copilot import (  # noqa: PLC0415

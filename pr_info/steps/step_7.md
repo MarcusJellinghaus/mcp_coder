@@ -272,3 +272,79 @@ file-size gate** (`check_file_size(max_lines=750)` must not list
 >
 > Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check`,
 > `run_lint_imports_check` and `check_file_size(max_lines=750)` all green, then one commit.
+
+---
+
+## Implementation note (written after the step was implemented)
+
+Implemented as specified. The `try` in `_ask_agent_stream` was widened upwards, `attach(q.put)` is
+its first statement, both `finally` statements are guarded by their own setup flags (`attached`,
+`thread is not None and thread_started`), `detach()` runs **before** `thread.join(timeout=5)`, the
+pause is a timestamped window plus a `pause_epoch` counter, and `_run` gained
+`except asyncio.CancelledError` ahead of its `except Exception`.
+
+**One micro-deviation from "everything currently between moves inside that `try`".** `error_holder`
+and `cancelled` stayed *above* the widened `try`; only `_run`, `_thread_main` and the
+`thread = ...; thread.start()` pair moved inside it. Both are read *after* the `finally`
+(`if error_holder and not cancelled:`), so binding them inside the `try` is a pylint
+`used-before-assignment` hazard for zero benefit — neither is an assignment that can fail, so
+neither can leave the engine attached to a dead turn, which is the property the widening exists
+for.
+
+**Two test assertions are stronger than the step's wording, because the obvious ones do not
+discriminate.**
+
+* Test 6 (`CancelledError` in `_run`) as written — "`error_holder` stays empty, the sentinel is
+  still put, the generator ends normally" — passes *without* the new `except` clause: the
+  `BaseException` escapes `_run`, but the `finally` still puts the sentinel and `error_holder` is
+  still empty, so the consumer ends identically either way. The test therefore records
+  `threading.excepthook` and asserts nothing escaped the agent thread. (Asserting on `stderr` via
+  `capsys` does **not** work: pytest's `threadexception` plugin installs its own hook, so the
+  traceback never reaches `sys.stderr` under pytest.)
+* Test 4's "two consecutive turns never share a queue" compares the `__self__` of the two attached
+  `q.put` bound methods, recorded by the fake bridge at `attach()` time.
+
+**Every discriminating test was confirmed red first**, against a deliberately broken copy of the
+production code: tests 1 and 2 fail with `Agent execution exceeded …s overall timeout` when
+`_elapsed()` ignores `paused`/the open window; test 2b fails with
+`no response for 1s. Connection closed.` when the `queue.Empty` branch drops the `pause_epoch`
+half of its condition; test 5 fails with `agent thread still parked after join(5)` when the
+`finally` joins before it detaches; test 6 fails with the recorded `CancelledError` when `_run`
+catches something else. Tests 4 and 7 are lifecycle assertions with no interesting broken variant.
+
+**The tests drive a scripted stand-in for `run_agent_stream`, not the real agent.** The step says
+to reuse `approval_harness.py`; that harness needs a *real* langchain install, and this venv has
+none (Step 3's probe still skips here — its decision gate is unchanged by this step). The pause,
+the attach/detach ordering and the `CancelledError` catch are all properties of the consumer loop
+in `_ask_agent_stream`, so the new module scripts the producer instead: it is deterministic, it
+runs in the langchain-free CI job, and it made the red-first verification above possible. Test 5
+reproduces the harness's parked-on-a-Future shape inline (a real `asyncio.Future` on a real agent
+thread, cancelled from `detach()` through `call_soon_threadsafe` exactly as the engine does);
+`test_approval_cancel_path.py` remains the place where the unwind is proven against real
+langgraph. Every provider import still lives inside a function, per the directory's convention.
+
+Timings are bounded below by the provider's `timeout: int` annotation, so the inactivity timeout
+in these tests is 1s (a float would be a `mypy --strict` `arg-type` error) and the pauses are
+0.7–1.6s; `_AGENT_OVERALL_TIMEOUT` is monkeypatched to sub-second floats. The whole module runs in
+~10s.
+
+`prompt_llm_stream`'s three `assert_called_once_with` blocks in `tests/llm/test_interface.py`
+gained `approval_bridge=None` — the only existing tests the new parameter touched.
+
+**Checks (all green):** `run_pylint_check`, `run_mypy_check`, `run_ruff_check` and
+`run_format_code` on `src/mcp_coder/llm` + `tests/llm`; `run_lint_imports_check` (21 contracts
+kept — the new `llm.interface -> llm.providers.langchain.approval_bridge` edge is `TYPE_CHECKING`
+only, and `approval_bridge` still imports no langchain); `check_file_size(max_lines=750)` clean,
+with `llm/providers/langchain/__init__.py` at ~570 lines after Step 1's extraction. Pytest:
+`tests/llm/providers/langchain` + `test_types.py` + `test_interface.py`, and the four wiring
+consumers `tests/icoder/test_llm_service.py`, `test_app_core.py`,
+`test_icoder_permission_wiring.py`, `tests/cli/commands/test_prompt.py`.
+
+**Pre-existing local failures, unrelated to this step and unchanged by it:**
+`test_langchain_exceptions.py::test_connection_errors_contains_httpx_connect_error` (no `httpx`
+installed, so the conftest hands the test a `MagicMock`) and the three
+`tests/llm/providers/copilot/test_copilot_integration.py` cases (the real `copilot` CLI exits 1
+here). **Environment caveats unchanged from Steps 1–6:** the stale installed `mcp_workspace`
+still needs `PYTHONPATH=…/mcp-workspace/src` on every pytest run; whole-repo runs still exceed the
+tool's 300s timeout, so verification used the targeted runs listed above; `isort` still prints
+`charmap` warnings for files this step did not touch.
