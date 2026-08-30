@@ -39,6 +39,49 @@ not stub, vendor, or locally re-implement the upstream names.
 > still has the same six members and `linked_branch_blocks` still returns
 > `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`, so sections 2a-2d
 > below remain accurate as written and need no revision. Still no code written.
+>
+> **Third re-check after `git fetch` — still blocked.** `origin/main` of mcp-workspace is
+> *still* `b9106c4` ("chore(pyproject): drop unused config extra (#275)"); `git branch -r
+> --merged origin/main` lists only `origin/main` and `origin/HEAD`, so
+> `origin/268-...` is **not** merged. That branch has advanced again (`7d5e348` ->
+> `eb9fe9f`, pr_info bookkeeping commits only). Checked this time against the **`origin/main`
+> blob itself**, not the reference working tree (whose HEAD `1c181ea` is not `origin/main`):
+> `git show origin/main:src/mcp_workspace/checks/branch_status_rendering.py` matches
+> `GITHUB_TOKEN_HINT`, `class CIStatus` and `pr_feedback_undeterminable`, but **zero**
+> occurrences of `LinkedBranchStatus` or `linked_branch_blocks`. The installed
+> `mcp_workspace.checks.branch_status_rendering` likewise exports neither name (it exports
+> `GITHUB_TOKEN_HINT`, `CIStatus`, `TaskTrackerStatus`, `WaitContext`,
+> `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). Reinstalling
+> remains pointless for *this* step — the names are absent from `main` itself, not merely
+> stale locally. Sections 2a-2d still need no revision. No code written.
+>
+> **Side finding — the environment's mcp-workspace is badly stale and the pre-existing
+> baseline is red.** This is **not** a regression from this branch (nothing here touches
+> Python) and fixing it will **not** unblock step 2, but it must be cleared before step 2
+> can be verified:
+>
+> - **pytest: mass collection failure.** ~20 collectors abort with
+>   `ModuleNotFoundError: No module named 'mcp_workspace.checks.branch_status_rendering'`,
+>   raised from the *existing* `src/mcp_coder/checks/branch_status.py:17` import of
+>   `GITHUB_TOKEN_HINT, CIStatus`. Because `src/mcp_coder/__init__.py:37` imports
+>   `collect_branch_status`, this poisons nearly every test module, not just the
+>   branch-status ones. The venv's mcp-workspace predates the
+>   `checks/branch_status_rendering` module altogether.
+> - **mypy: 9 errors**, including `import-not-found` on the same module,
+>   `"BranchStatusReport" has no attribute "pr_feedback_undeterminable"`
+>   (`check_branch_status.py:154`, `workflows/review/core.py:139`) and two
+>   `Unexpected keyword argument "fail_on_reviews"` for `format_for_llm`/`format_for_human`.
+>   All three names **do** exist on `origin/main`.
+> - **pylint: `E0401`** on the same import (alongside unrelated pre-existing `langchain`/
+>   `httpx` import errors).
+>
+> Note the interpreters disagree: the MCP tooling process resolves
+> `mcp_workspace.checks.branch_status_rendering` (its copy has `GITHUB_TOKEN_HINT`,
+> `CIStatus`, `TaskTrackerStatus`, `WaitContext`, `format_report_for_human`,
+> `format_report_for_llm`, `truncate_ci_details` — still no `LinkedBranchStatus`), while the
+> project venv used by pytest/mypy/pylint has no such module at all. A reinstall off `main`
+> should clear all three baselines. Not done here — it mutates the environment and is out of
+> scope for a step whose instruction is stop-and-report.
 
 ---
 
