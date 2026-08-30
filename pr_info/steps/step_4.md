@@ -244,3 +244,70 @@ def detach(self):                                     # consumer thread
 >
 > Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and
 > `run_lint_imports_check` all green, then one commit.
+
+---
+
+## Implementation note (written after the step landed)
+
+Both modules were written as specified.
+`llm/providers/langchain/approval_bridge.py` holds the `ApprovalBridge` Protocol and imports
+nothing but `collections.abc`, `typing` and `mcp_coder.llm.types` — **no langchain at any scope**.
+`icoder/permissions/approval.py` holds `_DENY_UNAVAILABLE`, `ApprovalDecision`,
+`_PendingApproval`, `_set_if_pending`, `ApprovalEngine` and `_payload`; it imports `ApprovalBridge`
+and `StreamEvent` only under `TYPE_CHECKING`, and imports no `permission_bridge`, no
+`langchain_*`, no `textual`, nothing from `icoder.core` / `icoder.ui` / `icoder.services`.
+`mcp_coder.icoder.permissions.approval` was added to `permissions_leaf_isolation`; nothing was
+added to `layered_architecture` (that belongs to Step 9). `tests/icoder/test_permissions_approval.py`
+covers all twelve listed cases in 13 tests, all passing.
+
+### 1. Two small shape deviations (behaviour identical)
+
+* **`_payload` is a module-level function**, not the `self._payload(...)` of the ALGORITHM
+  section — it reads no instance state, so a method would only invite one to be added later.
+* **The `TYPE_CHECKING` import of `ApprovalBridge` is *used*** by a trailing
+  `if TYPE_CHECKING: _bridge_conformance: ApprovalBridge = ApprovalEngine()` binding. HOW requires
+  the import but only the test consumes the Protocol, which would have left a dangling
+  typing-only import; this way mypy proves the conformance on the production module too (the test
+  keeps its own `bridge: ApprovalBridge = ApprovalEngine()` as case 11). It costs nothing at
+  runtime and the grimp edge HOW discusses is unchanged.
+
+Everything else follows the pseudocode literally: the `self._emit is not None` guard in
+`request_approval`'s `finally`, the cancel-then-clear `detach()` with its closed-loop
+`RuntimeError` guard + `break`, `_DENY_UNAVAILABLE` on the fail-closed deny, `_cancelled`
+surviving `detach()` but reset by `attach()`, one insertion-ordered dict with no lock/deque/counter,
+and no `try` around `resolve_pending`'s `call_soon_threadsafe` (not in the spec).
+
+### 2. Step 3's decision gate is **still open** — this step assumes the "passes" branch
+
+No langchain distribution is installed in this venv either, so the Step 3 probe still skips and the
+`CancelledError` question is still unanswered. Step 4 was therefore implemented on the
+pre-planned hard-cancel branch: `cancel_all()` / `detach()` cancel the futures, and
+`request_approval` lets `CancelledError` propagate. The engine's unit tests prove that
+end-to-end in pure asyncio (cases 5, 7, 7b), which is Tier A — the same tier #1044 already
+demonstrated. **If the probe later fails on a real-langchain environment**, the GATE fallback
+changes this module in one place: `cancel_all()` / `detach()` would `set_result` a
+`"cancelled"`-shaped `ApprovalDecision` instead of calling `future.cancel()`. Nothing else in the
+engine's shape depends on the answer.
+
+### 3. Local environment caveats for the checks (all pre-existing, none caused by this step)
+
+1. The stale installed `mcp_workspace` still breaks pytest collection repo-wide; the runs below
+   used `PYTHONPATH=C:\Users\Marcus\Documents\GitHub\mcp-workspace\src`. The same stale package is
+   what `run_mypy_check` reports 9 errors about (`branch_status`, `pr_feedback_undeterminable`,
+   `fail_on_reviews`, plus the unrelated `mcp.server.fastmcp` stub) — none of them in a file this
+   step touches.
+2. `tests/icoder` has pre-existing failures unrelated to this step: the nine
+   `test_snapshots.py` tests error with `fixture 'snap_compare' not found`
+   (`pytest-textual-snapshot` is not installed here, as recorded in Step 2), and
+   `test_busy_indicator.py::test_show_busy_preserves_start_time` fails on `assert 0.0 > 0.0`
+   (Windows clock resolution). `tests/icoder/test_permissions_approval.py` is 13/13 green.
+3. `pylint` over `src/mcp_coder/llm/providers/langchain` reports pre-existing `E0401`
+   (`Unable to import 'langchain_core…'`) for the function-level provider imports, because
+   langchain is not installed. Pylint over the three files this step adds is clean, as is
+   `ruff --preview` (D/DOC) over the two new production modules.
+4. The mandatory `format_all` run also collapsed one unrelated import block in
+   `tests/workflows/vscodeclaude/test_assessment_issue_facts.py` (pre-existing isort drift); it is
+   left in the working tree rather than hand-reverted, since any format run reproduces it.
+
+`run_lint_imports_check`: 21 contracts kept, 0 broken, with the new
+`permissions_leaf_isolation` entry in place.

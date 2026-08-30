@@ -67,9 +67,15 @@ records the extra `require_real_langchain` guard (`importorskip` alone finds the
 
 Details: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: implemented on Step 3's **still-open** hard-cancel gate — see the "Implementation note"
+at the end of [step_4.md](./steps/step_4.md), which also records two shape deviations
+(module-level `_payload`; the `TYPE_CHECKING` conformance binding that consumes the required
+`ApprovalBridge` import) and the pre-existing local environment gaps (stale installed
+`mcp_workspace`; no `pytest-textual-snapshot`; no langchain).
 
 ### Step 5: Resolver — `runtime` becomes its own stage (R14) + degraded docstring (R15)
 
