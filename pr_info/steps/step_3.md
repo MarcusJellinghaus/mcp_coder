@@ -170,3 +170,63 @@ assert thread.is_alive() is False and no exception was recorded other than Cance
 > fallback is specified in the step's GATE section.
 >
 > Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` all green, then one commit.
+
+---
+
+## Implementation note (written after the step landed)
+
+Both files were written as specified: `approval_harness.py` holds `make_fake_chat_model`, `Gate`,
+`make_blocking_tool` and `wait_for` (plus one extra guard, below); `test_approval_cancel_path.py`
+holds `test_cancelled_error_escapes_the_agent_stream` and
+`test_cancel_leaves_no_error_and_kills_the_thread`, driven by a local `_run_cancel_probe()` that
+reproduces `_ask_agent_stream`'s thread + `asyncio.run` + `queue.Queue` + sentinel +
+`join(timeout=5)` topology. Every `importorskip`, every langchain import and the `BaseChatModel`
+subclass are inside functions, with `# type: ignore[misc]` on the class line. Both tests are
+unmarked. No production file was touched.
+
+### 1. `pytest.importorskip` alone does not guard this directory
+
+HOW says "the directory conftest injects `MagicMock` modules when langchain is genuinely absent,
+and this test needs the **real** packages — hence `importorskip` rather than a plain import". That
+is only half a guard: `importorskip` resolves through `sys.modules`, so it finds the conftest's
+`MagicMock` and does **not** skip. Observed directly — the first run of the probe failed with
+`ModuleNotFoundError: No module named 'langchain_core.language_models'; 'langchain_core' is not a
+package`, i.e. it ran against the mock.
+
+The harness therefore exports one extra symbol beyond the four in WHAT:
+`require_real_langchain(*packages)`, which calls `pytest.importorskip` and then skips if the
+returned module `isinstance(..., unittest.mock.Mock)`. It is used by `make_fake_chat_model`,
+`make_blocking_tool` and `_run_cancel_probe`. Checking a not-mocked submodule name instead
+(`langgraph.prebuilt.chat_agent_executor`) would work too, but pins a langgraph internal.
+
+### 2. GATE: the probe could **not** be executed in this environment — outcome unknown
+
+**No langchain distribution is installed in the venv the checkers run**
+(`langchain-core`, `langgraph`, `langchain-mcp-adapters`, `langchain-openai` all report
+`PackageNotFoundError`; verified with `importlib.metadata.version`, which reads distribution
+metadata and is therefore immune to the conftest's `sys.modules` mocks). Both probe tests
+consequently **skip** here — cleanly, which is why the checks are green, but a green run is *not*
+evidence for the gate.
+
+So the decision gate is **still open**. The probe is written, typed and lint-clean; it has to be
+run once on an environment with the real `langchain-core` + `langgraph` (the CI
+`langchain-integration` job's install set, or a local `pip install -e .[langchain]`) before Step 4
+starts. Steps 4/7/9 depend on the answer:
+
+* **passes** → continue as planned;
+* **fails** → take the pre-authorised fallback in GATE above (resolve with a `"cancelled"` outcome
+  + deny-shaped `ToolMessage` + `cancel_event` backstop) and adjust Steps 4, 7 and 9.
+
+### 3. Local environment caveats for the checks (both pre-existing, both unrelated)
+
+1. The stale installed `mcp_workspace` of Steps 1–2 still breaks collection of every test; the
+   pytest runs below used `PYTHONPATH` pointed at a current `mcp-workspace` checkout.
+2. `tests/llm` under the fast selection has four failures that predate this step and touch nothing
+   it changed: three `tests/llm/providers/copilot/test_copilot_integration.py` tests (real
+   `copilot.CMD` subprocess, exit status 1) and
+   `test_langchain_exceptions.py::test_connection_errors_contains_httpx_connect_error` (asserts on
+   `httpx.ConnectError`, and `httpx` is mocked because it is not installed either). The full-repo
+   fast selection exceeds the 300s tool timeout, so `tests/llm` was run as the affected subset.
+
+`run_pylint_check` on the two new files, `run_mypy_check` (strict) and `run_lint_imports_check`
+(21 contracts kept) are all clean.

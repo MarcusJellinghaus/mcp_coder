@@ -52,9 +52,16 @@ installed, so `test_snapshots.py` cannot run here).
 
 Details: [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: **the decision gate is still OPEN.** No langchain distribution is installed in this
+venv, so both probe tests skip here and the `CancelledError` question is unanswered — see the
+"Implementation note" at the end of [step_3.md](./steps/step_3.md). Run the probe once on an
+environment with real `langchain-core` + `langgraph` before starting Step 4. That note also
+records the extra `require_real_langchain` guard (`importorskip` alone finds the conftest's
+`MagicMock`) and the two pre-existing local environment gaps.
 
 ### Step 4: `ApprovalBridge` Protocol + `ApprovalEngine`
 
