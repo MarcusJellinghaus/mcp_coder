@@ -51,6 +51,7 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.log_inventory
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.env_setup
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.approval
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.gateway
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.skill_frame
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.command_registry

@@ -17,10 +17,12 @@ from textual.widgets import Static
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.icoder.permissions.approval import ApprovalDecision, ApprovalEngine
 from mcp_coder.icoder.permissions.model import Matcher, PermissionFrame
 from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
+from mcp_coder.icoder.ui.stream_view import _DENY_NO_UI
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.detail_modal import DetailModal
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
@@ -1581,3 +1583,77 @@ async def test_resume_path_skips_startup_notices(
         text = "\n".join(output.recorded_lines)
         assert "degraded" not in text
         assert "is disabled" not in text
+
+
+# --- Step 9: approval_request branch + the direct UI -> engine cancel channel ---
+
+
+class _RecordingEngine(ApprovalEngine):
+    """Engine stub recording what the UI sends it (subclassed, so the type holds)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.resolved: list[tuple[str, ApprovalDecision]] = []
+        self.cancel_calls = 0
+
+    def resolve_pending(self, approval_id: str, decision: ApprovalDecision) -> None:
+        self.resolved.append((approval_id, decision))
+
+    def cancel_all(self) -> None:
+        self.cancel_calls += 1
+
+
+async def test_approval_request_auto_denies_and_renders_nothing(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """An approval_request resolves as a deny carrying _DENY_NO_UI, rendering nothing.
+
+    Interim behaviour until the modal lands (#1046): the reason is the UI's own
+    string, never the gateway's user-deny wording, because no user was asked.
+    """
+    engine = _RecordingEngine()
+    app = ICoderApp(
+        AppCore(llm_service=fake_llm, event_log=event_log, approval_engine=engine)
+    )
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        before = list(output.recorded_lines)
+
+        app._handle_stream_event(
+            {
+                "type": "approval_request",
+                "approval_id": "a1",
+                "tool_name": "mcp__srv__do_it",
+                "args": {},
+            }
+        )
+        await pilot.pause()
+
+        assert len(engine.resolved) == 1
+        approval_id, decision = engine.resolved[0]
+        assert approval_id == "a1"
+        assert decision.outcome == "deny"
+        assert decision.scope == "once"
+        assert decision.reason == _DENY_NO_UI
+        # Nothing rendered, and no turn/tool state was touched.
+        assert output.recorded_lines == before
+        assert app._current_turn_id is None
+        assert not app._open_tool_units
+
+
+async def test_cancel_stream_also_cancels_pending_approvals(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """Escape sets the cancel event AND reaches the engine (FINDINGS §4)."""
+    engine = _RecordingEngine()
+    app = ICoderApp(
+        AppCore(llm_service=fake_llm, event_log=event_log, approval_engine=engine)
+    )
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+
+        assert engine.cancel_calls == 1
+        assert app._cancel_event.is_set()

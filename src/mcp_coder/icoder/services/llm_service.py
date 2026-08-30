@@ -11,6 +11,10 @@ from mcp_coder.llm.interface import prompt_llm_stream
 from mcp_coder.llm.types import StreamEvent
 
 if TYPE_CHECKING:
+    # Typing-only on purpose (same reason as ``interface.py``): importing the
+    # provider submodule at runtime would eagerly execute the langchain
+    # package ``__init__`` for every importer of this service.
+    from mcp_coder.llm.providers.langchain.approval_bridge import ApprovalBridge
     from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager
 
 ICODER_LLM_TIMEOUT_SECONDS = 300  # 5-minute inactivity timeout for interactive use
@@ -58,6 +62,7 @@ class RealLLMService:
         *,
         project_dir: str | Path,
         gateway: LangchainEnforcementGateway | None = None,
+        approval_bridge: ApprovalBridge | None = None,
     ) -> None:
         self._provider = provider
         self._session_id = session_id
@@ -68,6 +73,7 @@ class RealLLMService:
         self._mcp_manager = mcp_manager
         self._project_dir = project_dir
         self._gateway = gateway
+        self._approval_bridge = approval_bridge
 
     def stream(
         self,
@@ -84,6 +90,11 @@ class RealLLMService:
         skill-frame snapshot, so this method no longer builds frames or surfaces
         per-token warnings. Filtering operates on a copy, never mutating the
         manager's shared cache.
+
+        The ``approval_bridge`` handed to the constructor is forwarded on every
+        turn. Its attach/detach lifecycle is owned by ``_ask_agent_stream``
+        alone — the emit sink is that function's local queue, which is not
+        reachable from here, so a second lifecycle site is deliberately absent.
 
         Args:
             question: The user input to send to the LLM.
@@ -112,6 +123,7 @@ class RealLLMService:
             tools=tools,
             project_dir=self._project_dir,
             inject_prompts=True,
+            approval_bridge=self._approval_bridge,
         ):
             if event.get("type") == "done":
                 sid = event.get("session_id")

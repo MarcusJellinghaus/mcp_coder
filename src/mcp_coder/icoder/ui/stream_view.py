@@ -18,6 +18,7 @@ from textual.app import App
 from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
+from mcp_coder.icoder.permissions.approval import ApprovalDecision
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.output_log import ContentUnit, OutputLog
 from mcp_coder.llm.formatting.render_actions import (
@@ -38,6 +39,15 @@ logger = logging.getLogger(__name__)
 
 STYLE_TOOL_OUTPUT = "white on #0a0a2e"
 STYLE_CANCELLED = "dim #e8a838"
+
+# Interim reason for the auto-deny below. Deliberately NOT the gateway's R11
+# user-deny wording: nobody was asked, so the model must not be told a user
+# refused this call.
+_DENY_NO_UI = (
+    "This tool requires approval, but the approval prompt is not available yet, "
+    "so the call was refused without asking the user. Choose a different approach "
+    "or ask the user how to proceed."
+)
 
 
 class StreamViewApp(App[None]):
@@ -203,6 +213,19 @@ class StreamViewApp(App[None]):
         if event.get("type") == "permission_warning":
             self.query_one(OutputLog).append_text(
                 str(event.get("message", "")), style=STYLE_CANCELLED
+            )
+            return
+        if event.get("type") == "approval_request":
+            # TODO(#1046): replace with the approval modal
+            # (ModalScreen[ApprovalDecision]). Until it lands nothing can
+            # answer, and an unanswered request wedges the turn permanently
+            # (the pause suppresses both streaming timeouts and the cancel
+            # paths cannot reach a parked interceptor) — so fail closed here,
+            # carrying our own reason rather than the gateway's user-deny
+            # wording, because no user was asked.
+            self._core.resolve_pending(
+                str(event.get("approval_id", "")),
+                ApprovalDecision("deny", "once", reason=_DENY_NO_UI),
             )
             return
         output = self.query_one(OutputLog)

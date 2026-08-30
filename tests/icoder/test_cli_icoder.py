@@ -340,7 +340,9 @@ def test_execute_icoder_passes_permission_degraded_when_config_degraded(
     monkeypatch.setattr(icoder_mod, "_assert_tool_interceptors_supported", lambda: None)
     monkeypatch.setattr(icoder_mod, "_load_mcp_server_config", lambda *a, **_kw: {})
     monkeypatch.setattr(
-        icoder_mod, "LangchainEnforcementGateway", lambda _config: MagicMock()
+        icoder_mod,
+        "LangchainEnforcementGateway",
+        lambda _config, _engine=None: MagicMock(),
     )
     monkeypatch.setattr(icoder_mod, "MCPManager", lambda *a, **_kw: MagicMock())
     monkeypatch.setattr(

@@ -219,3 +219,62 @@ UI (`tests/icoder/test_app_pilot.py`, `textual_integration`):
 > Use MCP tools only. Run the fast suite **and** the `textual_integration` marker. Finish with
 > `run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check` and
 > `check_file_size(max_lines=750)` all green, then one commit.
+
+---
+
+## Implementation note (post-implementation)
+
+Implemented exactly as the step specifies — no shape deviations. One engine is built inside the
+existing `provider == "langchain" and mcp_config` gate and injected into
+`LangchainEnforcementGateway`, `RealLLMService(approval_bridge=…)` and
+`AppCore(approval_engine=…, permission_gateway=…)`; `AppCore` gained the three no-op-safe
+delegators, the `TRANSIENT_EVENT_TYPES` carve-out and the R16 gate; `ui/stream_view.py` gained the
+`approval_request` early return (module-level `_DENY_NO_UI`, `TODO(#1046)`) and `ui/app.py`'s
+`action_cancel_stream` now also calls `self._core.cancel_pending_approvals()`. No attach/detach was
+added to `RealLLMService.stream`; `AppCore` still imports no `textual`.
+
+### Patch-site survey (incomplete in the step)
+
+The step's WHERE table lists `test_icoder_permission_wiring.py` but not the *second* stub of
+`LangchainEnforcementGateway`. Adding the constructor's second argument breaks any one-parameter
+stand-in, so two test doubles had to be re-pointed:
+
+* `tests/icoder/test_icoder_permission_wiring.py` — `_FakeGateway.__init__(self, config)` →
+  `(self, config, approval_engine=None)`; the test now also asserts
+  `llm_calls[0]["approval_bridge"] is gateway.approval_engine` (identity, per the step).
+* `tests/icoder/test_cli_icoder.py::test_execute_icoder_passes_permission_degraded_when_config_degraded`
+  — `lambda _config: MagicMock()` → `lambda _config, _engine=None: MagicMock()`. This was the only
+  **failing** test before the fix (`assert 1 == 0`: the `TypeError` was swallowed by the CLI's
+  top-level error boundary, so it surfaced as a nonzero exit code rather than a traceback).
+
+### Tests
+
+`tests/icoder/test_approval_wiring.py` (new, 9 cases) covers step tests 1–7: identity wiring,
+the non-langchain no-op path, both `approval_bridge` forwarding directions, R16 cancelled vs.
+normal (parametrized over engine present/absent), the R5 carve-out (asserted against the session
+`.jsonl` on disk, and asserting the live consumer still *sees* every event), and the engine-free
+`scope=session` grant through the real gateway interceptor. Step tests 8–9 are in
+`tests/icoder/test_app_pilot.py` (`textual_integration`), driven through a `_RecordingEngine`
+subclass of the real `ApprovalEngine` so the `AppCore` parameter type holds without a cast; test 9
+presses `escape` rather than calling the action directly, so the binding is exercised too.
+
+### Checks
+
+`run_pylint_check` clean on `src/mcp_coder/icoder` + `tests/icoder` (the `src`-wide run reports
+only the pre-existing stale-`mcp_workspace` / absent-langchain E-codes, none in a touched file);
+`run_mypy_check` (strict) on `src` + `tests/icoder` reports only the 6 pre-existing
+stale-`mcp_workspace` errors; `run_lint_imports_check` 21/21 kept with the new
+`cli.commands.icoder -> icoder.permissions.approval` entry; `run_format_code` reformatted
+`tests/icoder/test_approval_wiring.py` (applied, re-verified green afterwards);
+`check_file_size(max_lines=750)` clean — neither `ui/app.py` nor `ui/stream_view.py` is listed.
+
+Pytest: `tests/icoder` minus the two files below (850 passed); `test_app_pilot.py` +
+`test_cli_icoder.py` + `test_approval_wiring.py` unfiltered (92 passed, `textual_integration`
+included); `tests/cli` + `tests/llm/providers/langchain` (one pre-existing failure, see below).
+
+**Local environment caveats (all pre-existing, unchanged from Steps 1–8):** the stale installed
+`mcp_workspace` still breaks pytest collection repo-wide, so every run used
+`PYTHONPATH=C:\Users\Marcus\Documents\GitHub\mcp-workspace\src`; `pytest-textual-snapshot` is still
+absent, so `tests/icoder/test_snapshots.py` errors at fixture setup here and was excluded from the
+runs; `tests/llm/providers/langchain/test_langchain_exceptions.py::test_connection_errors_contains_httpx_connect_error`
+still fails with `httpx` absent. None of them touches anything this step changed.

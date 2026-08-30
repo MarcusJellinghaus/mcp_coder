@@ -140,9 +140,17 @@ locally, so verification used targeted per-file runs; four pre-existing `tests/l
 
 Details: [step_9.md](./steps/step_9.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: implemented as specified — no shape deviations. Two patch-target strings had to be
+re-pointed for the gateway's new second constructor argument (`test_cli_icoder.py`'s
+`lambda _config: MagicMock()`, and `test_icoder_permission_wiring.py`'s `_FakeGateway`) — see the
+"Implementation note" at the end of [step_9.md](./steps/step_9.md), which also records the
+unchanged local environment caveats (stale installed `mcp_workspace` forcing a `PYTHONPATH`
+workaround; no `pytest-textual-snapshot`, so `test_snapshots.py` still cannot run here; one
+pre-existing `tests/llm` failure with `httpx` absent).
 
 ### Step 10: Shutdown hook + closed-app guard (R9)
 

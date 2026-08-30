@@ -36,10 +36,17 @@ from mcp_coder.icoder.core.types import (
     TokenUsage,
 )
 from mcp_coder.icoder.env_setup import RuntimeInfo
+from mcp_coder.icoder.permissions.approval import ApprovalDecision, ApprovalEngine
+from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
+from mcp_coder.icoder.permissions.model import Rule
 from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import LLMService
 from mcp_coder.llm.storage import store_session
-from mcp_coder.llm.types import ResponseAssembler, StreamEvent
+from mcp_coder.llm.types import (
+    TRANSIENT_EVENT_TYPES,
+    ResponseAssembler,
+    StreamEvent,
+)
 
 
 class AppCore:
@@ -54,6 +61,8 @@ class AppCore:
         tool_display: Literal["oneline", "compressed"] = "compressed",
         skill_frames: Mapping[str, SkillFrame] | None = None,
         permission_degraded: bool = False,
+        approval_engine: ApprovalEngine | None = None,
+        permission_gateway: LangchainEnforcementGateway | None = None,
     ) -> None:
         """Initialize with injected dependencies.
 
@@ -70,6 +79,12 @@ class AppCore:
             permission_degraded: Whether the loaded permission config is
                 degraded (fail-closed — every MCP call is denied). Surfaced as a
                 loud startup line by the UI (#1061). Defaults to ``False``.
+            approval_engine: The runtime approval engine shared with the
+                gateway and the LLM service (langchain only), or ``None``.
+                Reached by the UI only through the three delegating methods
+                below, so the Textual layer never holds the engine itself.
+            permission_gateway: The enforcement gateway owning the runtime rule
+                layer (langchain only), or ``None``.
         """
         self._llm_service = llm_service
         self._event_log = event_log
@@ -81,6 +96,41 @@ class AppCore:
         self._tool_display: Literal["oneline", "compressed"] = tool_display
         self._skill_frames: dict[str, SkillFrame] = dict(skill_frames or {})
         self._permission_degraded = permission_degraded
+        self._approval_engine = approval_engine
+        self._permission_gateway = permission_gateway
+
+    # -- approval delegators (the UI's only route to engine and gateway) -----
+
+    def resolve_pending(self, approval_id: str, decision: ApprovalDecision) -> None:
+        """Answer one pending approval. No-op without an engine.
+
+        Args:
+            approval_id: The id carried by the ``approval_request`` event.
+            decision: The answer to apply.
+        """
+        if self._approval_engine is not None:
+            self._approval_engine.resolve_pending(approval_id, decision)
+
+    def cancel_pending_approvals(self) -> None:
+        """Abort every pending approval. No-op without an engine.
+
+        The direct UI -> engine cancel channel: an interceptor parked on an
+        approval emits no event, so the generic cancel paths cannot reach it.
+        """
+        if self._approval_engine is not None:
+            self._approval_engine.cancel_all()
+
+    def add_runtime_rule(self, rule: Rule) -> None:
+        """Append a rule to the gateway's runtime layer. No-op without a gateway.
+
+        Called on the UI thread by the approval modal (I3.3) when a user grants
+        a durable scope; the engine never writes the layer itself.
+
+        Args:
+            rule: The runtime-layer rule to append.
+        """
+        if self._permission_gateway is not None:
+            self._permission_gateway.add_runtime_rule(rule)
 
     def handle_input(self, text: str) -> Response:
         """Route user input to commands or typed actions for the UI.
@@ -197,7 +247,7 @@ class AppCore:
 
         for event in _events():
             assembler.add(event)
-            if event.get("type") != "raw_line":
+            if event.get("type") not in TRANSIENT_EVENT_TYPES:
                 self._event_log.emit("stream_event", **event)
             if event.get("type") == "done":
                 usage = event.get("usage", {})
@@ -214,6 +264,18 @@ class AppCore:
                             input_tokens, output_tokens, cache_read
                         )
             yield event
+
+        # R16 — a hard cancel unwinds the provider generator without a ``done``
+        # event, so this tail still runs and would record the aborted turn.
+        # BOTH statements are skipped, not just the store: ``ui/replay.py``
+        # clears ``in_flight`` on ``llm_request_end`` and appends the
+        # "— Cancelled —" marker only while ``in_flight`` is still true at EOF,
+        # so gating the store alone would make this the one cancel that replays
+        # without a marker. The flag is set by ``cancel_all()`` and reset by the
+        # next ``attach()`` — never by ``detach()``, which already ran inside
+        # the provider's ``finally`` before this line is reached.
+        if self._approval_engine is not None and self._approval_engine.cancelled:
+            return
 
         self._event_log.emit("llm_request_end")
 

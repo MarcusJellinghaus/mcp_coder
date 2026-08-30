@@ -128,7 +128,7 @@ def test_icoder_loads_permission_config_once(
 def test_icoder_injects_interceptor_into_manager(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Manager gets ``[gateway.interceptor]``; the same gateway reaches the service."""
+    """Manager gets ``[gateway.interceptor]``; gateway + engine reach the service."""
     from mcp_coder.cli.commands.icoder import execute_icoder
 
     (tmp_path / "logs").mkdir()
@@ -141,8 +141,9 @@ def test_icoder_injects_interceptor_into_manager(
     created: list[Any] = []
 
     class _FakeGateway:
-        def __init__(self, config: Any) -> None:
+        def __init__(self, config: Any, approval_engine: Any = None) -> None:
             self.config = config
+            self.approval_engine = approval_engine
             self.interceptor = object()  # stable sentinel identity
             created.append(self)
 
@@ -164,6 +165,10 @@ def test_icoder_injects_interceptor_into_manager(
     assert manager_calls[0]["tool_interceptors"] == [gateway.interceptor]
     assert len(llm_calls) == 1
     assert llm_calls[0]["gateway"] is gateway
+    # One engine, injected into the gateway and forwarded to the service as the
+    # provider's approval bridge (identity, not equality).
+    assert gateway.approval_engine is not None
+    assert llm_calls[0]["approval_bridge"] is gateway.approval_engine
 
 
 def test_icoder_no_gateway_without_langchain(
