@@ -106,6 +106,36 @@ def _assert_tool_interceptors_supported() -> None:
     )
 
 
+def _is_node_cancelled(exc: BaseException) -> bool:
+    """Return whether ``exc`` is langgraph's wrapper for a cancelled node.
+
+    langgraph's retry layer converts an ``asyncio.CancelledError`` raised by a
+    node body — which is what the approval engine's hard cancel (R7) produces
+    inside ``ToolNode`` — into ``NodeCancelledError``, an ordinary
+    ``Exception``. Without this check the cancel would be reported as a failed
+    turn: it would match every ``except Exception`` on the way out and match no
+    ``except asyncio.CancelledError`` at all.
+
+    The import is deferred and guarded because langgraph is an optional extra,
+    and because ``NodeCancelledError`` only exists in newer releases while
+    ``pyproject.toml`` deliberately sets no upper bound.
+
+    Args:
+        exc: The exception caught while draining the agent stream.
+
+    Returns:
+        True if ``exc`` is a ``NodeCancelledError``, False otherwise —
+        including when langgraph is absent or too old to define it.
+    """
+    try:
+        from langgraph.errors import (  # pylint: disable=import-outside-toplevel
+            NodeCancelledError,
+        )
+    except ImportError:
+        return False
+    return isinstance(exc, NodeCancelledError)
+
+
 _KNOWN_FIELDS = {"command", "args", "env", "transport", "type"}
 
 
@@ -669,6 +699,11 @@ async def run_agent_stream(
                     )
 
     except Exception as exc:
+        if _is_node_cancelled(exc):
+            # Hard cancel (R7) wearing langgraph's wrapper: restore it to the
+            # `CancelledError` the caller's cancel clause is written against,
+            # and emit no error event — the user cancelled, nothing failed.
+            raise asyncio.CancelledError(str(exc)) from exc
         yield {"type": "error", "message": str(exc)}
         raise
 

@@ -112,6 +112,7 @@ def test_llm_types_all_is_correct() -> None:
         "ResponseAssembler",
         "StreamEvent",
         "SUPPORTED_PROVIDERS",
+        "TRANSIENT_EVENT_TYPES",
         "UsageInfo",
     ]
 

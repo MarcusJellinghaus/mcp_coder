@@ -311,7 +311,7 @@ def _ask_agent_stream(
     Raises:
         TimeoutError: If no-progress or overall timeout is exceeded.
     """
-    from .agent import _check_agent_dependencies, run_agent_stream
+    from .agent import _check_agent_dependencies, _is_node_cancelled, run_agent_stream
 
     _check_agent_dependencies()
     _ollama_preflight(config)
@@ -391,7 +391,12 @@ def _ask_agent_stream(
                 # print the traceback on stderr — i.e. onto a live Textual screen.
                 pass
             except Exception as exc:  # pylint: disable=broad-except
-                error_holder.append(exc)
+                if _is_node_cancelled(exc):
+                    # The same hard cancel in the shape langgraph gives it when
+                    # a node body raises `CancelledError`: still not an error.
+                    pass
+                else:
+                    error_holder.append(exc)
             finally:
                 q.put(None)  # sentinel
 

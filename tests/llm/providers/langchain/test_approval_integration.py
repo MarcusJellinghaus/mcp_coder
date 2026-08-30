@@ -212,6 +212,20 @@ def _make_mcp_shaped_tool(
         )
         return await gateway.interceptor(request, _handler)
 
+    # ``from __future__ import annotations`` stores the signature above as
+    # *strings*, and ``StructuredTool.from_function`` resolves them with
+    # ``get_type_hints`` against this module's globals — where
+    # ``InjectedToolCallId`` does not exist, because the import above is
+    # deliberately deferred into this function (see ``require_real_langchain``
+    # for why every langchain import in this directory has to be). Rebinding the
+    # annotations to the real objects makes them resolvable while keeping the id
+    # genuinely injected; hard-coding it instead would void the FINDINGS §10
+    # deny-pairing regression this module exists for.
+    _call.__annotations__ = {
+        "tool_call_id": Annotated[str, InjectedToolCallId],
+        "return": Any,
+    }
+
     return StructuredTool.from_function(
         coroutine=_call,
         name=name,
