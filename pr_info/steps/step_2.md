@@ -1094,3 +1094,17 @@ flip a `0` to a `1`. None do today.
 > `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). No code
 > written. The pause note above stands — do not re-run this step until the upstream merge is
 > observed.
+
+> **Thirty-ninth re-check after `git fetch` (2026-08-30) — still blocked.** `origin/main` of
+> mcp-workspace is still `b9106c4` ("chore(pyproject): drop unused config extra (#275)") and
+> `git branch -r --merged origin/main` still lists only `origin/main` and `origin/HEAD`, so
+> `origin/268-...` remains **unmerged**. Its head has advanced `a3f4bd8` -> `5d6eec7` ("Add
+> review round log"), so the API shape was re-read on that branch rather than assumed:
+> `LinkedBranchStatus` still has the same six members (`OK`, `MISMATCH`, `AMBIGUOUS`,
+> `NOT_LINKED`, `UNKNOWN`, `NOT_CHECKED`) and `linked_branch_blocks` still returns
+> `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`; sections 2a-2d
+> need no revision. `git show origin/main:src/mcp_workspace/checks/branch_status_rendering.py`
+> matches `GITHUB_TOKEN_HINT` and `class CIStatus` but **zero** occurrences of either new
+> name; a repo-wide grep of the mcp-workspace tree returns 0 matches, and the module the MCP
+> tooling process resolves still exports neither name. No code written. The pause note above
+> stands — do not re-run this step until the upstream merge is observed.
