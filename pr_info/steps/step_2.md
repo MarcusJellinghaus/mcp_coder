@@ -960,3 +960,17 @@ flip a `0` to a `1`. None do today.
 > `linked_branch_blocks`. Nothing changed, so sections 2a-2d need no revision and no code was
 > written. Kept short deliberately: the pause note above stands — do not re-run this step
 > until the upstream merge is observed.
+>
+> **Thirty-third re-check after `git fetch` (2026-08-30) — identical to the thirty-second.**
+> `origin/main` of mcp-workspace is still `b9106c4` ("chore(pyproject): drop unused config
+> extra (#275)"), `git branch -r --merged origin/main` still lists only `origin/main` and
+> `origin/HEAD` (so `origin/268-...` remains **unmerged**), and that branch's head is still
+> `fc39252` ("docs(pr_info): rewrite commit message for isort fix"). `git show
+> origin/main:src/mcp_workspace/checks/branch_status_rendering.py` matches `GITHUB_TOKEN_HINT`
+> and `class CIStatus` but **zero** occurrences of `LinkedBranchStatus` or
+> `linked_branch_blocks`; a repo-wide grep of the mcp-workspace tree returns 0 matches, and
+> the installed module still exports neither name. The API shape on `268-...` is unchanged at
+> `fc39252` (same six members; `linked_branch_blocks` still returns
+> `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`), so sections 2a-2d
+> need no revision. No code written. The pause note above stands — do not re-run this step
+> until the upstream merge is observed.
