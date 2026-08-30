@@ -138,7 +138,7 @@ def skip_langchain_history_guard() -> Generator[None, None, None]:
     Yields:
         None, with the guard patched out for the duration of the test.
     """
-    with patch("mcp_coder.llm.providers.langchain.require_langchain_history"):
+    with patch("mcp_coder.llm.providers.langchain._setup.require_langchain_history"):
         yield
 
 

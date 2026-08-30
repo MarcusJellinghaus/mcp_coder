@@ -13,7 +13,7 @@ class TestLoadLangchainConfig:
     def test_returns_expected_keys(self) -> None:
         """_load_langchain_config returns a dict with all expected keys."""
         with patch(
-            "mcp_coder.llm.providers.langchain.get_config_values",
+            "mcp_coder.llm.providers.langchain._setup.get_config_values",
             return_value={
                 ("llm", "default_provider"): "langchain",
                 ("llm.langchain", "backend"): "openai",
@@ -46,7 +46,7 @@ class TestLoadLangchainConfig:
         monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", raising=False)
         monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_MODEL", raising=False)
         with patch(
-            "mcp_coder.llm.providers.langchain.get_config_values",
+            "mcp_coder.llm.providers.langchain._setup.get_config_values",
             return_value={
                 ("llm", "default_provider"): "langchain",
                 ("llm.langchain", "backend"): "gemini",
@@ -69,7 +69,7 @@ class TestLoadLangchainConfig:
         monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_BACKEND", raising=False)
         monkeypatch.delenv("MCP_CODER_LLM_LANGCHAIN_MODEL", raising=False)
         with patch(
-            "mcp_coder.llm.providers.langchain.get_config_values",
+            "mcp_coder.llm.providers.langchain._setup.get_config_values",
             return_value={
                 ("llm", "default_provider"): "langchain",
                 ("llm.langchain", "backend"): "openai",
@@ -127,7 +127,7 @@ class TestLoadLangchainConfig:
         into a traceback.
         """
         with patch(
-            "mcp_coder.llm.providers.langchain.get_config_values",
+            "mcp_coder.llm.providers.langchain._setup.get_config_values",
             side_effect=ValueError(
                 "Config error in [llm.langchain] model: expected str, got int"
             ),
@@ -153,7 +153,7 @@ class TestLoadLangchainConfig:
     def test_non_str_values_narrow_to_none(self) -> None:
         """Values that survive the schema but are not str still narrow to None."""
         with patch(
-            "mcp_coder.llm.providers.langchain.get_config_values",
+            "mcp_coder.llm.providers.langchain._setup.get_config_values",
             return_value={
                 ("llm", "default_provider"): "langchain",
                 ("llm.langchain", "backend"): "openai",
@@ -446,6 +446,10 @@ class _FakeClientError(Exception):
 
 _MOD = "mcp_coder.llm.providers.langchain"
 
+#: Names *consumed* by the moved setup helpers resolve through ``_setup``'s
+#: globals, so patching them on the package would silently no-op.
+_SETUP = f"{_MOD}._setup"
+
 
 # ---------------------------------------------------------------------------
 # _ask_text connection/auth error tests
@@ -534,7 +538,7 @@ class TestAskTextAuthError:
             patch(f"{_MOD}.load_langchain_history", return_value=[]),
             patch(f"{_MOD}.store_langchain_history"),
             patch(f"{_MOD}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+            patch(f"{_SETUP}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
 
@@ -555,7 +559,7 @@ class TestAskTextAuthError:
             patch(f"{_MOD}.load_langchain_history", return_value=[]),
             patch(f"{_MOD}.store_langchain_history"),
             patch(f"{_MOD}._create_chat_model", return_value=mock_model),
-            patch(f"{_MOD}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+            patch(f"{_SETUP}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
 
@@ -660,7 +664,7 @@ class TestAskAgentAuthError:
                 new_callable=AsyncMock,
                 side_effect=_FakeAuthError("invalid key"),
             ),
-            patch(f"{_MOD}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+            patch(f"{_SETUP}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
         ):
             from mcp_coder.llm.providers.langchain import ask_langchain
 

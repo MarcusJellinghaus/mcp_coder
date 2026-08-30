@@ -129,3 +129,59 @@ test.
 >
 > Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check`,
 > `run_lint_imports_check` and `check_file_size(max_lines=750)` all green, then one commit.
+
+---
+
+## Implementation note (written after the step landed)
+
+The move itself went exactly as specified above: seven symbols moved verbatim into `_setup.py`,
+re-exported from `__init__.py`, every call site left in place. `__init__.py` is now **505** lines
+(from 739). Two things needed more than the plan predicted.
+
+### 1. The patch-site survey in TESTS was incomplete — four more test files needed edits
+
+The survey grepped for literal patch strings and so missed the **f-string** form
+(`patch(f"{_MOD}.NAME")`, where `_MOD = "mcp_coder.llm.providers.langchain"`). Six further
+*consumed*-name patch sites fall in exactly the category HOW describes — their sole consumer is a
+moved symbol, so the re-export cannot protect them and leaving them would silently no-op:
+
+| Patched name | Sole consumer | Sites |
+|---|---|---|
+| `OPENAI_AUTH_ERRORS` | `_auth_errors_for_backend` | `test_langchain_dialed_host.py` ×1, `test_langchain_provider.py` ×3 |
+| `GOOGLE_CLIENT_ERRORS` | `_auth_errors_for_backend` | `test_langchain_dialed_host.py` ×1 |
+| `is_google_auth_error` | `_handle_provider_error` | `test_langchain_dialed_host.py` ×1 |
+
+Both files gained a `_SETUP = f"{_MOD}._setup"` constant (with the same one-line rationale comment)
+and those six strings now point at it. Same treatment, same reason as `get_config_values` /
+`require_langchain_history`.
+
+One further edit was **not** a patch string. `test_langchain_resolve_target.py`'s
+`TestImportCycle::test_package_imports_from_scratch` — the guard for `_config_diagnostics`'
+deferred `_create_chat_model` import — asserted `package.validate is not None`, and `validate`
+moved to `_setup.py` with its only caller. The assertion was re-pointed to `package.dialed_url`,
+the surviving package-level import *from `_config_diagnostics`*, which preserves the test's exact
+intent (the cycle still resolves when the package is imported from scratch) with a one-word change.
+Re-exporting `validate` from `__init__.py` instead was rejected: nothing calls it there any more,
+so it would plant the very silent-no-op trap HOW warns about, for the next person who patches it.
+
+### 2. Local environment caveat for the pytest run
+
+The installed `mcp_workspace` in this venv predates `mcp_workspace.checks.branch_status_rendering`,
+which `src/mcp_coder/checks/branch_status.py` imports at module scope. Since
+`src/mcp_coder/__init__.py` imports that shim, **every** test in the repo fails to collect,
+independently of this step. The pytest runs below were therefore made with
+`PYTHONPATH` pointed at a current `mcp-workspace` checkout. The fix is to refresh the
+unpinned `mcp-workspace @ git+…` dependency; nothing in this step touches it.
+
+### Checks
+
+`run_pylint_check`, `run_mypy_check`, `run_lint_imports_check` (21/21 kept),
+`run_format_code` (clean) and `check_file_size(max_lines=750)` (clean) all green; the residual
+pylint/mypy findings are all pre-existing and belong to absent optional deps (`langchain_core`,
+`langgraph`, `httpx`, `mcp.server.fastmcp`) or the stale `mcp_workspace` above.
+`tests/llm` plus the langchain-touching CLI/icoder modules pass; the only failures left there are
+the three `copilot` CLI integration tests and `test_connection_errors_contains_httpx_connect_error`
+(needs `httpx` installed) — none of them reachable from this diff.
+
+Note `mypy --strict` rejects a plain re-export, so the five names use the explicit
+`from ._setup import X as X` form already used for `_is_404_error` two lines above.

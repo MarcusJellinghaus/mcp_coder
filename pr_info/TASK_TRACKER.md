@@ -25,9 +25,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 Details: [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: step_1.md's patch-site survey was incomplete — see the "Implementation note"
+section at the end of [step_1.md](./steps/step_1.md) for the extra consumed-name
+patch strings that had to be re-pointed, and for the local environment caveat
+(stale installed `mcp_workspace`) that pytest runs had to work around.
 
 ### Step 2: Prep — extract the stream worker and event dispatch out of `ui/app.py`
 

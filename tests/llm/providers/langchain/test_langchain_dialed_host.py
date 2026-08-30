@@ -25,6 +25,10 @@ from mcp_coder.llm.providers.langchain._exceptions import (
 
 _MOD = "mcp_coder.llm.providers.langchain"
 
+#: Names *consumed* by the moved setup helpers resolve through ``_setup``'s
+#: globals, so patching them on the package would silently no-op.
+_SETUP = f"{_MOD}._setup"
+
 #: What the stub client reports; deliberately not any config value.
 _DIALED = "https://relay.internal/v1"
 
@@ -164,7 +168,7 @@ class TestHandleProviderErrorDialed:
     def test_auth_errors_do_not_mention_the_host(self) -> None:
         """The auth message has no base_url line to carry it."""
         with (
-            patch(f"{_MOD}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
+            patch(f"{_SETUP}.OPENAI_AUTH_ERRORS", (_FakeAuthError,)),
             pytest.raises(LLMAuthError) as exc_info,
         ):
             _handle_provider_error(_FakeAuthError("nope"), "openai", _DIALED)
@@ -173,8 +177,8 @@ class TestHandleProviderErrorDialed:
     def test_gemini_non_auth_client_error_names_the_host(self) -> None:
         """The second connection-error branch uses the same hint."""
         with (
-            patch(f"{_MOD}.GOOGLE_CLIENT_ERRORS", (_FakeAuthError,)),
-            patch(f"{_MOD}.is_google_auth_error", return_value=False),
+            patch(f"{_SETUP}.GOOGLE_CLIENT_ERRORS", (_FakeAuthError,)),
+            patch(f"{_SETUP}.is_google_auth_error", return_value=False),
             pytest.raises(LLMConnectionError) as exc_info,
         ):
             _handle_provider_error(_FakeAuthError("503"), "gemini", _DIALED)
