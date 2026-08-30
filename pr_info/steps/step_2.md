@@ -937,3 +937,19 @@ flip a `0` to a `1`. None do today.
 > paragraphs and no progress. Nothing changes on this side until #268 is merged upstream;
 > further re-checks add bookkeeping, not information. Suggest pausing this step until the
 > upstream merge is observed rather than re-running it.
+
+> **Thirty-first re-check after `git fetch` (2026-08-30) — still blocked.** `origin/main` of
+> mcp-workspace is *still* `b9106c4` ("chore(pyproject): drop unused config extra (#275)")
+> and `git branch -r --merged origin/main` still lists only `origin/main` and `origin/HEAD`,
+> so `origin/268-...` remains **unmerged**; its head has advanced `dbf3a81` -> `fc39252`
+> ("docs(pr_info): rewrite commit message for isort fix", docs only). The upstream API on
+> that branch is **unchanged in shape** at `fc39252`: `LinkedBranchStatus` still has the same
+> six members (`OK`, `MISMATCH`, `AMBIGUOUS`, `NOT_LINKED`, `UNKNOWN`, `NOT_CHECKED`) and
+> `linked_branch_blocks` still returns
+> `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`, so sections 2a-2d
+> need no revision. `git show origin/main:src/mcp_workspace/checks/branch_status_rendering.py`
+> matches `GITHUB_TOKEN_HINT` and `class CIStatus` but **zero** occurrences of
+> `LinkedBranchStatus` or `linked_branch_blocks`; a repo-wide grep of the mcp-workspace tree
+> returns 0 matches, and the module the MCP tooling process resolves still exports neither
+> name. Reinstalling would not help — the names are absent from `main` itself. No code
+> written. The note above still stands: pause this step until the upstream merge is observed.
