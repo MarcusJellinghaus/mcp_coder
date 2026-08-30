@@ -434,6 +434,22 @@ not stub, vendor, or locally re-implement the upstream names.
 > `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). Reinstalling
 > would not help — the names are absent from `main` itself. No code written.
 
+> **Twenty-fifth re-check after `git fetch` (2026-08-30) — still blocked, nothing has moved
+> since the twenty-fourth.** `origin/main` of mcp-workspace is *still* `b9106c4`
+> ("chore(pyproject): drop unused config extra (#275)") and `git branch -r --merged
+> origin/main` still lists only `origin/main` and `origin/HEAD`, so `origin/268-...` remains
+> **unmerged**; its head is also unchanged at `cdae676` ("docs(pr_info): add round 3
+> implementation review log entry"). Since that commit is identical to the one inspected at
+> the twenty-third and twenty-fourth re-checks, the upstream API shape is unchanged by
+> construction and sections 2a-2d need no revision.
+> `git show origin/main:src/mcp_workspace/checks/branch_status_rendering.py` matches
+> `class CIStatus` but **zero** occurrences of `LinkedBranchStatus` or
+> `linked_branch_blocks`; a repo-wide grep of the mcp-workspace tree still returns 0 matches,
+> and the module the MCP tooling process resolves still exports neither name (only
+> `GITHUB_TOKEN_HINT`, `CIStatus`, `TaskTrackerStatus`, `WaitContext`,
+> `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). Reinstalling
+> would not help — the names are absent from `main` itself. No code written.
+
 ---
 
 ## WHERE
