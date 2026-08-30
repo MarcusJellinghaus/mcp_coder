@@ -1020,3 +1020,26 @@ flip a `0` to a `1`. None do today.
 > `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). No code
 > written. The pause note above stands — do not re-run this step until the upstream merge is
 > observed.
+
+> **Twenty-eighth re-check after `git fetch` (2026-08-30) — still blocked.** `origin/main` of
+> mcp-workspace is *still* `b9106c4` ("chore(pyproject): drop unused config extra (#275)")
+> and `git branch -r --merged origin/main` still lists only `origin/main` and `origin/HEAD`,
+> so `origin/268-...` remains **unmerged**. Its head has advanced `dbf3a81` -> `d710cfa`.
+> Because the head moved, the API shape was re-read on that branch rather than assumed:
+> `LinkedBranchStatus` still has the same six members (`OK`, `MISMATCH`, `AMBIGUOUS`,
+> `NOT_LINKED`, `UNKNOWN`, `NOT_CHECKED`) and `linked_branch_blocks` still returns
+> `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`, so sections 2a-2d
+> remain accurate as written and need no revision.
+> `git show origin/main:src/mcp_workspace/checks/branch_status_rendering.py` matches
+> `GITHUB_TOKEN_HINT` and `class CIStatus` but **zero** occurrences of `LinkedBranchStatus`
+> or `linked_branch_blocks`; a repo-wide grep of the mcp-workspace tree still returns 0
+> matches, and the module the MCP tooling process resolves still exports neither name (only
+> `GITHUB_TOKEN_HINT`, `CIStatus`, `TaskTrackerStatus`, `WaitContext`,
+> `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). The side
+> finding above is **unchanged**: a targeted pytest run on `tests/checks/test_branch_status.py`
+> + `tests/cli/commands/test_check_branch_status_exit_code.py` still aborts at
+> `tests/cli/commands/conftest.py:10` -> `src/mcp_coder/__init__.py:37` ->
+> `src/mcp_coder/checks/__init__.py:3` -> `src/mcp_coder/checks/branch_status.py:17` failing
+> to import from `mcp_workspace.checks...`, i.e. the project venv's mcp-workspace is still
+> stale. Reinstalling would not help — the names are absent from `main` itself. No code
+> written.
