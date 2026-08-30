@@ -13,9 +13,11 @@ from ...icoder.permissions.approval import ApprovalEngine
 from ...icoder.permissions.gateway import LangchainEnforcementGateway
 from ...icoder.permissions.skill_frame import build_frame
 from ...icoder.ui.widgets.session_picker import run_startup_picker
+from ...llm.providers.langchain._mcp_tools import (  # noqa: PLC2701
+    _load_mcp_server_config,
+)
 from ...llm.providers.langchain.agent import (  # noqa: PLC2701
     _assert_tool_interceptors_supported,
-    _load_mcp_server_config,
 )
 from ...llm.providers.langchain.mcp_manager import MCPManager
 from ...utils.log_utils import OUTPUT

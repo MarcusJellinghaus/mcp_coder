@@ -10,12 +10,14 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.llm.providers.langchain.agent import (
-    AGENT_MAX_STEPS,
-    _check_agent_dependencies,
+from mcp_coder.llm.providers.langchain._mcp_tools import (
     _load_mcp_server_config,
     _resolve_env_vars,
     _sanitize_tool_schema,
+)
+from mcp_coder.llm.providers.langchain.agent import (
+    AGENT_MAX_STEPS,
+    _check_agent_dependencies,
 )
 
 
