@@ -953,3 +953,10 @@ flip a `0` to a `1`. None do today.
 > returns 0 matches, and the module the MCP tooling process resolves still exports neither
 > name. Reinstalling would not help — the names are absent from `main` itself. No code
 > written. The note above still stands: pause this step until the upstream merge is observed.
+>
+> **Thirty-second re-check after `git fetch` (2026-08-30) — identical to the thirty-first.**
+> `origin/main` `b9106c4`, only `origin/main`/`origin/HEAD` merged, `origin/268-...` head still
+> `fc39252`, `origin/main`'s `branch_status_rendering.py` still has no `LinkedBranchStatus` /
+> `linked_branch_blocks`. Nothing changed, so sections 2a-2d need no revision and no code was
+> written. Kept short deliberately: the pause note above stands — do not re-run this step
+> until the upstream merge is observed.
