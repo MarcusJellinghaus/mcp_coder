@@ -511,3 +511,113 @@ def test_sandbox_undeclared_healthy_is_never() -> None:
 
     assert decision.policy is Policy.NEVER
     assert decision.source == Frame()
+
+
+# ======================================================================
+# Step 5 — the ``runtime`` layer is its own top-priority stage (R14)
+# ======================================================================
+
+
+def test_runtime_grant_beats_authored_ask_at_equal_specificity() -> None:
+    """A runtime ``always`` beats an authored ``ask`` on the same matcher (R14)."""
+    authored = _rule("s", "t", Policy.AFTER_APPROVAL, "project")
+    runtime = _rule("s", "t", Policy.ALWAYS, "runtime")
+    config = PermissionConfig(rules=(authored, runtime))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.ALWAYS
+    assert decision.source == Layer("runtime")
+    assert decision.matched_rule is runtime
+
+
+def test_broad_runtime_grant_beats_more_specific_authored_ask() -> None:
+    """The runtime group is consulted before the specificity contest."""
+    authored = _rule("s", "t", Policy.AFTER_APPROVAL, "project")
+    runtime = _rule("s", WILDCARD, Policy.ALWAYS, "runtime")
+    config = PermissionConfig(rules=(authored, runtime))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.ALWAYS
+    assert decision.source == Layer("runtime")
+    assert decision.matched_rule is runtime
+
+
+def test_broad_runtime_grant_does_not_shadow_specific_authored_never() -> None:
+    """The widening is bounded: a broad runtime ``always`` loses to a specific never."""
+    authored = _rule("s", "t", Policy.NEVER, "project")
+    runtime = _rule("s", WILDCARD, Policy.ALWAYS, "runtime")
+    config = PermissionConfig(rules=(authored, runtime))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.NEVER
+    assert decision.source == Layer("project")
+    assert decision.matched_rule is authored
+
+
+def test_runtime_grant_loses_to_authored_never_at_equal_specificity() -> None:
+    """Equal specificity + an authored never -> the ordinary contest, NEVER wins."""
+    authored = _rule("s", "t", Policy.NEVER, "project")
+    runtime = _rule("s", "t", Policy.ALWAYS, "runtime")
+    config = PermissionConfig(rules=(authored, runtime))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.NEVER
+    assert decision.matched_rule is authored
+
+
+def test_more_specific_runtime_grant_beats_broader_authored_never() -> None:
+    """Documented residual: a strictly more specific runtime rule still wins."""
+    authored = _rule("s", WILDCARD, Policy.NEVER, "project")
+    runtime = _rule("s", "t", Policy.ALWAYS, "runtime")
+    config = PermissionConfig(rules=(authored, runtime))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.ALWAYS
+    assert decision.source == Layer("runtime")
+    assert decision.matched_rule is runtime
+
+
+def test_bound_reads_the_winning_authored_rule_not_any_authored_never() -> None:
+    """A broad never plus a specific ask: the ask wins authored, so the bound is off."""
+    broad_never = _rule("s", WILDCARD, Policy.NEVER, "project")
+    specific_ask = _rule("s", "t", Policy.AFTER_APPROVAL, "project")
+    runtime = _rule("s", "t", Policy.ALWAYS, "runtime")
+    config = PermissionConfig(rules=(broad_never, specific_ask, runtime))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.ALWAYS
+    assert decision.source == Layer("runtime")
+    assert decision.matched_rule is runtime
+
+
+def test_runtime_rules_contest_among_themselves_normally() -> None:
+    """Within the runtime group the ordinary 4-key contest still applies."""
+    broad = _rule("s", WILDCARD, Policy.AFTER_APPROVAL, "runtime")
+    specific = _rule("s", "t", Policy.ALWAYS, "runtime")
+    config = PermissionConfig(rules=(broad, specific))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.ALWAYS
+    assert decision.source == Layer("runtime")
+    assert decision.matched_rule is specific
+
+
+def test_no_runtime_rules_leaves_authored_precedence_unchanged() -> None:
+    """With no runtime rules the config path behaves exactly as before."""
+    allow = _rule("s", "t", Policy.ALWAYS, "user")
+    ask = _rule("s", "t", Policy.AFTER_APPROVAL, "project")
+    broad_never = _rule("s", WILDCARD, Policy.NEVER, "local")
+    config = PermissionConfig(rules=(allow, ask, broad_never))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.AFTER_APPROVAL
+    assert decision.source == Layer("project")
+    assert decision.matched_rule is ask

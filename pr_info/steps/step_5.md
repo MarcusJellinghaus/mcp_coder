@@ -163,3 +163,43 @@ the plain string `"runtime"` for the `approval_request` payload.
 >
 > Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` all
 > green, then one commit.
+
+---
+
+## Implementation note (written after the fact)
+
+**Shape:** implemented exactly as planned — `_rule_sort_key` lifted to module level, the
+partition + winning-authored-`never` bound in `_resolve_config`, and the two docstring
+corrections. No deviations, no extra patch sites, nothing outside
+`src/mcp_coder/icoder/permissions/resolver.py` and
+`tests/icoder/test_permissions_resolver.py`.
+
+Two docstrings beyond the two named in WHERE were touched, both for the same reason (they
+described the old flat precedence): the `_resolve_config` docstring gained a paragraph naming the
+runtime stage and its bound, and the module docstring's precedence sentence now reads
+`user->project->local` with `runtime` described as a stage above it.
+
+**TDD result (tests written first, run before the change):** cases 1, 2 and 4b were red, each
+resolving `AFTER_APPROVAL`/`Layer("project")` instead of `ALWAYS`/`Layer("runtime")` — exactly the
+R14 symptom. Cases 3, 4 and 5 (the two bound directions, the documented residual, and the
+intra-runtime contest) were already green before the change, as the step anticipated; they are
+regression guards, not drivers. Case 7's
+`test_later_layer_wins_at_equal_specificity_and_policy` stays green unedited: its four rules are
+all `ALWAYS`, so the runtime group short-circuit selects the single runtime rule the 4-key sort
+was already selecting.
+
+**Checks:** `run_pylint_check` and `run_mypy_check` clean on both the permissions package and the
+test file; `run_format_code` reports no changes.
+
+**Local environment caveats (all pre-existing, none caused by this step):**
+
+1. The stale installed `mcp_workspace` still breaks pytest collection repo-wide (Steps 1–4
+   recorded the same); every run below used
+   `PYTHONPATH=C:\Users\Marcus\Documents\GitHub\mcp-workspace\src`.
+2. The whole-repo run **and** the whole-`tests/icoder` run both exceed the tool's 300s timeout on
+   this machine, so pytest verification was done as targeted per-file runs: the ten
+   permission/wiring/service files (248 passed) plus `test_icoder_permission_wiring.py`
+   (6 passed, 2 skipped) plus `test_app_core.py` / `test_skills.py` / `test_replay.py` /
+   `test_cli_icoder.py` (107 passed). The change is a pure function in
+   `permissions/resolver.py`, so the untried remainder is the textual UI suite, which does not
+   reach the resolver.

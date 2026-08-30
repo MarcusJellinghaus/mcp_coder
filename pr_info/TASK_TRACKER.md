@@ -81,9 +81,16 @@ at the end of [step_4.md](./steps/step_4.md), which also records two shape devia
 
 Details: [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: implemented exactly as specified — no shape deviations. Test cases 1, 2 and 4b were
+confirmed red before the change (cases 3, 4 and 5 already passed, as the step predicted) and all
+eight are green after. See the "Implementation note" at the end of
+[step_5.md](./steps/step_5.md) for the local environment caveats (stale installed
+`mcp_workspace` forcing a `PYTHONPATH` workaround; the whole-repo and whole-`tests/icoder`
+pytest runs time out locally at 300s, so verification used targeted per-file runs).
 
 ### Step 6: Gateway — real `AFTER_APPROVAL` branch + runtime-rule store
 
