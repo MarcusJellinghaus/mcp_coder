@@ -129,6 +129,22 @@ not stub, vendor, or locally re-implement the upstream names.
 > import, via `src/mcp_coder/__init__.py:37` -> `src/mcp_coder/checks/branch_status.py:17`
 > failing to import from `mcp_workspace.checks.branch_status_rendering`. Sections 2a-2d need
 > no revision. No code written.
+>
+> **Seventh re-check after `git fetch` (2026-08-30) — still blocked.** `origin/main` of
+> mcp-workspace is *still* `b9106c4` ("chore(pyproject): drop unused config extra (#275)")
+> and `git branch -r --merged origin/main` still lists only `origin/main` and `origin/HEAD`,
+> so `origin/268-...` remains **unmerged**; its head has advanced `eb9fe9f` -> `1626fec`
+> ("docs(pr_info): add round 2 implementation review log", docs only).
+> `git show origin/main:src/mcp_workspace/checks/branch_status_rendering.py` matches
+> `class CIStatus` but **zero** occurrences of `LinkedBranchStatus` or
+> `linked_branch_blocks`; a repo-wide grep of the mcp-workspace tree still returns 0 matches,
+> and the module the MCP tooling process resolves still exports neither name (only
+> `GITHUB_TOKEN_HINT`, `CIStatus`, `TaskTrackerStatus`, `WaitContext`,
+> `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). The upstream
+> API on branch `268-...` is **still unchanged in shape** at `1626fec`: `LinkedBranchStatus`
+> has the same six members and `linked_branch_blocks` still returns
+> `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`, so sections 2a-2d
+> need no revision. No code written.
 
 ---
 
