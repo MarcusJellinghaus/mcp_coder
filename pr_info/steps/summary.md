@@ -117,11 +117,12 @@ installed in this environment does not either. Branch `268-...` exists on the re
 `1ccb198` but is unmerged.
 
 `pyproject.toml:24,347` take mcp-workspace as an **unpinned git dependency off the default
-branch**, so no version bump is needed — but **step 1 fails with `ImportError` until #268
+branch**, so no version bump is needed — but **step 2 fails with `ImportError` until #268
 lands on `main`**. The blocker is merge, not release. Re-verify the API names above before
 implementing; reinstall mcp-workspace after the merge.
 
-**Step 2 is not blocked** and can land independently (see below).
+**Step 1 is not blocked** and is sequenced first for exactly that reason: it can land while
+#268 is in flight, instead of being stranded behind step 2's "stop and report" precondition.
 
 ## Known risk, recorded not reopened
 
@@ -146,23 +147,24 @@ No folders or modules are created. No files are created.
 
 | File | Change |
 |---|---|
-| `src/mcp_coder/checks/branch_status.py` | Re-export `LinkedBranchStatus` and `linked_branch_blocks` (import list + `__all__`) |
-| `src/mcp_coder/cli/commands/check_branch_status.py` | Import both from the shim; two new terms in `_exit_code`; `_exit_code` docstring |
-| `docs/cli-reference.md` (`:688-696`) | Exit-code table rows 1 and 2 gain the linked-branch cause; ungated note; `--fix` known limitation |
-| `tests/cli/commands/test_check_branch_status_exit_code.py` | `_report()` gains a defaulted `linked_branch_status`; one 6x2 parametrized mapping test; one end-to-end case |
+| `.claude/skills/implementation_approve/SKILL.md` (`:19`) | "passes (exit code 0)" -> report's `Recommendations:` section lists a `Ready to merge` bullet (case-sensitive match) |
 
 ### Modified — step 2
 
 | File | Change |
 |---|---|
-| `.claude/skills/implementation_approve/SKILL.md` (`:19`) | "passes (exit code 0)" -> report's `Recommendations` contains `Ready to merge` |
+| `src/mcp_coder/checks/branch_status.py` | Re-export `LinkedBranchStatus` and `linked_branch_blocks` (import list + `__all__`) |
+| `src/mcp_coder/cli/commands/check_branch_status.py` | Import both from the shim; two new terms in `_exit_code`; `_exit_code` docstring |
+| `docs/cli-reference.md` (`:688-696`) | Exit-code table rows 1 and 2 gain the linked-branch cause; ungated note; `--fix` known limitation |
+| `tests/cli/commands/test_check_branch_status_exit_code.py` | `_report()` gains a defaulted `linked_branch_status`; one 6x2 parametrized mapping test; one tier-interaction case; one end-to-end case |
+| `tests/checks/test_branch_status.py` | `test_shim_reexports_expected_names` extended to cover `LinkedBranchStatus`, `linked_branch_blocks` and their `__all__` membership |
 
 ## Steps
 
 | Step | Scope | Blocked on #268? |
 |---|---|---|
-| [step_1.md](./step_1.md) | Shim re-export + `_exit_code` terms + tests + `docs/cli-reference.md` | **Yes** |
-| [step_2.md](./step_2.md) | `implementation_approve` skill wording | No |
+| [step_1.md](./step_1.md) | `implementation_approve` skill wording | No |
+| [step_2.md](./step_2.md) | Shim re-export + `_exit_code` terms + tests + `docs/cli-reference.md` | **Yes** |
 
 ### Why two steps and not three
 
@@ -173,10 +175,16 @@ unconsumed re-export, and a window where the documented exit codes contradict th
 ones. They are one commit.
 
 The skill wording is genuinely independent — it is wrong **today**, before any of this
-lands: step 1 of that skill calls the `mcp__mcp-workspace__check_branch_status` MCP tool,
-which returns text and no exit code at all, so "passes (exit code 0)" already describes
-nothing. It is also the only part not blocked on the upstream merge, so keeping it separate
-lets it land while #268 is in flight.
+lands: instruction 1 of that skill calls the `mcp__mcp-workspace__check_branch_status` MCP
+tool, which returns text and no exit code at all, so "passes (exit code 0)" already describes
+nothing. It is also the only part not blocked on the upstream merge, which is why it is
+sequenced first: the blocked commit must not sit in front of the one that can land.
+
+**Caveat on the `Ready to merge` criterion.** Upstream's `_generate_recommendations`
+withholds that recommendation on CI, tasks, rebase, `pr_mergeable_state` and
+`pr_feedback_blocks_merge` — but **not** on `pr_feedback_undeterminable`, which is absent
+from the suppression condition. An undeterminable review state therefore still yields
+`Ready to merge`. Recorded as a known gap in step_1.md; the fix belongs upstream.
 
 ## Test strategy
 
@@ -185,6 +193,19 @@ and is **extended, not replaced**. The file's existing two-layer pattern is pres
 pure layer that builds small `BranchStatusReport`s and calls `_exit_code` directly, and a
 thin end-to-end layer that drives `execute_check_branch_status` with only
 `collect_branch_status` faked.
+
+Two cases the 6x2 state table cannot reach are added explicitly. The table fixes
+`CIStatus.PASSED` with no review feedback, so it never sees the **tier interaction**:
+`MISMATCH` + `pr_feedback_undeterminable` + the gate on must give `2`, not `1`, because the
+tier-1 `linked_branch_blocks` term sits below the gated tier-2 review term. That ordering is
+the design rationale above, and without this case hoisting the term leaves every row green.
+The same report with the gate off must give `1`, which pins the linked-branch term as
+ungated.
+
+`tests/checks/test_branch_status.py` is the shim's contract home and its existing
+`test_shim_reexports_expected_names` is extended to cover both new names and their `__all__`
+membership. Without it `linked_branch_blocks` is never reached through the shim by any test,
+leaving the re-export surface half-verified.
 
 The upstream default `NOT_CHECKED` keeps every existing test in that file green untouched,
 including the full `test_ci_mapping_unchanged_after_assess_ci` table. The sibling
