@@ -145,3 +145,38 @@ bridge via an autouse fixture, so no `langchain_core` is needed).
 >
 > Use MCP tools only. Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and
 > `run_lint_imports_check` all green, then one commit.
+
+---
+
+## Implementation note (written after the step was implemented)
+
+Implemented exactly as specified — **no shape deviations**. `_DENY_ASK` was repurposed in place
+(its two existing tests keep asserting it, with corrected docstrings), `_DENY_USER` and
+`_source_label` are new module-level names, and the interceptor keeps the whole `Decision`.
+`add_runtime_rule` is the single `dataclasses.replace` rebind; both readers were verified to read
+`self._config` live rather than capturing it into a local.
+
+**Tests:** all nine listed cases were written, plus one extra
+(`test_add_runtime_rule_keeps_the_original_rules`) proving the rebind appends rather than
+replaces. The `ApprovalEngine` stub **subclasses the real engine** instead of being a
+`SimpleNamespace` behind a `cast`: the constructor parameter is typed `ApprovalEngine | None`, and
+subclassing satisfies that under `mypy --strict` without weakening the annotation. It overrides
+only `is_attached` and `request_approval`, so no future and no loop is ever touched.
+
+**Checks (all green):** `run_pylint_check`, `run_mypy_check`, `run_ruff_check` and
+`run_lint_imports_check` (21 contracts kept — `permissions_leaf_isolation` still passes; the
+gateway is excluded from it, and the new `gateway -> approval` edge points *into* the leaf, not
+out of it) on the permissions package and `tests/icoder`; `run_format_code(check_only=True)`
+reports no changes; `check_file_size(max_lines=750)` clean. Pytest: the 25 gateway tests, plus
+`test_permissions_approval.py` / `test_permissions_resolver.py` /
+`test_icoder_permission_wiring.py` (83 passed, 2 skipped — the skips are the pre-existing
+langchain-dependent wiring tests), plus the three gateway-constructing consumers
+`test_llm_service.py` / `test_app_core.py` / `test_cli_icoder.py` (109 passed).
+
+**Local environment caveats (pre-existing, unchanged from Steps 1–5):** the stale installed
+`mcp_workspace` still breaks pytest collection repo-wide, so every run used
+`PYTHONPATH=C:\Users\Marcus\Documents\GitHub\mcp-workspace\src`; the whole-repo and whole-
+`tests/icoder` runs still exceed the tool's 300s timeout on this machine, so verification was
+done as the targeted per-file runs listed above. `isort --check` prints `charmap` codec warnings
+for ~24 files it cannot even parse on this console encoding — pre-existing, and none of them is a
+file this step touched.

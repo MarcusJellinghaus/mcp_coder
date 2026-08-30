@@ -96,9 +96,16 @@ pytest runs time out locally at 300s, so verification used targeted per-file run
 
 Details: [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: implemented exactly as specified — no shape deviations. One extra test
+(`add_runtime_rule` appends rather than replaces) and the `ApprovalEngine` stub subclasses the
+real engine so the constructor's type holds without a cast — see the "Implementation note" at the
+end of [step_6.md](./steps/step_6.md), which also records the unchanged local environment
+caveats (stale installed `mcp_workspace` forcing a `PYTHONPATH` workaround; whole-suite pytest
+runs time out locally, so verification used targeted per-file runs).
 
 ### Step 7: Provider plumbing — bridge param, pause, `CancelledError` catch, transient events
 
