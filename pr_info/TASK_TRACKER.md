@@ -21,7 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-- [ ] [Step 1: `implementation_approve` skill gates on `Ready to merge`](./steps/step_1.md) — not blocked
+- [x] [Step 1: `implementation_approve` skill gates on `Ready to merge`](./steps/step_1.md) — not blocked
 - [ ] [Step 2: Linked-branch state feeds `_exit_code`](./steps/step_2.md) — blocked on mcp-workspace #268 merging to `main`
 
 ## Pull Request
