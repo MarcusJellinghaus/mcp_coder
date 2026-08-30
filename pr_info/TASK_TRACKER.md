@@ -173,9 +173,18 @@ pilot file times out locally, so the `textual_integration` runs used `-n 0`).
 
 Details: [step_11.md](./steps/step_11.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: implemented as specified, with two forced shape deviations (two extra fake chat models local
+to the new module — the Step 3 harness model cannot express cases 3 and 5; and an injected
+`InjectedToolCallId`, without which case 2 would not be the FINDINGS §10 regression). The spike is
+deleted after confirming §2/§3/§4/§5/§10 are all carried into production docstrings — the mapping is
+in the "Implementation note" at the end of [step_11.md](./steps/step_11.md). **Case 6's ordering
+assertion is still unverified**: no langchain is installed in this venv, so all six new tests skip
+here. Per the step, a wrong result there is cosmetic — report it, do not block on it. That note also
+records the unchanged local environment caveats and the four pre-existing `tests/llm` failures.
 
 ## Pull Request
 

@@ -89,3 +89,102 @@ imported it.
 > Touch no production file. Use MCP tools only (`delete_directory` with `recursive=True` for the
 > spike). Finish with `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and
 > `run_lint_imports_check` all green, then one commit.
+
+---
+
+## Implementation note (written after the step landed)
+
+### 1. Shape deviations
+
+Two, both forced by the fixtures the step reuses:
+
+* **Two extra fake chat models, local to the new module.** The Step 3 harness model asks for exactly
+  one tool call, which cannot express test 3 (`ToolNode` only runs calls concurrently when they
+  arrive in the *same* `AIMessage`) or test 5 (the backstop is only readable between
+  `astream_events` iterations, so the turn must keep producing events). `_make_two_call_model()` and
+  `_make_looping_model()` therefore live in the test module; `approval_harness.py` is untouched, and
+  the other four cases use `make_fake_chat_model()` as specified.
+* **`tool_call_id` is injected, not hard-coded.** The MCP-shaped tool takes
+  `Annotated[str, InjectedToolCallId]` so the id the gateway stamps onto the deny `ToolMessage` is
+  genuinely the model's `call_1`. Hard-coding it would have made test 2 — the FINDINGS §10
+  regression — assert nothing: the whole point is that an *unpaired* deny wedges
+  `create_react_agent` with `INVALID_CHAT_HISTORY`, which only `invoke_count == 2` can detect.
+
+The "MCP-shaped tool" is the step's own word for the seam: `convert_mcp_tool_to_langchain_tool`
+needs a live MCP server, so the tools call `gateway.interceptor` from their own coroutine with the
+four attributes it reads (`server_name`, `name`, `args`, `runtime.tool_call_id`). Everything
+downstream of that call is production code.
+
+### 2. Test-case mapping
+
+| Step case | Test |
+|---|---|
+| 1 allow | `test_allow_runs_the_gated_call_and_the_turn_completes` |
+| 2 deny | `test_deny_returns_a_paired_error_tool_message_and_the_agent_continues` |
+| 3 ungated not blocked | `test_ungated_call_runs_while_a_gated_one_is_pending` |
+| 4 cancel-while-pending | `test_cancel_while_pending_unwinds_the_turn_without_replanning` |
+| 5 backstop | `test_generator_close_still_stops_a_turn_with_no_approval_pending` |
+| 6 ordering | `test_approval_request_arrives_after_that_tools_tool_use_start` |
+
+Case 4's "`thread.is_alive() is False`" is asserted on the **agent** thread, captured by the tool
+coroutine itself (`_ToolLog.agent_thread`) — `_ask_agent_stream` never exposes the thread it joins,
+and the consumer thread is the test's own. Same technique as Step 10's note.
+
+Case 5 also asserts `gen.close()` returned in under 5s: without the backstop the close would burn
+the provider's whole `join(timeout=5)` budget and still return, so the elapsed time is what
+discriminates.
+
+### 3. Spike deletion (D9)
+
+`spikes/i3-1-approval/` (8 files) deleted with `delete_directory(recursive=True)` after confirming
+the load-bearing FINDINGS rationale is in production code:
+
+| FINDINGS | Carried into |
+|---|---|
+| §2 loop handle inside the coroutine | `ApprovalEngine` docstring, "Why the loop handle is taken inside the coroutine" |
+| §3 pause, not keepalives | `_ask_agent_stream`'s timestamped-window comment ("keepalives would arm it rather than reset it … and would also reach the session .jsonl and the replay path") |
+| §4 direct cancel channel | `ApprovalEngine` docstring "Why the direct UI cancel channel exists"; `action_cancel_stream`; `gateway.interceptor`'s "`CancelledError` must PROPAGATE" comment |
+| §5 stale-`q` / attach-detach in `try`/`finally` | `_ask_agent_stream` ("the engine must never stay attached to a dead turn"); `detach()`'s "Why detach() clears the registry"; `ask_langchain_stream`'s no-op-on-the-text-branch docstring |
+| §10 deny `tool_call_id` | `gateway.interceptor` reads `request.runtime.tool_call_id`; `build_deny_tool_message`'s docstring no longer repeats the false "ToolNode overwrites it" claim |
+
+A repo-wide search for `i3-1-approval` / `spikes/` afterwards returns hits only in this plan's own
+files, so nothing imported it (it was never on `testpaths` either).
+
+### 4. The one claim this step could not verify locally
+
+Case 6's ordering assertion is exactly the scheduling claim #1045 flagged as never verified, and
+**it is still unverified**: no langchain distribution is installed in this venv (this directory's
+conftest injects a `MagicMock` for `langchain_core`), so all six tests skip here — the same gap
+Step 3's probe hit and never closed. Reading `langchain_core.tracers.memory_stream._SendStream`
+shows the tracer's `on_tool_start` is delivered with `call_soon_threadsafe`, i.e. the consumer only
+sees it once the loop runs that callback, so the outcome depends on how many loop turns
+`AsyncCallbackManager.on_tool_start` costs before the tool coroutine reaches the interceptor. The
+assertion is written as the step specifies, with a failure message that names the exact cause. Per
+the step's own instruction, a wrong result there is **cosmetic** (a modal for a row not yet drawn,
+and R17 already says the two events share no correlation key) — report it, do not block on it.
+
+### 5. Local environment caveats (all pre-existing, none caused by this step)
+
+1. The stale installed `mcp_workspace` still breaks pytest collection repo-wide; every run below
+   used `PYTHONPATH=C:\Users\Marcus\Documents\GitHub\mcp-workspace\src`.
+2. No langchain/langgraph in this venv — see §4; the six new tests skip locally.
+3. `tests/llm` has four pre-existing failures unrelated to this step: three
+   `tests/llm/providers/copilot/test_copilot_integration.py` cases (the external `copilot` CLI exits
+   non-zero on this box) and `test_langchain_exceptions.py::test_connection_errors_contains_httpx_connect_error`
+   (`httpx` absent, so conftest's `MagicMock` stands in) — the last one is the failure Step 9
+   already recorded.
+4. `pytest-textual-snapshot` is still not installed, and whole-suite runs still exceed the 300s tool
+   timeout, so verification used per-directory runs.
+
+### 6. Checks
+
+* `run_pylint_check(["tests/llm/providers/langchain/test_approval_integration.py"])` — clean. (The
+  whole-directory run reports only pre-existing `E0401 Unable to import 'langchain_core.messages'`
+  in other files, i.e. caveat 2.)
+* `run_mypy_check(["tests/llm/providers/langchain"])` — clean.
+* `run_ruff_check` on the new file — clean.
+* `run_format_code` — isort clean, black reformatted the new file (applied).
+* `run_pytest_check` fast selection, `tests/llm` — the four pre-existing failures of caveat 3, the
+  six new tests skipped (caveat 2), nothing else.
+* `run_pytest_check` fast selection, `tests/icoder` minus `textual_integration` — **673 passed**.
+* `run_lint_imports_check` — **21 kept, 0 broken**.
