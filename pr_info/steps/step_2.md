@@ -387,6 +387,18 @@ not stub, vendor, or locally re-implement the upstream names.
 > `src/mcp_coder/checks/__init__.py:3` -> `src/mcp_coder/checks/branch_status.py:17` failing
 > to import from `mcp_workspace.checks...`, i.e. the project venv's mcp-workspace is still
 > stale. No code written.
+>
+> **Twenty-second re-check after `git fetch` (2026-08-30) — still blocked, nothing has moved
+> since the twenty-first.** `origin/main` of mcp-workspace is *still* `b9106c4`
+> ("chore(pyproject): drop unused config extra (#275)"); `git branch -r --merged origin/main`
+> still lists only `origin/main` and `origin/HEAD`, so `origin/268-...` remains **unmerged**,
+> its head unchanged at `1626fec`. `git show
+> origin/main:src/mcp_workspace/checks/branch_status_rendering.py` matches `class CIStatus`
+> but **zero** occurrences of `LinkedBranchStatus` or `linked_branch_blocks`; a repo-wide
+> grep of the mcp-workspace tree returns 0 matches, and the module the MCP tooling process
+> resolves still exports neither name. Upstream API shape unchanged by construction (same
+> commit as the seventh through twenty-first re-checks), so sections 2a-2d need no revision.
+> No code written.
 
 ---
 
