@@ -124,7 +124,10 @@ class ApprovalEngine:
     the GIL — so no lock is needed. Two consequences are *coded*, not assumed:
     the ``self._emit is not None`` guard in :meth:`request_approval`'s
     ``finally`` (the sink may already be gone when a racing ``detach()`` won),
-    and the cancel-then-clear order in :meth:`detach`.
+    the cancel-then-clear order in :meth:`detach`, and reading the loop handle
+    **once into a local** in :meth:`request_approval` (``detach()`` nulls
+    ``_loop`` last, so a re-read off the instance could yield ``None`` between
+    the assignment and the ``create_future()`` call).
 
     **Documented deviation from R3's mechanism (approved).** R3 specifies a
     serial lock held around the emit. There is no lock here; its *guarantee* —
@@ -299,9 +302,15 @@ class ApprovalEngine:
         """
         if self._cancelled or self._emit is None:
             return ApprovalDecision("deny", "once", reason=_DENY_UNAVAILABLE)
-        self._loop = asyncio.get_running_loop()
+        # Bind the loop to a local and create the future from *that*: a racing
+        # ``detach()`` nulls ``self._loop`` as its last act, so reading the
+        # attribute back would raise ``AttributeError`` here instead of letting
+        # the post-insert re-check below cancel this entry cleanly. The
+        # instance attribute is still assigned, for the cross-thread
+        # ``resolve_pending`` / ``cancel_all`` paths.
+        loop = self._loop = asyncio.get_running_loop()
         approval_id = uuid4().hex
-        future: asyncio.Future[ApprovalDecision] = self._loop.create_future()
+        future: asyncio.Future[ApprovalDecision] = loop.create_future()
         self._pending[approval_id] = _PendingApproval(
             future, _payload(approval_id, tool_name, args, source)
         )
