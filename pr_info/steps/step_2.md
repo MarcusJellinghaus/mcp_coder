@@ -1108,3 +1108,14 @@ flip a `0` to a `1`. None do today.
 > name; a repo-wide grep of the mcp-workspace tree returns 0 matches, and the module the MCP
 > tooling process resolves still exports neither name. No code written. The pause note above
 > stands — do not re-run this step until the upstream merge is observed.
+
+> **Fortieth re-check after `git fetch` (2026-08-30) — identical to the thirty-ninth.**
+> `origin/main` still `b9106c4`; `git branch -r --merged origin/main` still lists only
+> `origin/main` and `origin/HEAD`, so `origin/268-...` remains **unmerged** at the same head
+> `5d6eec7`. `origin/main`'s `branch_status_rendering.py` matches `class CIStatus` but has
+> **zero** occurrences of `LinkedBranchStatus` / `linked_branch_blocks`; a repo-wide grep of
+> the mcp-workspace tree returns 0 matches, and the module the MCP tooling process resolves
+> still exports neither name. API shape on `268-...` re-read and unchanged (six members;
+> `linked_branch_blocks` returns `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`),
+> so sections 2a-2d need no revision. No code written. The pause note above stands — do not
+> re-run this step until the upstream merge is observed.
