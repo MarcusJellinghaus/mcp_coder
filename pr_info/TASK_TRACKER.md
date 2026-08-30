@@ -38,9 +38,15 @@ patch strings that had to be re-pointed, and for the local environment caveat
 
 Details: [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: one patch-target string had to be re-pointed after all (`test_snapshots.py`'s
+`_frozen_clocks` now patches `datetime` in both UI modules) — see the "Implementation
+note" at the end of [step_2.md](./steps/step_2.md), which also records the two local
+environment gaps (stale installed `mcp_workspace`; `pytest-textual-snapshot` not
+installed, so `test_snapshots.py` cannot run here).
 
 ### Step 3: Real-path `CancelledError` probe (decision gate)
 

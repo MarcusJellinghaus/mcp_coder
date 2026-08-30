@@ -117,3 +117,47 @@ list `icoder/ui/app.py`) — all green.
 > Use MCP tools only. Run the fast suite **and** the `textual_integration` marker. Finish with
 > `run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check` and
 > `check_file_size(max_lines=750)` all green, then one commit.
+
+---
+
+## Implementation note (written after the step landed)
+
+The move went as specified: the eleven methods and the seven per-turn attributes moved verbatim
+into `StreamViewApp`, `ICoderApp` derives from it, `ui/replay.py` and `ui/startup.py` are
+untouched. `app.py` is now **480** lines (from 740) and `stream_view.py` is **308** — both under
+600 with room for Steps 8–10.
+
+### One test edit was unavoidable: a patch-target string
+
+TESTS says "no test is touched", but `tests/icoder/test_snapshots.py`'s `_frozen_clocks` fixture
+patches `mcp_coder.icoder.ui.app.datetime`, and `_handle_stream_event` — which stamps the
+assistant-turn and tool `ContentUnit` timestamps rendered in the detail-modal footer — now reads
+`datetime` from `ui/stream_view.py`'s globals. Leaving the patch alone would silently stop
+freezing the clock for `test_snapshot_modal_over_tool`. The fixture therefore patches **both**
+modules (`ui/app.py` still stamps user-input units), with a one-sentence docstring note. Same
+category, and same reason, as Step 1's re-pointed consumed-name patch strings: the base-class
+split cannot protect a patch aimed at a *module namespace*. No test logic, assertion or fixture
+signature changed.
+
+`STYLE_TOOL_OUTPUT` and `STYLE_CANCELLED` moved to `stream_view.py`; `STYLE_CANCELLED` is
+re-exported from `app.py` in the `import X as X` form for `ui/startup.py:10` (as
+`plan_review_log_2.md` §"Decisions" instructed). `STYLE_TOOL_OUTPUT` has no reader outside the
+moved block, so it is not re-exported. `STYLE_USER_INPUT` stays in `app.py` — still used there
+and imported by `ui/replay.py`.
+
+### Local environment caveats for the checks
+
+Two pre-existing, unrelated environment gaps in this venv (both independent of this step):
+
+1. The stale `mcp_workspace` install of Step 1's note still breaks collection of every test; the
+   runs below used `PYTHONPATH` pointed at a current `mcp-workspace` checkout.
+2. `pytest-textual-snapshot` is a declared dev dependency but is **not installed**, so all 12
+   `test_snapshots.py` tests error with `fixture 'snap_compare' not found` — before and after this
+   change. The re-pointed `datetime` patch above therefore could not be executed locally; it was
+   verified by reading the call sites.
+
+`tests/icoder` (minus `test_snapshots.py`): **867 passed**, including every `textual_integration`
+pilot test. One unrelated flake was observed on a marker-only rerun,
+`test_busy_indicator.py::test_show_busy_preserves_start_time` (`assert 0.0 > 0.0` — a 0.05s sleep
+rendered at one decimal place); it exercises its own `BusyIndicatorApp`, touches nothing this step
+changed, and passed in the full run.
