@@ -32,6 +32,13 @@ not stub, vendor, or locally re-implement the upstream names.
 > `origin/268-check-branch-status-verify-the-issue-s-linked-branch-matches-the-current-branch`
 > still exists unmerged. Reinstalling would not help — the names are absent from `main`
 > itself. No code written.
+>
+> **Re-checked again after `git fetch` (same day) — unchanged.** `origin/main` is still
+> `b9106c4`; `origin/268-...` is still unmerged and has advanced `1ccb198` -> `7d5e348`.
+> The upstream API on that branch is **unchanged in shape** at `7d5e348`: `LinkedBranchStatus`
+> still has the same six members and `linked_branch_blocks` still returns
+> `status not in (LinkedBranchStatus.OK, LinkedBranchStatus.NOT_CHECKED)`, so sections 2a-2d
+> below remain accurate as written and need no revision. Still no code written.
 
 ---
 
