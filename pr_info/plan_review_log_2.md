@@ -130,3 +130,44 @@ Engineer deviations from the instructions, both accepted:
 - Step 2 is a base-class split rather than free functions plus delegators; `ui/replay.py` and the pilot tests reach seven moved members by name, and delegators would return the headroom.
 
 **Status**: committed
+
+## Round 2 — 2026-08-30
+
+Reviewed at `8b298c3`, aimed hardest at the two prep-extraction steps added in round 1 — the only
+unreviewed work in the plan.
+
+**Findings**:
+- high — `step_1.md:43-49`, `:66-68`: the "no test edits" promise is false. The re-export protects the *moved* symbols but not the names they **consume**. `require_langchain_history` (consumed by `_resolve_session_id`) and `get_config_values` (consumed by `_load_langchain_config`) are both patched today and lose their consumer in `__init__.py`. Deleting them raises `AttributeError`; re-exporting them makes the patches silently no-op — the history guard really runs and the developer's real config is read. The step's "if a test needs an edit, revert and rethink" line would then send the implementer into a revert loop on a sound move.
+- high — `step_2.md:29-38`: `_handle_stream_event` calls `self._update_token_display()`, which sits outside the moved range, so `StreamViewApp` would lack the attribute — `mypy --strict` and pylint `no-member` both fail and the step cannot reach green CHECKS.
+- low — `step_4.md:80` names Step 7 for the `layered_architecture` entry; the CLI import appears in Step 9 (renumbering artifact). An unmatched `ignore_imports` entry can fail the run.
+- low — `step_9.md:128` points at `step_10.md` test 2; the pending-state monkeypatch is test 1.
+- low — `step_1.md:46-49` undercounts the affected test modules.
+- low — `step_8.md:63` still says `ui/app.py` for the "no open tool unit" WARN; after Step 2 it is `ui/stream_view.py`.
+- low — `step_2.md:67-69` omits `tests/icoder/ui/test_app.py` from TESTS.
+
+Verified sound: both extractions are cycle-free; the headroom is real (both files land ~510-520 and stay
+under 750 through Step 10); Step 2's base-class choice is right (`ui/replay.py` reaches exactly the seven
+members claimed); the resolver, renderer, `.importlinter` and R5/R16 premises all hold at HEAD; the
+renumbering is otherwise clean across all 13 files.
+
+**Decisions**:
+- Escalated F1 to the user; accepted the other six as straightforward fixes.
+
+**User decisions**:
+- **D-F1 — option A.** Re-point the ~6 patch strings at `…langchain._setup.<name>` and amend Step 1's
+  TESTS section to enumerate the two expected edits, rather than shrinking the move to preserve a
+  "no test edits" promise. Patch targets are part of what a move relocates; the alternative shapes
+  module boundaries around test-patch convenience and would leave the config loader outside `_setup`.
+
+**Changes**:
+Step 1 gains the consumed-name table, the re-point instruction, an explicit statement of the
+silent-no-op failure mode, and an enumerated TESTS exception. Step 2 moves `_update_token_display`.
+Steps 4, 8, 9 and `summary.md` corrected. `Decisions.md` records D-F1.
+
+Engineer corrections to the review's own numbers, all verified against source: the history-guard fixture
+is used by **9** tests, not 10; **21** modules reach the moved names through the package namespace, not
+5 or 11 (and four of the listed hits patch `verification._load_langchain_config`, a different binding);
+and `_update_token_display` has exactly one caller, so leaving it behind would have stranded dead code
+rather than merely failing mypy.
+
+**Status**: committed

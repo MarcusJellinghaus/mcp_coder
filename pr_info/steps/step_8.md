@@ -64,11 +64,11 @@ def pop_pending_tool(
   matches nothing pending, return `None` instead: both langchain tool events carry the same
   `run_id`, so a miss means a genuine desync, and falling through to name-FIFO there would attach
   the result to some *other* call of the same tool — the exact defect R1/R18 exist to fix. An
-  unpaired result is already handled (`duration_ms is None`; the "no open tool unit" WARN in
-  `ui/app.py`). Say both halves in the helper's docstring.
+  unpaired result is already handled (`duration_ms is None`; the "no open tool unit" WARN, which
+  Step 2 moved into `ui/stream_view.py`). Say both halves in the helper's docstring.
 * Blast radius check already done: `cleanup_pending` has **one** production caller
-  (`_cleanup_orphan_tools`), which has four callers (`app.py` error / cancel / `StreamDone`, and
-  `replay.py`). None of their signatures change.
+  (`_cleanup_orphan_tools`), which has four callers (`stream_view.py` error / cancel /
+  `StreamDone`, and `replay.py`). None of their signatures change.
 
 ## ALGORITHM
 

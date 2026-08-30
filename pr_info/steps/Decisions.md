@@ -21,8 +21,9 @@ Extraction targets chosen while writing the plan (the tech lead named the consum
   `_load_langchain_config`, `_create_chat_model`, `_resolve_session_id`. *Not* `_ask_agent_stream`:
   the consumer loop is the file's top layer and calls two of those helpers, so a module holding it
   would have to import its own parent package back. Moving the bottom layer has no cycle and frees
-  ~220 lines instead of ~130. Call sites stay in `__init__.py` so the five test modules that patch
-  `…langchain._load_langchain_config` / `._create_chat_model` keep working unchanged.
+  ~220 lines instead of ~130. Call sites stay in `__init__.py` so the 21 test modules that patch
+  `…langchain._load_langchain_config` / `._create_chat_model` keep working unchanged. (See D-F1 for
+  the two *consumed* names that re-export does not cover.)
 * **Step 2 — `icoder/ui/stream_view.py`**, holding `_stream_llm`, `_handle_stream_event` and the
   output-unit helpers between them, as `StreamViewApp`, a **base class** of `ICoderApp`. A base
   class rather than free functions plus delegators, because `ui/replay.py` and the pilot tests
@@ -68,3 +69,45 @@ takes effect — contradicting the issue's own acceptance criterion. Test case 4
     **Step 11** (end-to-end integration test + spike deletion), per "one step = one commit".
     The spike deletion rides with Step 11 because it is only safe once every step meant to carry
     the `FINDINGS.md` rationale has landed.
+
+## 2026-08-30 — plan review round 4 (tech lead)
+
+### D-F1 — Step 1 re-points the two orphaned patch strings, and says so
+
+Step 1's re-export protects patches on the symbols it *moves*, but not on the names those symbols
+*consume*. Two are patched today and lose their only `__init__.py` consumer to `_setup.py`:
+`require_langchain_history` (consumed by `_resolve_session_id`, patched by the
+`skip_langchain_history_guard` fixture in `tests/llm/providers/langchain/conftest.py`) and
+`get_config_values` (consumed by `_load_langchain_config`, patched at 5 sites in
+`test_langchain_provider.py`).
+
+Weighed: re-export those two names as well, versus re-point the ~6 patch strings at
+`…langchain._setup.<name>`. **Decided: re-point.** Re-exporting is the worse failure of the two —
+the patch still binds, but `_setup.py` resolves the name through its own globals, so both patches
+silently no-op: the resume guard would really run against synthetic session ids and
+`_load_langchain_config` would read the developer's real `config.toml`, with nothing failing loudly.
+Deleting the names without re-pointing at least fails honestly, with `AttributeError`.
+
+Consequence: Step 1's TESTS section no longer claims "no test edits". It enumerates these two files
+as the only permitted edit — patch-target strings only — and keeps "no other test may need an edit"
+as the purity check for everything else.
+
+### D-B2 — Applied fixes (no alternatives weighed)
+
+1. `_update_token_display` added to Step 2's moved set. `_handle_stream_event` calls it on the
+   `StreamDone` branch, but it sits below the `_stream_llm`…`_show_error` run the step moved, so
+   `StreamViewApp` would not have had the attribute and the step could not have reached green
+   CHECKS. It reads only `self._core.token_usage` and `#status-tokens`, and that call is its sole
+   caller in the tree.
+2. `step_4.md` said the `layered_architecture` ignore entry "belongs in Step 7"; the CLI import
+   first appears in **Step 9**, whose WHERE table owns `.importlinter`. Renumbering artifact —
+   old step 7 was the wiring step.
+3. `step_9.md` pointed at `step_10.md` "test 2" for the `AppCore.resolve_pending` monkeypatch that
+   reaches the pending state; that is **test 1** (test 2 is the closed-app guard).
+4. `step_8.md` twice named `ui/app.py` as the home of the "no open tool unit" WARN and of
+   `_cleanup_orphan_tools`'s callers; after Step 2 both are in `ui/stream_view.py`, as the same
+   step's DATA section already said.
+5. `step_2.md`'s TESTS section gained `tests/icoder/ui/test_app.py`, which drives
+   `_handle_stream_event` directly.
+6. Step 1's "five test modules" recounted: **21** modules patch or import the moved names through
+   the package namespace. Cosmetic — the re-export covers all of them.

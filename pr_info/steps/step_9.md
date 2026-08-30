@@ -125,7 +125,7 @@ def action_cancel_stream(self) -> None:
   shutdown hook stays in Step 10; with the interim auto-deny above, no approval is ever left
   pending across a quit in this commit. Consequence for Step 10: its R9 pilot test must suppress
   this auto-deny (monkeypatching `AppCore.resolve_pending` to a no-op) to reach the pending state
-  at all — see `step_10.md` test 2.
+  at all — see `step_10.md` test 1.
 
 ## ALGORITHM
 

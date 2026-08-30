@@ -77,7 +77,9 @@ class ApprovalEngine:
   `langchain_*`.
 * **`.importlinter`:** add `mcp_coder.icoder.permissions.approval` to the
   `permissions_leaf_isolation` `source_modules` list. Add nothing else yet — the
-  `layered_architecture` entry belongs in Step 7, where the CLI import actually appears.
+  `layered_architecture` entry belongs in Step 9, where the CLI import actually appears — adding it
+  here would whitelist an import that does not exist yet, which import-linter's unmatched-ignore
+  alerting can turn into a failure.
 * **No lock, no deque, no counter** (summary §2.2). Document *why* in the class docstring, and
   document it **accurately** — the registry is mutated on the agent loop in the normal case
   (`resolve_pending` / `cancel_all` only `call_soon_threadsafe`), but three members are touched

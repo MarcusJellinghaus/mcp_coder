@@ -17,17 +17,24 @@ This step moves the block those steps actually edit, so the headroom lands where
 
 ## WHAT
 
-One contiguous run of `ICoderApp` — everything from `_stream_llm` through `_show_error` — moves
-into a base class:
+One contiguous run of `ICoderApp` — everything from `_stream_llm` through `_show_error` — plus
+`_update_token_display`, moves into a base class:
 
 ```
 _stream_llm              _append_blank_line       _flush_buffer        _new_unit_id
 _finalize_turn           _cleanup_orphan_tools    _handle_stream_event
 _reset_busy_indicator    _append_cancelled_marker _show_error
+_update_token_display
 ```
 
 with the per-turn state they own: `_renderer`, `_text_buffer`, `_current_turn_id`,
 `_current_turn_text`, `_open_tool_units`, `_unit_counter`, `_cancel_event`.
+
+`_update_token_display` sits below `_show_error` and is **not** optional: `_handle_stream_event`
+calls it on the `StreamDone` branch. Leave it behind and `StreamViewApp` has no such attribute —
+`mypy --strict` errors, pylint fires `no-member`, and the step cannot reach green CHECKS. It moves
+cleanly: it reads only `self._core.token_usage` and `query_one("#status-tokens", Static)`, both
+available on the base, and that `StreamDone` branch is its only caller anywhere in the tree.
 
 ```python
 # icoder/ui/stream_view.py
@@ -72,9 +79,9 @@ at roughly **260**, so both stay well under 600 after Steps 8–10.
 
 ## TESTS
 
-**None new.** `tests/icoder/test_app_pilot.py`, `tests/icoder/ui/test_app_branch_info.py` and the
-replay tests must pass unchanged. If a test needs an edit, the move was not pure — revert and
-rethink.
+**None new.** `tests/icoder/test_app_pilot.py`, `tests/icoder/ui/test_app.py` (which drives
+`_handle_stream_event` directly), `tests/icoder/ui/test_app_branch_info.py` and the replay tests
+must pass unchanged. If a test needs an edit, the move was not pure — revert and rethink.
 
 ## CHECKS
 
@@ -93,7 +100,9 @@ list `icoder/ui/app.py`) — all green.
 > Create `src/mcp_coder/icoder/ui/stream_view.py` holding `class StreamViewApp(App[None])`, and
 > move `_stream_llm`, `_append_blank_line`, `_flush_buffer`, `_new_unit_id`, `_finalize_turn`,
 > `_cleanup_orphan_tools`, `_handle_stream_event`, `_reset_busy_indicator`,
-> `_append_cancelled_marker` and `_show_error` into it **verbatim**, together with the per-turn
+> `_append_cancelled_marker`, `_show_error` and `_update_token_display` into it **verbatim**
+> (`_update_token_display` is not contiguous with the rest but `_handle_stream_event` calls it, so
+> leaving it behind breaks `mypy --strict` and pylint), together with the per-turn
 > state they own (`_renderer`, `_text_buffer`, `_current_turn_id`, `_current_turn_text`,
 > `_open_tool_units`, `_unit_counter`, `_cancel_event`). Make `ICoderApp` inherit from it.
 >

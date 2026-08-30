@@ -321,7 +321,7 @@ the model a user refused a call nobody was asked about.
 | `src/mcp_coder/llm/formatting/render_actions.py` | Trailing optional `tool_run_id` on `ToolStart` / `ToolResult`. |
 | `src/mcp_coder/llm/formatting/stream_renderer.py` | `pop_pending_tool()`; id-keyed pairing; `tool_run_id` on cleanup results. |
 | `.importlinter` | `permissions_leaf_isolation` + `layered_architecture` entries. |
-| existing test files | `tests/icoder/test_permissions_resolver.py`, `tests/icoder/test_permissions_gateway.py`, `tests/icoder/test_icoder_permission_wiring.py`, `tests/icoder/test_app_pilot.py`, `tests/llm/test_types.py`, `tests/llm/formatting/test_stream_renderer_tool_format.py`. |
+| existing test files | `tests/icoder/test_permissions_resolver.py`, `tests/icoder/test_permissions_gateway.py`, `tests/icoder/test_icoder_permission_wiring.py`, `tests/icoder/test_app_pilot.py`, `tests/llm/test_types.py`, `tests/llm/formatting/test_stream_renderer_tool_format.py`; plus, in Step 1 and for patch-target strings only, `tests/llm/providers/langchain/conftest.py` and `tests/llm/providers/langchain/test_langchain_provider.py`. |
 
 ### Deleted
 
