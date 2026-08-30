@@ -96,6 +96,22 @@ not stub, vendor, or locally re-implement the upstream names.
 > still aborts at conftest import with `src/mcp_coder/checks/branch_status.py:17` failing to
 > import from `mcp_workspace.checks...`, i.e. the project venv's mcp-workspace is still stale.
 > Sections 2a-2d need no revision. No code written.
+>
+> **Fifth re-check after `git fetch` (2026-08-30) — still blocked, nothing has moved.**
+> `origin/main` of mcp-workspace is *still* `b9106c4` ("chore(pyproject): drop unused config
+> extra (#275)") and `git branch -r --merged origin/main` still lists only `origin/main` and
+> `origin/HEAD`, so `origin/268-...` remains **unmerged** (head unchanged at `eb9fe9f`).
+> `git show origin/main:src/mcp_workspace/checks/branch_status_rendering.py` matches
+> `class CIStatus` but **zero** occurrences of `LinkedBranchStatus` or
+> `linked_branch_blocks`; a repo-wide grep of the mcp-workspace tree still returns 0 matches,
+> and the module the MCP tooling process resolves still exports neither name (only
+> `GITHUB_TOKEN_HINT`, `CIStatus`, `TaskTrackerStatus`, `WaitContext`,
+> `format_report_for_human`, `format_report_for_llm`, `truncate_ci_details`). The side
+> finding above is **unchanged**: a targeted pytest run on `tests/checks/test_branch_status.py`
+> + `tests/cli/commands/test_check_branch_status_exit_code.py` still aborts at conftest
+> import, via `src/mcp_coder/__init__.py:37` -> `src/mcp_coder/checks/branch_status.py:17`
+> failing to import from `mcp_workspace.checks.branch_status_rendering`. Sections 2a-2d need
+> no revision. No code written.
 
 ---
 
