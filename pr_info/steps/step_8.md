@@ -149,3 +149,62 @@ lines here, so watch it as well as `icoder/ui/`).
 > Use MCP tools only. Run the fast suite **and** the `textual_integration` marker. Finish with
 > `run_pylint_check`, `run_pytest_check`, `run_mypy_check` and `check_file_size(max_lines=750)`
 > all green, then one commit.
+
+---
+
+## Implementation note (post-implementation)
+
+Implemented as specified — no shape deviations. Two small additions worth recording:
+
+1. **One private reader, `_read_run_id(event)`, in `stream_renderer.py`.** `StreamEvent` is
+   `dict[str, object]`, so both call sites needed the same `str | None` narrowing (and the same
+   "empty string counts as absent" rule that `pop_pending_tool`'s `if run_id:` already applies).
+   Inlining it twice would have been the only alternative; it is not a new concept.
+2. **`_pair_pending` kept, with a new `(run_id, name)` signature.** It is now a two-line wrapper
+   around `pop_pending_tool` that turns the matched entry into a `duration_ms`; keeping it leaves
+   `render()` unchanged in shape and keeps the monotonic arithmetic out of the shared helper.
+
+`pop_pending_tool` uses the step's `Any` payload type rather than a `TypeVar`. Both concrete
+deques (`…, float]` in the renderer, `…, str]` in the UI) type-check against it, and mypy stays
+clean at both sites.
+
+### Test-case mapping
+
+Cases 1, 3, 4 and the fallback half of case 2 are new tests in
+`tests/llm/formatting/test_stream_renderer_tool_format.py` (class `TestRendererRunIdPairing`),
+plus a `TestPopPendingTool` class covering the helper's three branches directly. Case 2's main
+claim — the existing FIFO tests stay green **unchanged** — holds: not one pre-existing assertion
+in that file or in `test_stream_renderer.py` was touched. Case 5 extends the two existing
+`tool_call_id` assertions in place, so the "`tool_call_id` unchanged" guarantee and the new
+`tool_run_id` assertion sit on the same event. Cases 6 and 7 are
+`test_same_tool_out_of_order_results_pair_by_run_id` and
+`test_cancel_resolves_the_open_same_name_unit` in `tests/icoder/test_app_pilot.py`; case 7 is
+strengthened to two same-name units (one completed, one open) so a name-FIFO regression would
+cancel the wrong row.
+
+Case 1 asserts exact durations (2000ms / 5000ms) against a scripted clock: `time` is
+monkeypatched **on the renderer module** rather than `time.monotonic` globally, so a background
+thread cannot consume the script.
+
+### Checks
+
+`run_pylint_check` clean on `llm/formatting`, `icoder/ui`, `tests/llm/formatting` and
+`tests/icoder`; `run_mypy_check` (strict) reports only the 9 pre-existing errors of Steps 4–7
+(stale `mcp_workspace`, absent `mcp.server.fastmcp`), none in a file this step touches;
+`run_lint_imports_check` 21/21 kept; `run_format_code` reformatted `ui/stream_view.py` and the
+renderer test file (applied, re-verified green afterwards); `check_file_size(max_lines=750)`
+clean — `agent.py` gains its two lines and stays under the gate.
+
+Pytest: `tests/llm/formatting` + the two langchain streaming files (155 passed);
+`tests/icoder/test_app_pilot.py` + `tests/icoder/ui/` + `tests/icoder/test_replay.py` +
+`tests/llm/formatting` (290 passed, `textual_integration` included — the pilot tests are run
+unfiltered, so both new UI cases execute).
+
+**Local environment caveats (all pre-existing, unchanged from Steps 1–7):** the stale installed
+`mcp_workspace` still breaks pytest collection repo-wide, so every run used
+`PYTHONPATH=C:\Users\Marcus\Documents\GitHub\mcp-workspace\src`; whole-repo runs still exceed the
+tool's 300s timeout, so verification used the targeted runs above. The fast `tests/llm` selection
+still has the same four pre-existing failures Steps 3 and 7 recorded (three
+`test_copilot_integration.py` cases against the real `copilot` CLI, and
+`test_langchain_exceptions.py::test_connection_errors_contains_httpx_connect_error` with `httpx`
+absent) — none of them touches anything this step changed.

@@ -43,6 +43,9 @@ class TestRunAgentStreamToolOutput:
         assert tool_results[0]["name"] == "search_tool"
         assert tool_results[0]["tool_call_id"] == "tc-123"
         assert tool_results[0]["output"] == "test result"
+        # tool_call_id is the model's own call id here; tool_run_id is the
+        # langgraph run_id that pairs this result with its tool_use_start.
+        assert tool_results[0]["tool_run_id"] == "run-1"
 
     async def test_tool_result_structured_content(self) -> None:
         """artifact.structured_content is extracted as JSON string."""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable, Iterator
 from datetime import datetime
 from pathlib import Path
@@ -1167,6 +1168,108 @@ async def test_cancel_synthesizes_cancelled_tool_unit(
         assert tool.is_error is True
         assert tool.duration_ms is None
         assert any("(cancelled)" in ln for ln in output.rendered_lines)
+
+
+async def test_same_tool_out_of_order_results_pair_by_run_id(
+    make_icoder_app: Callable[..., ICoderApp],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Two calls to the same tool pair by tool_run_id, not by arrival order."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {"file_path": "a.py"},
+                "tool_run_id": "run-a",
+            }
+        )
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {"file_path": "b.py"},
+                "tool_run_id": "run-b",
+            }
+        )
+        with caplog.at_level(logging.WARNING):
+            # The gated call (a) resolves *after* the ungated one (b).
+            app._handle_stream_event(
+                {
+                    "type": "tool_result",
+                    "name": "mcp__mcp-workspace__read_file",
+                    "output": "b output",
+                    "tool_run_id": "run-b",
+                }
+            )
+            app._handle_stream_event(
+                {
+                    "type": "tool_result",
+                    "name": "mcp__mcp-workspace__read_file",
+                    "output": "a output",
+                    "tool_run_id": "run-a",
+                }
+            )
+        await pilot.pause()
+
+        tool_units = [u for u in output._units.values() if u.kind == "tool"]
+        assert len(tool_units) == 2
+        by_arg = {(u.args or {})["file_path"]: u for u in tool_units}
+        assert by_arg["a.py"].output == "a output"
+        assert by_arg["b.py"].output == "b output"
+        assert "desync" not in caplog.text
+
+
+async def test_cancel_resolves_the_open_same_name_unit(
+    make_icoder_app: Callable[..., ICoderApp],
+) -> None:
+    """Orphan cleanup cancels the still-open unit, not the completed one."""
+    app = make_icoder_app(responses=[])
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        output = app.query_one(OutputLog)
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {"file_path": "a.py"},
+                "tool_run_id": "run-a",
+            }
+        )
+        app._handle_stream_event(
+            {
+                "type": "tool_use_start",
+                "name": "mcp__mcp-workspace__read_file",
+                "args": {"file_path": "b.py"},
+                "tool_run_id": "run-b",
+            }
+        )
+        app._handle_stream_event(
+            {
+                "type": "tool_result",
+                "name": "mcp__mcp-workspace__read_file",
+                "output": "a output",
+                "tool_run_id": "run-a",
+            }
+        )
+        await pilot.pause()
+
+        # Cancel while the second (same-name) call is still open.
+        app._cleanup_orphan_tools()
+        await pilot.pause()
+
+        by_arg = {
+            (u.args or {})["file_path"]: u
+            for u in output._units.values()
+            if u.kind == "tool"
+        }
+        assert by_arg["a.py"].output == "a output"
+        assert by_arg["a.py"].is_error is False
+        assert by_arg["b.py"].output == "(cancelled)"
+        assert by_arg["b.py"].is_error is True
 
 
 async def test_stream_done_clears_renderer_fifo(

@@ -30,6 +30,7 @@ from mcp_coder.llm.formatting.render_actions import (
 from mcp_coder.llm.formatting.stream_renderer import (
     StreamEventRenderer,
     format_tool_start,
+    pop_pending_tool,
 )
 from mcp_coder.llm.types import StreamEvent
 
@@ -62,9 +63,10 @@ class StreamViewApp(App[None]):
         # Open assistant turn (clickable unit) currently accumulating text.
         self._current_turn_id: str | None = None
         self._current_turn_text: str = ""
-        # Per raw-tool-name FIFO of open tool unit ids awaiting a result.
-        # Mirrors the renderer's own ``_pending`` FIFO (positional matching).
-        self._open_tool_units: dict[str, deque[str]] = {}
+        # FIFO of open tool units awaiting a result:
+        # (tool_run_id, raw_name, unit_id). Mirrors the renderer's own
+        # ``_pending`` FIFO and is popped by the same ``pop_pending_tool``.
+        self._open_tool_units: deque[tuple[str | None, str, str]] = deque()
         self._unit_counter: int = 0
         self._cancel_event = threading.Event()
 
@@ -156,21 +158,23 @@ class StreamViewApp(App[None]):
             self._current_turn_text = ""
 
     def _cleanup_orphan_tools(self) -> None:
-        """Resolve still-open tool units as cancelled and reset the FIFOs.
+        """Resolve still-open tool units as cancelled and reset the FIFO.
 
         Asks the renderer to synthesize cancelled ``ToolResult``s for any
         orphaned tool starts, then updates the matching open tool unit (by
-        raw name, positional FIFO) to a cancelled state. Any deque left
-        non-empty after pairing signals a FIFO desync between the renderer
-        and this app: it is WARN-logged (not silently swept) before clearing.
+        ``tool_run_id``, or name-FIFO when the provider emits no id) to a
+        cancelled state. Any entry left over after pairing signals a FIFO
+        desync between the renderer and this app: it is WARN-logged (not
+        silently swept) before clearing.
         """
         output = self.query_one(OutputLog)
         for cancelled in self._renderer.cleanup_pending():
-            dq = self._open_tool_units.get(cancelled.raw_name)
-            if dq:
-                unit_id = dq.popleft()
+            entry = pop_pending_tool(
+                self._open_tool_units, cancelled.tool_run_id, cancelled.raw_name
+            )
+            if entry is not None:
                 output.update_unit_and_rerender(
-                    unit_id,
+                    entry[2],
                     output="(cancelled)",
                     output_lines=("(cancelled)",),
                     total_lines=1,
@@ -179,14 +183,12 @@ class StreamViewApp(App[None]):
                     is_error=True,
                     full_text="(cancelled)",
                 )
-        for raw_name, dq in self._open_tool_units.items():
-            if dq:
-                logger.warning(
-                    "FIFO desync: %d open tool units remain for %s after cleanup",
-                    len(dq),
-                    raw_name,
-                )
-                dq.clear()
+        if self._open_tool_units:
+            logger.warning(
+                "FIFO desync: %d open tool units left over after cleanup",
+                len(self._open_tool_units),
+            )
+            self._open_tool_units.clear()
 
     def _handle_stream_event(
         self, event: StreamEvent, *, replay_mode: bool = False
@@ -257,10 +259,12 @@ class StreamViewApp(App[None]):
                 start_lines,
                 style=STYLE_TOOL_OUTPUT,
             )
-            self._open_tool_units.setdefault(action.raw_name, deque()).append(tool_id)
+            self._open_tool_units.append((action.tool_run_id, action.raw_name, tool_id))
         elif isinstance(action, ToolResult):
-            dq = self._open_tool_units.get(action.raw_name)
-            unit_id = dq.popleft() if dq else None
+            entry = pop_pending_tool(
+                self._open_tool_units, action.tool_run_id, action.raw_name
+            )
+            unit_id = entry[2] if entry is not None else None
             if unit_id is None:
                 logger.warning(
                     "FIFO desync: no open tool unit for ToolResult %s",

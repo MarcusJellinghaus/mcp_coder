@@ -144,6 +144,8 @@ class TestRunAgentStream:
         assert tool_starts[0]["name"] == "search_tool"
         assert tool_starts[0]["args"] == {"query": "test"}
         assert tool_starts[0]["tool_call_id"] == "run-1"
+        # tool_run_id is the pairing key (same run_id on both tool events).
+        assert tool_starts[0]["tool_run_id"] == "run-1"
 
     async def test_on_tool_end_error_status_emits_tool_result_with_is_error(
         self,

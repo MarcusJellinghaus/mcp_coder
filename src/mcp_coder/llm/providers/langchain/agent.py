@@ -597,6 +597,7 @@ async def run_agent_stream(
                     "name": name,
                     "args": input_data,
                     "tool_call_id": run_id,
+                    "tool_run_id": run_id,
                 }
 
             elif event_kind == "on_chat_model_end":
@@ -640,6 +641,7 @@ async def run_agent_stream(
                     "name": name,
                     "output": result_text,
                     "tool_call_id": tool_call_id,
+                    "tool_run_id": run_id,
                     "is_error": is_error,
                 }
 

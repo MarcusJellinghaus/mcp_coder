@@ -125,9 +125,16 @@ unchanged local environment caveats.
 
 Details: [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
+
+Notes: implemented as specified — no shape deviations. Two small additions (a private
+`_read_run_id` narrowing helper; `_pair_pending` kept as a two-line wrapper) and the full
+test-case mapping are recorded in the "Implementation note" at the end of
+[step_8.md](./steps/step_8.md), which also repeats the unchanged local environment caveats
+(stale installed `mcp_workspace` forcing a `PYTHONPATH` workaround; whole-suite runs time out
+locally, so verification used targeted per-file runs; four pre-existing `tests/llm` failures).
 
 ### Step 9: Wiring — CLI → gateway / `RealLLMService` / `AppCore` (+ R16 gate, + UI branch)
 

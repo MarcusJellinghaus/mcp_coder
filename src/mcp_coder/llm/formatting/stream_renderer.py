@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import time
 from collections import deque
+from typing import Any
 
 from ..types import StreamEvent
 from .render_actions import (
@@ -32,6 +33,62 @@ _HEAD_LINES = 10
 _TAIL_LINES = 5
 _TRUNCATION_THRESHOLD = _HEAD_LINES + _TAIL_LINES  # 15
 _MAX_INLINE_LEN = 100
+
+
+def pop_pending_tool(
+    pending: deque[tuple[str | None, str, Any]],
+    run_id: str | None,
+    name: str,
+) -> tuple[str | None, str, Any] | None:
+    """Pop the pending tool entry matching *run_id*, else the first by *name*.
+
+    Entries are ``(tool_run_id, raw_name, payload)``; the payload is opaque
+    here (a monotonic start time for the renderer, an open unit id for the UI).
+
+    Matching is id-keyed whenever *run_id* is supplied: a supplied id that
+    matches nothing pending returns ``None`` rather than falling back, because
+    both langchain tool events carry the same ``run_id`` — a miss is a genuine
+    desync, and name-FIFO there would attach the result to some *other* call of
+    the same tool.
+
+    The name-FIFO fallback is reached **only** when *run_id* is ``None``: the
+    Claude and Copilot streaming paths emit no correlation id at all, and
+    neither do logs recorded before ``tool_run_id`` existed.
+
+    Args:
+        pending: FIFO of open tool entries; the matched entry is removed.
+        run_id: The result's ``tool_run_id``, or ``None`` when it carries none.
+        name: Raw tool name, used by the fallback branch only.
+
+    Returns:
+        The matched entry, or ``None`` when nothing matches (an unpaired
+        result).
+    """
+    if run_id:
+        for i, entry in enumerate(pending):
+            if entry[0] == run_id:
+                del pending[i]
+                return entry
+        return None
+    for i, entry in enumerate(pending):
+        if entry[1] == name:
+            del pending[i]
+            return entry
+    return None
+
+
+def _read_run_id(event: StreamEvent) -> str | None:
+    """Read the optional ``tool_run_id`` correlation key off a tool event.
+
+    Args:
+        event: A ``tool_use_start`` or ``tool_result`` stream event.
+
+    Returns:
+        The id as a string, or ``None`` when the event carries none (the
+        Claude/Copilot shape, and any pre-``tool_run_id`` log).
+    """
+    run_id = event.get("tool_run_id")
+    return str(run_id) if run_id else None
 
 
 def _format_tool_name(name: str) -> str:
@@ -362,7 +419,8 @@ class StreamEventRenderer:
 
     def __init__(self, *, format_tools: bool = True) -> None:
         self._format_tools = format_tools
-        self._pending: deque[tuple[str, float]] = deque()
+        # (tool_run_id, raw_name, monotonic start)
+        self._pending: deque[tuple[str | None, str, float]] = deque()
 
     def render(self, event: StreamEvent) -> RenderAction | None:
         """Map a single stream event to a render action.
@@ -381,11 +439,13 @@ class StreamEventRenderer:
             args = event.get("args", {})
             if not isinstance(args, dict):
                 args = {}
-            self._pending.append((name, time.monotonic()))
+            run_id = _read_run_id(event)
+            self._pending.append((run_id, name, time.monotonic()))
             return ToolStart(
                 display_name=_format_tool_name(name),
                 raw_name=name,
                 args=args,
+                tool_run_id=run_id,
             )
 
         if event_type == "tool_result":
@@ -394,7 +454,8 @@ class StreamEventRenderer:
             output_lines, total_lines, truncated = _render_tool_output(
                 output, format_tools=self._format_tools
             )
-            duration_ms = self._pair_pending(name)
+            run_id = _read_run_id(event)
+            duration_ms = self._pair_pending(run_id, name)
             return ToolResult(
                 name=_format_tool_name(name),
                 raw_name=name,
@@ -403,6 +464,7 @@ class StreamEventRenderer:
                 truncated=truncated,
                 is_error=bool(event.get("is_error", False)),
                 duration_ms=duration_ms,
+                tool_run_id=run_id,
             )
 
         if event_type == "error":
@@ -413,30 +475,35 @@ class StreamEventRenderer:
 
         return None
 
-    def _pair_pending(self, name: str) -> int | None:
-        """Pop the first pending start matching *name* and compute its duration.
+    def _pair_pending(self, run_id: str | None, name: str) -> int | None:
+        """Pop the pending start for this result and compute its duration.
 
-        Walks the FIFO left-to-right and removes the first entry whose raw
-        name equals *name* (positional matching within the same name).
+        Delegates the lookup to :func:`pop_pending_tool` — id-keyed on
+        *run_id*, with a name-FIFO fallback only for the id-less providers.
+
+        Args:
+            run_id: The result's ``tool_run_id``, or ``None`` when absent.
+            name: Raw tool name.
 
         Returns:
             Elapsed time in milliseconds for the matched start, or ``None``
             when no pending start matches (an unpaired result).
         """
-        for i, (pending_name, start) in enumerate(self._pending):
-            if pending_name == name:
-                del self._pending[i]
-                return int((time.monotonic() - start) * 1000)
-        return None
+        entry = pop_pending_tool(self._pending, run_id, name)
+        if entry is None:
+            return None
+        start: float = entry[2]
+        return int((time.monotonic() - start) * 1000)
 
     def cleanup_pending(self) -> list[ToolResult]:
         """Synthesize cancelled-result actions for every orphaned tool start.
 
         Builds one ``ToolResult`` per still-pending ``tool_use_start`` (in
         FIFO order), each marked ``is_error=True`` with ``output_lines``
-        ``["(cancelled)"]`` and ``duration_ms=None``. The raw tool name is
-        preserved on ``raw_name`` so the caller can locate the matching open
-        tool unit via the per-name FIFO. Clears the FIFO.
+        ``["(cancelled)"]`` and ``duration_ms=None``. The originating
+        ``tool_run_id`` and raw tool name are preserved so the caller can
+        locate the matching open tool unit the same way a live result does.
+        Clears the FIFO.
 
         Called by the app layer on cancellation and on ``StreamDone``.
 
@@ -453,8 +520,9 @@ class StreamEventRenderer:
                 truncated=False,
                 is_error=True,
                 duration_ms=None,
+                tool_run_id=run_id,
             )
-            for name, _start in self._pending
+            for run_id, name, _start in self._pending
         ]
         self._pending.clear()
         return results
