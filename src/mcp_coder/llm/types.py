@@ -98,9 +98,13 @@ StreamEvent = dict[str, object]
 - {"type": "tool_result", "name": "...", "output": "...", "is_error": bool} — tool
   call result; the optional ``is_error`` flag (default ``False`` when absent)
   signals the tool reported a failure
-- {"type": "approval_request", "approval_id": "...", "tool": "...", "args": {...}} —
-  an ``ask``-gated MCP call is parked on a human decision (langchain provider
-  only). **Transient** (see ``TRANSIENT_EVENT_TYPES``): never persisted, never
+- {"type": "approval_request", "approval_id": "...", "tool_name": "...",
+  "args": {...}, "source": "..."} — an ``ask``-gated MCP call is parked on a
+  human decision (langchain provider only); ``approval_id`` is the key the UI
+  answers with, and ``source`` is the plain-string provenance of the asking
+  decision (bare layer name, ``"frame"`` or ``"default"`` — never a
+  ``Decision.Source`` dataclass, so the payload stays JSON-safe).
+  **Transient** (see ``TRANSIENT_EVENT_TYPES``): never persisted, never
   replayed. Exactly one is outstanding at a time
 - {"type": "error", "message": "...", "reason": "..."} — error during stream; the
   optional ``reason`` discriminator (e.g. ``"inactivity_timeout"``, ``"nonzero_exit"``)

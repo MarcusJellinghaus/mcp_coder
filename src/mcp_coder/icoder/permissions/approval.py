@@ -253,9 +253,12 @@ class ApprovalEngine:
         Args:
             tool_name: The canonical ``mcp__server__tool`` name being called.
             args: The call arguments (copied into the emitted payload).
-            source: Plain-string provenance of the decision that asked, e.g.
-                ``"layer:project"`` — never a ``Decision.Source`` dataclass, so
-                the payload stays JSON-safe.
+            source: Plain-string provenance of the decision that asked, as
+                produced by ``gateway._source_label``: the bare layer name for
+                a ``Layer`` (``"user"`` / ``"project"`` / ``"local"`` /
+                ``"runtime"``), ``"frame"`` for a ``Frame``, ``"default"``
+                otherwise — never a ``Decision.Source`` dataclass, so the
+                payload stays JSON-safe.
 
         Returns:
             The decision to apply. A fail-closed deny carrying
@@ -271,7 +274,23 @@ class ApprovalEngine:
         self._pending[approval_id] = _PendingApproval(
             future, _payload(approval_id, tool_name, args, source)
         )
-        if len(self._pending) == 1:  # only the front entry is ever emitted
+        # Re-check AFTER the insert, not only before it. Both teardown paths
+        # walk the registry from another thread, so either can run between the
+        # guard above and this insert and miss this entry: ``detach()`` cancels
+        # then clears, and ``cancel_all()`` schedules nothing at all when it
+        # reads ``_loop`` while it is still ``None`` — which is exactly the
+        # state a turn is in until its *first* approval assigns it two lines
+        # up. Cancelling here is what the teardown would have done; without it
+        # the interceptor parks on a future nothing can reach, and since a
+        # pending approval suspends both streaming timeouts that wedges the
+        # turn permanently.
+        # (Read the sink through :meth:`is_attached` rather than testing the
+        # attribute again: a second `self._emit is None` test looks unreachable
+        # to a single-threaded type checker, which is precisely the assumption
+        # this re-check exists to deny.)
+        if self._cancelled or not self.is_attached():
+            future.cancel()
+        elif len(self._pending) == 1:  # only the front entry is ever emitted
             self._emit_front()
         try:
             return await future  # CancelledError propagates to the gateway
