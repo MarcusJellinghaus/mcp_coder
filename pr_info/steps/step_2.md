@@ -25,6 +25,14 @@ One commit: tests + implementation + docs, all three checks passing.
 If any of these fail, **stop** and report that the upstream dependency has not landed. Do
 not stub, vendor, or locally re-implement the upstream names.
 
+> **Precondition re-checked 2026-08-30 — still blocked.** `origin/main` of mcp-workspace
+> (head `b9106c4`, last `checks` commit `a1f0eac` / #244) contains no `LinkedBranchStatus`
+> and no `linked_branch_blocks`; a repo-wide grep of the mcp-workspace tree returns 0
+> matches, and the installed package exports neither name. Branch
+> `origin/268-check-branch-status-verify-the-issue-s-linked-branch-matches-the-current-branch`
+> still exists unmerged. Reinstalling would not help — the names are absent from `main`
+> itself. No code written.
+
 ---
 
 ## WHERE
