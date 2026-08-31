@@ -105,15 +105,21 @@ class _FakeBridge:
     # --- driver side, called from the agent thread ---
 
     def open_approval(self, approval_id: str = "a1") -> None:
-        """Register an approval and emit its request, in that order."""
+        """Register an approval and emit its request, in that order.
+
+        The payload mirrors ``approval.py``'s ``_payload`` key for key: no
+        assertion here reads those keys, but #1046 codes against the real shape
+        and a fake that documents a different one is a trap.
+        """
         self._pending += 1
         if self._emit is not None:
             self._emit(
                 {
                     "type": "approval_request",
                     "approval_id": approval_id,
-                    "tool": "ping",
+                    "tool_name": "ping",
                     "args": {},
+                    "source": "project",
                 }
             )
 
@@ -212,7 +218,15 @@ def test_pause_defeats_both_timeouts() -> None:
     """A tool that outlasts both timeouts still completes while an approval pends.
 
     The pause is 1.6s: longer than the 1s inactivity timeout (so ``queue.Empty``
-    fires at least once) and longer than the 0.5s overall cap.
+    fires at least once) and longer than the 1.5s overall cap.
+
+    The cap is a ceiling on *setup* latency, not on the pause: ``start`` is taken
+    before ``attach()``, the thread construction and the agent thread's
+    ``asyncio.run`` bootstrap, and none of that interval is ever credited to
+    ``paused`` — so the first event's ``_elapsed()`` is raw setup cost, and a cap
+    below it kills the turn on a loaded box. It cannot be raised past the 1.6s
+    pause either: beyond that a turn that lost the ``paused`` credit would still
+    finish under the cap, and the credit would stop being load-bearing here.
     """
     bridge = _FakeBridge()
 
@@ -223,7 +237,7 @@ def test_pause_defeats_both_timeouts() -> None:
         bridge.close_approval()
         yield {"type": "done", "session_id": "s1"}
 
-    with _patched(_script, overall=0.5):
+    with _patched(_script, overall=1.5):
         events = list(_turn(bridge))
 
     assert [e["type"] for e in events] == ["text_delta", "approval_request", "done"]
@@ -237,8 +251,13 @@ def test_sub_inactivity_pause_is_excluded_from_the_overall_cap() -> None:
 
     ``timeout`` is 30s here, so the 1s pause never expires a ``q.get`` — there is
     no ``queue.Empty`` to hang an accumulator off. Only the timestamped window
-    keeps the turn under the 0.3s cap; ``paused += timeout`` in the
+    keeps the turn under the 0.9s cap; ``paused += timeout`` in the
     ``queue.Empty`` branch would credit nothing and the turn would die.
+
+    0.9s is the widest cap that keeps that true (the pause is 1.0s), and the cap
+    has to absorb the turn's whole setup latency — see
+    :func:`test_pause_defeats_both_timeouts` for why none of it is credited to
+    ``paused``.
     """
     bridge = _FakeBridge()
 
@@ -250,7 +269,7 @@ def test_sub_inactivity_pause_is_excluded_from_the_overall_cap() -> None:
 
     from mcp_coder.llm.providers.langchain import _ask_agent_stream
 
-    with _patched(_script, overall=0.3):
+    with _patched(_script, overall=0.9):
         events = list(
             _ask_agent_stream(
                 question="Hi",
@@ -300,6 +319,11 @@ def test_without_a_bridge_the_same_turn_times_out() -> None:
 
     Proves the pause is load-bearing rather than vacuous: nothing else in the
     setup keeps tests 1 and 2b alive.
+
+    The overall cap is deliberately far out of the way. What this test pins is
+    the *inactivity* message, and with no bridge there is no pause window at
+    all — so a cap tight enough to be tripped by setup latency would raise the
+    overall ``TimeoutError`` instead and fail the ``match``.
     """
     bridge = _FakeBridge()  # never attached; only drives the script's timing
 
@@ -310,7 +334,7 @@ def test_without_a_bridge_the_same_turn_times_out() -> None:
         bridge.close_approval()
         yield {"type": "done", "session_id": "s1"}
 
-    with _patched(_script, overall=0.5):
+    with _patched(_script, overall=5.0):
         with pytest.raises(
             TimeoutError, match=r"no response for 1s\. Connection closed"
         ):

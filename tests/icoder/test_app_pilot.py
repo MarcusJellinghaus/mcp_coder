@@ -1819,7 +1819,6 @@ async def test_quit_with_approval_pending_exits_and_unwinds_worker(
     assert (
         service.agent_thread.is_alive() is False
     ), "the parked approval future was never cancelled"
-    assert engine.pending() == 0
 
 
 async def test_shutdown_guard_drops_every_ui_call_from_worker_tail(

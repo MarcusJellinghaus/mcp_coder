@@ -343,16 +343,23 @@ class ApprovalEngine:
         self._pending[approval_id] = _PendingApproval(
             future, _payload(approval_id, tool_name, args, source)
         )
-        # Re-check AFTER the insert, not only before it. Both teardown paths
-        # walk the registry from another thread, so either can run between the
-        # guard above and this insert and miss this entry: ``detach()`` cancels
-        # then clears, and ``cancel_all()`` schedules nothing at all when it
-        # reads ``_loop`` while it is still ``None`` — which is exactly the
-        # state a turn is in until its *first* approval assigns it two lines
-        # up. Cancelling here is what the teardown would have done; without it
-        # the interceptor parks on a future nothing can reach, and since a
-        # pending approval suspends both streaming timeouts that wedges the
-        # turn permanently.
+        # Re-check AFTER the insert, not only before it. Both teardown paths run
+        # on another thread and can land anywhere between the guard above and
+        # this insert, where neither reaches this entry:
+        #   * ``detach()`` cancels the futures it can see and then clears the
+        #     registry, so an entry inserted around it is dropped uncancelled,
+        #     onto a turn whose sink is already gone;
+        #   * ``cancel_all()`` schedules nothing when it reads ``_loop`` before
+        #     the assignment above binds it — which is this turn's state until
+        #     its *first* approval. Landing after that assignment it *does*
+        #     schedule ``_cancel_all_on_loop``, which runs on this loop and does
+        #     find the entry; the re-check still matters there, because it stops
+        #     an ``approval_request`` for an abandoned turn being emitted (and
+        #     the caller parked) in the meantime.
+        # Cancelling here is what the teardown would have done; without it the
+        # interceptor parks on a future nothing can reach, and since a pending
+        # approval suspends both streaming timeouts that wedges the turn
+        # permanently.
         # (Read the sink through :meth:`is_attached` rather than testing the
         # attribute again: a second `self._emit is None` test looks unreachable
         # to a single-threaded type checker, which is precisely the assumption

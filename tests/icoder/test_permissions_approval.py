@@ -54,11 +54,12 @@ def _teardown_during_insert(
 ) -> None:
     """Run *teardown* inside ``request_approval``'s guard-to-insert window.
 
-    Both teardown paths walk the registry from another thread, so either can run
-    after ``request_approval``'s opening guard but before the insert that
-    follows it — seeing an empty registry, and therefore missing the entry that
-    is about to be added. ``uuid4()`` is called in exactly that window, so
-    hooking it turns the race into a deterministic interleaving.
+    Both teardown paths run from another thread, so either can land after
+    ``request_approval``'s opening guard but before the insert that follows it —
+    reading a registry the entry has not reached yet. ``uuid4()`` is called in
+    exactly that window, so hooking it turns the race into a deterministic
+    interleaving. Note that it is called *after* ``_loop`` is bound, which is
+    what each test's docstring reasons from.
 
     Args:
         monkeypatch: The active monkeypatch fixture.
@@ -269,11 +270,13 @@ async def test_cancel_all_racing_the_insert_cancels_the_new_future(
 ) -> None:
     """The same window, entered by the direct cancel channel.
 
-    ``cancel_all()`` hands the cancellation to the agent loop, so it walks a
-    registry this entry has not reached yet and cannot cancel it. Without the
-    re-check the engine goes on to *emit* an ``approval_request`` for a turn the
-    user has already cancelled — pushing a modal that must never appear — and
-    only unparks the caller later, once the deferred sweep happens to run.
+    ``cancel_all()`` hands the cancellation to the agent loop, and the hook fires
+    after ``request_approval`` has bound ``_loop`` — so ``_cancel_all_on_loop``
+    really is scheduled here, and would find this entry when it eventually runs.
+    What the re-check buys is the ordering: without it the engine first *emits*
+    an ``approval_request`` for a turn the user has already cancelled — pushing a
+    modal that must never appear — and unparks the caller only later, once that
+    deferred sweep gets its turn on the loop.
     """
     engine = ApprovalEngine()
     events: list[StreamEvent] = []

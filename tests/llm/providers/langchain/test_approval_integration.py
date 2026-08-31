@@ -25,9 +25,10 @@ model's tool call unpaired, so ``create_react_agent`` raises
 ``INVALID_CHAT_HISTORY`` and the agent never continues. Test 2 is that
 regression, and it can only be one if the id is genuinely the model's.
 
-Session storage needs no isolation here: this directory's autouse ``_tmp_home``
-fixture already redirects ``Path.home()`` to ``tmp_path`` (R12), which is where
-``run_agent_stream``'s unconditional history write lands.
+Session storage goes to ``tmp_path``: this directory's autouse ``_tmp_home``
+fixture redirects ``Path.home()`` (R12), which is where ``run_agent_stream``'s
+unconditional history write lands. ``_patched_provider`` asserts that rather
+than trusting it.
 
 Every ``pytest.importorskip`` and every langchain import lives *inside* a
 function, and both fake models are subclassed inside one — see
@@ -43,6 +44,7 @@ import time
 from collections.abc import Callable, Generator, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Annotated, Any, cast
 from unittest.mock import patch
 from uuid import uuid4
@@ -85,6 +87,11 @@ _JOIN_TIMEOUT = 20.0
 
 #: How long a test waits for an event to reach the consumer.
 _EVENT_TIMEOUT = 20.0
+
+
+#: The developer's real home, read at import time — before any test's redirect
+#: — so :func:`_patched_provider` can refuse to write session files into it.
+_REAL_HOME = Path.home()
 
 
 # --- the adapter request shape ------------------------------------------------
@@ -356,7 +363,9 @@ def _patched_provider(model: Any) -> Iterator[None]:
     chat-model factory and the adapter/langgraph dependency assertion (``tools``
     is passed explicitly, so no MCP adapter is needed). History *loading* is
     stubbed because the session ids here are synthetic; the **write** is left
-    real and lands under the autouse ``_tmp_home`` redirect.
+    real and lands under the autouse ``_tmp_home`` redirect — enforced here,
+    because that fixture exempts ``langchain_integration``-marked nodes and
+    marking this module would silently start writing to the real home.
 
     Args:
         model: The chat model ``_create_chat_model`` should hand back.
@@ -364,6 +373,7 @@ def _patched_provider(model: Any) -> Iterator[None]:
     Yields:
         None, with the provider's agent-mode dependencies stubbed.
     """
+    assert Path.home() != _REAL_HOME, "Path.home() is not redirected to tmp_path"
     with (
         patch(f"{_MOD_LC}.load_langchain_history", return_value=[]),
         patch(f"{_MOD_LC}._create_chat_model", return_value=model),
@@ -690,17 +700,21 @@ def test_generator_close_still_stops_a_turn_with_no_approval_pending(
             seen.append(str(event.get("type")))
             if event.get("type") == "tool_result":
                 break
+        # Before the close, not after: the provider's ``finally`` detaches
+        # unconditionally, so a post-close check discriminates nothing.
+        assert engine.is_attached() is True, "the turn never attached"
         started = time.monotonic()
         gen.close()
         elapsed = time.monotonic() - started
 
     assert "tool_result" in seen, f"the turn produced no tool result; saw {seen}"
-    assert engine.pending() == 0, "nothing should have been pending in this turn"
-    assert engine.is_attached() is False, "the turn never detached"
     assert escaped == [], f"an exception escaped the agent thread: {escaped!r}"
-    assert elapsed < 5.0, (
-        f"close() burned the whole join budget ({elapsed:.1f}s) — the backstop "
-        "did not stop the agent"
+    # Well under the provider's own ``thread.join(timeout=5)``: passing costs
+    # ~0.1s and the bug costs the whole budget, so a 5.0s threshold would sit
+    # exactly on the failure value.
+    assert elapsed < 2.0, (
+        f"close() took {elapsed:.1f}s — the backstop did not stop the agent, so "
+        "the join ran out its budget"
     )
 
     agent_thread = log.agent_thread
