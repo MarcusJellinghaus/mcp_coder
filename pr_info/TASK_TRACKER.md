@@ -188,5 +188,5 @@ records the unchanged local environment caveats and the four pre-existing `tests
 
 ## Pull Request
 
-- [ ] PR review
+- [x] PR review
 - [ ] PR summary
