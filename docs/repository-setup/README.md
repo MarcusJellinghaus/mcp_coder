@@ -60,7 +60,7 @@ The following files in this repository serve as references/templates for other p
 | `.claude/knowledge_base/refactoring_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/software_engineering_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/python.md` | P | No | Yes | — |
-| `.claude/settings.local.json` | G | No | Mostly | Permissions list — gitignored in downstream projects |
+| `.claude/settings.local.json` | G | No | Mostly | Permissions list — tracked downstream; the permission entries differ per repo |
 | `.mcp.json` (+ `.mcp.{linux,windows,macos}.json`) | G | Yes | No | Server paths, project name, `--test-folder`, reference projects |
 | `.github/workflows/label-new-issues.yml` | G | Yes | Yes | — |
 | `.github/workflows/approve-command.yml` | G | Yes | Yes | — |
