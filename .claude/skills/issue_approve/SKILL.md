@@ -59,7 +59,6 @@ This triggers the GitHub Action to promote the issue status (e.g., `status-01:cr
 
    If the label has not changed, report the issue as still sitting at its old status.
 
-6. Report the issue number, the status transition (from → to, or "unchanged"), and the
-   assignee.
+6. Report the issue number and the status transition (from → to, or "unchanged").
 
 **Note:** This skill has `disable-model-invocation` — it can only be run by the user typing `/issue_approve`. If you need this skill as a follow-up, tell the user: "Please run `/issue_approve` to proceed."
