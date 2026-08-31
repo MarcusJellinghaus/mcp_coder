@@ -41,7 +41,15 @@ from tests.llm.providers.langchain.approval_harness import (
 )
 
 #: Generous upper bound on how long the unwind may take to reach the sentinel.
-_DRAIN_TIMEOUT = 5.0
+#: Deliberately far above the probe's measured cost (~4.7s idle and serial):
+#: under ``-n auto`` this probe competes with the other workers for the CPU, and
+#: a deadline near the measured cost turns that contention into a flake. Only
+#: the production ``thread.join(timeout=5)`` below keeps its real budget — that
+#: one is the acceptance criterion, not a harness deadline.
+_DRAIN_TIMEOUT = 30.0
+
+#: Same reasoning, for the wait until the tool parks on its Future.
+_GATE_TIMEOUT = 30.0
 
 
 @dataclass
@@ -122,7 +130,9 @@ def _run_cancel_probe() -> _ProbeResult:
     thread = threading.Thread(target=_thread_main, daemon=True)
     thread.start()
 
-    assert wait_for(lambda: gate.fired), "the tool never reached its await"
+    assert wait_for(
+        lambda: gate.fired, timeout=_GATE_TIMEOUT
+    ), "the tool never reached its await"
     loop = gate.loop
     future = gate.future
     assert loop is not None and future is not None

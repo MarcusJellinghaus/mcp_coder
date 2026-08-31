@@ -242,10 +242,10 @@ class ApprovalEngine:
         """Whether a cancel was *requested* for this turn.
 
         Set by every :meth:`cancel_all`, including one that found nothing to
-        cancel. It stops further emits and fail-closes later approval requests,
-        so it is a statement about the channel, not about the turn's outcome —
-        use :attr:`turn_aborted` for that. Reset by :meth:`attach`, **not** by
-        :meth:`detach`.
+        cancel. It stops further emits and unwinds later approval requests with
+        ``asyncio.CancelledError``, so it is a statement about the channel, not
+        about the turn's outcome — use :attr:`turn_aborted` for that. Reset by
+        :meth:`attach`, **not** by :meth:`detach`.
 
         Returns:
             ``True`` once :meth:`cancel_all` ran for the current turn.
@@ -296,11 +296,26 @@ class ApprovalEngine:
 
         Returns:
             The decision to apply. A fail-closed deny carrying
-            ``_DENY_UNAVAILABLE`` when no prompt is reachable (detached, or the
-            turn is already cancelled) — never a bare deny, which the gateway
-            would render to the model as "denied by the user".
+            ``_DENY_UNAVAILABLE`` when no prompt is reachable because nothing is
+            attached — never a bare deny, which the gateway would render to the
+            model as "denied by the user".
+
+        Raises:
+            asyncio.CancelledError: If the turn is already cancelled. A deny
+                would invite the model to re-plan around a refusal on a turn the
+                user asked to abandon; unwinding is the designed cancel
+                semantics (R7), and the gateway propagates this untouched.
         """
-        if self._cancelled or self._emit is None:
+        # Two conditions, two different answers. ``_cancelled`` is set by every
+        # ``cancel_all()`` and reset only by ``attach()``, so an Escape press
+        # with nothing pending arms it for the rest of the turn: an ``ask``
+        # reached in that window belongs to a turn the user abandoned and must
+        # unwind, not deny. A missing sink is the other case — a non-iCoder
+        # caller, or any window before ``attach`` — where fail-closed denial is
+        # the required behaviour (§2.11).
+        if self._cancelled:
+            raise asyncio.CancelledError
+        if self._emit is None:
             return ApprovalDecision("deny", "once", reason=_DENY_UNAVAILABLE)
         # Bind the loop to a local and create the future from *that*: a racing
         # ``detach()`` nulls ``self._loop`` as its last act, so reading the
@@ -380,7 +395,18 @@ class ApprovalEngine:
         self._cancelled = True
         loop = self._loop
         if loop is not None:
-            loop.call_soon_threadsafe(self._cancel_all_on_loop)
+            try:
+                loop.call_soon_threadsafe(self._cancel_all_on_loop)
+            except RuntimeError:
+                # Same hazard as in :meth:`detach`, reached from the Textual
+                # thread: ``_loop`` stays bound until ``detach()`` nulls it, and
+                # ``asyncio.run`` may have closed that loop first. A closed loop
+                # means nothing is parked, so there is nothing to cancel — and
+                # this runs on a key press and on app shutdown, neither of which
+                # may raise.
+                logger.debug(
+                    "cancel_all(): agent loop already closed; nothing to cancel"
+                )
 
     # -- internals ------------------------------------------------------------
 

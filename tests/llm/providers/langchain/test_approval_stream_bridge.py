@@ -351,7 +351,10 @@ def test_detach_runs_when_the_generator_is_closed() -> None:
 
     async def _script() -> AsyncIterator[StreamEvent]:
         yield {"type": "text_delta", "text": "hi"}
-        await asyncio.sleep(5.0)
+        # Just long enough that the agent thread is still inside the script when
+        # ``gen.close()`` lands. The production ``thread.join(timeout=5)`` waits
+        # this out, so every extra second here is paid on every fast-suite run.
+        await asyncio.sleep(0.2)
         yield {"type": "done", "session_id": "s1"}
 
     with _patched(_script):

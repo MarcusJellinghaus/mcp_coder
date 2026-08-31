@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
-from typing import Iterator, Literal
+from typing import TYPE_CHECKING, Iterator, Literal
 
 from mcp_coder.icoder.core.colors import DEFAULT_PROMPT_COLOR, validate_color
 from mcp_coder.icoder.core.command_history import CommandHistory
@@ -37,7 +37,6 @@ from mcp_coder.icoder.core.types import (
 )
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.permissions.approval import ApprovalDecision, ApprovalEngine
-from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
 from mcp_coder.icoder.permissions.model import Rule
 from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import LLMService
@@ -47,6 +46,15 @@ from mcp_coder.llm.types import (
     ResponseAssembler,
     StreamEvent,
 )
+
+if TYPE_CHECKING:
+    # Typing-only on purpose, matching ``services/llm_service.py`` and
+    # ``llm/interface.py``: the gateway imports the langchain provider's
+    # ``permission_bridge``, so a runtime import here would put that submodule
+    # on the runtime path of every importer of ``AppCore`` — the widest import
+    # reach of the three. ``llm_service`` guards its own copy for the same
+    # reason; both are needed, since ``AppCore`` imports that module eagerly.
+    from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
 
 
 class AppCore:

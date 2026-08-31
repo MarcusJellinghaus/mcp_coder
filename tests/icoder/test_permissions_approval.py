@@ -223,8 +223,8 @@ async def test_cancel_all_unwinds_every_awaiting_coroutine() -> None:
 def test_cancel_all_with_nothing_pending_does_not_abort_the_turn() -> None:
     """An idle cancel — or the shutdown hook — leaves the turn recordable.
 
-    ``cancelled`` rises either way: it is what stops further emits and
-    fail-closes later requests. But only a cancel that actually unparked an
+    ``cancelled`` rises either way: it is what stops further emits and unwinds
+    later requests. But only a cancel that actually unparked an
     interceptor unwinds the provider generator past its ``done`` event, and only
     that turn must go unrecorded (R16). ``on_unmount`` fires ``cancel_all()`` on
     *every* quit, so conflating the two would discard the session record of a
@@ -371,6 +371,65 @@ def test_unattached_engine_denies_without_awaiting() -> None:
     assert decision.scope == "once"
     assert decision.reason == _DENY_UNAVAILABLE
     assert engine.pending() == 0
+
+
+def test_cancelled_turn_unwinds_instead_of_denying() -> None:
+    """An ``ask`` reached after a cancel raises rather than refusing the call.
+
+    ``_cancelled`` is armed by *every* ``cancel_all()`` and cleared only by
+    ``attach()``, so an Escape press with nothing pending leaves it set for the
+    rest of the turn while the consumer is still between events. A deny here
+    would hand the model "no approval prompt was reachable" and invite it to
+    re-plan around a refusal on a turn the user asked to abandon; the designed
+    semantics are to unwind (R7), and the gateway propagates ``CancelledError``
+    untouched.
+    """
+    engine = ApprovalEngine()
+    engine.attach(lambda event: None)
+    engine.cancel_all()
+
+    coro = engine.request_approval(tool_name="mcp__srv__tool", args={}, source="user")
+    with pytest.raises(asyncio.CancelledError):
+        coro.send(None)  # raises on the first step -> it never awaited
+
+    assert engine.pending() == 0
+    # The other early return is unchanged: a *detached* engine still fails
+    # closed with the deny reason (#1045 acceptance criterion), and detaching
+    # does not clear ``_cancelled``, so the sink must go first.
+    engine.attach(lambda event: None)
+    engine.detach()
+
+    detached = engine.request_approval(
+        tool_name="mcp__srv__tool", args={}, source="user"
+    )
+    with pytest.raises(StopIteration) as excinfo:
+        detached.send(None)
+
+    decision: ApprovalDecision = excinfo.value.value
+    assert decision.outcome == "deny"
+    assert decision.reason == _DENY_UNAVAILABLE
+
+
+def test_cancel_all_on_a_closed_agent_loop_does_not_raise() -> None:
+    """A quit or Ctrl+C landing after ``asyncio.run`` closed the loop is inert.
+
+    ``_loop`` stays bound until ``detach()`` nulls it, so ``cancel_all()`` can
+    reach a closed loop from the Textual thread — uncaught, that is a
+    ``RuntimeError`` on a key press or mid-shutdown in ``on_unmount``.
+    """
+    engine = ApprovalEngine()
+    engine.attach(lambda event: None)
+
+    loop = asyncio.new_event_loop()
+    future: asyncio.Future[ApprovalDecision] = loop.create_future()
+    loop.close()
+
+    engine._loop = loop
+    engine._pending["stale"] = _PendingApproval(future, {"type": "approval_request"})
+
+    engine.cancel_all()
+
+    assert engine.cancelled is True
 
 
 def test_deny_rejects_a_durable_scope() -> None:

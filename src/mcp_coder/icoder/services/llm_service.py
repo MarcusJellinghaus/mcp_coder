@@ -5,12 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, Protocol, runtime_checkable
 
-from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
 from mcp_coder.icoder.permissions.model import PermissionFrame
 from mcp_coder.llm.interface import prompt_llm_stream
 from mcp_coder.llm.types import StreamEvent
 
 if TYPE_CHECKING:
+    # Typing-only for the same reason, one hop further out: importing the
+    # gateway pulls in the provider's ``permission_bridge``. ``AppCore``
+    # imports this module, so leaving this one eager kept that submodule on
+    # ``AppCore``'s runtime path however ``AppCore`` spelled its own import.
+    from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
+
     # Typing-only on purpose (same reason as ``interface.py``): importing the
     # provider submodule at runtime would eagerly execute the langchain
     # package ``__init__`` for every importer of this service.
