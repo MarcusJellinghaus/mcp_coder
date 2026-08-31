@@ -5,6 +5,7 @@ import pytest
 from mcp_coder.llm.types import (
     LLM_RESPONSE_VERSION,
     SUPPORTED_PROVIDERS,
+    TRANSIENT_EVENT_TYPES,
     LLMResponseDict,
     ResponseAssembler,
     StreamEvent,
@@ -372,6 +373,39 @@ def test_response_assembler_raw_line_excluded_from_events() -> None:
     assert isinstance(events, list)
     assert all(e.get("type") != "raw_line" for e in events)
     assert any(e.get("type") == "text_delta" for e in events)
+
+
+def test_transient_event_types_membership() -> None:
+    """TRANSIENT_EVENT_TYPES names exactly the two never-persisted event types."""
+    assert TRANSIENT_EVENT_TYPES == frozenset({"raw_line", "approval_request"})
+
+
+def test_response_assembler_approval_request_excluded_from_events() -> None:
+    """approval_request is transient: it never reaches raw_response["events"].
+
+    Persisting it would put it into the session .jsonl too, and ui/replay.py
+    re-feeds that log to the live stream handler — i.e. replay would pop a modal
+    nobody can answer (R5).
+    """
+    assembler = ResponseAssembler(provider="langchain")
+    assembler.add({"type": "approval_request", "approval_id": "a1", "tool": "ping"})
+    assembler.add({"type": "raw_line", "line": '{"type":"chunk"}'})
+    assembler.add({"type": "text_delta", "text": "Hi"})
+    assembler.add({"type": "tool_use_start", "name": "ping", "args": {}})
+    assembler.add({"type": "tool_result", "name": "ping", "output": "pong"})
+    assembler.add({"type": "permission_warning", "message": "note"})
+
+    events = assembler.result()["raw_response"]["events"]
+    assert isinstance(events, list)
+    types = [e.get("type") for e in events]
+    assert "approval_request" not in types
+    assert "raw_line" not in types
+    assert types == [
+        "text_delta",
+        "tool_use_start",
+        "tool_result",
+        "permission_warning",
+    ]
 
 
 # --- ResponseAssembler text parity (AC3) tests ---

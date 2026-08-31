@@ -32,7 +32,7 @@ from ._config_diagnostics import (
     validate,
 )
 from ._exceptions import LLMAuthError, LLMConnectionError
-from .agent import _load_mcp_server_config
+from ._mcp_tools import _load_mcp_server_config
 
 logger = logging.getLogger(__name__)
 

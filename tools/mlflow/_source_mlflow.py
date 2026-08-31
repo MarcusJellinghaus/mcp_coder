@@ -16,8 +16,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from mcp_coder.utils.user_app_data import get_user_app_data_dir
-
 from _permission_common import (  # type: ignore[import-not-found]
     analyze_followup,
     bash_verb,
@@ -26,6 +24,8 @@ from _permission_common import (  # type: ignore[import-not-found]
     result_text,
     tool_category,
 )
+
+from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
 
 def get_mlflow_db_path() -> Path:

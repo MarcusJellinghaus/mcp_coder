@@ -36,14 +36,6 @@ Library Alternative:
 
 from __future__ import annotations
 
-# =============================================================================
-# Protected Processes - NEVER kill these, just report as blocking
-# =============================================================================
-PROTECTED_PROCESSES: set[str] = {
-    "explorer.exe",      # Windows Explorer - killing causes desktop issues
-}
-
-
 import argparse
 import os
 import re
@@ -55,6 +47,15 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+# =============================================================================
+# Protected Processes - NEVER kill these, just report as blocking
+# =============================================================================
+PROTECTED_PROCESSES: set[str] = {
+    "explorer.exe",      # Windows Explorer - killing causes desktop issues
+}
+
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable

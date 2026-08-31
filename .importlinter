@@ -51,6 +51,7 @@ ignore_imports =
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.log_inventory
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.env_setup
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions
+    mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.approval
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.gateway
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.permissions.skill_frame
     mcp_coder.cli.commands.icoder -> mcp_coder.icoder.core.command_registry
@@ -383,6 +384,7 @@ source_modules =
     mcp_coder.icoder.permissions.loader
     mcp_coder.icoder.permissions.skill_tools
     mcp_coder.icoder.permissions.skill_frame
+    mcp_coder.icoder.permissions.approval
 forbidden_modules =
     mcp_coder.icoder.skills
     mcp_coder.icoder.core

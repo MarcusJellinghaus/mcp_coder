@@ -399,7 +399,7 @@ class TestImportCycle:
             del sys.modules[name]
         try:
             package = importlib.import_module(_PACKAGE)
-            assert package.validate is not None
+            assert package.dialed_url is not None
         finally:
             for name in [
                 n for n in list(sys.modules) if n == _PACKAGE or n.startswith(prefix)

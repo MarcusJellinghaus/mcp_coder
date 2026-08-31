@@ -9,12 +9,15 @@ from ...icoder.core.event_log import emit_session_start, read_session_id_from_lo
 from ...icoder.core.log_inventory import list_icoder_logs
 from ...icoder.env_setup import setup_icoder_environment
 from ...icoder.permissions import load_permission_config
+from ...icoder.permissions.approval import ApprovalEngine
 from ...icoder.permissions.gateway import LangchainEnforcementGateway
 from ...icoder.permissions.skill_frame import build_frame
 from ...icoder.ui.widgets.session_picker import run_startup_picker
+from ...llm.providers.langchain._mcp_tools import (  # noqa: PLC2701
+    _load_mcp_server_config,
+)
 from ...llm.providers.langchain.agent import (  # noqa: PLC2701
     _assert_tool_interceptors_supported,
-    _load_mcp_server_config,
 )
 from ...llm.providers.langchain.mcp_manager import MCPManager
 from ...utils.log_utils import OUTPUT
@@ -97,6 +100,11 @@ def execute_icoder(args: argparse.Namespace) -> int:
         # shared by the interceptor (call level) and RealLLMService (turn level).
         mcp_manager: MCPManager | None = None
         gateway: LangchainEnforcementGateway | None = None
+        # ONE engine instance, referenced three times (gateway, service, core):
+        # the gateway asks it, the provider attaches it per turn, and AppCore is
+        # the UI's only route to it. Hoisted like ``gateway`` because AppCore is
+        # constructed later at outer scope.
+        approval_engine: ApprovalEngine | None = None
         # Hoisted to outer scope: ``config`` only exists inside the langchain
         # gate below, but AppCore is constructed later at outer scope, so a
         # ``config.degraded`` reference at the call site would NameError.
@@ -106,7 +114,8 @@ def execute_icoder(args: argparse.Namespace) -> int:
             _assert_tool_interceptors_supported()
             config = load_permission_config(project_dir)
             permission_degraded = config.degraded
-            gateway = LangchainEnforcementGateway(config)
+            approval_engine = ApprovalEngine()
+            gateway = LangchainEnforcementGateway(config, approval_engine)
             server_config = _load_mcp_server_config(mcp_config, env_vars)
             mcp_manager = MCPManager(
                 server_config, tool_interceptors=[gateway.interceptor]
@@ -200,6 +209,7 @@ def execute_icoder(args: argparse.Namespace) -> int:
             mcp_manager=mcp_manager,
             project_dir=str(project_dir),
             gateway=gateway,
+            approval_bridge=approval_engine,
         )
 
         from ...icoder.core.app_core import AppCore
@@ -221,6 +231,8 @@ def execute_icoder(args: argparse.Namespace) -> int:
                     tool_display=getattr(args, "tool_display", "compressed"),
                     skill_frames=frame_map,
                     permission_degraded=permission_degraded,
+                    approval_engine=approval_engine,
+                    permission_gateway=gateway,
                 )
                 initial_color = getattr(args, "initial_color", None)
                 if initial_color:

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm.providers.langchain.agent import _load_mcp_server_config
+from mcp_coder.llm.providers.langchain._mcp_tools import _load_mcp_server_config
 
 # ---------------------------------------------------------------------------
 # 1. Empty message list in _ask_text

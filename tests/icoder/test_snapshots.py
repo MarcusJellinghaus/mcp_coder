@@ -142,8 +142,13 @@ def _frozen_clocks(monkeypatch: pytest.MonkeyPatch) -> None:
     Tool tiers render ``duration_ms`` and the modal footer renders a
     wall-clock timestamp; both are runtime-variable. Pinning them keeps the
     rendered SVG stable across runs and environments.
+
+    ``datetime`` is patched in both UI modules that stamp a ``ContentUnit``:
+    ``ui/app.py`` (user-input units) and ``ui/stream_view.py`` (assistant-turn
+    and tool units).
     """
     monkeypatch.setattr("mcp_coder.icoder.ui.app.datetime", _FixedDatetime)
+    monkeypatch.setattr("mcp_coder.icoder.ui.stream_view.datetime", _FixedDatetime)
     monkeypatch.setattr("mcp_coder.llm.formatting.stream_renderer.time", _FrozenClock())
 
 

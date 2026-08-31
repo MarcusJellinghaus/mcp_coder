@@ -24,6 +24,7 @@ class ToolStart:
     display_name: str  # e.g. "workspace > read_file"
     raw_name: str  # e.g. "mcp__mcp-workspace__read_file"
     args: dict[str, object]  # raw args from stream event
+    tool_run_id: str | None = None  # pairing key; None for id-less providers
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,7 @@ class ToolResult:
     truncated: bool  # whether output was truncated
     is_error: bool = False  # whether the tool reported an error
     duration_ms: int | None = None  # elapsed time in ms, or None if unpaired
+    tool_run_id: str | None = None  # pairing key; None for id-less providers
 
 
 @dataclass(frozen=True)

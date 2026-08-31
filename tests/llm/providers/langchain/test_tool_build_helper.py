@@ -17,10 +17,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from mcp_coder.llm.providers.langchain.agent import (
-    _convert_server_tools,
-    run_agent_stream,
-)
+from mcp_coder.llm.providers.langchain._mcp_tools import _convert_server_tools
+from mcp_coder.llm.providers.langchain.agent import run_agent_stream
 from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager
 
 _PATCH_MCP_CLIENT = "langchain_mcp_adapters.client.MultiServerMCPClient"

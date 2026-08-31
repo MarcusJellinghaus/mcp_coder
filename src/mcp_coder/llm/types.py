@@ -13,11 +13,26 @@ __all__ = [
     "ResponseAssembler",
     "StreamEvent",
     "SUPPORTED_PROVIDERS",
+    "TRANSIENT_EVENT_TYPES",
     "UsageInfo",
 ]
 
 
 SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"claude", "langchain", "copilot"})
+
+TRANSIENT_EVENT_TYPES: frozenset[str] = frozenset({"raw_line", "approval_request"})
+"""Event types that are neither persisted nor replayed (R5).
+
+Every other stream event is written twice — into ``raw_response["events"]`` by
+:class:`ResponseAssembler` and into the icoder session ``.jsonl`` by
+``AppCore.stream_llm`` — and ``ui/replay.py`` re-feeds the log to the same
+handler that renders a live stream. Replaying an ``approval_request`` would
+therefore pop a modal nobody can answer, so it is filtered at both sinks from
+this one constant rather than from two literals that can drift apart.
+
+Public on purpose: ``AppCore`` imports it cross-module, so an underscore name
+would advertise a privacy the code does not honour.
+"""
 
 
 class UsageInfo(TypedDict, total=False):
@@ -83,6 +98,14 @@ StreamEvent = dict[str, object]
 - {"type": "tool_result", "name": "...", "output": "...", "is_error": bool} — tool
   call result; the optional ``is_error`` flag (default ``False`` when absent)
   signals the tool reported a failure
+- {"type": "approval_request", "approval_id": "...", "tool_name": "...",
+  "args": {...}, "source": "..."} — an ``ask``-gated MCP call is parked on a
+  human decision (langchain provider only); ``approval_id`` is the key the UI
+  answers with, and ``source`` is the plain-string provenance of the asking
+  decision (bare layer name, ``"frame"`` or ``"default"`` — never a
+  ``Decision.Source`` dataclass, so the payload stays JSON-safe).
+  **Transient** (see ``TRANSIENT_EVENT_TYPES``): never persisted, never
+  replayed. Exactly one is outstanding at a time
 - {"type": "error", "message": "...", "reason": "..."} — error during stream; the
   optional ``reason`` discriminator (e.g. ``"inactivity_timeout"``, ``"nonzero_exit"``)
   lets consumers translate the failure without string-matching the message
@@ -97,6 +120,17 @@ StreamEvent = dict[str, object]
   note (e.g. a dropped ``deny`` entry that forced ``base=none``); emitted by
   ``AppCore.stream_llm`` in front of the provider stream from the resolved
   skill frame's warnings, then rendered/logged like any other stream event
+
+Optional correlation fields on the two tool events (both absent from the CLI
+providers, and from any log recorded before they existed):
+
+- ``tool_call_id`` — provider-specific and **not** a matched pair: the langchain
+  provider puts the langgraph ``run_id`` on ``tool_use_start`` and the model's
+  own ``call_N`` id on ``tool_result``. Consumers that need to pair a result
+  with its call must not key on it
+- ``tool_run_id`` — the langgraph ``run_id`` on **both** tool events, i.e. the
+  one field that does pair them. Pairing falls back to name-FIFO only when a
+  ``tool_result`` carries no ``tool_run_id`` at all
 """
 
 
@@ -122,9 +156,10 @@ class ResponseAssembler:
         event_type = event.get("type")
         # `raw_line` events duplicate the parsed events and are already persisted
         # separately in `stream_file`; keep them out of the assembled `events`
-        # list to avoid ~2x payload. Live consumers still receive them from the
-        # generator directly.
-        if event_type != "raw_line":
+        # list to avoid ~2x payload. `approval_request` is transient for a
+        # different reason (replaying it pops an unanswerable modal). Live
+        # consumers still receive both from the generator directly.
+        if event_type not in TRANSIENT_EVENT_TYPES:
             self._raw_events.append(event)
         if event_type == "text_delta":
             self._saw_assistant_text = True

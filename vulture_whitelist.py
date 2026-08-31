@@ -310,6 +310,12 @@ _.BINDINGS
 _.action_cancel_stream
 _.action_noop
 
+# icoder/ui/stream_view.py - Textual Unmount lifecycle hook (the streaming half
+# of ICoderApp now lives here). Dispatched by App._shutdown(); it is the
+# shutdown hook that cancels pending approvals so quitting never stalls (R9 of
+# #1045).
+_.on_unmount
+
 # icoder/ui/widgets/branch_info_bar.py - Textual button event handler
 _.on_button_pressed
 
@@ -383,6 +389,10 @@ _.progress_callback
 # tests/icoder/test_permissions_gateway.py - Autouse fixture stubbing the
 # langchain deny bridge so gateway tests need no langchain_core.
 _._fake_deny_bridge
+
+# tests/icoder/test_approval_wiring.py - Same stub, but requested by name via
+# @pytest.mark.usefixtures("fake_deny_bridge"); vulture cannot see that string.
+_.fake_deny_bridge
 
 # tests/icoder/test_icoder_permission_wiring.py - _ScriptedModel implements the
 # BaseChatModel contract for create_react_agent; langchain calls these through
