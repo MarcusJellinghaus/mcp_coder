@@ -410,6 +410,28 @@ def test_cancelled_turn_unwinds_instead_of_denying() -> None:
     assert decision.reason == _DENY_UNAVAILABLE
 
 
+def test_the_cancelled_raise_marks_the_turn_aborted() -> None:
+    """The pre-await raise must raise ``turn_aborted``, not only ``cancelled``.
+
+    That raise unwinds the turn exactly as cancelling a parked future does: the
+    provider generator ends without its ``done`` event, so ``AppCore``'s R16
+    gate has to fire and skip both ``llm_request_end`` and ``store_session``.
+    Reading ``cancelled`` there instead is not an option — ``on_unmount`` arms
+    it on every quit — so the flag has to be raised here, at the unwind.
+    """
+    engine = ApprovalEngine()
+    engine.attach(lambda event: None)
+    engine.cancel_all()
+    assert engine.turn_aborted is False, "nothing was pending for that cancel to unpark"
+
+    coro = engine.request_approval(tool_name="mcp__srv__tool", args={}, source="user")
+    with pytest.raises(asyncio.CancelledError):
+        coro.send(None)
+
+    assert engine.turn_aborted is True
+    assert engine.cancelled is True
+
+
 def test_cancel_all_on_a_closed_agent_loop_does_not_raise() -> None:
     """A quit or Ctrl+C landing after ``asyncio.run`` closed the loop is inert.
 

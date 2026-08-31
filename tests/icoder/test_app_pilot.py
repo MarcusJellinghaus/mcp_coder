@@ -1701,8 +1701,14 @@ class _ApprovalPendingLLMService:
                 q.put(None)  # sentinel, like the provider's producer half
 
         def _agent_main() -> None:
-            # The real agent thread simply dies on the escaping CancelledError;
-            # swallow it so a cancelled turn prints no stray traceback.
+            # Production keeps the CancelledError off ``asyncio.run``: the
+            # provider's ``_run`` wraps its ``run_agent_stream`` drain in an
+            # ``except asyncio.CancelledError`` and returns normally, so the
+            # agent thread exits quietly with the sentinel already queued. This
+            # fake has no drain to wrap -- ``_ask`` is the whole coroutine --
+            # so it catches at the thread top instead. Same observable result,
+            # which is what the pilot tests below assert: a silent thread exit
+            # and no stray traceback over a live Textual screen.
             try:
                 asyncio.run(_ask())
             except BaseException:  # pylint: disable=broad-exception-caught

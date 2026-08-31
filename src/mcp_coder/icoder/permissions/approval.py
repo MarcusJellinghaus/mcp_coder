@@ -257,10 +257,12 @@ class ApprovalEngine:
         """Whether this turn was actually unwound by the direct cancel channel.
 
         Narrower than :attr:`cancelled` on purpose, and the two must not be
-        conflated. A cancel only unwinds the provider generator — skipping its
+        conflated. A cancel unwinds the provider generator — skipping its
         ``done`` event, which is the entire reason ``AppCore`` gates the turn
-        record on this — when there was a parked interceptor to unpark. A
-        :meth:`cancel_all` with nothing pending changes nothing about the turn:
+        record on this — in exactly two situations: there was a parked
+        interceptor to unpark, or a later :meth:`request_approval` found the
+        cancel flag already armed and raised instead of prompting. A
+        :meth:`cancel_all` that leads to neither changes nothing about the turn:
         it is an idle key press, or app shutdown while an ordinary turn is still
         streaming, and that turn either completes normally (and must be
         recorded) or is torn down by the generic cancel path, whose teardown
@@ -270,8 +272,9 @@ class ApprovalEngine:
         after ``detach()`` has already run in the provider's ``finally``.
 
         Returns:
-            ``True`` once at least one pending approval was cancelled through
-            :meth:`cancel_all` during the current turn.
+            ``True`` once the current turn was actually unwound: a pending
+            approval cancelled through :meth:`cancel_all`, or a
+            :meth:`request_approval` raising on an already-armed cancel.
         """
         return self._turn_aborted
 
@@ -305,6 +308,8 @@ class ApprovalEngine:
                 would invite the model to re-plan around a refusal on a turn the
                 user asked to abandon; unwinding is the designed cancel
                 semantics (R7), and the gateway propagates this untouched.
+                Raising also raises :attr:`turn_aborted`, because the unwind is
+                what stops the turn's ``done`` event from ever arriving.
         """
         # Two conditions, two different answers. ``_cancelled`` is set by every
         # ``cancel_all()`` and reset only by ``attach()``, so an Escape press
@@ -314,6 +319,15 @@ class ApprovalEngine:
         # caller, or any window before ``attach`` — where fail-closed denial is
         # the required behaviour (§2.11).
         if self._cancelled:
+            # Raising unwinds the turn, so the turn must not be recorded: the
+            # generator ends without its ``done`` event, and ``AppCore``'s R16
+            # gate reads exactly this flag to skip both ``llm_request_end`` and
+            # ``store_session``. Same reason the post-insert re-check below
+            # sets it. Leaving it down here would produce the one cancelled
+            # turn that replays with no "— Cancelled —" marker (``ui/replay``
+            # clears ``in_flight`` on ``llm_request_end``) while the live UI
+            # drew one, plus a stray session-picker entry.
+            self._turn_aborted = True
             raise asyncio.CancelledError
         if self._emit is None:
             return ApprovalDecision("deny", "once", reason=_DENY_UNAVAILABLE)
@@ -377,7 +391,19 @@ class ApprovalEngine:
         """
         entry, loop = self._pending.get(approval_id), self._loop
         if entry is not None and loop is not None:
-            loop.call_soon_threadsafe(_set_if_pending, entry.future, decision)
+            try:
+                loop.call_soon_threadsafe(_set_if_pending, entry.future, decision)
+            except RuntimeError:
+                # Same hazard as in :meth:`detach` and :meth:`cancel_all`, from
+                # the same Textual thread: ``_loop`` stays bound until
+                # ``detach()`` nulls it, and ``asyncio.run`` may have closed
+                # that loop first. Much harder to reach here — a closed loop
+                # means the turn is over, so the registry is normally already
+                # empty and the ``entry is not None`` test fails first — but the
+                # answer path runs on the UI thread too and may not raise.
+                logger.debug(
+                    "resolve_pending(): agent loop already closed; answer dropped"
+                )
 
     def cancel_all(self) -> None:
         """Abort every pending approval.
