@@ -69,7 +69,14 @@ from pathlib import Path
 
 MCP_CODER_REPO = "https://github.com/MarcusJellinghaus/mcp_coder.git"
 
-CLI_BINARIES = ("mcp-coder", "mcp-tools-py", "mcp-workspace", "mcp-config")
+# Required: every target project ends up with these three, via its own
+# dependencies or via [tool.mcp-coder.install-from-github]. A missing one
+# means the install failed to wire up an entry point.
+CLI_BINARIES = ("mcp-coder", "mcp-tools-py", "mcp-workspace")
+# Reported when present, never required: only projects that ask for it pull
+# mcp-config in (mcp-workspace). mcp-coder and mcp-tools-py do not depend on
+# it, so demanding it aborted their vscodeclaude session installs.
+OPTIONAL_CLI_BINARIES = ("mcp-config",)
 EXTRA_VERSION_QUERIES = ("mcp-coder-utils",)
 
 
@@ -427,24 +434,28 @@ def _phase_overrides(
 def _phase_versions(bin_dir: Path, uv_bin: str, py_v: Path, args: argparse.Namespace) -> None:
     """Phase 7b: print installed versions of CLIs and library-only packages.
 
-    Exits non-zero when an expected CLI binary is missing from the venv
-    — that indicates the install silently failed to wire up an entry
-    point. ``--version`` itself is still allowed to fail (a CLI that
-    crashes on ``--version`` is a separate problem worth a separate
-    signal, not a reason to fail the whole install).
+    Exits non-zero when a required CLI binary (``CLI_BINARIES``) is
+    missing from the venv — that indicates the install silently failed
+    to wire up an entry point. ``OPTIONAL_CLI_BINARIES`` are reported
+    but never required: not every target project pulls them in.
+    ``--version`` itself is still allowed to fail (a CLI that crashes on
+    ``--version`` is a separate problem worth a separate signal, not a
+    reason to fail the whole install).
     """
     print("\n--- installed versions")
     if args.check:
         print("  (skipped in --check mode)")
         return
     missing: list[str] = []
-    for name in CLI_BINARIES:
+    for name in CLI_BINARIES + OPTIONAL_CLI_BINARIES:
         binp = bin_dir / exe(name)
         if binp.exists():
             run([str(binp), "--version"], check=False)
-        else:
+        elif name in CLI_BINARIES:
             print(f"  (missing CLI: {name})")
             missing.append(name)
+        else:
+            print(f"  (optional CLI not installed: {name})")
     for pkg in EXTRA_VERSION_QUERIES:
         run([uv_bin, "pip", "show", "--python", str(py_v), pkg],
             check=False)
