@@ -444,10 +444,6 @@ class TestPhaseVersions:
         args = argparse.Namespace(check=False)
         install._phase_versions(bin_dir, "uv", bin_dir / install.exe("python"), args)
 
-    def test_mcp_config_is_optional_not_required(self) -> None:
-        assert "mcp-config" not in install.CLI_BINARIES
-        assert "mcp-config" in install.OPTIONAL_CLI_BINARIES
-
     def test_missing_optional_cli_does_not_fail(
         self,
         tmp_path: Path,
@@ -461,10 +457,10 @@ class TestPhaseVersions:
     def test_missing_required_cli_exits(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        bin_dir = self._make_bin_dir(tmp_path, list(install.CLI_BINARIES[1:]))
+        bin_dir = self._make_bin_dir(tmp_path, ["mcp-tools-py", "mcp-workspace"])
         with pytest.raises(SystemExit) as exc_info:
             self._run(monkeypatch, bin_dir)
-        assert install.CLI_BINARIES[0] in str(exc_info.value)
+        assert "mcp-coder" in str(exc_info.value)
 
     def test_all_required_present_succeeds(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
