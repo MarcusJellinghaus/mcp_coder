@@ -124,7 +124,7 @@ directory it starts in decides which coding rules it obeys.**
   never the tool env's.
 
 **The trap this removes.** The Jenkins command templates run `cd %VENV_BASE_DIR%` (six times,
-across all the templates in `command_templates.py`) for one reason: to activate a virtualenv.
+across the Windows templates in `command_templates.py`) for one reason: to activate a virtualenv.
 Before #1113, that shell-plumbing step *also* silently chose whose coding rules the agent
 followed, because the Claude subprocess inherited the shell's directory. Two unrelated concerns
 — which Python runs, and which rules apply — were coupled through one inherited variable. They
