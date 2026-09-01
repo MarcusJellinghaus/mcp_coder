@@ -112,9 +112,12 @@ full list.
   that fails (no network, PEP 668 externally-managed-environment, etc.),
   install it manually: `pip install uv` or follow
   [astral.sh/uv](https://docs.astral.sh/uv/).
-- **`missing CLI binaries after install`** — entry points (mcp-coder,
-  mcp-tools-py, etc.) didn't get wired up. Re-run with `--clean` to wipe and
-  recreate the venv: `python tools/install.py <target> --clean`.
+- **`missing CLI binaries after install`** — one of the required entry points
+  (`mcp-coder`, `mcp-tools-py`, `mcp-workspace`) didn't get wired up. Re-run
+  with `--clean` to wipe and recreate the venv:
+  `python tools/install.py <target> --clean`. Binaries listed as
+  `optional CLI not installed` are informational — they belong to packages
+  only some target projects pull in, and never fail the install.
 - **Two `.venv` dirs after `--use-sync`** — `uv sync` writes to
   `<local-path>/.venv`; install.py enforces `target == --local-path` when
   `--use-sync` is set and exits early if they differ.

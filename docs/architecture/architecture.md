@@ -44,7 +44,6 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 - **MCP Server Dependencies**:
   - `mcp-tools-py`: Quality checks (pylint, pytest, mypy)
   - `mcp-workspace`: File operations and management
-  - `mcp-config`: Configuration management helper
   - `mcp-shared-utils`: Common components (future)
 - **Python Library Dependencies**:
   - `PyGithub>=1.59.0`: GitHub API integration for PR management and issue workflows
@@ -76,7 +75,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 └─────────┘    └─────────────┘    └─────────────┘    └───────────────────┘
 ```
 
-***Additional libraries**: mcp-config (configuration helper), mcp-shared-utils (common components)*
+***Related tools, not runtime dependencies**: mcp-config (configuration helper), mcp-shared-utils (common components)*
 
 ### External Systems
 - **GitHub Issues API**: Source of workflow triggers and status updates

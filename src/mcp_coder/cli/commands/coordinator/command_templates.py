@@ -74,8 +74,6 @@ where mcp-tools-py
 mcp-tools-py --version
 where mcp-workspace
 mcp-workspace --version
-where mcp-config
-mcp-config --version
 
 set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000

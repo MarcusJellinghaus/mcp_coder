@@ -16,6 +16,7 @@ needed; correctness is enforced by the argv API itself.
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import sys
 from pathlib import Path
@@ -418,3 +419,53 @@ class TestEnsureSystemUv:
         with pytest.raises(SystemExit) as exc_info:
             install._ensure_system_uv()
         assert "astral.sh" in str(exc_info.value)
+
+
+class TestPhaseVersions:
+    """Required vs. optional CLI binaries in the post-install version check.
+
+    ``mcp-config`` is only installed by projects that ask for it, so a
+    target whose graph omits it (mcp-tools-py, mcp-coder) must still
+    install cleanly.
+    """
+
+    @staticmethod
+    def _make_bin_dir(tmp_path: Path, names: list[str]) -> Path:
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir(parents=True)
+        for name in names:
+            (bin_dir / install.exe(name)).write_text("", encoding="utf-8")
+        return bin_dir
+
+    @staticmethod
+    def _run(monkeypatch: pytest.MonkeyPatch, bin_dir: Path) -> None:
+        """Call _phase_versions with subprocess execution stubbed out."""
+        monkeypatch.setattr(install, "run", lambda *_a, **_kw: 0)
+        args = argparse.Namespace(check=False)
+        install._phase_versions(bin_dir, "uv", bin_dir / install.exe("python"), args)
+
+    def test_missing_optional_cli_does_not_fail(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        bin_dir = self._make_bin_dir(tmp_path, list(install.CLI_BINARIES))
+        self._run(monkeypatch, bin_dir)
+        assert "optional CLI not installed: mcp-config" in capsys.readouterr().out
+
+    def test_missing_required_cli_exits(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        bin_dir = self._make_bin_dir(tmp_path, ["mcp-tools-py", "mcp-workspace"])
+        with pytest.raises(SystemExit) as exc_info:
+            self._run(monkeypatch, bin_dir)
+        assert "mcp-coder" in str(exc_info.value)
+
+    def test_all_required_present_succeeds(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        bin_dir = self._make_bin_dir(
+            tmp_path, [*install.CLI_BINARIES, *install.OPTIONAL_CLI_BINARIES]
+        )
+        self._run(monkeypatch, bin_dir)  # must not raise
