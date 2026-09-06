@@ -151,10 +151,16 @@ New tests:
 | `test_allow_once_writes_no_runtime_rule` | with a spy on `AppCore.add_runtime_rule`, choice `1` records no call |
 | `test_session_choice_writes_a_runtime_rule` | choice `2` records exactly one `Rule` with `layer == "runtime"`, `policy is Policy.ALWAYS`, and a matcher that matches the tool |
 | `test_session_grant_is_honoured_by_resolve` | take the captured `Rule`, build `PermissionConfig(rules=(authored_ask, captured))` where `authored_ask` is `Rule(same matcher, AFTER_APPROVAL, "project")`, and assert `resolve(tool, {}, None, config).policy is Policy.ALWAYS` — public API only, and this is what "honoured on a subsequent turn" means |
-| `test_session_grant_absent_from_a_reloaded_config` | after a session grant, `load_permission_config(tmp_path)` contains **no** rule with `layer == "runtime"` (design §8.4 makes this an explicit obligation: session grants do not survive a resume) |
+| `test_session_grant_does_not_survive_a_reload` | author `tmp_path/".icoder"/"settings.json"` with `{"ask": ["mcp__srv__do_it"]}`; apply the session grant via choice `2`; then assert `resolve("mcp__srv__do_it", {}, None, load_permission_config(tmp_path)).policy is Policy.AFTER_APPROVAL` — the grant is gone and the tool asks again (design §8.4 makes this an explicit obligation: session grants do not survive a resume) |
 | `test_cancel_turn_cancels_and_never_resolves` | choice `5`: `engine.cancel_calls == 1`, `engine.resolved == []`, `app._cancel_event.is_set()` |
 | `test_ctrl_c_does_not_cancel_the_turn` | `pilot.press("ctrl+c")` on the open modal leaves `engine.cancel_calls == 0` and `engine.resolved == []` |
 | `test_replayed_log_pushes_no_approval_modal` | drain `core.stream_llm(...)` over a fake service yielding an `approval_request` then `done`; assert the written `.jsonl` contains no `approval_request` line; then `app.do_resume(log_path)` and assert `len(app.screen_stack) == 1` |
+
+`test_session_grant_does_not_survive_a_reload` must assert the *reloaded policy*, not the absence
+of a `runtime`-layer rule: `_discover_layers` yields only `user`/`project`/`local` and `loader.py`
+has no `runtime` handling at all, so "the reloaded config holds no `runtime` rule" can never fail
+and would leave the AC uncovered. Authoring the `ask` on disk is what makes the assertion
+falsifiable — it fails if the grant leaks into the loader.
 
 The replay test must use a log produced through `AppCore.stream_llm`, not a hand-written one: the
 guarantee under test is that `TRANSIENT_EVENT_TYPES` keeps `approval_request` out of the log at

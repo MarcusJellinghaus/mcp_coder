@@ -194,6 +194,18 @@ is not available here: the writer must not import `_schema_errors`' jsonschema p
 - `_read(target) -> tuple[str, str]` uses `target.read_bytes().decode("utf-8")`, **not**
   `read_text()`, which applies universal-newline translation and would silently convert CRLF to
   LF. Newline style is one check: `"\r\n" if "\r\n" in raw else "\n"`.
+  **The decode is inside the contract too.** `UnicodeDecodeError` is a `ValueError`, not an
+  `OSError`, so a `settings.local.json` holding invalid UTF-8 would escape step 5's single
+  `except OSError`, skip `resolve_pending` and wedge the turn — the same escape the parse,
+  non-object-root, non-list-section and move-branch guards exist to close, left open one line
+  earlier. Wrap the decode and re-raise as `PersistError`:
+
+  ```
+  try:
+      raw = target.read_bytes().decode("utf-8")
+  except ValueError as exc:                        # UnicodeDecodeError is a ValueError
+      raise PersistError(f"{target} is not valid UTF-8: {exc}") from exc
+  ```
 - `_atomic_write` does `target.parent.mkdir(parents=True, exist_ok=True)` — `.icoder/` may not
   exist, since `_discover_layers` only picks up files that exist and `emit_schema` bails when
   `.icoder` is not a directory — then `tempfile.mkstemp(dir=target.parent)`, writes with
@@ -202,9 +214,9 @@ is not available here: the writer must not import `_schema_errors`' jsonschema p
 - New-file skeleton is `"{\n}\n"`; `_insert_section` then adds the list. One code path for
   "brand-new file" and "existing file missing the key".
 - `write_rule` returns `None` and raises `OSError` on an unwritable target, and `PersistError`
-  (an `OSError` subclass) when the existing file is unparseable JSONC, has a non-object root,
-  holds a non-list value under `allow` / `ask` / `deny`, or when the move branch cannot locate
-  the array or the item it is asked to remove.
+  (an `OSError` subclass) when the existing file is not valid UTF-8, is unparseable JSONC, has a
+  non-object root, holds a non-list value under `allow` / `ask` / `deny`, or when the move branch
+  cannot locate the array or the item it is asked to remove.
   One failure type, so step 5's single `except OSError` branch degrades to a session grant and
   still calls `resolve_pending` — an unparseable local file must never wedge the turn. Nothing
   is written in either case: both raises happen before `_atomic_write`.
@@ -234,6 +246,7 @@ paths, and `.icoder/settings.local.json` is intended to be gitignored.
 | `test_already_present_is_a_no_op` | file bytes unchanged |
 | `test_no_temp_file_is_left_behind` | `.icoder/` holds no `*.tmp` afterwards |
 | `test_default_mode_value_is_not_mistaken_for_the_key` | **parametrised** over `{"defaultMode": "allow"}` (no `allow` array) and `{"defaultMode": "allow", "allow": ["x"]}`; after writing, the text contains exactly **one** top-level `"allow":` key, `defaultMode` is still `"allow"`, and `load_permission_config(tmp_path)` yields `ALWAYS` for the tool — i.e. the file still passes schema validation |
+| `test_invalid_utf8_raises_persist_error` | write raw bytes `b'{"allow": ["\xff\xfe"]}'` (invalid UTF-8) to `settings.local.json`; `pytest.raises(PersistError)` — assert the type explicitly, since the bug this pins is a `UnicodeDecodeError`/`ValueError` from `_read` that would escape the caller's `except OSError` — and the file bytes are unchanged |
 | `test_malformed_jsonc_raises_persist_error` | file holds `{"allow": [` ; `pytest.raises(PersistError)` and the file bytes are unchanged. Also assert `issubclass(PersistError, OSError)`, which is what makes step 5's degrade branch cover it |
 | `test_non_object_root_raises_persist_error` | file holds `["mcp__srv__x"]`; `pytest.raises(PersistError)` and the file bytes are unchanged |
 | `test_unlocatable_move_item_raises_persist_error` | file holds a **duplicate top-level key**, `{"ask": [], "ask": ["mcp__a__b"]}` (valid JSON — `json.loads` keeps the second, `_find_section_array` returns the first, empty array); write `mcp__a__b` to `allow`; `pytest.raises(PersistError)` — assert the type explicitly, since the bug this pins is a `TypeError` from `_remove_item(text, None)` that would escape the caller's `except OSError` — and the file bytes are unchanged |
@@ -262,13 +275,15 @@ so most cases end with a real round-trip rather than a string assertion.
 > `permissions_leaf_isolation` `source_modules` (not in `permissions_core_purity`). Do not touch
 > `ui/stream_view.py` — wiring is step 5.
 >
-> Work TDD: first write `tests/icoder/test_permissions_persist.py` with the eighteen cases from
+> Work TDD: first write `tests/icoder/test_permissions_persist.py` with the nineteen cases from
 > the table (unmarked, `tmp_path` only, never an in-repo fixture file), watch them fail, then write
 > the module.
 >
 > Reuse `loader._strip_jsonc` only as a parser via `json.loads(_strip_jsonc(text))`, wrapped so a
 > `ValueError`, a non-object root and a non-list `allow`/`ask`/`deny` value all become
-> `PersistError`. `PersistError` must be the module's only failure type: anything else escapes the
+> `PersistError`. Wrap `_read`'s `decode("utf-8")` the same way — `UnicodeDecodeError` is a
+> `ValueError`, and it happens before every other guard.
+> `PersistError` must be the module's only failure type: anything else escapes the
 > caller's `except OSError` and wedges the turn. That also covers the move branch — route it
 > through `_locate_item`, which turns a `None` from `_find_section_array` or `_find_item` into a
 > `PersistError` instead of letting it reach a `*` unpack or `_remove_item` as a `TypeError`.
