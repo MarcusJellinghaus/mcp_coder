@@ -30,7 +30,7 @@ showing the tool and its arguments, and apply the scope the user picks: `once` (
 
 ## Architectural / design changes
 
-### 1. Resolver precedence: layer moves above policy rank (step 1, issue #1154)
+### 1. Resolver precedence: personal-layer bit moves above policy rank (step 1, issue #1154)
 
 `_rule_sort_key` currently ranks `(specificity, policy.rank, layer, -index)`. Because
 `Policy.rank` sits above `_LAYER_ORDER`, a persisted `local` `allow` loses to an authored
@@ -171,12 +171,12 @@ renumber nothing — steps 2–5 are unaffected.
 
 | Path | Change |
 |---|---|
-| `src/mcp_coder/icoder/permissions/resolver.py` | `_PERSONAL_LAYERS` + 6-key `_rule_sort_key`; module + function docstrings; `_resolve_config` partition comment (step 1) |
+| `src/mcp_coder/icoder/permissions/resolver.py` | `_PERSONAL_LAYERS` + 6-key `_rule_sort_key`; five prose sites — module docstring, `_rule_sort_key` `Returns:`, `_resolve_config` docstring, its partition comment and its R14 bound comment (step 1) |
 | `src/mcp_coder/icoder/permissions/loader.py` | Add `LOCAL_SETTINGS_RELPATH`; use it in `_discover_layers` (step 3) |
 | `src/mcp_coder/icoder/ui/stream_view.py` | Delete `_DENY_NO_UI` + the `TODO(#1046)` auto-deny; push the modal; dismiss callback; receive `action_cancel_stream` (steps 3, 5) |
 | `src/mcp_coder/icoder/ui/app.py` | Remove `action_cancel_stream` (binding stays) (step 3) |
 | `.importlinter` | Add `permissions.persist` to `permissions_leaf_isolation` `source_modules` (step 4) |
-| `tests/icoder/test_permissions_resolver.py` | Six new precedence cases; docstring notes on three existing tests (step 1) |
+| `tests/icoder/test_permissions_resolver.py` | Seven new precedence cases; docstring notes on two existing tests (step 1) |
 | `tests/icoder/test_app_pilot.py` | Replace the auto-deny test; delete the `TODO(#1046)` monkeypatch; modal + scope + replay tests (steps 2, 3, 5) |
 
 ## Folders
