@@ -67,10 +67,14 @@ between `mcp_coder.prompts` and `mcp_coder.utils`; a single `subprocess` exempti
 
 ### Two mechanical notes on the Decisions
 
-- **Decision 11/12 (layout):** `InstallConfig` is *defined* in `_env.py` and re-exported
-  from `__init__.py`. Defining it in `__init__.py` while `_phases.py` annotates against
-  it creates an import cycle; a `TYPE_CHECKING` guard would hide the cycle from mypy but
-  not from `pycycle`. The public shape — `from mcp_coder.install import InstallConfig,
+- **Decision 11/12 (layout):** `InstallConfig` **and** the three module constants
+  (`MCP_CODER_REPO`, `REPORT_BINARIES`, `REPORT_PACKAGES`) are *defined* in `_env.py` and
+  re-exported from `__init__.py`. `__init__.py` must import `_phases` to implement
+  `install()`, and `_phases` needs all four — it annotates against `InstallConfig`, builds
+  the git spec from `MCP_CODER_REPO`, and iterates the report lists — so defining any of
+  them in `__init__.py` closes an `__init__ ↔ _phases` cycle. A `TYPE_CHECKING` guard
+  would hide the annotation half from mypy but not from `pycycle`, and would not help the
+  constants at all. The public shape — `from mcp_coder.install import InstallConfig,
   install` — is exactly as the Decision specifies.
 - **Decision 13 (strict load):** exactly one strict call site, in
   `InstallConfig.from_args`, and it runs *unconditionally* — an explicit `--extras`
@@ -124,6 +128,7 @@ CI run.
 | `src/mcp_coder/cli/parsers.py` | 2 | `add_install_parser` |
 | `src/mcp_coder/cli/main.py` | 2 | Import, call, dispatch |
 | `src/mcp_coder/cli/command_catalog.py` | 2 | `install` description + SETUP category |
+| `tests/cli/commands/test_help.py` | 2 | Command count `== 22` → `23` (`:66`) |
 | `tach.toml` | 2 | `mcp_coder.install` module; `cli` and `tests` `depends_on` |
 | `.importlinter` | 2 | Layer row, one `subprocess` wildcard row, `tests.install` in `test_module_independence` |
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | 3 | Delete `_resolve_install_script`; drop the spec field |
@@ -169,14 +174,19 @@ mcp__mcp-tools-py__run_ruff_check
 mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])
 ```
 
-`run_ruff_check` is not optional: CI runs `ruff check src tests` (`ci.yml:104`) with
+`run_ruff_check` is not optional: CI runs `ruff check src tests` (`ci.yml:103`) with
 `select = ["D", "DOC"]`, preview on, google convention. Step 2 moves ~570 lines of
 `tools/` code — never ruff-checked, since `tools/` is outside that scope — into `src/`.
 
 Steps 2 and 3 additionally: `run_tach_check`, `run_lint_imports_check`.
-Step 2 additionally: `./tools/pycycle_check.sh` (CI's architecture job, `ci.yml:197`) —
+Steps 2, 3 and 5 additionally: `run_vulture_check`.
+Step 2 additionally: `./tools/pycycle_check.sh` (CI's architecture job, `ci.yml:196`) —
 the new package is exactly where the Decision 11/12 note above says a cycle could form.
-Step 5 additionally: `run_vulture_check`.
+
+Those four gates are one PR-only matrix job (`ci.yml:194-197`), so vulture
+(`vulture src tests vulture_whitelist.py --min-confidence 60`, `ci.yml:197`) fails the same
+commits tach and lint-imports do. Step 2 moves ~570 lines of never-vulture-scanned code
+into `src/`; Step 3 deletes two functions.
 
 Note `mypy --strict` covers `src` **and** `tests` (`ci.yml:106`), so new test code needs
 full annotations.

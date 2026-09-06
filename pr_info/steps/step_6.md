@@ -101,7 +101,10 @@ No code, no data structures. Docs only.
 None. Verification:
 
 1. `git grep -rn "install\.py\|install\.bat\|install\.sh"` returns nothing outside
-   `pr_info/` and git history.
+   `pr_info/` and git history. This step reaches only `docs/` and `README.md`: `src/` and
+   `tests/` were cleared by Step 3's grep, and `tools/reinstall_local.{bat,sh}`'s header
+   comments by Step 5. A hit anywhere else means an earlier step's exit criterion was
+   skipped — fix it there, not here.
 2. `mcp__mcp-tools-py__run_pytest_check` fast selection still green (docstring-adjacent
    tests, help anti-drift).
 3. Link check: every path named in the edited docs exists.

@@ -49,7 +49,7 @@ Both survive the resolver deletion and belonged to no step:
 
 ## 5. `test_workspace_startup_script_github.py` needs docstring edits, not assertion edits
 
-All six `build_install_argv` call sites (`:55`, `:82`, `:115`, `:145`, `:179`, `:205`)
+All six `build_install_argv` call sites (`:54`, `:81`, `:114`, `:144`, `:179`, `:205`)
 assert only `"--skip-overrides" in` / `not in` the argv; none names the script path or
 `--extras`, so this refactor leaves them valid. The "update the six assertions to the new
 form" instruction was removed as unnecessary work. What the file actually needs is its two
@@ -122,8 +122,60 @@ as the issue's Scope requires. Different contract.
 Applied in `step_2.md` (the `.importlinter` HOW bullet, a TESTS note on the port, the LLM
 prompt) and `summary.md` (§7 and the Modified table).
 
+**Round 2 findings — all five accepted, all mechanical; no user decision needed.**
+
+## 9. The install package's module constants live in `_env.py`, not `__init__.py`
+
+`_phases.py` consumes all three: `_phase_install_main` builds the git spec from
+`MCP_CODER_REPO`, `_phase_versions` iterates `REPORT_BINARIES` / `REPORT_PACKAGES`. Since
+`__init__.py` imports `_phases` to implement `install()`, defining them in `__init__.py`
+closes an `__init__ ↔ _phases` cycle — the same hazard the Decision 11/12 note already
+handled for `InstallConfig`, which `pycycle` (in Step 2's own gates) would catch. They now
+get the identical treatment: defined in `_env.py`, re-exported from `__init__.py`, imported
+by `_phases` from `._env`.
+
+Applied in `step_2.md` (WHERE rows, both WHAT blocks, LLM prompt) and `summary.md`'s
+Decision 11/12 note, whose reasoning now covers the constants rather than `InstallConfig`
+alone.
+
+## 10. Step 5 owns the two `reinstall_local` header comments
+
+`reinstall_local.bat:3` and `.sh:3` say "Delegates to install.{bat,sh} in the same dir" —
+the last unowned `install.bat` / `install.sh` references outside `pr_info/`. Step 6 is
+doc-only and cannot reach `tools/`, yet its verification demands a clean whole-repo grep;
+Step 5's grep matched only `install\.py`. Step 5 now rewrites both headers and greps all
+three patterns over `tools/`. Same failure mode round 1 fixed for `src`/`tests`, where the
+pattern was widened but Steps 5 and 6 were not.
+
+Applied in `step_5.md` (WHERE rows, a WHAT note, TESTS §2, LLM prompt) and `step_6.md`'s
+verification §1, which now says which step owns which tree.
+
+## 11. `run_vulture_check` is added to Steps 2 and 3
+
+CI runs vulture (`ci.yml:197`) in the same PR-only architecture job as tach, lint-imports
+and pycycle (`ci.yml:194-197`) — gates both steps already run. Step 2 moves ~570 lines of
+never-vulture-scanned code into `src/`; Step 3 deletes two functions. Only Step 5 ran it.
+
+Applied in `summary.md`'s per-step extra-checks list and both steps' LLM prompts.
+
+## 12. Six line citations corrected
+
+`step_2.md` — pylint disable list `:199-212` (was `:212-223`); tach `tests`' `depends_on`
+`:470-488` (was `:472-488`, and the issue itself says `:470-488`). `summary.md` — ruff
+`ci.yml:103` (was `:104`, the unit-tests row); pycycle `ci.yml:196` (was `:197`, which is
+vulture — see #11). `step_3.md` and this file — the six `build_install_argv` assert lines
+are `:54`, `:81`, `:114`, `:144`, `:179`, `:205`; four were off by one.
+
+The substantive claims attached to each citation were verified and kept.
+
+## 13. `tests/cli/commands/test_help.py` added to `summary.md`'s Modified table
+
+`step_2.md`'s WHERE table already carried the `== 22` → `23` bump.
+
 ## Left deliberately untouched
 
 - Per-lint-rule detail (specific ruff/pylint rule codes and their line numbers) was not
   extended anywhere. The per-step verification block runs the gates; that is the right
-  level.
+  level. A CI gate *missing from* a step's block is a different thing — see #11.
+- `step_3.md:116`'s "module docstring's `install.py` sentence (`:8`)" actually spans
+  `:7-9`. Left as-is: the grep exit criterion covers it.

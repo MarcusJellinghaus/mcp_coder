@@ -77,3 +77,48 @@ criterion; the install test modules were renamed to mirror their sources and the
 CLI-dispatch test relocated to `tests/cli/commands/test_install.py`.
 
 **Status**: committed
+
+## Round 2 — 2026-09-06
+
+**Round 1 fixes verified.** The reviewer re-checked all eight entries in
+`Decisions.md` against the repository; every one landed correctly, including the
+achievability of the new grep exit criterion (18 `src/` + 22 `tests/` hits, all
+owned by Step 2 or 3) and the claim that `subprocess` is used only in `run()` and
+`_ensure_system_uv()`, so the dropped bare `ignore_imports` row genuinely could
+never have matched.
+
+**Findings** (5, all mechanical, none needing a human decision):
+
+- `step_2.md:79-84` — high — the WHAT block puts `MCP_CODER_REPO`,
+  `REPORT_BINARIES` and `REPORT_PACKAGES` in `__init__.py`, but `_phases.py`
+  consumes all three, closing an `__init__ ↔ _phases` cycle. `pycycle` is in
+  Step 2's own verification block, so the step could not commit green. Same
+  hazard the Decision 11/12 note already reasons about for `InstallConfig` — the
+  constants were missed.
+- `step_5.md:10-11`, `step_6.md:124` — medium — `reinstall_local.bat:3` and
+  `.sh:3` ("Delegates to install.bat/install.sh in the same dir") are unowned.
+  Step 6 is scoped to `docs/` so cannot reach `tools/`, yet its verification
+  demands a clean whole-repo grep; Step 5's grep covers only `install\.py`. Same
+  failure mode round 1 fixed for `src`/`tests`, with the scope not widened.
+- `summary.md:170-172` — medium — `run_vulture_check` is missing from Steps 2 and
+  3, though CI runs it in the same PR-only architecture job as tach, lint-imports
+  and pycycle, which both steps do run. Step 2 is the step moving ~570 lines of
+  never-vulture-scanned code into `src/`.
+- six wrong line citations — low — pylint disable list, ruff, pycycle, tach
+  `tests` array, and four of six assert lines in `step_3.md:121`.
+- `summary.md:127-152` — low — Modified table omits the
+  `tests/cli/commands/test_help.py` row that `step_2.md`'s WHERE table carries.
+
+**Decisions**: all five accepted and applied. One reviewer item skipped as
+cosmetic — `step_3.md:116`'s docstring sentence spans `:7-9` not `:8`, and the
+grep exit criterion covers it regardless.
+
+Note on the vulture finding: it is the *permitted* class of gate finding — a CI
+gate absent from a step's verification block — as distinct from predicting a
+gate's output, which is what burned run 1's rounds 3 and 4.
+
+**User decisions**: none required this round.
+
+**Changes**: see the round 2 commit.
+
+**Status**: committed
