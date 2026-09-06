@@ -165,6 +165,9 @@ specificity and this test would return `AFTER_APPROVAL`. Do not weaken it into a
 > Do not weaken it to a string assertion on the file.
 >
 > Finally, re-read the acceptance criteria of issue #1046 and confirm each one is now met, calling
-> out any that is not. Run `run_format_code`, then pylint, mypy(strict), ruff, lint-imports, tach,
+> out any that is not. The full-args criterion is a **containment** property — "the args widget's
+> text contains every argument value verbatim, with no truncation or ellipsis" — and step 2's
+> `format_args_full` satisfies it; do not read it as demanding the widget text equal any
+> formatter's output. Run `run_format_code`, then pylint, mypy(strict), ruff, lint-imports, tach,
 > `check_file_size` and both pytest selections. Delete `.scratch/` if it exists. Make exactly one
 > commit when everything passes.
