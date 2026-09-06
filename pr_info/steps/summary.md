@@ -45,7 +45,9 @@ section present, venv at `<repo>/.venv`) warn only.
 `_format_toml_error` becomes public `format_toml_error` in its own module, imported by
 both `user_config` and `pyproject_config`. `pyproject_config` gains a shared
 `_load_pyproject(project_dir, *, strict=False)` and the three existing readers collapse
-onto it.
+onto it. One new public reader, `get_install_extras(project_dir, *, strict=False) -> str | None`,
+serves both consumers of the extras key: `None` means "not declared", which is what Step 4's
+warn-only row needs, and the `"dev"` fallback is applied once, in `InstallConfig.from_args`.
 
 **7. New module registered in the architecture contracts.**
 `mcp_coder.install` → tach layer `domain` (`depends_on = [utils]`, mirroring
@@ -124,7 +126,7 @@ CI run.
 | `src/mcp_coder/utils/pyproject_config.py` | 1 | `_load_pyproject`, `get_install_extras`, collapse boilerplate |
 | `src/mcp_coder/config/label_config.py` | 1 | Comment only (why its boilerplate stays) |
 | `tests/utils/test_user_config.py` | 1 | Import + 10 call sites renamed |
-| `tests/utils/test_pyproject_config.py` | 1 | New cases for the two new functions |
+| `tests/utils/test_pyproject_config.py` | 1, 2 | New cases for `_load_pyproject` / `get_install_extras`; two cases inherited from the deleted `TestGithubOverridesParser` |
 | `src/mcp_coder/cli/parsers.py` | 2 | `add_install_parser` |
 | `src/mcp_coder/cli/main.py` | 2 | Import, call, dispatch |
 | `src/mcp_coder/cli/command_catalog.py` | 2 | `install` description + SETUP category |
@@ -140,7 +142,6 @@ CI run.
 | `tests/workflows/vscodeclaude/test_session_setup_flow.py` | 3 | Fixture + `_is_install` |
 | `tests/workflows/vscodeclaude/test_session_spec.py` | 3 | Fixtures + stale-spec test |
 | `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py` | 3 | Two docstrings (`:4`, `:151`); assertions unchanged |
-| `src/mcp_coder/utils/pyproject_config.py` | 4 | `install_extras_declared` predicate |
 | `src/mcp_coder/workflows/vscodeclaude/session_launch.py` | 4 | `validate_target_repo` |
 | `src/mcp_coder/workflows/vscodeclaude/__init__.py` | 4 | Export it |
 | `pyproject.toml` | 5 | Drop `[tool.setuptools.data-files]`; declare `[tool.mcp-coder.install] extras = "dev"` |
@@ -152,6 +153,7 @@ CI run.
 | `docs/repository-setup/internal.md` | 6 | `:38-39` |
 | `docs/repository-setup/README.md` | 6 | `:84` + contracts table |
 | `docs/cli-reference.md` | 6 | Short `install` entry |
+| `docs/architecture/architecture.md` | 6 | New §5 subsection for `install/` (beyond the issue's Scope — Decisions.md #14) |
 
 ### Deleted
 

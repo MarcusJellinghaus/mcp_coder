@@ -172,10 +172,97 @@ The substantive claims attached to each citation were verified and kept.
 
 `step_2.md`'s WHERE table already carried the `== 22` → `23` bump.
 
+**Round 3 findings — six items. Two needed Marcus's call (#14, #15); the rest are
+mechanical.**
+
+## 14. `docs/architecture/architecture.md` §5 gains an `install/` subsection
+
+**Marcus's call, made in the round 3 handoff:** "It is **not** in issue #1151's Scope — I am
+accepting it deliberately as a bounded Boy Scout fix, since this change creates the
+staleness and Step 6 is already the docs step."
+
+§5 "Building Block View" carries one subsection per top-level package (`llm/`, `cli/`,
+`icoder/`, `utils/`, `workflows/`). `src/mcp_coder/install/` becomes a new top-level package
+with its own tach layer and import-linter row, so the section goes stale the moment Step 2
+lands. Bounded to one short subsection matching the length and register of the existing
+per-package entries.
+
+Applied in `step_6.md` (WHERE row, a WHAT block with an explicit scope note, LLM prompt) and
+`summary.md`'s Modified table.
+
+## 15. One reader of the extras key, not two
+
+Marcus raised this as a preference, conditional on `step_4.md`'s recorded rationale not
+being load-bearing. It is not. The rationale read: "`get_install_extras` cannot serve here
+because it returns `"dev"` both when the repo declares `"dev"` and when it declares
+nothing." That is true only of the `-> str` signature the plan had chosen for it, not of the
+key it reads — so it argued against one shape of the function, not against a single reader.
+
+`get_install_extras` now returns `str | None` (`None` == not declared) and the `"dev"`
+fallback moves to its one consumer, `InstallConfig.from_args`. Step 4's warn row becomes
+`get_install_extras(folder_path) is None`. `install_extras_declared` is dropped: two public
+functions reading the same key, with the same lax-load semantics, collapse into one.
+
+Applied in `step_1.md` (WHAT, HOW, ALGORITHM, DATA, TESTS, LLM prompt), `step_2.md`
+(`from_args` ALGORITHM, LLM prompt), `step_4.md` (WHERE, WHAT, HOW, ALGORITHM, TESTS, LLM
+prompt) and `summary.md` (§6 and the Modified table). Nothing in the issue names
+`install_extras_declared`, so its Tests section is unaffected; the mapping lives in the
+steps' TESTS sections, which were updated.
+
+## 16. `TestGithubOverridesParser` is deleted, not ported
+
+`step_2.md` TESTS listed it among the classes ported into
+`tests/install/test_install_phases.py`, while HOW drops the function it tests — the local
+`github_overrides`, replaced by `pyproject_config.get_github_install_config`. Its coverage
+already exists against the replacement in
+`tests/utils/test_pyproject_config.py::TestGetGithubInstallConfig` (`:11-56`) for four of its
+five cases; the two single-field cases (`packages` alone, `packages-no-deps` alone) are
+carried over there instead. The `_write_pyproject` helper stays — `TestPhaseOverridesDryRun`
+still uses it.
+
+## 17. The argv-level tests get a `Namespace` harness inside `tests/install/`
+
+`_run_install_check` (`tests/tools/test_install_py.py:113-116`) and all of
+`TestUseSyncTargetGuard` (`:311-351`) drive `install.main([*argv, "--check"])`, but the plan
+drops both `main` and `parse_args`, leaving the only parser in `cli/parsers.py`
+(Decision 14). Several `test_install_env.py` bullets are phrased at flag level, so the step
+had to name a harness or invite one of two wrong turns: re-adding `parse_args`, or coupling
+`tests/install/` to `mcp_coder.cli`.
+
+Chosen: a local `_namespace(**overrides)` helper in each `tests/install/` module, feeding
+`InstallConfig.from_args` / `install` directly. This keeps the package's own tests off
+`mcp_coder.cli`, matching the split Decision 7 already set — `tests/cli/commands/test_install.py`
+is the only module allowed `create_parser()`. It also pins the parser defaults `_namespace`
+mirrors there, so the two cannot drift. `TestUseSyncTargetGuard` stops being an argv test
+altogether: the guard now raises `ValueError` inside `from_args`.
+
+Applied in `step_2.md` (a TESTS harness note, the `tests/cli/commands/test_install.py`
+bullets, LLM prompt).
+
+## 18. `run_ruff_check` added to Steps 1, 3 and 4
+
+`summary.md` states ruff "is not optional" for every step and Step 2's prompt lists it, but
+these three did not — though all three change Python under `src/`. Steps 5 and 6 touch no
+Python and are left alone. Same shape as #11: a CI gate missing from a step's block, not
+per-rule detail.
+
+## 19. Step 5 must preserve the job-local `env:` in the CI block it rewrites
+
+The step names the two comment ranges to rewrite (`ci.yml:136-143`, `:164-171`) but not the
+`env: UV_GIT_SHALLOW: "0"` at `:158-160`, which sits between them and is tied by its own
+comment to #817 (full clone so setuptools_scm can read sibling tags). There is no
+workflow-level `env:`, so it is job-local and a wholesale replacement of `:136-183` would
+lose it — precisely when this step adds sibling installs that need it.
+
+Applied in `step_5.md` (a WHAT clause after the CI block, LLM prompt).
+
 ## Left deliberately untouched
 
 - Per-lint-rule detail (specific ruff/pylint rule codes and their line numbers) was not
   extended anywhere. The per-step verification block runs the gates; that is the right
-  level. A CI gate *missing from* a step's block is a different thing — see #11.
+  level. A CI gate *missing from* a step's block is a different thing — see #11 and #18.
+- Line-number citations were not audited or re-verified as a class this round; precise line
+  numbers are explicitly not crucial per
+  `.claude/knowledge_base/software_engineering_principles.md`.
 - `step_3.md:116`'s "module docstring's `install.py` sentence (`:8`)" actually spans
   `:7-9`. Left as-is: the grep exit criterion covers it.

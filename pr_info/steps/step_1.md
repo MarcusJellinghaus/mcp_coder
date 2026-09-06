@@ -32,8 +32,14 @@ as dead code in `user_config`.
 
 ```python
 def _load_pyproject(project_dir: Path, *, strict: bool = False) -> dict[str, Any]:
-def get_install_extras(project_dir: Path, *, strict: bool = False) -> str:
+def get_install_extras(project_dir: Path, *, strict: bool = False) -> str | None:
 ```
+
+`get_install_extras` returns `None` when the key is not declared — **not** `"dev"`. It is
+the single public reader of `[tool.mcp-coder.install] extras`, serving both the installer
+(Step 2, which applies the `"dev"` fallback in `InstallConfig.from_args`) and Step 4's
+warn-only contract row (which needs declared-vs-absent). A second predicate would read the
+same key twice.
 
 ## HOW
 
@@ -45,8 +51,8 @@ def get_install_extras(project_dir: Path, *, strict: bool = False) -> str:
   `_load_pyproject(project_dir)` (lax) instead of each doing its own
   `path.exists()` / `open` / `tomllib.load` / `except` block. Their public behaviour
   and return types are unchanged.
-- `get_install_extras` returns a plain `str`, not a frozen dataclass — the section has
-  one field, and a wrapper class would add an import and a `.extras` hop for nothing.
+- `get_install_extras` returns a plain `str | None`, not a frozen dataclass — the section
+  has one field, and a wrapper class would add an import and a `.extras` hop for nothing.
 - `label_config.py:114`: one comment line stating that `mcp_coder.config` sits below
   `mcp_coder.utils` in the layer stack and therefore cannot import `pyproject_config`.
 
@@ -66,16 +72,17 @@ _load_pyproject(project_dir, strict):
 
 get_install_extras(project_dir, strict):
     section = _load_pyproject(project_dir, strict=strict).get("tool", {}).get("mcp-coder", {}).get("install", {})
-    return section.get("extras", "dev")                  # explicit "" is honoured
+    return section.get("extras")                         # None == not declared; "" is honoured
 ```
 
 ## DATA
 
 - `_load_pyproject` → parsed TOML `dict[str, Any]`; `{}` for missing file, and for a
   malformed one when `strict=False`.
-- `get_install_extras` → `str`. `"dev"` when the section or key is absent; `""` when
-  the repo declares no extras. Comma-separated values (`"dev,mlflow"`) pass through
-  unparsed — splitting is the installer's job.
+- `get_install_extras` → `str | None`. `None` when the file, section or key is absent;
+  `""` when the repo declares no extras. Comma-separated values (`"dev,mlflow"`) pass
+  through unparsed — splitting is the installer's job. The `"dev"` fallback is *not*
+  applied here; Step 2's `InstallConfig.from_args` owns it.
 - Malformed TOML with `strict=True` → `ValueError` whose message names the file
   (via `format_toml_error`).
 
@@ -83,8 +90,9 @@ get_install_extras(project_dir, strict):
 
 `tests/utils/test_pyproject_config.py` — new cases:
 
-- `get_install_extras`: declared value returned; section absent → `"dev"`; file absent →
-  `"dev"`; explicit `extras = ""` → `""`.
+- `get_install_extras`: declared value returned; key absent → `None`; section absent →
+  `None`; file absent → `None`; malformed file (lax) → `None`; explicit `extras = ""` →
+  `""` (distinct from `None` — this is the pair Step 4's warn row turns on).
 - `_load_pyproject`: missing file → `{}` under both `strict` values; malformed TOML →
   `{}` when lax, `ValueError` naming the file when strict.
 - One regression case per existing reader confirming behaviour is unchanged for a
@@ -108,5 +116,9 @@ All assertions stay as they are: this pins that `user_config`'s error path is un
 > later steps. Do not add a `strict` parameter to `get_github_install_config`
 > (see the summary's note on Decision 13).
 >
-> Then run `run_format_code`, `run_pylint_check`, `run_mypy_check` and the fast pytest
-> selection from the summary, and commit once with everything green.
+> `get_install_extras` returns `str | None` and does **not** apply the `"dev"` fallback —
+> that belongs to Step 2's `InstallConfig.from_args`. Do not add a second reader or
+> predicate for the same key.
+>
+> Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, `run_ruff_check` and
+> the fast pytest selection from the summary, and commit once with everything green.
