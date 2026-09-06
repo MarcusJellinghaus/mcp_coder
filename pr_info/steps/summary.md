@@ -73,9 +73,10 @@ exemptions (raw `subprocess.run` is deliberate — see below).
   not from `pycycle`. The public shape — `from mcp_coder.install import InstallConfig,
   install` — is exactly as the Decision specifies.
 - **Decision 13 (strict load):** exactly one strict call site, in
-  `InstallConfig.from_args`. It runs before any phase, so a malformed target
-  `pyproject.toml` aborts before `get_github_install_config` is ever reached — that
-  reader therefore needs no `strict` parameter.
+  `InstallConfig.from_args`, and it runs *unconditionally* — an explicit `--extras`
+  overrides the value but does not skip the read. It runs before any phase, so a
+  malformed target `pyproject.toml` aborts before `get_github_install_config` is ever
+  reached — that reader therefore needs no `strict` parameter.
 
 ## Steps
 
@@ -134,9 +135,10 @@ CI run.
 | `tests/workflows/vscodeclaude/test_session_setup_flow.py` | 3 | Fixture + `_is_install` |
 | `tests/workflows/vscodeclaude/test_session_spec.py` | 3 | Fixtures + stale-spec test |
 | `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py` | 3 | Six argv assertions |
+| `src/mcp_coder/utils/pyproject_config.py` | 4 | `install_extras_declared` predicate |
 | `src/mcp_coder/workflows/vscodeclaude/session_launch.py` | 4 | `validate_target_repo` |
 | `src/mcp_coder/workflows/vscodeclaude/__init__.py` | 4 | Export it |
-| `pyproject.toml` | 5 | Drop `[tool.setuptools.data-files]` |
+| `pyproject.toml` | 5 | Drop `[tool.setuptools.data-files]`; declare `[tool.mcp-coder.install] extras = "dev"` |
 | `tools/reinstall_local.bat` / `.sh` | 5 | Rewritten driver resolution |
 | `.github/workflows/ci.yml` | 5 | Bootstrap, new argv, two extra smoke checks |
 | `README.md` | 6 | `:143-157` |

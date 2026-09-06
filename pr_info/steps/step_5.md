@@ -10,7 +10,7 @@ Deleting the file in a separate commit from the CI edit fails that commit's own 
 | `tools/install.py` | **deleted** |
 | `tools/install.bat` | **deleted** |
 | `tools/install.sh` | **deleted** |
-| `pyproject.toml` | drop `[tool.setuptools.data-files]` (`:139-145`, comment included) |
+| `pyproject.toml` | drop `[tool.setuptools.data-files]` (`:139-145`, comment included); add `[tool.mcp-coder.install]` |
 | `tools/reinstall_local.bat` | rewritten |
 | `tools/reinstall_local.sh` | rewritten |
 | `.github/workflows/ci.yml` | `vscodeclaude-template-install` job (`:136-183`) |
@@ -21,7 +21,19 @@ addition is needed to replace the data-files entry.
 
 ## WHAT
 
-No Python API changes. Two shell wrappers and one CI job.
+No Python API changes. One TOML section, two shell wrappers and one CI job.
+
+**`pyproject.toml` declares its own extras.** Next to the existing
+`[tool.mcp-coder.install-from-github]`:
+
+```toml
+[tool.mcp-coder.install]
+extras = "dev"
+```
+
+Same value the deleted `--extras dev` hardcoded, so nothing about the install changes —
+but mcp_coder is itself a target repo (the CI job and `reinstall_local` both install
+it), so without this the Step 4 contract row warns on the repo that introduced it.
 
 **Driver resolution (Decisions 20 + 22)** — `reinstall_local` is the one caller that
 would otherwise drive an install from the venv being rewritten: the driver becomes
@@ -84,7 +96,13 @@ run: |
   # Bootstrap mcp-coder into the SYSTEM Python, not ./.venv:
   # `mcp-coder install . --use-sync` runs `uv sync`, which rewrites ./.venv
   # mid-run and would wipe a bootstrap installed there.
-  uv pip install --system .
+  #
+  # Siblings come from GitHub HEAD, exactly as every other job does: the PyPI
+  # copies of mcp-workspace / mcp-coder-utils are too old for mcp_coder's
+  # imports, so a bare `uv pip install --system .` bootstrap could not even
+  # `import mcp_coder`, let alone run the install subcommand.
+  mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+  uv pip install --system "${SPECS[@]}" .
 
   # Mirror the argv session_setup.build_install_argv produces:
   mcp-coder install . --source local --local-path . --use-sync --refresh
@@ -96,7 +114,8 @@ run: |
   python -c "import mcp_coder; print('mcp_coder import OK from', mcp_coder.__file__)"
 ```
 
-`uv pip install --system` is the pattern the other jobs already use (`ci.yml:124`).
+The `mapfile` + `uv pip install --system "${SPECS[@]}"` pair is copied verbatim from
+`ci.yml:123-124`, the pattern every other job already uses.
 Rewrite the stale job comment at `:136-143` and the inline one at `:164-171` — both
 describe the deleted script and the wheel-deployed copy.
 
@@ -131,10 +150,13 @@ wrapper deliberately ignores. Step 6 documents it.
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_5.md`.
 >
 > Implement Step 5 only, as one commit: delete `tools/install.py`, `tools/install.bat`
-> and `tools/install.sh`; drop `[tool.setuptools.data-files]` from `pyproject.toml`;
-> rewrite `tools/reinstall_local.bat` and `tools/reinstall_local.sh` with the
-> three-branch driver resolution; update the `vscodeclaude-template-install` job in
-> `.github/workflows/ci.yml`.
+> and `tools/install.sh`; drop `[tool.setuptools.data-files]` from `pyproject.toml` and
+> add `[tool.mcp-coder.install] extras = "dev"`; rewrite `tools/reinstall_local.bat` and
+> `tools/reinstall_local.sh` with the three-branch driver resolution; update the
+> `vscodeclaude-template-install` job in `.github/workflows/ci.yml`.
+>
+> The CI bootstrap must install the GitHub sibling specs before `.`, mirroring
+> `ci.yml:123-124` — the PyPI copies are too old to import.
 >
 > The repo-venv filter must gate both the `MCP_CODER_VENV_PATH` branch and the PATH
 > branch — see the rationale in this step. Normalise `%~dp0..` with `%%~fd` before

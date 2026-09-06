@@ -8,7 +8,7 @@ reader. Independent of everything else; ships as one commit.
 | File | Action |
 |---|---|
 | `src/mcp_coder/utils/toml_utils.py` | **new** |
-| `src/mcp_coder/utils/user_config.py` | modified (`:107-176`, `:208`) |
+| `src/mcp_coder/utils/user_config.py` | modified (`:34`, `:107-176`, `:208`) |
 | `src/mcp_coder/utils/pyproject_config.py` | modified (all three readers) |
 | `src/mcp_coder/config/label_config.py` | modified (comment at `:114` only) |
 | `tests/utils/test_user_config.py` | modified (`:9` import + 10 call sites) |
@@ -23,7 +23,10 @@ def format_toml_error(file_path: Path, error: tomllib.TOMLDecodeError) -> str:
 ```
 
 Moved verbatim from `user_config._format_toml_error` (`:107-176`), renamed public.
-Hoist its function-local `import re` (`:117`) to module level — the only edit to the body.
+Two edits to the body: hoist its function-local `import re` (`:117`) to module level,
+and bring the module-level `_SMART_QUOTES` constant (`user_config.py:34`) along — it is
+used only by this function (`:171`), so it moves with it rather than being left behind
+as dead code in `user_config`.
 
 `src/mcp_coder/utils/pyproject_config.py`:
 
@@ -35,7 +38,8 @@ def get_install_extras(project_dir: Path, *, strict: bool = False) -> str:
 ## HOW
 
 - `user_config.py`: `from .toml_utils import format_toml_error`, delete the private
-  function, update the single call at `:208`.
+  function **and** the now-unused `_SMART_QUOTES` constant (`:34`), update the single
+  call at `:208`.
 - `pyproject_config.py`: `from .toml_utils import format_toml_error`; rewrite
   `get_prompts_config`, `get_github_install_config`, `get_implement_config` to call
   `_load_pyproject(project_dir)` (lax) instead of each doing its own
