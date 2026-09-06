@@ -21,6 +21,10 @@ wiring (that is step 5).
 ```python
 Section = Literal["allow", "ask", "deny"]
 
+class PersistError(OSError):
+    """Raised when the target file cannot be parsed. Subclasses OSError so the
+    caller's existing degrade branch already covers it."""
+
 class Span(NamedTuple):
     kind: str      # "code" | "string" | "comment"
     start: int
@@ -82,11 +86,22 @@ depth = 0
 for span in spans:
     if span is code:   depth += count("{[") - count("}]") over its chars
     elif span is string and depth == 1 and json.loads(span_text) == section:
-        walk code chars after the span: expect ':' then '[' -> open_i
+        # Guard, not an assumption: a depth-1 string may be a *value*, not a key.
+        walk code chars after the span, skipping whitespace:
+            next non-space must be ':' , then the next non-space must be '['
+            if either check fails -> NOT this key; continue the for-loop
+        open_i = offset of that '['
         keep walking code chars counting '[' / ']' -> matching close_i
         return (open_i, close_i)
 return None
 ```
+
+**The `:` + `[` check must fall through, not bail.** `defaultMode` is a top-level key whose
+schema enum is exactly `"allow" | "ask" | "deny"` (`loader.py::build_settings_schema`), so
+`{"defaultMode": "allow", "allow": [...]}` puts a depth-1 string `"allow"` in the text that is a
+*value*. Returning `None` there would make `write_rule` call `_insert_section` and emit a second
+top-level `"allow"` key — a file that fails schema validation and degrades the whole config
+fail-closed. Continuing the scan finds the real key later in the same pass.
 
 `_insert_item` — two branches, no formatting engine:
 
@@ -119,7 +134,12 @@ whole line when nothing else remains on it.
 
 ```
 text, newline = _read(target)                    # "{\n}\n", "\n" when the file is absent
-data = json.loads(_strip_jsonc(text))
+try:
+    data = json.loads(_strip_jsonc(text))
+except ValueError as exc:                        # JSONDecodeError is a ValueError
+    raise PersistError(f"{target} is not valid JSONC: {exc}") from exc
+if not isinstance(data, dict):                   # e.g. a bare list or scalar root
+    raise PersistError(f"{target} does not hold a JSON object")
 if matcher in data.get(section, []): return      # idempotent: no write, no mtime change
 for other in ("allow","ask","deny") if other != section and matcher in data.get(other, []):
     text = _remove_item(text, _find_item(text, _scan(text), *_find_section_array(...), matcher))
@@ -143,7 +163,11 @@ this removes a whole class of off-by-one bugs.
   On any exception the temp file is unlinked before re-raising.
 - New-file skeleton is `"{\n}\n"`; `_insert_section` then adds the list. One code path for
   "brand-new file" and "existing file missing the key".
-- `write_rule` returns `None` and raises `OSError` on an unwritable target (step 5 handles it).
+- `write_rule` returns `None` and raises `OSError` on an unwritable target, and `PersistError`
+  (an `OSError` subclass) when the existing file is unparseable JSONC or has a non-object root.
+  One failure type, so step 5's single `except OSError` branch degrades to a session grant and
+  still calls `resolve_pending` — an unparseable local file must never wedge the turn. Nothing
+  is written in either case: both raises happen before `_atomic_write`.
 
 Matcher shapes in v1 are whole-matcher (non-arg) only — `mcp__server__tool`, `mcp__server__*`,
 `@group`. The insert is matcher-string-agnostic, so nothing here enumerates them.
@@ -169,6 +193,9 @@ paths, and `.icoder/settings.local.json` is intended to be gitignored.
 | `test_matcher_in_another_list_is_moved_not_duplicated` | matcher in `ask`; write to `allow` → absent from `ask`, present in `allow`, and appears exactly once in the whole file |
 | `test_already_present_is_a_no_op` | file bytes unchanged |
 | `test_no_temp_file_is_left_behind` | `.icoder/` holds no `*.tmp` afterwards |
+| `test_default_mode_value_is_not_mistaken_for_the_key` | **parametrised** over `{"defaultMode": "allow"}` (no `allow` array) and `{"defaultMode": "allow", "allow": ["x"]}`; after writing, the text contains exactly **one** top-level `"allow":` key, `defaultMode` is still `"allow"`, and `load_permission_config(tmp_path)` yields `ALWAYS` for the tool — i.e. the file still passes schema validation |
+| `test_malformed_jsonc_raises_persist_error` | file holds `{"allow": [` ; `pytest.raises(PersistError)` and the file bytes are unchanged. Also assert `issubclass(PersistError, OSError)`, which is what makes step 5's degrade branch cover it |
+| `test_non_object_root_raises_persist_error` | file holds `["mcp__srv__x"]`; `pytest.raises(PersistError)` and the file bytes are unchanged |
 
 Give the module a `_reload(tmp_path, tool)` helper that runs `load_permission_config` + `resolve`
 so most cases end with a real round-trip rather than a string assertion.
@@ -193,14 +220,18 @@ so most cases end with a real round-trip rather than a string assertion.
 > `permissions_leaf_isolation` `source_modules` (not in `permissions_core_purity`). Do not touch
 > `ui/stream_view.py` — wiring is step 5.
 >
-> Work TDD: first write `tests/icoder/test_permissions_persist.py` with the thirteen cases from
+> Work TDD: first write `tests/icoder/test_permissions_persist.py` with the sixteen cases from
 > the table (unmarked, `tmp_path` only, never an in-repo fixture file), watch them fail, then write
 > the module.
 >
-> Reuse `loader._strip_jsonc` only as a parser via `json.loads(_strip_jsonc(text))`. Author `_scan`
-> as the locator — do not try to derive offsets from `_strip_jsonc`. Do not add a full JSON
-> round-trip: comments must survive. Re-run `_scan` after each text mutation instead of adjusting
-> offsets.
+> Reuse `loader._strip_jsonc` only as a parser via `json.loads(_strip_jsonc(text))`, wrapped so a
+> `ValueError` and a non-object root both become `PersistError`. Author `_scan` as the locator —
+> do not try to derive offsets from `_strip_jsonc`. Do not add a full JSON round-trip: comments
+> must survive. Re-run `_scan` after each text mutation instead of adjusting offsets.
+>
+> In `_find_section_array`, the `:` + `[` check after a depth-1 string is a guard that must
+> continue the scan on failure, never return `None` — `defaultMode`'s value is legitimately
+> `"allow"` / `"ask"` / `"deny"`.
 >
 > Run `run_format_code`, then pylint, mypy(strict), ruff, lint-imports and the fast unit test
 > selection. Make exactly one commit when everything passes.

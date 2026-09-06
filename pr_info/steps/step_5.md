@@ -47,7 +47,7 @@ if decision.scope in ("session", "persist"):
     if decision.scope == "persist":
         try:
             write_rule(self._persist_target(), tool_name)
-        except OSError as exc:                       # unwritable target must not wedge the turn
+        except OSError as exc:                       # incl. PersistError (unparseable file);
             logger.warning("persist write failed: %s", exc)
             self.query_one(OutputLog).append_text(
                 f"Could not write the permission rule: {exc}", style=STYLE_CANCELLED
@@ -60,6 +60,13 @@ self._core.resolve_pending(approval_id, decision)
 
 A failed disk write degrades to a session grant and says so. It must not raise on the UI thread
 and must not leave the parked interceptor unanswered — `resolve_pending` still runs.
+
+`except OSError` is the single degrade branch and it must cover **every** `write_rule` failure,
+not just an unwritable target. Step 4 raises `PersistError(OSError)` for an unparseable
+`settings.local.json` and for a non-object root precisely so this one clause suffices; do not add
+a second `except ValueError`, and do not narrow this clause to `PermissionError`. Anything that
+escapes here runs on the UI thread inside the dismiss callback, skips `resolve_pending`, and
+wedges the turn permanently.
 
 The section is always `"allow"`: deny is once-only in v1, so `persist` can only ever carry an
 allow. `write_rule`'s `section` parameter keeps its default and is not passed here.
@@ -84,7 +91,7 @@ Add to the approval section of `tests/icoder/test_app_pilot.py`. All of these ne
 | `test_persist_choice_also_applies_the_runtime_rule` | the `add_runtime_rule` spy recorded one `Rule(layer="runtime", policy=ALWAYS)` — the grant is live this process, not only next launch |
 | `test_persist_choice_resolves_pending_with_persist_scope` | the `_RecordingEngine` recorded `("allow", "persist")` and the write happened **before** the resolve (assert ordering, e.g. by recording both into one list) |
 | `test_persist_end_to_end_yields_always_after_reload` | `tmp_path/".icoder"/"settings.json"` authored with `{"ask": ["mcp__srv__do_it"]}`; drive choice `3`; then `load_permission_config(tmp_path)` + `resolve("mcp__srv__do_it", {}, None, config)` is `Policy.ALWAYS` |
-| `test_persist_write_failure_degrades_to_a_session_grant` | make the target unwritable (e.g. create `.icoder/settings.local.json` as a **directory**); choice `3` still calls `add_runtime_rule` and still calls `resolve_pending`, and the output log carries a message |
+| `test_persist_write_failure_degrades_to_a_session_grant` | **parametrised** over an unwritable target (create `.icoder/settings.local.json` as a **directory**), a malformed file (`{"allow": [`) and a non-object root (`["x"]`); in all three, choice `3` still calls `add_runtime_rule`, still calls `resolve_pending`, and the output log carries a message. The last two are what prove `PersistError` reaches the `except OSError` branch rather than escaping onto the UI thread |
 
 `test_persist_end_to_end_yields_always_after_reload` is the only test that proves #1046 and #1154
 actually compose, and it is exactly the failure the persist-precedence correction exists to
@@ -112,7 +119,8 @@ specificity and this test would return `AFTER_APPROVAL`. Do not weaken it into a
 > Implement step 5 only: wire the `persist` choice in `ui/stream_view.py::_apply_approval` per the
 > ALGORITHM section — disk write first, then the mirrored runtime rule, then `resolve_pending`.
 > A failed write degrades to a session grant with a message in the output log and must not raise
-> on the UI thread.
+> on the UI thread. The single `except OSError` clause must catch step 4's `PersistError` too —
+> an unparseable or non-object `settings.local.json` must degrade, not wedge the turn.
 >
 > Work TDD: add the five tests from the table to the approval section of
 > `tests/icoder/test_app_pilot.py` first, watch them fail, then make them pass.
