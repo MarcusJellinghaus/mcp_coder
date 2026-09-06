@@ -226,3 +226,74 @@ run 1 dropped findings silently and the same ones resurfaced every round.
 **Changes**: see the round 4 commit.
 
 **Status**: committed
+
+## Round 5 — 2026-09-06
+
+**Round 4 fixes verified.** All three landed. The reviewer also confirmed the
+reworded `install-env` messages break no existing assertion — `TestEnsureSystemUv`
+asserts only on `"pip install uv"` and `"astral.sh"` — and that a repo-wide grep
+for `install-env` finds nothing outside the four ported strings and `ci.yml:179`,
+which sits inside the block Step 5 replaces.
+
+**Findings**: none. No high, no medium, no low worth acting on.
+
+Re-verified this round: all 21 top-level symbols in `tools/install.py` are either
+ported or explicitly dropped, with none unassigned; `extras = ""` is already safe
+in the ported code (`_phase_install_main:347` guards on `if args.extras`, and the
+`uv sync` loop skips empty segments), so the `""`-means-no-extras contract needs no
+extra work; Step 3's atomicity claim holds exactly (`create_startup_script` touches
+the filesystem for `mcp_coder_install_path` nowhere else once the resolver is
+gone); the grep exit criterion remains achievable with every remaining hit owned by
+a step; and the citations that could misdirect an edit all land on the right
+construct.
+
+Two items the reviewer considered and deliberately did not raise: the stale
+`# Activate the venv install-env created` comment at `ci.yml:179` (Step 5's
+replacement block simply does not carry it) and docstring-rule consequences of
+relocating `format_toml_error` (Step 1's verification block runs
+`run_ruff_check`, so it surfaces in-step).
+
+**Decisions**: nothing to accept or skip.
+
+**Changes**: none — the stopping rule's converged outcome.
+
+**Status**: no changes needed
+
+## Final Status
+
+**Converged after 5 rounds.** Round 5 produced zero plan changes and an explicit
+"ready for implementation" verdict.
+
+| Round | Findings | Highs | Outcome |
+|---|---|---|---|
+| 1 | 9 | 1 | all applied; 1 escalated to the user |
+| 2 | 5 | 1 | all applied |
+| 3 | 5 | 0 | all applied, incl. 2 judgment calls |
+| 4 | 3 | 0 | 2 applied, 2 skipped and recorded |
+| 5 | 0 | 0 | converged |
+
+**Commits**: `afa6efc`, `06a7917`, `bd740c2`, `040dd05`, plus this log.
+
+**User decisions recorded**:
+
+1. The `subprocess_isolation` row is fixed in the plan only; issue #1151's Scope
+   bullet asserting "Both rows are required" is left as-is and the gap accepted.
+   `Decisions.md` records the divergence and instructs against reverting it.
+2. The review-workflow defects that made run 1 fail are filed as #1155 rather than
+   fixed during this run.
+
+**Deliberate scope addition**: `docs/architecture/architecture.md` §5 gains an
+`install/` subsection (Step 6). Not in the issue's Scope; accepted because this
+change creates the staleness.
+
+**Skipped items, recorded rather than dropped**: the `_namespace` full-namespace
+default pin and moving `_namespace` into `tests/install/conftest.py` (both
+speculative or preference), and `step_3.md`'s `:7-9` docstring span (cosmetic, and
+covered by the grep criterion).
+
+**Why this run converged where run 1 did not.** Run 1 enumerated individual lint
+rule codes into the plan, each edit forcing a round that found the next rule, and
+it dropped findings silently so the same ones returned every round. This run ruled
+lint-output prediction and line-citation auditing out of scope, replaced step 3's
+reference enumeration with a grep exit criterion that closes the whole class, and
+recorded every skipped item. The plan is ready for approval.
