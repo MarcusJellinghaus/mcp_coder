@@ -77,21 +77,16 @@ A failed disk write degrades to a session grant and says so. Neither branch may 
 thread or leave the parked interceptor unanswered — `resolve_pending` still runs in every case,
 including the unparseable-matcher one.
 
-`except OSError` is the single degrade branch and it must cover **every** `write_rule` failure,
-not just an unwritable target. Step 4 raises `PersistError(OSError)` for an unparseable
-`settings.local.json` and for a non-object root precisely so this one clause suffices; do not add
-a second `except ValueError`, and do not narrow this clause to `PermissionError`. Anything that
-escapes here runs on the UI thread inside the dismiss callback, skips `resolve_pending`, and
-wedges the turn permanently.
+The single `except OSError` must cover `PersistError`; do not narrow it or add a second clause.
 
 The section is always `"allow"`: deny is once-only in v1, so `persist` can only ever carry an
 allow. `write_rule`'s `section` parameter keeps its default and is not passed here.
 
 ## DATA
 
-`_persist_target()` (added in step 3) returns
-`Path(runtime_info.project_dir) / LOCAL_SETTINGS_RELPATH`, i.e.
-`<project_dir>/.icoder/settings.local.json`. Persist **always** writes there, for new and existing
+`_persist_target()` (added in step 3) returns `self._project_dir / LOCAL_SETTINGS_RELPATH`, i.e.
+`<project_dir>/.icoder/settings.local.json`, reusing the `_project_dir` the subclass already
+computes rather than recomputing it. Persist **always** writes there, for new and existing
 matchers alike — it never edits a `project`- or `user`-layer file, because a personal "remember
 this" must not mutate a committed, team-shared config. There is no picker in v1; the resolved
 target is already shown read-only in the modal (step 2).
