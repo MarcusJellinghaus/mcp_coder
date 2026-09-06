@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Shared TOML plumbing in `mcp_coder.utils` ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy, ruff — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy, ruff — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `mcp_coder.install` package + `mcp-coder install` subcommand ([step_2.md](./steps/step_2.md))
 

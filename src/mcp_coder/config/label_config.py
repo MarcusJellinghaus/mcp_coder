@@ -111,6 +111,9 @@ def validate_labels_config(labels_config: Dict[str, Any]) -> None:
                 )
 
 
+# The TOML boilerplate below duplicates utils.pyproject_config._load_pyproject on
+# purpose: mcp_coder.config sits below mcp_coder.utils in the layer stack, so it
+# cannot import pyproject_config.
 def _get_labels_config_from_pyproject(project_dir: Path) -> Optional[Path]:
     """Read labels-config from [tool.mcp-coder] in pyproject.toml.
 
