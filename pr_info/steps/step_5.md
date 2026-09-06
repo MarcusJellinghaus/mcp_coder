@@ -11,8 +11,8 @@ Deleting the file in a separate commit from the CI edit fails that commit's own 
 | `tools/install.bat` | **deleted** |
 | `tools/install.sh` | **deleted** |
 | `pyproject.toml` | drop `[tool.setuptools.data-files]` (`:139-145`, comment included); add `[tool.mcp-coder.install]` |
-| `tools/reinstall_local.bat` | rewritten |
-| `tools/reinstall_local.sh` | rewritten |
+| `tools/reinstall_local.bat` | rewritten, header comment included (`:2-4`) |
+| `tools/reinstall_local.sh` | rewritten, header comment included (`:2-4`) |
 | `.github/workflows/ci.yml` | `vscodeclaude-template-install` job (`:136-183`) |
 
 `tests/tools/__init__.py` stays — `tests/tools/mlflow/` still needs it.
@@ -107,6 +107,13 @@ fi
 **survive** — per-invocation dev convenience, not repo policy. Both scripts keep their
 existing venv-activation tails verbatim.
 
+**The header comments are rewritten too.** `reinstall_local.bat:3` and
+`reinstall_local.sh:3` both read "Delegates to install.{bat,sh} in the same dir" — false
+once those files are gone, and the last unowned `install.bat` / `install.sh` references
+outside `pr_info/`. Step 6 is doc-only and cannot reach `tools/`, so its verification grep
+fails unless this step fixes them: say the wrapper resolves an `mcp-coder` from outside the
+repo venv and drives `mcp-coder install`.
+
 **The existing post-install failure guard is retained too** — it is not part of the
 activation tail. `reinstall_local.bat:14-17` and `reinstall_local.sh:15,20-23` both
 hard-fail when the installer returns non-zero; on `.sh` the guard *wraps* the very
@@ -163,8 +170,10 @@ Nothing unit-testable here — the wrappers are shell and the CI job is the test
 
 1. Full local check suite (below) — `run_vulture_check` in particular, to catch anything
    left dangling by the deletions.
-2. `git grep -n "install\.py"` returns only historical references in `docs/`, which
-   Step 6 clears.
+2. `git grep -n "install\.py\|install\.bat\|install\.sh" -- tools` returns empty, and the
+   same grep repo-wide returns only `docs/` / `README.md` references, which Step 6 clears.
+   All three patterns are needed: the two `reinstall_local` header comments name
+   `install.bat` / `install.sh`, which an `install\.py` grep does not see.
 3. The `vscodeclaude-template-install` job passing on the pushed branch.
 
 Also state in the commit message that `tools/reinstall_local.*` now requires an
@@ -192,6 +201,11 @@ wrapper deliberately ignores. Step 6 documents it.
 > guards (`bat:14-17`, `sh:15,20-23`) — the `.sh` guard wraps the invocation line you are
 > replacing, so it is easy to lose. On `.sh` every failure path (the new hard-fail and
 > the retained guard) must use the `_SOURCED`-aware `return 1` / `exit 1` form.
+>
+> Rewrite both wrappers' header comments (`:2-4`) as well — they still say they delegate to
+> `install.bat` / `install.sh`. Nothing after this step can reach `tools/`. Prove it with
+> `git grep -n "install\.py\|install\.bat\|install\.sh" -- tools`, which must come back
+> empty.
 >
 > Documentation is Step 6 — leave `docs/` and `README.md` alone.
 >

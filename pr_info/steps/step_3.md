@@ -116,7 +116,7 @@ regenerated on every restart — no version field, no migration shim.
   live); delete the second test entirely, plus the module docstring's `install.py`
   sentence (`:8`).
 - `test_workspace_startup_script_github.py`: **the assertions do not change.** All six
-  `build_install_argv` call sites (`:55`, `:82`, `:115`, `:145`, `:179`, `:205`) assert only
+  `build_install_argv` call sites (`:54`, `:81`, `:114`, `:144`, `:179`, `:205`) assert only
   `"--skip-overrides" in` / `not in` the argv — none names the script path or `--extras`, so
   this refactor leaves them valid. Only the two docstrings need editing: the module docstring
   (`:4`, "live inside ``tools/install.py`` … covered by that script's own tests") and the
@@ -158,4 +158,5 @@ Steps 5 and 6 both rely on that being true from here on.
 > (Step 4).
 >
 > Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, the fast pytest
-> selection, plus `run_tach_check` and `run_lint_imports_check`. Commit once, green.
+> selection, plus `run_tach_check`, `run_lint_imports_check` and `run_vulture_check` —
+> the last catches anything left dangling by the two deleted functions. Commit once, green.

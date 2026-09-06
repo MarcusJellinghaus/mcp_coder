@@ -10,8 +10,8 @@ it. The two coexist for three commits; only the tests move.
 
 | File | Action |
 |---|---|
-| `src/mcp_coder/install/__init__.py` | **new** — `install()`, re-export `InstallConfig` |
-| `src/mcp_coder/install/_env.py` | **new** — `InstallConfig` + env helpers |
+| `src/mcp_coder/install/__init__.py` | **new** — `install()`, re-export `InstallConfig` + the three constants |
+| `src/mcp_coder/install/_env.py` | **new** — the three module constants, `InstallConfig` + env helpers |
 | `src/mcp_coder/install/_phases.py` | **new** — the five phases |
 | `src/mcp_coder/cli/commands/install.py` | **new** — `execute_install` |
 | `src/mcp_coder/cli/parsers.py` | modified — `add_install_parser` after `add_icoder_parser` (`:578`) |
@@ -36,6 +36,10 @@ in `tests/cli/commands/` next to `test_init.py` — which imports `create_parser
 `_env.py`:
 
 ```python
+MCP_CODER_REPO: str
+REPORT_BINARIES: tuple[str, ...] = ("mcp-coder", "mcp-tools-py", "mcp-workspace", "mcp-config")
+REPORT_PACKAGES: tuple[str, ...] = ("mcp-coder-utils",)
+
 @dataclass(frozen=True)
 class InstallConfig:
     target: Path
@@ -75,14 +79,13 @@ def phase_report_versions(config: InstallConfig, bin_dir: Path, uv_bin: str, py_
 `__init__.py`:
 
 ```python
-MCP_CODER_REPO: str
-REPORT_BINARIES: tuple[str, ...] = ("mcp-coder", "mcp-tools-py", "mcp-workspace", "mcp-config")
-REPORT_PACKAGES: tuple[str, ...] = ("mcp-coder-utils",)
-
-from ._env import InstallConfig          # re-export; see summary's Decision 11/12 note
+# re-exports; see summary's Decision 11/12 note
+from ._env import MCP_CODER_REPO, REPORT_BINARIES, REPORT_PACKAGES, InstallConfig
 
 def install(config: InstallConfig) -> None
 ```
+
+`_phases.py` imports the constants from `._env`, never from the package root.
 
 `cli/commands/install.py`:
 
@@ -103,14 +106,14 @@ def add_install_parser(subparsers: Any) -> None
   Keep raw `subprocess.run` with inherited stdio and the `--check` dry-run mode.
 - **One code edit the move forces: pylint W1510.** `tools/install.py:214`'s
   `subprocess.run(cmd, cwd=cwd)` trips `subprocess-run-check`, which is *not* in
-  `pyproject.toml`'s pylint disable list (`:212-223`), so CI's `pylint ./src ./tests`
+  `pyproject.toml`'s pylint disable list (`:199-212`), so CI's `pylint ./src ./tests`
   (`ci.yml:102`) fails the moment `run` lands under `src/`. Pass `check=False`
   explicitly: `subprocess.run(cmd, cwd=cwd, check=False)`. Do **not** forward the
   wrapper's own `check` parameter — that one means "exit the process on failure" and is
   handled two lines below by `sys.exit(r.returncode)`; forwarding it would raise
   `CalledProcessError` instead and change behaviour.
 - **Docstrings are not "unchanged" — the move puts them under `ruff check src`** for the
-  first time (`D` + `DOC`, preview, google). `ruff check --preview tools/install.py`
+  first time (`ci.yml:103`, `D` + `DOC`, preview, google). `ruff check --preview tools/install.py`
   reports 8 issues across 6 rules today; six of them are on code that survives the move.
   All are fixed by editing the docstring, not the code:
   - `_ensure_system_uv` (`tools/install.py:483-487`) documents `Raises: SystemExit:`
@@ -174,7 +177,7 @@ def add_install_parser(subparsers: Any) -> None
 - **`tach.toml`**: new `[[modules]]` `path = "mcp_coder.install"`, `layer = "domain"`,
   `depends_on = [{ path = "mcp_coder.utils" }]`, placed after the `mcp_coder.prompt_sources`
   block; add `{ path = "mcp_coder.install" }` to `mcp_coder.cli`'s `depends_on` (`:56-73`)
-  and to `tests`' (`:472-488`).
+  and to `tests`' (`:470-488`).
 - **`.importlinter`**: add `mcp_coder.install` as its own row in `layered_architecture`
   between `mcp_coder.prompts` and `mcp_coder.utils`; add **exactly one** row,
   `mcp_coder.install.** -> subprocess`, to `subprocess_isolation`'s `ignore_imports`;
@@ -277,8 +280,10 @@ the contract in this same commit.
 > those are Steps 3 and 5. Keep raw `subprocess.run` and the `--check` mode, but pass
 > `check=False` to `subprocess.run` itself (pylint W1510) without forwarding the
 > wrapper's own `check` parameter. Define
-> `InstallConfig` in `_env.py` and re-export it from `__init__.py` (see the summary's
-> Decision 11/12 note) — do not create an import cycle.
+> `InstallConfig` **and** `MCP_CODER_REPO` / `REPORT_BINARIES` / `REPORT_PACKAGES` in
+> `_env.py`, re-export them from `__init__.py`, and have `_phases.py` import them from
+> `._env` (see the summary's Decision 11/12 note) — `__init__.py` imports `_phases`, so
+> anything `_phases` needs from the package root is an import cycle.
 >
 > Remember `cli/command_catalog.py` and the hard-coded command count in
 > `tests/cli/commands/test_help.py:66` (`all_command_names`, not the `COMMAND_CATEGORIES`
@@ -297,5 +302,6 @@ the contract in this same commit.
 > Decisions.md #8.
 >
 > Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, `run_ruff_check`,
-> the fast pytest selection, plus `run_tach_check`, `run_lint_imports_check` and
-> `./tools/pycycle_check.sh`. Commit once, green.
+> the fast pytest selection, plus `run_tach_check`, `run_lint_imports_check`,
+> `run_vulture_check` and `./tools/pycycle_check.sh` — the last four are one PR-only CI
+> job, and the ~570 moved lines have never been vulture-scanned. Commit once, green.
