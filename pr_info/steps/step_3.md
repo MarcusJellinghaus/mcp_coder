@@ -9,15 +9,18 @@ neither half passes alone.
 
 | File | Action |
 |---|---|
-| `src/mcp_coder/workflows/vscodeclaude/workspace.py` | delete `_resolve_install_script` (`:482-514`), its call (`:602`), the `install_script_path=` kwarg (`:615`), docstrings (`:550`, `:561`) |
+| `src/mcp_coder/workflows/vscodeclaude/workspace.py` | delete `_resolve_install_script` (`:482-514`), its call (`:602`), the `install_script_path=` kwarg (`:615`), docstrings (`:550`, `:554`, `:561`) |
 | `src/mcp_coder/workflows/vscodeclaude/types.py` | drop the field (`:245`); filter unknown keys in `read_session_spec` |
-| `src/mcp_coder/workflows/vscodeclaude/session_setup.py` | new `build_install_argv`; delete `_coordinator_python` (`:56-66`); its docstring (`:109`, `:119`) |
+| `src/mcp_coder/workflows/vscodeclaude/session_setup.py` | new `build_install_argv`; delete `_coordinator_python` (`:56-66`); its docstring (`:109`, `:115`, `:119`) |
 | `src/mcp_coder/workflows/vscodeclaude/templates.py` | docstrings `:5`, `:28` |
 | `tests/workflows/vscodeclaude/test_startup_script_mcp_coder_path.py` | delete 2nd test; trim 1st |
 | `tests/workflows/vscodeclaude/test_session_setup_env.py` | `:38`, `:130`, `:134` |
 | `tests/workflows/vscodeclaude/test_session_setup_flow.py` | `:44`, `:99` |
 | `tests/workflows/vscodeclaude/test_session_spec.py` | `:25`, `:67` + new case |
-| `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py` | six argv assertions; module docstring (`:3-5`) |
+| `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py` | docstrings only (`:4`, `:151`) — the argv assertions do not change |
+
+The line numbers above are navigation aids, not the checklist. The checklist is the grep
+exit criterion in HOW.
 
 ## WHAT
 
@@ -44,18 +47,30 @@ skip_github_install: bool
   any future added field needs a default.
 - `regenerate_session_files` (`session_launch.py:424`) needs no edit — it goes through
   `create_startup_script`.
-- **Every remaining `install.py` mention this step makes false goes with it.** Step 6 is
-  doc-only and cannot reach `src/` or `tests/`, yet Step 5 TESTS §2 and Step 6
-  verification §1 both assert `git grep install\.py` finds nothing outside `docs/` /
-  `pr_info/`. So, besides `templates.py:5,28`:
-  - `session_setup.py:109` (`"""Build the argv that provisions the project venv via
-    ``install.py``."""`) and `:119` (`"The argv list to invoke ``install.py`` with the
-    coordinator Python."`) — rewrite both to name `mcp-coder install` and the
-    coordinator's `mcp-coder` executable, not a script path and not the coordinator
-    Python.
-  - `test_workspace_startup_script_github.py:3-5` — "GitHub override semantics …
-    live inside ``tools/install.py`` and are covered by that script's own tests" is
-    false after Step 2 moved them; point it at `mcp_coder.install` and `tests/install/`.
+- **Every remaining `install.py` / `install_script_path` mention this step makes false goes
+  with it — and the definition of done is a grep, not a list.** Step 6 is doc-only and
+  cannot reach `src/` or `tests/`, and Step 5 TESTS §2 and Step 6 verification §1 both
+  rely on `src/` and `tests/` being clean from here on. Exit criterion:
+
+  ```
+  git grep -n "install\.py\|install_script_path" -- src tests    # must return empty
+  ```
+
+  Run it, then fix whatever it prints. Both patterns are needed: `install_script_path`
+  names the retired field and is invisible to an `install\.py` grep. Every previous
+  attempt to enumerate these references came up short.
+
+  Known references, as examples rather than the checklist:
+  - `workspace.py` — the resolver body (`:483-512`) and three `create_startup_script`
+    docstring lines. `:554` is the `skip_github_install` Args entry ("thread
+    ``--skip-overrides`` into the install.py argv at run time"); `:550` and `:561` name
+    the resolver's job and its `FileNotFoundError`.
+  - `session_setup.py` — the `build_install_argv` docstring. `:109` and `:119` name a
+    script path and the coordinator Python; rewrite both to name `mcp-coder install` and
+    the coordinator's `mcp-coder` executable. `:115` documents "the session spec carrying
+    the resolved ``install_script_path``" — retarget it at the fields the argv now uses.
+  - `templates.py:5`, `:28`; `types.py:245` (field plus its trailing comment).
+  - the test modules — see TESTS below.
 
 ## ALGORITHM
 
@@ -100,13 +115,21 @@ regenerated on every restart — no version field, no migration shim.
   minus its `:37-38` fixture lines (its install-dir ≠ session-folder assertion is still
   live); delete the second test entirely, plus the module docstring's `install.py`
   sentence (`:8`).
-- `test_workspace_startup_script_github.py`: update the six `build_install_argv`
-  assertions to the new form; the `skip_github_install` on-disk chain (`:151`) still
-  asserts `--skip-overrides` threads through. Also retarget the module docstring
-  (`:3-5`) off `tools/install.py`.
+- `test_workspace_startup_script_github.py`: **the assertions do not change.** All six
+  `build_install_argv` call sites (`:55`, `:82`, `:115`, `:145`, `:179`, `:205`) assert only
+  `"--skip-overrides" in` / `not in` the argv — none names the script path or `--extras`, so
+  this refactor leaves them valid. Only the two docstrings need editing: the module docstring
+  (`:4`, "live inside ``tools/install.py`` … covered by that script's own tests") and the
+  class docstring at `:151` ("reaches the ``install.py`` argv"). Point both at
+  `mcp_coder.install` and `tests/install/`.
 
-Before committing, `git grep -n "install\.py"` must return nothing under `src/` or
-`tests/` — Steps 5 and 6 both rely on that being true from here on.
+Exit criterion before committing:
+
+```
+git grep -n "install\.py\|install_script_path" -- src tests    # must return empty
+```
+
+Steps 5 and 6 both rely on that being true from here on.
 
 ## LLM PROMPT
 
@@ -118,11 +141,15 @@ Before committing, `git grep -n "install\.py"` must return nothing under `src/` 
 > removal, `read_session_spec` unknown-key filter, `_resolve_install_script` deletion,
 > docstrings.
 >
-> The docstrings are not optional and not only `templates.py`: `build_install_argv`'s
-> own docstring (`session_setup.py:109`, `:119`) and
-> `test_workspace_startup_script_github.py`'s module docstring (`:3-5`) still name
-> `install.py`. Step 6 is doc-only, so nothing later can fix them. Finish with
-> `git grep -n "install\.py"` over `src/` and `tests/` — it must come back empty.
+> The docstrings are not optional and not only `templates.py`: `build_install_argv`'s own
+> docstring and two docstrings in `test_workspace_startup_script_github.py` still name
+> `install.py` / `install_script_path`. Step 6 is doc-only, so nothing later can fix them.
+> Do not work from the reference lists in this step — they are examples and have been
+> incomplete every time. Work from the grep:
+> `git grep -n "install\.py\|install_script_path" -- src tests` must come back empty.
+>
+> `test_workspace_startup_script_github.py`'s six `build_install_argv` assertions need no
+> change — they only check `--skip-overrides`. Edit its docstrings, not its assertions.
 >
 > The resolver deletion and the test trim are one atomic change: `create_startup_script`
 > still calls the resolver, so trimming the tests alone leaves them failing.

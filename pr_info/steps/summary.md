@@ -50,8 +50,8 @@ onto it.
 **7. New module registered in the architecture contracts.**
 `mcp_coder.install` → tach layer `domain` (`depends_on = [utils]`, mirroring
 `mcp_coder.prompts`); its own row in the import-linter `layered_architecture` contract
-between `mcp_coder.prompts` and `mcp_coder.utils`; a wildcard pair of `subprocess`
-exemptions (raw `subprocess.run` is deliberate — see below).
+between `mcp_coder.prompts` and `mcp_coder.utils`; a single `subprocess` exemption,
+`mcp_coder.install.** -> subprocess` (raw `subprocess.run` is deliberate — see below).
 
 ### Deliberate non-changes
 
@@ -107,9 +107,9 @@ CI run.
 | `src/mcp_coder/install/_phases.py` | 2 |
 | `src/mcp_coder/cli/commands/install.py` | 2 |
 | `tests/install/__init__.py` | 2 |
-| `tests/install/test_install_config.py` | 2 |
+| `tests/install/test_install_env.py` | 2 |
 | `tests/install/test_install_phases.py` | 2 |
-| `tests/install/test_install_cli.py` | 2 |
+| `tests/cli/commands/test_install.py` | 2 |
 | `tests/workflows/vscodeclaude/test_validate_target_repo.py` | 4 |
 
 ### Modified
@@ -125,7 +125,7 @@ CI run.
 | `src/mcp_coder/cli/main.py` | 2 | Import, call, dispatch |
 | `src/mcp_coder/cli/command_catalog.py` | 2 | `install` description + SETUP category |
 | `tach.toml` | 2 | `mcp_coder.install` module; `cli` and `tests` `depends_on` |
-| `.importlinter` | 2 | Layer row, `subprocess` wildcard pair, `tests.install` |
+| `.importlinter` | 2 | Layer row, one `subprocess` wildcard row, `tests.install` in `test_module_independence` |
 | `src/mcp_coder/workflows/vscodeclaude/workspace.py` | 3 | Delete `_resolve_install_script`; drop the spec field |
 | `src/mcp_coder/workflows/vscodeclaude/types.py` | 3 | Retire `install_script_path`; drop unknown keys |
 | `src/mcp_coder/workflows/vscodeclaude/session_setup.py` | 3 | New argv; delete `_coordinator_python` |
@@ -134,7 +134,7 @@ CI run.
 | `tests/workflows/vscodeclaude/test_session_setup_env.py` | 3 | Fixture + 2 assertions |
 | `tests/workflows/vscodeclaude/test_session_setup_flow.py` | 3 | Fixture + `_is_install` |
 | `tests/workflows/vscodeclaude/test_session_spec.py` | 3 | Fixtures + stale-spec test |
-| `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py` | 3 | Six argv assertions |
+| `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py` | 3 | Two docstrings (`:4`, `:151`); assertions unchanged |
 | `src/mcp_coder/utils/pyproject_config.py` | 4 | `install_extras_declared` predicate |
 | `src/mcp_coder/workflows/vscodeclaude/session_launch.py` | 4 | `validate_target_repo` |
 | `src/mcp_coder/workflows/vscodeclaude/__init__.py` | 4 | Export it |

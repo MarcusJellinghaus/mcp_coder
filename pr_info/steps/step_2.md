@@ -17,11 +17,19 @@ it. The two coexist for three commits; only the tests move.
 | `src/mcp_coder/cli/parsers.py` | modified — `add_install_parser` after `add_icoder_parser` (`:578`) |
 | `src/mcp_coder/cli/main.py` | modified — import blocks `:17-38` / `:40-57`, call `:128-145`, dispatch |
 | `src/mcp_coder/cli/command_catalog.py` | modified — description + SETUP category |
-| `tests/cli/commands/test_help.py` | modified — `len(all_command_names) == 22` → `23` (`:38`) |
+| `tests/cli/commands/test_help.py` | modified — `len(all_command_names) == 22` → `23` (`:66`) |
 | `tach.toml` | modified |
 | `.importlinter` | modified |
-| `tests/install/{__init__,test_install_config,test_install_phases,test_install_cli}.py` | **new** |
+| `tests/install/{__init__,test_install_env,test_install_phases}.py` | **new** |
+| `tests/cli/commands/test_install.py` | **new** — parser registration + dispatch |
 | `tests/tools/test_install_py.py` | **deleted** (ported) |
+
+Test files mirror their source module, per `planning_principles.md`:
+`test_install_env.py` ↔ `install/_env.py` and `test_install_phases.py` ↔ `install/_phases.py`
+(the `test_<package>_<module>` shape `tests/llm/providers/langchain/` already uses for
+private modules), and the CLI-dispatch tests mirror `cli/commands/install.py`, so they live
+in `tests/cli/commands/` next to `test_init.py` — which imports `create_parser` from
+`cli.main` for exactly this kind of assertion.
 
 ## WHAT
 
@@ -159,17 +167,24 @@ def add_install_parser(subparsers: Any) -> None
 - **`command_catalog.py`**: `"install": "Install mcp-coder into a target environment"`
   and add `"install"` to the `SETUP` category. Required — `tests/cli/test_help_anti_drift.py`
   asserts the description set equals the parser leaf set and that every description is
-  categorized exactly once. `tests/cli/commands/test_help.py:38` hard-codes the command
-  count (`== 22`); bump it to `23`.
+  categorized exactly once. `tests/cli/commands/test_help.py:66` hard-codes the command
+  count (`assert len(all_command_names) == 22`); bump it to `23`. Do **not** touch `:38`
+  (`assert len(COMMAND_CATEGORIES) == 4` — the category count, unchanged) and do not touch
+  `expected_commands` at `:42-65`, which is asserted as a subset, not an equality.
 - **`tach.toml`**: new `[[modules]]` `path = "mcp_coder.install"`, `layer = "domain"`,
   `depends_on = [{ path = "mcp_coder.utils" }]`, placed after the `mcp_coder.prompt_sources`
   block; add `{ path = "mcp_coder.install" }` to `mcp_coder.cli`'s `depends_on` (`:56-73`)
   and to `tests`' (`:472-488`).
 - **`.importlinter`**: add `mcp_coder.install` as its own row in `layered_architecture`
-  between `mcp_coder.prompts` and `mcp_coder.utils`; add **both**
-  `mcp_coder.install -> subprocess` and `mcp_coder.install.** -> subprocess` to
-  `subprocess_isolation`'s `ignore_imports` (`pkg.**` does not match `pkg` itself);
+  between `mcp_coder.prompts` and `mcp_coder.utils`; add **exactly one** row,
+  `mcp_coder.install.** -> subprocess`, to `subprocess_isolation`'s `ignore_imports`;
   add `tests.install` to `test_module_independence`.
+  **Deliberate divergence from issue #1151** (Decision 8): the issue's Scope asks for a
+  wildcard pair and says both rows are required. They are not — an `ignore_imports` row
+  that matches no edge is an `AlertLevel.ERROR` hard failure, and `install/__init__.py`
+  imports no `subprocess` (it lives in `_env.py`), so the bare row can never match. Do
+  not restore it. Add **no** `tests.install` row to `subprocess_isolation` either, for
+  the same reason — see the TESTS note.
 
 ## ALGORITHM
 
@@ -216,7 +231,14 @@ execute_install(args):
 Port `tests/tools/test_install_py.py` into `tests/install/`, replacing its
 `importlib.util.spec_from_file_location` loader with normal imports, then delete it.
 
-`tests/install/test_install_config.py`
+**Constraint on the port:** keep reaching subprocess as a *module attribute* of the module
+under test — `_env.subprocess.run`, `_env.subprocess.CalledProcessError`, the form
+`tests/tools/test_install_py.py:367,384,398,400,417` already uses. Do **not** add a bare
+`import subprocess` to any test in `tests/install/`. `subprocess_isolation` gets no
+`tests.install` exemption (see the `.importlinter` bullet in HOW), so such an import breaks
+the contract in this same commit.
+
+`tests/install/test_install_env.py`
 - extras: declared in target pyproject; section absent → `"dev"`; explicit `extras = ""`
   → `""`; explicit `--extras` flag overrides the file.
 - strict TOML: malformed target pyproject → error naming the file, **also when
@@ -234,7 +256,7 @@ Port `tests/tools/test_install_py.py` into `tests/install/`, replacing its
 - **Rewritten** `TestPhaseVersions`: a missing binary is reported and the install still
   succeeds (§2 / Decision 3) — the old "missing required CLI exits" test is deleted.
 
-`tests/install/test_install_cli.py`
+`tests/cli/commands/test_install.py`
 - `create_parser()` registers `install` as a subcommand and parses the flags.
 - `main()` dispatches `install` to `execute_install` (monkeypatched).
 
@@ -242,10 +264,13 @@ Port `tests/tools/test_install_py.py` into `tests/install/`, replacing its
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_2.md`.
 >
-> Implement Step 2 only. TDD: create `tests/install/` with the three test files first
-> (porting `tests/tools/test_install_py.py`, rewriting `TestPhaseVersions`), then build
+> Implement Step 2 only. TDD: write the three test files first — `tests/install/`
+> (`test_install_env.py`, `test_install_phases.py`, porting
+> `tests/tools/test_install_py.py` and rewriting `TestPhaseVersions`) plus
+> `tests/cli/commands/test_install.py` for the parser/dispatch coverage — then build
 > `src/mcp_coder/install/` and the CLI wiring until they pass, then delete
-> `tests/tools/test_install_py.py`.
+> `tests/tools/test_install_py.py`. Test files mirror their source module; do not put the
+> CLI-dispatch test under `tests/install/`.
 >
 > Leave `tools/install.py`, `tools/install.bat`, `tools/install.sh`, `pyproject.toml`'s
 > `data-files` entry, `ci.yml` and everything under `workflows/vscodeclaude/` untouched —
@@ -256,12 +281,20 @@ Port `tests/tools/test_install_py.py` into `tests/install/`, replacing its
 > Decision 11/12 note) — do not create an import cycle.
 >
 > Remember `cli/command_catalog.py` and the hard-coded command count in
-> `tests/cli/commands/test_help.py:38`, or the help tests fail.
+> `tests/cli/commands/test_help.py:66` (`all_command_names`, not the `COMMAND_CATEGORIES`
+> count at `:38`), or the help tests fail.
 >
 > The ported docstrings are not clean under `ruff check src` — fix the five surviving
 > findings listed in HOW, and rewrite the module docstring for
 > `src/mcp_coder/install/__init__.py` rather than porting it (it documents the
 > standalone-script / data-files / stdlib-only model this issue retires).
+>
+> In `.importlinter`, `subprocess_isolation` gets exactly one new row —
+> `mcp_coder.install.** -> subprocess`. No bare `mcp_coder.install` row and no
+> `tests.install` row: an unmatched `ignore_imports` row fails the contract. Keep the
+> ported tests patching `_env.subprocess.run` as an attribute rather than importing
+> `subprocess`. This deliberately diverges from issue #1151's Scope — see HOW and
+> Decisions.md #8.
 >
 > Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, `run_ruff_check`,
 > the fast pytest selection, plus `run_tach_check`, `run_lint_imports_check` and

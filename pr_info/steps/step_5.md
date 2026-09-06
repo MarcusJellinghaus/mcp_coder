@@ -48,7 +48,8 @@ Order, identical on both platforms:
 2. A PATH lookup taking the first hit whose directory is not the repo venv bin dir.
    Windows `where` lists all hits; `command -v` returns only the first and cannot
    express the filter, so the `.sh` side uses `type -a -P mcp-coder`.
-3. Hard-fail with an actionable message.
+3. Hard-fail with an actionable message — `exit /b 1` on `.bat`, and on `.sh` the
+   `_SOURCED`-aware form (`return 1` when sourced, `exit 1` otherwise).
 
 The repo-venv filter gates **both** branches. `claude.bat:16-18` routes an activated
 repo venv into `:discover_from_path`, whose non-shadow-proof `where` (`:27-31`) yields
@@ -71,21 +72,47 @@ if not defined MC  for /f "delims=" %%i in ('where mcp-coder 2^>nul') do ^
 if not defined MC  ( echo [FAIL] <message>  & exit /b 1 )
 "%MC%" install "%REPO%" --source local --local-path "%REPO%" ^
     --extra-packages "langchain langchain-anthropic mlflow" --refresh
+if errorlevel 1 (                        # retained guard, today's :14-17
+    echo [FAIL] mcp-coder install failed
+    exit /b 1
+)
 <existing activate tail, unchanged>
 ```
 
-`tools/reinstall_local.sh` — same order, `$REPO_DIR/.venv/bin` as the filter, and:
+`tools/reinstall_local.sh` — same order, `$REPO_DIR/.venv/bin` as the filter. This script
+is documented as `source`-able and already computes `_SOURCED` (`:8`), so **every** failure
+path must honour it (`return 1` when sourced, `exit 1` otherwise) — a bare `exit 1` would
+kill the developer's interactive shell:
 
 ```
 for p in $(type -a -P mcp-coder 2>/dev/null); do
     case "$p" in "$REPO_DIR/.venv/bin/"*) continue ;; esac
     MC="$p"; break
 done
+if [ -z "$MC" ]; then                    # branch 3, mirroring the .bat hard-fail
+    echo "[FAIL] <message>"
+    [ "$_SOURCED" = "1" ] && return 1 || exit 1
+fi
+
+# retained guard, today's :15,20-23
+if ! "$MC" install "$REPO_DIR" \
+    --source local --local-path "$REPO_DIR" \
+    --extra-packages "langchain langchain-anthropic mlflow" --refresh; then
+    echo "[FAIL] mcp-coder install failed"
+    [ "$_SOURCED" = "1" ] && return 1 || exit 1
+fi
 ```
 
 `--extras dev` is **dropped** (repo policy now); `--extra-packages` and `--refresh`
 **survive** — per-invocation dev convenience, not repo policy. Both scripts keep their
 existing venv-activation tails verbatim.
+
+**The existing post-install failure guard is retained too** — it is not part of the
+activation tail. `reinstall_local.bat:14-17` and `reinstall_local.sh:15,20-23` both
+hard-fail when the installer returns non-zero; on `.sh` the guard *wraps* the very
+invocation line being replaced (`if ! … ; then`), so a rewrite that only swaps the
+command drops it. Without the guard the wrapper activates a half-built venv and reports
+success.
 
 `.github/workflows/ci.yml`, `vscodeclaude-template-install`:
 
@@ -161,7 +188,10 @@ wrapper deliberately ignores. Step 6 documents it.
 > The repo-venv filter must gate both the `MCP_CODER_VENV_PATH` branch and the PATH
 > branch — see the rationale in this step. Normalise `%~dp0..` with `%%~fd` before
 > comparing paths. Keep `--extra-packages` and `--refresh`; drop `--extras dev`. Keep
-> both scripts' existing activation tails.
+> both scripts' existing activation tails **and** their existing post-install failure
+> guards (`bat:14-17`, `sh:15,20-23`) — the `.sh` guard wraps the invocation line you are
+> replacing, so it is easy to lose. On `.sh` every failure path (the new hard-fail and
+> the retained guard) must use the `_SOURCED`-aware `return 1` / `exit 1` form.
 >
 > Documentation is Step 6 — leave `docs/` and `README.md` alone.
 >
