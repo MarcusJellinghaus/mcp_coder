@@ -215,6 +215,9 @@ enable = ["R0401"]
 
 [tool.mypy]
 python_version = "3.11"
+# Strictness lives here, not at the call site: mcp-tools-py's run_mypy_check no
+# longer takes a `strict` argument, so the project config is the only floor.
+strict = true
 # Disable import-untyped errors for libraries without stubs when types-* packages are not installed
 # The types-requests package is available in [project.optional-dependencies].types for dev environments
 disable_error_code = ["import-untyped"]
