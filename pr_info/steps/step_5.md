@@ -85,6 +85,8 @@ path must honour it (`return 1` when sourced, `exit 1` otherwise) — a bare `ex
 kill the developer's interactive shell:
 
 ```
+MC=""                       # `[ -z "$MC" ]` is the only guard; a second `source` in the
+                            # same shell must not reuse the previous run's value
 for p in $(type -a -P mcp-coder 2>/dev/null); do
     case "$p" in "$REPO_DIR/.venv/bin/"*) continue ;; esac
     MC="$p"; break
@@ -102,6 +104,12 @@ if ! "$MC" install "$REPO_DIR" \
     [ "$_SOURCED" = "1" ] && return 1 || exit 1
 fi
 ```
+
+**Add `MC` and `p` to the `.sh` script's closing `unset` line** (`reinstall_local.sh:42`,
+today `unset _SOURCED _SCRIPT_PATH _SCRIPT_DIR REPO_DIR VENV_BIN`). The script is
+source-able, so both new variables would otherwise leak into the developer's interactive
+shell. The `.bat` side needs neither the initializer nor an unset: it already does
+`set "MC="` and runs inside `setlocal`.
 
 `--extras dev` is **dropped** (repo policy now); `--extra-packages` and `--refresh`
 **survive** — per-invocation dev convenience, not repo policy. Both scripts keep their
@@ -157,7 +165,10 @@ describe the deleted script and the wheel-deployed copy.
 `UV_GIT_SHALLOW: "0"`, "Full clone so setuptools_scm can read tags on sibling repos
 (#817)". It sits *between* the two comment ranges above and there is no workflow-level
 `env:`, so it is job-local — replacing `:136-183` wholesale would silently drop it, and the
-sibling installs this step adds are exactly what needs it.
+sibling installs this step adds are exactly what needs it. Preserve the
+`# shellcheck disable=SC1091` comment above `source .venv/bin/activate` (`:180`) for the
+same reason; no CI job runs shellcheck, so nothing breaks without it, but the replacement
+block above does not carry it.
 
 ## DATA
 
@@ -201,6 +212,8 @@ wrapper deliberately ignores. Step 6 documents it.
 > `ci.yml:123-124` — the PyPI copies are too old to import. Keep the step's job-local
 > `env: UV_GIT_SHALLOW: "0"` block (`ci.yml:158-160`) and its `#817` comment — it sits
 > between the two comments you are rewriting, so a wholesale block replacement loses it.
+> Keep the `# shellcheck disable=SC1091` comment above `source .venv/bin/activate`
+> (`:180`) for the same reason.
 >
 > The repo-venv filter must gate both the `MCP_CODER_VENV_PATH` branch and the PATH
 > branch — see the rationale in this step. Normalise `%~dp0..` with `%%~fd` before
@@ -208,7 +221,9 @@ wrapper deliberately ignores. Step 6 documents it.
 > both scripts' existing activation tails **and** their existing post-install failure
 > guards (`bat:14-17`, `sh:15,20-23`) — the `.sh` guard wraps the invocation line you are
 > replacing, so it is easy to lose. On `.sh` every failure path (the new hard-fail and
-> the retained guard) must use the `_SOURCED`-aware `return 1` / `exit 1` form.
+> the retained guard) must use the `_SOURCED`-aware `return 1` / `exit 1` form, and the
+> new `MC` / `p` variables need an `MC=""` initializer before the loop plus both names
+> added to the closing `unset` line — the script is source-able.
 >
 > Rewrite both wrappers' header comments (`:2-4`) as well — they still say they delegate to
 > `install.bat` / `install.sh`. Nothing after this step can reach `tools/`. Prove it with

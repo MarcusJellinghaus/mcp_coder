@@ -256,6 +256,42 @@ lose it — precisely when this step adds sibling installs that need it.
 
 Applied in `step_5.md` (a WHAT clause after the CI block, LLM prompt).
 
+**Round 4 findings — three items, all mechanical; two more considered and skipped.**
+
+## 20. The retired `install-env` name is scrubbed from the ported user-facing strings
+
+`prog="install-env"` disappears with `parse_args`, so once the standalone script becomes a
+subcommand the name identifies nothing the user can invoke — yet four strings still print
+it: the two
+`_ensure_system_uv` `sys.exit` messages (`tools/install.py:500`, `:510`), inside a function
+Step 2 ports verbatim, and the header and footer prints (`:553`, `:566`), which `install()`
+re-creates. No step owned them: Step 3's grep (`install\.py|install_script_path`) and Step
+5/6's (`install\.py|install\.bat|install\.sh`) match file names, not the tool name. All
+four now say `mcp-coder install`.
+
+Applied in `step_2.md`: a HOW bullet, the LLM prompt.
+
+## 21. The `.sh` rewrite must initialise and unset `MC`
+
+`tools/reinstall_local.sh` is source-able and ends with
+`unset _SOURCED _SCRIPT_PATH _SCRIPT_DIR REPO_DIR VENV_BIN` (`:42`). The driver-resolution
+block introduces `MC` and the loop variable `p` with neither an initializer nor an unset.
+Since `[ -z "$MC" ]` is the only guard, a second `source` in the same shell would reuse the
+previous run's `MC`, and both variables would leak into the interactive shell. `MC=""` now
+precedes the loop and both names join the closing `unset`. The `.bat` side needs neither —
+it already does `set "MC="` and runs inside `setlocal`.
+
+Applied in `step_5.md`: the `.sh` algorithm block, a note after it, the LLM prompt.
+
+## 22. The CI block rewrite preserves one more line
+
+The replacement block drops the `# shellcheck disable=SC1091` comment above
+`source .venv/bin/activate` (`ci.yml:180`). No CI job runs shellcheck, so nothing breaks,
+but it is the same kind of one-line preservation as #19's job-local `env:` clause — so that
+clause was extended to cover it rather than given a paragraph of its own.
+
+Applied in `step_5.md`: the existing preservation clause after the CI block, the LLM prompt.
+
 ## Left deliberately untouched
 
 - Per-lint-rule detail (specific ruff/pylint rule codes and their line numbers) was not
@@ -266,3 +302,13 @@ Applied in `step_5.md` (a WHAT clause after the CI block, LLM prompt).
   `.claude/knowledge_base/software_engineering_principles.md`.
 - `step_3.md:116`'s "module docstring's `install.py` sentence (`:8`)" actually spans
   `:7-9`. Left as-is: the grep exit criterion covers it.
+- **Round 4, skipped as speculative:** hardening the `_namespace` default pin to cover the
+  whole namespace (`source`, `ref`, `extra_packages` and the five `store_true` flags, or a
+  whole-dict comparison). The pin already works in the direction that matters —
+  `tests/cli/commands/test_install.py` asserts the parser defaults, so a future parser
+  change trips a test that points at `_namespace` — and the three pinned defaults are
+  exactly the ones this refactor changes. Per `software_engineering_principles.md`, a change
+  that only matters if someone later makes a mistake is speculative.
+- **Round 4, skipped as optional:** moving the duplicated `_namespace` helper into
+  `tests/install/conftest.py`. Raised as a preference; duplicating a small helper across two
+  test modules is unremarkable.

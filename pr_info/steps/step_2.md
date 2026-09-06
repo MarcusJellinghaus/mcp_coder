@@ -113,6 +113,14 @@ def add_install_parser(subparsers: Any) -> None
   wrapper's own `check` parameter — that one means "exit the process on failure" and is
   handled two lines below by `sys.exit(r.returncode)`; forwarding it would raise
   `CalledProcessError` instead and change behaviour.
+- **User-facing strings drop the retired `install-env` name.** `prog="install-env"`
+  (`tools/install.py:117`) goes with `parse_args`, so after Decisions 1 and 2 nothing the
+  user can invoke is called that. Four strings still say it: the two `sys.exit` messages
+  inside `ensure_system_uv` (`:500`, `:510`), which the step ports verbatim, and the header
+  and footer prints (`:553`, `:566`), which `install()` re-creates. All four must say
+  `mcp-coder install`. No later step catches them — Step 3's grep
+  (`install\.py|install_script_path`) and Step 6's (`install\.py|install\.bat|install\.sh`)
+  match file names only.
 - **Docstrings are not "unchanged" — the move puts them under `ruff check src`** for the
   first time (`ci.yml:103`, `D` + `DOC`, preview, google). `ruff check --preview tools/install.py`
   reports 8 issues across 6 rules today; six of them are on code that survives the move.
@@ -329,7 +337,9 @@ pins them (see below).
 > `data-files` entry, `ci.yml` and everything under `workflows/vscodeclaude/` untouched —
 > those are Steps 3 and 5. Keep raw `subprocess.run` and the `--check` mode, but pass
 > `check=False` to `subprocess.run` itself (pylint W1510) without forwarding the
-> wrapper's own `check` parameter. Define
+> wrapper's own `check` parameter. The name `install-env` is retired with `parse_args`, so
+> the two `ensure_system_uv` `sys.exit` messages and the header/footer prints must say
+> `mcp-coder install` instead. Define
 > `InstallConfig` **and** `MCP_CODER_REPO` / `REPORT_BINARIES` / `REPORT_PACKAGES` in
 > `_env.py`, re-export them from `__init__.py`, and have `_phases.py` import them from
 > `._env` (see the summary's Decision 11/12 note) — `__init__.py` imports `_phases`, so
