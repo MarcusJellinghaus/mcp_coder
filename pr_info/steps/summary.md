@@ -2,7 +2,16 @@
 
 Implementation summary for issue **#1046**, part of epic **#1038**, design reference **#1037**
 (§5, §8.2, §8.3). Depends on I3.2 (**#1045**, landed) and on the cross-layer precedence fix
-(**#1154**, open — delivered here as step 1).
+(**#1154**, open — step 1 delivers the part #1046 needs and **only** that part).
+
+**#1154 is only partially addressed here and must stay open.** #1154 asks for `_LAYER_ORDER` to be
+hoisted above `Policy.rank`, so that at equal specificity *any* higher layer wins regardless of
+`allow`/`ask` — its AC1 therefore also covers a `project` `allow` beating a `user` `ask`. Step 1
+hoists a narrower `personal_bit` instead, which is everything the persist scope needs and avoids a
+security-relevant widening (see step_1.md). Consequence: #1154's AC1 is unmet for the
+`user` ↔ `project` pair, its proposed sort key no longer matches the code, so the step-1 commit must
+not carry a closing keyword for #1154, and the issue text needs amending before anyone implements
+the remainder.
 
 ## Goal
 
@@ -144,7 +153,7 @@ all future calls with **any** arguments, not just the arguments shown:
 
 | # | Title | Commit scope |
 |---|---|---|
-| 1 | Resolver cross-layer precedence (#1154) | `resolver.py` + resolver tests |
+| 1 | Resolver cross-layer precedence (partially addresses #1154) | `resolver.py` + resolver tests |
 | 2 | `ApprovalModal` widget | `approval_modal.py` + modal tests |
 | 3 | Modal push + `once`/`session` wiring; remove the interim auto-deny | `stream_view.py`, `app.py`, `loader.py` + pilot tests |
 | 4 | `permissions/persist.py` JSONC write-back | `persist.py`, `.importlinter` + writer unit tests |

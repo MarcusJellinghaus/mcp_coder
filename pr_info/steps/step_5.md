@@ -101,6 +101,26 @@ target is already shown read-only in the modal (step 2).
 Add to the approval section of `tests/icoder/test_app_pilot.py`. All of these need a real
 `project_dir`, so construct the `AppCore` with a `RuntimeInfo` pointing at `tmp_path`.
 
+**Every test here that calls `load_permission_config(tmp_path)` must isolate the user layer
+first**, exactly as step 4's `_reload` helper does:
+
+```python
+user_root = tmp_path / "user"
+user_root.mkdir(exist_ok=True)
+monkeypatch.setattr(
+    "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+    lambda _app: user_root,
+)
+```
+
+`_discover_layers` reads `get_user_app_data_dir("mcp_coder") / ".icoder" / "settings.json"` — a
+real machine path outside `tmp_path` — so without this both load-bearing assertions below are
+environment-dependent: a machine-level user `ask`/`deny` for `mcp__srv__do_it` changes
+`test_persist_end_to_end_yields_always_after_reload`'s resolved policy, and a malformed user file
+sets `degraded=True`, which falsifies `test_unparseable_tool_name_is_never_written_to_disk`'s
+`degraded is False` while the code under test is perfectly correct. The precedent is
+`tests/icoder/test_permissions_loader_layers.py:460`'s `_empty_user_dir`.
+
 | Test | Asserts |
 |---|---|
 | `test_persist_choice_writes_the_rule_to_settings_local` | after `pilot.press("3")`, `tmp_path/".icoder"/"settings.local.json"` exists and its parsed `allow` list contains the tool exactly once |

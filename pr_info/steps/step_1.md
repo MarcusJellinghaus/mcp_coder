@@ -1,7 +1,16 @@
-# Step 1 — Resolver cross-layer precedence (issue #1154)
+# Step 1 — Resolver cross-layer precedence (partially addresses #1154)
 
 > Prerequisite for steps 4–5. **Skip this step entirely if #1154 has already landed on `main`.**
 > Steps 2–3 do not depend on it.
+>
+> **This step does NOT complete #1154 and must not close it.** #1154 specifies hoisting
+> `_LAYER_ORDER` itself above `Policy.rank`, and its AC1 reads "at equal specificity a higher layer
+> wins over a lower layer regardless of `allow`/`ask`" — which includes a `project` `allow` beating
+> a `user` `ask`. This step deliberately delivers only the `local`/`runtime` half of that (see
+> **Deliberately narrow** below), so #1154's AC1 stays unmet for the `user` ↔ `project` pair.
+> Keep `#1154` out of any closing keyword in the commit message, and leave the issue open with a
+> comment recording that its stated key and AC1 need amending — the `user` ↔ `project` widening is
+> security-relevant and needs its own decision, not a side effect of #1046.
 
 ## Goal
 
@@ -10,11 +19,16 @@ At equal specificity a **personal** layer (`local`, `runtime`) must win over a s
 an authored `project` or `user` `ask` — while a `never` in any layer still wins at equal
 specificity (fail closed), and the `user` ↔ `project` relationship is left exactly as it is today.
 
-**Deliberately narrow.** Hoisting the whole of `_LAYER_ORDER` above `Policy.rank` would also flip
-`user` ↔ `project`: a repo-committed `.icoder/settings.json` `"allow"` would silently override the
-user's own global `"ask"` at equal specificity. That is a security-relevant widening #1046 never
-asks for — the persist target is only ever `local`, and the runtime grant only ever `runtime`. So
-what is hoisted is a **personal bit**, not the layer order.
+**Deliberately narrow.** Hoisting the whole of `_LAYER_ORDER` above `Policy.rank` — the shape
+#1154 spells out — would also flip `user` ↔ `project`: a repo-committed `.icoder/settings.json`
+`"allow"` would silently override the user's own global `"ask"` at equal specificity. That is a
+security-relevant widening #1046 never asks for — the persist target is only ever `local`, and the
+runtime grant only ever `runtime`. So what is hoisted is a **personal bit**, not the layer order.
+
+This is a knowing divergence from #1154, not an oversight: it satisfies everything #1046's persist
+scope needs while leaving the `user` ↔ `project` contest for #1154 to decide on its own merits.
+Hence the header note — #1154 stays open, and its ACs and proposed key need rewriting before
+anyone implements the remainder.
 
 ## WHERE
 
@@ -134,14 +148,19 @@ Every other existing test in the file must pass untouched.
 
 ## Commit
 
-`fix(permissions): let a personal layer win at equal specificity (#1154)`
+`fix(permissions): let a personal layer win at equal specificity (#1046)`
+
+Body: `Partially addresses #1154 — the user <-> project half is not implemented.`
+The reference is deliberately `#1046`, and deliberately not a closing keyword on `#1154`: the step
+leaves that issue's AC1 unmet, so it must survive this PR.
 
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_1.md`.
 >
 > Implement step 1 only: the cross-layer precedence fix in
-> `src/mcp_coder/icoder/permissions/resolver.py` (issue #1154).
+> `src/mcp_coder/icoder/permissions/resolver.py`. It **partially** addresses #1154 — do not close
+> that issue and do not use a closing keyword for it in the commit message.
 >
 > Work TDD: first add the seven new test functions listed in step_1.md to
 > `tests/icoder/test_permissions_resolver.py` and confirm the first one fails against the current
