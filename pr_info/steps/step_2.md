@@ -17,6 +17,7 @@ it. The two coexist for three commits; only the tests move.
 | `src/mcp_coder/cli/parsers.py` | modified — `add_install_parser` after `add_icoder_parser` (`:578`) |
 | `src/mcp_coder/cli/main.py` | modified — import blocks `:17-38` / `:40-57`, call `:128-145`, dispatch |
 | `src/mcp_coder/cli/command_catalog.py` | modified — description + SETUP category |
+| `tests/cli/commands/test_help.py` | modified — `len(all_command_names) == 22` → `23` (`:38`) |
 | `tach.toml` | modified |
 | `.importlinter` | modified |
 | `tests/install/{__init__,test_install_config,test_install_phases,test_install_cli}.py` | **new** |
@@ -92,6 +93,19 @@ def add_install_parser(subparsers: Any) -> None
 - **Ported from `tools/install.py`, unchanged in behaviour:** `venv_bin`, `exe`, `run`,
   `ensure_system_uv`, `rmtree_with_retry`/`_rmtree_onexc`, and the phase bodies.
   Keep raw `subprocess.run` with inherited stdio and the `--check` dry-run mode.
+- **Docstrings are not "unchanged" — the move puts them under `ruff check src`** for the
+  first time (`D` + `DOC`, preview, google). Two known offenders, both fixed by editing
+  the docstring, not the code:
+  - `_ensure_system_uv` (`tools/install.py:483-487`) documents `Raises: SystemExit:`
+    but exits via `sys.exit` → **DOC502**. Drop the `Raises:` section and state the
+    failure in prose. (The alternative — a `"src/mcp_coder/install/_env.py" = ["DOC502"]`
+    entry next to the four in `pyproject.toml:336-339` — is the fallback if any other
+    `sys.exit` docstring resists.)
+  - `_rmtree_with_retry` (`tools/install.py:263-266`) has a four-line summary with no
+    blank line and no closing period → **D205 / D400**. Rewrite as a one-line summary
+    plus a blank line plus the body.
+  Run `run_ruff_check` before committing; the rest of the ported docstrings are already
+  google-style and should pass unedited.
 - **Dropped:** `CLI_BINARIES`, `OPTIONAL_CLI_BINARIES`, `EXTRA_VERSION_QUERIES`,
   `_detect_repo_root`, `REPO_ROOT`, `_source_dir_for_overrides`, `parse_args`, `main`,
   and the local `github_overrides` (use `pyproject_config.get_github_install_config`).
@@ -111,7 +125,8 @@ def add_install_parser(subparsers: Any) -> None
 - **`command_catalog.py`**: `"install": "Install mcp-coder into a target environment"`
   and add `"install"` to the `SETUP` category. Required — `tests/cli/test_help_anti_drift.py`
   asserts the description set equals the parser leaf set and that every description is
-  categorized exactly once.
+  categorized exactly once. `tests/cli/commands/test_help.py:38` hard-codes the command
+  count (`== 22`); bump it to `23`.
 - **`tach.toml`**: new `[[modules]]` `path = "mcp_coder.install"`, `layer = "domain"`,
   `depends_on = [{ path = "mcp_coder.utils" }]`, placed after the `mcp_coder.prompt_sources`
   block; add `{ path = "mcp_coder.install" }` to `mcp_coder.cli`'s `depends_on` (`:56-73`)
@@ -204,7 +219,9 @@ Port `tests/tools/test_install_py.py` into `tests/install/`, replacing its
 > `InstallConfig` in `_env.py` and re-export it from `__init__.py` (see the summary's
 > Decision 11/12 note) — do not create an import cycle.
 >
-> Remember `cli/command_catalog.py`, or `tests/cli/test_help_anti_drift.py` fails.
+> Remember `cli/command_catalog.py` and the hard-coded command count in
+> `tests/cli/commands/test_help.py:38`, or the help tests fail.
 >
-> Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, the fast pytest
-> selection, plus `run_tach_check` and `run_lint_imports_check`. Commit once, green.
+> Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, `run_ruff_check`,
+> the fast pytest selection, plus `run_tach_check`, `run_lint_imports_check` and
+> `./tools/pycycle_check.sh`. Commit once, green.
