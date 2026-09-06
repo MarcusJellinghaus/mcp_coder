@@ -46,3 +46,15 @@ I'll gather context now.`pr_info/steps/step_2.md:95` — high — "Keep raw `sub
 Verdict(decision='tasks', tasks=["step_2.md:95 — Plan the pylint W1510 (`subprocess-run-check`) fix that the move forces: `tools/install.py:214`'s `subprocess.run(cmd, cwd=cwd)` trips it once under `src/`, and it is not in pyproject.toml's disable list. Specify passing `check=False` on the inner call explicitly, and note that the wrapper's own `check` parameter must not be forwarded, so failures still go through `sys.exit(rc)` rather than raising `CalledProcessError`."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 5 — 2026-09-06
+**Findings**:
+I'll gather context first.`pr_info/steps/step_3.md:15` — high — Step 3 lists only `templates.py:5,28` for docstring cleanup, but `session_setup.py:109` and `:119` (`build_install_argv`'s own docstring: "provisions the project venv via ``install.py``", "argv list to invoke ``install.py`` with the coordinator Python") and `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py:4` also name `install.py`; no step owns them, so they become false at Step 3 and contradict Step 5 TESTS §2 ("`git grep install\.py` returns only historical references in `docs/`") and Step 6 verification §1 ("returns nothing outside `pr_info/`"), which Step 6 cannot fix since it is scoped doc-only.
+
+`pr_info/steps/step_5.md:77` — medium — the `.sh` rewrite is specified as "same order" plus the PATH loop; the new branch-3 hard-fail is shown only in `.bat` form (`exit /b 1`, `:71`). `tools/reinstall_local.sh:8,22` guards its failure path with `_SOURCED` (`return 1` vs `exit 1`) because the script is documented as `source`-able; an unqualified `exit 1` kills the developer's interactive shell.
+
+`pr_info/steps/step_2.md:170` — medium — `subprocess_isolation`'s `source_modules` includes `tests`, and every exempt test module is listed individually; the plan adds `mcp_coder.install` / `mcp_coder.install.**` but no `tests.install` entry. The ported tests only stay legal because they reach subprocess as a module attribute (`install.subprocess.run`, `install.subprocess.CalledProcessError` at `tests/tools/test_install_py.py:367,398`), and the step does not record that constraint.
+**Decisions**:
+Verdict(decision='tasks', tasks=["step_3.md:15 — Extend the docstring/reference cleanup to every remaining `install.py` mention that Step 3 makes false: `session_setup.py:109` and `:119` (`build_install_argv`'s docstring) and `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py:4`. Without this, Step 5 TESTS §2 and Step 6 verification §1 (`git grep install\\.py` returns nothing outside `docs/`/`pr_info/`) cannot pass, since Step 6 is doc-only."], escalate_reason=None)
+**Changes**:
+applied
