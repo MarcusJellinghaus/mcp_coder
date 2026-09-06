@@ -93,6 +93,14 @@ def add_install_parser(subparsers: Any) -> None
 - **Ported from `tools/install.py`, unchanged in behaviour:** `venv_bin`, `exe`, `run`,
   `ensure_system_uv`, `rmtree_with_retry`/`_rmtree_onexc`, and the phase bodies.
   Keep raw `subprocess.run` with inherited stdio and the `--check` dry-run mode.
+- **One code edit the move forces: pylint W1510.** `tools/install.py:214`'s
+  `subprocess.run(cmd, cwd=cwd)` trips `subprocess-run-check`, which is *not* in
+  `pyproject.toml`'s pylint disable list (`:212-223`), so CI's `pylint ./src ./tests`
+  (`ci.yml:102`) fails the moment `run` lands under `src/`. Pass `check=False`
+  explicitly: `subprocess.run(cmd, cwd=cwd, check=False)`. Do **not** forward the
+  wrapper's own `check` parameter — that one means "exit the process on failure" and is
+  handled two lines below by `sys.exit(r.returncode)`; forwarding it would raise
+  `CalledProcessError` instead and change behaviour.
 - **Docstrings are not "unchanged" — the move puts them under `ruff check src`** for the
   first time (`D` + `DOC`, preview, google). `ruff check --preview tools/install.py`
   reports 8 issues across 6 rules today; six of them are on code that survives the move.
@@ -241,7 +249,9 @@ Port `tests/tools/test_install_py.py` into `tests/install/`, replacing its
 >
 > Leave `tools/install.py`, `tools/install.bat`, `tools/install.sh`, `pyproject.toml`'s
 > `data-files` entry, `ci.yml` and everything under `workflows/vscodeclaude/` untouched —
-> those are Steps 3 and 5. Keep raw `subprocess.run` and the `--check` mode. Define
+> those are Steps 3 and 5. Keep raw `subprocess.run` and the `--check` mode, but pass
+> `check=False` to `subprocess.run` itself (pylint W1510) without forwarding the
+> wrapper's own `check` parameter. Define
 > `InstallConfig` in `_env.py` and re-export it from `__init__.py` (see the summary's
 > Decision 11/12 note) — do not create an import cycle.
 >
