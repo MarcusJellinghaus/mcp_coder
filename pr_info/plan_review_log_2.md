@@ -104,3 +104,73 @@ applied:
 `Decisions.md` (decisions 8–11).
 
 **Status**: committed.
+
+## Round 3 — 2026-09-07
+
+**Findings**: none.
+
+Round-2's three corrections were verified against HEAD rather than against the log: `step_1.md`'s
+five `resolver.py` prose sites all resolve to exact lines (`:9`, `:46`, `:142`, `:166`, `:180`)
+plus the test module docstring, and its counts now agree across the WHERE row, the 7-row TDD
+table, the notes section, Acceptance and the LLM prompt; `step_4.md`'s
+`test_no_temp_file_is_left_behind` asserts `.icoder/` holds exactly `settings.local.json`;
+`summary.md`'s heading and Files-modified rows match `step_1.md`.
+
+Other anchors spot-checked and correct: `app.py:82-86`/`:222-233` (the `action_cancel_stream`
+"pure move" claim holds — it touches only `_cancel_event` and `_core`), `loader.py:214/216`,
+`test_app_pilot.py:1609/1766`, `test_approval_wiring.py:384`,
+`test_permissions_loader_layers.py:459`. Every #1046 acceptance criterion maps to at least one
+named test; no new dependencies are implied.
+
+**Decisions**: nothing to apply.
+
+**User decisions**: none outstanding.
+
+**Changes**: none.
+
+**Status**: no changes needed.
+
+---
+
+## Final Status
+
+**Plan is ready for approval.** Three rounds; rounds 1 and 2 produced changes, round 3 produced
+none, which is what ended the loop.
+
+**Commits produced**
+| SHA | Subject |
+|---|---|
+| `264e0c5` | `docs(pr_info): make persist tests falsifiable and trim step_4 pseudo-code` |
+| `01acf1a` | `docs(pr_info): rescope #1154 into step 1 and pin the reworded full-args AC` |
+| `5f08bdc` | `docs(pr_info): apply plan review round 2 corrections` |
+
+**Why run 1 did not converge, and what changed.** Run 1's five rounds all found edge cases inside
+`step_4.md`/`step_5.md` prose pseudo-code rather than planning defects. Prose pseudo-code is
+reviewable but not runnable, so review had no termination condition, and each round's fix enlarged
+the surface for the next. Run 2 round 1 compressed `step_4.md` from ~322 to 223 lines — the six
+pseudo-code bodies became six numbered invariants, every accumulated guard preserved as a stated
+requirement, with the 19-row test table left as the real specification. Review converged in two
+further rounds.
+
+Run 2 also applied four findings that run 1 had raised and dropped without applying (two of which
+left named tests unfalsifiable), and settled the two questions run 1 escalated.
+
+**Issue edits made during this run**
+- **#1154** rescoped and retitled to *"I2.5 — Cross-layer precedence: a local/runtime rule must win
+  over an authored ask at equal specificity"*, with its sort key, AC1 and test list aligned to the
+  narrow `personal_bit`, and a new **Won't fix** section recording that a `user` `ask` still beats a
+  `project` `allow` at equal specificity — a repo-committed `"allow"` must not silently override the
+  user's global `"ask"`. `personal_bit` is final, not a stopgap; step 1 delivers #1154 in full and
+  closes it.
+- **#1046**'s full-args acceptance criterion reworded from the unsatisfiable "the args widget's
+  text equals `_format_args(args)` in full" to "contains every argument value verbatim"
+  (`_format_args` truncates single-line values over 120 chars via `_render_value_full`).
+
+**Left for the human at merge time.** #1154's "Consequential edits elsewhere" also asks for a
+precedence-bullet update in design ref #1037 §5 and a sub-issue-table row in epic #1038. These are
+issue-text edits, not code, and are not among #1154's acceptance criteria, so the plan correctly
+omits them — but step 1's commit closes #1154, so they want doing by hand.
+
+**Unrelated:** CI on this branch is red from a pre-existing dependency mismatch on `main`
+(`run_mypy_check() got an unexpected keyword argument 'strict'`, 4 failures in
+`tests/test_mcp_tools_py_integration.py`). Nothing on this branch touches source code.
