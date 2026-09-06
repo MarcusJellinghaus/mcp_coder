@@ -132,7 +132,8 @@ InstallConfig.from_args(args):
     local_path = (args.local_path or args.target).resolve()
     if args.use_sync and local_path != target:
         raise ValueError("--use-sync requires target == --local-path; uv sync writes to <local-path>/.venv")
-    extras = args.extras if args.extras is not None else get_install_extras(local_path, strict=True)
+    declared = get_install_extras(local_path, strict=True)   # unconditional: validates the file
+    extras   = args.extras if args.extras is not None else declared
     return cls(target=target, local_path=local_path, extras=extras, ...)
 
 install(config):
@@ -169,8 +170,10 @@ Port `tests/tools/test_install_py.py` into `tests/install/`, replacing its
 `tests/install/test_install_config.py`
 - extras: declared in target pyproject; section absent → `"dev"`; explicit `extras = ""`
   → `""`; explicit `--extras` flag overrides the file.
-- strict TOML: malformed target pyproject → error naming the file; missing pyproject →
-  `{}` semantics, installs with the `"dev"` fallback (Decision 21).
+- strict TOML: malformed target pyproject → error naming the file, **also when
+  `--extras` is passed explicitly** (the strict read is unconditional, so
+  `phase_overrides`' lax `get_github_install_config` can never silently swallow it);
+  missing pyproject → `{}` semantics, installs with the `"dev"` fallback (Decision 21).
 - `--local-path` defaults to `<target>`; an explicit `--local-path` still wins.
 - `--source local` without `--local-path` still errors (Decision 19).
 - `InstallConfig` rejects attribute assignment (Decision 12).

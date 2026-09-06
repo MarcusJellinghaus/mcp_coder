@@ -23,12 +23,21 @@ file's `tools/install.py` references; read the whole file.
   "`pip install mcp-coder` first".
 - `:39-69`: the "call `install.py` directly" section becomes "custom / bleeding-edge —
   `mcp-coder install`", with the four commands re-expressed
-  (`mcp-coder install /path/to/target --source git --ref main`, etc.).
-  Trim the six-bullet rationale to two or three — most of it justified a standalone
-  script that no longer exists.
+  (`mcp-coder install /path/to/target --source git --ref main --local-path <checkout>`,
+  etc.). Trim the six-bullet rationale to two or three — most of it justified a
+  standalone script that no longer exists.
 - `:64-67`: the "applied automatically unless `--skip-overrides`" claim now holds only
-  when the target (or an explicit `--local-path`) has a `pyproject.toml`
-  (Decisions 10 + 17). `--local-path` defaults to `<target>`.
+  when the pyproject that declares them is reachable. `--local-path` defaults to
+  `<target>` (Decisions 10 + 17), and a fresh `--source git` target is an empty
+  directory with no `pyproject.toml` — so **overrides are skipped unless `--local-path`
+  points at a checkout of the declaring repo**, and the siblings then come from PyPI,
+  where they lag mcp-coder's imports. Document both halves:
+  - the sibling-pinned form: `git clone` the repo (or reuse an existing checkout), then
+    `mcp-coder install /path/to/target --source git --local-path /path/to/checkout`;
+  - the no-checkout form: `mcp-coder install /path/to/target --source git`, which
+    installs PyPI siblings and is only appropriate when PyPI versions are wanted.
+    Say so plainly rather than leaving the reader to infer it — §2 dropped the
+    required-CLI check that used to surface a half-wired env.
 - `:71-100`: the curl / minimal-files section is **deleted** (Decision 1).
 - `:115-120`: the `missing CLI binaries after install` entry is **deleted**, not edited —
   §2 removed the failure it documents.
@@ -42,7 +51,12 @@ file's `tools/install.py` references; read the whole file.
 **`README.md:143-157`** — replace the whole fenced block, including `:150`'s
 `curl -O … pyproject.toml`, **and** the trailing prose at `:154-157`, which describes
 the deleted recipe and is orphaned without it. New content: `pip install mcp-coder`,
-then `mcp-coder install ~/mcp-coder-env --source git`. Keep the Installation-Guide link.
+`git clone` the repo, then
+`mcp-coder install ~/mcp-coder-env --source git --local-path <checkout>`. The
+`--local-path` is what the retired `curl -O … pyproject.toml` line existed for: without
+it the target has no `pyproject.toml`, so `[tool.mcp-coder.install-from-github]` is
+never read and the siblings come from PyPI (Decisions 10 + 17). Keep the
+Installation-Guide link and point at it for the no-checkout variant.
 
 **`docs/environments/environments.md`**
 - `:113`: `reinstall_local.*` now resolves an `mcp-coder` from outside the repo venv and
