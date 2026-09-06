@@ -165,10 +165,17 @@ CI run.
 mcp__mcp-tools-py__run_format_code
 mcp__mcp-tools-py__run_pylint_check
 mcp__mcp-tools-py__run_mypy_check
+mcp__mcp-tools-py__run_ruff_check
 mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])
 ```
 
+`run_ruff_check` is not optional: CI runs `ruff check src tests` (`ci.yml:104`) with
+`select = ["D", "DOC"]`, preview on, google convention. Step 2 moves ~570 lines of
+`tools/` code — never ruff-checked, since `tools/` is outside that scope — into `src/`.
+
 Steps 2 and 3 additionally: `run_tach_check`, `run_lint_imports_check`.
+Step 2 additionally: `./tools/pycycle_check.sh` (CI's architecture job, `ci.yml:197`) —
+the new package is exactly where the Decision 11/12 note above says a cycle could form.
 Step 5 additionally: `run_vulture_check`.
 
 Note `mypy --strict` covers `src` **and** `tests` (`ci.yml:106`), so new test code needs

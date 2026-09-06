@@ -46,7 +46,10 @@ file's `tools/install.py` references; read the whole file.
 - **Add** the tool-env prerequisite for `reinstall_local`: a fresh clone needs an
   `mcp-coder` on PATH (or `MCP_CODER_VENV_PATH` set) before the wrapper runs, because
   the driver deliberately comes from outside the repo venv. `uv sync --extra dev` does
-  not satisfy this.
+  not satisfy this. State the version floor, not just presence: the tool-env copy must
+  itself carry the `install` subcommand — a pre-#1151 one fails with
+  `invalid choice: 'install'`, and the fix is to upgrade the tool env first
+  (`pip install -U mcp-coder`), not to re-run the wrapper.
 
 **`README.md:143-157`** — replace the whole fenced block, including `:150`'s
 `curl -O … pyproject.toml`, **and** the trailing prose at `:154-157`, which describes
