@@ -252,8 +252,31 @@ paths, and `.icoder/settings.local.json` is intended to be gitignored.
 | `test_unlocatable_move_item_raises_persist_error` | file holds a **duplicate top-level key**, `{"ask": [], "ask": ["mcp__a__b"]}` (valid JSON — `json.loads` keeps the second, `_find_section_array` returns the first, empty array); write `mcp__a__b` to `allow`; `pytest.raises(PersistError)` — assert the type explicitly, since the bug this pins is a `TypeError` from `_remove_item(text, None)` that would escape the caller's `except OSError` — and the file bytes are unchanged |
 | `test_non_list_section_raises_persist_error` | **parametrised** over `{"allow": "mcp__a__b"}` (writing to `allow`) and `{"ask": "mcp__a__b"}` (writing to `allow`, so the move branch is the one that would blow up); `pytest.raises(PersistError)` — assert the type explicitly, since the bug this pins is a `TypeError` from the `*None` unpack that would escape the caller's `except OSError` — and the file bytes are unchanged |
 
-Give the module a `_reload(tmp_path, tool)` helper that runs `load_permission_config` + `resolve`
-so most cases end with a real round-trip rather than a string assertion.
+Give the module a `_reload(tmp_path, tool, monkeypatch)` helper that runs `load_permission_config`
++ `resolve` so most cases end with a real round-trip rather than a string assertion.
+
+**The helper must isolate the user layer first.** `_discover_layers` reads
+`get_user_app_data_dir("mcp_coder") / ".icoder" / "settings.json"` — a real machine path, not
+anything under `tmp_path`. A developer's or CI runner's own user-layer file therefore joins every
+`load_permission_config(tmp_path)` call: a user-level `ask`/`deny` for the tool changes the
+resolved policy, and a malformed user file sets `degraded=True`, which drives *every* tool to
+`AFTER_APPROVAL`. Both silently flip these assertions on one machine and not another. Do exactly
+what `tests/icoder/test_permissions_loader_layers.py:460`'s `_empty_user_dir` does, inside
+`_reload`, so every row routed through it is covered:
+
+```python
+def _reload(tmp_path: Path, tool: str, monkeypatch: pytest.MonkeyPatch) -> Decision:
+    user_root = tmp_path / "user"
+    user_root.mkdir(exist_ok=True)
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+    return resolve(tool, {}, None, load_permission_config(tmp_path))
+```
+
+Any test in this file that calls `load_permission_config(tmp_path)` directly rather than through
+`_reload` must apply the same monkeypatch.
 
 ## Acceptance
 

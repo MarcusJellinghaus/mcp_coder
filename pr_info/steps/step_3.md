@@ -162,6 +162,23 @@ has no `runtime` handling at all, so "the reloaded config holds no `runtime` rul
 and would leave the AC uncovered. Authoring the `ask` on disk is what makes the assertion
 falsifiable — it fails if the grant leaks into the loader.
 
+It must also **isolate the user layer** before calling `load_permission_config(tmp_path)`:
+`_discover_layers` reads `get_user_app_data_dir("mcp_coder") / ".icoder" / "settings.json"`, a real
+machine path outside `tmp_path`. A machine-level user `allow`/`deny` for `mcp__srv__do_it` beats or
+changes the authored `project` `ask`, and a malformed user file sets `degraded=True` — either way
+the assertion turns on the runner's own config rather than on the code under test. Point the
+lookup at an empty directory, as `tests/icoder/test_permissions_loader_layers.py:460`'s
+`_empty_user_dir` does:
+
+```python
+user_root = tmp_path / "user"
+user_root.mkdir(exist_ok=True)
+monkeypatch.setattr(
+    "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+    lambda _app: user_root,
+)
+```
+
 The replay test must use a log produced through `AppCore.stream_llm`, not a hand-written one: the
 guarantee under test is that `TRANSIENT_EVENT_TYPES` keeps `approval_request` out of the log at
 the sink. This step adds **no** replay-mode branch to `_handle_stream_event`.
