@@ -44,22 +44,38 @@ have to relaunch before their own grant took effect.
 
 ```python
 if decision.scope in ("session", "persist"):
-    if decision.scope == "persist":
-        try:
-            write_rule(self._persist_target(), tool_name)
-        except OSError as exc:                       # incl. PersistError (unparseable file);
-            logger.warning("persist write failed: %s", exc)
-            self.query_one(OutputLog).append_text(
-                f"Could not write the permission rule: {exc}", style=STYLE_CANCELLED
-            )
-    rule = _grant_rule(tool_name)
-    if rule is not None:
+    rule = _grant_rule(tool_name)                    # the parse guard, now FIRST
+    if rule is None:
+        self.query_one(OutputLog).append_text(       # nothing granted, nothing written
+            f"Could not remember {tool_name}: not a valid matcher.",
+            style=STYLE_CANCELLED,
+        )
+    else:
+        if decision.scope == "persist":
+            try:
+                write_rule(self._persist_target(), tool_name)
+            except OSError as exc:                   # incl. PersistError (unparseable file);
+                logger.warning("persist write failed: %s", exc)
+                self.query_one(OutputLog).append_text(
+                    f"Could not write the permission rule: {exc}", style=STYLE_CANCELLED
+                )
         self._core.add_runtime_rule(rule)
 self._core.resolve_pending(approval_id, decision)
 ```
 
-A failed disk write degrades to a session grant and says so. It must not raise on the UI thread
-and must not leave the parked interceptor unanswered — `resolve_pending` still runs.
+**The `_grant_rule` parse guard moves ahead of the disk write** (step 3 computed it after; that
+ordering is only safe while there is no write). `write_rule` inserts the matcher string verbatim
+and validates nothing, while `loader._load_layer` is per-layer atomic: one token `parse_matcher`
+rejects fails the **whole** `local` layer, which sets `degraded=True` and drives every tool to ASK
+on every future launch until the user hand-edits the file. So a name the resolver could never have
+matched must not reach disk. It is reachable: `gateway.interceptor` builds
+`f"mcp__{request.server_name}__{request.name}"`, and `matcher._parse_token` requires exactly two
+`__`-separated parts, so a tool whose own name contains `__` yields `mcp__srv__do__it` — which
+never matches a rule, and therefore prompts under `defaultMode: "ask"`.
+
+A failed disk write degrades to a session grant and says so. Neither branch may raise on the UI
+thread or leave the parked interceptor unanswered — `resolve_pending` still runs in every case,
+including the unparseable-matcher one.
 
 `except OSError` is the single degrade branch and it must cover **every** `write_rule` failure,
 not just an unwritable target. Step 4 raises `PersistError(OSError)` for an unparseable
@@ -91,7 +107,8 @@ Add to the approval section of `tests/icoder/test_app_pilot.py`. All of these ne
 | `test_persist_choice_also_applies_the_runtime_rule` | the `add_runtime_rule` spy recorded one `Rule(layer="runtime", policy=ALWAYS)` — the grant is live this process, not only next launch |
 | `test_persist_choice_resolves_pending_with_persist_scope` | the `_RecordingEngine` recorded `("allow", "persist")` and the write happened **before** the resolve (assert ordering, e.g. by recording both into one list) |
 | `test_persist_end_to_end_yields_always_after_reload` | `tmp_path/".icoder"/"settings.json"` authored with `{"ask": ["mcp__srv__do_it"]}`; drive choice `3`; then `load_permission_config(tmp_path)` + `resolve("mcp__srv__do_it", {}, None, config)` is `Policy.ALWAYS` |
-| `test_persist_write_failure_degrades_to_a_session_grant` | **parametrised** over an unwritable target (create `.icoder/settings.local.json` as a **directory**), a malformed file (`{"allow": [`) and a non-object root (`["x"]`); in all three, choice `3` still calls `add_runtime_rule`, still calls `resolve_pending`, and the output log carries a message. The last two are what prove `PersistError` reaches the `except OSError` branch rather than escaping onto the UI thread |
+| `test_unparseable_tool_name_is_never_written_to_disk` | the `approval_request` carries `tool_name="mcp__srv__do__it"` (three `__`-separated parts, so `parse_matcher` rejects it); after `pilot.press("3")` **no** `settings.local.json` exists, `add_runtime_rule` recorded nothing, `resolve_pending` was still called with `("allow", "persist")`, and the output log carries a message. Then assert the next launch is unharmed: `load_permission_config(tmp_path)` over the authored `.icoder/settings.json` returns `degraded is False`. Without the guard the file holds a token `_load_layer` rejects, which degrades the whole layer and drives every tool to ASK forever. |
+| `test_persist_write_failure_degrades_to_a_session_grant` | **parametrised** over an unwritable target (create `.icoder/settings.local.json` as a **directory**), a malformed file (`{"allow": [`), a non-object root (`["x"]`) and a non-list section value (`{"allow": "mcp__a__b"}`); in all four, choice `3` still calls `add_runtime_rule`, still calls `resolve_pending`, and the output log carries a message. The last three are what prove `PersistError` reaches the `except OSError` branch rather than escaping onto the UI thread as a `ValueError`/`TypeError` and wedging the turn |
 
 `test_persist_end_to_end_yields_always_after_reload` is the only test that proves #1046 and #1154
 actually compose, and it is exactly the failure the persist-precedence correction exists to
@@ -117,12 +134,15 @@ specificity and this test would return `AFTER_APPROVAL`. Do not weaken it into a
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_5.md`. Steps 1–4 must be committed first.
 >
 > Implement step 5 only: wire the `persist` choice in `ui/stream_view.py::_apply_approval` per the
-> ALGORITHM section — disk write first, then the mirrored runtime rule, then `resolve_pending`.
+> ALGORITHM section — `_grant_rule`'s parse guard first, then the disk write, then the mirrored
+> runtime rule, then `resolve_pending`. A tool name `parse_matcher` rejects must reach neither the
+> runtime layer nor the file: writing it would fail the whole `local` layer on the next launch.
 > A failed write degrades to a session grant with a message in the output log and must not raise
 > on the UI thread. The single `except OSError` clause must catch step 4's `PersistError` too —
-> an unparseable or non-object `settings.local.json` must degrade, not wedge the turn.
+> an unparseable, non-object or non-list-section `settings.local.json` must degrade, not wedge the
+> turn.
 >
-> Work TDD: add the five tests from the table to the approval section of
+> Work TDD: add the six tests from the table to the approval section of
 > `tests/icoder/test_app_pilot.py` first, watch them fail, then make them pass.
 >
 > `test_persist_end_to_end_yields_always_after_reload` must go through
