@@ -18,6 +18,7 @@ it. The two coexist for three commits; only the tests move.
 | `src/mcp_coder/cli/main.py` | modified — import blocks `:17-38` / `:40-57`, call `:128-145`, dispatch |
 | `src/mcp_coder/cli/command_catalog.py` | modified — description + SETUP category |
 | `tests/cli/commands/test_help.py` | modified — `len(all_command_names) == 22` → `23` (`:66`) |
+| `tests/utils/test_pyproject_config.py` | modified — two cases inherited from the deleted `TestGithubOverridesParser` |
 | `tach.toml` | modified |
 | `.importlinter` | modified |
 | `tests/install/{__init__,test_install_env,test_install_phases}.py` | **new** |
@@ -170,7 +171,11 @@ def add_install_parser(subparsers: Any) -> None
 - **`command_catalog.py`**: `"install": "Install mcp-coder into a target environment"`
   and add `"install"` to the `SETUP` category. Required — `tests/cli/test_help_anti_drift.py`
   asserts the description set equals the parser leaf set and that every description is
-  categorized exactly once. `tests/cli/commands/test_help.py:66` hard-codes the command
+  categorized exactly once. Its third assertion binds the parser: `test_every_leaf_is_described`
+  checks the subparser's `help=` string *equals* `COMMAND_DESCRIPTIONS[name]`, so
+  `add_install_parser` must pass `help=COMMAND_DESCRIPTIONS["install"]` rather than
+  repeating the text as a literal — the convention every existing parser follows
+  (`parsers.py:565`, `:582`). `tests/cli/commands/test_help.py:66` hard-codes the command
   count (`assert len(all_command_names) == 22`); bump it to `23`. Do **not** touch `:38`
   (`assert len(COMMAND_CATEGORIES) == 4` — the category count, unchanged) and do not touch
   `expected_commands` at `:42-65`, which is asserted as a subset, not an equality.
@@ -200,7 +205,9 @@ InstallConfig.from_args(args):
     if args.use_sync and local_path != target:
         raise ValueError("--use-sync requires target == --local-path; uv sync writes to <local-path>/.venv")
     declared = get_install_extras(local_path, strict=True)   # unconditional: validates the file
-    extras   = args.extras if args.extras is not None else declared
+    if   args.extras is not None: extras = args.extras       # explicit flag wins
+    elif declared    is not None: extras = declared          # repo policy
+    else:                         extras = "dev"             # the only "dev" fallback site
     return cls(target=target, local_path=local_path, extras=extras, ...)
 
 install(config):
@@ -241,6 +248,28 @@ under test — `_env.subprocess.run`, `_env.subprocess.CalledProcessError`, the 
 `tests.install` exemption (see the `.importlinter` bullet in HOW), so such an import breaks
 the contract in this same commit.
 
+**Harness for the argv-level cases.** The old tests drive `install.main([*argv, "--check"])`
+— `_run_install_check` (`tests/tools/test_install_py.py:113-116`) and all of
+`TestUseSyncTargetGuard` (`:311-351`). HOW drops **both** `main` and `parse_args`, and the
+only parser is now `add_install_parser` in `cli/parsers.py` (Decision 14), which
+`tests/install/` must not reach for — that would couple the package's own tests to
+`mcp_coder.cli`. Give each `tests/install/` module one local helper instead, building the
+`Namespace` the parser would have produced:
+
+```python
+def _namespace(**overrides: Any) -> argparse.Namespace:   # parser defaults + overrides
+```
+
+Every flag-level bullet below therefore means the corresponding `Namespace` attribute:
+`InstallConfig.from_args(_namespace(extras="mlflow", ...))` for the extras cases, and
+`install(InstallConfig.from_args(_namespace(check=True, ...)))` wherever the old test called
+`_run_install_check`. `TestUseSyncTargetGuard` does not port as an argv test at all — the
+guard now raises `ValueError` inside `from_args`, before any phase runs, so it collapses into
+the `--use-sync` case listed below.
+
+`_namespace`'s defaults could drift from the parser's, so `tests/cli/commands/test_install.py`
+pins them (see below).
+
 `tests/install/test_install_env.py`
 - extras: declared in target pyproject; section absent → `"dev"`; explicit `extras = ""`
   → `""`; explicit `--extras` flag overrides the file.
@@ -254,13 +283,23 @@ the contract in this same commit.
 - `--use-sync` with mismatched target/local-path errors.
 
 `tests/install/test_install_phases.py`
-- The ported `TestGithubOverridesParser` / `TestPhaseOverridesDryRun` /
-  `TestEnsureSystemUv` coverage (dry-run stdout assertions on the `> …` lines).
+- The ported `TestPhaseOverridesDryRun` / `TestEnsureSystemUv` coverage (dry-run stdout
+  assertions on the `> …` lines).
+- **`TestGithubOverridesParser` is deleted, not ported.** HOW drops the local
+  `github_overrides` it tests, and its replacement is already covered by
+  `tests/utils/test_pyproject_config.py::TestGetGithubInstallConfig` (`:11-56`): packages +
+  no-deps, section missing, file missing, empty lists. Carry over only the two cases that
+  class lacks — `packages` alone and `packages-no-deps` alone — as new cases *there*.
+  **Keep the `_write_pyproject` helper** (`tests/tools/test_install_py.py:43-58`);
+  `TestPhaseOverridesDryRun` still needs it.
 - **Rewritten** `TestPhaseVersions`: a missing binary is reported and the install still
   succeeds (§2 / Decision 3) — the old "missing required CLI exits" test is deleted.
 
 `tests/cli/commands/test_install.py`
 - `create_parser()` registers `install` as a subcommand and parses the flags.
+- The parser defaults `tests/install/`'s `_namespace` helper mirrors: `--extras` and
+  `--local-path` parse to `None`, `--python` to `sys.executable`. This is what keeps the
+  flag-level phrasing in `tests/install/` honest without importing `mcp_coder.cli` there.
 - `main()` dispatches `install` to `execute_install` (monkeypatched).
 
 ## LLM PROMPT
@@ -275,6 +314,17 @@ the contract in this same commit.
 > `tests/tools/test_install_py.py`. Test files mirror their source module; do not put the
 > CLI-dispatch test under `tests/install/`.
 >
+> The old tests reach the config through `install.main([… , "--check"])`, but `main` and
+> `parse_args` are both dropped. Do **not** re-add either, and do not import
+> `mcp_coder.cli` from `tests/install/`: build the `Namespace` with a local `_namespace()`
+> helper and call `InstallConfig.from_args` / `install` directly, and pin the parser
+> defaults it mirrors in `tests/cli/commands/test_install.py`. Delete
+> `TestGithubOverridesParser` rather than porting it — the function it tests is dropped —
+> but keep the `_write_pyproject` helper for `TestPhaseOverridesDryRun`.
+>
+> `get_install_extras` returns `str | None`; the `"dev"` fallback lives in
+> `InstallConfig.from_args` and nowhere else.
+>
 > Leave `tools/install.py`, `tools/install.bat`, `tools/install.sh`, `pyproject.toml`'s
 > `data-files` entry, `ci.yml` and everything under `workflows/vscodeclaude/` untouched —
 > those are Steps 3 and 5. Keep raw `subprocess.run` and the `--check` mode, but pass
@@ -287,7 +337,9 @@ the contract in this same commit.
 >
 > Remember `cli/command_catalog.py` and the hard-coded command count in
 > `tests/cli/commands/test_help.py:66` (`all_command_names`, not the `COMMAND_CATEGORIES`
-> count at `:38`), or the help tests fail.
+> count at `:38`), or the help tests fail. `add_install_parser` must pass
+> `help=COMMAND_DESCRIPTIONS["install"]`, not a copy of the string —
+> `test_every_leaf_is_described` asserts the two are equal.
 >
 > The ported docstrings are not clean under `ruff check src` — fix the five surviving
 > findings listed in HOW, and rewrite the module docstring for

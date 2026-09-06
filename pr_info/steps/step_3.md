@@ -157,6 +157,7 @@ Steps 5 and 6 both rely on that being true from here on.
 > Do not delete `tools/install.py` (Step 5) and do not touch `session_launch.py`
 > (Step 4).
 >
-> Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, the fast pytest
-> selection, plus `run_tach_check`, `run_lint_imports_check` and `run_vulture_check` —
+> Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, `run_ruff_check`, the
+> fast pytest selection, plus `run_tach_check`, `run_lint_imports_check` and
+> `run_vulture_check` —
 > the last catches anything left dangling by the two deleted functions. Commit once, green.

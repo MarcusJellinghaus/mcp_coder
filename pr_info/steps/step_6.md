@@ -13,6 +13,7 @@ Doc-only commit. Every remaining reference to `tools/install.py`, `install.bat`,
 | `docs/repository-setup/internal.md` | `:38-39` |
 | `docs/repository-setup/README.md` | `:84` + contracts table |
 | `docs/cli-reference.md` | short `### install` entry |
+| `docs/architecture/architecture.md` | new `install/` subsection in §5 |
 
 ## WHAT
 
@@ -92,6 +93,18 @@ plus its entry in the `### Basics` command list at `:7`. Not required by the iss
 not test-enforced, but the file is a complete command list and would otherwise be stale.
 Keep it to synopsis + flag table; the details live in `installation.md`.
 
+**`docs/architecture/architecture.md`** — §5 "Building Block View" carries one subsection
+per top-level package (`llm/`, `cli/`, `icoder/`, `utils/`, `workflows/`, `:182-343`).
+`src/mcp_coder/install/` is a new one, with its own tach layer and import-linter row, so
+add an **Installer (`src/mcp_coder/install/`)** `###` subsection after the CLI one
+(`:245-254`), in the same register and length as the shorter entries: one line per module
+(`__init__.py` `install()` + re-exports, `_env.py` `InstallConfig` + env helpers,
+`_phases.py` the five phases), with its tests (`tests/install/`) and the `domain` layer /
+`depends_on = [utils]` boundary. One short paragraph — not a rewrite of §5.
+
+**Scope note:** this file is not in issue #1151's Scope. It is a deliberate Boy Scout fix,
+accepted in review because this PR is what makes the section stale (see `Decisions.md` #14).
+
 ## DATA
 
 No code, no data structures. Docs only.
@@ -117,8 +130,9 @@ None. Verification:
 > `docs/getting-started/installation.md` around `mcp-coder install`, replace
 > `README.md:143-157` (fenced block *and* the orphaned prose after it), and apply the
 > point edits to `environments.md`, `repository-setup/internal.md`,
-> `repository-setup/README.md` (including the new contracts table) and
-> `docs/cli-reference.md`.
+> `repository-setup/README.md` (including the new contracts table),
+> `docs/cli-reference.md` and `docs/architecture/architecture.md` (one short new §5
+> subsection for `src/mcp_coder/install/`).
 >
 > Follow the repo's writing style: say it once, cut anything not load-bearing. Trim the
 > old rationale prose rather than translating it one-for-one — most of it justified a

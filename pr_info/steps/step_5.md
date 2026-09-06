@@ -153,6 +153,12 @@ The `mapfile` + `uv pip install --system "${SPECS[@]}"` pair is copied verbatim 
 Rewrite the stale job comment at `:136-143` and the inline one at `:164-171` — both
 describe the deleted script and the wheel-deployed copy.
 
+**Preserve the step's `env:` block** (`ci.yml:158-160`) verbatim, comment included:
+`UV_GIT_SHALLOW: "0"`, "Full clone so setuptools_scm can read tags on sibling repos
+(#817)". It sits *between* the two comment ranges above and there is no workflow-level
+`env:`, so it is job-local — replacing `:136-183` wholesale would silently drop it, and the
+sibling installs this step adds are exactly what needs it.
+
 ## DATA
 
 Failure message for branch 3 (both wrappers, same wording):
@@ -192,7 +198,9 @@ wrapper deliberately ignores. Step 6 documents it.
 > `vscodeclaude-template-install` job in `.github/workflows/ci.yml`.
 >
 > The CI bootstrap must install the GitHub sibling specs before `.`, mirroring
-> `ci.yml:123-124` — the PyPI copies are too old to import.
+> `ci.yml:123-124` — the PyPI copies are too old to import. Keep the step's job-local
+> `env: UV_GIT_SHALLOW: "0"` block (`ci.yml:158-160`) and its `#817` comment — it sits
+> between the two comments you are rewriting, so a wholesale block replacement loses it.
 >
 > The repo-venv filter must gate both the `MCP_CODER_VENV_PATH` branch and the PATH
 > branch — see the rationale in this step. Normalise `%~dp0..` with `%%~fd` before

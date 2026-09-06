@@ -122,3 +122,55 @@ gate's output, which is what burned run 1's rounds 3 and 4.
 **Changes**: see the round 2 commit.
 
 **Status**: committed
+
+## Round 3 — 2026-09-06
+
+**Round 2 fixes verified.** All five landed correctly. The reviewer confirmed the
+cycle reasoning against the real code (`_phase_install_main` uses
+`MCP_CODER_REPO`, `_phase_versions` iterates the report lists, `subprocess`
+appears only in `run()` and `_ensure_system_uv()` — both bound for `_env.py`), so
+the resulting `__init__ → _phases → _env` graph is acyclic and the single
+`ignore_imports` row is right. A repo-wide grep for all three `install.*`
+patterns now shows every remaining hit owned by a step.
+
+**Findings** (5, no highs, all mechanical, plus 2 judgment calls):
+
+- `step_2.md` TESTS — medium — instructs porting `TestGithubOverridesParser`,
+  but HOW drops the function it tests; its five cases already exist verbatim
+  against the replacement in `tests/utils/test_pyproject_config.py:11-56`. Should
+  be a deletion, keeping the `_write_pyproject` helper.
+- `step_2.md` TESTS — medium — no harness named for the ported argv-level tests.
+  `_run_install_check` and `TestUseSyncTargetGuard` drive `install.main(...)`, but
+  the plan drops both `main` and `parse_args`. Left open, the likely wrong turns
+  are re-adding `parse_args` or coupling `tests/install/` to `mcp_coder.cli`.
+- `step_1.md`, `step_3.md`, `step_4.md` — medium — `run_ruff_check` missing from
+  all three prompts although `summary.md` calls it non-optional and all three
+  change Python under `src/`.
+- `step_5.md` — low — the CI block rewrite would silently drop the job-local
+  `env: UV_GIT_SHALLOW: "0"` (`ci.yml:158-160`, tied to #817), which sits between
+  the two named comment ranges.
+- `step_2.md` HOW — low — `test_every_leaf_is_described` asserts the subparser's
+  `help=` equals `COMMAND_DESCRIPTIONS[name]`, so `add_install_parser` must pass
+  the constant, not a literal.
+
+**Decisions**: all five accepted. Both judgment calls also accepted:
+
+- `docs/architecture/architecture.md` §5 gains an `install/` entry. Deliberately
+  beyond the issue's Scope — §5 carries one section per top-level package and this
+  PR creates the staleness, so it is a bounded Boy Scout fix in the step that
+  already owns docs.
+- The two-readers simplification (`get_install_extras` + `install_extras_declared`
+  → one `-> str | None`) was passed to the engineer **conditionally**: collapse
+  only if `step_4.md`'s documented rationale for splitting them does not hold.
+  Not forced — a preference, not a defect.
+
+Line-number citation precision was ruled out of scope for this round, per
+`software_engineering_principles.md` ("precise line numbers are not crucial").
+References that would *misdirect an edit* remain in scope; the cosmetic kind does
+not. This closed the last cheap-findings channel.
+
+**User decisions**: none required this round.
+
+**Changes**: see the round 3 commit.
+
+**Status**: committed
