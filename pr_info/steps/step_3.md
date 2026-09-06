@@ -35,6 +35,8 @@ letting `persist.py` duplicate it in step 4, and use it for the `local` candidat
 def _grant_rule(tool_name: str) -> Rule | None: ...          # module-level
 
 class StreamViewApp(App[None]):
+    _project_dir: Path                                       # supplied by the subclass
+
     def action_cancel_stream(self) -> None: ...              # moved down from ICoderApp
     def _persist_target(self) -> Path: ...
     def _push_approval_modal(self, event: StreamEvent) -> None: ...
@@ -106,10 +108,17 @@ def _grant_rule(tool_name):
 
 ```python
 def _persist_target(self):
-    info = self._core.runtime_info
-    root = Path(info.project_dir) if info else Path.cwd()
-    return root / LOCAL_SETTINGS_RELPATH
+    return self._project_dir / LOCAL_SETTINGS_RELPATH
 ```
+
+**Do not recompute the project directory here.** `ICoderApp.__init__` (`app.py:82-86`) already
+computes `self._project_dir: Path` from `runtime_info.project_dir` with a `Path.cwd()` fallback,
+and `ICoderApp` is the only subclass of `StreamViewApp` — `StreamViewApp` is never instantiated
+directly. A second `Path(runtime_info.project_dir) if ... else Path.cwd()` here is two
+implementations that can drift, which is the same objection that justifies moving
+`action_cancel_stream` down rather than inlining it. `StreamViewApp` already declares
+`_core: AppCore` as a class annotation supplied by the subclass; `_project_dir: Path` joins it the
+same way.
 
 `push_screen(screen, callback)` — **`push_screen_wait` is forbidden.** `_handle_stream_event` runs
 under `call_from_thread`, which blocks the consumer thread until it returns, and both streaming
@@ -150,11 +159,22 @@ New tests:
 | `test_approval_choice_resolves_pending_with_decision` | **parametrised** over `("1", "allow", "once")`, `("2", "allow", "session")`, `("4", "deny", "once")`: after `pilot.press(key)` the `_RecordingEngine` recorded exactly one `(approval_id, decision)` with the right `outcome`/`scope`, `approval_id` matching the event, and `reason is None` |
 | `test_allow_once_writes_no_runtime_rule` | with a spy on `AppCore.add_runtime_rule`, choice `1` records no call |
 | `test_session_choice_writes_a_runtime_rule` | choice `2` records exactly one `Rule` with `layer == "runtime"`, `policy is Policy.ALWAYS`, and a matcher that matches the tool |
-| `test_session_grant_is_honoured_by_resolve` | take the captured `Rule`, build `PermissionConfig(rules=(authored_ask, captured))` where `authored_ask` is `Rule(same matcher, AFTER_APPROVAL, "project")`, and assert `resolve(tool, {}, None, config).policy is Policy.ALWAYS` — public API only, and this is what "honoured on a subsequent turn" means |
+| `test_session_grant_is_honoured_by_resolve` | drive a **real** gateway, not the spy: `gateway = LangchainEnforcementGateway(PermissionConfig(rules=(authored_ask,)))` with `authored_ask = Rule(matcher, Policy.AFTER_APPROVAL, "project")`, construct `AppCore(..., permission_gateway=gateway)`, press `2`, then assert `resolve(tool, {}, None, gateway._config).policy is Policy.ALWAYS` |
 | `test_session_grant_does_not_survive_a_reload` | author `tmp_path/".icoder"/"settings.json"` with `{"ask": ["mcp__srv__do_it"]}`; apply the session grant via choice `2`; then assert `resolve("mcp__srv__do_it", {}, None, load_permission_config(tmp_path)).policy is Policy.AFTER_APPROVAL` — the grant is gone and the tool asks again (design §8.4 makes this an explicit obligation: session grants do not survive a resume) |
 | `test_cancel_turn_cancels_and_never_resolves` | choice `5`: `engine.cancel_calls == 1`, `engine.resolved == []`, `app._cancel_event.is_set()` |
 | `test_ctrl_c_does_not_cancel_the_turn` | `pilot.press("ctrl+c")` on the open modal leaves `engine.cancel_calls == 0` and `engine.resolved == []` |
 | `test_replayed_log_pushes_no_approval_modal` | drain `core.stream_llm(...)` over a fake service yielding an `approval_request` then `done`; assert the written `.jsonl` contains no `approval_request` line; then `app.do_resume(log_path)` and assert `len(app.screen_stack) == 1` |
+
+`test_session_grant_is_honoured_by_resolve` must go through a real `LangchainEnforcementGateway`,
+not through a `PermissionConfig` hand-built from the `Rule` the `add_runtime_rule` spy captured.
+The spy version only proves the UI passed a well-formed `Rule` — which
+`test_session_choice_writes_a_runtime_rule` already covers — and never exercises
+`gateway.add_runtime_rule`, the store #1045 owns, which rebinds the frozen `PermissionConfig`.
+Seeding the gateway with the authored `ask` and reading the grant back out of the gateway's own
+config is what makes "honoured on a subsequent turn" falsifiable. The precedent for constructing
+`AppCore(..., permission_gateway=gateway)` around a real gateway is
+`tests/icoder/test_approval_wiring.py:384`
+(`test_add_runtime_rule_grants_the_tool_on_a_later_turn`) — read it before writing this one.
 
 `test_session_grant_does_not_survive_a_reload` must assert the *reloaded policy*, not the absence
 of a `runtime`-layer rule: `_discover_layers` yields only `user`/`project`/`local` and `loader.py`
