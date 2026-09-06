@@ -21,6 +21,8 @@ def build_prompt_text(
     tool_name: str, source: str, persist_target: Path
 ) -> str: ...
 
+def format_args_full(args: dict[str, object]) -> str: ...
+
 class ApprovalModal(ModalScreen[Optional[ApprovalDecision]]):
     DEFAULT_CSS: str
     BINDINGS: list[Binding]
@@ -53,12 +55,33 @@ cancel outcome.
 
 ```python
 from mcp_coder.icoder.permissions.approval import ApprovalDecision
-from mcp_coder.icoder.ui.widgets.detail_modal import _format_args
 ```
 
-Import `_format_args` under its existing private name. `detail_modal.py` already imports
-`_render_tool_output` / `_render_value_full` from `stream_renderer` exactly this way, so this
-follows the surrounding code and leaves `detail_modal.py` untouched.
+**`detail_modal._format_args` is deliberately NOT reused.** It renders each value through
+`stream_renderer._render_value_full`, which truncates a single-line string longer than 120
+characters to `value[:117] + "..."`. That is right for a read-after-the-fact inspection modal and
+wrong here: the user makes a security decision on what the modal shows, and a long one-line
+command, URL or JSON blob is exactly the case where the tail matters. Truncated text is not
+"reachable by scrolling" — the characters are gone before the widget sees them.
+
+`format_args_full` is therefore authored in this module: the same block shape as `_format_args`
+(`"Args:"` header, `  key: value`, multi-line values indented under their key), but values are
+rendered **verbatim** — no length test, no ellipsis. Long lines wrap/scroll inside the `TextArea`,
+which is what makes the full text reachable.
+
+```
+if not args: return "Args: (none)"
+lines = ["Args:"]
+for key, value in args.items():
+    text = value if isinstance(value, str) else json.dumps(value, indent=2, default=repr)
+    rendered = text.splitlines() or [""]
+    if len(rendered) == 1:  lines.append(f"  {key}: {rendered[0]}")
+    else:                   lines += [f"  {key}:"] + [f"    {sub}" for sub in rendered]
+return "\n".join(lines)
+```
+
+`detail_modal.py` stays untouched: its truncation is correct for its own screen, so this is a new
+sibling formatter, not a change to a shared one.
 
 Bindings — the digit bindings carry `priority=True` so a focused `TextArea` cannot swallow them,
 and `ctrl+c` carries `priority=True` to shadow `ICoderApp`'s `ctrl+c → action_noop` (precedent:
@@ -84,7 +107,7 @@ BINDINGS = [
 ```python
 yield Container(
     Static(build_prompt_text(...), id="approval-prompt"),
-    TextArea(_format_args(self._args), read_only=True, id="approval-args"),
+    TextArea(format_args_full(self._args), read_only=True, id="approval-args"),
     classes="approval-modal-container",
 )
 ```
@@ -147,7 +170,7 @@ async with app.run_test() as pilot:
     app.push_screen(
         ApprovalModal(
             tool_name="mcp__srv__do_it",
-            args={"path": "a.txt", "text": "x" * 300},
+            args={"path": "a.txt", "cmd": "x" * 300},
             source="project",
             persist_target=tmp_path / ".icoder" / "settings.local.json",
         ),
@@ -159,7 +182,7 @@ async with app.run_test() as pilot:
 | Test | Asserts |
 |---|---|
 | `test_approval_modal_states_the_over_grant` | `"with any arguments"` **and** `"mcp__srv__do_it"` are both in the `#approval-prompt` text. Substrings only, so copy-editing does not break it. |
-| `test_approval_modal_args_widget_holds_full_args` | `query_one("#approval-args", TextArea).text == _format_args(args)` — full equality, no truncation, no ellipsis. Use an args dict with a >120-char value so truncation would be visible. |
+| `test_approval_modal_args_widget_holds_full_args` | build `args = {"path": "a.txt", "cmd": "x" * 300}` (a single-line value well over 120 chars); assert the **raw value** `"x" * 300` is a substring of `query_one("#approval-args", TextArea).text`, that the key `"cmd"` is present, and that `"..."` does not appear in the widget text. Assert against the raw input, never against the formatter's own output — comparing with `format_args_full(args)` would pass identically if the formatter truncated, which is the bug this test exists to catch. |
 | `test_approval_modal_shows_persist_target_and_summary` | the prompt text contains `str(persist_target)`, `"allow"` and the tool name |
 | `test_approval_modal_choice_dismisses_with_decision` | **parametrised** over `("1", "allow", "once")`, `("2", "allow", "session")`, `("3", "allow", "persist")`, `("4", "deny", "once")`, `("escape", "deny", "once")` — one `pilot.press(key)`, then the captured decision's `outcome`/`scope`, and `reason is None` |
 | `test_approval_modal_cancel_dismisses_with_none` | `pilot.press("5")` captures exactly `None` |
@@ -167,7 +190,7 @@ async with app.run_test() as pilot:
 
 ## Acceptance
 
-- All seven tests pass under `markers=["textual_integration"]`.
+- All six tests pass under `markers=["textual_integration"]`.
 - pylint / mypy(strict) / ruff-docstrings / lint-imports clean.
 - `approval_modal.py` well under the 750-line CI gate (expect ~120 lines).
 
@@ -180,11 +203,13 @@ async with app.run_test() as pilot:
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_2.md`.
 >
 > Implement step 2 only: create `src/mcp_coder/icoder/ui/widgets/approval_modal.py` with
-> `DISCLAIMER_TEMPLATE`, `build_prompt_text` and `ApprovalModal`, exactly as specified under WHAT,
-> HOW, ALGORITHM and DATA. Do not wire it into `ui/stream_view.py` — that is step 3. Do not modify
-> `ui/widgets/detail_modal.py`; import `_format_args` from it under its existing name.
+> `DISCLAIMER_TEMPLATE`, `build_prompt_text`, `format_args_full` and `ApprovalModal`, exactly as
+> specified under WHAT, HOW, ALGORITHM and DATA. Do not wire it into `ui/stream_view.py` — that is
+> step 3. Do not modify `ui/widgets/detail_modal.py`, and do **not** import its `_format_args`:
+> it truncates long single-line values through `_render_value_full`, which would defeat the
+> full-args acceptance criterion. Author `format_args_full` here and render values verbatim.
 >
-> Work TDD: first add the seven tests from the table to the approval section of
+> Work TDD: first add the six tests from the table to the approval section of
 > `tests/icoder/test_app_pilot.py` (they push the modal directly with `app.push_screen`), watch
 > them fail, then write the module.
 >

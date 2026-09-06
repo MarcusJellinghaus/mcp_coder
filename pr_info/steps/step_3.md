@@ -89,7 +89,7 @@ def _apply_approval(self, approval_id, tool_name, decision):
         self.action_cancel_stream()           # sets _cancel_event AND cancels the future
         return                                # never resolve_pending
     if decision.scope in ("session", "persist"):
-        rule = _grant_rule(tool_name)         # step 5 adds the persist disk write here
+        rule = _grant_rule(tool_name)         # step 5 gates its disk write on this guard
         if rule is not None:
             self._core.add_runtime_rule(rule)
     self._core.resolve_pending(approval_id, decision)

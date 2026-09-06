@@ -20,7 +20,7 @@ showing the tool and its arguments, and apply the scope the user picks: `once` (
 | Runtime-rule store | `permissions/gateway.py::add_runtime_rule` | Rebinds the frozen `PermissionConfig` with one extra rule |
 | UI delegators | `core/app_core.py` | `resolve_pending`, `cancel_pending_approvals`, `add_runtime_rule` |
 | Replay exclusion | `llm/types.py::TRANSIENT_EVENT_TYPES` | `approval_request` is never persisted or replayed |
-| Args rendering | `ui/widgets/detail_modal.py::_format_args` | Full, untruncated arg block |
+| Args block shape | `ui/widgets/detail_modal.py::_format_args` | Layout precedent only — **not reused**: it truncates long single-line values (see the KISS table) |
 
 ## Architectural / design changes
 
@@ -32,13 +32,22 @@ showing the tool and its arguments, and apply the scope the user picks: `once` (
 every launch. The key becomes:
 
 ```
-(specificity, never_bit, layer, policy.rank, -index)
+(specificity, never_bit, personal_bit, policy.rank, layer, -index)
 ```
 
-The hoisted `never_bit` is what keeps the change fail-closed: without it, moving layer above
-`rank` would let a `local` `allow` shadow a `project` `deny`. Specificity stays primary, so §5's
-authored carve-out (a more-specific `always` beats a broader `never`) survives. #1045's R14
-runtime partition is structurally unchanged and inherits the new key.
+Two bits are hoisted above `Policy.rank`; `_LAYER_ORDER` itself stays where it is.
+
+- `never_bit` keeps the change fail-closed: without it a `local` `allow` could shadow a `project`
+  `deny`.
+- `personal_bit` (`local`/`runtime` = 1, `user`/`project` = 0) is what lifts a persisted or
+  session grant over an authored `ask`. Hoisting the whole `_LAYER_ORDER` instead would also flip
+  `user` ↔ `project`, letting a repo-committed `"allow"` silently override the user's global
+  `"ask"` — a widening #1046 does not need, since it only ever writes `local` and `runtime`.
+
+Specificity stays primary, so §5's authored carve-out (a more-specific `always` beats a broader
+`never`) survives, and `_LAYER_ORDER` still breaks ties inside each group (`runtime` over `local`,
+`project` over `user`). #1045's R14 runtime partition is structurally unchanged and inherits the
+new key.
 
 ### 2. Scope side-effects are applied on the UI thread, by the UI
 
@@ -47,10 +56,15 @@ engine cannot own the writes. Both scope side-effects therefore run inline in th
 callback, **before** `resolve_pending`:
 
 ```
+guard    → parse_matcher(tool_name); on failure grant nothing and write nothing
 session  → AppCore.add_runtime_rule(Rule(matcher, ALWAYS, "runtime"))
 persist  → persist.write_rule(...) on disk  AND  the same runtime rule
-then     → AppCore.resolve_pending(approval_id, decision)
+then     → AppCore.resolve_pending(approval_id, decision)   # always, in every branch
 ```
+
+The guard runs first because `write_rule` validates nothing and `loader._load_layer` is per-layer
+atomic: one token `parse_matcher` rejects would fail the whole `local` layer on the next launch and
+degrade the config fail-closed.
 
 This modal never touches the cross-thread Future. It is pushed with
 `push_screen(screen, callback)` — never `push_screen_wait`, which would wedge the consumer thread
@@ -96,7 +110,7 @@ can drift.
 |---|---|
 | Modal body is one `Static` + one read-only `TextArea` | `Static` cannot scroll or be copied; `TextArea` gives both. No `OptionList`, no selection handler. |
 | Digit bindings use `priority=True` | Checked before the focused widget, so a focused `TextArea` cannot swallow `1`–`5`. Removes the focus-management design fork. |
-| `_format_args` imported under its existing private name | `detail_modal.py` already imports `_render_tool_output` / `_render_value_full` from `stream_renderer` the same way. Zero churn in `detail_modal.py`. |
+| The modal renders args with its own `format_args_full`, not `detail_modal._format_args` | `_format_args` routes values through `_render_value_full`, which cuts a single-line string over 120 chars to `value[:117] + "..."` — right for an inspection modal, fatal for a security decision, and unreachable by scrolling because the characters never reach the widget. A sibling formatter is smaller than reworking a shared one, and leaves `detail_modal.py` untouched. |
 | Persist confirmation is an always-visible line under choice `3`, not a second screen | The issue settles that "the modal choice *is* the explicit apply", so the confirmation is text to display, not a keystroke to collect. |
 | Insertion uses one indentation rule | Indent like the existing first array item, else the `[` line's indent + 2. One branch, not a formatting engine. |
 | Choice tests are parametrised | Five choices plus `Esc` become one test function over `(key, expected)`. |
@@ -151,7 +165,7 @@ renumber nothing — steps 2–5 are unaffected.
 
 | Path | Change |
 |---|---|
-| `src/mcp_coder/icoder/permissions/resolver.py` | 5-key `_rule_sort_key`; module + function docstrings; `_resolve_config` partition comment (step 1) |
+| `src/mcp_coder/icoder/permissions/resolver.py` | `_PERSONAL_LAYERS` + 6-key `_rule_sort_key`; module + function docstrings; `_resolve_config` partition comment (step 1) |
 | `src/mcp_coder/icoder/permissions/loader.py` | Add `LOCAL_SETTINGS_RELPATH`; use it in `_discover_layers` (step 3) |
 | `src/mcp_coder/icoder/ui/stream_view.py` | Delete `_DENY_NO_UI` + the `TODO(#1046)` auto-deny; push the modal; dismiss callback; receive `action_cancel_stream` (steps 3, 5) |
 | `src/mcp_coder/icoder/ui/app.py` | Remove `action_cancel_stream` (binding stays) (step 3) |

@@ -22,8 +22,9 @@ wiring (that is step 5).
 Section = Literal["allow", "ask", "deny"]
 
 class PersistError(OSError):
-    """Raised when the target file cannot be parsed. Subclasses OSError so the
-    caller's existing degrade branch already covers it."""
+    """Raised when the target file cannot be parsed or holds a section this
+    writer refuses to edit. Subclasses OSError so the caller's existing degrade
+    branch already covers it."""
 
 class Span(NamedTuple):
     kind: str      # "code" | "string" | "comment"
@@ -140,6 +141,9 @@ except ValueError as exc:                        # JSONDecodeError is a ValueErr
     raise PersistError(f"{target} is not valid JSONC: {exc}") from exc
 if not isinstance(data, dict):                   # e.g. a bare list or scalar root
     raise PersistError(f"{target} does not hold a JSON object")
+for key in ("allow", "ask", "deny"):             # a present section must be a list
+    if key in data and not isinstance(data[key], list):
+        raise PersistError(f"{target}: {key!r} is not a list")
 if matcher in data.get(section, []): return      # idempotent: no write, no mtime change
 for other in ("allow","ask","deny") if other != section and matcher in data.get(other, []):
     text = _remove_item(text, _find_item(text, _scan(text), *_find_section_array(...), matcher))
@@ -150,6 +154,16 @@ _atomic_write(target, text)
 
 Re-run `_scan` after every mutation rather than adjusting offsets. A settings file is small and
 this removes a whole class of off-by-one bugs.
+
+**The section-type check is not defensive padding — it is what keeps the failure mode inside
+`PersistError`.** `{"allow": "mcp__a__b"}` is valid JSON with an object root, so it clears both
+guards above; then `matcher in data.get(section, [])` silently becomes a *substring* test over a
+string, and once the move branch or the locator runs, `_find_section_array` finds no `"allow"`
+followed by `:` `[`, returns `None`, and the `*_find_section_array(...)` unpack raises a
+`TypeError` — not an `OSError`, so it escapes step 5's single degrade branch, skips
+`resolve_pending` and wedges the turn. Rejecting a non-list section up front is one `isinstance`
+and keeps the module's one-failure-type contract true. (Schema validation lives in the loader and
+is not available here: the writer must not import `_schema_errors`' jsonschema path for one check.)
 
 ## DATA
 
@@ -164,7 +178,8 @@ this removes a whole class of off-by-one bugs.
 - New-file skeleton is `"{\n}\n"`; `_insert_section` then adds the list. One code path for
   "brand-new file" and "existing file missing the key".
 - `write_rule` returns `None` and raises `OSError` on an unwritable target, and `PersistError`
-  (an `OSError` subclass) when the existing file is unparseable JSONC or has a non-object root.
+  (an `OSError` subclass) when the existing file is unparseable JSONC, has a non-object root, or
+  holds a non-list value under `allow` / `ask` / `deny`.
   One failure type, so step 5's single `except OSError` branch degrades to a session grant and
   still calls `resolve_pending` — an unparseable local file must never wedge the turn. Nothing
   is written in either case: both raises happen before `_atomic_write`.
@@ -196,6 +211,7 @@ paths, and `.icoder/settings.local.json` is intended to be gitignored.
 | `test_default_mode_value_is_not_mistaken_for_the_key` | **parametrised** over `{"defaultMode": "allow"}` (no `allow` array) and `{"defaultMode": "allow", "allow": ["x"]}`; after writing, the text contains exactly **one** top-level `"allow":` key, `defaultMode` is still `"allow"`, and `load_permission_config(tmp_path)` yields `ALWAYS` for the tool — i.e. the file still passes schema validation |
 | `test_malformed_jsonc_raises_persist_error` | file holds `{"allow": [` ; `pytest.raises(PersistError)` and the file bytes are unchanged. Also assert `issubclass(PersistError, OSError)`, which is what makes step 5's degrade branch cover it |
 | `test_non_object_root_raises_persist_error` | file holds `["mcp__srv__x"]`; `pytest.raises(PersistError)` and the file bytes are unchanged |
+| `test_non_list_section_raises_persist_error` | **parametrised** over `{"allow": "mcp__a__b"}` (writing to `allow`) and `{"ask": "mcp__a__b"}` (writing to `allow`, so the move branch is the one that would blow up); `pytest.raises(PersistError)` — assert the type explicitly, since the bug this pins is a `TypeError` from the `*None` unpack that would escape the caller's `except OSError` — and the file bytes are unchanged |
 
 Give the module a `_reload(tmp_path, tool)` helper that runs `load_permission_config` + `resolve`
 so most cases end with a real round-trip rather than a string assertion.
@@ -220,12 +236,14 @@ so most cases end with a real round-trip rather than a string assertion.
 > `permissions_leaf_isolation` `source_modules` (not in `permissions_core_purity`). Do not touch
 > `ui/stream_view.py` — wiring is step 5.
 >
-> Work TDD: first write `tests/icoder/test_permissions_persist.py` with the sixteen cases from
+> Work TDD: first write `tests/icoder/test_permissions_persist.py` with the seventeen cases from
 > the table (unmarked, `tmp_path` only, never an in-repo fixture file), watch them fail, then write
 > the module.
 >
 > Reuse `loader._strip_jsonc` only as a parser via `json.loads(_strip_jsonc(text))`, wrapped so a
-> `ValueError` and a non-object root both become `PersistError`. Author `_scan` as the locator —
+> `ValueError`, a non-object root and a non-list `allow`/`ask`/`deny` value all become
+> `PersistError`. `PersistError` must be the module's only failure type: anything else escapes the
+> caller's `except OSError` and wedges the turn. Author `_scan` as the locator —
 > do not try to derive offsets from `_strip_jsonc`. Do not add a full JSON round-trip: comments
 > must survive. Re-run `_scan` after each text mutation instead of adjusting offsets.
 >
