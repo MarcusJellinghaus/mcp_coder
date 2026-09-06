@@ -69,6 +69,10 @@ command, URL or JSON blob is exactly the case where the tail matters. Truncated 
 rendered **verbatim** — no length test, no ellipsis. Long lines wrap/scroll inside the `TextArea`,
 which is what makes the full text reachable.
 
+This is what #1046's full-args acceptance criterion asks for: *the args widget's text contains
+every argument value verbatim, with no truncation or ellipsis.* It is a containment property, not
+an equality one — the widget also carries the `"Args:"` header and the key prefixes.
+
 ```
 if not args: return "Args: (none)"
 lines = ["Args:"]
@@ -206,8 +210,9 @@ async with app.run_test() as pilot:
 > `DISCLAIMER_TEMPLATE`, `build_prompt_text`, `format_args_full` and `ApprovalModal`, exactly as
 > specified under WHAT, HOW, ALGORITHM and DATA. Do not wire it into `ui/stream_view.py` — that is
 > step 3. Do not modify `ui/widgets/detail_modal.py`, and do **not** import its `_format_args`:
-> it truncates long single-line values through `_render_value_full`, which would defeat the
-> full-args acceptance criterion. Author `format_args_full` here and render values verbatim.
+> it truncates long single-line values through `_render_value_full`, which would defeat #1046's
+> full-args acceptance criterion — "the args widget's text contains every argument value verbatim,
+> with no truncation or ellipsis". Author `format_args_full` here and render values verbatim.
 >
 > Work TDD: first add the six tests from the table to the approval section of
 > `tests/icoder/test_app_pilot.py` (they push the modal directly with `app.push_screen`), watch

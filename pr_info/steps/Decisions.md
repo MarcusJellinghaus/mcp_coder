@@ -60,8 +60,35 @@ The tests are the specification.
 
 Applied to `step_4.md` and `step_5.md`.
 
+## 6. #1154 is rescoped to what step 1 delivers, and this PR closes it
+
+Marcus decided the narrow `personal_bit` is #1154's **final** semantic, not a stopgap. #1154 is
+retitled and its body amended in parallel: its sort key becomes the actual one
+`(specificity, never_bit, personal_bit, policy.rank, layer, -index)`; its AC1 becomes the narrow
+property (at equal specificity a `local`/`runtime` rule beats a `user`/`project` rule regardless of
+`allow`/`ask`), plus a new AC pinning that a `user` `ask` still beats a `project` `allow` at equal
+specificity. The `user` ↔ `project` direction is a recorded **won't-fix**: at equal specificity a
+repo-committed `"allow"` must not silently override the user's global `"ask"`, which the originally
+specified full `_LAYER_ORDER` hoist would have done — a security regression.
+
+Consequence: step 1 satisfies #1154 in full and its commit carries `Closes #1154.`
+
+Applied to `summary.md` (the "only partially addressed" paragraph collapsed to the rationale) and
+`step_1.md` (header note, "Deliberately narrow" section, commit message, LLM prompt).
+
+## 7. #1046's full-args AC is reworded to a containment property
+
+The AC demanded the args widget's text *equal* `_format_args(args)` **and** carry no truncation —
+impossible, since `_format_args` truncates single-line values over 120 chars via
+`_render_value_full`. It is amended to: the args widget's text **contains every argument value
+verbatim, with no truncation or ellipsis**.
+
+No design change — the plan already gives the modal its own verbatim `format_args_full` instead of
+reusing `detail_modal._format_args`. The plan nowhere quoted the old wording; the new wording is
+now stated so the step-5 self-check cannot trip over it.
+
+Applied to `step_2.md` (HOW section and LLM prompt) and `step_5.md` (LLM prompt self-check).
+
 ## Explicitly out of scope
 
-- Step 1 and the #1154 question — with Marcus.
-- The args-formatting decision in `step_2.md` — with Marcus.
 - Modal tests stay in `tests/icoder/test_app_pilot.py`.
