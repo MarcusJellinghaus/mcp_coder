@@ -89,6 +89,51 @@ now stated so the step-5 self-check cannot trip over it.
 
 Applied to `step_2.md` (HOW section and LLM prompt) and `step_5.md` (LLM prompt self-check).
 
+## 8. Step 1's prose-site list covers all five `resolver.py` sites
+
+Round 2 found the list incomplete: it named three resolver sites, but `resolver.py:142`
+(`_resolve_config`'s docstring, "the ordinary 4-key contest") and `resolver.py:180` (the R14 bound
+comment, "falls through to the ordinary 4-key contest") also describe a key that no longer exists.
+Both verified against the file. The list is now five resolver sites plus the test module docstring,
+with the two new ones as explicit items. #1154's own "Consequential edits" list already names
+`_resolve_config`'s docstring, so this also keeps step 1 aligned with the issue it closes.
+
+Applied to `step_1.md` (WHERE row, HOW list, Acceptance, LLM prompt) and `summary.md`'s
+"Files modified" row.
+
+## 9. `test_no_temp_file_is_left_behind` is made falsifiable
+
+The row asserted `.icoder/` holds no `*.tmp` file, but the implementation the same step specifies
+(`tempfile.mkstemp(dir=target.parent)`) uses the default **empty suffix** and a `tmp` *prefix*, so
+that glob can never match and the row passed whether or not a temp file leaked. It now asserts the
+directory holds exactly one entry, `settings.local.json`.
+
+Applied to `step_4.md`.
+
+## 10. The summary's precedence heading names the personal bit, not the layer order
+
+The heading read "Resolver precedence: layer moves above policy rank", which asserts exactly what
+`step_1.md` forbids stating and what `summary.md` contradicts three lines below ("Two bits are
+hoisted above `Policy.rank`; `_LAYER_ORDER` itself stays where it is"). Retitled to
+"personal-layer bit moves above policy rank". The surrounding paragraph was checked and is correct
+as written — it describes the pre-change key, not a hoisted layer order.
+
+Applied to `summary.md`.
+
+## 11. The resolver test counts are reconciled to `step_1.md`'s TDD section
+
+`summary.md` said "Six new precedence cases; docstring notes on three existing tests" while
+`step_1.md`'s TDD table names **seven** tests and its notes section says "**Two** existing tests …
+add a docstring note to each", explicitly excluding
+`test_no_runtime_rules_leaves_authored_precedence_unchanged`. Counted directly rather than trusted:
+seven table rows, two notes.
+
+The mismatch ran both ways — `step_1.md`'s own WHERE row also said "three existing tests",
+contradicting its TDD section and its LLM prompt ("the two docstring notes"). The TDD section is
+authoritative because it names each test individually. Both outliers corrected to seven / two.
+
+Applied to `summary.md`'s "Files modified" row and `step_1.md`'s WHERE row.
+
 ## Explicitly out of scope
 
 - Modal tests stay in `tests/icoder/test_app_pilot.py`.

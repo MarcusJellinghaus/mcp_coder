@@ -57,3 +57,50 @@ plan as left by run 1 round 5.
 lines), `step_5.md` (compression, `_persist_target` form), new `steps/Decisions.md`.
 
 **Status**: committed.
+
+## Round 2 — 2026-09-07
+
+**Verification** (of round 1's changes and the two issue edits):
+- Round-1 findings A–D confirmed present in the plan text, checked against HEAD
+  (`app_core.py:73` accepts `permission_gateway=`, `gateway.py:107/128` rebinds `_config`,
+  `app.py:85-89` computes `self._project_dir`).
+- **No guard was lost in the `step_4.md` compression.** Each of the five guard families
+  accumulated over run 1 maps to a surviving invariant plus a test row; the deleted `comma` rule
+  is now pinned by the plain-`json.loads` assertion instead of by prose.
+- No `#1154` residue: `summary.md` and `step_1.md` agree with the rescoped issue.
+- The reworded full-args AC is reflected in `step_2.md` and `step_5.md`.
+
+**Findings**:
+- F1 — low — `step_1.md:76-88`: the list of prose sites to restate for the 4-key → 6-key change
+  misses `resolver.py:142` (the `_resolve_config` docstring) and `resolver.py:180` (the R14 bound
+  comment), so merged code would still describe a key that no longer exists. #1154's own
+  "Consequential edits" list names the first of these.
+- F2 — low — `step_4.md:152`: `test_no_temp_file_is_left_behind` asserts `.icoder/` holds no
+  `*.tmp` file, but the specified `tempfile.mkstemp(dir=target.parent)` uses an empty suffix and a
+  `tmp` *prefix*, so the glob can never match and the row passes whether or not a temp file leaks.
+- F3 — low — `summary.md:33`: the heading "Resolver precedence: layer moves above policy rank"
+  asserts exactly what `step_1.md:72-74` forbids stating, and is contradicted by `summary.md:44`.
+- Follow-on (found while fixing) — `summary.md` and `step_1.md`'s WHERE row disagreed with
+  `step_1.md`'s TDD table on the resolver test counts.
+
+**Decisions**: F1, F2, F3 all accepted and applied — one-line edits, none changes the design; F2
+in particular was an unfalsifiable assertion. The count mismatch was folded into the same round
+rather than deferred. Five items were explicitly considered and skipped as speculative or
+implementer detail (recorded in the review report).
+
+**User decisions**: none outstanding. The two questions raised in round 1 were answered and
+applied:
+1. **#1154 rescoped on GitHub** to the narrow `local`/`runtime`-over-authored precedence fix
+   (new title: "I2.5 — Cross-layer precedence: a local/runtime rule must win over an authored ask
+   at equal specificity"), with a **Won't fix** section recording that a `user` `ask` still beats
+   a `project` `allow` at equal specificity — a repo-committed `"allow"` must not silently
+   override the user's global `"ask"`. `personal_bit` is the final semantic, not a stopgap, so
+   step 1 delivers #1154 in full and closes it.
+2. **#1046's full-args AC reworded** from the unsatisfiable "equals `_format_args(args)` in full"
+   to "contains every argument value verbatim", since `_format_args` truncates single-line values
+   over 120 chars.
+
+**Changes**: `step_1.md` (F1, WHERE-row count), `step_4.md` (F2), `summary.md` (F3, count),
+`Decisions.md` (decisions 8–11).
+
+**Status**: committed.

@@ -25,8 +25,8 @@ recorded won't-fix on #1154.
 
 | File | Change |
 |---|---|
-| `src/mcp_coder/icoder/permissions/resolver.py` | `_PERSONAL_LAYERS` + `_rule_sort_key` key order + three docstring/comment sites |
-| `tests/icoder/test_permissions_resolver.py` | Seven new cases; docstring notes on three existing tests |
+| `src/mcp_coder/icoder/permissions/resolver.py` | `_PERSONAL_LAYERS` + `_rule_sort_key` key order + five docstring/comment sites |
+| `tests/icoder/test_permissions_resolver.py` | Seven new cases; docstring notes on two existing tests |
 
 ## WHAT
 
@@ -69,22 +69,30 @@ personal group (`runtime` over `local`) and *within* the shared group (`project`
 `top_authored` with `_rule_sort_key` and keeps the `blocked` short-circuit, both of which inherit
 the new key. Only its explanatory comment changes.
 
-Three prose sites still describe the old order and must be restated. Do not leave any of them
-implying the key is 4 keys, and do not let any of them say the *layer order* was hoisted — it was
-not; only the personal bit was:
+Five sites in `resolver.py`, plus the test module docstring, still describe the old order and must
+be restated. Do not leave any of them implying the key is 4 keys, and do not let any of them say
+the *layer order* was hoisted — it was not; only the personal bit was. (#1154's own "Consequential
+edits" list already names `_resolve_config`'s docstring, so covering all five keeps this step
+aligned with the issue it closes.)
 
 1. `resolver.py` module docstring (~line 9) — "specificity (primary) -> `never>ask>allow` ->
    layer order ..." becomes "specificity (primary) -> `never` -> personal layers
    (`local`/`runtime`) -> `ask>allow` -> layer order -> declaration order".
 2. `_rule_sort_key`'s `Returns:` block (~line 46) — "The 4-key precedence tuple ..." becomes the
    6-key description, naming what each of the two new bits is for.
-3. `_resolve_config`'s partition comment (~line 171) — currently justifies the partition with
+3. `_resolve_config`'s docstring (~line 142) — "decided by the ordinary 4-key contest of
+   `_rule_sort_key`" becomes "6-key contest".
+4. `_resolve_config`'s partition comment (~line 166) — currently justifies the partition with
    "`_LAYER_ORDER` is only the *third* sort key and `Policy.rank` puts AFTER_APPROVAL above
    ALWAYS". `_LAYER_ORDER` is now the *fifth* key and `Policy.rank` the fourth, but the personal
    bit above both already lifts `runtime` over an authored `ask`, so restate it: the partition
    survives because it is *stronger* than the personal bit — it ignores specificity, which the
    personal bit does not.
-4. `tests/icoder/test_permissions_resolver.py` module docstring (~line 5) carries the same
+5. `_resolve_config`'s R14 bound comment (~line 180) — "the authored `never` falls through to the
+   ordinary 4-key contest" becomes "6-key contest". The sentence's claim is unchanged: the `never`
+   bit is above the personal bit, so the authored `never` still loses only to a strictly more
+   specific runtime rule.
+6. `tests/icoder/test_permissions_resolver.py` module docstring (~line 5) carries the same
    sentence; update it too.
 
 ## The fail-closed bound (must hold after the change)
@@ -134,7 +142,7 @@ Every other existing test in the file must pass untouched.
 - The seven new cases pass; the full `tests/icoder/test_permissions_resolver.py` passes.
 - All #1045 R14 expectations unchanged.
 - `user` ↔ `project` precedence is provably unchanged (the second new case).
-- The four prose sites describe the 6-key order.
+- All six prose sites (five in `resolver.py`, one in the test module) describe the 6-key order.
 - pylint / mypy(strict) / ruff clean.
 
 ## Commit
@@ -162,9 +170,9 @@ issue.
 > today's behaviour. `test_user_ask_still_beats_project_allow_at_equal_specificity` pins that and
 > must pass both before and after the change.
 >
-> Then update the four prose sites listed under HOW so none of them still describes a 4-key tuple,
+> Then update the six prose sites listed under HOW so none of them still describes a 4-key tuple,
 > and add the two docstring notes to the existing tests that change meaning.
-> Do not change `_resolve_config`'s structure — only its comment.
+> Do not change `_resolve_config`'s structure — only its docstring and its two comments.
 >
 > Run `run_format_code`, then pylint, mypy(strict), ruff and the fast unit test selection from the
 > summary. Make exactly one commit when everything passes.
