@@ -94,18 +94,44 @@ def add_install_parser(subparsers: Any) -> None
   `ensure_system_uv`, `rmtree_with_retry`/`_rmtree_onexc`, and the phase bodies.
   Keep raw `subprocess.run` with inherited stdio and the `--check` dry-run mode.
 - **Docstrings are not "unchanged" — the move puts them under `ruff check src`** for the
-  first time (`D` + `DOC`, preview, google). Two known offenders, both fixed by editing
-  the docstring, not the code:
+  first time (`D` + `DOC`, preview, google). `ruff check --preview tools/install.py`
+  reports 8 issues across 6 rules today; six of them are on code that survives the move.
+  All are fixed by editing the docstring, not the code:
   - `_ensure_system_uv` (`tools/install.py:483-487`) documents `Raises: SystemExit:`
     but exits via `sys.exit` → **DOC502**. Drop the `Raises:` section and state the
     failure in prose. (The alternative — a `"src/mcp_coder/install/_env.py" = ["DOC502"]`
     entry next to the four in `pyproject.toml:336-339` — is the fallback if any other
     `sys.exit` docstring resists.)
   - `_rmtree_with_retry` (`tools/install.py:263-266`) has a four-line summary with no
-    blank line and no closing period → **D205 / D400**. Rewrite as a one-line summary
-    plus a blank line plus the body.
-  Run `run_ruff_check` before committing; the rest of the ported docstrings are already
-  google-style and should pass unedited.
+    blank line → **D205**. Rewrite as a one-line summary plus a blank line plus the body.
+  - `_rmtree_onexc` (`tools/install.py:254`) opens with lowercase `rmtree` → **D403**.
+    Capitalize the first word.
+  - `exe` (`tools/install.py:186`) returns a value its docstring never documents →
+    **DOC201**. Add a `Returns:` section.
+  - The module docstring (`tools/install.py:2`) trips **D301** (the `\\` line
+    continuation in the example at `:50`) and **D416** (`Examples` at `:42` is an
+    rST section header, not a google `Examples:`). It is rewritten wholesale — see the
+    next bullet — which clears both; no `r"""` prefix is needed because the retired
+    examples go with it.
+  The two dropped functions carry the remaining two findings (`parse_args` `:110` and
+  `_source_dir_for_overrides` `:241`, both DOC201), so they need no work.
+  Run `run_ruff_check` before committing.
+- **The module docstring is rewritten, not ported.** `tools/install.py:1-67` describes
+  the model this issue retires. `src/mcp_coder/install/__init__.py` gets a fresh
+  google-style docstring that keeps only what is still true — the *Scope* statement
+  (installs Python packages only; staging `.mcp.json` / `.claude/` is the caller's job,
+  the sentence `environments.md:141` will point at in Step 6), the three `--source`
+  modes, and idempotency / never-blocks-on-input. Removed outright:
+  - "A **standalone script**, not part of mcp-coder's importable API" (`:4`) — it is
+    now ordinary package code (Decision 1).
+  - the whole *Distribution* section (`:6-12`), which documents the
+    `<install-prefix>/share/mcp-coder/install.py` data-files copy that Step 5 deletes.
+  - "stdlib only — must run before mcp-coder is installed" (`:38`) — dropped with the
+    curl bootstrap; the installer now reuses `utils.pyproject_config`.
+  - the *Examples* section (`:42-52`) with its `python tools/install.py …` invocations;
+    usage lives in the CLI help text and `docs/getting-started/installation.md`.
+  Convert the surviving rST underline sections (`Scope`, `Install sources`) to google
+  style — plain prose under a one-line summary — so D416 cannot recur.
 - **Dropped:** `CLI_BINARIES`, `OPTIONAL_CLI_BINARIES`, `EXTRA_VERSION_QUERIES`,
   `_detect_repo_root`, `REPO_ROOT`, `_source_dir_for_overrides`, `parse_args`, `main`,
   and the local `github_overrides` (use `pyproject_config.get_github_install_config`).
@@ -221,6 +247,11 @@ Port `tests/tools/test_install_py.py` into `tests/install/`, replacing its
 >
 > Remember `cli/command_catalog.py` and the hard-coded command count in
 > `tests/cli/commands/test_help.py:38`, or the help tests fail.
+>
+> The ported docstrings are not clean under `ruff check src` — fix the five surviving
+> findings listed in HOW, and rewrite the module docstring for
+> `src/mcp_coder/install/__init__.py` rather than porting it (it documents the
+> standalone-script / data-files / stdlib-only model this issue retires).
 >
 > Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, `run_ruff_check`,
 > the fast pytest selection, plus `run_tach_check`, `run_lint_imports_check` and
