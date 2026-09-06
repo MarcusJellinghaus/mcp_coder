@@ -174,3 +174,55 @@ not. This closed the last cheap-findings channel.
 **Changes**: see the round 3 commit.
 
 **Status**: committed
+
+## Round 4 — 2026-09-06
+
+**Round 3 fixes verified, including the design change.** The collapsed extras
+reader is coherent end to end: `get_install_extras(project_dir, *, strict=False)
+-> str | None` in Step 1, `from_args` as the sole `"dev"` fallback site reading
+the Decision-17-resolved `local_path`, and Step 4's warn row as
+`get_install_extras(folder_path) is None`. `--extras` keeps `default=None`, so an
+explicit `--extras ""` stays distinguishable from not-passed (`""` is falsy but
+not `None`, and only `is not None` is tested) — the issue's Decision 4 and its §4
+contract table row are both satisfied. No stale `-> str` expectation and no
+surviving `install_extras_declared` anywhere in `pr_info/steps/`. Each of steps 1,
+2 and 4 is still green alone; Step 4 adds no tach or import-linter edge because
+`workflows` already imports `pyproject_config`.
+
+**Findings** (3, all low, all mechanical — no highs or mediums):
+
+- `step_2.md` — low — the obsolete `install-env` name is ported into user-facing
+  strings that no step owns: `_ensure_system_uv`'s two failure messages
+  (`install.py:500,510`) and the header/footer prints (`:553`, `:566`). After
+  Decisions 1–2 they name nothing invocable, and both steps' greps miss them.
+- `step_5.md` — low — the `.sh` rewrite adds `MC` (and loop variable `p`) with no
+  `MC=""` initializer and no `unset`. `[ -z "$MC" ]` is the only guard, so a second
+  `source` in the same shell reuses the stale value and both variables leak. The
+  script unsets everything else precisely because it is source-able; `.bat` is
+  already safe via `set "MC="` inside `setlocal`.
+- `step_2.md` — low — `_namespace`'s default pinning is directional and partial.
+
+**Decisions**: first two accepted, plus the `# shellcheck disable=SC1091`
+one-liner (`ci.yml:180`) folded into round 3's existing preservation clause — same
+class as the `env:` fix.
+
+Two items **skipped**, recorded rather than dropped:
+
+- Hardening `_namespace`'s pinning to the complete namespace. The pin already
+  works in the direction that matters, and the three pinned defaults are exactly
+  the ones this refactor changes. Per `software_engineering_principles.md`, a
+  change that only pays off if someone later makes a mistake is speculative.
+- Moving the duplicated `_namespace` into `tests/install/conftest.py`. Raised as a
+  preference; duplicating a small helper across two test modules is unremarkable.
+
+**Stopping rule for round 5.** Rounds have gone 9 findings (1 high) → 5 (1 high)
+→ 5 (0 high) → 3 (0 high, 0 medium). If round 5 surfaces only low or cosmetic
+items with no correctness impact, the run stops and those are recorded here as
+accepted-known rather than triggering another edit. Recording beats dropping —
+run 1 dropped findings silently and the same ones resurfaced every round.
+
+**User decisions**: none required this round.
+
+**Changes**: see the round 4 commit.
+
+**Status**: committed
