@@ -34,3 +34,15 @@ I'll gather context: knowledge base, the issue tree, and the plan files.`pr_info
 Verdict(decision='tasks', tasks=['step_2.md:107 — Correct the claim that the remaining ported docstrings pass unedited, and plan the four additional ruff findings that survive the move: D301 (module docstring backslash continuation), D416 (`Examples` section missing colon), D403 (`_rmtree_onexc` summary capitalization), and DOC201 (`exe` undocumented return). Either fix each docstring or record a per-file-ignore.', "step_2.md:96 — Plan a rewrite of the module docstring for `src/mcp_coder/install/__init__.py`: convert the numpy/rST sections to google style and remove the retired standalone-script model — the 'standalone script, not part of mcp-coder's importable API' claim, the `share/mcp-coder` data-files section, the 'stdlib only — must run before mcp-coder is installed' note, and the `python tools/install.py …` examples."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 4 — 2026-09-06
+**Findings**:
+I'll gather context now.`pr_info/steps/step_2.md:95` — high — "Keep raw `subprocess.run`" plans no fix for pylint W1510 (`subprocess-run-check`), which `tools/install.py:214` (`subprocess.run(cmd, cwd=cwd)`) trips today and which is *not* in `pyproject.toml`'s pylint disable list; once `run` lands in `src/`, CI's `pylint ./src ./tests` (`ci.yml:102`) fails the step. The step enumerates the ruff work but omits this. Fix is `check=False` on the inner call — the wrapper's own `check` parameter must not be forwarded, or failures raise `CalledProcessError` instead of `sys.exit(rc)`.
+
+`pr_info/steps/step_5.md:77` — medium — the `.sh` rewrite is specified only as "same order" plus the PATH loop; the new hard-fail branch is shown only in `.bat` form (`exit /b 1`, `:71`). `tools/reinstall_local.sh` is documented as `source`-able and already guards its failure path with `_SOURCED` (`return 1` vs `exit 1`); an unqualified `exit 1` in the new branch kills the developer's interactive shell.
+
+`pr_info/steps/step_2.md:161` — medium — the planned `subprocess_isolation` exemptions cover `mcp_coder.install` / `mcp_coder.install.**` but not `tests.install`, and that contract's `source_modules` includes `tests`; the ported tests only survive because they reach `subprocess` as a module attribute (`install.subprocess.run`, `install.subprocess.CalledProcessError`) — the step does not record that constraint, so a natural port that adds `import subprocess` breaks `lint-imports` in the same commit.
+**Decisions**:
+Verdict(decision='tasks', tasks=["step_2.md:95 — Plan the pylint W1510 (`subprocess-run-check`) fix that the move forces: `tools/install.py:214`'s `subprocess.run(cmd, cwd=cwd)` trips it once under `src/`, and it is not in pyproject.toml's disable list. Specify passing `check=False` on the inner call explicitly, and note that the wrapper's own `check` parameter must not be forwarded, so failures still go through `sys.exit(rc)` rather than raising `CalledProcessError`."], escalate_reason=None)
+**Changes**:
+applied
