@@ -174,3 +174,43 @@ omits them — but step 1's commit closes #1154, so they want doing by hand.
 **Unrelated:** CI on this branch is red from a pre-existing dependency mismatch on `main`
 (`run_mypy_check() got an unexpected keyword argument 'strict'`, 4 failures in
 `tests/test_mcp_tools_py_integration.py`). Nothing on this branch touches source code.
+
+---
+
+## Addendum — 2026-09-07 (after the run closed)
+
+**The #1154 rescope recorded above was reverted.** The rounds above are left as written — they
+record what was decided at the time — but two of their conclusions no longer hold:
+
+- Round 2's "**#1154 rescoped on GitHub** … step 1 delivers #1154 in full and closes it" is
+  **superseded**. #1154 has been restored to its original text (the wider `_LAYER_ORDER` hoist
+  proposal) and **stays open**. Step 1 partially addresses it and its commit carries `Refs #1154`,
+  never a closing keyword.
+- The Final Status entry "Left for the human at merge time", which was premised on step 1 closing
+  #1154, no longer applies in that form. #1154 remains open and carries its own consequential-edits
+  list.
+
+**Why.** The rescope settled a design question that is the maintainer's to make — whether a `user`
+`ask` should keep beating a `project` `allow` at equal specificity, and whether layer order should
+outrank policy rank in general. #1046 needs neither answered: step 1's narrow `personal_bit` is
+sufficient for the persist scope on its own. The rescope also ran under the maintainer's GitHub
+credentials, so the issue's edit history attributed reasoning to him that was not his.
+
+**What the research found** (gathered after the run, from #1037/#1038 rather than from #1046's
+restatements of them):
+
+- #1037 §5 states the order as specificity → `deny`/`never` > `ask` > `allow` → layer order, i.e.
+  **policy rank sits above layer order**. `tests/icoder/test_permissions_resolver.py:612` already
+  pins the `user`↔`project` pair at HEAD. So the *original* wide hoist would have contradicted §5
+  and silently flipped a passing test — but the "won't fix" rationale offered for the narrow fix
+  (that a repo-committed config must not override a user-global setting) **is not in the design**.
+  #1037 and #1038 describe no trust asymmetry between `user` and `project`; §8.2's committed/personal
+  split governs *write targets* only, and §10.1 F2 prefers project scoping where it compares.
+- **Both variants deviate from §5** — the narrow one still lifts a layer-derived bit above
+  `Policy.rank` for `local`/`runtime`. Amending §5's precedence bullet is therefore required either
+  way; it is tracked on #1154 and is *not* done by #1046. A comment on #1037 now records the
+  deviation, which is the second of its kind (#1045's R14 already overrides §5 for `runtime`).
+
+**Code impact: none.** Step 1 still implements
+`(specificity, never_bit, personal_bit, policy.rank, layer, -index)`. Only the issue-tracking
+framing changed. The plan remains ready to implement.

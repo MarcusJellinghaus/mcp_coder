@@ -60,7 +60,11 @@ The tests are the specification.
 
 Applied to `step_4.md` and `step_5.md`.
 
-## 6. #1154 is rescoped to what step 1 delivers, and this PR closes it
+## 6. #1154 is rescoped to what step 1 delivers, and this PR closes it — SUPERSEDED by 12
+
+> **Superseded.** Marcus reversed this later in the same review run; see decision 12. Kept for the
+> history. Nothing below is in force any more except the `personal_bit` rationale, which decision
+> 12 keeps.
 
 Marcus decided the narrow `personal_bit` is #1154's **final** semantic, not a stopgap. #1154 is
 retitled and its body amended in parallel: its sort key becomes the actual one
@@ -96,7 +100,7 @@ Round 2 found the list incomplete: it named three resolver sites, but `resolver.
 comment, "falls through to the ordinary 4-key contest") also describe a key that no longer exists.
 Both verified against the file. The list is now five resolver sites plus the test module docstring,
 with the two new ones as explicit items. #1154's own "Consequential edits" list already names
-`_resolve_config`'s docstring, so this also keeps step 1 aligned with the issue it closes.
+`_resolve_config`'s docstring, so this also keeps step 1 aligned with that issue.
 
 Applied to `step_1.md` (WHERE row, HOW list, Acceptance, LLM prompt) and `summary.md`'s
 "Files modified" row.
@@ -133,6 +137,24 @@ contradicting its TDD section and its LLM prompt ("the two docstring notes"). Th
 authoritative because it names each test individually. Both outliers corrected to seven / two.
 
 Applied to `summary.md`'s "Files modified" row and `step_1.md`'s WHERE row.
+
+## 12. The #1154 rescope is reverted: the issue stays open, this PR only partly addresses it
+
+Marcus reversed decision 6. #1154 keeps its original text — the wider `_LAYER_ORDER` hoist
+proposal — and stays **open**; the narrow-fix reasoning goes onto it as a comment instead of
+replacing its body. The rescope would have settled a design question that is Marcus's to make:
+whether a `user` `ask` should keep beating a `project` `allow` at equal specificity, and whether
+layer order should outrank policy rank in general. #1046 needs neither answered.
+
+Step 1's code is unchanged — still
+`(specificity, never_bit, personal_bit, policy.rank, layer, -index)`, and the `personal_bit`
+rationale from decision 6 still explains why that key was chosen. Only the issue-tracking framing
+changes: no closing keyword for #1154 anywhere in step 1's commit body or LLM prompt, and #1154's
+AC1 is explicitly recorded as unmet.
+
+Applied to `step_1.md` (title, header note, "Deliberately narrow" wording, prose-site aside, commit
+block, LLM prompt) and `summary.md` (opening dependency sentence, the paragraph below it, and the
+steps-table row title).
 
 ## Explicitly out of scope
 

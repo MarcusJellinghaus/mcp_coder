@@ -1,11 +1,12 @@
-# Step 1 — Resolver cross-layer precedence (closes #1154)
+# Step 1 — Resolver cross-layer precedence (narrow fix, refs #1154)
 
 > Prerequisite for steps 4–5. **Skip this step entirely if #1154 has already landed on `main`.**
 > Steps 2–3 do not depend on it.
 >
-> **This step delivers #1154 in full**, under its rescoped definition: the sort key below *is*
-> #1154's specified key, and its AC1 is the narrow property this step implements. The commit
-> therefore closes it.
+> **This step implements only the narrow `personal_bit` fix that #1046 needs.** #1154's AC1 — a
+> higher layer wins at equal specificity regardless of `allow`/`ask` — is **not** met by it, so
+> **#1154 stays open**. The reasoning is recorded as a comment on #1154; read it there rather than
+> here. The commit must not close the issue.
 
 ## Goal
 
@@ -18,8 +19,8 @@ specificity (fail closed), and the `user` ↔ `project` relationship is left exa
 `user` ↔ `project`: a repo-committed `.icoder/settings.json` `"allow"` would silently override the
 user's own global `"ask"` at equal specificity. That is a security regression nothing asks for —
 the persist target is only ever `local`, and the runtime grant only ever `runtime`. So what is
-hoisted is a **personal bit**, not the layer order, and the `user` ↔ `project` direction is a
-recorded won't-fix on #1154.
+hoisted is a **personal bit**, not the layer order, and the `user` ↔ `project` direction is left
+untouched for #1154 to settle.
 
 ## WHERE
 
@@ -72,8 +73,8 @@ the new key. Only its explanatory comment changes.
 Five sites in `resolver.py`, plus the test module docstring, still describe the old order and must
 be restated. Do not leave any of them implying the key is 4 keys, and do not let any of them say
 the *layer order* was hoisted — it was not; only the personal bit was. (#1154's own "Consequential
-edits" list already names `_resolve_config`'s docstring, so covering all five keeps this step
-aligned with the issue it closes.)
+edits" list already names `_resolve_config`'s docstring, so covering all five also serves that
+issue.)
 
 1. `resolver.py` module docstring (~line 9) — "specificity (primary) -> `never>ask>allow` ->
    layer order ..." becomes "specificity (primary) -> `never` -> personal layers
@@ -149,16 +150,17 @@ Every other existing test in the file must pass untouched.
 
 `fix(permissions): let a personal layer win at equal specificity (#1046)`
 
-Body: `Closes #1154.` The `user` <-> `project` direction stays as it is today, by decision on that
-issue.
+Body: `Refs #1154` — a partial fix only, so **no closing keyword**: this step does not meet that
+issue's AC1 and must not auto-close it. The `user` <-> `project` direction stays as it is today.
 
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_1.md`.
 >
 > Implement step 1 only: the cross-layer precedence fix in
-> `src/mcp_coder/icoder/permissions/resolver.py`. It delivers #1154 in full — put `Closes #1154.`
-> in the commit body.
+> `src/mcp_coder/icoder/permissions/resolver.py`. It is a **partial** fix for #1154, which stays
+> open — put `Refs #1154` in the commit body and **never** a closing keyword (`Closes`/`Fixes`/
+> `Resolves`) with that number.
 >
 > Work TDD: first add the seven new test functions listed in step_1.md to
 > `tests/icoder/test_permissions_resolver.py` and confirm the first one fails against the current
