@@ -2,13 +2,13 @@
 
 Implementation summary for issue **#1046**, part of epic **#1038**, design reference **#1037**
 (§5, §8.2, §8.3). Depends on I3.2 (**#1045**, landed) and on the cross-layer precedence fix
-(**#1154**, rescoped to the narrow `personal_bit` — step 1 delivers it in full, so this PR closes
-it).
+(**#1154**, which step 1 only partially addresses).
 
-**Step 1 satisfies #1154 completely.** The narrow `personal_bit` is #1154's final semantic, not a
-stopgap: hoisting the whole `_LAYER_ORDER` would let a repo-committed `"allow"` silently override
-the user's global `"ask"` at equal specificity, so the `user` ↔ `project` direction is a recorded
-won't-fix on #1154.
+**Step 1 partially addresses #1154; the issue stays open.** Step 1 hoists a narrow `personal_bit`
+rather than the whole `_LAYER_ORDER`, because the full hoist would let a repo-committed `"allow"`
+silently override the user's global `"ask"` at equal specificity. That is the only part #1046
+needs; the remaining `user` ↔ `project` question is left to #1154, where the reasoning is recorded
+as a comment.
 
 ## Goal
 
@@ -150,7 +150,7 @@ all future calls with **any** arguments, not just the arguments shown:
 
 | # | Title | Commit scope |
 |---|---|---|
-| 1 | Resolver cross-layer precedence (closes #1154) | `resolver.py` + resolver tests |
+| 1 | Resolver cross-layer precedence (narrow fix, refs #1154) | `resolver.py` + resolver tests |
 | 2 | `ApprovalModal` widget | `approval_modal.py` + modal tests |
 | 3 | Modal push + `once`/`session` wiring; remove the interim auto-deny | `stream_view.py`, `app.py`, `loader.py` + pilot tests |
 | 4 | `permissions/persist.py` JSONC write-back | `persist.py`, `.importlinter` + writer unit tests |
