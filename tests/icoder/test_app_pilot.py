@@ -2228,6 +2228,7 @@ async def test_persist_write_failure_degrades_to_a_session_grant(
     assert len(engine.resolved) == 1
     assert engine.resolved[0][1].scope == "persist"
     assert "Could not write the permission rule" in log_text
+    assert f"{_APPROVAL_TOOL} is allowed for this session only" in log_text
     if content is not None:
         assert target.read_bytes() == content
 

@@ -248,7 +248,8 @@ class StreamViewApp(App[None]):
                     except OSError as exc:
                         logger.warning("persist write failed: %s", exc)
                         self.query_one(OutputLog).append_text(
-                            f"Could not write the permission rule: {exc}",
+                            f"Could not write the permission rule: {exc}; "
+                            f"{tool_name} is allowed for this session only.",
                             style=STYLE_CANCELLED,
                         )
                 self._core.add_runtime_rule(rule)
