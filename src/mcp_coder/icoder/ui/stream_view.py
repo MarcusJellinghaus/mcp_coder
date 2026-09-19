@@ -24,6 +24,7 @@ from mcp_coder.icoder.permissions.approval import ApprovalDecision
 from mcp_coder.icoder.permissions.loader import LOCAL_SETTINGS_RELPATH
 from mcp_coder.icoder.permissions.matcher import parse_matcher
 from mcp_coder.icoder.permissions.model import Policy, Rule
+from mcp_coder.icoder.permissions.persist import write_rule
 from mcp_coder.icoder.ui.widgets.approval_modal import ApprovalModal
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.output_log import ContentUnit, OutputLog
@@ -214,8 +215,16 @@ class StreamViewApp(App[None]):
         ``None`` (choice ``5``) abandons the turn through the same path as
         ``Esc`` on the main screen and never resolves. A ``session`` or
         ``persist`` scope adds the whole-tool runtime grant first, so a later
-        call in the same turn already resolves ``ALWAYS``. The Future itself
-        is only ever touched by ``resolve_pending``.
+        call in the same turn already resolves ``ALWAYS``; ``persist`` also
+        writes the rule to :meth:`_persist_target` so it survives a relaunch.
+        The Future itself is only ever touched by ``resolve_pending``, which
+        runs in every branch.
+
+        The parse guard runs before the write: ``write_rule`` inserts the
+        matcher verbatim and ``loader._load_layer`` is per-layer atomic, so
+        one rejected token would fail the whole ``local`` layer on the next
+        launch. A failed write degrades to a session grant and says so; the
+        single ``except OSError`` also covers ``PersistError``.
 
         Args:
             approval_id: The pending call's id from the event.
@@ -227,7 +236,21 @@ class StreamViewApp(App[None]):
             return
         if decision.scope in ("session", "persist"):
             rule = _grant_rule(tool_name)
-            if rule is not None:
+            if rule is None:
+                self.query_one(OutputLog).append_text(
+                    f"Could not remember {tool_name}: not a valid matcher.",
+                    style=STYLE_CANCELLED,
+                )
+            else:
+                if decision.scope == "persist":
+                    try:
+                        write_rule(self._persist_target(), tool_name)
+                    except OSError as exc:
+                        logger.warning("persist write failed: %s", exc)
+                        self.query_one(OutputLog).append_text(
+                            f"Could not write the permission rule: {exc}",
+                            style=STYLE_CANCELLED,
+                        )
                 self._core.add_runtime_rule(rule)
         self._core.resolve_pending(approval_id, decision)
 

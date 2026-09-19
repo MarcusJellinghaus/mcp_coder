@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Wire the `persist` choice + end-to-end composition test
 [step_5.md](./steps/step_5.md) — gated on steps 1 and 4.
-- [ ] Implementation: six pilot tests, disk write in `_apply_approval` (parse guard first, `except OSError` degrade), re-check every #1046 acceptance criterion
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `feat(icoder): persist approval grants to settings.local.json (#1046)`
+- [x] Implementation: six pilot tests, disk write in `_apply_approval` (parse guard first, `except OSError` degrade), re-check every #1046 acceptance criterion
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `feat(icoder): persist approval grants to settings.local.json (#1046)`
 
 ## Pull Request
 
