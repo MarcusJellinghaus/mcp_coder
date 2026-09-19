@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: `permissions/persist.py` — comment-preserving JSONC write-back
 [step_4.md](./steps/step_4.md) — gated on step 1.
-- [ ] Implementation: nineteen unmarked tests in `test_permissions_persist.py`, new `persist.py` (`write_rule`, `PersistError`, `_scan` locator), register in `.importlinter` `permissions_leaf_isolation`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `feat(permissions): add comment-preserving JSONC rule write-back (#1046)`
+- [x] Implementation: nineteen unmarked tests in `test_permissions_persist.py`, new `persist.py` (`write_rule`, `PersistError`, `_scan` locator), register in `.importlinter` `permissions_leaf_isolation`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `feat(permissions): add comment-preserving JSONC rule write-back (#1046)`
 
 ### Step 5: Wire the `persist` choice + end-to-end composition test
 [step_5.md](./steps/step_5.md) — gated on steps 1 and 4.

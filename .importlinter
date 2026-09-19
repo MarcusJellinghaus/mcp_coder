@@ -385,6 +385,7 @@ source_modules =
     mcp_coder.icoder.permissions.skill_tools
     mcp_coder.icoder.permissions.skill_frame
     mcp_coder.icoder.permissions.approval
+    mcp_coder.icoder.permissions.persist
 forbidden_modules =
     mcp_coder.icoder.skills
     mcp_coder.icoder.core
