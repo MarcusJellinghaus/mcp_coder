@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Modal push + `once`/`session` wiring; remove interim auto-deny
 [step_3.md](./steps/step_3.md)
-- [ ] Implementation: delete two obsolete test artefacts, nine new tests, `LOCAL_SETTINGS_RELPATH` in `loader.py`, modal push + `_apply_approval` in `stream_view.py`, move `action_cancel_stream` down from `app.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `feat(icoder): push the approval modal and apply once/session scopes (#1046)`
+- [x] Implementation: delete two obsolete test artefacts, nine new tests, `LOCAL_SETTINGS_RELPATH` in `loader.py`, modal push + `_apply_approval` in `stream_view.py`, move `action_cancel_stream` down from `app.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `feat(icoder): push the approval modal and apply once/session scopes (#1046)`
 
 ### Step 4: `permissions/persist.py` — comment-preserving JSONC write-back
 [step_4.md](./steps/step_4.md) — gated on step 1.

@@ -64,6 +64,10 @@ _POLICY_BY_TOKEN: dict[str, Policy] = {
     "deny": Policy.NEVER,
 }
 
+#: The ``local`` layer, relative to the project root. Shared with the approval
+#: modal's persist target (I3.3) so the reader and the writer cannot drift.
+LOCAL_SETTINGS_RELPATH = Path(".icoder") / "settings.local.json"
+
 
 def _strip_jsonc(text: str) -> str:
     """Strip // and /* */ comments and trailing commas from JSONC text.
@@ -213,7 +217,7 @@ def _discover_layers(project_dir: Path) -> list[tuple[str, Path]]:
     candidates: list[tuple[str, Path]] = [
         ("user", get_user_app_data_dir("mcp_coder") / ".icoder" / "settings.json"),
         ("project", project_dir / ".icoder" / "settings.json"),
-        ("local", project_dir / ".icoder" / "settings.local.json"),
+        ("local", project_dir / LOCAL_SETTINGS_RELPATH),
     ]
     return [(tag, p.resolve()) for tag, p in candidates if p.is_file()]
 

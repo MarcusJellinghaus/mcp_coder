@@ -21,11 +21,20 @@ from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.permissions.approval import ApprovalDecision, ApprovalEngine
-from mcp_coder.icoder.permissions.model import Matcher, PermissionFrame
+from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
+from mcp_coder.icoder.permissions.loader import load_permission_config
+from mcp_coder.icoder.permissions.matcher import matches
+from mcp_coder.icoder.permissions.model import (
+    Matcher,
+    PermissionConfig,
+    PermissionFrame,
+    Policy,
+    Rule,
+)
+from mcp_coder.icoder.permissions.resolver import resolve
 from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
-from mcp_coder.icoder.ui.stream_view import _DENY_NO_UI
 from mcp_coder.icoder.ui.widgets.approval_modal import ApprovalModal
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.detail_modal import DetailModal
@@ -1591,6 +1600,19 @@ async def test_resume_path_skips_startup_notices(
 
 # --- Step 9: approval_request branch + the direct UI -> engine cancel channel ---
 
+_APPROVAL_TOOL = "mcp__srv__do_it"
+
+
+def _approval_event(approval_id: str = "a1") -> StreamEvent:
+    """Build the ``approval_request`` event the engine would emit for the tool."""
+    return {
+        "type": "approval_request",
+        "approval_id": approval_id,
+        "tool_name": _APPROVAL_TOOL,
+        "args": {"path": "a.txt"},
+        "source": "project",
+    }
+
 
 class _RecordingEngine(ApprovalEngine):
     """Engine stub recording what the UI sends it (subclassed, so the type holds)."""
@@ -1607,14 +1629,10 @@ class _RecordingEngine(ApprovalEngine):
         self.cancel_calls += 1
 
 
-async def test_approval_request_auto_denies_and_renders_nothing(
+async def test_approval_request_pushes_the_modal(
     fake_llm: FakeLLMService, event_log: EventLog
 ) -> None:
-    """An approval_request resolves as a deny carrying _DENY_NO_UI, rendering nothing.
-
-    Interim behaviour until the modal lands (#1046): the reason is the UI's own
-    string, never the gateway's user-deny wording, because no user was asked.
-    """
+    """An approval_request pushes an ApprovalModal for the tool and answers nothing yet."""
     engine = _RecordingEngine()
     app = ICoderApp(
         AppCore(llm_service=fake_llm, event_log=event_log, approval_engine=engine)
@@ -1624,22 +1642,12 @@ async def test_approval_request_auto_denies_and_renders_nothing(
         output = app.query_one(OutputLog)
         before = list(output.recorded_lines)
 
-        app._handle_stream_event(
-            {
-                "type": "approval_request",
-                "approval_id": "a1",
-                "tool_name": "mcp__srv__do_it",
-                "args": {},
-            }
-        )
+        app._handle_stream_event(_approval_event())
         await pilot.pause()
 
-        assert len(engine.resolved) == 1
-        approval_id, decision = engine.resolved[0]
-        assert approval_id == "a1"
-        assert decision.outcome == "deny"
-        assert decision.scope == "once"
-        assert decision.reason == _DENY_NO_UI
+        assert isinstance(app.screen, ApprovalModal)
+        assert _APPROVAL_TOOL in _approval_prompt_text(app)
+        assert engine.resolved == []
         # Nothing rendered, and no turn/tool state was touched.
         assert output.recorded_lines == before
         assert app._current_turn_id is None
@@ -1783,6 +1791,208 @@ async def test_approval_modal_ctrl_c_copies_and_does_not_dismiss(
         assert isinstance(icoder_app.screen, ApprovalModal)
 
 
+# --- #1046 step 3: modal pushed from the stream + once/session scopes applied ---
+
+
+def _recording_app(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> tuple[ICoderApp, _RecordingEngine]:
+    """Build an ICoderApp around a recording engine (no gateway)."""
+    engine = _RecordingEngine()
+    app = ICoderApp(
+        AppCore(llm_service=fake_llm, event_log=event_log, approval_engine=engine)
+    )
+    return app, engine
+
+
+async def _open_modal_and_press(app: ICoderApp, pilot: Pilot[Any], key: str) -> None:
+    """Push the modal through the stream branch, then press ``key`` on it."""
+    await pilot.pause()
+    app._handle_stream_event(_approval_event())
+    await pilot.pause()
+    assert isinstance(app.screen, ApprovalModal)
+    await pilot.press(key)
+    await pilot.pause()
+
+
+@pytest.mark.parametrize(
+    ("key", "outcome", "scope"),
+    [
+        ("1", "allow", "once"),
+        ("2", "allow", "session"),
+        ("4", "deny", "once"),
+    ],
+)
+async def test_approval_choice_resolves_pending_with_decision(
+    fake_llm: FakeLLMService,
+    event_log: EventLog,
+    key: str,
+    outcome: str,
+    scope: str,
+) -> None:
+    """One keypress on the modal reaches resolve_pending with the matching decision."""
+    app, engine = _recording_app(fake_llm, event_log)
+    async with app.run_test() as pilot:
+        await _open_modal_and_press(app, pilot, key)
+
+        assert len(engine.resolved) == 1
+        approval_id, decision = engine.resolved[0]
+        assert approval_id == "a1"
+        assert decision.outcome == outcome
+        assert decision.scope == scope
+        assert decision.reason is None
+
+
+async def test_allow_once_writes_no_runtime_rule(
+    fake_llm: FakeLLMService, event_log: EventLog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Choice 1 grants nothing beyond this call."""
+    added: list[Rule] = []
+    monkeypatch.setattr(
+        AppCore, "add_runtime_rule", lambda self, rule: added.append(rule)
+    )
+    app, _ = _recording_app(fake_llm, event_log)
+    async with app.run_test() as pilot:
+        await _open_modal_and_press(app, pilot, "1")
+
+        assert added == []
+
+
+async def test_session_choice_writes_a_runtime_rule(
+    fake_llm: FakeLLMService, event_log: EventLog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Choice 2 adds exactly one runtime ALWAYS rule matching the tool."""
+    added: list[Rule] = []
+    monkeypatch.setattr(
+        AppCore, "add_runtime_rule", lambda self, rule: added.append(rule)
+    )
+    app, _ = _recording_app(fake_llm, event_log)
+    async with app.run_test() as pilot:
+        await _open_modal_and_press(app, pilot, "2")
+
+        assert len(added) == 1
+        rule = added[0]
+        assert rule.layer == "runtime"
+        assert rule.policy is Policy.ALWAYS
+        assert matches(rule.matcher, _APPROVAL_TOOL)
+
+
+async def test_session_grant_is_honoured_by_resolve(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """Choice 2 goes through the real gateway: the authored ask now resolves ALWAYS."""
+    authored_ask = Rule(
+        Matcher(server="srv", tool="do_it"), Policy.AFTER_APPROVAL, "project"
+    )
+    gateway = LangchainEnforcementGateway(PermissionConfig(rules=(authored_ask,)))
+    engine = _RecordingEngine()
+    app = ICoderApp(
+        AppCore(
+            llm_service=fake_llm,
+            event_log=event_log,
+            approval_engine=engine,
+            permission_gateway=gateway,
+        )
+    )
+    async with app.run_test() as pilot:
+        assert (
+            resolve(_APPROVAL_TOOL, {}, None, gateway._config).policy
+            is Policy.AFTER_APPROVAL
+        )
+        await _open_modal_and_press(app, pilot, "2")
+
+        assert (
+            resolve(_APPROVAL_TOOL, {}, None, gateway._config).policy is Policy.ALWAYS
+        )
+        assert len(engine.resolved) == 1
+
+
+async def test_session_grant_does_not_survive_a_reload(
+    fake_llm: FakeLLMService,
+    event_log: EventLog,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A session grant lives in memory only: a fresh load still asks (design §8.4)."""
+    user_root = tmp_path / "user"
+    user_root.mkdir(exist_ok=True)
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _app: user_root,
+    )
+    icoder = tmp_path / ".icoder"
+    icoder.mkdir()
+    (icoder / "settings.json").write_text(
+        json.dumps({"ask": [_APPROVAL_TOOL]}), encoding="utf-8"
+    )
+    gateway = LangchainEnforcementGateway(load_permission_config(tmp_path))
+    engine = _RecordingEngine()
+    app = ICoderApp(
+        AppCore(
+            llm_service=fake_llm,
+            event_log=event_log,
+            approval_engine=engine,
+            permission_gateway=gateway,
+        )
+    )
+    async with app.run_test() as pilot:
+        await _open_modal_and_press(app, pilot, "2")
+        assert (
+            resolve(_APPROVAL_TOOL, {}, None, gateway._config).policy is Policy.ALWAYS
+        )
+
+    reloaded = load_permission_config(tmp_path)
+    assert not reloaded.degraded
+    assert resolve(_APPROVAL_TOOL, {}, None, reloaded).policy is Policy.AFTER_APPROVAL
+
+
+async def test_cancel_turn_cancels_and_never_resolves(
+    fake_llm: FakeLLMService, event_log: EventLog
+) -> None:
+    """Choice 5 cancels the turn through the engine channel and answers nothing."""
+    app, engine = _recording_app(fake_llm, event_log)
+    async with app.run_test() as pilot:
+        await _open_modal_and_press(app, pilot, "5")
+
+        assert engine.cancel_calls == 1
+        assert engine.resolved == []
+        assert app._cancel_event.is_set()
+
+
+async def test_ctrl_c_does_not_cancel_the_turn(
+    fake_llm: FakeLLMService, event_log: EventLog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ctrl+C on the open modal copies; it neither cancels nor resolves."""
+    app, engine = _recording_app(fake_llm, event_log)
+    monkeypatch.setattr(app, "copy_to_clipboard", lambda _text: None)
+    async with app.run_test() as pilot:
+        await _open_modal_and_press(app, pilot, "ctrl+c")
+
+        assert engine.cancel_calls == 0
+        assert engine.resolved == []
+        assert isinstance(app.screen, ApprovalModal)
+
+
+async def test_replayed_log_pushes_no_approval_modal(
+    event_log: EventLog,
+) -> None:
+    """approval_request never reaches the .jsonl, so a resume pushes no modal."""
+    fake = FakeLLMService(responses=[[_approval_event(), {"type": "done"}]])
+    core = AppCore(llm_service=fake, event_log=event_log)
+    list(core.stream_llm("use the tool"))
+    log_path = event_log.current_path
+    assert "approval_request" not in log_path.read_text(encoding="utf-8")
+
+    app = ICoderApp(core)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.do_resume(log_path)
+        await pilot.pause()
+
+        assert len(app.screen_stack) == 1
+        assert not isinstance(app.screen, ApprovalModal)
+
+
 # --- Step 10: shutdown hook + closed-app guard (R9) ---
 
 #: Hard cap on the quit-with-an-approval-pending case, deliberately far below
@@ -1882,17 +2092,6 @@ async def test_quit_with_approval_pending_exits_and_unwinds_worker(
     service = _ApprovalPendingLLMService(engine)
     app = ICoderApp(
         AppCore(llm_service=service, event_log=event_log, approval_engine=engine)
-    )
-
-    # TODO(#1046): delete this patch together with the auto-deny it defeats.
-    # Step 9's interim ``approval_request`` branch answers every request
-    # synchronously through AppCore.resolve_pending, so without this nothing is
-    # ever pending at quit time and the test cannot exercise R9 at all. The UI
-    # branch itself stays unpatched -- its interaction with shutdown is the
-    # thing under test. Once the modal lands, a pending approval is the natural
-    # state while it is open and this patch point disappears rather than moves.
-    monkeypatch.setattr(
-        AppCore, "resolve_pending", lambda self, approval_id, decision: None
     )
 
     # Textual thread workers run in a pooled, reused thread, so ``is_alive()``
