@@ -296,8 +296,10 @@ def _insert_section(
 def _remove_item(text: str, span: Span) -> str:
     """Delete the item at ``span`` plus one adjacent comma.
 
-    The comma after it (same line) is preferred, else the one before it. When
-    nothing but whitespace remains on the item's line, the whole line goes.
+    Adjacency is judged on the code view, so whitespace *and comments* between
+    the item and its comma are skipped (and removed with it). The comma after
+    the item is preferred, else the one before it. When nothing but whitespace
+    remains on the item's line, the whole line goes.
 
     Args:
         text: The JSONC source.
@@ -305,19 +307,23 @@ def _remove_item(text: str, span: Span) -> str:
 
     Returns:
         The updated text.
+
+    Raises:
+        PersistError: No comma is adjacent yet the item is not alone in its
+            list — deleting it would leave the file unparseable.
     """
     start, end = span.start, span.end
-    j = end
-    while j < len(text) and text[j] in " \t":
-        j += 1
-    if text[j : j + 1] == ",":
-        end = j + 1
-    else:
-        k = start
-        while k > 0 and text[k - 1].isspace():
-            k -= 1
-        if text[k - 1 : k] == ",":
-            start = k - 1
+    code = _code_view(text, _scan(text))
+    after = _skip_ws(code, end)
+    before = start
+    while before > 0 and code[before - 1].isspace():
+        before -= 1
+    if code[after : after + 1] == ",":
+        end = after + 1
+    elif code[before - 1 : before] == ",":
+        start = before - 1
+    elif code[before - 1 : before] != "[" or code[after : after + 1] != "]":
+        raise PersistError(f"no comma adjacent to {text[span.start:span.end]}")
     out = text[:start] + text[end:]
     line_start = out.rfind("\n", 0, start) + 1
     line_end = out.find("\n", start)
@@ -420,10 +426,10 @@ def write_rule(target: Path, matcher: str, section: Section = "allow") -> None:
 
     Raises:
         PersistError: The file cannot be parsed, its root is not an object, a
-            section value is not a list, or the item to move cannot be located.
-            Nothing is written in that case. Plain :class:`OSError` propagates
-            from an unwritable target.
-    """  # noqa: DOC502 - raised by _read/_parse/_locate_item, part of the contract
+            section value is not a list, or the item to move cannot be located
+            or removed cleanly. Nothing is written in that case. Plain
+            :class:`OSError` propagates from an unwritable target.
+    """  # noqa: DOC502 - raised by _read/_parse/_locate_item/_remove_item, part of the contract
     text, newline = _read(target)
     sections = _parse(text, target)
     if matcher in sections[section]:

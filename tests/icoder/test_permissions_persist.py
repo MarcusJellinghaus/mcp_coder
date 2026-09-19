@@ -17,6 +17,7 @@ import pytest
 
 from mcp_coder.icoder.permissions.loader import (
     LOCAL_SETTINGS_RELPATH,
+    _strip_jsonc,
     load_permission_config,
 )
 from mcp_coder.icoder.permissions.model import Decision, Layer, Policy
@@ -243,6 +244,27 @@ def test_matcher_in_another_list_is_moved_not_duplicated(
     after = _text(target)
     assert after.count(TOOL) == 1
     assert json.loads(after) == {"ask": ["mcp__a__x"], "allow": [TOOL]}
+    _assert_local_always(_reload(tmp_path, TOOL, monkeypatch))
+
+
+@pytest.mark.parametrize(
+    "ask_body",
+    [f'"{TOOL}" /* c */, "mcp__a__x"', f'"{TOOL}" // c\n, "mcp__a__x"'],
+    ids=["block-comment-before-comma", "line-comment-before-comma"],
+)
+def test_move_skips_a_comment_between_item_and_comma(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ask_body: str
+) -> None:
+    """The comma after a moved item is found across a comment, not left dangling."""
+    target = _seed(tmp_path, f'{{"ask": [{ask_body}], "allow": []}}\n')
+
+    write_rule(target, TOOL, "allow")
+
+    after = _text(target)
+    assert json.loads(_strip_jsonc(after)) == {
+        "ask": ["mcp__a__x"],
+        "allow": [TOOL],
+    }
     _assert_local_always(_reload(tmp_path, TOOL, monkeypatch))
 
 
