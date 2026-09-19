@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: `ApprovalModal` widget
 [step_2.md](./steps/step_2.md)
-- [ ] Implementation: six pilot tests, new `ui/widgets/approval_modal.py` (`DISCLAIMER_TEMPLATE`, `build_prompt_text`, `format_args_full`, `ApprovalModal`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `feat(icoder): add the reactive approval modal (#1046)`
+- [x] Implementation: six pilot tests, new `ui/widgets/approval_modal.py` (`DISCLAIMER_TEMPLATE`, `build_prompt_text`, `format_args_full`, `ApprovalModal`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `feat(icoder): add the reactive approval modal (#1046)`
 
 ### Step 3: Modal push + `once`/`session` wiring; remove interim auto-deny
 [step_3.md](./steps/step_3.md)

@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from textual.pilot import Pilot
-from textual.widgets import Static
+from textual.widgets import Static, TextArea
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
@@ -26,6 +26,7 @@ from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.stream_view import _DENY_NO_UI
+from mcp_coder.icoder.ui.widgets.approval_modal import ApprovalModal
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.detail_modal import DetailModal
 from mcp_coder.icoder.ui.widgets.input_area import InputArea
@@ -1660,6 +1661,126 @@ async def test_cancel_stream_also_cancels_pending_approvals(
 
         assert engine.cancel_calls == 1
         assert app._cancel_event.is_set()
+
+
+# --- #1046 step 2: ApprovalModal pushed directly (no stream wiring yet) ---
+
+_LONG_CMD = "x" * 300
+
+
+async def _push_approval_modal(
+    app: ICoderApp, pilot: Pilot[Any], tmp_path: Path
+) -> tuple[list[ApprovalDecision | None], Path]:
+    """Push one ApprovalModal and return the dismiss recorder + persist target."""
+    persist_target = tmp_path / ".icoder" / "settings.local.json"
+    got: list[ApprovalDecision | None] = []
+    app.push_screen(
+        ApprovalModal(
+            tool_name="mcp__srv__do_it",
+            args={"path": "a.txt", "cmd": _LONG_CMD},
+            source="project",
+            persist_target=persist_target,
+        ),
+        got.append,
+    )
+    await pilot.pause()
+    return got, persist_target
+
+
+def _approval_prompt_text(app: ICoderApp) -> str:
+    """Return the rendered text of the modal's ``#approval-prompt`` Static."""
+    return str(app.screen.query_one("#approval-prompt", Static).render())
+
+
+async def test_approval_modal_states_the_over_grant(
+    icoder_app: ICoderApp, tmp_path: Path
+) -> None:
+    """The prompt names the tool and says a remember grant covers any arguments."""
+    async with icoder_app.run_test() as pilot:
+        await _push_approval_modal(icoder_app, pilot, tmp_path)
+        prompt = _approval_prompt_text(icoder_app)
+        assert "with any arguments" in prompt
+        assert "mcp__srv__do_it" in prompt
+
+
+async def test_approval_modal_args_widget_holds_full_args(
+    icoder_app: ICoderApp, tmp_path: Path
+) -> None:
+    """A 300-char single-line value reaches the TextArea verbatim, no ellipsis."""
+    async with icoder_app.run_test() as pilot:
+        await _push_approval_modal(icoder_app, pilot, tmp_path)
+        text = icoder_app.screen.query_one("#approval-args", TextArea).text
+        assert _LONG_CMD in text
+        assert "cmd" in text
+        assert "..." not in text
+
+
+async def test_approval_modal_shows_persist_target_and_summary(
+    icoder_app: ICoderApp, tmp_path: Path
+) -> None:
+    """Choice 3 is confirmed inline: target file plus a one-line write summary."""
+    async with icoder_app.run_test() as pilot:
+        _, persist_target = await _push_approval_modal(icoder_app, pilot, tmp_path)
+        prompt = _approval_prompt_text(icoder_app)
+        assert str(persist_target) in prompt
+        assert "allow" in prompt
+        assert "mcp__srv__do_it" in prompt
+
+
+@pytest.mark.parametrize(
+    ("key", "outcome", "scope"),
+    [
+        ("1", "allow", "once"),
+        ("2", "allow", "session"),
+        ("3", "allow", "persist"),
+        ("4", "deny", "once"),
+        ("escape", "deny", "once"),
+    ],
+)
+async def test_approval_modal_choice_dismisses_with_decision(
+    icoder_app: ICoderApp, tmp_path: Path, key: str, outcome: str, scope: str
+) -> None:
+    """One keypress dismisses with the matching decision; reason stays None."""
+    async with icoder_app.run_test() as pilot:
+        got, _ = await _push_approval_modal(icoder_app, pilot, tmp_path)
+        await pilot.press(key)
+        await pilot.pause()
+
+        assert len(got) == 1
+        decision = got[0]
+        assert decision is not None
+        assert decision.outcome == outcome
+        assert decision.scope == scope
+        assert decision.reason is None
+
+
+async def test_approval_modal_cancel_dismisses_with_none(
+    icoder_app: ICoderApp, tmp_path: Path
+) -> None:
+    """Choice 5 dismisses with None — the caller cancels the turn."""
+    async with icoder_app.run_test() as pilot:
+        got, _ = await _push_approval_modal(icoder_app, pilot, tmp_path)
+        await pilot.press("5")
+        await pilot.pause()
+
+        assert got == [None]
+
+
+async def test_approval_modal_ctrl_c_copies_and_does_not_dismiss(
+    icoder_app: ICoderApp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ctrl+C copies the args text and leaves the modal open."""
+    copied: list[str] = []
+    monkeypatch.setattr(icoder_app, "copy_to_clipboard", copied.append)
+    async with icoder_app.run_test() as pilot:
+        got, _ = await _push_approval_modal(icoder_app, pilot, tmp_path)
+        await pilot.press("ctrl+c")
+        await pilot.pause()
+
+        assert copied
+        assert _LONG_CMD in copied[0]
+        assert got == []
+        assert isinstance(icoder_app.screen, ApprovalModal)
 
 
 # --- Step 10: shutdown hook + closed-app guard (R9) ---
