@@ -127,41 +127,44 @@ class TuiChecker:
 
     def _check_windows_cmd_codepage(self) -> None:
         """Silently fix non-UTF-8 console codepage on Windows."""
-        if sys.platform != "win32":
-            return
-        if not hasattr(ctypes, "windll"):
-            return
-        current_cp = ctypes.windll.kernel32.GetConsoleOutputCP()
-        if current_cp == 65001:
-            return
+        # Positive platform guard: mypy skips the block silently on other
+        # platforms, whereas code after a platform-guarded early return is
+        # reported as unreachable under warn_unreachable.
+        if sys.platform == "win32":
+            if not hasattr(ctypes, "windll"):
+                return
+            current_cp = ctypes.windll.kernel32.GetConsoleOutputCP()
+            if current_cp == 65001:
+                return
 
-        def fix_fn() -> None:
-            ctypes.windll.kernel32.SetConsoleOutputCP(65001)
-            atexit.register(ctypes.windll.kernel32.SetConsoleOutputCP, current_cp)
+            def fix_fn() -> None:
+                ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+                atexit.register(ctypes.windll.kernel32.SetConsoleOutputCP, current_cp)
 
-        self._silent_fixes.append(
-            (f"Console codepage set to UTF-8 (was {current_cp})", fix_fn)
-        )
+            self._silent_fixes.append(
+                (f"Console codepage set to UTF-8 (was {current_cp})", fix_fn)
+            )
 
     def _check_vscode_gpu_acceleration(self) -> None:
         """Prompt if VS Code gpuAcceleration is set to 'off'."""
-        if sys.platform != "win32":
-            return
-        if os.environ.get("SSH_CONNECTION"):
-            return
-        if os.environ.get("TERM_PROGRAM") != "vscode":
-            return
-        settings_path = (
-            Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "settings.json"
-        )
-        if not settings_path.is_file():
-            return
-        try:
-            content = settings_path.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            return
-        if re.search(r'"terminal\.integrated\.gpuAcceleration"\s*:\s*"off"', content):
-            self._prompts.append((_VSCODE_GPU_PROMPT, _VSCODE_GPU_INSTRUCTIONS))
+        if sys.platform == "win32":
+            if os.environ.get("SSH_CONNECTION"):
+                return
+            if os.environ.get("TERM_PROGRAM") != "vscode":
+                return
+            settings_path = (
+                Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "settings.json"
+            )
+            if not settings_path.is_file():
+                return
+            try:
+                content = settings_path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                return
+            if re.search(
+                r'"terminal\.integrated\.gpuAcceleration"\s*:\s*"off"', content
+            ):
+                self._prompts.append((_VSCODE_GPU_PROMPT, _VSCODE_GPU_INSTRUCTIONS))
 
     def _check_windows_terminal(self) -> None:
         """No-op stub for Windows Terminal (future-proofing)."""
