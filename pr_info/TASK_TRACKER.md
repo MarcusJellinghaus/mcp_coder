@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Resolver cross-layer precedence — personal-layer bit (refs #1154)
 [step_1.md](./steps/step_1.md) — skip if #1154 has already landed on `main`.
-- [ ] Implementation: seven new resolver tests, `_PERSONAL_LAYERS` + 6-key `_rule_sort_key`, six prose sites, two docstring notes
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `fix(permissions): let a personal layer win at equal specificity (#1046)` — body `Refs #1154`, no closing keyword
+- [x] Implementation: seven new resolver tests, `_PERSONAL_LAYERS` + 6-key `_rule_sort_key`, six prose sites, two docstring notes
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `fix(permissions): let a personal layer win at equal specificity (#1046)` — body `Refs #1154`, no closing keyword
 
 ### Step 2: `ApprovalModal` widget
 [step_2.md](./steps/step_2.md)

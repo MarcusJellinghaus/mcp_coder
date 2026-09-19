@@ -6,8 +6,9 @@ Deterministic ``tool_name -> Decision`` mapping. This module imports only from
 ``resolve`` runs the frame-first branch (:func:`_resolve_frame`) when a frame is
 active, then falls through to the config path (:func:`_resolve_config`). The
 config path applies config-rule precedence — specificity (primary) ->
-``never>ask>allow`` -> layer order (``user->project->local``) -> declaration
-order — with ``runtime`` sitting above that contest as its own top-priority
+``never`` -> personal layers (``local``/``runtime``) -> ``ask>allow`` -> layer
+order (``user->project->local``) -> declaration order — with ``runtime``
+sitting above that contest as its own top-priority
 stage (bounded by a winning authored ``never``), a fail-closed degrade path, and
 the ``None -> ALWAYS`` default mapping (§8.4) living here, not in the model.
 Frame elevation beats
@@ -35,20 +36,33 @@ from mcp_coder.icoder.permissions.model import (
 
 _LAYER_ORDER = {"user": 0, "project": 1, "local": 2, "runtime": 3}
 
+# Layers the user writes for themselves (a session grant, a persisted "remember
+# this"), as opposed to the shared authored ``user``/``project`` files.
+_PERSONAL_LAYERS = frozenset({"local", "runtime"})
 
-def _rule_sort_key(ir: tuple[int, Rule]) -> tuple[Specificity, int, int, int]:
+
+def _rule_sort_key(
+    ir: tuple[int, Rule],
+) -> tuple[Specificity, int, int, int, int, int]:
     """Rank one ``(index, rule)`` candidate for the ``max()`` contest.
 
     Args:
         ir: An ``(declaration index, rule)`` pair from the candidate list.
 
     Returns:
-        The 4-key precedence tuple: specificity, then ``never>ask>allow``, then
-        layer order, then the negated index (earlier declaration wins).
+        The 6-key precedence tuple: specificity, then a ``never`` bit (a deny
+        in any layer dominates at equal specificity — fail closed), then a
+        personal-layer bit (``local``/``runtime`` outrank ``user``/``project``,
+        so a persisted or session grant beats an authored ``ask``), then
+        ``ask>allow`` (still decides *within* a group, so ``user`` vs
+        ``project`` is unchanged), then layer order, then the negated index
+        (earlier declaration wins).
     """
     index, rule = ir
     return (
         specificity(rule.matcher),
+        1 if rule.policy is Policy.NEVER else 0,
+        1 if rule.layer in _PERSONAL_LAYERS else 0,
         rule.policy.rank,
         _LAYER_ORDER[rule.layer],
         # Final tie-break: earlier declaration wins, so negate the index — a
@@ -139,7 +153,7 @@ def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision:
     is its own top-priority stage and contests alone whenever it is non-empty
     and the top-ranked authored candidate is not ``never`` (R14). Everything
     else — including the runtime rules among themselves — is decided by the
-    ordinary 4-key contest of :func:`_rule_sort_key`.
+    ordinary 6-key contest of :func:`_rule_sort_key`.
 
     Args:
         tool_name: Canonical ``mcp__server__tool`` name of the call.
@@ -163,11 +177,14 @@ def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision:
         if matches(rule.matcher, tool_name)
     ]
     if cands:
-        # ``runtime`` is a stage, not just a layer: ``_LAYER_ORDER`` is only the
-        # *third* sort key and ``Policy.rank`` puts AFTER_APPROVAL (1) above
-        # ALWAYS (0), so without this partition a session grant
-        # ``Rule(..., ALWAYS, "runtime")`` would lose to an authored ``ask`` on
-        # the same matcher and the user would be re-prompted every turn (R14).
+        # ``runtime`` is a stage, not just a layer. The personal bit in
+        # ``_rule_sort_key`` already lifts a session grant
+        # ``Rule(..., ALWAYS, "runtime")`` over an authored ``ask`` on the same
+        # matcher, but only at equal specificity — ``_LAYER_ORDER`` is the
+        # *fifth* key and ``Policy.rank`` the fourth, both below specificity.
+        # This partition is stronger: it ignores specificity, so a broad grant
+        # also beats a more specific authored ``ask`` and the user is not
+        # re-prompted every turn (R14).
         runtime = [ir for ir in cands if ir[1].layer == "runtime"]
         authored = [ir for ir in cands if ir[1].layer != "runtime"]
         # Bound the widening: R14 only needs runtime to beat ``ask``, and letting
@@ -177,8 +194,9 @@ def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision:
         # holding both a broad ``never`` and a specific ``ask`` must not skip the
         # short-circuit, or the ``ask`` beats the grant on ``Policy.rank``. When
         # the bound engages, the authored ``never`` falls through to the ordinary
-        # 4-key contest, so it loses only to a *strictly more specific* runtime
-        # rule, never to a broader one.
+        # 6-key contest, where the ``never`` bit sits above the personal bit,
+        # so it loses only to a *strictly more specific* runtime rule, never to
+        # a broader one.
         top_authored = max(authored, key=_rule_sort_key) if authored else None
         blocked = top_authored is not None and top_authored[1].policy is Policy.NEVER
         if runtime and not blocked:
