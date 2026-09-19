@@ -268,6 +268,32 @@ def test_move_skips_a_comment_between_item_and_comma(
     _assert_local_always(_reload(tmp_path, TOOL, monkeypatch))
 
 
+def test_move_of_last_item_keeps_previous_items_line_comment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Removing the last entry deletes only its comma; the neighbour's comment stays."""
+    target = _seed(
+        tmp_path,
+        "{\n"
+        '  "ask": [\n'
+        '    "mcp__a__x", // keep me\n'
+        f'    "{TOOL}"\n'
+        "  ],\n"
+        '  "allow": []\n'
+        "}\n",
+    )
+
+    write_rule(target, TOOL, "allow")
+
+    after = _text(target)
+    assert '    "mcp__a__x" // keep me\n  ],\n' in after
+    assert json.loads(_strip_jsonc(after)) == {
+        "ask": ["mcp__a__x"],
+        "allow": [TOOL],
+    }
+    _assert_local_always(_reload(tmp_path, TOOL, monkeypatch))
+
+
 def test_already_present_is_a_no_op(tmp_path: Path) -> None:
     target = _seed(tmp_path, f'{{"allow": ["{TOOL}"]}}\n')
     before = target.read_bytes()

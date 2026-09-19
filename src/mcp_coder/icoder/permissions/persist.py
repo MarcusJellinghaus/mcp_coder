@@ -297,8 +297,10 @@ def _remove_item(text: str, span: Span) -> str:
     """Delete the item at ``span`` plus one adjacent comma.
 
     Adjacency is judged on the code view, so whitespace *and comments* between
-    the item and its comma are skipped (and removed with it). The comma after
-    the item is preferred, else the one before it. When nothing but whitespace
+    the item and its comma are skipped. The comma after the item is preferred
+    and everything up to it goes with the item; else the comma before it is
+    deleted on its own, so whatever sits between them — typically the previous
+    item's trailing ``//`` comment — survives. When nothing but whitespace
     remains on the item's line, the whole line goes.
 
     Args:
@@ -318,10 +320,11 @@ def _remove_item(text: str, span: Span) -> str:
     before = start
     while before > 0 and code[before - 1].isspace():
         before -= 1
+    comma_before: int | None = None
     if code[after : after + 1] == ",":
         end = after + 1
     elif code[before - 1 : before] == ",":
-        start = before - 1
+        comma_before = before - 1
     elif code[before - 1 : before] != "[" or code[after : after + 1] != "]":
         raise PersistError(f"no comma adjacent to {text[span.start:span.end]}")
     out = text[:start] + text[end:]
@@ -330,6 +333,9 @@ def _remove_item(text: str, span: Span) -> str:
     line_end = len(out) if line_end == -1 else line_end + 1
     if not out[line_start:line_end].strip():
         out = out[:line_start] + out[line_end:]
+    if comma_before is not None:
+        # Sits before ``start``, so the line edit above did not move it.
+        out = out[:comma_before] + out[comma_before + 1 :]
     return out
 
 
