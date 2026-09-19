@@ -215,6 +215,8 @@ enable = ["R0401"]
 
 [tool.mypy]
 python_version = "3.11"
+strict = true
+warn_unreachable = true
 # Disable import-untyped errors for libraries without stubs when types-* packages are not installed
 # The types-requests package is available in [project.optional-dependencies].types for dev environments
 disable_error_code = ["import-untyped"]
