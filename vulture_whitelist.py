@@ -323,6 +323,13 @@ _.on_button_pressed
 _.on_option_list_option_selected
 _.action_cancel
 
+# icoder/ui/widgets/approval_modal.py - Textual action bindings (choices 1-5)
+_.action_allow_once
+_.action_allow_session
+_.action_allow_persist
+_.action_deny_once
+_.action_cancel_turn
+
 # tests/icoder/test_command_registry.py - Test command handler
 _.handle_test
 
