@@ -438,3 +438,7 @@ _.skip_langchain_history_guard
 # configured langchain backend so the guard is reached rather than the
 # "backend not configured" raise.
 _.configured_backend
+
+# tests/workflows/vscodeclaude/test_validate_target_repo.py - autouse fixture
+# pinning platform.system() so the expected MCP config filename is deterministic.
+_._windows_platform
