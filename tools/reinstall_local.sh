@@ -1,6 +1,7 @@
 #!/bin/bash
 # Reinstall mcp-coder in editable mode (developer convenience).
-# Delegates to install.sh in the same dir, then activates the venv if sourced.
+# Resolves an mcp-coder from OUTSIDE the repo venv, drives `mcp-coder install`
+# against this repo, then activates the venv if sourced.
 #
 # Usage: source tools/reinstall_local.sh   (persists venv activation)
 #    or: bash   tools/reinstall_local.sh   (does not persist activation)
@@ -12,13 +13,35 @@ _SCRIPT_DIR="$( cd "$( dirname "$_SCRIPT_PATH" )" && pwd )"
 REPO_DIR="$( cd "$_SCRIPT_DIR/.." && pwd )"
 VENV_BIN="$REPO_DIR/.venv/bin"
 
-if ! "$_SCRIPT_DIR/install.sh" "$REPO_DIR" \
+# The install rewrites $VENV_BIN/mcp-coder, so the driver must come from
+# elsewhere. `type -a -P` lists every PATH hit; `command -v` gives only the
+# first and so cannot be filtered.
+MC=""
+if [ -n "$MCP_CODER_VENV_PATH" ] \
+    && [ -x "$MCP_CODER_VENV_PATH/mcp-coder" ] \
+    && [ "$MCP_CODER_VENV_PATH" != "$VENV_BIN" ]; then
+    MC="$MCP_CODER_VENV_PATH/mcp-coder"
+fi
+if [ -z "$MC" ]; then
+    while IFS= read -r p; do
+        case "$p" in "$VENV_BIN/"*) continue ;; esac
+        MC="$p"; break
+    done <<< "$(type -a -P mcp-coder 2>/dev/null)"
+fi
+if [ -z "$MC" ]; then
+    echo "[FAIL] No mcp-coder found outside $REPO_DIR/.venv."
+    echo "       reinstall_local rewrites the repo venv, so it cannot be driven from it."
+    echo "       Install the tool env first (pip install mcp-coder) or set"
+    echo "       MCP_CODER_VENV_PATH to its Scripts/bin directory."
+    [ "$_SOURCED" = "1" ] && return 1 || exit 1
+fi
+
+if ! "$MC" install "$REPO_DIR" \
     --source local \
     --local-path "$REPO_DIR" \
-    --extras dev \
     --extra-packages "langchain langchain-anthropic mlflow" \
     --refresh; then
-    echo "[FAIL] install.sh failed"
+    echo "[FAIL] mcp-coder install failed"
     [ "$_SOURCED" = "1" ] && return 1 || exit 1
 fi
 
@@ -39,4 +62,4 @@ if [ "$_SOURCED" != "1" ]; then
     echo "      To activate now, run:  source $VENV_BIN/activate"
 fi
 
-unset _SOURCED _SCRIPT_PATH _SCRIPT_DIR REPO_DIR VENV_BIN
+unset _SOURCED _SCRIPT_PATH _SCRIPT_DIR REPO_DIR VENV_BIN MC p

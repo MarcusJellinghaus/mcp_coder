@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 from typing import Any, NoReturn
 
 from .command_catalog import COMMAND_DESCRIPTIONS
@@ -572,6 +573,88 @@ def add_init_parser(subparsers: Any) -> None:
     )
     add_project_dir_arg(
         init_parser, help="Target project directory (default: current directory)"
+    )
+
+
+def add_install_parser(subparsers: Any) -> None:
+    """Add the install command parser."""
+    install_parser = subparsers.add_parser(
+        "install",
+        help=COMMAND_DESCRIPTIONS["install"],
+        formatter_class=WideHelpFormatter,
+    )
+    install_parser.add_argument(
+        "target",
+        type=Path,
+        help="Directory that will hold <target>/.venv and copied configs.",
+    )
+    install_parser.add_argument(
+        "--source",
+        choices=("git", "pypi", "local"),
+        default="git",
+        help="Where to install mcp-coder from (default: git).",
+    )
+    install_parser.add_argument(
+        "--ref",
+        default="main",
+        help="Git ref (branch/tag/sha) for --source=git. Default: main.",
+    )
+    install_parser.add_argument(
+        "--local-path",
+        type=Path,
+        default=None,
+        help="Path to a local checkout (required for --source=local). Also "
+        "determines which pyproject.toml is read for the extras policy and "
+        "the GitHub overrides. Default: <target>.",
+    )
+    install_parser.add_argument(
+        "--extras",
+        default=None,
+        help='Extras to install, e.g. "dev" or "dev,mlflow". Pass "" for no '
+        "extras (typical with --source=pypi). Default: the "
+        "[tool.mcp-coder.install] extras from the pyproject.toml at "
+        '--local-path, or "dev".',
+    )
+    install_parser.add_argument(
+        "--extra-packages",
+        default="",
+        help="Space-separated extra packages installed after the main "
+        'install (e.g. "langchain mlflow").',
+    )
+    install_parser.add_argument(
+        "--use-sync",
+        action="store_true",
+        help="For --source=local: use the uv.lock-honoring install sequence "
+        "(uv venv + uv sync --extra <extras> + GitHub overrides + uv pip "
+        "install -e . --no-deps) instead of a single uv pip install. "
+        "Reproducible builds via the project's uv.lock.",
+    )
+    install_parser.add_argument(
+        "--skip-overrides",
+        action="store_true",
+        help="Skip the [tool.mcp-coder.install-from-github] step entirely. "
+        "Use when whatever versions PyPI / the lock file provide are "
+        "preferred over GitHub HEAD.",
+    )
+    install_parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Pass --refresh to uv so cached git clones are bypassed.",
+    )
+    install_parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Delete an existing .venv before creating a fresh one.",
+    )
+    install_parser.add_argument(
+        "--python",
+        default=sys.executable,
+        help="Base interpreter for `python -m venv`. Default: current.",
+    )
+    install_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Dry-run mode: print every command without executing anything.",
     )
 
 

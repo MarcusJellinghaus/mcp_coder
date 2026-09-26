@@ -13,6 +13,7 @@ from ...mcp_workspace_github import (
     RepoIdentifier,
     get_all_cached_issues,
 )
+from ...utils.pyproject_config import get_github_install_config, get_install_extras
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
@@ -75,7 +76,66 @@ __all__ = [
     "prepare_and_launch_session",
     "process_eligible_issues",
     "regenerate_session_files",
+    "validate_target_repo",
 ]
+
+
+def validate_target_repo(folder_path: Path) -> None:
+    """Validate the launch-time contract of a target repo.
+
+    Only the MCP config row is fatal. The remaining rows describe policy the
+    target repo is expected to declare for itself; each missing one is logged
+    as a warning and the launch continues. A ``pyproject.toml`` that cannot be
+    read is warned about as exactly that, rather than as absent policy.
+
+    Args:
+        folder_path: Working folder holding the checked-out target repo.
+
+    Raises:
+        FileNotFoundError: If the platform's MCP config file is missing.
+    """  # noqa: DOC502 - raised by validate_mcp_json, part of the contract
+    validate_mcp_json(folder_path)
+
+    pyproject = folder_path / "pyproject.toml"
+
+    try:
+        declared_extras = get_install_extras(folder_path, strict=True)
+        github_config = get_github_install_config(folder_path)
+    except ValueError as exc:
+        # An unreadable file is not "no policy declared". `mcp-coder install`
+        # reads the same pyproject.toml strictly and aborts on it, so name the
+        # error here instead of reporting both rows below as absent.
+        logger.warning(
+            "%s cannot be read as target-repo policy; `mcp-coder install` will "
+            "abort on the same file:\n%s",
+            pyproject,
+            exc,
+        )
+    else:
+        if declared_extras is None:
+            logger.warning(
+                "%s declares no [tool.mcp-coder.install] extras; "
+                "falling back to 'dev'",
+                pyproject,
+            )
+        if not github_config.packages and not github_config.packages_no_deps:
+            logger.warning(
+                "%s declares no [tool.mcp-coder.install-from-github] packages; "
+                "no sibling pinning, so published PyPI versions win",
+                pyproject,
+            )
+
+    venv = folder_path / ".venv"
+    if venv.exists() and not (venv / "pyvenv.cfg").exists():
+        logger.warning("%s has no pyvenv.cfg; the venv is empty or broken", venv)
+
+    second_venv = folder_path / "venv"
+    if second_venv.exists():
+        logger.warning(
+            "%s exists; the installer and the session only use %s",
+            second_venv,
+            venv,
+        )
 
 
 def launch_vscode(
@@ -139,7 +199,7 @@ def prepare_and_launch_session(
     Steps:
     1. Create working folder
     2. Setup git repo
-    3. Validate .mcp.json
+    3. Validate the target-repo contract
     4. Run setup commands (if configured) - validates commands first
     5. Update .gitignore
     6. Create workspace file
@@ -171,8 +231,8 @@ def prepare_and_launch_session(
         # Setup git repo
         setup_git_repo(folder_path, repo_url, branch_name)
 
-        # Validate .mcp.json
-        validate_mcp_json(folder_path)
+        # Validate the target-repo contract (.mcp.json is fatal, the rest warn)
+        validate_target_repo(folder_path)
 
         # Run setup commands if configured
         candidate_keys = _SETUP_COMMAND_KEYS.get(platform.system(), ())

@@ -53,19 +53,6 @@ def _mcp_coder_exe(spec: SessionSpec) -> Path:
     return _venv_bin_dir(Path(spec.mcp_coder_install_path) / ".venv") / exe
 
 
-def _coordinator_python(spec: SessionSpec) -> Path:
-    """Return the absolute path to the coordinator venv's Python interpreter.
-
-    Args:
-        spec: The session spec carrying ``mcp_coder_install_path``.
-
-    Returns:
-        Absolute path to ``python(.exe)`` inside the coordinator venv.
-    """
-    exe = "python.exe" if sys.platform == "win32" else "python"
-    return _venv_bin_dir(Path(spec.mcp_coder_install_path) / ".venv") / exe
-
-
 def build_subprocess_env(spec: SessionSpec, cwd: Path) -> dict[str, str]:
     """Build the environment shared by every subprocess of the session.
 
@@ -106,28 +93,29 @@ def build_subprocess_env(spec: SessionSpec, cwd: Path) -> dict[str, str]:
 
 
 def build_install_argv(spec: SessionSpec, cwd: Path) -> list[str]:
-    """Build the argv that provisions the project venv via ``install.py``.
+    """Build the argv that provisions the project venv via ``mcp-coder install``.
 
-    Mirrors the exact flags used by the retired shell templates; appends
-    ``--skip-overrides`` iff ``spec.skip_github_install`` is set.
+    Extras are the target project's business — the installer reads them from
+    the target's ``pyproject.toml`` — so no ``--extras`` is emitted here.
+    Appends ``--skip-overrides`` iff ``spec.skip_github_install`` is set.
 
     Args:
-        spec: The session spec carrying the resolved ``install_script_path``.
+        spec: The session spec carrying ``mcp_coder_install_path`` and
+            ``skip_github_install``.
         cwd: The session/project directory.
 
     Returns:
-        The argv list to invoke ``install.py`` with the coordinator Python.
+        The argv list to invoke ``install`` with the coordinator's
+        ``mcp-coder`` executable.
     """
     argv = [
-        str(_coordinator_python(spec)),
-        spec.install_script_path,
+        str(_mcp_coder_exe(spec)),
+        "install",
         str(cwd),
         "--source",
         "local",
         "--local-path",
         str(cwd),
-        "--extras",
-        "dev",
         "--use-sync",
         "--refresh",
     ]

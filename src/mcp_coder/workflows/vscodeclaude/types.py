@@ -1,7 +1,7 @@
 """Type definitions and constants for vscodeclaude feature."""
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from enum import Enum
 from pathlib import Path
 from typing import Any, TypedDict
@@ -242,7 +242,6 @@ class SessionSpec:
     commands: list[str]
     timeout: int
     mcp_config: str  # e.g. ".mcp.json" / ".mcp.linux.json"
-    install_script_path: str  # resolved tools/install.py
     mcp_coder_install_path: str  # coordinator install dir (holds .venv)
     skip_github_install: bool
     is_intervention: bool
@@ -270,6 +269,10 @@ def write_session_spec(folder: Path, spec: SessionSpec) -> Path:
 def read_session_spec(folder: Path) -> SessionSpec:
     """Load the session spec from ``<folder>/.vscodeclaude_session.json``.
 
+    Keys the spec no longer declares are dropped, so a session folder written
+    by an older launcher still loads. The asymmetry is deliberate: a *missing*
+    key still raises, so any field added later needs a default.
+
     Args:
         folder: Session folder holding the spec JSON.
 
@@ -277,4 +280,5 @@ def read_session_spec(folder: Path) -> SessionSpec:
         The deserialized ``SessionSpec``.
     """
     data = json.loads((folder / SESSION_SPEC_FILENAME).read_text(encoding="utf-8"))
-    return SessionSpec(**data)
+    names = {f.name for f in fields(SessionSpec)}
+    return SessionSpec(**{k: v for k, v in data.items() if k in names})

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from mcp_coder.utils.toml_utils import format_toml_error
 from mcp_coder.utils.user_config import (
-    _format_toml_error,
     get_cache_refresh_minutes,
     get_config_file_path,
     get_config_values,
@@ -15,7 +15,7 @@ from mcp_coder.utils.user_config import (
 
 
 class TestFormatTomlError:
-    """Tests for _format_toml_error helper function."""
+    """Tests for format_toml_error helper function."""
 
     def test_format_includes_all_error_components(self, tmp_path: Path) -> None:
         """Error message includes file path, line number, content, and pointer."""
@@ -33,7 +33,7 @@ class TestFormatTomlError:
             pytest.fail("Expected TOMLDecodeError")
         except tomllib.TOMLDecodeError as error:
             # Execute
-            result = _format_toml_error(config_file, error)
+            result = format_toml_error(config_file, error)
 
             # Verify all components are present
             assert str(config_file) in result  # file path
@@ -57,7 +57,7 @@ class TestFormatTomlError:
             config_file.unlink()
 
             # Execute - should not raise
-            result = _format_toml_error(config_file, error)
+            result = format_toml_error(config_file, error)
 
             # Verify - should still have file path and error message
             assert str(config_file) in result
@@ -80,7 +80,7 @@ class TestFormatTomlError:
             config_file.write_text('only_one_line = "ok"\n', encoding="utf-8")
 
             # Execute - should not raise
-            result = _format_toml_error(config_file, error)
+            result = format_toml_error(config_file, error)
 
             # Verify - should have file path and error message
             assert str(config_file) in result
@@ -101,7 +101,7 @@ class TestFormatTomlError:
             pytest.fail("Expected TOMLDecodeError")
         except tomllib.TOMLDecodeError as error:
             # Execute
-            result = _format_toml_error(config_file, error)
+            result = format_toml_error(config_file, error)
 
             # Verify - smart-quote hint present, backslash hint absent
             assert "Curly/smart quotes" in result
@@ -122,7 +122,7 @@ class TestFormatTomlError:
             pytest.fail("Expected TOMLDecodeError")
         except tomllib.TOMLDecodeError as error:
             # Execute
-            result = _format_toml_error(config_file, error)
+            result = format_toml_error(config_file, error)
 
             # Verify
             assert "Curly/smart quotes" in result
@@ -141,7 +141,7 @@ class TestFormatTomlError:
             pytest.fail("Expected TOMLDecodeError")
         except tomllib.TOMLDecodeError as error:
             # Execute
-            result = _format_toml_error(config_file, error)
+            result = format_toml_error(config_file, error)
 
             # Verify - only the backslash hint
             assert "Backslashes in paths" in result
@@ -159,7 +159,7 @@ class TestFormatTomlError:
             pytest.fail("Expected TOMLDecodeError")
         except tomllib.TOMLDecodeError as error:
             # Execute
-            result = _format_toml_error(config_file, error)
+            result = format_toml_error(config_file, error)
 
             # Verify
             assert "Curly/smart quotes" not in result
@@ -184,7 +184,7 @@ class TestFormatTomlError:
             config_file.unlink()
 
             # Execute - should not raise
-            result = _format_toml_error(config_file, error)
+            result = format_toml_error(config_file, error)
 
             # Verify - no hint, but the error is still reported
             assert "TOML parse error" in result

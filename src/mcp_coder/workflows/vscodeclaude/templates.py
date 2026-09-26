@@ -2,7 +2,7 @@ r"""Template strings for VSCode Claude session files.
 
 The startup script is a **thin launcher** (one per platform) that bootstraps
 into Python: `python -m mcp_coder.workflows.vscodeclaude.session_setup <CWD>`.
-All shell orchestration that used to live here — env assembly, `install.py`
+All shell orchestration that used to live here — env assembly, venv
 provisioning, session-ID capture, step chaining, the interactive `claude`
 handoff and the banner — now lives in `session_setup.py`, driven by a typed
 session-spec JSON (`.vscodeclaude_session.json`) written at launch time.
@@ -25,7 +25,7 @@ The system still uses two separate Python virtual environments for isolation:
 1. MCP-CODER ENVIRONMENT: the coordinator's `.venv` (contains the mcp-coder
    executable). Its Python is what the launcher invokes.
 2. PROJECT ENVIRONMENT: the issue-specific workspace `.venv` (project
-   dependencies), provisioned by `session_setup` via `tools/install.py`.
+   dependencies), provisioned by `session_setup` via `mcp-coder install`.
 
 """
 

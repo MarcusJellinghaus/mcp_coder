@@ -9,6 +9,9 @@ import logging
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+from .toml_utils import format_toml_error
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +35,40 @@ class GitHubInstallConfig:
     packages_no_deps: list[str]
 
 
+def _load_pyproject(project_dir: Path, *, strict: bool = False) -> dict[str, Any]:
+    """Load and parse pyproject.toml from a project directory.
+
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+        strict: Raise on a malformed or unreadable file instead of
+            returning an empty dict. A missing file is never an error.
+
+    Returns:
+        Parsed TOML data, or an empty dict when the file is absent (or
+        malformed and strict is False).
+
+    Raises:
+        ValueError: If strict is True and the file exists but cannot be
+            read or parsed. The message names the file.
+    """
+    path = project_dir / "pyproject.toml"
+    if not path.exists():
+        return {}
+
+    try:
+        with open(path, "rb") as f:
+            data: dict[str, Any] = tomllib.load(f)
+            return data
+    except tomllib.TOMLDecodeError as e:
+        if strict:
+            raise ValueError(format_toml_error(path, e)) from e
+        return {}
+    except OSError as e:
+        if strict:
+            raise ValueError(f"Error reading {path}\n{e}") from e
+        return {}
+
+
 def get_prompts_config(project_dir: Path) -> PromptsConfig:
     """Read [tool.mcp-coder.prompts] from pyproject.toml.
 
@@ -41,24 +78,7 @@ def get_prompts_config(project_dir: Path) -> PromptsConfig:
     Returns:
         PromptsConfig with prompt paths and mode.
     """
-    path = project_dir / "pyproject.toml"
-    if not path.exists():
-        return PromptsConfig(
-            system_prompt=None,
-            project_prompt=None,
-            claude_system_prompt_mode="append",
-        )
-
-    try:
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
-    except (tomllib.TOMLDecodeError, OSError):
-        return PromptsConfig(
-            system_prompt=None,
-            project_prompt=None,
-            claude_system_prompt_mode="append",
-        )
-
+    data = _load_pyproject(project_dir)
     prompts = data.get("tool", {}).get("mcp-coder", {}).get("prompts", {})
     mode = prompts.get("claude-system-prompt-mode", "append")
     if mode not in _VALID_PROMPT_MODES:
@@ -82,6 +102,30 @@ class ImplementConfig:
     check_type_hints: bool
 
 
+def _require_spec_list(path: Path, key: str, value: Any) -> list[str]:
+    """Validate one [tool.mcp-coder.install-from-github] list value.
+
+    Args:
+        path: The pyproject.toml the value came from, named in the error.
+        key: The key the value came from, named in the error.
+        value: The raw TOML value.
+
+    Returns:
+        The value as a list of install specs.
+
+    Raises:
+        ValueError: If the value is not a list of strings. The message names
+            the file, the key and the offending value.
+    """
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return list(value)
+    raise ValueError(
+        f"Invalid [tool.mcp-coder.install-from-github] {key} in {path}\n"
+        'Expected a list of strings such as ["pkg @ git+https://host/pkg.git"], '
+        f"got {type(value).__name__}: {value!r}"
+    )
+
+
 def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
     """Read [tool.mcp-coder.install-from-github] from pyproject.toml.
 
@@ -90,21 +134,20 @@ def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
 
     Returns:
         GitHubInstallConfig with packages and packages_no_deps lists.
-    """
-    path = project_dir / "pyproject.toml"
-    if not path.exists():
-        return GitHubInstallConfig(packages=[], packages_no_deps=[])
 
-    try:
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
-    except (tomllib.TOMLDecodeError, OSError):
-        return GitHubInstallConfig(packages=[], packages_no_deps=[])
-
+    Raises:
+        ValueError: If either key is declared as something other than a list
+            of strings. The installer concatenates these onto a uv argv, so a
+            wrong type would otherwise surface as a TypeError mid-install.
+    """  # noqa: DOC502 - raised by _require_spec_list, part of this contract
+    data = _load_pyproject(project_dir)
     gh = data.get("tool", {}).get("mcp-coder", {}).get("install-from-github", {})
+    path = project_dir / "pyproject.toml"
     return GitHubInstallConfig(
-        packages=gh.get("packages", []),
-        packages_no_deps=gh.get("packages-no-deps", []),
+        packages=_require_spec_list(path, "packages", gh.get("packages", [])),
+        packages_no_deps=_require_spec_list(
+            path, "packages-no-deps", gh.get("packages-no-deps", [])
+        ),
     )
 
 
@@ -117,18 +160,45 @@ def get_implement_config(project_dir: Path) -> ImplementConfig:
     Returns:
         ImplementConfig with format_code and check_type_hints booleans.
     """
-    path = project_dir / "pyproject.toml"
-    if not path.exists():
-        return ImplementConfig(format_code=False, check_type_hints=False)
-
-    try:
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
-    except (tomllib.TOMLDecodeError, OSError):
-        return ImplementConfig(format_code=False, check_type_hints=False)
-
+    data = _load_pyproject(project_dir)
     section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
     return ImplementConfig(
         format_code=section.get("format_code", False),
         check_type_hints=section.get("check_type_hints", False),
     )
+
+
+def get_install_extras(project_dir: Path, *, strict: bool = False) -> str | None:
+    """Read [tool.mcp-coder.install] extras from pyproject.toml.
+
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+        strict: Propagate the ValueError _load_pyproject raises for a
+            malformed pyproject.toml, and reject a non-string extras value,
+            instead of returning None.
+
+    Returns:
+        The declared extras string, unparsed (e.g. "dev,mlflow"), or None when
+        the file, section or key is absent. An explicit empty string is
+        returned as "" — the caller distinguishes it from "not declared".
+
+    Raises:
+        ValueError: If strict is True and extras is declared as something
+            other than a string. The message names the file and the value.
+    """
+    data = _load_pyproject(project_dir, strict=strict)
+    section = data.get("tool", {}).get("mcp-coder", {}).get("install", {})
+    extras: Any = section.get("extras")
+    if extras is None or isinstance(extras, str):
+        return extras
+    path = project_dir / "pyproject.toml"
+    if strict:
+        raise ValueError(
+            f"Invalid [tool.mcp-coder.install] extras in {path}\n"
+            f'Expected a string such as "dev" or "dev,mlflow", '
+            f"got {type(extras).__name__}: {extras!r}"
+        )
+    logger.warning(
+        "Ignoring non-string [tool.mcp-coder.install] extras in %s: %r", path, extras
+    )
+    return None

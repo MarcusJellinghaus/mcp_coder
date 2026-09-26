@@ -1,8 +1,8 @@
 """Test how create_startup_script propagates skip_github_install.
 
 GitHub override semantics themselves (which packages, --refresh, no-deps,
-etc.) live inside ``tools/install.py`` and are covered by that script's
-own tests + the ``vscodeclaude-template-install`` CI job. Here we only
+etc.) live inside ``mcp_coder.install`` and are covered by ``tests/install/``
+and the ``vscodeclaude-template-install`` CI job. Here we only
 verify that ``create_startup_script`` records the user-facing
 ``--no-install-from-github`` flag on the spec and that
 ``session_setup.build_install_argv`` threads it through as
@@ -148,7 +148,8 @@ class TestSkipGithubInstallRoundTrip:
     """End-to-end: workspace.py -> spec JSON -> session_setup -> install argv.
 
     A single on-disk chain proving the ``skip_github_install`` flag survives
-    serialization and reaches the install.py argv (or is absent by default).
+    serialization and reaches the ``mcp-coder install`` argv (or is absent
+    by default).
     """
 
     def test_skip_github_install_true_round_trips_to_skip_overrides(

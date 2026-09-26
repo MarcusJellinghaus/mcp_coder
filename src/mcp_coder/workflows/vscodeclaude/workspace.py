@@ -479,41 +479,6 @@ def create_workspace_file(
     return workspace_file
 
 
-def _resolve_install_script(install_path: Path) -> Path:
-    """Locate ``tools/install.py`` given the mcp-coder install dir.
-
-    Two layouts are supported:
-
-    * **Wheel install** (production): mcp-coder was ``pip install``ed
-      from a wheel; ``pyproject.toml`` data-files put a copy at
-      ``<install_path>/.venv/share/mcp-coder/install.py``.
-    * **Editable install** (developer): mcp-coder is installed
-      ``-e <repo>`` and the canonical ``<repo>/tools/install.py`` is
-      reachable from ``install_path``.
-
-    Returns:
-        Path to the script. The vscodeclaude template substitutes this
-        into the generated startup script so the session runs it
-        directly with the mcp-coder venv's interpreter.
-
-    Raises:
-        FileNotFoundError: When neither candidate exists — usually
-        means mcp-coder was installed from an older wheel without the
-        data-files entry, or the install layout is unusual.
-    """
-    candidates = (
-        install_path / ".venv" / "share" / "mcp-coder" / "install.py",
-        install_path / "tools" / "install.py",
-    )
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    raise FileNotFoundError(
-        f"install.py not found under {install_path}. Looked at: "
-        + ", ".join(str(c) for c in candidates)
-    )
-
-
 def create_startup_script(
     folder_path: Path,
     issue_number: int,
@@ -547,19 +512,19 @@ def create_startup_script(
         is_intervention: If True, mark the spec for intervention mode
         timeout: Timeout for mcp-coder prompt calls (default: 300 seconds)
         mcp_coder_install_path: Path to mcp-coder installation directory
-            (for locating install.py and the coordinator venv Python)
+            (holds the coordinator venv with the ``mcp-coder`` executable)
         session_folder_path: Unused. Retained for signature stability; the
             CWD is the runtime source of truth for the session directory.
         skip_github_install: If True, thread ``--skip-overrides`` into the
-            install.py argv at run time. Default False (auto-detect).
+            ``mcp-coder install`` argv at run time. Default False
+            (auto-detect).
 
     Returns:
         Path to created launcher script (.bat or .sh)
 
     Raises:
         FileNotFoundError: If the platform-specific MCP config file is absent
-            (POSIX only), or if ``tools/install.py`` cannot be located under
-            ``mcp_coder_install_path``.
+            (POSIX only).
         RuntimeError: If ``mcp_coder_install_path`` is not provided and cannot
             be auto-discovered from the running mcp-coder install.
         ValueError: If commands config is not a list of strings.
@@ -599,8 +564,6 @@ def create_startup_script(
             "Pass mcp_coder_install_path explicitly."
         )
 
-    install_script_path = _resolve_install_script(mcp_coder_install_path)
-
     # Serialize the typed spec that session_setup consumes at run time.
     spec = SessionSpec(
         issue_number=issue_number,
@@ -612,7 +575,6 @@ def create_startup_script(
         commands=list(commands),
         timeout=timeout,
         mcp_config=mcp_config_filename,
-        install_script_path=str(install_script_path),
         mcp_coder_install_path=str(mcp_coder_install_path),
         skip_github_install=skip_github_install,
         is_intervention=is_intervention,

@@ -136,10 +136,10 @@ jobs:
   # Exercises the install sequence that vscodeclaude sessions run at launch.
   # The argv is built by
   # src/mcp_coder/workflows/vscodeclaude/session_setup.py:build_install_argv
-  # (session_setup shells out to tools/install.py; see #695). This job mirrors
-  # that argv against the source-tree tools/install.py so a break in the
-  # installer contract surfaces here. Independent of `test` because it uses an
-  # activated project venv (not --system) and pulls siblings at HEAD via
+  # (session_setup shells out to `mcp-coder install`; see #695). This job
+  # mirrors that argv so a break in the installer contract surfaces here.
+  # Independent of `test` because it uses an activated project venv (not
+  # --system) and pulls siblings at HEAD via
   # [tool.mcp-coder.install-from-github] — see #969.
   vscodeclaude-template-install:
     runs-on: ubuntu-latest
@@ -161,25 +161,30 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Mirror the argv session_setup.build_install_argv produces:
-          #   python <install-prefix>/share/mcp-coder/install.py "$PWD" \
-          #     --source local --local-path "$PWD" --extras dev --use-sync \
-          #     --refresh
+          # Bootstrap mcp-coder into the SYSTEM Python, not ./.venv:
+          # `mcp-coder install . --use-sync` runs `uv sync`, which rewrites
+          # ./.venv mid-run and would wipe a bootstrap installed there.
           #
-          # CI runs the script directly from the source tree (tools/install.py)
-          # so we don't need to install mcp-coder first. A launched session runs
-          # the wheel-deployed copy of the same file.
-          python tools/install.py . \
+          # Siblings come from GitHub HEAD, exactly as every other job does: the
+          # PyPI copies of mcp-workspace / mcp-coder-utils are too old for
+          # mcp_coder's imports, so a bare `uv pip install --system .` bootstrap
+          # could not even `import mcp_coder`, let alone run the subcommand.
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" .
+
+          # Mirror the argv session_setup.build_install_argv produces:
+          mcp-coder install . \
             --source local \
             --local-path . \
-            --extras dev \
             --use-sync \
             --refresh
 
-          # Activate the venv install-env created and smoke-check end-to-end.
+          # Activate the venv `mcp-coder install` created, smoke-check end-to-end.
           # shellcheck disable=SC1091
           source .venv/bin/activate
           mcp-coder --version
+          mcp-tools-py --version
+          mcp-workspace --version
           python -c "import mcp_coder; print('mcp_coder import OK from', mcp_coder.__file__)"
 
   # Architecture checks - only run on pull requests

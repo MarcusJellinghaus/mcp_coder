@@ -110,7 +110,7 @@ For local development: discovers the tool environment the same way as `claude.ba
 
 ### How `reinstall_local.bat` Does It
 
-`reinstall_local.bat` (and `reinstall_local.sh`) delegates to the unified entry point at `tools/install.py`, invoked as `tools\install.bat <repo> --source local --local-path <repo> --extras dev --refresh`. The installer reads `[tool.mcp-coder.install-from-github]` from `pyproject.toml` to override sibling MCP packages with their GitHub HEAD versions. The same `install.py` script is also used elsewhere in this repo — see `tools/install.py` for the full design. (Note: install.py installs Python packages only; callers that need `.mcp.json` + `.claude/` in the target stage those themselves.)
+`reinstall_local.bat` (and `reinstall_local.sh`) resolves an `mcp-coder` from **outside** the repo venv — `MCP_CODER_VENV_PATH` first, then the PATH hits that are not `<repo>\.venv\Scripts` — and invokes `mcp-coder install <repo> --source local --local-path <repo> --refresh`. The driver has to come from elsewhere because the install rewrites the repo venv it would otherwise be running from; with no such copy the wrapper fails instead of guessing. The installer reads `[tool.mcp-coder.install-from-github]` from `pyproject.toml` to override sibling MCP packages with their GitHub HEAD versions, and `[tool.mcp-coder.install] extras` for the extras to install. Full design: `src/mcp_coder/install/`. (Note: the installer installs Python packages only; callers that need `.mcp.json` + `.claude/` in the target stage those themselves.)
 
 ## The Working Directory Selects the Agent's Rules
 
@@ -138,8 +138,9 @@ are now decoupled: the virtualenv still comes from the shell, the rules come fro
 | `.mcp.json` | **Keep.** The coordinator smoke test in `command_templates.py` runs `claude --mcp-config .mcp.json` from that directory. |
 | `.claude/CLAUDE.md` | **Should not exist.** Driven projects never read it; it only misleads whoever inspects the machine next. |
 
-No code in this repo creates either — `tools/install.py:17` installs Python packages only and
-leaves staging to the caller. Since the fix a stale tool-env `CLAUDE.md` is harmless; deleting
+No code in this repo creates either — the installer's scope statement in
+`src/mcp_coder/install/__init__.py` is Python packages only, and it leaves staging to the
+caller. Since the fix a stale tool-env `CLAUDE.md` is harmless; deleting
 it stops it being mistaken for the rules in force.
 
 Every run now reports the Claude working directory and the project instructions files found by

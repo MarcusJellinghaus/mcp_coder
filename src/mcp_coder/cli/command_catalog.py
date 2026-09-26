@@ -14,6 +14,7 @@ from __future__ import annotations
 # per-command ``--help`` text are the same string.
 COMMAND_DESCRIPTIONS: dict[str, str] = {
     "init": "Initialize project: create config and deploy Claude skills",
+    "install": "Install mcp-coder into a target environment",
     "verify": "Verify CLI installation, LLM provider, and MLflow configuration",
     "create-plan": "Generate implementation plan for a GitHub issue",
     "review-plan": "Run automated review of an implementation plan",
@@ -39,7 +40,7 @@ COMMAND_DESCRIPTIONS: dict[str, str] = {
 
 # (category_title, ordered command names) - the single readable layout source.
 COMMAND_CATEGORIES: list[tuple[str, list[str]]] = [
-    ("SETUP", ["init", "verify"]),
+    ("SETUP", ["init", "install", "verify"]),
     (
         "BACKGROUND DEVELOPMENT",
         [

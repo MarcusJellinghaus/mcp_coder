@@ -304,6 +304,7 @@ from .session_launch import (
     prepare_and_launch_session,
     process_eligible_issues,
     regenerate_session_files,
+    validate_target_repo,
 )
 
 # Session restart
@@ -451,6 +452,7 @@ __all__ = [
     "prepare_and_launch_session",
     "process_eligible_issues",
     "regenerate_session_files",
+    "validate_target_repo",
     # Session restart
     "restart_closed_sessions",
     "handle_pr_created_issues",

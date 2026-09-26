@@ -252,6 +252,15 @@ with `--project-dir`; together these cover the CI/CD case that motivated shared 
   - `verify.py` - System verification (tests: `cli/commands/test_verify.py`)
   - `icoder.py` - iCoder TUI launcher (tests: `cli/commands/test_cli_icoder.py`)
 
+### Installer (`src/mcp_coder/install/`)
+Provisions a target environment: `<target>/.venv` plus mcp-coder from git, PyPI or a local checkout. Backs the `mcp-coder install` subcommand and, through it, `tools/reinstall_local.*`, CI provisioning, and VSCodeClaude session setup. Installs Python packages only — staging `.mcp.json` / `.claude/` is the caller's job. Target-project policy (extras, sibling pinning) is read from the target's own `pyproject.toml`, never hardcoded here.
+
+- `__init__.py` - `install(config)` sequences the phases; re-exports `InstallConfig` and the module constants
+- `_env.py` - `InstallConfig` (resolved from the parsed CLI namespace) and the subprocess / venv / filesystem helpers, including the module constants `_phases` consumes
+- `_phases.py` - the five phases: venv, pip+uv bootstrap, main install, GitHub overrides, version report
+- Tests: `tests/install/test_install_env.py`, `tests/install/test_install_phases.py`
+- Boundary: tach layer `domain` with `depends_on = [utils]`, and one import-linter `subprocess` exemption — raw `subprocess.run` with inherited stdio is deliberate, since the shared helpers either capture output and time out or mangle `uv`'s progress display
+
 ### iCoder Interactive TUI (`src/mcp_coder/icoder/`)
 Interactive terminal chat for LLM-assisted coding. Three-layer architecture maximizes testability by keeping all logic outside the UI layer.
 

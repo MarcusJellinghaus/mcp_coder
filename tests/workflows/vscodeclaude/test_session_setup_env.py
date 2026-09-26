@@ -35,7 +35,6 @@ def _make_spec(
         commands=commands if commands is not None else ["mcp-coder implement"],
         timeout=timeout,
         mcp_config=mcp_config,
-        install_script_path="/coord/tools/install.py",
         mcp_coder_install_path="/coord",
         skip_github_install=skip_github_install,
         is_intervention=is_intervention,
@@ -127,11 +126,11 @@ class TestBuildInstallArgv:
     def test_exact_flags(self, tmp_path: Path) -> None:
         """The provisioning argv carries the canonical flags in order."""
         argv = build_install_argv(_make_spec(), tmp_path)
-        assert argv[1] == "/coord/tools/install.py"
+        assert Path(argv[0]).stem == "mcp-coder"
+        assert argv[1] == "install"
         assert argv[2] == str(tmp_path)
         assert "--source" in argv and "local" in argv
         assert "--local-path" in argv
-        assert "--extras" in argv and "dev" in argv
         assert "--use-sync" in argv
         assert "--refresh" in argv
 

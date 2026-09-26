@@ -40,6 +40,7 @@ layers =
     mcp_coder.llm | mcp_coder.prompt_manager
     mcp_coder.prompt_sources | mcp_coder.prompt_parsing
     mcp_coder.prompts
+    mcp_coder.install
     mcp_coder.utils
     mcp_coder.mcp_tools_py | mcp_coder.mcp_workspace_git | mcp_coder.mcp_workspace_github
     mcp_coder.config | mcp_coder.constants
@@ -469,6 +470,7 @@ modules =
     tests.checks
     tests.icoder
     tests.prompts
+    tests.install
 # Allowed: Importing shared fixtures from tests.utils.conftest
 # TODO: Refactor to use pytest's conftest discovery instead of explicit imports
 ignore_imports =
@@ -538,3 +540,4 @@ ignore_imports =
     tests.utils.test_mcp_verification -> subprocess
     mcp_coder.workflows.vscodeclaude.session_setup -> subprocess
     tests.workflows.vscodeclaude.test_session_setup_flow -> subprocess
+    mcp_coder.install.** -> subprocess

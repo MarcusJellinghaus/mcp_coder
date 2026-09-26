@@ -35,8 +35,7 @@ See [`tools/mlflow/README.md`](../../tools/mlflow/README.md) for the full list.
 
 | File | Purpose |
 |---|---|
-| `install.py`, `install.bat`, `install.sh` (under `tools/`) | Unified installer for git, pypi, and local sources |
-| `tools/reinstall_local.bat`, `tools/reinstall_local.sh` | Thin wrappers around `install.{bat,sh}` for editable dev reinstall |
+| `tools/reinstall_local.bat`, `tools/reinstall_local.sh` | Editable dev reinstall via `mcp-coder install` |
 | `tools/read_github_deps.py` | Read GitHub dependency info (still used by CI workflows) |
 | `tools/safe_delete_folder.py` | Safe folder deletion helper |
 | `tools/__init__.py` | Makes `tools/` an importable Python package |
