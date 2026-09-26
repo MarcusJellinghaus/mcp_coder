@@ -219,19 +219,6 @@ class ICoderApp(StreamViewApp):
             lines = runtime_banner.format_runtime_info(self._core.runtime_info)
             output.append_text("\n".join(lines), style="dim")
 
-    def action_cancel_stream(self) -> None:
-        """Cancel the stream AND any pending approval. No-op when idle.
-
-        The engine call is the *direct* UI -> engine channel and is what
-        actually unwinds a turn parked on an approval: all three generic paths
-        (``cancel_event``, ``_cancel_event``, ``GeneratorExit``) are gated on an
-        event arriving from the generator, and a blocked interceptor emits none,
-        so none of them can trigger a cancel while the consumer waits in
-        ``q.get``. They stay wired as the post-resolution backstop.
-        """
-        self._cancel_event.set()
-        self._core.cancel_pending_approvals()
-
     def action_noop(self) -> None:
         """Suppress Ctrl+C quit dialog."""
 

@@ -13,6 +13,7 @@ import threading
 from collections import deque
 from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from textual.app import App
@@ -20,6 +21,11 @@ from textual.widgets import Static
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.permissions.approval import ApprovalDecision
+from mcp_coder.icoder.permissions.loader import LOCAL_SETTINGS_RELPATH
+from mcp_coder.icoder.permissions.matcher import parse_matcher
+from mcp_coder.icoder.permissions.model import Policy, Rule
+from mcp_coder.icoder.permissions.persist import write_rule
+from mcp_coder.icoder.ui.widgets.approval_modal import ApprovalModal
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
 from mcp_coder.icoder.ui.widgets.output_log import ContentUnit, OutputLog
 from mcp_coder.llm.formatting.render_actions import (
@@ -41,14 +47,27 @@ logger = logging.getLogger(__name__)
 STYLE_TOOL_OUTPUT = "white on #0a0a2e"
 STYLE_CANCELLED = "dim #e8a838"
 
-# Interim reason for the auto-deny below. Deliberately NOT the gateway's R11
-# user-deny wording: nobody was asked, so the model must not be told a user
-# refused this call.
-_DENY_NO_UI = (
-    "This tool requires approval, but the approval prompt is not available yet, "
-    "so the call was refused without asking the user. Choose a different approach "
-    "or ask the user how to proceed."
-)
+
+def _grant_rule(tool_name: str) -> Rule | None:
+    """Build the whole-tool ``runtime`` grant a "remember" choice adds.
+
+    A canonical ``mcp__server__tool`` name always parses to exactly one
+    matcher, so the guard is a type-level safety net: on a malformed name the
+    UI grants nothing (and the caller still answers the pending call) rather
+    than raising on the UI thread.
+
+    Args:
+        tool_name: The canonical tool name from the ``approval_request`` event.
+
+    Returns:
+        The ``Rule(matcher, ALWAYS, "runtime")`` grant, or ``None`` when the
+        name does not parse to a matcher.
+    """
+    matchers, errors = parse_matcher(tool_name)
+    if errors or not matchers:
+        logger.warning("no runtime grant for %r: %s", tool_name, errors)
+        return None
+    return Rule(matchers[0], Policy.ALWAYS, "runtime")
 
 
 class StreamViewApp(App[None]):
@@ -56,10 +75,12 @@ class StreamViewApp(App[None]):
 
     Owns the per-turn streaming state (renderer, text buffer, open assistant
     turn, open tool units, cancel event) and the worker/dispatch methods that
-    mutate it. ``_core`` is supplied by the concrete subclass.
+    mutate it. ``_core`` and ``_project_dir`` are supplied by the concrete
+    subclass.
     """
 
     _core: AppCore
+    _project_dir: Path
 
     def __init__(self, *, format_tools: bool = True, **kwargs: Any) -> None:
         """Initialize the per-turn streaming state.
@@ -137,6 +158,102 @@ class StreamViewApp(App[None]):
             self.call_from_thread(callback, *args)
         except RuntimeError as exc:
             logger.debug("call_from_thread dropped during shutdown: %s", exc)
+
+    def action_cancel_stream(self) -> None:
+        """Cancel the stream AND any pending approval. No-op when idle.
+
+        The engine call is the *direct* UI -> engine channel and is what
+        actually unwinds a turn parked on an approval: all three generic paths
+        (``cancel_event``, ``_cancel_event``, ``GeneratorExit``) are gated on an
+        event arriving from the generator, and a blocked interceptor emits none,
+        so none of them can trigger a cancel while the consumer waits in
+        ``q.get``. They stay wired as the post-resolution backstop.
+        """
+        self._cancel_event.set()
+        self._core.cancel_pending_approvals()
+
+    def _persist_target(self) -> Path:
+        """Return the file a ``persist`` grant is written to.
+
+        Always the gitignored ``local`` layer: a personal "remember this" must
+        never mutate a committed, team-shared config.
+        """
+        return self._project_dir / LOCAL_SETTINGS_RELPATH
+
+    def _push_approval_modal(self, event: StreamEvent) -> None:
+        """Push the :class:`ApprovalModal` for one ``approval_request`` event.
+
+        Uses ``push_screen(screen, callback)``, never ``push_screen_wait``:
+        this runs under ``call_from_thread``, which blocks the consumer thread
+        until it returns, and both streaming timeouts are suspended while an
+        approval is pending — a wait here would wedge the turn permanently.
+
+        Args:
+            event: The ``approval_request`` stream event.
+        """
+        approval_id = str(event.get("approval_id", ""))
+        tool_name = str(event.get("tool_name", ""))
+        args = event.get("args")
+        modal = ApprovalModal(
+            tool_name=tool_name,
+            args=args if isinstance(args, dict) else {},
+            source=str(event.get("source", "")),
+            persist_target=self._persist_target(),
+        )
+        self.push_screen(
+            modal, lambda d: self._apply_approval(approval_id, tool_name, d)
+        )
+
+    def _apply_approval(
+        self,
+        approval_id: str,
+        tool_name: str,
+        decision: ApprovalDecision | None,
+    ) -> None:
+        """Apply the modal's choice, then answer the pending call.
+
+        ``None`` (choice ``5``) abandons the turn through the same path as
+        ``Esc`` on the main screen and never resolves. A ``session`` or
+        ``persist`` scope adds the whole-tool runtime grant first, so a later
+        call in the same turn already resolves ``ALWAYS``; ``persist`` also
+        writes the rule to :meth:`_persist_target` so it survives a relaunch.
+        The Future itself is only ever touched by ``resolve_pending``, which
+        runs in every branch.
+
+        The parse guard runs before the write: ``write_rule`` inserts the
+        matcher verbatim and ``loader._load_layer`` is per-layer atomic, so
+        one rejected token would fail the whole ``local`` layer on the next
+        launch. A failed write degrades to a session grant and says so; the
+        single ``except OSError`` also covers ``PersistError``.
+
+        Args:
+            approval_id: The pending call's id from the event.
+            tool_name: The canonical tool name from the event.
+            decision: The user's decision, or ``None`` to cancel the turn.
+        """
+        if decision is None:
+            self.action_cancel_stream()
+            return
+        if decision.scope in ("session", "persist"):
+            rule = _grant_rule(tool_name)
+            if rule is None:
+                self.query_one(OutputLog).append_text(
+                    f"Could not remember {tool_name}: not a valid matcher.",
+                    style=STYLE_CANCELLED,
+                )
+            else:
+                if decision.scope == "persist":
+                    try:
+                        write_rule(self._persist_target(), tool_name)
+                    except OSError as exc:
+                        logger.warning("persist write failed: %s", exc)
+                        self.query_one(OutputLog).append_text(
+                            f"Could not write the permission rule: {exc}; "
+                            f"{tool_name} is allowed for this session only.",
+                            style=STYLE_CANCELLED,
+                        )
+                self._core.add_runtime_rule(rule)
+        self._core.resolve_pending(approval_id, decision)
 
     def _stream_llm(self, text: str, skill_name: str | None = None) -> None:
         """Worker target: stream LLM response in background thread.
@@ -274,17 +391,7 @@ class StreamViewApp(App[None]):
             )
             return
         if event.get("type") == "approval_request":
-            # TODO(#1046): replace with the approval modal
-            # (ModalScreen[ApprovalDecision]). Until it lands nothing can
-            # answer, and an unanswered request wedges the turn permanently
-            # (the pause suppresses both streaming timeouts and the cancel
-            # paths cannot reach a parked interceptor) — so fail closed here,
-            # carrying our own reason rather than the gateway's user-deny
-            # wording, because no user was asked.
-            self._core.resolve_pending(
-                str(event.get("approval_id", "")),
-                ApprovalDecision("deny", "once", reason=_DENY_NO_UI),
-            )
+            self._push_approval_modal(event)
             return
         output = self.query_one(OutputLog)
         action = self._renderer.render(event)

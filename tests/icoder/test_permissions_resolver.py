@@ -2,7 +2,8 @@
 
 Step 3 exercises ``mcp_coder.icoder.permissions.resolver.resolve`` on the
 ``frame=None`` config path: config rule precedence — specificity (primary) ->
-``never>ask>allow`` -> layer order -> declaration order — plus the default
+``never`` -> personal layers (``local``/``runtime``) -> ``ask>allow`` -> layer
+order -> declaration order — plus the default
 fallback and the fail-closed degrade path. Step 4 adds the frame-first branch
 (models A/B/C, intra-frame deny>allow, elevation-over-never with
 ``lifted_never``, and the frame x degrade / degrade x sandbox interactions).
@@ -65,7 +66,12 @@ def test_equal_specificity_never_beats_ask_and_allow() -> None:
 
 
 def test_equal_specificity_ask_beats_allow() -> None:
-    """With only allow + ask at equal specificity, AFTER_APPROVAL wins."""
+    """With only allow + ask at equal specificity, AFTER_APPROVAL wins.
+
+    Both rules are in layer ``user``, so the personal bit is equal and
+    ``Policy.rank`` decides. This does not pin ask-over-allow across layers —
+    see ``test_local_allow_beats_project_ask_at_equal_specificity``.
+    """
     allow = _rule("git", "commit", Policy.ALWAYS, "user")
     ask = _rule("git", "commit", Policy.AFTER_APPROVAL, "user")
     config = PermissionConfig(rules=(allow, ask))
@@ -519,7 +525,13 @@ def test_sandbox_undeclared_healthy_is_never() -> None:
 
 
 def test_runtime_grant_beats_authored_ask_at_equal_specificity() -> None:
-    """A runtime ``always`` beats an authored ``ask`` on the same matcher (R14)."""
+    """A runtime ``always`` beats an authored ``ask`` on the same matcher (R14).
+
+    Under the 6-key ``_rule_sort_key`` this would pass even if the R14 runtime
+    stage were deleted: the personal bit lifts ``runtime`` over an authored
+    ``ask`` on its own. The only regression cover for the stage itself is
+    ``test_broad_runtime_grant_beats_more_specific_authored_ask``.
+    """
     authored = _rule("s", "t", Policy.AFTER_APPROVAL, "project")
     runtime = _rule("s", "t", Policy.ALWAYS, "runtime")
     config = PermissionConfig(rules=(authored, runtime))
@@ -597,7 +609,7 @@ def test_bound_reads_the_winning_authored_rule_not_any_authored_never() -> None:
 
 
 def test_runtime_rules_contest_among_themselves_normally() -> None:
-    """Within the runtime group the ordinary 4-key contest still applies."""
+    """Within the runtime group the ordinary 6-key contest still applies."""
     broad = _rule("s", WILDCARD, Policy.AFTER_APPROVAL, "runtime")
     specific = _rule("s", "t", Policy.ALWAYS, "runtime")
     config = PermissionConfig(rules=(broad, specific))
@@ -621,3 +633,99 @@ def test_no_runtime_rules_leaves_authored_precedence_unchanged() -> None:
     assert decision.policy is Policy.AFTER_APPROVAL
     assert decision.source == Layer("project")
     assert decision.matched_rule is ask
+
+
+# ======================================================================
+# Cross-layer precedence — the personal bit (#1046, refs #1154)
+# ======================================================================
+
+
+def test_local_allow_beats_project_ask_at_equal_specificity() -> None:
+    """A persisted ``local`` allow beats an authored ``project`` ask (personal bit)."""
+    ask = _rule("s", "t", Policy.AFTER_APPROVAL, "project")
+    allow = _rule("s", "t", Policy.ALWAYS, "local")
+    config = PermissionConfig(rules=(ask, allow))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.ALWAYS
+    assert decision.source == Layer("local")
+    assert decision.matched_rule is allow
+
+
+def test_user_ask_still_beats_project_allow_at_equal_specificity() -> None:
+    """The non-personal pair is untouched: ``Policy.rank`` still decides user vs project.
+
+    A committed repo config must not downgrade the user's own global ``ask``.
+    """
+    ask = _rule("s", "t", Policy.AFTER_APPROVAL, "user")
+    allow = _rule("s", "t", Policy.ALWAYS, "project")
+    config = PermissionConfig(rules=(ask, allow))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.AFTER_APPROVAL
+    assert decision.source == Layer("user")
+    assert decision.matched_rule is ask
+
+
+def test_local_allow_loses_to_project_never_at_equal_specificity() -> None:
+    """The never bit sits above the personal bit: a local allow cannot shadow a deny."""
+    never = _rule("s", "t", Policy.NEVER, "project")
+    allow = _rule("s", "t", Policy.ALWAYS, "local")
+    config = PermissionConfig(rules=(never, allow))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.NEVER
+    assert decision.source == Layer("project")
+    assert decision.matched_rule is never
+
+
+def test_broad_local_allow_loses_to_specific_project_never() -> None:
+    """Specificity stays primary: a broad local allow loses to a specific never."""
+    never = _rule("s", "t", Policy.NEVER, "project")
+    allow = _rule("s", WILDCARD, Policy.ALWAYS, "local")
+    config = PermissionConfig(rules=(never, allow))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.NEVER
+    assert decision.matched_rule is never
+
+
+def test_broad_local_allow_loses_to_specific_project_ask() -> None:
+    """Specificity stays primary: a broad local allow loses to a specific ask."""
+    ask = _rule("s", "t", Policy.AFTER_APPROVAL, "project")
+    allow = _rule("s", WILDCARD, Policy.ALWAYS, "local")
+    config = PermissionConfig(rules=(ask, allow))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.AFTER_APPROVAL
+    assert decision.matched_rule is ask
+
+
+def test_specific_local_always_beats_broad_project_never() -> None:
+    """§5 carve-out survives: a more specific ``always`` beats a broader ``never``."""
+    never = _rule("s", WILDCARD, Policy.NEVER, "project")
+    allow = _rule("s", "t", Policy.ALWAYS, "local")
+    config = PermissionConfig(rules=(never, allow))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.ALWAYS
+    assert decision.matched_rule is allow
+
+
+def test_user_never_beats_local_allow_at_equal_specificity() -> None:
+    """The fail-closed bound is layer-direction-agnostic: a user never beats a local allow."""
+    never = _rule("s", "t", Policy.NEVER, "user")
+    allow = _rule("s", "t", Policy.ALWAYS, "local")
+    config = PermissionConfig(rules=(never, allow))
+
+    decision = resolve("mcp__s__t", None, None, config)
+
+    assert decision.policy is Policy.NEVER
+    assert decision.source == Layer("user")
+    assert decision.matched_rule is never
