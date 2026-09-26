@@ -95,7 +95,9 @@ def _patch_run(monkeypatch: pytest.MonkeyPatch, fake: _FakeRun) -> _FakeRun:
 
 
 def _is_install(argv: list[str]) -> bool:
-    return "install" in argv
+    # Positional: the subcommand always follows the mcp-coder executable, so a
+    # spec command that merely contains the token cannot be mistaken for it.
+    return len(argv) > 1 and argv[1] == "install"
 
 
 def _is_claude(argv: list[str]) -> bool:

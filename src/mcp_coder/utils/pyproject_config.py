@@ -142,14 +142,31 @@ def get_install_extras(project_dir: Path, *, strict: bool = False) -> str | None
     Args:
         project_dir: Path to directory containing pyproject.toml.
         strict: Propagate the ValueError _load_pyproject raises for a
-            malformed pyproject.toml instead of returning None.
+            malformed pyproject.toml, and reject a non-string extras value,
+            instead of returning None.
 
     Returns:
         The declared extras string, unparsed (e.g. "dev,mlflow"), or None when
         the file, section or key is absent. An explicit empty string is
         returned as "" — the caller distinguishes it from "not declared".
+
+    Raises:
+        ValueError: If strict is True and extras is declared as something
+            other than a string. The message names the file and the value.
     """
     data = _load_pyproject(project_dir, strict=strict)
     section = data.get("tool", {}).get("mcp-coder", {}).get("install", {})
-    extras: str | None = section.get("extras")
-    return extras
+    extras: Any = section.get("extras")
+    if extras is None or isinstance(extras, str):
+        return extras
+    path = project_dir / "pyproject.toml"
+    if strict:
+        raise ValueError(
+            f"Invalid [tool.mcp-coder.install] extras in {path}\n"
+            f'Expected a string such as "dev" or "dev,mlflow", '
+            f"got {type(extras).__name__}: {extras!r}"
+        )
+    logger.warning(
+        "Ignoring non-string [tool.mcp-coder.install] extras in %s: %r", path, extras
+    )
+    return None

@@ -141,7 +141,11 @@ def phase_overrides(
     the editable install.
 
     Skipped entirely for ``--source pypi`` (PyPI-only install) or when
-    ``--skip-overrides`` is set (caller opts out of GitHub HEAD).
+    ``--skip-overrides`` is set (caller opts out of GitHub HEAD). When the
+    resolved ``local_path`` declares no overrides at all, that is reported
+    rather than passed over in silence: it is the usual outcome of a
+    ``--source git`` install whose ``--local-path`` is not a checkout, and
+    it means the siblings come from PyPI.
 
     Args:
         config: Resolved install configuration.
@@ -153,6 +157,17 @@ def phase_overrides(
         return
 
     overrides = get_github_install_config(config.local_path)
+    if not overrides.packages and not overrides.packages_no_deps:
+        pyproject = config.local_path / "pyproject.toml"
+        reason = (
+            f"no {pyproject}"
+            if not pyproject.exists()
+            else f"no [tool.mcp-coder.install-from-github] in {pyproject}"
+        )
+        print(
+            f"--- skipping GitHub overrides ({reason}); "
+            "sibling packages come from PyPI"
+        )
     if overrides.packages:
         cmd = [uv_bin, "pip", "install", "--python", str(py_v)]
         if config.refresh:

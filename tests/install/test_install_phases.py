@@ -32,6 +32,9 @@ from mcp_coder.install._env import REPORT_BINARIES, exe
 _shutil = getattr(_env, "shutil")
 _subprocess = getattr(_env, "subprocess")
 
+# Stands in for a real uv binary wherever the installer looks one up.
+_STUB_UV = "/stub/bin/uv"
+
 
 def _namespace(**overrides: Any) -> argparse.Namespace:
     """Build the Namespace add_install_parser would produce."""
@@ -86,6 +89,22 @@ class TestPhaseOverridesDryRun:
     Verifies the commands the installer *would* run for a given
     pyproject.toml, without spawning any subprocesses.
     """
+
+    @pytest.fixture(autouse=True)
+    def _stub_uv_lookup(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Keep the dry run hermetic by pinning every uv probe.
+
+        ``--check`` suppresses the phase commands but not the lookups around
+        them: ``install()`` calls ``ensure_system_uv`` before the first phase,
+        which shells out to ``pip install uv`` and may ``sys.exit`` when uv is
+        absent, and the first two phases branch on ``shutil.which('uv')``.
+        Unstubbed, these tests would touch the real environment and emit
+        different commands depending on whether uv happens to be on PATH.
+        """
+        monkeypatch.setattr(
+            "mcp_coder.install.ensure_system_uv", lambda: _STUB_UV, raising=True
+        )
+        monkeypatch.setattr(_shutil, "which", lambda _: _STUB_UV)
 
     def test_with_deps_packages_emit_install_command(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -199,6 +218,26 @@ class TestPhaseOverridesDryRun:
         )
         # No git+https line — overrides ran but the reader returned empty lists.
         assert "git+https" not in "\n".join(cmds)
+
+    def test_absent_overrides_are_reported(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Declaring no overrides is announced, not passed over in silence."""
+        _write_pyproject(tmp_path)
+        install(
+            InstallConfig.from_args(
+                _namespace(
+                    check=True,
+                    target=tmp_path,
+                    source="local",
+                    local_path=tmp_path,
+                    extras="",
+                )
+            )
+        )
+        out = capsys.readouterr().out
+        assert "skipping GitHub overrides" in out
+        assert "install-from-github" in out
 
     def test_use_sync_emits_sync_command(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

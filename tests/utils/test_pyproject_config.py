@@ -222,6 +222,25 @@ class TestGetInstallExtras:
         )
         assert get_install_extras(tmp_path) == ""
 
+    def test_raises_for_non_string_value_strict(self, tmp_path: Path) -> None:
+        """A list-valued extras is a target-repo error, not an install spec."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder.install]\nextras = ['dev']\n", encoding="utf-8"
+        )
+        with pytest.raises(ValueError) as exc_info:
+            get_install_extras(tmp_path, strict=True)
+        message = str(exc_info.value)
+        assert str(tmp_path / "pyproject.toml") in message
+        assert "extras" in message
+        assert "list" in message
+
+    def test_returns_none_for_non_string_value_lax(self, tmp_path: Path) -> None:
+        """Lax callers treat a mistyped value as not declared."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder.install]\nextras = true\n", encoding="utf-8"
+        )
+        assert get_install_extras(tmp_path) is None
+
 
 class TestMalformedTomlRegression:
     """Existing readers keep returning neutral defaults for malformed TOML."""

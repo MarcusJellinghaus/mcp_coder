@@ -442,3 +442,7 @@ _.configured_backend
 # tests/workflows/vscodeclaude/test_validate_target_repo.py - autouse fixture
 # pinning platform.system() so the expected MCP config filename is deterministic.
 _._windows_platform
+
+# tests/install/test_install_phases.py - autouse fixture stubbing the uv lookups
+# so the dry-run tests never probe or install into the real environment.
+_._stub_uv_lookup
