@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: `mcp_coder.install` package + `mcp-coder install` subcommand ([step_2.md](./steps/step_2.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy, ruff, lint-imports, vulture — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy, ruff, lint-imports, vulture — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: vscodeclaude switchover — spec field, argv, resolver removal ([step_3.md](./steps/step_3.md))
 

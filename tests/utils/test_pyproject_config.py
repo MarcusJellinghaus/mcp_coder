@@ -61,6 +61,32 @@ packages-no-deps = []
         assert config.packages == []
         assert config.packages_no_deps == []
 
+    def test_returns_packages_when_only_packages_declared(self, tmp_path: Path) -> None:
+        """Only the packages key is set."""
+        (tmp_path / "pyproject.toml").write_text(
+            """\
+[tool.mcp-coder.install-from-github]
+packages = ["pkg-a @ git+https://example.com/a.git"]
+""",
+            encoding="utf-8",
+        )
+        config = get_github_install_config(tmp_path)
+        assert config.packages == ["pkg-a @ git+https://example.com/a.git"]
+        assert config.packages_no_deps == []
+
+    def test_returns_no_deps_when_only_no_deps_declared(self, tmp_path: Path) -> None:
+        """Only the packages-no-deps key is set."""
+        (tmp_path / "pyproject.toml").write_text(
+            """\
+[tool.mcp-coder.install-from-github]
+packages-no-deps = ["pkg-b @ git+https://example.com/b.git"]
+""",
+            encoding="utf-8",
+        )
+        config = get_github_install_config(tmp_path)
+        assert config.packages == []
+        assert config.packages_no_deps == ["pkg-b @ git+https://example.com/b.git"]
+
 
 class TestGetImplementConfig:
     """Tests for get_implement_config."""

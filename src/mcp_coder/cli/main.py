@@ -32,6 +32,7 @@ from .commands.help import get_help_text
 from .commands.icoder import execute_icoder
 from .commands.implement import execute_implement
 from .commands.init import execute_init
+from .commands.install import execute_install
 from .commands.prompt import execute_prompt
 from .commands.rebase import execute_rebase
 from .commands.review import execute_review_implementation, execute_review_plan
@@ -48,6 +49,7 @@ from .parsers import (
     add_icoder_parser,
     add_implement_parser,
     add_init_parser,
+    add_install_parser,
     add_prompt_parser,
     add_rebase_parser,
     add_review_implementation_parser,
@@ -126,6 +128,7 @@ def create_parser() -> argparse.ArgumentParser:
     # Simple commands without subparsers
     subparsers.add_parser("help", help=argparse.SUPPRESS)
     add_init_parser(subparsers)
+    add_install_parser(subparsers)
     add_verify_parser(subparsers)
 
     # Add command parsers from parsers module
@@ -333,6 +336,8 @@ def main() -> int:
         # Route to appropriate command handler
         if args.command == "init":
             return execute_init(args)
+        elif args.command == "install":
+            return execute_install(args)
         elif args.command == "verify":
             return execute_verify(args)
         elif args.command == "prompt":
