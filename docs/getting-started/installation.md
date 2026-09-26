@@ -101,9 +101,11 @@ logging, Textual dev tooling, …). See
 [Optional Dependencies](../configuration/optional-dependencies.md) for the
 full list.
 
-The default extras for a target come from `[tool.mcp-coder.install] extras` in
-the target's `pyproject.toml`, falling back to `dev`. `--extras` overrides it;
-`--extras ""` installs none.
+The default extras come from `[tool.mcp-coder.install] extras` in the
+`pyproject.toml` at `--local-path` — which defaults to `<target>`, so the
+`--source git --local-path <checkout>` forms above take their extras from the
+checkout, not from the target. Absent that key, the fallback is `dev`.
+`--extras` overrides it; `--extras ""` installs none.
 
 ## Troubleshooting
 

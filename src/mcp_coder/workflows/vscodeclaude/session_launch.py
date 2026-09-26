@@ -85,7 +85,8 @@ def validate_target_repo(folder_path: Path) -> None:
 
     Only the MCP config row is fatal. The remaining rows describe policy the
     target repo is expected to declare for itself; each missing one is logged
-    as a warning and the launch continues.
+    as a warning and the launch continues. A ``pyproject.toml`` that cannot be
+    read is warned about as exactly that, rather than as absent policy.
 
     Args:
         folder_path: Working folder holding the checked-out target repo.
@@ -97,19 +98,32 @@ def validate_target_repo(folder_path: Path) -> None:
 
     pyproject = folder_path / "pyproject.toml"
 
-    if get_install_extras(folder_path) is None:
+    try:
+        declared_extras = get_install_extras(folder_path, strict=True)
+        github_config = get_github_install_config(folder_path)
+    except ValueError as exc:
+        # An unreadable file is not "no policy declared". `mcp-coder install`
+        # reads the same pyproject.toml strictly and aborts on it, so name the
+        # error here instead of reporting both rows below as absent.
         logger.warning(
-            "%s declares no [tool.mcp-coder.install] extras; falling back to 'dev'",
+            "%s cannot be read as target-repo policy; `mcp-coder install` will "
+            "abort on the same file:\n%s",
             pyproject,
+            exc,
         )
-
-    github_config = get_github_install_config(folder_path)
-    if not github_config.packages and not github_config.packages_no_deps:
-        logger.warning(
-            "%s declares no [tool.mcp-coder.install-from-github] packages; "
-            "no sibling pinning, so published PyPI versions win",
-            pyproject,
-        )
+    else:
+        if declared_extras is None:
+            logger.warning(
+                "%s declares no [tool.mcp-coder.install] extras; "
+                "falling back to 'dev'",
+                pyproject,
+            )
+        if not github_config.packages and not github_config.packages_no_deps:
+            logger.warning(
+                "%s declares no [tool.mcp-coder.install-from-github] packages; "
+                "no sibling pinning, so published PyPI versions win",
+                pyproject,
+            )
 
     venv = folder_path / ".venv"
     if venv.exists() and not (venv / "pyvenv.cfg").exists():

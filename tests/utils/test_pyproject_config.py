@@ -87,6 +87,38 @@ packages-no-deps = ["pkg-b @ git+https://example.com/b.git"]
         assert config.packages == []
         assert config.packages_no_deps == ["pkg-b @ git+https://example.com/b.git"]
 
+    @pytest.mark.parametrize("key", ["packages", "packages-no-deps"])
+    def test_raises_when_value_is_a_bare_string(self, tmp_path: Path, key: str) -> None:
+        """A string instead of a list is rejected, naming the file and the key.
+
+        The installer concatenates these onto a uv argv, so a bare string would
+        otherwise surface as a TypeError mid-install.
+        """
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder.install-from-github]\n"
+            f'{key} = "pkg-a @ git+https://example.com/a.git"\n',
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError) as exc_info:
+            get_github_install_config(tmp_path)
+        message = str(exc_info.value)
+        assert key in message
+        assert "pyproject.toml" in message
+        assert "list of strings" in message
+
+    @pytest.mark.parametrize("key", ["packages", "packages-no-deps"])
+    def test_raises_when_list_holds_a_non_string(
+        self, tmp_path: Path, key: str
+    ) -> None:
+        """A list with a non-string entry is rejected too."""
+        (tmp_path / "pyproject.toml").write_text(
+            f'[tool.mcp-coder.install-from-github]\n{key} = ["pkg-a", 42]\n',
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError) as exc_info:
+            get_github_install_config(tmp_path)
+        assert key in str(exc_info.value)
+
 
 class TestGetImplementConfig:
     """Tests for get_implement_config."""

@@ -179,7 +179,7 @@ jobs:
             --use-sync \
             --refresh
 
-          # Activate the venv install-env created and smoke-check end-to-end.
+          # Activate the venv `mcp-coder install` created, smoke-check end-to-end.
           # shellcheck disable=SC1091
           source .venv/bin/activate
           mcp-coder --version

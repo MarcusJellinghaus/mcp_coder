@@ -102,6 +102,30 @@ class ImplementConfig:
     check_type_hints: bool
 
 
+def _require_spec_list(path: Path, key: str, value: Any) -> list[str]:
+    """Validate one [tool.mcp-coder.install-from-github] list value.
+
+    Args:
+        path: The pyproject.toml the value came from, named in the error.
+        key: The key the value came from, named in the error.
+        value: The raw TOML value.
+
+    Returns:
+        The value as a list of install specs.
+
+    Raises:
+        ValueError: If the value is not a list of strings. The message names
+            the file, the key and the offending value.
+    """
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return list(value)
+    raise ValueError(
+        f"Invalid [tool.mcp-coder.install-from-github] {key} in {path}\n"
+        'Expected a list of strings such as ["pkg @ git+https://host/pkg.git"], '
+        f"got {type(value).__name__}: {value!r}"
+    )
+
+
 def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
     """Read [tool.mcp-coder.install-from-github] from pyproject.toml.
 
@@ -110,12 +134,20 @@ def get_github_install_config(project_dir: Path) -> GitHubInstallConfig:
 
     Returns:
         GitHubInstallConfig with packages and packages_no_deps lists.
-    """
+
+    Raises:
+        ValueError: If either key is declared as something other than a list
+            of strings. The installer concatenates these onto a uv argv, so a
+            wrong type would otherwise surface as a TypeError mid-install.
+    """  # noqa: DOC502 - raised by _require_spec_list, part of this contract
     data = _load_pyproject(project_dir)
     gh = data.get("tool", {}).get("mcp-coder", {}).get("install-from-github", {})
+    path = project_dir / "pyproject.toml"
     return GitHubInstallConfig(
-        packages=gh.get("packages", []),
-        packages_no_deps=gh.get("packages-no-deps", []),
+        packages=_require_spec_list(path, "packages", gh.get("packages", [])),
+        packages_no_deps=_require_spec_list(
+            path, "packages-no-deps", gh.get("packages-no-deps", [])
+        ),
     )
 
 

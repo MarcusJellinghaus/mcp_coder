@@ -180,3 +180,45 @@ class TestMissingPyproject:
         assert len(messages) == 2
         assert any("extras" in message for message in messages)
         assert any("install-from-github" in message for message in messages)
+
+
+class TestUnreadablePyproject:
+    """An unreadable pyproject.toml is named, not reported as absent policy."""
+
+    def test_malformed_toml_warns_about_the_parse_error(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """One warning naming the file and the parse error, not two 'no ...' rows."""
+        _make_compliant_repo(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            "this is not valid toml {{{", encoding="utf-8"
+        )
+
+        with caplog.at_level(logging.WARNING, logger=_LOGGER_NAME):
+            validate_target_repo(tmp_path)
+
+        messages = _warnings(caplog)
+        assert len(messages) == 1
+        assert "pyproject.toml" in messages[0]
+        assert "TOML parse error" in messages[0]
+        assert "declares no" not in messages[0]
+
+    def test_non_list_packages_warns_about_the_type(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A string where a list of specs belongs is reported at launch."""
+        _make_compliant_repo(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.mcp-coder.install]\nextras = "dev"\n\n'
+            "[tool.mcp-coder.install-from-github]\n"
+            'packages = "mcp-tools-py @ git+https://host/pkg.git"\n',
+            encoding="utf-8",
+        )
+
+        with caplog.at_level(logging.WARNING, logger=_LOGGER_NAME):
+            validate_target_repo(tmp_path)
+
+        messages = _warnings(caplog)
+        assert len(messages) == 1
+        assert "install-from-github" in messages[0]
+        assert "packages" in messages[0]
