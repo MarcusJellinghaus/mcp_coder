@@ -22,9 +22,6 @@ never blocks on user input.
 from __future__ import annotations
 
 from ._env import (
-    MCP_CODER_REPO,
-    REPORT_BINARIES,
-    REPORT_PACKAGES,
     InstallConfig,
     ensure_system_uv,
     exe,
@@ -40,9 +37,6 @@ from ._phases import (
 )
 
 __all__ = [
-    "MCP_CODER_REPO",
-    "REPORT_BINARIES",
-    "REPORT_PACKAGES",
     "InstallConfig",
     "install",
 ]

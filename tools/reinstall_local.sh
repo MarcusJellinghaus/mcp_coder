@@ -23,10 +23,10 @@ if [ -n "$MCP_CODER_VENV_PATH" ] \
     MC="$MCP_CODER_VENV_PATH/mcp-coder"
 fi
 if [ -z "$MC" ]; then
-    for p in $(type -a -P mcp-coder 2>/dev/null); do
+    while IFS= read -r p; do
         case "$p" in "$VENV_BIN/"*) continue ;; esac
         MC="$p"; break
-    done
+    done <<< "$(type -a -P mcp-coder 2>/dev/null)"
 fi
 if [ -z "$MC" ]; then
     echo "[FAIL] No mcp-coder found outside $REPO_DIR/.venv."
