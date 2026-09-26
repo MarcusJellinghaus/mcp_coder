@@ -39,8 +39,9 @@ REPORT_BINARIES: tuple[str, ...] = (
 # Library-only packages: no entry point, so `uv pip show` is the only probe.
 REPORT_PACKAGES: tuple[str, ...] = ("mcp-coder-utils",)
 
-# Used when neither --extras nor the target's [tool.mcp-coder.install] section
-# declares anything. This is the only fallback site.
+# Used when neither --extras nor the [tool.mcp-coder.install] section in the
+# pyproject.toml at --local-path declares anything. This is the only
+# fallback site.
 _DEFAULT_EXTRAS = "dev"
 
 
@@ -50,7 +51,8 @@ class InstallConfig:
 
     ``local_path`` and ``extras`` are always resolved, so no phase ever sees
     a sentinel: ``local_path`` defaults to ``target`` and ``extras`` falls
-    back to the target project's declared policy, then to ``"dev"``.
+    back to the declared policy in the pyproject.toml at ``local_path``,
+    then to ``"dev"``.
     """
 
     target: Path

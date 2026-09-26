@@ -135,7 +135,7 @@ mcp-coder install TARGET [OPTIONS]
 - `--source {git,pypi,local}` - Where to install mcp-coder from (default: `git`)
 - `--ref REF` - Git ref (branch/tag/sha) for `--source git` (default: `main`)
 - `--local-path PATH` - Local checkout; required for `--source local`. Also selects the `pyproject.toml` read for the extras policy and the GitHub overrides (default: `<target>`)
-- `--extras EXTRAS` - Extras to install, e.g. `dev` or `dev,mlflow`; `""` for none. Default: the target's `[tool.mcp-coder.install] extras`, else `dev`
+- `--extras EXTRAS` - Extras to install, e.g. `dev` or `dev,mlflow`; `""` for none. Default: the `[tool.mcp-coder.install] extras` from the pyproject.toml at `--local-path`, else `dev`
 - `--extra-packages PKGS` - Space-separated packages installed after the main install
 - `--use-sync` - For `--source local`: use the `uv.lock`-honoring sequence instead of one `uv pip install`. Requires `target == --local-path`
 - `--skip-overrides` - Skip `[tool.mcp-coder.install-from-github]` entirely

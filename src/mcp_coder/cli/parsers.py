@@ -611,8 +611,9 @@ def add_install_parser(subparsers: Any) -> None:
         "--extras",
         default=None,
         help='Extras to install, e.g. "dev" or "dev,mlflow". Pass "" for no '
-        "extras (typical with --source=pypi). Default: the target project's "
-        '[tool.mcp-coder.install] extras, or "dev".',
+        "extras (typical with --source=pypi). Default: the "
+        "[tool.mcp-coder.install] extras from the pyproject.toml at "
+        '--local-path, or "dev".',
     )
     install_parser.add_argument(
         "--extra-packages",

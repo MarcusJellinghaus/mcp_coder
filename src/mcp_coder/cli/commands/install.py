@@ -15,9 +15,9 @@ def execute_install(args: argparse.Namespace) -> int:
         args: Parsed command-line arguments.
 
     Returns:
-        0 on success, 1 when the requested configuration or the target
-        project's pyproject.toml is invalid. A failing install command exits
-        the process directly.
+        0 on success, 1 when the requested configuration or the
+        pyproject.toml at --local-path is invalid. A failing install
+        command exits the process directly.
     """
     try:
         config = InstallConfig.from_args(args)
