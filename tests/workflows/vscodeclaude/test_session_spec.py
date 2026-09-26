@@ -22,7 +22,6 @@ def _make_spec(commands: list[str]) -> SessionSpec:
         commands=commands,
         timeout=300,
         mcp_config=".mcp.json",
-        install_script_path="/coord/tools/install.py",
         mcp_coder_install_path="/coord",
         skip_github_install=False,
         is_intervention=False,
@@ -64,7 +63,6 @@ class TestSessionSpecRoundTrip:
             commands=[],
             timeout=600,
             mcp_config=".mcp.linux.json",
-            install_script_path="/coord/tools/install.py",
             mcp_coder_install_path="/coord",
             skip_github_install=True,
             is_intervention=True,
@@ -74,6 +72,20 @@ class TestSessionSpecRoundTrip:
         assert loaded == spec
         assert loaded.skip_github_install is True
         assert loaded.is_intervention is True
+
+
+class TestSessionSpecStaleKeys:
+    """A spec JSON left behind by an older launcher still loads."""
+
+    def test_unknown_key_is_ignored(self, tmp_path: Path) -> None:
+        """A key this refactor retired does not break read_session_spec."""
+        spec = _make_spec(["cmd"])
+        path = write_session_spec(tmp_path, spec)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["a_field_retired_by_a_later_version"] = "/coord/tools/legacy-script"
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+        assert read_session_spec(tmp_path) == spec
 
 
 class TestSessionSpecFile:

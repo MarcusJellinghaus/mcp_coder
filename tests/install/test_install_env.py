@@ -4,7 +4,7 @@ The installer no longer owns a parser (``mcp-coder install`` is the only
 entry point, defined in ``cli/parsers.py``), so these tests build the
 Namespace the parser would produce with a local ``_namespace`` helper and
 call ``InstallConfig.from_args`` directly. The defaults that helper mirrors
-are pinned in ``tests/cli/commands/test_install.py``.
+are pinned in ``tests/cli/commands/test_install``.
 """
 
 from __future__ import annotations

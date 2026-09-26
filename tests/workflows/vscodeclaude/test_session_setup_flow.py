@@ -41,7 +41,6 @@ def _make_spec(
         commands=commands if commands is not None else ["mcp-coder implement"],
         timeout=300,
         mcp_config=".mcp.json",
-        install_script_path="/coord/tools/install.py",
         mcp_coder_install_path="/coord",
         skip_github_install=skip_github_install,
         is_intervention=is_intervention,
@@ -96,7 +95,7 @@ def _patch_run(monkeypatch: pytest.MonkeyPatch, fake: _FakeRun) -> _FakeRun:
 
 
 def _is_install(argv: list[str]) -> bool:
-    return "/coord/tools/install.py" in argv
+    return "install" in argv
 
 
 def _is_claude(argv: list[str]) -> bool:
