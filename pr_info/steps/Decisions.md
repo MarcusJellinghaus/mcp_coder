@@ -130,7 +130,8 @@ prompt) and `summary.md` (§7 and the Modified table).
 `MCP_CODER_REPO`, `_phase_versions` iterates `REPORT_BINARIES` / `REPORT_PACKAGES`. Since
 `__init__.py` imports `_phases` to implement `install()`, defining them in `__init__.py`
 closes an `__init__ ↔ _phases` cycle — the same hazard the Decision 11/12 note already
-handled for `InstallConfig`, which `pycycle` (in Step 2's own gates) would catch. They now
+handled for `InstallConfig`, which `pycycle` (CI's architecture job; not run locally — see
+#23) would catch. They now
 get the identical treatment: defined in `_env.py`, re-exported from `__init__.py`, imported
 by `_phases` from `._env`.
 
@@ -153,7 +154,8 @@ verification §1, which now says which step owns which tree.
 ## 11. `run_vulture_check` is added to Steps 2 and 3
 
 CI runs vulture (`ci.yml:197`) in the same PR-only architecture job as tach, lint-imports
-and pycycle (`ci.yml:194-197`) — gates both steps already run. Step 2 moves ~570 lines of
+and pycycle (`ci.yml:194-197`). (tach and pycycle are no longer run locally — see #23.)
+Step 2 moves ~570 lines of
 never-vulture-scanned code into `src/`; Step 3 deletes two functions. Only Step 5 ran it.
 
 Applied in `summary.md`'s per-step extra-checks list and both steps' LLM prompts.
@@ -291,6 +293,22 @@ but it is the same kind of one-line preservation as #19's job-local `env:` claus
 clause was extended to cover it rather than given a paragraph of its own.
 
 Applied in `step_5.md`: the existing preservation clause after the CI block, the LLM prompt.
+
+**After implementation — Marcus's call.**
+
+## 23. Do NOT run tach or pycycle locally
+
+Do **not** run `run_tach_check`, `tach check`, `./tools/pycycle_check.sh` or
+`python -m pycycle` in any step. Neither is installed in the executor's `.venv`, and
+automated sessions have no shell, so three implementation runs (builds 1832, 1845, 1848)
+blocked on Step 2 with every other gate green. CI's PR-only architecture job
+(`ci.yml:194-197`) still runs both, so they are checked on the PR, not per step.
+
+This supersedes the tach and pycycle parts of #9 and #11, and of run 1 round 2's
+pycycle finding. The design those decisions produced still stands: keep the module
+constants and `InstallConfig` in `_env.py` so `__init__ → _phases → _env` stays acyclic.
+
+Applied in `TASK_TRACKER.md` (Steps 2 and 3), `step_2.md`, `step_3.md` and `summary.md`.
 
 ## Left deliberately untouched
 

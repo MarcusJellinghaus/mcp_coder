@@ -364,6 +364,6 @@ pins them (see below).
 > Decisions.md #8.
 >
 > Then run `run_format_code`, `run_pylint_check`, `run_mypy_check`, `run_ruff_check`,
-> the fast pytest selection, plus `run_tach_check`, `run_lint_imports_check`,
-> `run_vulture_check` and `./tools/pycycle_check.sh` — the last four are one PR-only CI
-> job, and the ~570 moved lines have never been vulture-scanned. Commit once, green.
+> the fast pytest selection, plus `run_lint_imports_check` and `run_vulture_check` — the
+> ~570 moved lines have never been vulture-scanned. tach and pycycle are left to CI's
+> architecture job. Commit once, green.

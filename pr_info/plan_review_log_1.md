@@ -58,3 +58,10 @@ I'll gather context first.`pr_info/steps/step_3.md:15` — high — Step 3 lists
 Verdict(decision='tasks', tasks=["step_3.md:15 — Extend the docstring/reference cleanup to every remaining `install.py` mention that Step 3 makes false: `session_setup.py:109` and `:119` (`build_install_argv`'s docstring) and `tests/workflows/vscodeclaude/test_workspace_startup_script_github.py:4`. Without this, Step 5 TESTS §2 and Step 6 verification §1 (`git grep install\\.py` returns nothing outside `docs/`/`pr_info/`) cannot pass, since Step 6 is doc-only."], escalate_reason=None)
 **Changes**:
 applied
+
+## Post-review amendment — 2026-09-26
+
+Round 2's pycycle task, and the tach checks in the per-step blocks, are **reversed**: do
+**not** run tach or pycycle locally. The executor cannot run either, which blocked three
+implementation runs. CI's architecture job still runs both on the PR. See `Decisions.md`
+#23.

@@ -180,15 +180,17 @@ mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "-m", "not git_int
 `select = ["D", "DOC"]`, preview on, google convention. Step 2 moves ~570 lines of
 `tools/` code — never ruff-checked, since `tools/` is outside that scope — into `src/`.
 
-Steps 2 and 3 additionally: `run_tach_check`, `run_lint_imports_check`.
+Steps 2 and 3 additionally: `run_lint_imports_check`.
 Steps 2, 3 and 5 additionally: `run_vulture_check`.
-Step 2 additionally: `./tools/pycycle_check.sh` (CI's architecture job, `ci.yml:196`) —
-the new package is exactly where the Decision 11/12 note above says a cycle could form.
 
-Those four gates are one PR-only matrix job (`ci.yml:194-197`), so vulture
-(`vulture src tests vulture_whitelist.py --min-confidence 60`, `ci.yml:197`) fails the same
-commits tach and lint-imports do. Step 2 moves ~570 lines of never-vulture-scanned code
-into `src/`; Step 3 deletes two functions.
+tach and pycycle are not run locally: the automated implementer's venv and sessions
+cannot run them. CI's PR-only architecture job (`ci.yml:194-197`) still runs both, and
+pycycle matters most for Step 2 — the new package is exactly where the Decision 11/12
+note above says a cycle could form.
+
+That job also runs vulture (`vulture src tests vulture_whitelist.py --min-confidence 60`,
+`ci.yml:197`), so it fails the same commits lint-imports does. Step 2 moves ~570 lines of
+never-vulture-scanned code into `src/`; Step 3 deletes two functions.
 
 Note `mypy --strict` covers `src` **and** `tests` (`ci.yml:106`), so new test code needs
 full annotations.

@@ -297,3 +297,17 @@ it dropped findings silently so the same ones returned every round. This run rul
 lint-output prediction and line-citation auditing out of scope, replaced step 3's
 reference enumeration with a grep exit criterion that closes the whole class, and
 recorded every skipped item. The plan is ready for approval.
+
+## Post-review amendment — 2026-09-26
+
+**User decision:** do **not** run tach or pycycle locally, in any step. Neither is
+installed in the executor's `.venv`, and automated sessions have no shell, so
+implementation runs 1832, 1845 and 1848 all blocked on Step 2's checks with every other
+gate green. CI's PR-only architecture job (`ci.yml:194-197`) still runs both.
+
+This reverses the tach/pycycle parts of the verification blocks this review kept and
+extended (round 2's vulture reasoning, and run 1 round 2's pycycle task). The
+`_env.py` placement from round 2 stands; only the local check is gone. See
+`Decisions.md` #23.
+
+**Changes**: `TASK_TRACKER.md`, `step_2.md`, `step_3.md`, `summary.md`, `Decisions.md`.
