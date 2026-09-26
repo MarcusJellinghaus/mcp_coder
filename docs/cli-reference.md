@@ -10,6 +10,7 @@ Core commands for help, verification, and interactive prompts.
 | Command | Description |
 |---------|-------------|
 | [`init`](#init) | Initialize project: create config and deploy Claude skills |
+| [`install`](#install) | Install mcp-coder into a target environment |
 | [`help`](#help) | Show comprehensive help information with examples |
 | [`verify`](#verify) | Verify Claude CLI installation and configuration |
 | [`prompt`](#prompt) | Execute prompt via Claude API with configurable debug output |
@@ -116,6 +117,43 @@ mcp-coder init --just-skills
 # Initialize a specific project directory
 mcp-coder init --project-dir /path/to/project
 ```
+
+---
+
+### install
+
+Install mcp-coder into a target environment: create `<target>/.venv`, install mcp-coder from git, PyPI or a local checkout, apply the sibling-package overrides, and report the installed versions. Python packages only — staging `.mcp.json` or `.claude/` is the caller's job.
+
+```bash
+mcp-coder install TARGET [OPTIONS]
+```
+
+**Arguments:**
+- `target` - Directory that will hold `<target>/.venv` (required)
+
+**Options:**
+- `--source {git,pypi,local}` - Where to install mcp-coder from (default: `git`)
+- `--ref REF` - Git ref (branch/tag/sha) for `--source git` (default: `main`)
+- `--local-path PATH` - Local checkout; required for `--source local`. Also selects the `pyproject.toml` read for the extras policy and the GitHub overrides (default: `<target>`)
+- `--extras EXTRAS` - Extras to install, e.g. `dev` or `dev,mlflow`; `""` for none. Default: the target's `[tool.mcp-coder.install] extras`, else `dev`
+- `--extra-packages PKGS` - Space-separated packages installed after the main install
+- `--use-sync` - For `--source local`: use the `uv.lock`-honoring sequence instead of one `uv pip install`. Requires `target == --local-path`
+- `--skip-overrides` - Skip `[tool.mcp-coder.install-from-github]` entirely
+- `--refresh` - Pass `--refresh` to uv, bypassing cached git clones
+- `--clean` - Delete an existing `.venv` before creating a fresh one
+- `--python PATH` - Base interpreter for `python -m venv` (default: current)
+- `--check` - Dry run: print every command without executing it
+
+**Examples:**
+```bash
+# GitHub HEAD, siblings pinned from a checkout
+mcp-coder install ~/mcp-coder-env --source git --local-path ~/src/mcp_coder
+
+# Editable install of a local checkout
+mcp-coder install ~/src/mcp_coder --source local --local-path ~/src/mcp_coder
+```
+
+See the [Installation Guide](getting-started/installation.md) for which form to pick.
 
 ---
 

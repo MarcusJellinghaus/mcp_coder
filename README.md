@@ -140,21 +140,23 @@ cd mcp_coder
 pip install -e ".[dev]"
 ```
 
-**Clean machine, latest GitHub HEAD** (no clone — pulls mcp-coder plus
-the three sibling MCP packages `mcp-tools-py`, `mcp-workspace`,
+**Separate environment, latest GitHub HEAD** (pulls mcp-coder plus the
+three sibling MCP packages `mcp-tools-py`, `mcp-workspace`,
 `mcp-coder-utils` straight from GitHub):
 
 ```bash
-mkdir mcp-installer && cd mcp-installer
-curl --create-dirs -o tools/install.py https://raw.githubusercontent.com/MarcusJellinghaus/mcp_coder/main/tools/install.py
-curl -O https://raw.githubusercontent.com/MarcusJellinghaus/mcp_coder/main/pyproject.toml
-python tools/install.py ~/mcp-coder-env --source git
+pip install mcp-coder
+git clone https://github.com/MarcusJellinghaus/mcp_coder.git
+mcp-coder install ~/mcp-coder-env --source git --local-path mcp_coder
 ```
 
 Installs everything into `~/mcp-coder-env/.venv`; auto-installs `uv` if
-missing. See the
-[Installation Guide](docs/getting-started/installation.md) for PyPI
-release, pinning a specific ref, and other install paths.
+missing. `--local-path` is what makes the sibling pinning work: it names
+the checkout whose `[tool.mcp-coder.install-from-github]` is read.
+Without it the siblings come from PyPI. See the
+[Installation Guide](docs/getting-started/installation.md) for that
+no-checkout variant, the PyPI release, pinning a specific ref, and other
+install paths.
 
 #### Optional features
 

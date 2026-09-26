@@ -81,7 +81,7 @@ The following files in this repository serve as references/templates for other p
 | `icoder_local.bat` | I | — | — | mcp-coder repo only |
 | `mlflow_implementation.md` / `project_idea.md` | I | — | — | mcp-coder repo only |
 | `tools/mlflow/*` (start_mlflow, get_*mlflow*, inspect/search, extract/analyze permission events) | I | — | — | mcp-coder repo only |
-| `tools/install.py`, `tools/install.bat`, `tools/install.sh`, `tools/reinstall_local.*`, `tools/read_github_deps.py`, `tools/safe_delete_folder.py` | I | — | — | mcp-coder repo only |
+| `tools/reinstall_local.*`, `tools/read_github_deps.py`, `tools/safe_delete_folder.py` | I | — | — | mcp-coder repo only |
 | `.run/` | I | — | — | IDE configs, mcp-coder repo only |
 | `.github/workflows/langchain-integration.yml` | I | — | — | mcp-coder repo only |
 | `.github/workflows/publish.yml` | I | — | — | mcp-coder repo only |
@@ -91,6 +91,19 @@ The following files in this repository serve as references/templates for other p
 - **Mandatory** = required for MCP Coder workflows to function. **Optional** files enhance the workflow but are not required.
 - **Copy as-is = Yes** means the file works in any project without edits. **Mostly** means small path tweaks may be needed. **No** means the file is project-specific and must be authored or adapted.
 - Skills, knowledge base, and agents are deployed via `mcp-coder init`. Re-run `mcp-coder init` after upgrading mcp-coder — existing files are never overwritten (delete a file first to refresh it). Other files must be re-pulled manually.
+
+## Target-Repo Contracts
+
+What a repo must declare about itself to be installed into and driven by mcp-coder. `validate_target_repo` checks all four rows at VSCodeClaude launch.
+
+| Contract | Declared / enforced by | Fails how |
+|---|---|---|
+| ships `.mcp.json` (+ `.mcp.linux.json` on POSIX) | `workspace._MCP_CONFIG_FILES`, `validate_mcp_json` | `FileNotFoundError` at launch — fatal |
+| extras to install | `[tool.mcp-coder.install] extras`, default `dev` | `uv sync` error — warn |
+| `[tool.mcp-coder.install-from-github]` for sibling pinning | `pyproject_config.get_github_install_config` | silently no overrides — warn |
+| venv at `<repo>/.venv` | installer, `uv sync`, `session_setup` | two venvs / empty venv — warn |
+
+A `uv.lock` is **not** required — mcp_coder itself tracks none, so `uv sync` resolves fresh.
 
 ## Testing Your Setup
 
