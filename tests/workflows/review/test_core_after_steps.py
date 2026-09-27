@@ -600,3 +600,43 @@ def test_tasks_resume_exception_writes_and_flushes_round_log(
     )
     assert "foo.py:1" in log  # the real reviewer findings were captured
     env.commit_all_changes.assert_called()
+
+
+# --- Step 1 (#1158): the previous round's round-log write lands at loop entry -
+
+
+def test_tasks_round_flushes_log_before_next_round_rebase(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Round 2's rebase sees round 1's round-log write already committed.
+
+    The successful-``tasks`` path at the bottom of the loop leaves its log write
+    uncommitted on purpose; the top of the next round lands it, so the rebase on
+    a following ``dismiss`` round is not refused for unstaged changes.
+    """
+    at_rebase: list[tuple[int, int]] = []
+
+    def _rebase(_project_dir: Path) -> bool:
+        at_rebase.append(
+            (env.commit_staged_files.call_count, env.flush_push.call_count)
+        )
+        return True
+
+    env.attempt_rebase_and_push.side_effect = _rebase
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),  # round 1 -> tasks
+        _reviewer(),
+        _resp(_DISMISS),  # round 2 -> dismiss
+    ]
+
+    assert _run(tmp_path) == 0
+    # Round 1 has nothing pending; round 2's rebase sees round 1's round-log
+    # write already committed - and never pushed by the flush itself.
+    assert at_rebase == [(0, 0), (1, 0)]
+    # Only the round log was staged - unrelated dirt could not ride along.
+    assert env.stage_specific_files.call_args.args == (
+        [tmp_path / "pr_info" / "implementation_review_log_1.md"],
+        tmp_path,
+    )

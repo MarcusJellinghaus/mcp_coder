@@ -103,6 +103,21 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     mocks.flush_push = MagicMock(return_value=True)
     monkeypatch.setattr(handoff, "push_changes", mocks.flush_push)
 
+    # Scoped log flush (handoff._flush_round_log with only=): without these the
+    # top-of-loop flush would run against the non-repo tmp_path, where
+    # stage_specific_files returns False and nothing is ever committed.
+    mocks.stage_specific_files = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "stage_specific_files", mocks.stage_specific_files)
+    mocks.commit_staged_files = MagicMock(
+        return_value={
+            "success": True,
+            "commit_hash": "LOGSHA",
+            "error": None,
+            "error_category": None,
+        }
+    )
+    monkeypatch.setattr(handoff, "commit_staged_files", mocks.commit_staged_files)
+
     mocks.update_workflow_label = MagicMock(return_value=True)
     monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
     mocks.handle_workflow_failure = MagicMock()

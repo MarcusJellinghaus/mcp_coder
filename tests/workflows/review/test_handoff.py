@@ -102,6 +102,94 @@ def test_flush_swallows_push_raise(
     assert any(r.levelno == logging.WARNING for r in caplog.records)
 
 
+def test_flush_no_commit_skips_push(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A successful commit that committed nothing skips the push, quietly.
+
+    ``commit_all_changes`` reports an empty tree as ``success: True`` with
+    ``commit_hash: None``; there is nothing to push and nothing to warn about
+    (unlike the ``success: False`` path above, which does warn).
+    """
+    commit = MagicMock(
+        return_value={
+            "success": True,
+            "commit_hash": None,
+            "error": None,
+            "error_category": None,
+        }
+    )
+    push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "commit_all_changes", commit)
+    monkeypatch.setattr(handoff, "push_changes", push)
+
+    with caplog.at_level(logging.WARNING):
+        handoff._flush_round_log(tmp_path)
+
+    push.assert_not_called()
+    assert not any(r.levelno == logging.WARNING for r in caplog.records)
+
+
+@pytest.mark.parametrize("staged", [True, False])
+def test_flush_only_commits_just_the_log(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    staged: bool,
+) -> None:
+    """``only=`` stages and commits that one path — never the whole tree.
+
+    An arbitrarily dirty working tree can therefore never be committed under
+    the round-log message. A failed staging commits nothing and warns.
+    """
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    stage = MagicMock(return_value=staged)
+    commit_staged = MagicMock(
+        return_value={
+            "success": True,
+            "commit_hash": "abc",
+            "error": None,
+            "error_category": None,
+        }
+    )
+    commit_all = MagicMock(return_value={"success": True, "commit_hash": "abc"})
+    push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "stage_specific_files", stage)
+    monkeypatch.setattr(handoff, "commit_staged_files", commit_staged)
+    monkeypatch.setattr(handoff, "commit_all_changes", commit_all)
+    monkeypatch.setattr(handoff, "push_changes", push)
+
+    with caplog.at_level(logging.WARNING):
+        handoff._flush_round_log(tmp_path, only=log_path)
+
+    stage.assert_called_once_with([log_path], tmp_path)
+    commit_all.assert_not_called()
+    if staged:
+        commit_staged.assert_called_once()
+        assert commit_staged.call_args.args[1] == tmp_path
+        push.assert_called_once_with(tmp_path)
+        assert not any(r.levelno == logging.WARNING for r in caplog.records)
+    else:
+        commit_staged.assert_not_called()
+        push.assert_not_called()
+        assert any(r.levelno == logging.WARNING for r in caplog.records)
+
+
+def test_flush_push_false_commits_without_pushing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """``push=False`` lands the commit locally and leaves the push to the caller."""
+    commit = MagicMock(return_value={"success": True, "commit_hash": "abc"})
+    push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "commit_all_changes", commit)
+    monkeypatch.setattr(handoff, "push_changes", push)
+
+    handoff._flush_round_log(tmp_path, push=False)
+
+    commit.assert_called_once()
+    push.assert_not_called()
+
+
 # --- _route_to_human -------------------------------------------------------
 
 

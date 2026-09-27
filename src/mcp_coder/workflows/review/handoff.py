@@ -10,7 +10,11 @@ helpers alongside them.
 import logging
 from pathlib import Path
 
-from mcp_coder.mcp_workspace_git import commit_all_changes
+from mcp_coder.mcp_workspace_git import (
+    commit_all_changes,
+    commit_staged_files,
+    stage_specific_files,
+)
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.failure_handling import (
@@ -120,32 +124,63 @@ def _fail(
     return 1
 
 
-def _flush_round_log(project_dir: Path, message: str = "Add review round log") -> None:
-    """Commit + push the already-written round log; best-effort (never raises).
+def _flush_round_log(
+    project_dir: Path,
+    message: str = "Add review round log",
+    *,
+    only: Path | None = None,
+    push: bool = True,
+) -> None:
+    """Commit (and usually push) an already-written round log; best-effort.
 
-    The round body always *writes* its log to the working tree; the terminal
-    paths call this to land that entry in the *committed* review log. It does
-    **not** re-write the log — the caller wrote it first — it only commits and
-    pushes what is already on disk.
+    The round body always *writes* its log to the working tree. Two kinds of
+    caller land that entry in the *committed* review log: the terminal paths,
+    which commit the whole tree and push; and the top of the round loop, which
+    lands the *previous* round's write scoped to that one file and without
+    pushing (``only=``/``push=False``), so the next round's rebase is not
+    refused for unstaged changes. Neither re-writes the log — the caller wrote
+    it first.
 
-    Both git calls report failure by return value rather than by raising
-    (``commit_all_changes`` returns ``{"success": bool}``; ``push_changes``
-    returns ``bool``), so the falsy result is checked and warned; the push is
-    skipped when the commit did not succeed. A broad ``try/except`` additionally
-    swallows any unexpected raise so a broken-commit terminal path never recurses
-    into a second failure.
+    The push is skipped when the commit failed, when it succeeded but committed
+    nothing (``commit_hash is None``), when ``only=`` could not be staged, and
+    whenever ``push=False``.
+
+    Every git call reports failure by return value rather than by raising
+    (``stage_specific_files``/``push_changes`` return ``bool``;
+    ``commit_all_changes``/``commit_staged_files`` return a ``CommitResult``),
+    so each falsy result is checked and warned. A broad ``try/except``
+    additionally swallows any unexpected raise so a broken-commit terminal path
+    never recurses into a second failure.
 
     Args:
         project_dir: Repository root; git ops target this.
         message: Commit message for the round-log commit.
+        only: When given, commit *only* this path — ``stage_specific_files``
+            plus ``commit_staged_files`` instead of ``commit_all_changes``, so
+            an arbitrarily dirty tree can never ride along under ``message``.
+        push: When False, leave the commit local; the caller's own push carries
+            it.
     """
     try:
-        result = commit_all_changes(message, project_dir)
+        if only is not None:
+            if not stage_specific_files([only], project_dir):
+                logger.warning(
+                    "Could not stage the round log %s - not committing", only
+                )
+                return
+            result = commit_staged_files(message, project_dir)
+        else:
+            result = commit_all_changes(message, project_dir)
         if not result["success"]:
             logger.warning(
                 "Round-log commit did not succeed: %s",
                 result.get("error") or "unknown error",
             )
+            return
+        if result["commit_hash"] is None:
+            logger.debug("Round-log commit had nothing to commit")
+            return
+        if not push:
             return
         if not push_changes(project_dir):
             logger.warning("Round-log push did not succeed")

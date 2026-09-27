@@ -124,7 +124,23 @@ def run_review_workflow(
                 elapsed=time.time() - start_time,
             )
 
+        # The successful-`tasks` path at the bottom of the loop leaves its
+        # round-log write uncommitted; the next iteration lands it (see below).
+        pending_log: Path | None = None
+
         for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
+            if pending_log is not None:
+                # Land the previous round's log write before anything in this
+                # round can trip over it — a rebase attempt refuses on unstaged
+                # changes. Scoped to that one file so unrelated dirt is never
+                # swept in, and push-free because this round's own push carries
+                # it. Must stay ABOVE `sha_before`: a flush that commits
+                # something would otherwise advance HEAD past the captured SHA
+                # and the round's applied/no-op label would always read
+                # "applied".
+                _flush_round_log(project_dir, only=pending_log, push=False)
+                pending_log = None
+
             sha_before = get_latest_commit_sha(project_dir)
 
             # PR review feedback (implementation lane only): fetch fresh
@@ -572,7 +588,9 @@ def run_review_workflow(
             changed = get_latest_commit_sha(
                 project_dir
             ) != sha_before or not is_working_directory_clean(project_dir)
-            write_round_log(
+            # Left uncommitted on purpose: the top of the next iteration lands
+            # it, and every terminal path flushes its own write.
+            pending_log = write_round_log(
                 project_dir,
                 config,
                 run_number,
