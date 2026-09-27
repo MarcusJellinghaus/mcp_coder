@@ -15,6 +15,10 @@ from mcp_coder.workflow_steps.ci import (
     _run_ci_analysis,
     _run_ci_fix,
 )
+from mcp_coder.workflow_steps.constants import (
+    CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
+    CI_MAX_POLL_ATTEMPTS,
+)
 
 
 class TestPollForCiCompletionHeartbeat:
@@ -260,6 +264,36 @@ class TestPollForCiCompletionShaCorrelation:
         assert passed is True
         assert status is not None
         assert status["run"]["commit_sha"] == "OLDSHA"
+
+    def test_expected_sha_that_never_appears_gives_up_on_its_own_budget(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A run that never appears costs ~2 minutes, not the full 12.5.
+
+        No workflow triggered for the pushed commit (or another actor pushed
+        past it) means the branch's newest run stays someone else's forever.
+        Waiting out ``CI_MAX_POLL_ATTEMPTS`` for it would stall every caller,
+        including ``implement``; the dedicated budget bounds it instead.
+        """
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = self._run(
+            "completed", "OLDSHA", conclusion="success"
+        )
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(
+                    mock_ci_manager, "main", expected_sha="NEWSHA"
+                )
+
+        assert status is None
+        assert passed is True  # graceful exit, not a failure
+        assert "No CI run appeared for" in caplog.text
+        assert (
+            mock_ci_manager.get_latest_ci_status.call_count
+            == CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+        )
+        assert CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS < CI_MAX_POLL_ATTEMPTS
 
     def test_a_run_without_a_sha_is_accepted(self) -> None:
         """An uncorrelatable run is used rather than polled past to the cap."""

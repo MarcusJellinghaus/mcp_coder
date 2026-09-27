@@ -88,16 +88,17 @@ a regenerated `uv.lock` is simply not staged. Item 2's guard still does **not** 
 because it answers a different question — *what will git refuse* — and git has no notion of the
 list: a modified `uv.lock` blocks a rebase like any other tracked modification.
 
-`commit_staged_files` commits the whole *index*, though, not the paths just staged, so scoping
-holds only while the index starts out empty of anything else. `_flush_round_log` therefore reads
-`get_full_status(project_dir)["staged"]` first (`_unrelated_staged_entries`) and **refuses**, with
-a warning naming them, when the index already holds an entry that is not the round log — rather
-than committing someone else's staged work under "Add review round log". mcp-workspace exposes no
-pathspec-scoped commit (`git commit -- <path>`) that would allow both, and reaching past the
-`mcp_workspace_git` layer to GitPython for one is not worth it; refusing keeps the documented
-guarantee exact and is the same "fail loudly rather than repair silently" the tripwire embodies.
-The cost is the already-accepted best-effort one: the round log stays uncommitted and item 2 names
-the dirty tree on the next rebase.
+`commit_staged_files` commits the whole *index*, though, not the paths just staged, so it can only
+be used while the index holds nothing else. `_flush_round_log` therefore reads
+`get_full_status(project_dir)["staged"]` (`_unrelated_staged_entries`) after staging the log, and
+when the index already holds an unrelated entry it commits by pathspec instead
+(`_commit_only_path`): `git commit -m <message> -- <round log>` builds a temporary index from that
+one path, so the commit contains the round log alone and the unrelated entries stay staged and
+uncommitted. Refusing to commit at all was rejected: the handoff path is reached *because* the
+tree is dirty, so refusing would lose the round-log entry in exactly the case it documents.
+mcp-workspace exposes no pathspec-scoped commit, so this goes through the trusted `git` CLI —
+fixed argv, no shell, via the `subprocess_runner` shim, the same escape hatch
+`workflows/rebase.py` already uses (GitPython itself stays forbidden by the isolation contract).
 
 **`_route_to_human` commits the round log alone too.** It previously flushed with
 `commit_all_changes` + push. One of the three paths reaching it is the unresolved-rebase handoff —
@@ -209,9 +210,13 @@ therefore both cheaper and sufficient — and since `get_full_status` never rais
   same logic at two layers. The message names the *condition* git refuses on ("staged or modified
   tracked files") rather than a cause: `_attempt_rebase_and_push` is shared with `implement`,
   where a dirty tree at that point is not a leftover round-log write.
-- Adding a pathspec-scoped commit (`git commit -- <path>`) to `mcp_workspace_git` so `only=` could
-  commit the log even with a dirty index — that is an mcp-workspace change, and calling GitPython
-  directly from `handoff.py` would reach past the git layer every other call site goes through.
+- Refusing the `only=` flush outright when the index holds unrelated staged entries — the
+  unresolved-rebase handoff is reached precisely because the tree is dirty, so refusing would drop
+  the round-log entry in the one case that most needs recording. The pathspec commit lands it
+  without sweeping anything in.
+- Adding the pathspec-scoped commit to `mcp_workspace_git` — that is an mcp-workspace change, and
+  calling GitPython directly from `handoff.py` is forbidden by the isolation contract; the `git`
+  CLI via the `subprocess_runner` shim is the sanctioned route.
 - A documentation change. The flush invariant is a fact about one loop; it lives in the code
   comment at the flush site and in `_flush_round_log`'s rewritten docstring.
   `docs/architecture/architecture.md`'s `workflows/review/` bullet is a module inventory and

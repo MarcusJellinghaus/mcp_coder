@@ -34,6 +34,7 @@ from mcp_coder.workflow_steps.commit import (
 )
 
 from .constants import (
+    CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
     CI_MAX_FIX_ATTEMPTS,
     CI_MAX_POLL_ATTEMPTS,
     CI_NEW_RUN_MAX_POLL_ATTEMPTS,
@@ -275,8 +276,11 @@ def _poll_for_ci_completion(
             seconds after a push is still the *previous* commit's run — reading
             its green conclusion would declare a commit CI never saw green. When
             given, a run for any other commit counts as "no run yet" and polling
-            continues. Omit it (the default) to accept whichever run is newest,
-            as callers that did not just push should.
+            continues — bounded by ``CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS`` rather
+            than the full poll cap, since the run-registration gap is seconds
+            and a run that never appears for this commit would otherwise stall
+            the caller for the whole cap. Omit it (the default) to accept
+            whichever run is newest, as callers that did not just push should.
 
     Returns:
         Tuple of (ci_status dict or None, success bool).
@@ -285,6 +289,9 @@ def _poll_for_ci_completion(
     """
     poll_start_time = time.time()
     heartbeat_iteration_interval = 8  # ~2min at 15s intervals
+    # Attempts spent looking at a run for some *other* commit; bounded
+    # separately from the overall cap (see CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS).
+    other_commit_attempts = 0
 
     for poll_attempt in range(CI_MAX_POLL_ATTEMPTS):
         try:
@@ -309,8 +316,14 @@ def _poll_for_ci_completion(
             and observed_sha != expected_sha
         )
 
+        if is_other_commit:
+            other_commit_attempts += 1
+
         if len(run_info) == 0 or is_other_commit:
-            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1:
+            budget_spent = other_commit_attempts >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1 and not (
+                is_other_commit and budget_spent
+            ):
                 waiting_for = (
                     f"Latest CI run is for {_short_sha(observed_sha or 'unknown')}, "
                     f"waiting for {_short_sha(expected_sha or 'unknown')}"
@@ -325,8 +338,10 @@ def _poll_for_ci_completion(
                 continue
             if is_other_commit:
                 logger.info(
-                    "CI_TIMEOUT: No CI run appeared for %s - skipping CI check",
+                    "CI_TIMEOUT: No CI run appeared for %s after %d attempts "
+                    "- skipping CI check",
                     _short_sha(expected_sha or "unknown"),
+                    other_commit_attempts,
                 )
             else:
                 logger.info(

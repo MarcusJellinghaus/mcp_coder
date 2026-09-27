@@ -16,7 +16,9 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from git import Repo
 
+from mcp_coder.mcp_workspace_git import get_full_status
 from mcp_coder.workflows.review import handoff
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 
@@ -175,19 +177,22 @@ def test_flush_only_commits_just_the_log(
         assert any(r.levelno == logging.WARNING for r in caplog.records)
 
 
-def test_flush_only_refuses_when_index_holds_unrelated_entries(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+def test_flush_only_commits_by_pathspec_when_index_holds_unrelated_entries(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A pre-staged file blocks the scoped commit instead of riding along.
+    """A pre-staged file sends the commit down the pathspec route.
 
-    ``commit_staged_files`` commits the whole index, so staging the round log on
-    top of someone else's staged work would commit it under "Add review round
-    log". The flush refuses and warns; the round log stays uncommitted, which
-    ``_attempt_rebase_and_push``'s tripwire then names.
+    ``commit_staged_files`` commits the whole index, so it would carry someone
+    else's staged work under "Add review round log". The round log must still
+    land — this is the handoff path — so it is committed by pathspec instead,
+    leaving the unrelated entry staged and uncommitted.
     """
     log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
     stage = MagicMock(return_value=True)
     commit_staged = MagicMock(return_value={"success": True, "commit_hash": "abc"})
+    execute = MagicMock(
+        return_value=SimpleNamespace(return_code=0, stdout="", stderr="")
+    )
     monkeypatch.setattr(
         handoff,
         "get_full_status",
@@ -201,13 +206,61 @@ def test_flush_only_refuses_when_index_holds_unrelated_entries(
     )
     monkeypatch.setattr(handoff, "stage_specific_files", stage)
     monkeypatch.setattr(handoff, "commit_staged_files", commit_staged)
+    monkeypatch.setattr(handoff, "execute_command", execute)
+    monkeypatch.setattr(handoff, "get_latest_commit_sha", MagicMock(return_value="abc"))
+    push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "push_changes", push)
+
+    handoff._flush_round_log(tmp_path, only=log_path)
+
+    stage.assert_called_once_with([log_path], tmp_path)
+    # Never the whole index - that is what would sweep src/unrelated.py in.
+    commit_staged.assert_not_called()
+    assert execute.call_args.args[0] == [
+        "git",
+        "commit",
+        "-m",
+        "Add review round log",
+        "--",
+        "pr_info/plan_review_log_1.md",
+    ]
+    push.assert_called_once_with(tmp_path)
+
+
+def test_flush_only_pathspec_commit_failure_is_warned_and_not_pushed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A non-zero ``git commit -- <path>`` warns and skips the push."""
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    push = MagicMock(return_value=True)
+    monkeypatch.setattr(
+        handoff,
+        "get_full_status",
+        MagicMock(
+            return_value={
+                "staged": ["src/unrelated.py"],
+                "modified": [],
+                "untracked": [],
+            }
+        ),
+    )
+    monkeypatch.setattr(handoff, "stage_specific_files", MagicMock(return_value=True))
+    monkeypatch.setattr(
+        handoff,
+        "execute_command",
+        MagicMock(
+            return_value=SimpleNamespace(
+                return_code=1, stdout="", stderr="nothing to commit"
+            )
+        ),
+    )
+    monkeypatch.setattr(handoff, "push_changes", push)
 
     with caplog.at_level(logging.WARNING):
         handoff._flush_round_log(tmp_path, only=log_path)
 
-    stage.assert_not_called()
-    commit_staged.assert_not_called()
-    assert "src/unrelated.py" in caplog.text
+    assert "nothing to commit" in caplog.text
+    push.assert_not_called()
 
 
 def test_flush_only_proceeds_when_the_log_itself_is_already_staged(
@@ -432,6 +485,64 @@ def test_route_leaves_unrelated_dirty_files_uncommitted(
     commit_all.assert_not_called()  # src/foo.py stays dirty
     stage.assert_called_once_with([log_path], tmp_path)
     commit_staged.assert_called_once()
+
+
+@pytest.mark.git_integration
+def test_route_lands_the_round_log_over_an_unrelated_staged_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Against a real repo: the round log lands, the staged file does not.
+
+    The unresolved-rebase handoff is reached precisely because the tree is
+    dirty, and that dirt may be *staged*. The round log must still reach the
+    committed review log, and the unrelated staged entry must stay staged and
+    uncommitted for ``_attempt_rebase_and_push``'s tripwire to name.
+    """
+    repo = Repo.init(tmp_path)
+    with repo.config_writer() as config:
+        config.set_value("user", "name", "Test User")
+        config.set_value("user", "email", "test@example.com")
+        config.set_value("commit", "gpgsign", "false")
+    # LF bytes throughout: with core.autocrlf on, a CRLF working-tree file is
+    # hashed differently by GitPython's staging and by the git CLI's commit,
+    # which would muddy the index assertions below without testing anything.
+    (tmp_path / "README.md").write_bytes(b"# Test\n")
+    repo.index.add(["README.md"])
+    repo.index.commit("Initial commit")
+
+    # Someone else's work, already staged.
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "unrelated.py").write_bytes(b"x = 1\n")
+    repo.index.add(["src/unrelated.py"])
+    repo.index.write()
+
+    # The round the handoff must not lose.
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    log_path.parent.mkdir()
+    log_path.write_bytes(b"## Round 3\nEscalate reason: rebase\n")
+
+    monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
+    monkeypatch.setattr(handoff, "IssueManager", MagicMock())
+    monkeypatch.setattr(handoff, "update_workflow_label", MagicMock(return_value=True))
+
+    assert (
+        handoff._route_to_human(
+            REVIEW_PLAN,
+            tmp_path,
+            issue_number=42,
+            update_issue_labels=True,
+            post_issue_comments=True,
+            comment_body="handing off",
+            log_path=log_path,
+        )
+        == 0
+    )
+
+    committed = repo.git.show("HEAD:pr_info/plan_review_log_1.md")
+    assert "Escalate reason: rebase" in committed
+    touched = repo.git.show("--pretty=format:", "--name-only", "HEAD").split()
+    assert touched == ["pr_info/plan_review_log_1.md"]
+    assert get_full_status(tmp_path)["staged"] == ["src/unrelated.py"]
 
 
 # --- _fail (details param) -------------------------------------------------
