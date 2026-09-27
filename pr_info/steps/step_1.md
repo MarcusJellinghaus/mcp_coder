@@ -108,9 +108,20 @@ not call it: it stages exactly that one path and commits the index.
 
 ### `push=False` — the top-of-loop commit does not push
 
-The commit is what unblocks the rebase; pushing it separately buys nothing, because the round's
-own push carries it a moment later (`core.py:484` on the `tasks` path, `_attempt_rebase_and_push`'s
-force-with-lease push on the `dismiss` path, or a terminal `_flush_round_log` on a failing path).
+The commit is what unblocks the rebase; on every path that converges, pushing it separately buys
+nothing, because the round's own push carries it a moment later (`core.py:484` on the `tasks` path,
+`_attempt_rebase_and_push`'s force-with-lease push on the `dismiss` path, `_route_to_human`'s flush
+on `escalate` / unresolved rebase / rounds cap, or one of the terminal `_flush_round_log` calls at
+`core.py:316`, `391`, `439`, `473`, `496`, `554`, all of which push).
+
+Four `_fail` sites neither write nor flush a round log — `core.py:186` (reviewer exception),
+`core.py:201` (empty-report exhaustion), `core.py:235` (supervisor exception) and `core.py:246`
+(unparsable verdict) — so on those the top-of-loop commit stays **local and unpushed**. Accepted
+deliberately: the run is already failing into a human handoff, the previous round's entry is at
+least committed (today it is left uncommitted instead), an unpushed local commit blocks nothing
+(including a later rebase), and the next push on the branch carries it. Pushing on the top-of-loop
+call to cover only those four cases would pay a push on every round for a path that ends in a
+human handoff anyway.
 
 Residual cost, accepted deliberately: on a `dismiss` round whose rebase is a no-op, that
 force-with-lease push now carries a log-only commit to the remote *before* the CI gate, so

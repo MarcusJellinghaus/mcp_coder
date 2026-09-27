@@ -50,17 +50,22 @@ change to `core.py` establishes an invariant that did not previously exist:
 
 > *A review round never begins with a previous round's round-log write still uncommitted.*
 
-That holds unconditionally. `only=` (below) stages exactly the round-log path, so whatever else is
-dirty neither blocks that write from landing nor is swept into its commit. Unrelated dirt stays in
-the working tree, where item 2's tripwire turns it into a loud, diagnosable handoff rather than an
-opaque git error.
+That holds for every *dirt class*, but not for every *failure*. `only=` (below) stages exactly the
+round-log path, so whatever else is dirty neither blocks that write from landing nor is swept into
+its commit; unrelated dirt stays in the working tree, where item 2's tripwire turns it into a loud,
+diagnosable handoff rather than an opaque git error. The flush itself stays **best-effort**,
+though: a `False` from `stage_specific_files` (not a repository, file missing) or a
+`success: False` from `commit_staged_files` (signing or pre-commit-hook failure) warns and returns,
+and the round then *does* begin with the previous round's write still uncommitted — the reported
+failure mode, rarer than today and backstopped by item 2, which names it instead of letting git
+fail on raw stderr.
 
 Responsibility for landing a round-log entry moves from "each `write_round_log` call site must
-remember to pair itself with a flush" to "the loop entry point flushes what is pending". The
-terminal call sites keep their own flushes (they return before reaching the next loop iteration,
-so there is no top-of-loop flush to rely on), but the *non-terminal* site no longer needs one.
-This converts a per-call-site correctness obligation — violated once, and liable to be violated
-again — into a single checkpoint, backed by item 2 for any other stray write.
+remember to pair itself with a flush" to "the loop entry point flushes what the previous round
+handed it". The terminal call sites keep their own flushes (they return before reaching the next
+loop iteration, so there is no top-of-loop flush to rely on), but the *non-terminal* site no longer
+needs one. This **narrows** the per-call-site obligation rather than removing it — see *Deviation
+from the issue text* — and item 2 backstops whatever slips through.
 
 **Ordering is load-bearing.** The flush must precede `sha_before = get_latest_commit_sha(...)`.
 If it ran after, a flush that actually commits something would advance HEAD past the captured
@@ -84,9 +89,12 @@ because it answers a different question — *what will git refuse* — and git h
 list: a modified `uv.lock` blocks a rebase like any other tracked modification.
 
 **The top-of-loop commit does not push (`push=False`).** The commit is what unblocks the rebase;
-the round's own push carries it moments later (`core.py:484` on the `tasks` path,
-`_attempt_rebase_and_push`'s force-with-lease push on `dismiss`, or a terminal flush on a failing
-path). Accepted residual cost: on a `dismiss` round whose rebase is a no-op, that push now
+on every converging path the round's own push carries it moments later (`core.py:484` on the
+`tasks` path, `_attempt_rebase_and_push`'s force-with-lease push on `dismiss`, `_route_to_human`'s
+flush on `escalate`/rebase/rounds-cap, or one of the terminal flushes that do push). On the four
+`_fail` sites that neither write nor flush a round log (`core.py:186`, `201`, `235`, `246`) the
+commit stays local and unpushed — accepted; see step_1.md. Accepted residual cost: on a `dismiss`
+round whose rebase is a no-op, that push now
 carries a log-only commit to the remote *before* the CI gate, so `check_and_fix_ci` waits for a
 CI run triggered by it — about one extra CI cycle on such a round. It is not avoidable while
 fixing this bug (the log write must be committed before the rebase, and any commit reaching the
@@ -171,6 +179,19 @@ cause — but implements it over `get_full_status` instead, because
 `is_working_directory_clean` counts untracked files as dirty (which `git rebase` tolerates) and
 because it is a redundant second status read either way. The issue may want updating to match on
 both counts.
+
+Issue #1158's *Fix* item 1 also calls the top-of-loop flush "a single self-healing checkpoint at
+the loop's entry point [that] removes the need to get every call site right". The plan does **not**
+deliver that property. `pending_log` flushes only what a call site explicitly assigned to it, so a
+*future* non-terminal `write_round_log` added without `pending_log = …` would regress exactly as
+`core.py:575` did: the obligation is narrowed from "pair every call site with a flush" to "assign
+`pending_log` at every non-terminal call site", not removed. Deriving the path inside the loop from
+`config.log_stem` + `run_number` would be call-site-independent, but it reconstructs a path
+`write_round_log` already returns and makes the flush fire on rounds with nothing pending, each
+warning: `stage_specific_files` returns `False` for a not-yet-created log file, and
+`commit_staged_files` reports an unchanged staged path as `success: False`. The narrower obligation
+is accepted instead, backed by item 2's tripwire, which names any write that does slip through.
+The issue may want updating on this count too.
 
 ## Related (not blocking)
 
