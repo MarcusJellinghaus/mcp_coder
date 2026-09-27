@@ -1,133 +1,204 @@
-# Step 2 — Top-of-loop `_flush_round_log` in the review round loop
+# Step 2 — Dirty-working-tree guard in `_attempt_rebase_and_push`
 
-Read [summary.md](./summary.md) first. **Depends on step 1** — without the `commit_hash`
-guard this step adds a no-op `git push` to every round.
+Read [summary.md](./summary.md) first. Independent of step 1 — may land in either order.
 
-This is the fix for the reported failure: round 1 `tasks` (clean) leaves its round-log write
-uncommitted, round 2 `dismiss` attempts a rebase, git refuses with "You have unstaged changes".
+Shared hardening: a backstop for *any* stray uncommitted write, not just the round-log path
+fixed by step 1 (including the unrelated-dirt case step 1 deliberately refuses to commit).
+Turns git's generic `error: cannot rebase: You have unstaged changes` into a warning that names
+the cause at the workflow layer.
 
 ## WHERE
 
-- Source: `src/mcp_coder/workflows/review/core.py` — inside `run_review_workflow.body`, the
-  round loop opening at line 127.
-- Test: `tests/workflows/review/test_core_after_steps.py` — new test in the
-  `# --- dismiss final gate: rebase + CI ---` area or appended at the end of the file.
+- Source: `src/mcp_coder/workflow_steps/rebase.py` — `_attempt_rebase_and_push`, line 33.
+- Test: `tests/workflow_steps/test_rebase.py` — a new class, e.g.
+  `class TestDirtyWorkingTreeGuard`, placed before `class TestRebaseIntegration`.
 
 ## WHAT
 
-One statement, no signature changes:
+No signature change:
 
 ```python
-for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
-    _flush_round_log(project_dir)          # NEW — must precede sha_before
-    sha_before = get_latest_commit_sha(project_dir)
+def _attempt_rebase_and_push(project_dir: Path) -> bool:
 ```
 
-New test:
+Two new imports in `rebase.py`, one extending the existing `mcp_workspace_git` shim import:
 
 ```python
-def test_tasks_round_flushes_log_before_next_round_rebase(
-    env: SimpleNamespace, tmp_path: Path
-) -> None:
+from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
+from mcp_coder.mcp_workspace_git import (
+    get_full_status,
+    is_working_directory_clean,
+    rebase_onto_branch,
+)
+```
+
+One module-private helper plus four new tests:
+
+```python
+def _has_uncommitted_tracked_changes(project_dir: Path) -> bool: ...
+
+def test_dirty_tree_skips_rebase(...) -> None:
+def test_untracked_only_proceeds_to_rebase(...) -> None:
+def test_clean_tree_proceeds_to_rebase(...) -> None:
+def test_non_git_repo_proceeds_to_rebase(...) -> None:
 ```
 
 ## HOW
 
-- `_flush_round_log` is **already imported** in `core.py` (line 46,
-  `from .handoff import _fail, _flush_round_log, _route_to_human, _set_label`). No import
-  change.
-- Leave every existing terminal `_flush_round_log` call in place: those paths `return` before
-  reaching the next loop iteration, so there is no top-of-loop flush for them to rely on.
-- The `env` fixture in `tests/workflows/review/conftest.py` already mocks everything needed —
-  `handoff.commit_all_changes` (returns `commit_hash="FLUSHSHA"`), `handoff.push_changes`,
-  `steps._attempt_rebase_and_push`, and `core.get_latest_commit_sha` (constant `"SHA0"`, so
-  the new flush cannot perturb the `sha_before` comparison). **Do not modify `conftest.py`.**
-- Import the existing helpers the sibling tests use:
-  `from tests.workflows.review.conftest import _DISMISS, _TASKS, _resp, _reviewer, _run`.
+- Import through the local shim `mcp_coder.mcp_workspace_git`, never `mcp_workspace` directly —
+  the module already does this for `rebase_onto_branch`.
+- Place the guard at the **top of the function**, above `_get_rebase_target_branch`:
+  `detect_base_branch` performs a remote fetch, and there is no point paying for it when the
+  rebase cannot start.
+
+### `ignore_files` — match the other control-flow call sites
+
+Pass `ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS`. Every other call site that uses this
+function to *decide control flow* already does — `workflow_steps/prerequisites.py:34`
+(`check_git_clean`, which gates this very workflow), `workflows/create_plan/core.py:492`,
+`workflows/create_pr/core.py:566`, `cli/commands/set_status.py:264`. Omitting it would let this
+guard block on a file (`uv.lock`) that the prerequisite check immediately upstream deliberately
+tolerates.
+
+### Untracked files — explicitly *not* a reason to skip
+
+`is_working_directory_clean` counts untracked files as dirty
+(`mcp_workspace/git_operations/repository_status.py:44` sums staged + modified + untracked), but
+`git rebase` starts happily with untracked files present. Using its verdict directly would make
+the guard skip a rebase that would have succeeded, converting a green run into a needs-human
+handoff in the `review` lane — a regression, not hardening.
+
+So the cheap `is_working_directory_clean` call stays as the fast path, and when it reports dirty
+the decision is refined by `_has_uncommitted_tracked_changes`, which re-reads
+`get_full_status(project_dir)` and skips only on **staged or modified** entries (after filtering
+`DEFAULT_IGNORED_BUILD_ARTIFACTS`) — exactly the two categories git refuses on ("You have
+unstaged changes" / "Your index contains uncommitted changes"). Deletions of tracked files
+appear under `modified`, so they are covered. The second git read only happens on the rare
+dirty path.
+
+### Non-git-repo path
+
+`is_working_directory_clean` **raises `ValueError`** when `project_dir` is not a git repository.
+Catch it and treat the tree as clean, letting `rebase_onto_branch` report the non-repo case as
+it does today. This preserves the function's documented "never fails workflow" contract **and**
+keeps the eight existing tests in `test_rebase.py` passing untouched — the five in
+`TestRebaseIntegration` run against `Path("/test")`, which is not a repository.
+
+### Callers
+
+Additive only: both callers (`workflows/implement/core.py:104`, `workflows/review/steps.py:105`)
+already handle a `False` return exactly as they do today. Do not touch either caller.
+
+Update the function docstring's `Returns:` to mention the dirty-tree case alongside the existing
+"rebase skipped, failed, or no target detected", and say that untracked files alone do not count.
 
 ## ALGORITHM
 
-Comment the call to record why it exists and why the position is fixed:
+```
+try:
+    clean = is_working_directory_clean(
+        project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+    )
+except ValueError:
+    clean = True            # not a git repo - let rebase_onto_branch report that
+if not clean and _has_uncommitted_tracked_changes(project_dir):
+    warn("Working tree has uncommitted changes - skipping rebase "
+         "(likely a leftover uncommitted write)")
+    return False
+target = _get_rebase_target_branch(project_dir)   # unchanged from here down
+```
 
 ```
-for each round:
-    flush whatever the PREVIOUS round left pending   # self-healing checkpoint
-    capture sha_before                               # AFTER the flush, never before
-    ... reviewer -> supervisor -> verdict -> after-steps ...
-    write_round_log(...)                             # left uncommitted on purpose
+_has_uncommitted_tracked_changes(project_dir):
+    status = get_full_status(project_dir)         # {} for a non-repo
+    ignored = set(DEFAULT_IGNORED_BUILD_ARTIFACTS)
+    blocking = [f for f in status.get("staged", []) + status.get("modified", [])
+                if f not in ignored]
+    return bool(blocking)     # untracked files are NOT blocking: git rebase tolerates them
 ```
 
-The ordering relative to `sha_before` is load-bearing: a flush that commits something advances
-HEAD, so capturing `sha_before` first would make the round's "applied vs no-op" label
-(`core.py:578-583`) always read "applied" even when the round's own fix did nothing.
+The warning is generic about the **cause**; it must not enumerate the dirty files. File-level
+detail belongs to `mcp-workspace#295`'s hardening of `rebase_onto_branch`, so the two layers do
+not duplicate the same logic. Use a plain hyphen, not an em dash, matching the existing log
+strings in this module.
 
 ## DATA
 
-- `_flush_round_log` returns `None` and never raises; no new failure path, no new return value,
-  no change to any exit code.
-- On round 1 of a clean tree the call is a no-op after step 1's guard: `commit_all_changes`
-  reports `commit_hash=None`, the push is skipped, one debug line is logged.
+- Returns `bool`, unchanged: `True` only on rebase-succeeded-and-pushed; `False` on
+  staged/modified-dirty tree, no target, rebase failed, or push failed.
+- No exception ever escapes.
+- An untracked-only tree, and a tree dirty only in `DEFAULT_IGNORED_BUILD_ARTIFACTS`, both reach
+  the rebase exactly as today.
 
 ## TDD
 
-1. Write `test_tasks_round_flushes_log_before_next_round_rebase`. Drive a two-round run —
-   round 1 `tasks` (three `prompt_llm` responses: reviewer, `_TASKS`, reviewer resume), round 2
-   `dismiss` (two responses: reviewer, `_DISMISS`) — and record how many flushes had happened
-   at each rebase attempt:
+1. Write the four tests as direct unit calls to `_attempt_rebase_and_push` — lighter than the
+   existing integration-style tests that drive `run_implement_workflow`.
 
-   ```python
-   flushes_at_rebase: list[int] = []
+   - `test_dirty_tree_skips_rebase`: patch `...is_working_directory_clean` → `False` and
+     `...get_full_status` → `{"staged": [], "modified": ["src/foo.py"], "untracked": []}`.
+     Assert the return is `False`, `rebase_onto_branch.assert_not_called()`,
+     `push_changes.assert_not_called()`, and that a `logging.WARNING` record was emitted
+     (`caplog`).
+   - `test_untracked_only_proceeds_to_rebase`: `is_working_directory_clean` → `False` but
+     `get_full_status` → `{"staged": [], "modified": [], "untracked": ["notes.txt"]}`. Assert
+     `rebase_onto_branch` **was** called and the return is `True`. This is the regression guard:
+     a tree git would have rebased must still be rebased.
+   - `test_clean_tree_proceeds_to_rebase`: `is_working_directory_clean` → `True`, target
+     `"main"`, rebase `True`, push `True`. Assert the return is `True` and `rebase_onto_branch`
+     was called with `(project_dir, "main")`.
+   - `test_non_git_repo_proceeds_to_rebase`: **do not patch `is_working_directory_clean`.** Pass
+     pytest's `tmp_path` (a real directory that is not a git repository) so the real function
+     raises `ValueError` and the swallow is genuinely exercised — this is what the "never fails
+     workflow" contract rests on, and what keeps the eight existing tests green. Patch only
+     `..._get_rebase_target_branch` → `"main"`, `...rebase_onto_branch` → `True` and
+     `...push_changes` → `True`; assert the return is `True` and no exception escaped.
 
-   def _rebase(_project_dir: Path) -> bool:
-       flushes_at_rebase.append(env.commit_all_changes.call_count)
-       return True
-
-   env.attempt_rebase_and_push.side_effect = _rebase
-   env.prompt_llm.side_effect = [
-       _reviewer(), _resp(_TASKS), _reviewer(session_id="rev-1"),  # round 1
-       _reviewer(), _resp(_DISMISS),                               # round 2
-   ]
-
-   assert _run(tmp_path) == 0
-   # Round 1's rebase sees only its own top-of-loop flush; round 2's also sees
-   # the flush that committed round 1's round-log write. That is the bug.
-   assert flushes_at_rebase == [1, 2]
-   ```
-
-   Confirm it fails before the source change (it records `[0, 0]` today — no flush runs on
-   either round's rebase path).
-2. Add the one-line call plus its comment. Confirm the test passes and the whole
-   `tests/workflows/review/` suite still passes.
+   Confirm `test_dirty_tree_skips_rebase` and `test_untracked_only_proceeds_to_rebase` fail
+   before the source change.
+2. Add the guard, the helper, the imports and the docstring line.
+3. `tests/workflow_steps/test_rebase.py` currently holds **8** tests (3 in
+   `TestGetRebaseTargetBranch`, 5 in `TestRebaseIntegration`), so confirm all **12** pass — the
+   8 existing ones **must not need editing**. If any of them requires a change, stop and
+   report: that means the `ValueError` swallow is not behaving as designed.
 
 ## Verification
 
 ```
 mcp__mcp-tools-py__run_format_code
 mcp__mcp-tools-py__run_pylint_check
-mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "tests/workflows/review/"])
+mcp__mcp-tools-py__run_pytest_check(extra_args=["-n", "auto", "tests/workflow_steps/", "tests/workflows/review/", "tests/workflows/implement/"])
 mcp__mcp-tools-py__run_mypy_check
+mcp__mcp-tools-py__run_lint_imports_check
 ```
 
-Existing review tests are expected to pass unchanged: every assertion on the flush uses
-`assert_called()`, not `assert_called_once()`. If any turns out to assert an exact count,
-report it rather than silently loosening the assertion.
+`run_lint_imports_check` matters here: the new imports must go through the
+`mcp_coder.mcp_workspace_git` shim, and `workflow_steps/` sits in the middle tier of the
+three-tier workflow architecture.
 
 Then the full unit suite, then **one commit** for this step.
 
 ## LLM prompt
 
-> Read `pr_info/steps/summary.md` and `pr_info/steps/step_2.md`. Step 1 must already be
-> committed.
+> Read `pr_info/steps/summary.md` and `pr_info/steps/step_2.md`.
 >
-> Implement step 2 only, test-first. Add a single `_flush_round_log(project_dir)` call as the
-> first statement inside the round loop in `src/mcp_coder/workflows/review/core.py` (line 127),
-> **above** `sha_before = get_latest_commit_sha(project_dir)` — the ordering is load-bearing,
-> explain it in a short comment. `_flush_round_log` is already imported. Leave all existing
-> terminal flush calls in place.
+> Implement step 2 only, test-first. In `src/mcp_coder/workflow_steps/rebase.py`, add a guard
+> clause at the top of `_attempt_rebase_and_push`: call
+> `is_working_directory_clean(project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS)`
+> (imported from the `mcp_coder.mcp_workspace_git` shim and `mcp_coder.constants`), and when it
+> reports dirty refine the decision with a small `_has_uncommitted_tracked_changes` helper over
+> `get_full_status`: skip the rebase only for staged or modified entries, never for
+> untracked-only dirt, because `git rebase` tolerates untracked files and the guard must not
+> skip a rebase that would have succeeded. On a genuine skip, log a warning naming the cause —
+> not the individual files — and return `False`. `is_working_directory_clean` raises `ValueError`
+> on a non-git-repo path: catch it and treat the tree as clean so the function keeps its
+> "never fails workflow" contract.
 >
-> Write the test in `tests/workflows/review/test_core_after_steps.py` first, using the existing
-> `env` fixture and the `_run` / `_reviewer` / `_resp` / `_TASKS` / `_DISMISS` helpers from
-> `tests/workflows/review/conftest.py`; drive round 1 `tasks` then round 2 `dismiss` and assert
-> that round 2's rebase attempt happens after round 1's round-log flush. Do not modify
-> `conftest.py` or any existing test. Run `run_format_code`, then pylint / pytest (`-n auto`) /
-> mypy, and produce a single commit.
+> Add four direct unit tests to `tests/workflow_steps/test_rebase.py` (dirty tree skips and
+> warns; untracked-only still rebases; clean tree rebases; and a non-git-repo path that does
+> **not** patch `is_working_directory_clean`, so the `ValueError` swallow is really exercised),
+> written before the source change. That file already has 8 tests, so it must end with 12
+> passing and none of the existing 8 edited — if one needs editing, stop and report. Do not
+> touch either caller (`workflows/implement/core.py`, `workflows/review/steps.py`). Run
+> `run_format_code`, then pylint / pytest (`-n auto`) / mypy / lint-imports, and produce a
+> single commit.
