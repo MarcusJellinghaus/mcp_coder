@@ -33,6 +33,10 @@ from .verdict import Verdict
 
 logger = logging.getLogger(__name__)
 
+# ``commit_staged_files`` reports the first 7 characters of the SHA; the
+# pathspec-scoped commit below matches that so both routes return the same shape.
+_SHORT_SHA_LENGTH = 7
+
 
 def _set_label(
     config: ReviewConfig,
@@ -191,10 +195,11 @@ def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResu
         project_dir: Repository root; the commit runs here.
 
     Returns:
-        A ``CommitResult`` shaped like ``commit_staged_files``'s, so the
-        caller's success / ``commit_hash`` / push tail is shared. "Nothing to
-        commit for that path" surfaces as git's non-zero exit, i.e.
-        ``success: False``, which the caller already warns on.
+        A ``CommitResult`` shaped like ``commit_staged_files``'s — including a
+        ``commit_hash`` shortened to the same 7 characters — so the caller's
+        success / ``commit_hash`` / push tail is shared. "Nothing to commit for
+        that path" surfaces as git's non-zero exit, i.e. ``success: False``,
+        which the caller already warns on.
     """
     relative = _relative_to_project(only, project_dir)
     if relative is None:
@@ -208,16 +213,25 @@ def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResu
         ["git", "commit", "-m", message, "--", relative], cwd=str(project_dir)
     )
     if result.return_code != 0:
+        # A timeout, a missing ``git`` binary or a permission error exits 1 with
+        # both streams empty and the cause only in ``execution_error``, so all
+        # three are reported - this path exists to name a cause.
+        reported = [
+            part.strip()
+            for part in (result.stderr, result.stdout, result.execution_error)
+            if part and part.strip()
+        ]
         return {
             "success": False,
             "commit_hash": None,
-            "error": (result.stderr or result.stdout or "").strip()
+            "error": "; ".join(reported)
             or f"git commit -- {relative} exited {result.return_code}",
             "error_category": "commit_failed",
         }
+    sha = get_latest_commit_sha(project_dir)
     return {
         "success": True,
-        "commit_hash": get_latest_commit_sha(project_dir),
+        "commit_hash": sha[:_SHORT_SHA_LENGTH] if sha else None,
         "error": None,
         "error_category": None,
     }

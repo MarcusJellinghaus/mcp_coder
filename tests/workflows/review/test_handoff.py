@@ -132,12 +132,14 @@ def test_flush_no_commit_skips_push(
     assert not any(r.levelno == logging.WARNING for r in caplog.records)
 
 
-@pytest.mark.parametrize("staged", [True, False])
+@pytest.mark.parametrize(
+    "staging_succeeds", [True, False], ids=["staging-succeeds", "staging-fails"]
+)
 def test_flush_only_commits_just_the_log(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
-    staged: bool,
+    staging_succeeds: bool,
 ) -> None:
     """``only=`` stages and commits that one path — never the whole tree.
 
@@ -145,7 +147,7 @@ def test_flush_only_commits_just_the_log(
     the round-log message. A failed staging commits nothing and warns.
     """
     log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
-    stage = MagicMock(return_value=staged)
+    stage = MagicMock(return_value=staging_succeeds)
     commit_staged = MagicMock(
         return_value={
             "success": True,
@@ -166,7 +168,7 @@ def test_flush_only_commits_just_the_log(
 
     stage.assert_called_once_with([log_path], tmp_path)
     commit_all.assert_not_called()
-    if staged:
+    if staging_succeeds:
         commit_staged.assert_called_once()
         assert commit_staged.call_args.args[1] == tmp_path
         push.assert_called_once_with(tmp_path)
@@ -191,7 +193,9 @@ def test_flush_only_commits_by_pathspec_when_index_holds_unrelated_entries(
     stage = MagicMock(return_value=True)
     commit_staged = MagicMock(return_value={"success": True, "commit_hash": "abc"})
     execute = MagicMock(
-        return_value=SimpleNamespace(return_code=0, stdout="", stderr="")
+        return_value=SimpleNamespace(
+            return_code=0, stdout="", stderr="", execution_error=None
+        )
     )
     monkeypatch.setattr(
         handoff,
@@ -250,7 +254,10 @@ def test_flush_only_pathspec_commit_failure_is_warned_and_not_pushed(
         "execute_command",
         MagicMock(
             return_value=SimpleNamespace(
-                return_code=1, stdout="", stderr="nothing to commit"
+                return_code=1,
+                stdout="",
+                stderr="nothing to commit",
+                execution_error=None,
             )
         ),
     )
@@ -261,6 +268,76 @@ def test_flush_only_pathspec_commit_failure_is_warned_and_not_pushed(
 
     assert "nothing to commit" in caplog.text
     push.assert_not_called()
+
+
+def test_flush_only_pathspec_reports_an_execution_error_without_output(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A timeout / missing git / permission error is named, not swallowed.
+
+    ``execute_command`` reports those as ``return_code=1`` with both streams
+    empty and the cause only in ``execution_error``; the warning must carry it
+    rather than degrade to a bare exit code.
+    """
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    push = MagicMock(return_value=True)
+    monkeypatch.setattr(
+        handoff,
+        "get_full_status",
+        MagicMock(
+            return_value={
+                "staged": ["src/unrelated.py"],
+                "modified": [],
+                "untracked": [],
+            }
+        ),
+    )
+    monkeypatch.setattr(handoff, "stage_specific_files", MagicMock(return_value=True))
+    monkeypatch.setattr(
+        handoff,
+        "execute_command",
+        MagicMock(
+            return_value=SimpleNamespace(
+                return_code=1,
+                stdout="",
+                stderr="",
+                execution_error="Process timed out after 30 seconds",
+            )
+        ),
+    )
+    monkeypatch.setattr(handoff, "push_changes", push)
+
+    with caplog.at_level(logging.WARNING):
+        handoff._flush_round_log(tmp_path, only=log_path)
+
+    assert "Process timed out after 30 seconds" in caplog.text
+    push.assert_not_called()
+
+
+def test_commit_only_path_returns_a_short_commit_hash(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The pathspec route reports the same 7-character hash as ``commit_staged_files``."""
+    full_sha = "0123456789abcdef0123456789abcdef01234567"
+    monkeypatch.setattr(
+        handoff,
+        "execute_command",
+        MagicMock(
+            return_value=SimpleNamespace(
+                return_code=0, stdout="", stderr="", execution_error=None
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        handoff, "get_latest_commit_sha", MagicMock(return_value=full_sha)
+    )
+
+    result = handoff._commit_only_path(
+        "Add review round log", tmp_path / "pr_info" / "plan_review_log_1.md", tmp_path
+    )
+
+    assert result["success"]
+    assert result["commit_hash"] == "0123456"
 
 
 def test_flush_only_proceeds_when_the_log_itself_is_already_staged(
