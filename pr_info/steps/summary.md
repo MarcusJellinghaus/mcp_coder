@@ -20,7 +20,8 @@ The bug is silent whenever the following round is *also* `tasks`, because that r
 
 ## Fix — two independent changes
 
-1. **Land the previous round's log write at the top of each round** (`core.py` + `handoff.py`).
+1. **Land the previous round's log write at the top of each round** (`core.py`, `handoff.py`, plus
+   one re-export line in `mcp_workspace_git.py`).
    The non-terminal `write_round_log` result is kept in a `pending_log` local (the function
    already returns the path), and the first statement inside the round loop — **above**
    `sha_before = get_latest_commit_sha(...)` — flushes it. A single self-healing checkpoint at
@@ -30,36 +31,36 @@ The bug is silent whenever the following round is *also* `tasks`, because that r
 
    The flush is **scoped and push-free**, via two new keyword-only flags on `_flush_round_log`
    (`only=`, `push=False`) that both default to today's behaviour so no terminal call site
-   changes. See *Architectural / design changes* for why each matters.
+   changes. `only=` stages and commits exactly that one path (`stage_specific_files` +
+   `commit_staged_files`) instead of `commit_all_changes`. See *Architectural / design changes*
+   for why each matters.
 
 2. **Dirty-tree tripwire in `_attempt_rebase_and_push`** (`workflow_steps/rebase.py`, shared by
    the `review` and `implement` workflows). Before attempting a rebase, check for uncommitted
    changes git would actually refuse on; when present, log a clear warning naming the *cause*
    and return `False` rather than letting git fail first with only raw stderr. A backstop for
-   any future stray write, including the unrelated-dirt case item 1 deliberately declines to
-   commit.
+   any future stray write, including the unrelated dirt item 1 deliberately leaves in the working
+   tree.
 
 ## Architectural / design changes
 
 **A new loop invariant, not a new mechanism.** No module or class is added; one private helper
-gains two defaulted keyword-only flags. The change to `core.py` establishes an invariant that
-did not previously exist:
+gains two defaulted keyword-only flags and the git shim re-exports one more staging function. The
+change to `core.py` establishes an invariant that did not previously exist:
 
-> *A review round never begins on a working tree whose only pending change is a previous round's
-> round-log write.*
+> *A review round never begins with a previous round's round-log write still uncommitted.*
 
-The qualifier is load-bearing, not hedging: `only=` (below) deliberately refuses when anything
-*else* is pending, so in that case the round does begin carrying the previous round's pending
-write, alongside the unrelated dirt. Item 2's tripwire is what makes that case a loud, diagnosable
-handoff rather than an opaque git error.
+That holds unconditionally. `only=` (below) stages exactly the round-log path, so whatever else is
+dirty neither blocks that write from landing nor is swept into its commit. Unrelated dirt stays in
+the working tree, where item 2's tripwire turns it into a loud, diagnosable handoff rather than an
+opaque git error.
 
 Responsibility for landing a round-log entry moves from "each `write_round_log` call site must
 remember to pair itself with a flush" to "the loop entry point flushes what is pending". The
 terminal call sites keep their own flushes (they return before reaching the next loop iteration,
 so there is no top-of-loop flush to rely on), but the *non-terminal* site no longer needs one.
 This converts a per-call-site correctness obligation — violated once, and liable to be violated
-again — into a single checkpoint, backed by item 2 for the cases the checkpoint declines to
-repair.
+again — into a single checkpoint, backed by item 2 for any other stray write.
 
 **Ordering is load-bearing.** The flush must precede `sha_before = get_latest_commit_sha(...)`.
 If it ran after, a flush that actually commits something would advance HEAD past the captured
@@ -68,20 +69,19 @@ SHA, and the round's "applied vs no-op" log label (`core.py:578-583`) would alwa
 
 **The top-of-loop commit is scoped to the round-log file (`only=`).** `commit_all_changes` stages
 and commits *everything*. Calling it unconditionally every round would auto-commit any unrelated
-dirt under the message "Add review round log" — the behaviour rejected below. `only=` makes the
-helper compare `get_full_status`'s pending set (staged + modified + untracked, since a first-run
-log file is untracked) against that one path and refuse otherwise, with a warning. Unrelated
-dirt is therefore *not* silently repaired: the round proceeds and item 2's tripwire turns it into
-a loud, diagnosable handoff.
+dirt under the message "Add review round log" — the behaviour rejected below. `only=` therefore
+does not call it: it calls `stage_specific_files([only], project_dir)` and then
+`commit_staged_files`, so the commit contains exactly that one path. `stage_specific_files` accepts
+an absolute path and uses `repo.index.add`, so a first-run *untracked* log file stages exactly like
+a modified one; `commit_staged_files` returns the same `CommitResult` as `commit_all_changes`, so
+the existing success/push tail is shared. `mcp_workspace_git.py` gains the one re-export line that
+makes `stage_specific_files` importable through the shim.
 
-`DEFAULT_IGNORED_BUILD_ARTIFACTS` is subtracted from the pending set before that comparison, as
-`workflows/implement/task_tracker_prep.py:111` does. Without it a regenerated `uv.lock` would make
-the flush refuse, leaving the round log uncommitted for the next round's rebase — reinstating the
-very bug being fixed. Item 2's guard deliberately does the opposite and does **not** filter the
-list; the two are consistent because they answer different questions. `only=` asks *what may be
-swept into a round-log commit*, and the list encodes files this repo already treats as noise
-wherever it appears. Item 2's guard asks *what git will refuse*, and git has no notion of the
-list — a modified `uv.lock` blocks a rebase like any other tracked modification.
+Committing the path directly removes the question the alternative had to answer — which pending
+changes count as "dirt" — and with it any `DEFAULT_IGNORED_BUILD_ARTIFACTS` filtering on this side:
+a regenerated `uv.lock` is simply not staged. Item 2's guard still does **not** filter that list,
+because it answers a different question — *what will git refuse* — and git has no notion of the
+list: a modified `uv.lock` blocks a rebase like any other tracked modification.
 
 **The top-of-loop commit does not push (`push=False`).** The commit is what unblocks the rebase;
 the round's own push carries it moments later (`core.py:484` on the `tasks` path,
@@ -96,9 +96,10 @@ commit afterwards untested. Covered in step 1's verification.
 
 **`_flush_round_log` becomes idempotent-on-clean.** Skipping the push when `commit_hash is None`
 separates two outcomes `commit_all_changes` collapses into one truthy `success`: "committed
-something" and "there was nothing to commit". Its docstring is rewritten, not extended: it is no
-longer only the terminal paths that call it, and the push is no longer skipped only when the
-commit failed.
+something" and "there was nothing to commit". (`commit_staged_files`, the `only=` branch, instead
+reports an empty index as `success: False`, which the existing falsy-commit branch already warns
+on.) Its docstring is rewritten, not extended: it is no longer only the terminal paths that call
+it, and the push is no longer skipped only when the commit failed.
 
 **`workflow_steps/rebase.py` gains a precondition guard.** The guard is additive: both callers
 already treat a `False` return exactly as they do today (`implement/core.py:104` ignores it and
@@ -129,6 +130,11 @@ therefore both cheaper and sufficient — and since `get_full_status` never rais
   top-of-loop commit is scoped with `only=` instead of being a bare `commit_all_changes`.
 - Merging `write_round_log` and `_flush_round_log` into one function — touches ~10 call sites
   for no benefit once the top-of-loop flush exists.
+- A pending-set guard around `commit_all_changes` for `only=` (compare `get_full_status`'s
+  staged + modified + untracked set against the log path, minus
+  `DEFAULT_IGNORED_BUILD_ARTIFACTS`, and refuse otherwise) — `stage_specific_files` commits
+  exactly that one path with no status read, no ignore-list question and no refusal branch, and
+  it lands the round log even when the tree is dirty for another reason.
 - `is_working_directory_clean` as a pre-filter in item 2's guard — it calls `get_full_status`
   internally, so it adds a second status read on the dirty path instead of saving one, and it
   cannot veto a blocking staged/modified entry anyway. Dropping it also drops a `try/except
@@ -157,7 +163,7 @@ Issue #1158's *Fix* item 1 prescribes a bare `_flush_round_log(project_dir)` at 
 loop. That is an unconditional `commit_all_changes`, which contradicts the issue's own
 "decided against auto-committing whatever is dirty" and would commit unrelated dirt under the
 round-log commit message. The plan keeps the issue's placement and rationale but scopes the
-commit (`only=`, ignore-list filtered) and drops its push (`push=False`).
+commit (`only=` — a staged commit of the round-log path alone) and drops its push (`push=False`).
 
 Issue #1158's *Fix* item 2 prescribes `is_working_directory_clean(project_dir)` as the rebase
 precondition check. The plan keeps the issue's intent — a workflow-layer tripwire that names the
@@ -177,7 +183,8 @@ library layer. Log-message-only, no interface change; the two fixes are independ
 
 | File | Change |
 |------|--------|
-| `src/mcp_coder/workflows/review/handoff.py` | `_flush_round_log`: `only=` scope guard (ignore-list filtered), `push=` flag, `commit_hash is None` push skip, docstring rewrite (step 1) |
+| `src/mcp_coder/mcp_workspace_git.py` | Re-export `stage_specific_files` (one import line + `__all__`) (step 1) |
+| `src/mcp_coder/workflows/review/handoff.py` | `_flush_round_log`: `only=` staged commit of that one path (`stage_specific_files` + `commit_staged_files`), `push=` flag, `commit_hash is None` push skip, docstring rewrite (step 1) |
 | `src/mcp_coder/workflows/review/core.py` | `pending_log` local; scoped push-free flush at the top of the round loop, above `sha_before` (step 1) |
 | `src/mcp_coder/workflow_steps/rebase.py` | `_attempt_rebase_and_push`: dirty-working-tree guard + `_has_uncommitted_tracked_changes` helper (step 2) |
 
@@ -185,9 +192,9 @@ library layer. Log-message-only, no interface change; the two fixes are independ
 
 | File | Change |
 |------|--------|
-| `tests/workflows/review/conftest.py` | `env` fixture: add a `handoff.get_full_status` mock (step 1) |
-| `tests/workflows/review/test_handoff.py` | Two tests: `commit_hash is None` skips the push; `only=` refuses unrelated dirt but not a `uv.lock` (parametrised) (step 1) |
-| `tests/workflows/review/test_core_after_steps.py` | Two tests: round 1 `tasks` flushes before round 2's rebase; a round starting dirty for another reason is not committed (step 1) |
+| `tests/workflows/review/conftest.py` | `env` fixture: add `handoff.stage_specific_files` + `handoff.commit_staged_files` mocks (step 1) |
+| `tests/workflows/review/test_handoff.py` | Two tests: `commit_hash is None` skips the push; `only=` stages and commits just that path, and a failed staging commits nothing (parametrised) (step 1) |
+| `tests/workflows/review/test_core_after_steps.py` | One test: round 1 `tasks` flushes before round 2's rebase, staging only the round-log path (step 1) |
 | `tests/workflow_steps/test_rebase.py` | Four tests: dirty tree skips the rebase; a modified `uv.lock` alone also skips; untracked-only still rebases; clean tree rebases (step 2) |
 
 ### Not modified
@@ -199,9 +206,10 @@ library layer. Log-message-only, no interface change; the two fixes are independ
   unpatched `get_full_status` reports a non-repo with nothing pending, and the 3 in
   `TestGetRebaseTargetBranch` never reach the guard.
 - `tests/workflows/review/test_core.py`, which defines its own duplicate `env` fixture and
-  `_run` (plan lane), needs no change: with `get_full_status` unpatched there it reports nothing
-  pending on `tmp_path`, so the scoped flush takes its no-op branch, and every flush assertion in
-  that file is `assert_called()`, satisfied by its terminal flush.
+  `_run` (plan lane), needs no change: with `stage_specific_files` unpatched there it returns
+  `False` on the non-repo `tmp_path`, so the scoped flush warns and commits nothing, and every
+  flush assertion in that file is `assert_called()` on `commit_all_changes`, satisfied by its
+  terminal flush.
 
 ## Step order
 

@@ -64,9 +64,9 @@ uncommitted changes"). Two consequences, both deliberate:
   git refuses that tree today too, so `_attempt_rebase_and_push` already returns `False` for it;
   only the log message improves.
 
-Step 1's `only=` guard *does* filter the list, and for the complementary reason: it is deciding
-what may be swept into a round-log commit, not what git will refuse. The two uses are consistent
-because they answer different questions (see summary.md).
+Step 1 never has to answer that question: its `only=` flush stages the round-log path directly, so
+nothing else — `uv.lock` included — can be swept into that commit, and no ignore list is consulted
+on that side (see summary.md).
 
 ### One call, not two
 
@@ -141,8 +141,10 @@ strings in this module.
 1. Write the four tests as direct unit calls to `_attempt_rebase_and_push` — lighter than the
    existing integration-style tests that drive `run_implement_workflow`.
 
-   All four patch `...get_full_status` only — `is_working_directory_clean` is not used, so there
-   is nothing else to patch on the guard side.
+   On the guard side all four patch `...get_full_status` only — `is_working_directory_clean` is
+   not used, so there is nothing else to patch there. Downstream of the guard each test still
+   patches what it asserts on: the target-branch lookup (`..._get_rebase_target_branch`),
+   `...rebase_onto_branch` and `...push_changes`.
 
    - `test_dirty_tree_skips_rebase`: `...get_full_status` →
      `{"staged": [], "modified": ["src/foo.py"], "untracked": []}`. Assert the return is `False`,
@@ -154,9 +156,12 @@ strings in this module.
      decision that `DEFAULT_IGNORED_BUILD_ARTIFACTS` is **not** filtered here: git refuses a
      modified `uv.lock`, so the guard must name it rather than stay silent.
    - `test_untracked_only_proceeds_to_rebase`: `...get_full_status` →
-     `{"staged": [], "modified": [], "untracked": ["notes.txt"]}`. Assert `rebase_onto_branch`
-     **was** called and the return is `True`. This is the regression guard: a tree git would have
-     rebased must still be rebased.
+     `{"staged": [], "modified": [], "untracked": ["notes.txt"]}`, and — as in
+     `test_clean_tree_proceeds_to_rebase` — target `"main"`, rebase `True`, push `True`. Assert
+     `rebase_onto_branch` **was** called and the return is `True`. This is the regression guard: a
+     tree git would have rebased must still be rebased. Without patching the target lookup the real
+     `detect_base_branch` returns `None` on a non-repo `tmp_path` and `rebase_onto_branch` is never
+     reached.
    - `test_clean_tree_proceeds_to_rebase`: `...get_full_status` →
      `{"staged": [], "modified": [], "untracked": []}`, target `"main"`, rebase `True`, push
      `True`. Assert the return is `True` and `rebase_onto_branch` was called with
