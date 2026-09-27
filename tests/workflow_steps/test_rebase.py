@@ -1,7 +1,10 @@
 """Tests for the rebase-and-push workflow step."""
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from mcp_coder.workflow_steps.rebase import (
     _attempt_rebase_and_push,
@@ -42,6 +45,117 @@ class TestGetRebaseTargetBranch:
 
         result = _get_rebase_target_branch(tmp_path)
         assert result == "main"
+
+
+class TestDirtyWorkingTreeGuard:
+    """Tests for the dirty-working-tree guard in _attempt_rebase_and_push."""
+
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.get_full_status")
+    def test_dirty_tree_skips_rebase(
+        self,
+        mock_status: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test a modified tracked file skips the rebase with a warning."""
+        mock_status.return_value = {
+            "staged": [],
+            "modified": ["src/foo.py"],
+            "untracked": [],
+        }
+
+        with caplog.at_level(logging.WARNING):
+            result = _attempt_rebase_and_push(tmp_path)
+
+        assert result is False
+        mock_get_target.assert_not_called()
+        mock_rebase.assert_not_called()
+        mock_push.assert_not_called()
+        assert any(r.levelno == logging.WARNING for r in caplog.records)
+
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.get_full_status")
+    def test_ignored_artifact_alone_still_skips_rebase(
+        self,
+        mock_status: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test a modified uv.lock alone also skips: git refuses it like any other."""
+        mock_status.return_value = {
+            "staged": [],
+            "modified": ["uv.lock"],
+            "untracked": [],
+        }
+
+        with caplog.at_level(logging.WARNING):
+            result = _attempt_rebase_and_push(tmp_path)
+
+        assert result is False
+        mock_rebase.assert_not_called()
+        mock_push.assert_not_called()
+        assert any(r.levelno == logging.WARNING for r in caplog.records)
+
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.get_full_status")
+    def test_untracked_only_proceeds_to_rebase(
+        self,
+        mock_status: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test untracked files alone do not block: git rebase tolerates them."""
+        mock_status.return_value = {
+            "staged": [],
+            "modified": [],
+            "untracked": ["notes.txt"],
+        }
+        mock_get_target.return_value = "main"
+        mock_rebase.return_value = True
+        mock_push.return_value = True
+
+        result = _attempt_rebase_and_push(tmp_path)
+
+        assert result is True
+        mock_rebase.assert_called_once_with(tmp_path, "main")
+
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.get_full_status")
+    def test_clean_tree_proceeds_to_rebase(
+        self,
+        mock_status: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test a clean tree reaches the rebase and succeeds."""
+        mock_status.return_value = {"staged": [], "modified": [], "untracked": []}
+        mock_get_target.return_value = "main"
+        mock_rebase.return_value = True
+        mock_push.return_value = True
+
+        result = _attempt_rebase_and_push(tmp_path)
+
+        assert result is True
+        mock_rebase.assert_called_once_with(tmp_path, "main")
 
 
 class TestRebaseIntegration:
