@@ -6,6 +6,9 @@ shared loop against ``REVIEW_PLAN`` (``run_after_steps=False``), so the
 ``_after_steps`` stub always returns ``None`` here — Step 8 covers the
 after-steps behaviour separately.
 
+The ``env`` fixture comes from ``conftest.py`` (shared with the after-steps and
+gate modules); the after-steps mocks it adds are inert in this lane.
+
 Call order per round:
     1. fresh reviewer (``session_id=None``)               -> prompt_llm call
     2. supervisor verdict (persistent session)            -> prompt_llm call
@@ -21,10 +24,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.review import core, handoff, reviewer, steps
+from mcp_coder.workflows.review import core
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 
 # --- verdict payloads -------------------------------------------------------
@@ -54,67 +56,6 @@ def _resp(text: str, session_id: str | None = "sup-1") -> dict[str, Any]:
 def _reviewer(text: str = _REPORT, session_id: str | None = "rev-1") -> dict[str, Any]:
     """Reviewer response (distinct session id from the supervisor)."""
     return _resp(text, session_id=session_id)
-
-
-@pytest.fixture
-def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
-    """Patch every external the core loop touches; expose the mocks."""
-    mocks = SimpleNamespace()
-
-    mocks.prompt_llm = MagicMock(name="prompt_llm")
-    monkeypatch.setattr(reviewer, "prompt_llm", mocks.prompt_llm)
-
-    monkeypatch.setattr(reviewer, "prepare_llm_environment", MagicMock(return_value={}))
-
-    mocks.run_formatters = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "run_formatters", mocks.run_formatters)
-    mocks.commit_changes = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "commit_changes", mocks.commit_changes)
-    mocks.push_changes = MagicMock(return_value=True)
-    monkeypatch.setattr(core, "push_changes", mocks.push_changes)
-
-    # By default every round registers a change (dirty working dir).
-    mocks.get_latest_commit_sha = MagicMock(return_value="SHA0")
-    monkeypatch.setattr(core, "get_latest_commit_sha", mocks.get_latest_commit_sha)
-    mocks.is_working_directory_clean = MagicMock(return_value=False)
-    monkeypatch.setattr(
-        core, "is_working_directory_clean", mocks.is_working_directory_clean
-    )
-
-    monkeypatch.setattr(
-        steps, "get_current_branch_name", MagicMock(return_value="1072-review")
-    )
-    mocks.issue_manager = MagicMock(name="IssueManager")
-    monkeypatch.setattr(handoff, "IssueManager", mocks.issue_manager)
-
-    # Terminal-path log flush (handoff._flush_round_log commit + push): mocked so
-    # the flush never touches real git; tests assert the commit fired.
-    mocks.commit_all_changes = MagicMock(
-        return_value={"success": True, "commit_hash": "FLUSHSHA"}
-    )
-    monkeypatch.setattr(handoff, "commit_all_changes", mocks.commit_all_changes)
-    mocks.flush_push = MagicMock(return_value=True)
-    monkeypatch.setattr(handoff, "push_changes", mocks.flush_push)
-
-    mocks.update_workflow_label = MagicMock(return_value=True)
-    monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
-    mocks.handle_workflow_failure = MagicMock()
-    monkeypatch.setattr(
-        handoff, "handle_workflow_failure", mocks.handle_workflow_failure
-    )
-
-    # Present so the plan lane can assert it is never called (thread_pr_feedback
-    # is False for REVIEW_PLAN); a stray call would surface as a real GitHub hit.
-    mocks.collect_branch_status = MagicMock(
-        return_value=SimpleNamespace(
-            pr_feedback_text=None,
-            pr_feedback_undeterminable=False,
-            ci_status=CIStatus.PASSED,
-        )
-    )
-    monkeypatch.setattr(core, "collect_branch_status", mocks.collect_branch_status)
-
-    return mocks
 
 
 def _run(project_dir: Path, **kwargs: Any) -> int:
@@ -167,8 +108,10 @@ def test_escalate_sets_escalate_label_and_logs_reason(
     from_id, to_id = _label_transition(env.update_workflow_label)
     assert from_id == REVIEW_PLAN.busy_label_id
     assert to_id == REVIEW_PLAN.escalate_label_id
-    # Handoff path: the last round's log is flushed and a comment is posted.
-    env.commit_all_changes.assert_called()
+    # Handoff path: the last round's log is flushed (scoped to that file, never
+    # the whole tree) and a comment is posted.
+    env.commit_staged_files.assert_called()
+    env.commit_all_changes.assert_not_called()
     comment = env.issue_manager.return_value.add_comment.call_args.args[1]
     assert "needs a human" in comment
 
@@ -210,6 +153,34 @@ def test_tasks_then_dismiss_resumes_reviewer(
     env.push_changes.assert_called_once()
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_PLAN.success_label_id
+
+
+def test_tasks_round_log_lands_at_the_next_round_entry(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """The plan lane honours the same loop-entry flush as the impl lane.
+
+    ``review-plan`` runs no after-steps, so nothing rebases here — but the
+    invariant is the loop's, not the rebase gate's: round 1's round-log write is
+    committed (scoped, unpushed) before round 2 starts.
+    """
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(text="fixed", session_id="rev-1"),  # round 1 -> tasks
+        _reviewer(),
+        _resp(_DISMISS),  # round 2 -> dismiss
+    ]
+
+    assert _run(tmp_path) == 0
+
+    # One scoped commit: round 1's log, landed at round 2's entry, naming that
+    # file and nothing else.
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    env.stage_specific_files.assert_called_once_with([log_path], tmp_path)
+    env.commit_staged_files.assert_called_once()
+    # It does not push: the single push here is round 2's own terminal flush.
+    assert env.flush_push.call_count == 1
 
 
 def test_reviewer_is_fresh_each_round(env: SimpleNamespace, tmp_path: Path) -> None:
@@ -320,8 +291,9 @@ def test_rounds_cap_exhausted_hands_off(env: SimpleNamespace, tmp_path: Path) ->
     env.handle_workflow_failure.assert_not_called()
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_PLAN.escalate_label_id
-    # The last round's log is flushed to the committed review log.
-    env.commit_all_changes.assert_called()
+    # The last round's log is flushed to the committed review log, scoped.
+    env.commit_staged_files.assert_called()
+    env.commit_all_changes.assert_not_called()
     # A handoff comment is posted on the issue.
     env.issue_manager.return_value.add_comment.assert_called_once()
 

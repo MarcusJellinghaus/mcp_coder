@@ -88,19 +88,66 @@ a regenerated `uv.lock` is simply not staged. Item 2's guard still does **not** 
 because it answers a different question — *what will git refuse* — and git has no notion of the
 list: a modified `uv.lock` blocks a rebase like any other tracked modification.
 
+`commit_staged_files` commits the whole *index*, though, not the paths just staged, so scoping
+holds only while the index starts out empty of anything else. `_flush_round_log` therefore reads
+`get_full_status(project_dir)["staged"]` first (`_unrelated_staged_entries`) and **refuses**, with
+a warning naming them, when the index already holds an entry that is not the round log — rather
+than committing someone else's staged work under "Add review round log". mcp-workspace exposes no
+pathspec-scoped commit (`git commit -- <path>`) that would allow both, and reaching past the
+`mcp_workspace_git` layer to GitPython for one is not worth it; refusing keeps the documented
+guarantee exact and is the same "fail loudly rather than repair silently" the tripwire embodies.
+The cost is the already-accepted best-effort one: the round log stays uncommitted and item 2 names
+the dirty tree on the next rebase.
+
+**`_route_to_human` commits the round log alone too.** It previously flushed with
+`commit_all_changes` + push. One of the three paths reaching it is the unresolved-rebase handoff —
+reached *because* the tree was dirty — so the whole-tree commit pushed exactly the dirt item 2's
+tripwire had just refused to rebase over, repairing silently the condition it had named. It now
+takes a required keyword-only `log_path` and flushes `only=log_path`; the four call sites pass the
+path `write_round_log` returned (`pending_log` at the rounds cap). `log_path` is required, not
+defaulted, so a new handoff site cannot fall back to the whole-tree commit by omission; `None`
+means no round wrote a log and nothing is committed. The rounds-cap `pending_ci_note` `_fail`
+(`core.py:609`) is scoped the same way, being the sibling branch of the same terminal. The
+remaining `_fail` sites keep `commit_all_changes`: `commit-failed` and `push-failed` reach it with
+the round's own fix work uncommitted on purpose, and sweeping that in is what their comments
+already describe.
+
 **The top-of-loop commit does not push (`push=False`).** The commit is what unblocks the rebase;
 on every converging path the round's own push carries it moments later (`core.py:484` on the
 `tasks` path, `_attempt_rebase_and_push`'s force-with-lease push on `dismiss`, `_route_to_human`'s
 flush on `escalate`/rebase/rounds-cap, or one of the terminal flushes that do push). On the four
 `_fail` sites that neither write nor flush a round log (`core.py:186`, `201`, `235`, `246`) the
-commit stays local and unpushed — accepted; see step_1.md. Accepted residual cost: on a `dismiss`
-round whose rebase is a no-op, that push now
-carries a log-only commit to the remote *before* the CI gate, so `check_and_fix_ci` waits for a
-CI run triggered by it — about one extra CI cycle on such a round. It is not avoidable while
-fixing this bug (the log write must be committed before the rebase, and any commit reaching the
-remote re-triggers CI), and it is strictly more correct than today's behaviour, which declares
-the round green on a CI run for a commit that is not the branch head and then pushes the log
-commit afterwards untested. Covered in step 1's verification.
+commit stays local and unpushed — accepted; see step_1.md.
+
+**The flush commit's own CI run gates the dismiss round (the stale-green race).** On a `dismiss`
+round whose rebase is a no-op, `_attempt_rebase_and_push`'s force-with-lease push now carries a
+log-only commit to the remote *before* the CI gate — where previously such a round pushed nothing.
+That is unavoidable while fixing this bug (the log write must be committed before the rebase, and
+any commit reaching the remote re-triggers CI) and is strictly more correct than declaring the
+round green on a run for a commit that is not the branch head. It is not, however, merely "one
+extra CI cycle": it exposes a **race that turns a passing dismiss round into a terminal
+`ci_unknown` failure**.
+
+`_poll_for_ci_completion` asked `CIResultsManager.get_latest_ci_status(branch)`, which answers
+"the newest run on this branch" — and for the first seconds after a push that is still the
+*previous* commit's run. So the poll could read round 1's completed green, return immediately,
+and hand `check_ci_proven_gate` a branch whose newest run is by then the just-queued one for the
+flush commit. `assess_ci(..., require_proven=True)` maps that `PENDING` to `"ci_unknown"` — RC=1,
+`17f-ci_unknown`, on a review that had converged. The window is the GitHub run-registration
+latency, and `_after_steps` polls within a second of the push, so it is likely to be hit rather
+than merely possible. The same race already existed whenever a rebase rewrote commits; making the
+dismiss round always push turns "occasionally" into "every such round".
+
+**Resolution:** `_poll_for_ci_completion` takes an optional `expected_sha`, and `_after_steps`
+passes the local HEAD the rebase step just pushed (`get_latest_commit_sha`). A run whose
+`commit_sha` is any other commit is treated exactly like "no run yet" — the poll keeps waiting
+instead of reading it, for a stale *failure* as much as a stale success. Three deliberate
+non-behaviours: a run reporting no SHA is accepted (uncorrelatable, so blocking to the poll cap
+would be worse than using it); exhausting the cap with only other-commit runs returns the existing
+graceful `(None, True)`, differing only in the log line; and `expected_sha` defaults to `None`, so
+`implement`'s call site — which does not push immediately beforehand — is unchanged. The fix loop's
+own pushes keep using `_wait_for_new_ci_run`'s run-id comparison, so `expected_sha` gates the first
+poll only.
 
 **`_flush_round_log` becomes idempotent-on-clean.** Skipping the push when `commit_hash is None`
 separates two outcomes `commit_all_changes` collapses into one truthy `success`: "committed
@@ -159,7 +206,12 @@ therefore both cheaper and sufficient — and since `get_full_status` never rais
 - Surfacing the dirty-file list into the human-handoff issue comment — logs are enough.
 - Enumerating the specific dirty files in the new rebase warning — file-level detail is left to
   `mcp-workspace#295`'s hardening of `rebase_onto_branch`, so the two fixes do not duplicate the
-  same logic at two layers.
+  same logic at two layers. The message names the *condition* git refuses on ("staged or modified
+  tracked files") rather than a cause: `_attempt_rebase_and_push` is shared with `implement`,
+  where a dirty tree at that point is not a leftover round-log write.
+- Adding a pathspec-scoped commit (`git commit -- <path>`) to `mcp_workspace_git` so `only=` could
+  commit the log even with a dirty index — that is an mcp-workspace change, and calling GitPython
+  directly from `handoff.py` would reach past the git layer every other call site goes through.
 - A documentation change. The flush invariant is a fact about one loop; it lives in the code
   comment at the flush site and in `_flush_round_log`'s rewritten docstring.
   `docs/architecture/architecture.md`'s `workflows/review/` bullet is a module inventory and
@@ -205,32 +257,33 @@ library layer. Log-message-only, no interface change; the two fixes are independ
 | File | Change |
 |------|--------|
 | `src/mcp_coder/mcp_workspace_git.py` | Re-export `stage_specific_files` (one import line + `__all__`) (step 1) |
-| `src/mcp_coder/workflows/review/handoff.py` | `_flush_round_log`: `only=` staged commit of that one path (`stage_specific_files` + `commit_staged_files`), `push=` flag, `commit_hash is None` push skip, docstring rewrite (step 1) |
-| `src/mcp_coder/workflows/review/core.py` | `pending_log` local; scoped push-free flush at the top of the round loop, above `sha_before` (step 1) |
+| `src/mcp_coder/workflows/review/handoff.py` | `_flush_round_log`: `only=` staged commit of that one path (`stage_specific_files` + `commit_staged_files`), refusing when the index holds unrelated entries (`_unrelated_staged_entries`); `push=` flag; `commit_hash is None` push skip; docstring rewrite. `_route_to_human`: required `log_path`, scoped flush (step 1) |
+| `src/mcp_coder/workflows/review/core.py` | `pending_log` local; scoped push-free flush at the top of the round loop, above `sha_before`; `log_path=` at the four `_route_to_human` sites and the rounds-cap CI `_fail` (step 1) |
+| `src/mcp_coder/workflows/review/steps.py` | `_after_steps`: pass the just-pushed HEAD SHA to `check_and_fix_ci` as `expected_sha` (step 1) |
+| `src/mcp_coder/workflow_steps/ci.py` | `_poll_for_ci_completion` / `check_and_fix_ci`: optional `expected_sha` pinning the first poll to the pushed commit (step 1) |
 | `src/mcp_coder/workflow_steps/rebase.py` | `_attempt_rebase_and_push`: dirty-working-tree guard + `_has_uncommitted_tracked_changes` helper (step 2) |
 
 ### Modified — tests
 
 | File | Change |
 |------|--------|
-| `tests/workflows/review/conftest.py` | `env` fixture: add `handoff.stage_specific_files` + `handoff.commit_staged_files` mocks (step 1) |
-| `tests/workflows/review/test_handoff.py` | Two tests: `commit_hash is None` skips the push; `only=` stages and commits just that path, and a failed staging commits nothing (parametrised) (step 1) |
-| `tests/workflows/review/test_core_after_steps.py` | One test: round 1 `tasks` flushes before round 2's rebase, staging only the round-log path (step 1) |
+| `tests/workflows/review/conftest.py` | `env` fixture: add `handoff.stage_specific_files`, `handoff.commit_staged_files`, `handoff.get_full_status` and `steps.get_latest_commit_sha` mocks (step 1) |
+| `tests/workflows/review/test_handoff.py` | `commit_hash is None` skips the push; `only=` stages and commits just that path (parametrised on a failed staging); a pre-staged unrelated entry refuses the commit; the log itself already staged does not; `_route_to_human` flushes scoped, skips entirely on `log_path=None`, and leaves unrelated dirt uncommitted (step 1) |
+| `tests/workflows/review/test_core_after_steps.py` | Round 1 `tasks` flushes before round 2's rebase, staging only the round-log path; a no-op-rebase dismiss round waits for the flush commit's own CI run instead of the previous commit's stale green (step 1) |
+| `tests/workflows/review/test_core.py` | Drop the duplicate `env` fixture in favour of `conftest`'s; add the plan-lane loop-entry flush test (step 1) |
+| `tests/workflow_steps/test_ci.py` | Four tests: a completed run for an earlier commit is skipped (green and red alike); no `expected_sha` keeps today's newest-run behaviour; a run without a SHA is accepted (step 1) |
 | `tests/workflow_steps/test_rebase.py` | Four tests: dirty tree skips the rebase; a modified `uv.lock` alone also skips; untracked-only still rebases; clean tree rebases (step 2) |
 
 ### Not modified
 
 - No new modules, packages or `__init__.py` files.
 - No documentation changes (see *Decided against*).
-- No existing test is edited. In `tests/workflow_steps/test_rebase.py` all **8** existing tests
-  pass untouched — the 5 in `TestRebaseIntegration` run against `Path("/test")`, where the
-  unpatched `get_full_status` reports a non-repo with nothing pending, and the 3 in
-  `TestGetRebaseTargetBranch` never reach the guard.
-- `tests/workflows/review/test_core.py`, which defines its own duplicate `env` fixture and
-  `_run` (plan lane), needs no change: with `stage_specific_files` unpatched there it returns
-  `False` on the non-repo `tmp_path`, so the scoped flush warns and commits nothing, and every
-  flush assertion in that file is `assert_called()` on `commit_all_changes`, satisfied by its
-  terminal flush.
+- In `tests/workflow_steps/test_rebase.py` all **8** existing tests pass untouched — the 5 in
+  `TestRebaseIntegration` run against `Path("/test")`, where the unpatched `get_full_status`
+  reports a non-repo with nothing pending, and the 3 in `TestGetRebaseTargetBranch` never reach
+  the guard.
+- `implement`'s `check_and_fix_ci` call site: `expected_sha` defaults to `None`, so its poll is
+  byte-identical to today's.
 
 ## Step order
 

@@ -64,8 +64,9 @@ def _attempt_rebase_and_push(project_dir: Path) -> bool:
     # remote, and there is no point paying for it when the rebase cannot start.
     if _has_uncommitted_tracked_changes(project_dir):
         logger.warning(
-            "Working tree has uncommitted changes - skipping rebase "
-            "(likely a leftover uncommitted write)"
+            "Skipping rebase: the working tree has staged or modified tracked "
+            "files, which git refuses to rebase over - commit or discard them "
+            "and re-run"
         )
         return False
 

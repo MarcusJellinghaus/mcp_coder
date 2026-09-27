@@ -296,7 +296,7 @@ def run_review_workflow(
                 if reason is None and config.enforce_implementation_gates:
                     reason, details = check_ci_proven_gate(project_dir)
                 if reason == "rebase":
-                    write_round_log(
+                    log_path = write_round_log(
                         project_dir,
                         config,
                         run_number,
@@ -315,6 +315,7 @@ def run_review_workflow(
                         comment_body=(
                             "Branch could not be rebased cleanly — handing off."
                         ),
+                        log_path=log_path,
                     )
                 if reason:
                     # Terminal dismiss-gate failure (after-steps or Gate 2):
@@ -357,7 +358,7 @@ def run_review_workflow(
                 return 0
 
             if verdict.decision == "escalate":
-                write_round_log(
+                log_path = write_round_log(
                     project_dir,
                     config,
                     run_number,
@@ -377,6 +378,7 @@ def run_review_workflow(
                         f"{config.name} review escalated to a human: "
                         f"{verdict.escalate_reason}"
                     ),
+                    log_path=log_path,
                 )
 
             # decision == "tasks": resume the reviewer to apply the fixes.
@@ -530,7 +532,7 @@ def run_review_workflow(
                 is_dismiss=False,
             )
             if reason == "rebase":
-                write_round_log(
+                log_path = write_round_log(
                     project_dir,
                     config,
                     run_number,
@@ -547,6 +549,7 @@ def run_review_workflow(
                     update_issue_labels=update_issue_labels,
                     post_issue_comments=post_issue_comments,
                     comment_body=("Branch could not be rebased cleanly — handing off."),
+                    log_path=log_path,
                 )
             if reason == "ci":
                 # Mid-loop red CI is a finding, not a terminal failure: carry it
@@ -606,7 +609,8 @@ def run_review_workflow(
             # A still-open CI finding keeps the cap terminal (17f-ci): flush the
             # last round's log (best-effort, mirroring the commit/push-failed
             # paths) then fail, so the round still lands in the committed log.
-            _flush_round_log(project_dir)
+            if pending_log is not None:
+                _flush_round_log(project_dir, only=pending_log)
             return _fail(
                 config,
                 project_dir,
@@ -632,6 +636,7 @@ def run_review_workflow(
                 f"({REVIEW_MAX_ROUNDS} rounds) without converging — handing off "
                 f"for human review."
             ),
+            log_path=pending_log,
         )
 
     return run_guarded(

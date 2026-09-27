@@ -13,6 +13,7 @@ from pathlib import Path
 from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
     commit_staged_files,
+    get_full_status,
     stage_specific_files,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
@@ -124,6 +125,32 @@ def _fail(
     return 1
 
 
+def _unrelated_staged_entries(only: Path, project_dir: Path) -> list[str]:
+    """Return the index entries that are not ``only``.
+
+    ``commit_staged_files`` commits whatever the index holds, so "this commit
+    contains the round log and nothing else" only holds while the index is free
+    of other entries. This reports the ones that would otherwise ride along.
+
+    Args:
+        only: The round-log path the caller intends to commit alone.
+        project_dir: Repository root; entries are read relative to it.
+
+    Returns:
+        Project-relative paths staged besides ``only``; empty when the index
+        holds nothing else. A path outside ``project_dir`` (which git could not
+        stage anyway) reports every staged entry as unrelated.
+    """
+    staged = get_full_status(project_dir)["staged"]
+    if not staged:
+        return []
+    try:
+        relative = only.resolve().relative_to(project_dir.resolve())
+    except ValueError:
+        return staged
+    return [entry for entry in staged if Path(entry) != relative]
+
+
 def _flush_round_log(
     project_dir: Path,
     message: str = "Add review round log",
@@ -134,16 +161,16 @@ def _flush_round_log(
     """Commit (and usually push) an already-written round log; best-effort.
 
     The round body always *writes* its log to the working tree. Two kinds of
-    caller land that entry in the *committed* review log: the terminal paths,
-    which commit the whole tree and push; and the top of the round loop, which
-    lands the *previous* round's write scoped to that one file and without
-    pushing (``only=``/``push=False``), so the next round's rebase is not
-    refused for unstaged changes. Neither re-writes the log — the caller wrote
-    it first.
+    caller land that entry in the *committed* review log: the ``_fail`` paths,
+    which commit the whole tree and push; and the scoped callers — the top of
+    the round loop and :func:`_route_to_human` — which commit that one file and
+    nothing else (``only=``), the loop additionally without pushing
+    (``push=False``) so the next round's rebase is not refused for unstaged
+    changes. Neither re-writes the log — the caller wrote it first.
 
     The push is skipped when the commit failed, when it succeeded but committed
-    nothing (``commit_hash is None``), when ``only=`` could not be staged, and
-    whenever ``push=False``.
+    nothing (``commit_hash is None``), when ``only=`` could not be committed,
+    and whenever ``push=False``.
 
     Every git call reports failure by return value rather than by raising
     (``stage_specific_files``/``push_changes`` return ``bool``;
@@ -157,12 +184,27 @@ def _flush_round_log(
         message: Commit message for the round-log commit.
         only: When given, commit *only* this path — ``stage_specific_files``
             plus ``commit_staged_files`` instead of ``commit_all_changes``, so
-            an arbitrarily dirty tree can never ride along under ``message``.
+            a dirty tree cannot ride along under ``message``. Pre-staged
+            entries would ride along regardless of what is staged here, so the
+            flush refuses outright when the index already holds any; landing
+            the log is not worth silently committing someone else's work under
+            this message, and the dirty tree that results is what
+            ``_attempt_rebase_and_push``'s tripwire exists to name.
         push: When False, leave the commit local; the caller's own push carries
             it.
     """
     try:
         if only is not None:
+            unrelated = _unrelated_staged_entries(only, project_dir)
+            if unrelated:
+                logger.warning(
+                    "Index already holds unrelated staged entries (%s) - not "
+                    "committing the round log, which would carry them under "
+                    "'%s'",
+                    ", ".join(sorted(unrelated)),
+                    message,
+                )
+                return
             if not stage_specific_files([only], project_dir):
                 logger.warning(
                     "Could not stage the round log %s - not committing", only
@@ -196,6 +238,7 @@ def _route_to_human(
     update_issue_labels: bool,
     post_issue_comments: bool,
     comment_body: str,
+    log_path: Path | None,
 ) -> int:
     """Hand a converged-but-unresolved run off to a human; return ``0``.
 
@@ -205,6 +248,11 @@ def _route_to_human(
     ``escalate_label_id`` recovery label. Unlike :func:`_fail`, this is **not**
     an error — it returns ``0`` and never touches a failure label.
 
+    The flush is scoped to ``log_path``. The unresolved-rebase handoff is
+    reached *because* the working tree was dirty, so committing the whole tree
+    here would push exactly the dirt ``_attempt_rebase_and_push``'s tripwire
+    refused to rebase over — repairing silently the condition it just named.
+
     Args:
         config: The review workflow config (provides ``escalate_label_id``).
         project_dir: Repository root.
@@ -212,11 +260,15 @@ def _route_to_human(
         update_issue_labels: Whether to apply the escalate label transition.
         post_issue_comments: Whether to post the handoff comment.
         comment_body: Human-readable explanation of why the run handed off.
+        log_path: The round log to land, or ``None`` when no round wrote one
+            (nothing is committed then). Required, so a new handoff site cannot
+            fall back to committing the whole tree by omission.
 
     Returns:
         Always ``0``.
     """
-    _flush_round_log(project_dir)
+    if log_path is not None:
+        _flush_round_log(project_dir, only=log_path)
     if post_issue_comments and issue_number is not None:
         try:
             IssueManager(project_dir).add_comment(issue_number, comment_body)

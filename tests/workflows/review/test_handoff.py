@@ -175,6 +175,67 @@ def test_flush_only_commits_just_the_log(
         assert any(r.levelno == logging.WARNING for r in caplog.records)
 
 
+def test_flush_only_refuses_when_index_holds_unrelated_entries(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A pre-staged file blocks the scoped commit instead of riding along.
+
+    ``commit_staged_files`` commits the whole index, so staging the round log on
+    top of someone else's staged work would commit it under "Add review round
+    log". The flush refuses and warns; the round log stays uncommitted, which
+    ``_attempt_rebase_and_push``'s tripwire then names.
+    """
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    stage = MagicMock(return_value=True)
+    commit_staged = MagicMock(return_value={"success": True, "commit_hash": "abc"})
+    monkeypatch.setattr(
+        handoff,
+        "get_full_status",
+        MagicMock(
+            return_value={
+                "staged": ["src/unrelated.py"],
+                "modified": [],
+                "untracked": [],
+            }
+        ),
+    )
+    monkeypatch.setattr(handoff, "stage_specific_files", stage)
+    monkeypatch.setattr(handoff, "commit_staged_files", commit_staged)
+
+    with caplog.at_level(logging.WARNING):
+        handoff._flush_round_log(tmp_path, only=log_path)
+
+    stage.assert_not_called()
+    commit_staged.assert_not_called()
+    assert "src/unrelated.py" in caplog.text
+
+
+def test_flush_only_proceeds_when_the_log_itself_is_already_staged(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The round log already sitting in the index is not an unrelated entry."""
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    commit_staged = MagicMock(return_value={"success": True, "commit_hash": "abc"})
+    monkeypatch.setattr(
+        handoff,
+        "get_full_status",
+        MagicMock(
+            return_value={
+                "staged": ["pr_info/plan_review_log_1.md"],
+                "modified": [],
+                "untracked": [],
+            }
+        ),
+    )
+    monkeypatch.setattr(handoff, "stage_specific_files", MagicMock(return_value=True))
+    monkeypatch.setattr(handoff, "commit_staged_files", commit_staged)
+    monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
+
+    handoff._flush_round_log(tmp_path, only=log_path)
+
+    commit_staged.assert_called_once()
+
+
 def test_flush_push_false_commits_without_pushing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -210,6 +271,7 @@ def test_route_flushes_comments_labels_returns_zero(
     routed: SimpleNamespace, tmp_path: Path
 ) -> None:
     """The full gated path: flush, post a comment, escalate label, return 0."""
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
     result = handoff._route_to_human(
         REVIEW_PLAN,
         tmp_path,
@@ -217,10 +279,11 @@ def test_route_flushes_comments_labels_returns_zero(
         update_issue_labels=True,
         post_issue_comments=True,
         comment_body="handing off",
+        log_path=log_path,
     )
 
     assert result == 0
-    routed.flush.assert_called_once_with(tmp_path)
+    routed.flush.assert_called_once_with(tmp_path, only=log_path)
     routed.issue_manager.return_value.add_comment.assert_called_once_with(
         42, "handing off"
     )
@@ -233,6 +296,7 @@ def test_route_skips_comment_when_gated_off(
     routed: SimpleNamespace, tmp_path: Path
 ) -> None:
     """With comments gated off, still flush + relabel but post no comment."""
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
     result = handoff._route_to_human(
         REVIEW_PLAN,
         tmp_path,
@@ -240,10 +304,11 @@ def test_route_skips_comment_when_gated_off(
         update_issue_labels=True,
         post_issue_comments=False,
         comment_body="handing off",
+        log_path=log_path,
     )
 
     assert result == 0
-    routed.flush.assert_called_once_with(tmp_path)
+    routed.flush.assert_called_once_with(tmp_path, only=log_path)
     routed.issue_manager.return_value.add_comment.assert_not_called()
     routed.update_workflow_label.assert_called_once()
 
@@ -259,6 +324,7 @@ def test_route_skips_comment_when_no_issue_number(
         update_issue_labels=True,
         post_issue_comments=True,
         comment_body="handing off",
+        log_path=tmp_path / "pr_info" / "plan_review_log_1.md",
     )
 
     assert result == 0
@@ -279,6 +345,7 @@ def test_route_comment_failure_is_best_effort(
         update_issue_labels=True,
         post_issue_comments=True,
         comment_body="handing off",
+        log_path=tmp_path / "pr_info" / "plan_review_log_1.md",
     )
 
     assert result == 0
@@ -296,10 +363,75 @@ def test_route_transitions_to_escalate_label_gated(
         update_issue_labels=False,
         post_issue_comments=True,
         comment_body="handing off",
+        log_path=tmp_path / "pr_info" / "plan_review_log_1.md",
     )
 
     assert result == 0
     routed.update_workflow_label.assert_not_called()
+
+
+def test_route_without_a_round_log_commits_nothing(
+    routed: SimpleNamespace, tmp_path: Path
+) -> None:
+    """``log_path=None`` means no round wrote a log, so nothing is committed."""
+    result = handoff._route_to_human(
+        REVIEW_PLAN,
+        tmp_path,
+        issue_number=42,
+        update_issue_labels=True,
+        post_issue_comments=True,
+        comment_body="handing off",
+        log_path=None,
+    )
+
+    assert result == 0
+    routed.flush.assert_not_called()
+    routed.update_workflow_label.assert_called_once()
+
+
+def test_route_leaves_unrelated_dirty_files_uncommitted(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The handoff lands the round log alone, never the tree that reached it.
+
+    The unresolved-rebase handoff is reached *because* the tree was dirty;
+    committing all of it here would push exactly what the rebase tripwire
+    refused to rebase over.
+    """
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    stage = MagicMock(return_value=True)
+    commit_staged = MagicMock(return_value={"success": True, "commit_hash": "abc"})
+    commit_all = MagicMock(return_value={"success": True, "commit_hash": "def"})
+    monkeypatch.setattr(
+        handoff,
+        "get_full_status",
+        MagicMock(
+            return_value={"staged": [], "modified": ["src/foo.py"], "untracked": []}
+        ),
+    )
+    monkeypatch.setattr(handoff, "stage_specific_files", stage)
+    monkeypatch.setattr(handoff, "commit_staged_files", commit_staged)
+    monkeypatch.setattr(handoff, "commit_all_changes", commit_all)
+    monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
+    monkeypatch.setattr(handoff, "IssueManager", MagicMock())
+    monkeypatch.setattr(handoff, "update_workflow_label", MagicMock(return_value=True))
+
+    assert (
+        handoff._route_to_human(
+            REVIEW_PLAN,
+            tmp_path,
+            issue_number=42,
+            update_issue_labels=True,
+            post_issue_comments=True,
+            comment_body="handing off",
+            log_path=log_path,
+        )
+        == 0
+    )
+
+    commit_all.assert_not_called()  # src/foo.py stays dirty
+    stage.assert_called_once_with([log_path], tmp_path)
+    commit_staged.assert_called_once()
 
 
 # --- _fail (details param) -------------------------------------------------
