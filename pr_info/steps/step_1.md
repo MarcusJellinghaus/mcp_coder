@@ -46,9 +46,10 @@ for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
     sha_before = get_latest_commit_sha(project_dir)   # NEVER before the flush
 ```
 
-New import in `handoff.py`, extending the existing shim import:
+New imports in `handoff.py`, one extending the existing shim import:
 
 ```python
+from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from mcp_coder.mcp_workspace_git import commit_all_changes, get_full_status
 ```
 
@@ -74,11 +75,24 @@ guard: commit **only** when the pending change set is exactly that one file, oth
 and leave the tree alone for step 2's rebase precondition guard to report.
 
 - Use `get_full_status(project_dir)` (already re-exported by `mcp_coder.mcp_workspace_git`); it
-  returns `{"staged": [...], "modified": [...], "untracked": [...]}` with paths **relative to
-  the project root**, and an empty dict for a non-repo.
+  returns `{"staged": [...], "modified": [...], "untracked": [...]}` with paths **relative to the
+  project root**. It never raises: a non-git-repo, and an unexpected git error, both yield
+  `{"staged": [], "modified": [], "untracked": []}` — all three keys always present, so they can
+  be indexed directly.
 - Compare the **union of all three lists** against `only`: the round log is a *modified*
   tracked file on a re-run but an *untracked* file the first time a run number is allocated, so
   both categories must count.
+- **Filter `DEFAULT_IGNORED_BUILD_ARTIFACTS` out of the union before comparing**, as
+  `workflows/implement/task_tracker_prep.py:111` does with the same constant. Without it a
+  regenerated `uv.lock` makes the flush refuse, leaving the round log uncommitted — and step 2's
+  guard would then be the only thing standing between that and the rebase. Sweeping `uv.lock` into
+  the round-log commit is the right trade: the repo already treats that file as noise everywhere
+  the constant appears, and `commit_all_changes` commits it alongside the log so the tree ends
+  clean and the rebase proceeds.
+- Note the asymmetry with step 2, which deliberately does **not** filter the constant: `only=`
+  decides *what may be swept into a round-log commit* (the list encodes "noise we are willing to
+  commit"), while step 2's guard decides *what git will refuse* (git has no notion of the list).
+  Different questions, hence different answers.
 - Normalise with `only.relative_to(project_dir).as_posix()`.
 
 ### `push=False` — the top-of-loop commit does not push
@@ -127,14 +141,15 @@ extended:
   the pending set is not just that file, and whenever `push=False`.
 
 Document the two new flags under `Args:` and keep the existing "best-effort, never raises"
-statement: `get_full_status` returns `{}` rather than raising for a non-repo, and the whole body
-stays inside the existing broad `try/except`.
+statement: `get_full_status` never raises — it returns
+`{"staged": [], "modified": [], "untracked": []}` for a non-repo — and the whole body stays inside
+the existing broad `try/except`.
 
 ### Test fixture
 
 `tests/workflows/review/conftest.py`'s `env` fixture must gain a `handoff.get_full_status` mock
 — without it the new `only=` check runs against the real (non-repo) `tmp_path`, `get_full_status`
-returns `{}`, and the top-of-loop flush would silently never commit in any test:
+reports nothing pending, and the top-of-loop flush would silently never commit in any test:
 
 ```python
 mocks.get_full_status = MagicMock(
@@ -152,9 +167,10 @@ That path is what the lane actually writes: `REVIEW_IMPLEMENTATION.log_stem` is
 override the return value.
 
 `tests/workflows/review/test_core.py` defines its **own** duplicate `env` fixture and `_run`
-(plan lane) and does not need the mock: with `get_full_status` unpatched the guard simply
-refuses, which changes none of its assertions (every flush assertion there is
-`assert_called()`, satisfied by the terminal flush). Leave that file untouched.
+(plan lane) and does not need the mock: with `get_full_status` unpatched it reports nothing
+pending on `tmp_path`, so the scoped flush takes its "nothing pending" no-op branch, which changes
+none of its assertions (every flush assertion there is `assert_called()`, satisfied by the
+terminal flush). Leave that file untouched.
 
 ## ALGORITHM
 
@@ -162,7 +178,9 @@ refuses, which changes none of its assertions (every flush assertion there is
 
 ```
 if only is not None:
+    status = get_full_status(project_dir)   # never raises; all three keys always present
     pending = set(status["staged"] + status["modified"] + status["untracked"])
+    pending -= set(DEFAULT_IGNORED_BUILD_ARTIFACTS)   # a regenerated uv.lock is not "dirt"
     rel = only.relative_to(project_dir).as_posix()
     if pending == set():        debug("nothing pending"); return
     if pending != {rel}:        warn("unexpected pending changes besides the round log - "
@@ -201,6 +219,9 @@ for each round:
 - A round whose tree carries unrelated dirt is *not* repaired: the round proceeds, and its
   rebase attempt is refused by step 2's guard with a warning naming the cause. That is the
   intended loud failure, not a regression.
+- `DEFAULT_IGNORED_BUILD_ARTIFACTS` does not count as unrelated dirt here: a pending set of the
+  round log plus a regenerated `uv.lock` still commits (both files, since `commit_all_changes`
+  commits everything), leaving the tree clean for the rebase.
 
 ## TDD
 
@@ -209,11 +230,15 @@ for each round:
    `push_changes` to a `MagicMock`. Call with no `only=`. Assert `push.assert_not_called()` and
    that no `logging.WARNING` record was emitted (this is what distinguishes the new quiet path
    from the existing `success: False` path, which does warn).
-2. `test_flush_only_refuses_unrelated_dirt` — patch `handoff.get_full_status` to report the log
-   file **and** `src/foo.py` as modified; call `_flush_round_log(tmp_path, only=log_path)`.
-   Assert `commit_all_changes.assert_not_called()`, `push.assert_not_called()` and that a
-   `logging.WARNING` was emitted. Add the mirror assertion in the same test or a parametrised
-   case: with only the log file pending, the commit **is** made.
+2. `test_flush_only_refuses_unrelated_dirt` — parametrise `handoff.get_full_status` over three
+   pending sets and call `_flush_round_log(tmp_path, only=log_path)` for each:
+
+   - log file **plus** `src/foo.py` modified → `commit_all_changes.assert_not_called()`,
+     `push.assert_not_called()`, and a `logging.WARNING` was emitted.
+   - log file alone → the commit **is** made.
+   - log file **plus** `uv.lock` modified → the commit **is** made and no `logging.WARNING` was
+     emitted. This pins the `DEFAULT_IGNORED_BUILD_ARTIFACTS` filtering: without it the flush
+     would refuse and leave the round log uncommitted for the next rebase, which is the bug.
 3. `test_tasks_round_flushes_log_before_next_round_rebase` — drive a two-round run, round 1
    `tasks` (three `prompt_llm` responses: reviewer, `_TASKS`, reviewer resume) then round 2
    `dismiss` (two: reviewer, `_DISMISS`), and record how many commits had happened at each
@@ -280,6 +305,11 @@ Then the full unit suite, then **one commit** for this step.
 > behaviour. `only=` uses `get_full_status` (via the `mcp_coder.mcp_workspace_git` shim) to
 > commit **only** when the sole pending change is that one file — refusing with a warning
 > otherwise, so an arbitrarily dirty tree is never committed under "Add review round log".
+> Subtract `DEFAULT_IGNORED_BUILD_ARTIFACTS` (from `mcp_coder.constants`) from the pending set
+> before that comparison, as `workflows/implement/task_tracker_prep.py:111` does: otherwise a
+> regenerated `uv.lock` makes the flush refuse and leaves the round log uncommitted for the next
+> rebase, which is the bug this step fixes. Step 2's guard deliberately does *not* filter that
+> list — it answers "what will git refuse", not "what may be swept into this commit".
 > Also skip the push when `commit_all_changes` reports `commit_hash is None`, and when
 > `push=False`. **Rewrite** the function's docstring: it is no longer only the terminal paths
 > that call it, and the push is no longer skipped only when the commit failed.
