@@ -39,5 +39,5 @@ Details: [step_2.md](./steps/step_2.md)
 
 ## Pull Request
 
-- [ ] Review PR changes
+- [x] Review PR changes
 - [ ] Create PR summary
