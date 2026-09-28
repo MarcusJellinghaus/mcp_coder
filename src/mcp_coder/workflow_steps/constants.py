@@ -34,6 +34,14 @@ LLM_INACTIVITY_TIMEOUT_SECONDS = 600
 LLM_CI_ANALYSIS_TIMEOUT_SECONDS = 300  # 5 minutes of silence for CI failure analysis
 CI_POLL_INTERVAL_SECONDS = 15  # Poll CI status every 15 seconds
 CI_MAX_POLL_ATTEMPTS = 50  # Max 50 attempts = 12.5 minutes max wait
+# Separate, much smaller budget for "the newest run is still the *previous*
+# commit's" (see _poll_for_ci_completion's expected_sha). That gap is GitHub's
+# run-registration latency - seconds, not minutes - so when no run appears for
+# the pushed commit at all (no workflow triggered for it, or another actor
+# pushed past it) the poll gives up here instead of burning the full
+# CI_MAX_POLL_ATTEMPTS on a wait that cannot succeed.
+# The sleep follows each non-final attempt, so 8 attempts wait 7 intervals.
+CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS = 8  # Max 8 attempts = ~105 seconds max wait
 CI_MAX_FIX_ATTEMPTS = 4  # Max 4 fix attempts before giving up
 CI_NEW_RUN_POLL_INTERVAL_SECONDS = 5  # Poll for new CI run every 5 seconds
 CI_NEW_RUN_MAX_POLL_ATTEMPTS = 6  # Max 6 attempts = 30 seconds to detect new run

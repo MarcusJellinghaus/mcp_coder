@@ -34,6 +34,7 @@ from mcp_coder.workflow_steps.commit import (
 )
 
 from .constants import (
+    CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
     CI_MAX_FIX_ATTEMPTS,
     CI_MAX_POLL_ATTEMPTS,
     CI_NEW_RUN_MAX_POLL_ATTEMPTS,
@@ -261,13 +262,25 @@ def _run_ci_fix(
 
 
 def _poll_for_ci_completion(
-    ci_manager: CIResultsManager, branch: str
+    ci_manager: CIResultsManager,
+    branch: str,
+    expected_sha: Optional[str] = None,
 ) -> tuple[Optional[CIStatusData], bool]:
     """Poll for CI run completion.
 
     Args:
         ci_manager: CIResultsManager instance
         branch: Branch name to check
+        expected_sha: Commit the caller just pushed. ``get_latest_ci_status``
+            answers "the newest run on this branch", which for the first
+            seconds after a push is still the *previous* commit's run — reading
+            its green conclusion would declare a commit CI never saw green. When
+            given, a run for any other commit counts as "no run yet" and polling
+            continues — bounded by ``CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS`` rather
+            than the full poll cap, since the run-registration gap is seconds
+            and a run that never appears for this commit would otherwise stall
+            the caller for the whole cap. Omit it (the default) to accept
+            whichever run is newest, as callers that did not just push should.
 
     Returns:
         Tuple of (ci_status dict or None, success bool).
@@ -276,6 +289,9 @@ def _poll_for_ci_completion(
     """
     poll_start_time = time.time()
     heartbeat_iteration_interval = 8  # ~2min at 15s intervals
+    # Attempts spent looking at a run for some *other* commit; bounded
+    # separately from the overall cap (see CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS).
+    other_commit_attempts = 0
 
     for poll_attempt in range(CI_MAX_POLL_ATTEMPTS):
         try:
@@ -291,15 +307,46 @@ def _poll_for_ci_completion(
         elapsed = time.time() - poll_start_time
         elapsed_min, elapsed_sec = divmod(int(elapsed), 60)
 
-        if len(run_info) == 0:
-            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1:
+        observed_sha = run_info.get("commit_sha")
+        # A run that reports no SHA cannot be correlated, so it is accepted
+        # rather than blocking the poll until the cap.
+        is_other_commit = (
+            expected_sha is not None
+            and observed_sha is not None
+            and observed_sha != expected_sha
+        )
+
+        if is_other_commit:
+            other_commit_attempts += 1
+
+        if len(run_info) == 0 or is_other_commit:
+            budget_spent = other_commit_attempts >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1 and not (
+                is_other_commit and budget_spent
+            ):
+                waiting_for = (
+                    f"Latest CI run is for {_short_sha(observed_sha or 'unknown')}, "
+                    f"waiting for {_short_sha(expected_sha or 'unknown')}"
+                    if is_other_commit
+                    else "No CI run found yet"
+                )
                 logger.debug(
-                    f"No CI run found yet (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS}, "
+                    f"{waiting_for} (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS}, "
                     f"elapsed: {elapsed_min}m {elapsed_sec}s)"
                 )
                 time.sleep(CI_POLL_INTERVAL_SECONDS)
                 continue
-            logger.info("CI_NOT_CONFIGURED: No workflow runs found - skipping CI check")
+            if is_other_commit:
+                logger.info(
+                    "CI_TIMEOUT: No CI run appeared for %s after %d attempts "
+                    "- skipping CI check",
+                    _short_sha(expected_sha or "unknown"),
+                    other_commit_attempts,
+                )
+            else:
+                logger.info(
+                    "CI_NOT_CONFIGURED: No workflow runs found - skipping CI check"
+                )
             return None, True  # Graceful exit
 
         run_status = run_info.get("status")
@@ -481,6 +528,7 @@ def check_and_fix_ci(
     analysis_prompt_header: str = "CI Failure Analysis Prompt",
     fix_prompt_header: str = "CI Fix Prompt",
     session_dir_name: str = "implement_sessions",
+    expected_sha: Optional[str] = None,
 ) -> bool:
     """Check CI status after finalisation and attempt fixes if needed.
 
@@ -497,6 +545,11 @@ def check_and_fix_ci(
             implement's "CI Fix Prompt".
         session_dir_name: Sub-directory under ``.mcp-coder`` where analysis/fix
             sessions are stored. Defaults to implement's "implement_sessions".
+        expected_sha: Commit the caller just pushed, if any. Gates the *initial*
+            poll so the previous commit's completed run cannot be read as this
+            one's result (see :func:`_poll_for_ci_completion`). The fix loop's
+            own pushes are tracked by run id instead, via
+            :func:`_wait_for_new_ci_run`, so this applies to the first poll only.
 
     Returns:
         True if CI passes or on API errors (exit 0 scenarios)
@@ -532,7 +585,7 @@ def check_and_fix_ci(
 
     # Phase 1: Poll for CI completion
     logger.info("Polling for CI completion...")
-    ci_status, ci_passed = _poll_for_ci_completion(ci_manager, branch)
+    ci_status, ci_passed = _poll_for_ci_completion(ci_manager, branch, expected_sha)
 
     if ci_status is None or ci_passed:
         return True  # Graceful exit or CI passed

@@ -15,6 +15,10 @@ from mcp_coder.workflow_steps.ci import (
     _run_ci_analysis,
     _run_ci_fix,
 )
+from mcp_coder.workflow_steps.constants import (
+    CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
+    CI_MAX_POLL_ATTEMPTS,
+)
 
 
 class TestPollForCiCompletionHeartbeat:
@@ -187,6 +191,126 @@ class TestPollForCiCompletionHeartbeat:
             r for r in caplog.records if "CI polling heartbeat" in r.message
         ]
         assert len(heartbeat_logs) == 2  # Fires at iterations 8 and 16
+
+
+class TestPollForCiCompletionShaCorrelation:
+    """``expected_sha`` pins the poll to the commit the caller just pushed."""
+
+    @staticmethod
+    def _run(status: str, sha: str, conclusion: str | None = None) -> Dict[str, Any]:
+        """Build one ``get_latest_ci_status`` payload."""
+        return {
+            "run": {
+                "status": status,
+                "conclusion": conclusion,
+                "run_ids": [1],
+                "commit_sha": sha,
+            },
+            "jobs": [],
+        }
+
+    def test_green_run_for_an_earlier_commit_is_not_accepted(self) -> None:
+        """The previous commit's completed green is skipped, not returned.
+
+        For the first seconds after a push GitHub has not registered a run for
+        the new commit yet, so "latest run on this branch" still answers with
+        the old one. Taking its conclusion would mark the pushed commit green
+        without CI ever having seen it.
+        """
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = [
+            self._run("completed", "OLDSHA", conclusion="success"),
+            self._run("queued", "NEWSHA"),
+            self._run("completed", "NEWSHA", conclusion="success"),
+        ]
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            status, passed = _poll_for_ci_completion(
+                mock_ci_manager, "main", expected_sha="NEWSHA"
+            )
+
+        assert passed is True
+        assert status is not None
+        assert status["run"]["commit_sha"] == "NEWSHA"
+        assert mock_ci_manager.get_latest_ci_status.call_count == 3
+
+    def test_red_run_for_an_earlier_commit_is_not_accepted_either(self) -> None:
+        """A stale *failure* is skipped too - it is not this commit's result."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = [
+            self._run("completed", "OLDSHA", conclusion="failure"),
+            self._run("completed", "NEWSHA", conclusion="success"),
+        ]
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            status, passed = _poll_for_ci_completion(
+                mock_ci_manager, "main", expected_sha="NEWSHA"
+            )
+
+        assert passed is True
+        assert status is not None
+        assert status["run"]["commit_sha"] == "NEWSHA"
+
+    def test_without_expected_sha_the_newest_run_still_wins(self) -> None:
+        """Callers that did not just push keep today's behaviour."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = [
+            self._run("completed", "OLDSHA", conclusion="success"),
+        ]
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+
+        assert passed is True
+        assert status is not None
+        assert status["run"]["commit_sha"] == "OLDSHA"
+
+    def test_expected_sha_that_never_appears_gives_up_on_its_own_budget(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A run that never appears costs ~105 seconds, not the full 12.5 minutes.
+
+        No workflow triggered for the pushed commit (or another actor pushed
+        past it) means the branch's newest run stays someone else's forever.
+        Waiting out ``CI_MAX_POLL_ATTEMPTS`` for it would stall every caller,
+        including ``implement``; the dedicated budget bounds it instead.
+        """
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = self._run(
+            "completed", "OLDSHA", conclusion="success"
+        )
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(
+                    mock_ci_manager, "main", expected_sha="NEWSHA"
+                )
+
+        assert status is None
+        assert passed is True  # graceful exit, not a failure
+        assert "No CI run appeared for" in caplog.text
+        assert (
+            mock_ci_manager.get_latest_ci_status.call_count
+            == CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+        )
+        assert CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS < CI_MAX_POLL_ATTEMPTS
+
+    def test_a_run_without_a_sha_is_accepted(self) -> None:
+        """An uncorrelatable run is used rather than polled past to the cap."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {
+            "run": {"status": "completed", "conclusion": "success", "run_ids": [1]},
+            "jobs": [],
+        }
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            status, passed = _poll_for_ci_completion(
+                mock_ci_manager, "main", expected_sha="NEWSHA"
+            )
+
+        assert passed is True
+        assert status is not None
+        assert mock_ci_manager.get_latest_ci_status.call_count == 1
 
 
 def _make_config() -> CIFixConfig:

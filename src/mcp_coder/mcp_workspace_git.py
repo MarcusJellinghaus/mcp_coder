@@ -65,7 +65,10 @@ from mcp_workspace.git_operations.repository_status import (
 )
 
 # Staging
-from mcp_workspace.git_operations.staging import stage_all_changes
+from mcp_workspace.git_operations.staging import (
+    stage_all_changes,
+    stage_specific_files,
+)
 
 # Verification
 from mcp_workspace.git_operations.verification import verify_git
@@ -98,6 +101,7 @@ __all__ = [
     "push_branch",
     "rebase_onto_branch",
     "stage_all_changes",
+    "stage_specific_files",
     "commit_all_changes",
     "needs_rebase",
     "MERGE_BASE_DISTANCE_THRESHOLD",

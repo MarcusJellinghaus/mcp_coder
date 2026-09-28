@@ -124,7 +124,23 @@ def run_review_workflow(
                 elapsed=time.time() - start_time,
             )
 
+        # The successful-`tasks` path at the bottom of the loop leaves its
+        # round-log write uncommitted; the next iteration lands it (see below).
+        pending_log: Path | None = None
+
         for round_number in range(1, REVIEW_MAX_ROUNDS + 1):
+            if pending_log is not None:
+                # Land the previous round's log write before anything in this
+                # round can trip over it — a rebase attempt refuses on unstaged
+                # changes. Scoped to that one file so unrelated dirt is never
+                # swept in, and push-free because this round's own push carries
+                # it. Must stay ABOVE `sha_before`: a flush that commits
+                # something would otherwise advance HEAD past the captured SHA
+                # and the round's applied/no-op label would always read
+                # "applied".
+                _flush_round_log(project_dir, only=pending_log, push=False)
+                pending_log = None
+
             sha_before = get_latest_commit_sha(project_dir)
 
             # PR review feedback (implementation lane only): fetch fresh
@@ -280,7 +296,7 @@ def run_review_workflow(
                 if reason is None and config.enforce_implementation_gates:
                     reason, details = check_ci_proven_gate(project_dir)
                 if reason == "rebase":
-                    write_round_log(
+                    log_path = write_round_log(
                         project_dir,
                         config,
                         run_number,
@@ -299,6 +315,7 @@ def run_review_workflow(
                         comment_body=(
                             "Branch could not be rebased cleanly — handing off."
                         ),
+                        log_path=log_path,
                     )
                 if reason:
                     # Terminal dismiss-gate failure (after-steps or Gate 2):
@@ -341,7 +358,7 @@ def run_review_workflow(
                 return 0
 
             if verdict.decision == "escalate":
-                write_round_log(
+                log_path = write_round_log(
                     project_dir,
                     config,
                     run_number,
@@ -361,6 +378,7 @@ def run_review_workflow(
                         f"{config.name} review escalated to a human: "
                         f"{verdict.escalate_reason}"
                     ),
+                    log_path=log_path,
                 )
 
             # decision == "tasks": resume the reviewer to apply the fixes.
@@ -514,7 +532,7 @@ def run_review_workflow(
                 is_dismiss=False,
             )
             if reason == "rebase":
-                write_round_log(
+                log_path = write_round_log(
                     project_dir,
                     config,
                     run_number,
@@ -531,6 +549,7 @@ def run_review_workflow(
                     update_issue_labels=update_issue_labels,
                     post_issue_comments=post_issue_comments,
                     comment_body=("Branch could not be rebased cleanly — handing off."),
+                    log_path=log_path,
                 )
             if reason == "ci":
                 # Mid-loop red CI is a finding, not a terminal failure: carry it
@@ -572,7 +591,9 @@ def run_review_workflow(
             changed = get_latest_commit_sha(
                 project_dir
             ) != sha_before or not is_working_directory_clean(project_dir)
-            write_round_log(
+            # Left uncommitted on purpose: the top of the next iteration lands
+            # it, and every terminal path flushes its own write.
+            pending_log = write_round_log(
                 project_dir,
                 config,
                 run_number,
@@ -588,7 +609,8 @@ def run_review_workflow(
             # A still-open CI finding keeps the cap terminal (17f-ci): flush the
             # last round's log (best-effort, mirroring the commit/push-failed
             # paths) then fail, so the round still lands in the committed log.
-            _flush_round_log(project_dir)
+            if pending_log is not None:
+                _flush_round_log(project_dir, only=pending_log)
             return _fail(
                 config,
                 project_dir,
@@ -614,6 +636,7 @@ def run_review_workflow(
                 f"({REVIEW_MAX_ROUNDS} rounds) without converging — handing off "
                 f"for human review."
             ),
+            log_path=pending_log,
         )
 
     return run_guarded(

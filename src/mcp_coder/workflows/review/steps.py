@@ -18,6 +18,7 @@ from pathlib import Path
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
+    get_latest_commit_sha,
 )
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
@@ -74,7 +75,8 @@ def _after_steps(
        ``"rebase"``, which the caller routes to a needs-human handoff
        (``07:code-review``) — never a success and never a failure label.
     2. **CI gate:** ``check_and_fix_ci`` runs its own retries (reusing
-       ``implement``'s prompt headers, overriding only ``session_dir_name``). A
+       ``implement``'s prompt headers, overriding ``session_dir_name`` and
+       pinning the first poll to the SHA the rebase step just pushed). A
        green result returns ``None``. A red result returns ``"ci"``: on the
        final dismiss gate (``is_dismiss``) the caller treats that as a terminal
        ``17f-ci`` failure; mid-loop the caller instead carries it forward as a
@@ -115,6 +117,13 @@ def _after_steps(
     branch = get_current_branch_name(project_dir)
     if not branch:
         return None
+    # The rebase step just pushed local HEAD - including the round-log commit
+    # the loop lands at its entry, which on a dismiss round is the only thing
+    # pushed. Correlate the CI poll with that SHA: the newest run on the branch
+    # is still the *previous* commit's for the first seconds after a push, and
+    # taking its green would hand check_ci_proven_gate a branch whose newest run
+    # is the queued one it reads as PENDING -> "ci_unknown".
+    pushed_sha = get_latest_commit_sha(project_dir)
     try:
         ci_ok = check_and_fix_ci(
             project_dir=project_dir,
@@ -123,6 +132,7 @@ def _after_steps(
             mcp_config=mcp_config,
             settings_file=settings_file,
             session_dir_name=config.session_dir_name,
+            expected_sha=pushed_sha,
         )
     except Exception as exc:  # pylint: disable=broad-exception-caught
         return llm_failure_reason(exc) or "general"

@@ -91,17 +91,44 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(
         steps, "get_current_branch_name", MagicMock(return_value="1072-review")
     )
+    # The SHA _after_steps pins the CI poll to (the commit the rebase pushed).
+    mocks.steps_get_latest_commit_sha = MagicMock(return_value="PUSHEDSHA")
+    monkeypatch.setattr(
+        steps, "get_latest_commit_sha", mocks.steps_get_latest_commit_sha
+    )
     mocks.issue_manager = MagicMock(name="IssueManager")
     monkeypatch.setattr(handoff, "IssueManager", mocks.issue_manager)
 
-    # Terminal-path log flush (handoff._flush_round_log commit + push): mocked so
-    # the flush never touches real git; tests assert the commit fired.
+    # Whole-tree log flush (handoff._flush_round_log commit + push, used by the
+    # _fail paths): mocked so the flush never touches real git; tests assert the
+    # commit fired.
     mocks.commit_all_changes = MagicMock(
         return_value={"success": True, "commit_hash": "FLUSHSHA"}
     )
     monkeypatch.setattr(handoff, "commit_all_changes", mocks.commit_all_changes)
     mocks.flush_push = MagicMock(return_value=True)
     monkeypatch.setattr(handoff, "push_changes", mocks.flush_push)
+
+    # Scoped log flush (handoff._flush_round_log with only=, used by the
+    # top-of-loop flush and _route_to_human): without these it would run against
+    # the non-repo tmp_path, where stage_specific_files returns False and
+    # nothing is ever committed. An empty index means no unrelated staged entry
+    # blocks the scoped commit.
+    mocks.handoff_get_full_status = MagicMock(
+        return_value={"staged": [], "modified": [], "untracked": []}
+    )
+    monkeypatch.setattr(handoff, "get_full_status", mocks.handoff_get_full_status)
+    mocks.stage_specific_files = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "stage_specific_files", mocks.stage_specific_files)
+    mocks.commit_staged_files = MagicMock(
+        return_value={
+            "success": True,
+            "commit_hash": "LOGSHA",
+            "error": None,
+            "error_category": None,
+        }
+    )
+    monkeypatch.setattr(handoff, "commit_staged_files", mocks.commit_staged_files)
 
     mocks.update_workflow_label = MagicMock(return_value=True)
     monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
