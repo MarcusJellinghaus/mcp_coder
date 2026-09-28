@@ -268,7 +268,7 @@ class TestPollForCiCompletionShaCorrelation:
     def test_expected_sha_that_never_appears_gives_up_on_its_own_budget(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """A run that never appears costs ~2 minutes, not the full 12.5.
+        """A run that never appears costs ~105 seconds, not the full 12.5 minutes.
 
         No workflow triggered for the pushed commit (or another actor pushed
         past it) means the branch's newest run stays someone else's forever.
