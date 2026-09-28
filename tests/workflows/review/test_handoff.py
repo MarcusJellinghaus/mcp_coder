@@ -340,6 +340,123 @@ def test_commit_only_path_returns_a_short_commit_hash(
     assert result["commit_hash"] == "0123456"
 
 
+def test_flush_only_unstages_the_log_when_the_commit_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A failed ``only=`` commit restores the log's index entry.
+
+    Leaving it staged would be worse than not flushing at all: an untracked log
+    does not stop a rebase, a staged one does.
+    """
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    execute = MagicMock(
+        return_value=SimpleNamespace(
+            return_code=0, stdout="", stderr="", execution_error=None
+        )
+    )
+    monkeypatch.setattr(
+        handoff,
+        "get_full_status",
+        MagicMock(return_value={"staged": [], "modified": [], "untracked": []}),
+    )
+    monkeypatch.setattr(handoff, "stage_specific_files", MagicMock(return_value=True))
+    monkeypatch.setattr(
+        handoff,
+        "commit_staged_files",
+        MagicMock(return_value={"success": False, "error": "gpg failed to sign"}),
+    )
+    monkeypatch.setattr(handoff, "execute_command", execute)
+    push = MagicMock(return_value=True)
+    monkeypatch.setattr(handoff, "push_changes", push)
+
+    handoff._flush_round_log(tmp_path, only=log_path)
+
+    assert execute.call_args.args[0] == [
+        "git",
+        "reset",
+        "-q",
+        "HEAD",
+        "--",
+        "pr_info/plan_review_log_1.md",
+    ]
+    push.assert_not_called()
+
+
+def test_unstage_failure_warns_without_raising(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The restore is best-effort: a failing reset warns and never raises."""
+    monkeypatch.setattr(
+        handoff,
+        "execute_command",
+        MagicMock(
+            return_value=SimpleNamespace(
+                return_code=128,
+                stdout="",
+                stderr="fatal: ambiguous argument 'HEAD'",
+                execution_error=None,
+            )
+        ),
+    )
+
+    with caplog.at_level(logging.WARNING):
+        handoff._unstage_path(tmp_path / "pr_info" / "plan_review_log_1.md", tmp_path)
+
+    assert "ambiguous argument" in caplog.text
+
+
+@pytest.mark.git_integration
+def test_failed_flush_leaves_the_log_unstaged_and_others_staged(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Against a real repo: a failed ``only=`` flush adds no blocking state.
+
+    The round-log path must end up untracked again — as it was before the
+    flush — while the unrelated entry that sent the commit down the pathspec
+    route stays staged.
+    """
+    repo = Repo.init(tmp_path)
+    with repo.config_writer() as config:
+        config.set_value("user", "name", "Test User")
+        config.set_value("user", "email", "test@example.com")
+        config.set_value("commit", "gpgsign", "false")
+    (tmp_path / "README.md").write_bytes(b"# Test\n")
+    repo.index.add(["README.md"])
+    repo.index.commit("Initial commit")
+
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "unrelated.py").write_bytes(b"x = 1\n")
+    repo.index.add(["src/unrelated.py"])
+    repo.index.write()
+
+    log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
+    log_path.parent.mkdir()
+    log_path.write_bytes(b"## Round 3\n")
+
+    # Stands in for the hook rejection / signing failure the fix is about; the
+    # staging before it and the unstaging after it are the real thing.
+    monkeypatch.setattr(
+        handoff,
+        "_commit_only_path",
+        MagicMock(
+            return_value={
+                "success": False,
+                "commit_hash": None,
+                "error": "pre-commit hook rejected the commit",
+                "error_category": "commit_failed",
+            }
+        ),
+    )
+    monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
+
+    handoff._flush_round_log(tmp_path, only=log_path)
+
+    status = get_full_status(tmp_path)
+    assert status["staged"] == ["src/unrelated.py"]
+    assert "pr_info/plan_review_log_1.md" in status["untracked"]
+    assert log_path.read_bytes() == b"## Round 3\n"
+
+
 def test_flush_only_proceeds_when_the_log_itself_is_already_staged(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

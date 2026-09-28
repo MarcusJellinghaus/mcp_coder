@@ -237,6 +237,47 @@ def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResu
     }
 
 
+def _unstage_path(only: Path, project_dir: Path) -> None:
+    """Drop one path's index entry again after a failed flush; best-effort.
+
+    A failed ``only=`` commit would otherwise leave the round log *staged*,
+    which is strictly more blocking than the state the flush found: on a run's
+    first flush the log is untracked, and ``git rebase`` tolerates untracked
+    files, while ``_has_uncommitted_tracked_changes`` refuses on a staged
+    entry. So a failed flush would turn a rebase that would have succeeded into
+    a needs-human handoff.
+
+    ``git reset HEAD -- <path>`` restores that one index entry from HEAD and
+    touches nothing else: a previously untracked log becomes untracked again,
+    and a tracked-and-modified log keeps its working-tree modification (which
+    blocks a rebase either way — the goal is only not to *add* blocking state).
+    Other staged entries are left alone, which is the whole point of the
+    pathspec route. mcp-workspace exposes no unstage operation, so this takes
+    the same escape hatch as :func:`_commit_only_path`.
+
+    Args:
+        only: The round-log path whose index entry should be restored.
+        project_dir: Repository root; the reset runs here.
+    """
+    relative = _relative_to_project(only, project_dir)
+    if relative is None:
+        return
+    result = execute_command(
+        ["git", "reset", "-q", "HEAD", "--", relative], cwd=str(project_dir)
+    )
+    if result.return_code != 0:
+        reported = [
+            part.strip()
+            for part in (result.stderr, result.stdout, result.execution_error)
+            if part and part.strip()
+        ]
+        logger.warning(
+            "Could not unstage the round log %s after the failed commit: %s",
+            relative,
+            "; ".join(reported) or f"git reset exited {result.return_code}",
+        )
+
+
 def _flush_round_log(
     project_dir: Path,
     message: str = "Add review round log",
@@ -257,6 +298,10 @@ def _flush_round_log(
     The push is skipped when the commit failed, when it succeeded but committed
     nothing (``commit_hash is None``), when ``only=`` could not be committed,
     and whenever ``push=False``.
+
+    A failed ``only=`` commit also has its index entry restored
+    (:func:`_unstage_path`), so the failed flush leaves the tree no more
+    blocking to the next rebase than it found it.
 
     Every git call reports failure by return value rather than by raising
     (``stage_specific_files``/``push_changes`` return ``bool``;
@@ -305,6 +350,11 @@ def _flush_round_log(
                 "Round-log commit did not succeed: %s",
                 result.get("error") or "unknown error",
             )
+            if only is not None:
+                # The log is staged but uncommitted, which blocks the next
+                # round's rebase harder than the untracked file this started
+                # from; see _unstage_path.
+                _unstage_path(only, project_dir)
             return
         if result["commit_hash"] is None:
             logger.debug("Round-log commit had nothing to commit")
