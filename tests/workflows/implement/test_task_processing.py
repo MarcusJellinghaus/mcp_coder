@@ -250,6 +250,26 @@ class TestBlockedExitInPrompts:
         )
         assert "unless something blocks you" in gate
 
+    def test_blocked_file_is_the_only_report_channel(self) -> None:
+        """The blocked bullet claims exclusivity, so prose is not a report."""
+        prompt_template = get_prompt(
+            str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker"
+        )
+
+        bullet = next(b for b in prompt_template.split("\n- ") if BLOCKED_FILE in b)
+        assert "ONLY" in bullet
+        assert "stop and report" not in prompt_template
+
+    def test_plan_creation_prompt_offers_blocked_exit(self) -> None:
+        """Generated step preconditions must point at the marker file."""
+        prompt_template = get_prompt(
+            str(PROMPTS_FILE_PATH), "Implementation Plan Creation"
+        )
+
+        assert BLOCKED_FILE in prompt_template
+        # The prompt quotes the phrase once, as the thing never to write.
+        assert "stop and report" not in prompt_template.replace('"stop and report"', "")
+
 
 class TestCheckAndFixMypy:
     """Test check_and_fix_mypy function."""

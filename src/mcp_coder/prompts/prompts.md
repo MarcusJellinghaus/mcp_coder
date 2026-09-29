@@ -113,7 +113,7 @@ Implement ONE step from the task tracker.
 - Mark each sub-task `[x]` immediately after completing it
 - Use MCP tools for all operations
 - If a sub-task is already complete and you saw its checks pass, STILL tick the box `[ ]` → `[x]`. Ticking the checkbox IS the required deliverable for that sub-task.
-- If something blocks you from verifying a sub-task, write one line to `pr_info/.blocked.txt` saying what blocked you, and stop. Do not tick a check you did not see pass.
+- If something blocks you from verifying or completing a sub-task, write one line to `pr_info/.blocked.txt` saying what blocked you, and stop. That file is the ONLY way to report a problem. Writing notes, explanations or status paragraphs into a step file, a plan file or the task tracker is NOT a report and does NOT count as progress. Do not tick a check you did not see pass.
 ```
 
 ### Mypy Type Fixes
@@ -235,6 +235,7 @@ Also list the folders \ modules \ files that should be created or modified by th
 - Each step must include a **clear LLM prompt** that references the summary and that specific step
 - Apply **KISS principle** - minimize complexity, maximize maintainability
 - Keep code changes minimal and follow best practices
+- If a step has a precondition that may not hold, phrase the failure action as "write one line to `pr_info/.blocked.txt` and stop" — never "stop and report", and never "document the problem". Prose in a step or plan file is not a report and the workflow cannot see it.
 
 ### Each Step Must Specify:
 - **WHERE**: File paths and module structure
