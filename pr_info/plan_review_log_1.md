@@ -51,3 +51,31 @@ I'll gather context first.`pr_info/steps/step_4.md:127` — high — The autouse
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_4.md, extend the autouse _count_incomplete_tasks fixture (or add an equivalent) to test_task_progress_gate.py so Step 3\'s prompt-assembly test at step_3.md:128, which patches only prompt_llm/get_next_task, does not hit the new real before-read and return "error" before the LLM call — Step 4 must land with checks green.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 4 — 2026-09-29
+**Findings**:
+I'll gather context now.`pr_info/steps/step_4.md:20` — high — `_count_incomplete_tasks` is specified only by signature and docstring; the plan never states it must reproduce `get_next_task`'s path derivation (`get_incomplete_tasks(str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True)`). A literal implementation passing `project_dir` reads the wrong directory and raises on every round, turning every production round into `"error"`. (Raised round 3, not applied.)
+
+`pr_info/steps/step_4.md:101` — high — No planned test exercises the real `_count_incomplete_tasks`: tests 1–8 patch it, and both autouse fixtures patch it everywhere else. The one genuinely new function in the change — its path derivation and its `exclude_meta_tasks=True` flag — is covered by nothing, so the failure mode above ships green.
+
+`pr_info/steps/step_4.md:112` — medium — Tests 4 and 5/6/7 both drive failures through patched objects, but the plan never says which of the two `_count_incomplete_tasks` reads a given `side_effect` element or exception belongs to when `get_next_task` is separately patched; test 4 ("after-read raises") is unimplementable as written without that mapping. (Raised round 3, not applied.)
+
+`pr_info/steps/summary.md:104` — medium — The Modified table attributes `test_task_processing.py` changes to Step 4 only, but Step 5 also edits that file (`TestBlockedExitInPrompts`, `step_5.md:59`); the file-to-step mapping is incomplete.
+
+`pr_info/steps/step_4.md:24` — low — `get_next_task`'s docstring contract changes from "returns None on error" to "propagates" with no `Raises:`, and the exhaustive `Returns:` reason enumerations in `process_single_task` (`task_processing.py:369-377`) and `process_task_with_retry` (`:566-570`) are not updated for `no_progress` / `no_progress_after_retries`. (Raised rounds 1–3, not applied.)
+**Decisions**:
+Verdict(decision='tasks', tasks=['In pr_info/steps/step_4.md:20, specify _count_incomplete_tasks\'s implementation explicitly: it must call get_incomplete_tasks(str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True), matching get_next_task\'s path derivation, so a literal implementation does not read the wrong directory and turn every round into "error".', 'In pr_info/steps/step_4.md, add a test that exercises the real _count_incomplete_tasks (unpatched) against a temporary pr_info directory, asserting both the path derivation and that meta tasks are excluded.'], escalate_reason=None)
+**Changes**:
+applied
+
+## Round 5 — 2026-09-29
+**Findings**:
+I'll gather context now.`pr_info/steps/step_4.md:13` — medium — Test 9 requires a new `real_tracker_count` pytest marker registered in `pyproject.toml` (`--strict-markers` is on in `addopts`), but `pyproject.toml` is listed neither in this step's WHERE section nor in `summary.md`'s Modified files table.
+`pr_info/steps/summary.md:74` — medium — The Modified table attributes `test_task_processing.py` changes to Step 4 only; Step 5 also edits that file (`TestBlockedExitInPrompts`, `step_5.md:59`). (Raised round 4, not applied.)
+`pr_info/steps/step_4.md:112` — medium — The plan never states which of the two `_count_incomplete_tasks` reads a given `side_effect` element or exception belongs to when `get_next_task` is patched separately, leaving test 4 ("after-read raises") under-specified. (Raised rounds 3–4, not applied.)
+`pr_info/steps/step_4.md:24` — low — `get_next_task`'s docstring contract changes from "returns None on error" to "propagates" with no `Raises:`, and the exhaustive `Returns:` reason enumerations in `process_single_task` (`task_processing.py:369-377`) and `process_task_with_retry` (`:566-570`) are not updated for `no_progress` / `no_progress_after_retries`. (Raised rounds 1–4, not applied.)
+`pr_info/steps/step_5.md:63` — low — Tests 2 and 4 assert `stop and report` is absent from prompt sections that never contained it; both pass before the edit and guard nothing. (Raised round 3, not applied.)
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
