@@ -86,16 +86,14 @@ class TaskOutcome:
 def get_next_task(project_dir: Path) -> Optional[str]:
     """Get next incomplete task from task tracker (excluding meta-tasks).
 
+    TaskTrackerError, OSError and UnicodeDecodeError from the tracker read
+    propagate to the caller, which maps them to a failure reason.
+
     Args:
         project_dir: Path to the project directory
 
     Returns:
         Next incomplete task name string, or None if no tasks remain.
-
-    Raises:
-        TaskTrackerError: If the tracker is missing or has no tasks section.
-            Other read failures (OSError, UnicodeDecodeError) propagate too;
-            the caller maps them to a failure reason.
     """
     logger.info("Checking for incomplete tasks...")
 
@@ -114,7 +112,16 @@ def get_next_task(project_dir: Path) -> Optional[str]:
 
 
 def _count_incomplete_tasks(project_dir: Path) -> int:
-    """Count incomplete non-meta tasks. Raises TaskTrackerError if unreadable."""
+    """Count incomplete non-meta tasks.
+
+    TaskTrackerError propagates if the tracker is unreadable.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Number of incomplete non-meta tasks.
+    """
     return len(
         get_incomplete_tasks(str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True)
     )
