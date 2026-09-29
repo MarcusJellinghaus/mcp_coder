@@ -69,9 +69,11 @@ class _RawScenario(NamedTuple):
   `_token_errors` (both sides), store a `_RawScenario` with raw tokens. The schema already guarantees
   `base` is present and one of the two literals, so no extra validation is needed.
 - Phase 2 merge and the shadow warning are unchanged in shape — the map value type changes only.
-- Phase 3: build `ScenarioBlock(base, expand-each-allow-token, expand-each-deny-token)`. Like the
-  group map, **drop** the per-scenario expansion errors: an unreferenced broken scenario must not
-  degrade the config.
+- Phase 3: build `ScenarioBlock(base, …)` by expanding each `allow`/`deny` member token with step 3's
+  `_expanded_members` against the merged **group** map (`raw_groups`) — a `@x` among scenario members is
+  a *group* reference, so resolving it against `raw_scenarios` would report it as unknown. Like the
+  group map, a side with any expansion error fails **wholesale** (`()`, never partial) and its errors
+  stay out of `config.errors`: an unreferenced broken scenario must not degrade the config.
 - Narrow `base` inline: `block_base: Base = "inherit" if raw.base == "inherit" else "none"`. Do **not**
   import `as_base` from `skill_frame` — the loader must not depend on the frame builder.
 - `emit_schema` is content-gated, so the regenerated `settings.schema.json` in any repo with
@@ -87,9 +89,13 @@ _load_layer, toolScenarios branch:
         scenarios[name] = _RawScenario(block["base"], allow, deny)
 
 phase 3:
+    # expand-each == step 3's _expanded_members: every member token expanded against
+    # the merged GROUP map (raw_groups), never against raw_scenarios, and the side
+    # fails wholesale (()) on any error rather than storing a partial result.
     scenarios = {
         name: ScenarioBlock(narrow(raw.base),
-                            tuple(expand-each(raw.allow)), tuple(expand-each(raw.deny)))
+                            _expanded_members(raw.allow, raw_groups),
+                            _expanded_members(raw.deny, raw_groups))
         for name, raw in raw_scenarios.items()
     }
 ```
@@ -125,7 +131,8 @@ phase 3:
 
 8. A scenario whose `allow` contains `@group` expands to the group's members, with `base` preserved.
 9. A scenario referencing a group defined in **another layer** resolves (same merged-map guarantee).
-10. An unreferenced scenario with an unknown ref leaves `degraded is False`.
+10. An unreferenced scenario with an unknown ref leaves `degraded is False`, and the affected side is
+    `()` — the block fails wholesale rather than keeping its resolvable members.
 
 ## LLM prompt
 
@@ -138,8 +145,10 @@ phase 3:
 >
 > `base` must be **required** in the schema and un-defaulted in `ScenarioBlock`. Keep
 > `name_to_string_array` for `toolGroups`. Do not import anything from `skill_frame` into `loader.py` —
-> narrow `base` with an inline ternary. Drop per-scenario expansion errors, exactly as step 3 does for
-> the group map, so an unreferenced broken scenario does not degrade the config.
+> narrow `base` with an inline ternary. Expand scenario members against the merged **group** map with
+> step 3's `_expanded_members`, exactly as step 3 does for the group map: a side with any error fails
+> wholesale (`()`, never partial) and its errors stay out of `config.errors`, so an unreferenced broken
+> scenario does not degrade the config.
 >
 > Then run the checks listed at the end of the summary. If the repo has an `.icoder/` directory, the
 > regenerated `settings.schema.json` is expected churn — include it. One commit.

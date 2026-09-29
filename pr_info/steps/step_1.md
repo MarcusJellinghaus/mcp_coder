@@ -51,12 +51,12 @@ equality and hash so provenance never changes matcher identity.
 
 | Site | Guard |
 |---|---|
-| `resolver.py:63` (`_rule_sort_key` → `specificity(rule.matcher)`) | narrow before use; unreachable given the `:206` filter, but mypy needs it |
-| `resolver.py:177` (`_resolve_frame`) | verify whether a guard is actually needed here after reading the widened types; add only if mypy demands it |
-| `resolver.py:206` (`_resolve_config` candidate comprehension) | add `rule.matcher is not None and` before `matches(...)` — this is the real filter that keeps a matcher-less rule out of the contest |
+| `resolver.py:63` (`_rule_sort_key` → `specificity(rule.matcher)`) | narrow before use; unreachable given the `:177` filter, but mypy needs it |
+| `resolver.py:177` (`_resolve_config` candidate comprehension) | **mandatory**: add `rule.matcher is not None and` before `matches(...)` — this is the real filter that keeps a matcher-less rule out of the contest, and the only thing that enforces D13 in the resolver |
+| `resolver.py:206` (`matched = best.matcher.origin or best`) | guard the `.origin` dereference: a matcher-less winner has no provenance to follow, so read `origin` only when `best.matcher is not None` and otherwise report `best` itself |
 | `gateway.py:161` (`filter_tools`) | `rule.matcher is not None and rule.matcher.arg is not None` — a matcher-less origin rule means the tool is **hidden** (fail-closed, §10) |
 
-Add a short comment at `:206` and `:161` naming D13: unreachable by construction, fail closed rather
+Add a short comment at `:177` and `:161` naming D13: unreachable by construction, fail closed rather
 than crash a live session.
 
 ## ALGORITHM

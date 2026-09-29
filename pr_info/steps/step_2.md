@@ -29,9 +29,9 @@ def expand(
 def _expand_ref(
     token: str,
     groups: Mapping[str, Sequence[str]],
-    visited: frozenset[str],
+    visited: set[str],
 ) -> tuple[list[Matcher], list[str]]:
-    """Recursive worker: expand one ``@ref`` under a visited-name set."""
+    """Recursive worker: expand one ``@ref``, recording visited group names."""
 ```
 
 ## HOW
@@ -58,7 +58,7 @@ def _expand_ref(
 ```
 expand(token, groups):
     if not is_ref(token):          return parse_matcher(token)        # leaf, as today
-    matchers, errors = _expand_ref(token, groups, visited=frozenset())
+    matchers, errors = _expand_ref(token, groups, visited=set())
     if not errors and not matchers:                                   # D3 + D4 in one check
         errors = [f"group reference {token!r} resolves to no tools (empty or cyclic)"]
     return matchers, errors
@@ -67,11 +67,18 @@ _expand_ref(token, groups, visited):
     name = ref_name(token)
     if name in visited:            return [], []                      # contributes once; cycle-safe
     if name not in groups:         return [], [f"unknown group reference '@{name}'"]
+    visited.add(name)                                                 # ONE shared set, not per-path
     for member in groups[name]:                                       # recurse refs, parse leaves
-        sub = _expand_ref(member, groups, visited | {name}) if is_ref(member) else parse_matcher(member)
+        sub = _expand_ref(member, groups, visited) if is_ref(member) else parse_matcher(member)
         accumulate matchers and errors
     return matchers, errors
 ```
+
+`visited` is **one set threaded through the whole expansion**, mutated in place — not a per-path
+`visited | {name}` copy. A per-path set would re-expand a group reached by two routes, so the diamond
+`{"a": ["@c", "@b"], "b": ["@c"], "c": [...]}` would contribute `c`'s members **twice**, contradicting
+D4 and test 7. Shared-set semantics keep both properties: every group contributes at most once, and a
+cycle terminates on the same check.
 
 Note the asymmetry that step 3's tests pin: an **unknown name is an error at any depth**, while
 **emptiness is only checked on the top-level result** — so a nested ref to a defined-but-empty group
@@ -118,8 +125,9 @@ does not poison a sibling that resolved.
 > them fail, then implement `src/mcp_coder/icoder/permissions/expand.py`.
 >
 > Keep the module pure: import only `parse_matcher` and `Matcher`, return errors as data, never log,
-> never touch the filesystem. Do **not** build an explicit cycle detector — the visited-set plus the
-> single "expands to zero matchers" check is the whole mechanism. Do not add a second public
+> never touch the filesystem. Do **not** build an explicit cycle detector — one **shared** visited-name
+> set (mutated in place, never a per-path copy) plus the single "expands to zero matchers" check is the
+> whole mechanism. Do not add a second public
 > function; origin stamping belongs to step 3.
 >
 > Also export `expand` from `permissions/__init__.py` and add

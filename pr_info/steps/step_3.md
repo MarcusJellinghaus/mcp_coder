@@ -57,8 +57,17 @@ def _expand_rules(
 - `load_permission_config` collects `list[tuple[str, Path, _LayerResult]]` for the good layers, so no
   `_PendingRule` type is needed: the layer tag and path are already in hand at expansion time.
 - `PermissionConfig.groups` stays post-expansion and ref-free: materialise it by calling
-  `expand(f"@{name}", raw_groups)` per name and **dropping** the errors — a broken group that no rule
-  references must not degrade the config. Add a one-line comment saying so.
+  `expand(f"@{name}", raw_groups)` per name. A group that expands with **any** error fails
+  **wholesale** — store `()` for it, never the partially resolved members — so no caller can be handed
+  a silently-shrunk group. Step 5 reads this map, and an empty entry there is exactly what routes a
+  skill `@ref` into I2.4's drop-and-warn ladder (D10).
+- The per-group errors still do **not** enter `config.errors`: a broken group that no rule references
+  must not degrade the whole config (the rule that *does* reference it degrades via `_expand_rules`).
+  Add a one-line comment saying both halves — fail the group wholesale, degrade only the referencing
+  rule.
+- Scenario members expand against the merged **group** map (`raw_groups`), never against
+  `raw_scenarios`: a `@group` inside a scenario is a group reference, and looking it up in the scenario
+  map would report it as an unknown ref. Same wholesale-failure rule as groups.
 - Origin synthesis is 3 lines, in `_expand_rules`, not in `expand.py`. Use
   `dataclasses.replace(m, origin=origin)` (add the import).
 - Update the module docstring: replace the Step-5/Step-6 `@ref`-unsupported wording with the
@@ -82,9 +91,24 @@ load_permission_config(project_dir):
         loaded.append((tag, path, r)); default = r.default_policy or default
     raw_groups, raw_scenarios = _merge_named(loaded)    # PHASE 2 — merge, still raw
     rules, rule_errors = _expand_rules(loaded, raw_groups)   # PHASE 3 — expand + build
-    groups = {n: expand(f"@{n}", raw_groups)[0] for n in raw_groups}     # errors dropped
-    scenarios = likewise over raw_scenarios
+    groups = {n: _expanded_or_empty(f"@{n}", raw_groups) for n in raw_groups}
+    # Scenario MEMBERS are tokens too, and a "@x" among them is a GROUP ref:
+    # expand each member token against raw_groups, never against raw_scenarios.
+    scenarios = {n: _expanded_members(members, raw_groups)
+                 for n, members in raw_scenarios.items()}
     degraded = bool(errors + rule_errors); log each; return PermissionConfig(...)
+
+_expanded_or_empty(token, raw_groups):        # wholesale failure, no partial result
+    matchers, errs = expand(token, raw_groups)
+    return () if errs else tuple(matchers)    # errors stay out of config.errors
+
+_expanded_members(member_tokens, raw_groups):
+    out = []
+    for token in member_tokens:
+        matchers, errs = expand(token, raw_groups)
+        if errs: return ()                    # one broken member fails the whole entry
+        out += matchers
+    return tuple(out)
 
 _expand_rules(loaded, groups):
     for tag, path, r in loaded:                        # authored order → members land in place
@@ -103,7 +127,9 @@ _expand_rules(loaded, groups):
 - Each expanded member's `matcher.origin` is the shared synthesised `Rule(matcher=None, …,
   ref="@name")` carrying the authored token and `source_path`.
 - `PermissionConfig.groups` — `Mapping[str, tuple[Matcher, ...]]`, unchanged type, now transitively
-  expanded and ref-free.
+  expanded and ref-free. A group that failed to expand is stored as `()`, never partially.
+- `PermissionConfig.scenarios` — same shape and same wholesale-failure rule; members expanded against
+  the merged **group** map.
 - `degraded` / `errors` — as today, now also fed by per-rule ref failures.
 
 ## Tests (write first)
@@ -139,7 +165,12 @@ they cannot live in the pure expander file.
     its whole layer, siblings included.
 12. **Cycle on disk** — terminates, degrades, contributes no rules.
 13. **Unreferenced broken group does not degrade** — a `toolGroups` entry with an unknown nested ref
-    that no rule references leaves `degraded is False`.
+    that no rule references leaves `degraded is False`, **and** `config.groups[name] == ()`: the group
+    fails wholesale, so its one resolvable member is *not* stored either. This is what keeps step 5
+    from handing a skill a silently-shrunk group.
+14. **Scenario member `@group` resolves** — a `toolScenarios` entry whose member list contains `"@git"`
+    expands to `git`'s members in `config.scenarios`, proving members are expanded against the merged
+    group map and not against the scenario map.
 
 ### `tests/icoder/test_permissions_loader_layers.py` (modify)
 
@@ -164,7 +195,7 @@ they cannot live in the pure expander file.
 > Implement **step 3** of `pr_info/steps/summary.md` as described in `pr_info/steps/step_3.md`.
 > Read the summary first — §1, §4 and §8 hold the settled decisions D1/D6/D8/D11/D13/D-M.
 >
-> Test-driven: write `tests/icoder/test_permissions_loader_expand.py` (the thirteen cases listed) and
+> Test-driven: write `tests/icoder/test_permissions_loader_expand.py` (the fourteen cases listed) and
 > apply the `test_permissions_loader_layers.py` inversions first, watch them fail, then restructure
 > `loader.py`.
 >
@@ -173,6 +204,12 @@ they cannot live in the pure expander file.
 >   three `_LayerResult` collection fields to raw tokens instead. The layer tag and path are already
 >   available where expansion happens.
 > - Group and scenario **members must stay raw across the merge**, or transitive expansion cannot work.
+> - Expand `toolScenarios` members against the merged **group** map, never against the scenario map —
+>   a `@x` inside a scenario is a group reference.
+> - `config.groups` / `config.scenarios` entries fail **wholesale**: store `()` on any expansion error,
+>   never the partially resolved members, so step 5 can never hand a skill a silently-shrunk group. Those
+>   per-entry errors still stay out of `config.errors` — only the rule that references a broken group
+>   degrades.
 > - Expand in authored order so members land at the authored rule's position; no splice logic.
 > - A ref failure kills **only its own rule** (D11); a structural failure still discards its layer.
 > - Every fail-closed assertion is on `config.rules`, never through `resolve()` — `degraded`
