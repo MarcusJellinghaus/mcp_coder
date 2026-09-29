@@ -54,10 +54,12 @@ import jsonschema
 from mcp_coder.icoder.permissions.expand import expand, is_ref
 from mcp_coder.icoder.permissions.matcher import parse_matcher
 from mcp_coder.icoder.permissions.model import (
+    Base,
     Matcher,
     PermissionConfig,
     Policy,
     Rule,
+    ScenarioBlock,
 )
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
@@ -146,6 +148,16 @@ def build_settings_schema() -> dict[str, object]:
         "type": "object",
         "additionalProperties": string_array,
     }
+    scenario_block: dict[str, object] = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["base"],
+        "properties": {
+            "base": {"enum": ["inherit", "none"]},
+            "allow": string_array,
+            "deny": string_array,
+        },
+    }
     return {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -157,7 +169,10 @@ def build_settings_schema() -> dict[str, object]:
             "ask": string_array,
             "deny": string_array,
             "toolGroups": name_to_string_array,
-            "toolScenarios": name_to_string_array,
+            "toolScenarios": {
+                "type": "object",
+                "additionalProperties": scenario_block,
+            },
         },
     }
 
@@ -227,6 +242,14 @@ def _discover_layers(project_dir: Path) -> list[tuple[str, Path]]:
     return [(tag, p.resolve()) for tag, p in candidates if p.is_file()]
 
 
+class _RawScenario(NamedTuple):
+    """One layer's raw ``toolScenarios`` entry — members still tokens."""
+
+    base: str
+    allow: tuple[str, ...]
+    deny: tuple[str, ...]
+
+
 class _LayerResult(NamedTuple):
     """The outcome of loading one layer.
 
@@ -240,7 +263,7 @@ class _LayerResult(NamedTuple):
     default_policy: Policy | None
     rule_tokens: list[tuple[str, Policy]]
     groups: dict[str, tuple[str, ...]]
-    scenarios: dict[str, tuple[str, ...]]
+    scenarios: dict[str, _RawScenario]
     errors: list[str]
 
 
@@ -297,7 +320,7 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
         errors: list[str] = []
         rule_tokens: list[tuple[str, Policy]] = []
         groups: dict[str, tuple[str, ...]] = {}
-        scenarios: dict[str, tuple[str, ...]] = {}
+        scenarios: dict[str, _RawScenario] = {}
 
         # All keys optional -> default-safe access. An omitted section yields an
         # empty iterable (never ``None``), so the common "absent section" case
@@ -313,11 +336,17 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
 
         # Members stay raw across the merge so ``@ref`` expansion can follow
         # references into groups defined by other layers.
-        for named, store in (("toolGroups", groups), ("toolScenarios", scenarios)):
-            for name, members in data.get(named, {}).items():
-                for token in members:
-                    errors += _token_errors(token, path)
-                store[name] = tuple(members)
+        for name, members in data.get("toolGroups", {}).items():
+            for token in members:
+                errors += _token_errors(token, path)
+            groups[name] = tuple(members)
+        # The schema guarantees ``base`` is present and a valid literal.
+        for name, block in data.get("toolScenarios", {}).items():
+            allow = tuple(block.get("allow", []))
+            deny = tuple(block.get("deny", []))
+            for token in allow + deny:
+                errors += _token_errors(token, path)
+            scenarios[name] = _RawScenario(block["base"], allow, deny)
 
         default = (
             _POLICY_BY_TOKEN.get(data["defaultMode"]) if "defaultMode" in data else None
@@ -340,7 +369,7 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
 
 def _merge_named(
     loaded: list[tuple[str, Path, _LayerResult]],
-) -> tuple[dict[str, tuple[str, ...]], dict[str, tuple[str, ...]]]:
+) -> tuple[dict[str, tuple[str, ...]], dict[str, _RawScenario]]:
     """Merge raw ``toolGroups``/``toolScenarios`` last-layer-wins, warning on shadowing.
 
     Args:
@@ -350,16 +379,16 @@ def _merge_named(
         The merged raw ``(groups, scenarios)`` maps.
     """
     groups: dict[str, tuple[str, ...]] = {}
-    scenarios: dict[str, tuple[str, ...]] = {}
+    scenarios: dict[str, _RawScenario] = {}
     for _, path, result in loaded:
         for name, members in result.groups.items():
             if name in groups:
                 logger.warning("group %r shadowed by %s", name, path)
             groups[name] = members
-        for name, members in result.scenarios.items():
+        for name, block in result.scenarios.items():
             if name in scenarios:
                 logger.warning("scenario %r shadowed by %s", name, path)
-            scenarios[name] = members
+            scenarios[name] = block
     return groups, scenarios
 
 
@@ -395,23 +424,50 @@ def _expand_rules(
 
 def _expanded_members(
     tokens: Sequence[str], groups: Mapping[str, Sequence[str]]
-) -> tuple[Matcher, ...]:
+) -> tuple[tuple[Matcher, ...], list[str]]:
     """Expand member tokens against ``groups``; ``()`` if any member fails.
 
     Args:
-        tokens: Raw member tokens of one group or scenario.
+        tokens: Raw member tokens of one group or scenario side.
         groups: The merged raw group map.
 
     Returns:
-        All expanded matchers, or ``()`` on any error — never a partial result.
+        ``(matchers, errors)``. Matchers are ``()`` on any error — never a
+        partial result.
     """
     out: list[Matcher] = []
+    errors: list[str] = []
     for token in tokens:
         matchers, errs = expand(token, groups)
-        if errs:
-            return ()
+        errors += errs
         out += matchers
-    return tuple(out)
+    return (() if errors else tuple(out)), errors
+
+
+def _build_scenario(
+    name: str, raw: _RawScenario, groups: Mapping[str, Sequence[str]]
+) -> ScenarioBlock:
+    """Expand one raw scenario into a :class:`ScenarioBlock`, failing closed.
+
+    A side with any expansion error is ``()``; a failed ``deny`` also forces
+    ``base="none"``. Every error is logged and kept on the block, never in
+    ``config.errors`` (D10: the skill using it is blocked, not the session).
+
+    Args:
+        name: The scenario name, for error provenance.
+        raw: The merged raw scenario.
+        groups: The merged raw group map.
+
+    Returns:
+        The expanded :class:`ScenarioBlock`.
+    """
+    allow, allow_errs = _expanded_members(raw.allow, groups)
+    deny, deny_errs = _expanded_members(raw.deny, groups)
+    base: Base = "inherit" if raw.base == "inherit" and not deny_errs else "none"
+    errors = tuple(f"scenario {name!r}: {e}" for e in allow_errs + deny_errs)
+    for err in errors:
+        logger.warning("permission config: %s", err)
+    return ScenarioBlock(base, allow, deny, errors)
 
 
 def load_permission_config(project_dir: Path) -> PermissionConfig:
@@ -459,14 +515,13 @@ def load_permission_config(project_dir: Path) -> PermissionConfig:
     rules, rule_errors = _expand_rules(loaded, raw_groups)
     errors += rule_errors
 
-    # A group/scenario that fails to expand is stored as ``()`` wholesale, and its
-    # errors stay out of ``errors``: only a rule referencing it degrades.
-    # Scenario members are expanded against the GROUP map — a ``@x`` there is a
-    # group reference.
-    groups = {n: _expanded_members((f"@{n}",), raw_groups) for n in raw_groups}
+    # A group that fails to expand is stored as ``()`` wholesale, and its errors
+    # stay out of ``errors``: only a rule referencing it degrades. Scenario
+    # members are expanded against the GROUP map — a ``@x`` there is a group
+    # reference; their errors live on the block.
+    groups = {n: _expanded_members((f"@{n}",), raw_groups)[0] for n in raw_groups}
     scenarios = {
-        n: _expanded_members(members, raw_groups)
-        for n, members in raw_scenarios.items()
+        n: _build_scenario(n, raw, raw_groups) for n, raw in raw_scenarios.items()
     }
 
     degraded = bool(errors)

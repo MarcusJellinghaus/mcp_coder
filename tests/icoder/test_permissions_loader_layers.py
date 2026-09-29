@@ -26,6 +26,7 @@ import pytest
 from mcp_coder.icoder.permissions.loader import (
     _discover_layers,
     _load_layer,
+    _RawScenario,
     _token_errors,
     build_settings_schema,
     load_permission_config,
@@ -240,14 +241,35 @@ def test_load_layer_populates_groups_and_scenarios(tmp_path: Path) -> None:
         json.dumps(
             {
                 "toolGroups": {"git": ["mcp__git__status", "mcp__git__log"]},
-                "toolScenarios": {"review": ["mcp__github__pr_view"]},
+                "toolScenarios": {
+                    "review": {
+                        "base": "none",
+                        "allow": ["mcp__github__pr_view"],
+                        "deny": ["@git"],
+                    }
+                },
             }
         ),
     )
     result = _load_layer("project", path)
     assert result.errors == []
     assert result.groups == {"git": ("mcp__git__status", "mcp__git__log")}
-    assert result.scenarios == {"review": ("mcp__github__pr_view",)}
+    assert result.scenarios == {
+        "review": _RawScenario("none", ("mcp__github__pr_view",), ("@git",))
+    }
+
+
+def test_load_layer_rejects_malformed_scenario_token(tmp_path: Path) -> None:
+    """A malformed ``deny`` member in a scenario fails the layer."""
+    path = _write_layer(
+        tmp_path,
+        json.dumps(
+            {"toolScenarios": {"review": {"base": "none", "deny": ["github:*"]}}}
+        ),
+    )
+    result = _load_layer("project", path)
+    assert result.errors
+    assert result.scenarios == {}
 
 
 def test_load_layer_parses_default_mode(tmp_path: Path) -> None:

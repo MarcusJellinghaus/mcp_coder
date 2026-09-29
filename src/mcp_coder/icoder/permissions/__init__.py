@@ -23,6 +23,7 @@ from mcp_coder.icoder.permissions.model import (
     PermissionFrame,
     Policy,
     Rule,
+    ScenarioBlock,
     Source,
     Specificity,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "PermissionFrame",
     "Policy",
     "Rule",
+    "ScenarioBlock",
     "Source",
     "Specificity",
     "expand",

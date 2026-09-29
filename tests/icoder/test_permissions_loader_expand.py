@@ -275,11 +275,72 @@ def test_scenario_member_group_ref_resolves(layers: _Layers) -> None:
         "project",
         {
             "toolGroups": {"git": ["mcp__git__status", "mcp__git__log"]},
-            "toolScenarios": {"review": ["@git", "mcp__gh__view"]},
+            "toolScenarios": {
+                "review": {"base": "inherit", "allow": ["@git", "mcp__gh__view"]}
+            },
         },
     )
 
     config = load_permission_config(layers.project_dir)
 
     assert config.degraded is False
-    assert [m.tool for m in config.scenarios["review"]] == ["status", "log", "view"]
+    block = config.scenarios["review"]
+    assert block.base == "inherit"
+    assert [m.tool for m in block.allow] == ["status", "log", "view"]
+    assert block.deny == ()
+    assert block.errors == ()
+
+
+def test_scenario_resolves_group_from_another_layer(layers: _Layers) -> None:
+    """A scenario in ``project`` resolves a group defined in ``user``."""
+    layers.write("user", {"toolGroups": {"git": ["mcp__git__status"]}})
+    layers.write(
+        "project",
+        {"toolScenarios": {"review": {"base": "none", "deny": ["@git"]}}},
+    )
+
+    config = load_permission_config(layers.project_dir)
+
+    block = config.scenarios["review"]
+    assert block.base == "none"
+    assert [m.tool for m in block.deny] == ["status"]
+    assert block.errors == ()
+
+
+def test_scenario_unknown_allow_ref_fails_side_wholesale(layers: _Layers) -> None:
+    """An unknown ``allow`` ref empties that side and is recorded, not degraded."""
+    layers.write(
+        "project",
+        {
+            "toolScenarios": {
+                "review": {"base": "inherit", "allow": ["mcp__gh__view", "@nope"]}
+            }
+        },
+    )
+
+    config = load_permission_config(layers.project_dir)
+
+    assert config.degraded is False
+    assert config.errors == ()
+    block = config.scenarios["review"]
+    assert block.allow == ()
+    assert block.base == "inherit"
+    joined = " ".join(block.errors)
+    assert "review" in joined
+    assert "@nope" in joined
+
+
+def test_scenario_failed_deny_forces_base_none(layers: _Layers) -> None:
+    """A failed ``deny`` side fails closed: ``base`` becomes ``none``."""
+    layers.write(
+        "project",
+        {"toolScenarios": {"review": {"base": "inherit", "deny": ["@nope"]}}},
+    )
+
+    config = load_permission_config(layers.project_dir)
+
+    assert config.degraded is False
+    block = config.scenarios["review"]
+    assert block.deny == ()
+    assert block.base == "none"
+    assert block.errors

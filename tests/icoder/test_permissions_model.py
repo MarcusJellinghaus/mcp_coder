@@ -24,6 +24,7 @@ from mcp_coder.icoder.permissions import (
     PermissionFrame,
     Policy,
     Rule,
+    ScenarioBlock,
     Source,
     Specificity,
 )
@@ -77,6 +78,17 @@ def test_permission_frame_construction_defaults() -> None:
     assert frame.base == "inherit"
     assert frame.allow == ()
     assert frame.deny == ()
+
+
+def test_scenario_block_requires_base_and_defaults_sides() -> None:
+    """ScenarioBlock needs ``base``; allow/deny/errors default to empty."""
+    block = ScenarioBlock(base="none")
+    assert block.base == "none"
+    assert block.allow == ()
+    assert block.deny == ()
+    assert block.errors == ()
+    with pytest.raises(TypeError):
+        ScenarioBlock()  # type: ignore[call-arg]  # pylint: disable=no-value-for-parameter
 
 
 def test_permission_config_empty_is_valid() -> None:
@@ -310,7 +322,7 @@ def test_rule_source_path_populatable() -> None:
 def test_permission_config_groups_and_scenarios_populatable() -> None:
     """PermissionConfig stores groups and scenarios mappings."""
     grp = {"g1": (Matcher(server="s", tool="t"),)}
-    scn = {"s1": (Matcher(server="a", tool="b"),)}
+    scn = {"s1": ScenarioBlock("inherit", allow=(Matcher(server="a", tool="b"),))}
     cfg = PermissionConfig(groups=grp, scenarios=scn)
     assert cfg.groups == grp
     assert cfg.scenarios == scn

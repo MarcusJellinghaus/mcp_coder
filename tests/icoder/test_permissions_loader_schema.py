@@ -107,7 +107,7 @@ def test_schema_accepts_full_valid_config() -> None:
         "ask": ["fs:write"],
         "deny": ["shell:*"],
         "toolGroups": {"git": ["github:*", "shell:git"]},
-        "toolScenarios": {"review": ["github:pr_view"]},
+        "toolScenarios": {"review": {"base": "none", "allow": ["github:pr_view"]}},
     }
     assert _schema_errors(data) == []
 
@@ -137,6 +137,34 @@ def test_schema_rejects_tool_groups_value_not_string_array() -> None:
     errors = _schema_errors({"toolGroups": {"git": [1, 2]}})
     assert errors
     assert any("toolGroups" in e or "git" in e for e in errors)
+
+
+def test_schema_rejects_flat_tool_scenarios_array() -> None:
+    """The pre-I4.1 flat ``toolScenarios`` array is rejected (D7)."""
+    errors = _schema_errors({"toolScenarios": {"review": ["github:pr_view"]}})
+    assert errors
+    assert any("toolScenarios" in e for e in errors)
+
+
+def test_schema_rejects_scenario_without_base() -> None:
+    """``base`` is required on a scenario block, never defaulted (D7)."""
+    errors = _schema_errors({"toolScenarios": {"review": {"allow": ["github:*"]}}})
+    assert errors
+    assert any("base" in e for e in errors)
+
+
+def test_schema_rejects_bad_scenario_base() -> None:
+    """``base`` must be ``inherit`` or ``none``."""
+    errors = _schema_errors({"toolScenarios": {"review": {"base": "maybe"}}})
+    assert errors
+
+
+def test_schema_rejects_unknown_scenario_key() -> None:
+    """An unknown key inside a scenario block is rejected."""
+    errors = _schema_errors(
+        {"toolScenarios": {"review": {"base": "none", "ask": ["github:*"]}}}
+    )
+    assert errors
 
 
 # --- Step 3: gated schema emit ---

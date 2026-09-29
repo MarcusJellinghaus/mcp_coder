@@ -100,6 +100,21 @@ class PermissionFrame:
 
 
 @dataclass(frozen=True)
+class ScenarioBlock:
+    """A whole ``tools:`` block a skill can reference with ``use: <name>``.
+
+    ``base`` is required and never defaulted (D7). ``errors`` is non-empty iff
+    a side failed to expand; that side is then ``()``, and a failed ``deny``
+    has also forced ``base`` to ``"none"``. A skill using it is blocked.
+    """
+
+    base: Base
+    allow: tuple[Matcher, ...] = ()
+    deny: tuple[Matcher, ...] = ()
+    errors: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class PermissionConfig:
     """Merged permission config across all layers.
 
@@ -113,10 +128,10 @@ class PermissionConfig:
     # the None -> ALWAYS mapping is resolver-only, Step 3)
     groups: Mapping[str, tuple[Matcher, ...]] = field(
         default_factory=dict
-    )  # stored, matched in I4.1
-    scenarios: Mapping[str, tuple[Matcher, ...]] = field(
+    )  # expanded, ref-free
+    scenarios: Mapping[str, ScenarioBlock] = field(
         default_factory=dict
-    )  # stored, matched in I4.1
+    )  # expanded, ref-free
     degraded: bool = False
     errors: tuple[str, ...] = ()
 
