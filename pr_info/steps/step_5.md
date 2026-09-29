@@ -58,6 +58,12 @@ def _classify_all(
 - An unknown `use: <name>` keeps today's outright block (there is no side to drop a missing whole
   block from); only the reason string changes from `"unsupported until I4.1"` to naming the unknown
   scenario. Note in the docstring that this is deliberate, per D10.
+- A scenario with non-empty `ScenarioBlock.errors` (step 4: a side failed to expand and was stored as
+  `()`) is **blocked** with the errors as warnings and in the reason — never returned as-is. Blocking,
+  not the `two_empties` ladder, because the ladder cannot tell a declared-but-emptied scenario side from
+  a legitimately empty one, and a whole-block reference has no side to drop (same reasoning as an
+  unknown `use:`, D10). This covers both a broken `allow` (would silently run with nothing allowed) and
+  a broken `deny` (would otherwise run without its denies).
 - A scenario's `base` is used verbatim — it is the security-relevant half of `use:`. Do not pass it
   through `as_base`; the loader already narrowed it to a `Base` literal.
 - Update the class/module docstrings that say `@ref` is unsupported until I4.1.
@@ -79,6 +85,9 @@ build_frame(...):
         block = scenarios.get(tools_block.use)
         if block is None:
             return SkillFrame(PermissionFrame("none"), (), f"declares use: {…!r}, unknown scenario")
+        if block.errors:                              # a side failed to expand → fail closed
+            return SkillFrame(PermissionFrame("none"), block.errors,
+                              blocked_reason=f"use: {…!r} failed to expand: " + "; ".join(block.errors))
         return SkillFrame(PermissionFrame(block.base, block.allow, block.deny))
     ...unchanged: classify allow/deny, deny-dropped forces base=none, two_empties...
 ```
@@ -110,13 +119,19 @@ build_frame(...):
    mentions "cannot combine".
 10. Omitting `groups`/`scenarios` entirely leaves every pre-existing behaviour unchanged (a `@ref`
     then reads as unknown → ladder, fail-closed).
+11. `use: review` where the scenario's **`allow`** side failed to expand
+    (`ScenarioBlock("none", (), (), errors=("scenario 'review': unknown group reference '@nope'",))`)
+    → blocked, `frame.base == "none"`, and the error appears in both `warnings` and `blocked_reason`.
+12. `use: review` where the scenario's **`deny`** side failed to expand
+    (`ScenarioBlock("none", (Matcher("git", "log"),), (), errors=(…,))`) → blocked with the error
+    reported; the surviving `allow` matcher is **not** granted (`frame.allow == ()`).
 
 ## LLM prompt
 
 > Implement **step 5** of `pr_info/steps/summary.md` as described in `pr_info/steps/step_5.md`.
 > Read the summary first (§5) for D5 and D10.
 >
-> Test-driven: add the ten cases listed to `tests/icoder/test_permissions_skill_frame.py`, watch them
+> Test-driven: add the twelve cases listed to `tests/icoder/test_permissions_skill_frame.py`, watch them
 > fail, then change `skill_frame.py`.
 >
 > Key constraints:
@@ -127,6 +142,8 @@ build_frame(...):
 > - An unknown `@ref` uses I2.4's existing ladder (drop + warn on allow, force `base: none` on deny,
 >   block only via `two_empties`). It must **not** set any global degrade.
 > - An unknown `use: <name>` stays an outright block; change only the reason string.
+> - A known scenario with non-empty `errors` (a side failed to expand) is also blocked, with the errors
+>   surfaced as warnings and in the reason — never returned as a frame with a silently emptied side.
 > - Leave the `tools_block.errors` branch ahead of the `use` branch so D5's `use:` + inline-keys
 >   rejection keeps working — that case is a regression assertion only.
 >

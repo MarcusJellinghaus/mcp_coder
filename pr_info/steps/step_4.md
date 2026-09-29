@@ -26,6 +26,7 @@ class ScenarioBlock:
     base: Base                                  # REQUIRED — never defaulted (design §3)
     allow: tuple[Matcher, ...] = ()
     deny: tuple[Matcher, ...] = ()
+    errors: tuple[str, ...] = ()                # expansion failures; non-empty => skill blocked
 
 
 @dataclass(frozen=True)
@@ -69,11 +70,18 @@ class _RawScenario(NamedTuple):
   `_token_errors` (both sides), store a `_RawScenario` with raw tokens. The schema already guarantees
   `base` is present and one of the two literals, so no extra validation is needed.
 - Phase 2 merge and the shadow warning are unchanged in shape — the map value type changes only.
-- Phase 3: build `ScenarioBlock(base, …)` by expanding each `allow`/`deny` member token with step 3's
-  `_expanded_members` against the merged **group** map (`raw_groups`) — a `@x` among scenario members is
-  a *group* reference, so resolving it against `raw_scenarios` would report it as unknown. Like the
-  group map, a side with any expansion error fails **wholesale** (`()`, never partial) and its errors
-  stay out of `config.errors`: an unreferenced broken scenario must not degrade the config.
+- Phase 3: build `ScenarioBlock(base, …)` by expanding each `allow`/`deny` member token against the
+  merged **group** map (`raw_groups`) — a `@x` among scenario members is a *group* reference, so
+  resolving it against `raw_scenarios` would report it as unknown. Change step 3's `_expanded_members`
+  to return `(matchers, errors)` so the errors are kept, not discarded. A side with any expansion error
+  still fails **wholesale** (`()`, never partial), and the failure is **never silent**:
+  - a failed `deny` side forces `base` to `"none"` — the same fail-closed rule as a dropped skill deny
+    (D10 / I2.4's D3), so an emptied deny can never leave an `inherit` block with no denies;
+  - every expansion error (either side) is recorded on `ScenarioBlock.errors` (naming the scenario) and
+    logged with `logger.warning`; step 5's `build_frame` blocks any `use:` of a block with errors.
+  - The errors do **not** go into `config.errors`/`degraded`: that would force the whole session to
+    `ask` for one scenario's typo, which D10 rules out. Failing the referencing skill is the scoped
+    equivalent of D11's "the referencing rule degrades".
 - Narrow `base` inline: `block_base: Base = "inherit" if raw.base == "inherit" else "none"`. Do **not**
   import `as_base` from `skill_frame` — the loader must not depend on the frame builder.
 - `emit_schema` is content-gated, so the regenerated `settings.schema.json` in any repo with
@@ -89,21 +97,24 @@ _load_layer, toolScenarios branch:
         scenarios[name] = _RawScenario(block["base"], allow, deny)
 
 phase 3:
-    # expand-each == step 3's _expanded_members: every member token expanded against
-    # the merged GROUP map (raw_groups), never against raw_scenarios, and the side
-    # fails wholesale (()) on any error rather than storing a partial result.
-    scenarios = {
-        name: ScenarioBlock(narrow(raw.base),
-                            _expanded_members(raw.allow, raw_groups),
-                            _expanded_members(raw.deny, raw_groups))
-        for name, raw in raw_scenarios.items()
-    }
+    # _expanded_members now returns (matchers, errors): every member token expanded
+    # against the merged GROUP map (raw_groups), never raw_scenarios; a side fails
+    # wholesale (()) on any error, and the errors are kept.
+    for name, raw in raw_scenarios.items():
+        allow, allow_errs = _expanded_members(raw.allow, raw_groups)
+        deny, deny_errs = _expanded_members(raw.deny, raw_groups)
+        base = "none" if deny_errs else narrow(raw.base)      # failed deny => fail closed
+        errs = tuple(f"scenario {name!r}: {e}" for e in allow_errs + deny_errs)
+        for e in errs: logger.warning("permission config: %s", e)
+        scenarios[name] = ScenarioBlock(base, allow, deny, errs)
+    # errs stay out of config.errors — step 5 blocks the referencing skill instead
 ```
 
 ## DATA
 
 - `PermissionConfig.scenarios: Mapping[str, ScenarioBlock]` — expanded, ref-free, `base` always a
-  `Base` literal.
+  `Base` literal; `errors` non-empty iff a side failed to expand (then that side is `()`, and a failed
+  `deny` has also forced `base="none"`).
 - `_LayerResult.scenarios: dict[str, _RawScenario]` — raw tokens, layer-local.
 
 ## Tests (write first)
@@ -131,24 +142,27 @@ phase 3:
 
 8. A scenario whose `allow` contains `@group` expands to the group's members, with `base` preserved.
 9. A scenario referencing a group defined in **another layer** resolves (same merged-map guarantee).
-10. An unreferenced scenario with an unknown ref leaves `degraded is False`, and the affected side is
-    `()` — the block fails wholesale rather than keeping its resolvable members.
+10. An unreferenced scenario with an unknown ref in `allow` leaves `degraded is False`, the `allow`
+    side is `()` (wholesale, not partial), and `ScenarioBlock.errors` names the scenario and the ref.
+11. A scenario `{base: "inherit", deny: ["@nope"]}` → `deny == ()`, `base == "none"` (fail closed, not
+    an `inherit` block with no denies), `errors` non-empty, `degraded is False`.
 
 ## LLM prompt
 
 > Implement **step 4** of `pr_info/steps/summary.md` as described in `pr_info/steps/step_4.md`.
 > Read the summary first (§6) for D7 and why `base` is required.
 >
-> Test-driven: write/invert the ten test cases listed first, watch them fail, then change the schema
+> Test-driven: write/invert the eleven test cases listed first, watch them fail, then change the schema
 > branch, add `ScenarioBlock`, retype `PermissionConfig.scenarios`, and build the blocks in the
 > loader's expansion phase.
 >
 > `base` must be **required** in the schema and un-defaulted in `ScenarioBlock`. Keep
 > `name_to_string_array` for `toolGroups`. Do not import anything from `skill_frame` into `loader.py` —
 > narrow `base` with an inline ternary. Expand scenario members against the merged **group** map with
-> step 3's `_expanded_members`, exactly as step 3 does for the group map: a side with any error fails
-> wholesale (`()`, never partial) and its errors stay out of `config.errors`, so an unreferenced broken
-> scenario does not degrade the config.
+> step 3's `_expanded_members` (now returning its errors): a side with any error fails wholesale (`()`,
+> never partial), a failed `deny` forces `base="none"`, and every error is logged and recorded on
+> `ScenarioBlock.errors` — never silently dropped. Keep them out of `config.errors` so one broken
+> scenario does not degrade the whole session (D10); step 5 blocks the skill that uses it.
 >
 > Then run the checks listed at the end of the summary. If the repo has an `.icoder/` directory, the
 > regenerated `settings.schema.json` is expected churn — include it. One commit.

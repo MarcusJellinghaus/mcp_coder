@@ -97,14 +97,17 @@ Failure handling on the skill path follows I2.4's existing ladder (D10), **not**
 dropped + warning on the `allow` side, `base` forced to `none` on the `deny` side, blocked only if
 `allow` empties (`two_empties`). An unknown **`use: <name>`** is not covered by that ladder — there
 is no side to drop a missing whole block from — so it keeps today's outright block; only the
-"unsupported until I4.1" reason string becomes "unknown scenario".
+"unsupported until I4.1" reason string becomes "unknown scenario". A known scenario whose side failed
+to expand (non-empty `ScenarioBlock.errors`) is blocked the same way, with the errors surfaced — never
+applied with a silently emptied side.
 
 ### 6. `toolScenarios` changes shape (D7)
 
 A flat matcher list cannot express `base`, which is the security-relevant half of `use:`. Both sides
 become `name → {base, allow, deny}`: the **schema branch** and the **model type** (new frozen
 `ScenarioBlock`, `base` required and never defaulted). This restores design §5's shape, which I2.2
-flattened. Nothing outside `loader.py`/`model.py` reads `.scenarios` today.
+flattened. A side that fails to expand is stored as `()`, a failed `deny` forces `base="none"`, and the
+errors are logged and kept on `ScenarioBlock.errors` (not `config.errors` — no global degrade, D10). Nothing outside `loader.py`/`model.py` reads `.scenarios` today.
 
 ### 7. Load runs for every provider (D9), banner stays gated (D12)
 
