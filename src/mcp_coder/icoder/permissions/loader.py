@@ -197,7 +197,9 @@ def emit_schema(project_dir: Path) -> bool:
     """Write ``settings.schema.json`` into ``<project_dir>/.icoder/``.
 
     Gated: writes only when ``.icoder/`` already exists (no dir creation) and
-    only when the content would change (no git churn).
+    only when the content would change (no git churn). An I/O failure is
+    logged, never raised: the schema is a convenience and must not abort
+    startup.
 
     Args:
         project_dir: The project root whose ``.icoder/`` directory receives
@@ -211,9 +213,13 @@ def emit_schema(project_dir: Path) -> bool:
         return False
     target = icoder / "settings.schema.json"
     new = json.dumps(build_settings_schema(), indent=2) + "\n"
-    if target.exists() and target.read_text(encoding="utf-8") == new:
+    try:
+        if target.exists() and target.read_text(encoding="utf-8") == new:
+            return False
+        target.write_text(new, encoding="utf-8")
+    except OSError as exc:
+        logger.warning("could not write %s: %s", target, exc)
         return False
-    target.write_text(new, encoding="utf-8")
     return True
 
 

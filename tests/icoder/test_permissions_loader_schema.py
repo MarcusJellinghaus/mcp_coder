@@ -13,13 +13,17 @@ helper (structure + enums only), and the gated ``emit_schema`` writer.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+
+import pytest
 
 from mcp_coder.icoder.permissions.loader import (
     _schema_errors,
     _strip_jsonc,
     build_settings_schema,
     emit_schema,
+    load_permission_config,
 )
 
 # --- comment removal ---
@@ -199,3 +203,30 @@ def test_emit_schema_rewrites_when_content_differs(tmp_path: Path) -> None:
     target.write_text("{}\n", encoding="utf-8")
     assert emit_schema(tmp_path) is True
     assert json.loads(target.read_text(encoding="utf-8")) == build_settings_schema()
+
+
+def test_unwritable_schema_does_not_abort_load(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A failing schema write is logged; loading still returns the config."""
+    monkeypatch.setattr(
+        "mcp_coder.icoder.permissions.loader.get_user_app_data_dir",
+        lambda _name: tmp_path / "user",
+    )
+    (tmp_path / ".icoder").mkdir()
+    (tmp_path / ".icoder" / "settings.json").write_text(
+        '{"allow": ["mcp__s__t"]}', encoding="utf-8"
+    )
+
+    def _raise(*_args: object, **_kwargs: object) -> int:
+        raise OSError("read-only")
+
+    monkeypatch.setattr(Path, "write_text", _raise)
+
+    with caplog.at_level(logging.WARNING, logger="mcp_coder.icoder.permissions"):
+        config = load_permission_config(tmp_path)
+
+    assert not config.degraded
+    assert len(config.rules) == 1
+    assert "settings.schema.json" in caplog.text
+    assert "read-only" in caplog.text
