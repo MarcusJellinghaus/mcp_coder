@@ -142,8 +142,13 @@ def run_implement_workflow(
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
-        # Step 4: Process all incomplete tasks in a loop
-        while True:
+        # Step 4: Process all incomplete tasks in a bounded loop. The cap is a
+        # backstop, not a bound: one round can complete a whole step, so rounds
+        # are far fewer than `progress.total` (which counts every checkbox,
+        # completed ones included). `for ... else` keeps the cap structural -
+        # the `else` fires exactly when the `no_tasks` break never did.
+        round_cap = max(progress.total + 10, 20)
+        for _ in range(round_cap):
             outcome = process_task_with_retry(
                 project_dir,
                 provider,
@@ -209,6 +214,12 @@ def run_implement_workflow(
 
             # Show updated progress after each task
             log_progress_summary(project_dir)
+        else:
+            return fail(
+                "general",
+                stage="Task implementation",
+                message=f"Stopped after {round_cap} rounds without completing all tasks",
+            )
 
         # Step 5: Run final mypy check if not running after each task
         if (

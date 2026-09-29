@@ -310,3 +310,125 @@ class TestBlockedRouting:
         assert failure_arg.category == "llm_timeout"
         assert "LLM timed out during task processing" in failure_arg.message
         assert "why" in failure_arg.message
+
+
+class TestRoundCap:
+    """Test that the task loop is bounded by max(progress.total + 10, 20)."""
+
+    @patch(_DELIBERATE_HANDLER)
+    @patch("mcp_coder.workflows.implement.core.get_step_progress", return_value={})
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_cap_fires_after_twenty_rounds_when_progress_total_is_zero(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_step_progress: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """Endless successful rounds stop at the 20-round fallback cap."""
+        mock_process.return_value = TaskOutcome(True, "completed")
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 1
+        assert mock_process.call_count == 20
+        mock_handle_failure.assert_called_once()
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "implementing_failed"
+        assert failure_arg.stage == "Task implementation"
+        assert "20 rounds" in failure_arg.message
+
+    @patch(_DELIBERATE_HANDLER)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feat-1147",
+    )
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_step_progress",
+        return_value={"step_1": {"total": 100}},
+    )
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_cap_scales_with_step_progress_total(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_step_progress: MagicMock,
+        mock_finalisation: MagicMock,
+        mock_branch: MagicMock,
+        mock_ci: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """A 100-checkbox tracker gives a cap of 110, so 109 rounds still pass."""
+        mock_process.side_effect = [TaskOutcome(True, "completed")] * 109 + [
+            TaskOutcome(False, "no_tasks")
+        ]
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 0
+        assert mock_process.call_count == 110
+        mock_handle_failure.assert_not_called()
+
+    @patch(_DELIBERATE_HANDLER)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feat-1147",
+    )
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.get_step_progress", return_value={})
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_cap_does_not_fire_one_round_early(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_step_progress: MagicMock,
+        mock_finalisation: MagicMock,
+        mock_branch: MagicMock,
+        mock_ci: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """19 successes then no_tasks fits inside a cap of 20."""
+        mock_process.side_effect = [TaskOutcome(True, "completed")] * 19 + [
+            TaskOutcome(False, "no_tasks")
+        ]
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 0
+        mock_handle_failure.assert_not_called()
