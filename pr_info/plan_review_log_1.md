@@ -15,3 +15,21 @@ I'll gather context now.`pr_info/steps/step_1.md:55` — high — guard table mi
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_1.md:55, correct the guard-table entry for resolver.py:177: it is the _resolve_config candidate comprehension (matches(rule.matcher, ...)) that enforces D13, not _resolve_frame, and the guard there is mandatory, not optional.', 'In pr_info/steps/step_1.md:56, fix the resolver.py:206 entry: that line is `matched = best.matcher.origin or best`, so replace the prescribed `rule.matcher is not None and matches(...)` guard with a guard for the `.origin` dereference on a matcher-less rule.', 'In pr_info/steps/step_2.md:71, change the expansion to track visited members globally rather than per-path (`visited | {name}` is path-local), so a diamond such as `a: [@c, @b], b: [@c]` contributes `@c` once, matching test 7 at step_2.md:101 and D4.', 'In pr_info/steps/step_3.md:86, expand scenarios against the merged group map rather than `raw_scenarios`, so a `@group` member inside a scenario resolves instead of being treated as an unknown scenario and dropped.', 'In pr_info/steps/step_3.md:85, stop discarding group-expansion errors: either propagate them or make a group with an unresolvable nested ref fail wholesale, so `config.groups` never stores a partially expanded group that step 5 silently hands to a skill `@ref`.', 'In pr_info/steps/step_4.md:92, state explicitly that `expand-each(raw.allow)` expands scenario members against the merged group map, consistent with the step 3 fix.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-09-29
+**Findings**:
+Plan files and issue read; now verifying the plan's claims against the actual source.`pr_info/steps/step_4.md:72` — high — A scenario side that hits any expansion error is stored as `()`, and that error is kept out of `config.errors`. On the `deny` side this fails open. For `{base: "inherit", deny: ["@typo"]}`, the deny list silently becomes `()`, so a `use:` skill runs with `inherit` and no denies. On the skill path a dropped deny forces `base: none` (D10, which reuses I2.4's D3 rule), but this path skips that. Fix: give `ScenarioBlock` the same treatment as a dropped deny. Either force `base` to `none` when a `deny` side fails wholesale, or record the failure so `build_frame` can block or narrow the frame.
+
+`pr_info/steps/step_5.md:82` — high — The `use:` branch returns `PermissionFrame(block.base, block.allow, block.deny)` without checking whether the scenario's sides were emptied by a failed expansion. There is no warning and no `two_empties` check. A broken `deny` therefore passes through as fail-open, as in the previous finding. A broken `allow` leaves a skill that runs silently with nothing allowed, where it should be blocked or warned. No test covers either case. Add tests for a `use:` scenario whose `allow` or `deny` side failed to expand.
+**Decisions**:
+Verdict(decision='tasks', tasks=["In pr_info/steps/step_4.md:72, stop storing an emptied side silently: when a ScenarioBlock's `deny` expansion fails wholesale, apply the same fail-closed treatment as a dropped deny (force `base` to `none` per D10) or record the failure so `build_frame` can block/narrow the frame, and surface the error in `config.errors` rather than discarding it.", 'In pr_info/steps/step_5.md:82, make the `use:` branch check for scenario sides emptied by a failed expansion instead of returning `PermissionFrame(block.base, block.allow, block.deny)` blindly: warn and fail closed (block, or apply the `two_empties` check) for a broken `deny` or a broken `allow`.', 'Add tests in step 5 for a `use:` scenario whose `allow` side failed to expand and one whose `deny` side failed to expand, asserting the skill is blocked/narrowed and the failure is reported rather than silently passing through.'], escalate_reason=None)
+**Changes**:
+applied
+
+## Round 3 — 2026-09-29
+**Findings**:
+Round-3 review: verifying the plan against the gateway source, then emitting findings.NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
