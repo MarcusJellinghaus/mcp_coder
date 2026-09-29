@@ -1,7 +1,7 @@
 # Step 1 — Round cap on the task loop
 
 See [summary.md](./summary.md). Independent of the other steps, and deliberately first: it is
-the backstop for the one risk the progress predicate (Step 2) cannot cover — the count is
+the backstop for the one risk the progress predicate (Step 4) cannot cover — the count is
 written by the agent, so deleting or regenerating tracker lines also lowers it — and it bounds
 the loop while Steps 2–4 land, so no intermediate commit can leave an unbounded run.
 

@@ -49,7 +49,7 @@ and the plan-creation prompt are reworded so that prose is never a report.
 
 | Reason | Where | Label |
 |--------|-------|-------|
-| `no_progress` | per-attempt, internal to `process_task_with_retry` once Step 4 lands | — (never reaches `core.py`) |
+| `no_progress` | per-attempt, internal to `process_task_with_retry` | — (never reaches `core.py`) |
 | `no_progress_after_retries` | retry budget exhausted, at least one attempt changed files | existing `no_changes_after_retries` |
 | `no_changes_after_retries` | every attempt produced zero changes | unchanged |
 | `error` | tracker unreadable for any reason — detail names `pr_info/TASK_TRACKER.md` | existing `implementing_failed` |
@@ -79,7 +79,7 @@ workflow matrix for no operational gain. The distinction between "the LLM did no
 
 | File | Purpose |
 |------|---------|
-| `tests/workflows/implement/test_task_progress_gate.py` | the progress gate and the retry-loop reason selection |
+| `tests/workflows/implement/test_task_progress_gate.py` | the retry-loop reason selection (Step 3) and the progress gate (Step 4) |
 
 ### Not touched
 
@@ -114,18 +114,23 @@ all of them meaning exactly what they mean today, with no per-test edit.
 ## Steps
 
 1. **Round cap** — bound the `while True:` loop in `core.py` Step 4.
-2. **Progress gate** — `_count_incomplete_tasks`, before/after snapshot, `no_progress` reason,
+2. **Failure surface** — new reason in the two dicts, routed in `core.py`, tracker detail plumbed.
+3. **Retry loop** — retry on `no_progress`, pick the terminal reason, second reminder variant.
+4. **Progress gate** — `_count_incomplete_tasks`, before/after snapshot, `no_progress` reason,
    tracker errors surfaced as `error`.
-3. **Failure surface** — new reason in the two dicts, routed in `core.py`, tracker detail plumbed.
-4. **Retry loop** — retry on `no_progress`, pick the terminal reason, second reminder variant.
 5. **Prompt wording** — one reword, one addition in `prompts.md`.
 
 **The order is the safety property, not a preference.** `core.py`'s failure chain has no `else`:
-an unrouted reason falls through to `progress.completed += 1` and the loop goes round again. So
-the cap lands first, before any new reason exists — it bounds every intermediate commit — and
-the route (3) lands before the code that emits the reason it routes (4). Step 2 does emit a
-`no_progress` that nothing routes until Step 4; that window is deliberate and is exactly what
-the Step 1 cap covers.
+an unrouted reason falls through to `progress.completed += 1` and the loop goes round again — so
+every consumer lands before the thing that produces what it consumes. The cap lands first, before
+any new reason exists, as the backstop for the one risk the predicate cannot cover. Then the route
+(2), then the retry loop that keeps `no_progress` off `core.py` entirely (3), and only then the
+gate that emits it (4).
 
-Sequencing: 2 needs 1 only for the backstop, 4 needs both 2 (the reason) and 3 (its route).
-5 is independent of all of them. Each step produces one commit.
+Sequencing: no other step depends on Step 4. Step 3 keys off the `"no_progress"` *string* and needs no
+emitter — exactly as Step 2 routes a reason nothing emits yet — and both are testable by
+constructing outcomes directly. Landing the consumer and its route before the emitter closes the
+window in which a no-progress round would reach `core.py` unrouted, increment
+`progress.completed` and loop on until the full round cap was burned. Step 2 needs only Step 1's
+backstop; Step 3 needs Step 2; Step 4 needs Steps 2 and 3. Step 5 is independent of all of them.
+Each step produces one commit.
