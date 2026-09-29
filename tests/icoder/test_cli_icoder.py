@@ -188,7 +188,11 @@ def test_execute_icoder_build_frame_enforce_flag_is_langchain_only(
     captured_flags: list[bool] = []
 
     def fake_build_frame(
-        tools_block: object, allowed_tools: object, *, enforce_skill_tools: bool
+        tools_block: object,
+        allowed_tools: object,
+        *,
+        enforce_skill_tools: bool,
+        **_kwargs: object,
     ) -> SkillFrame:
         captured_flags.append(enforce_skill_tools)
         return SkillFrame(frame=None)
@@ -290,10 +294,10 @@ def test_execute_icoder_malformed_tools_block_blocks_regardless_of_provider(
 def test_execute_icoder_permission_degraded_defaults_false_off_langchain(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """AppCore receives permission_degraded=False when no config is loaded (#1061).
+    """AppCore receives permission_degraded=False off the langchain gate (#1061).
 
-    The default provider here is ``claude`` (no langchain gate), so no permission
-    config is loaded and the flag keeps its ``False`` default.
+    The default provider here is ``claude`` (no langchain gate): the permission
+    config is still loaded, but the flag keeps its ``False`` default (D12).
     """
     from mcp_coder.cli.commands.icoder import execute_icoder
 

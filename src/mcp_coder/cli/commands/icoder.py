@@ -105,14 +105,16 @@ def execute_icoder(args: argparse.Namespace) -> int:
         # the UI's only route to it. Hoisted like ``gateway`` because AppCore is
         # constructed later at outer scope.
         approval_engine: ApprovalEngine | None = None
-        # Hoisted to outer scope: ``config`` only exists inside the langchain
-        # gate below, but AppCore is constructed later at outer scope, so a
-        # ``config.degraded`` reference at the call site would NameError.
-        # Non-langchain keeps this False default (no permission config loaded).
+        # Loaded for every provider (D9): build_frame needs its groups/scenarios
+        # so skill @ref/use: resolution is provider-agnostic.
+        config = load_permission_config(project_dir)
+        # The degraded banner claims MCP calls are being denied, which is only
+        # true where the gateway enforces — so the flag is set inside the
+        # langchain gate and stays False elsewhere, even for a degraded config
+        # (D12).
         permission_degraded = False
         if provider == "langchain" and mcp_config:
             _assert_tool_interceptors_supported()
-            config = load_permission_config(project_dir)
             permission_degraded = config.degraded
             approval_engine = ApprovalEngine()
             gateway = LangchainEnforcementGateway(config, approval_engine)
@@ -180,6 +182,8 @@ def execute_icoder(args: argparse.Namespace) -> int:
                 enforce_skill_tools=(
                     ENFORCE_SKILL_TOOLS if provider == "langchain" else False
                 ),
+                groups=config.groups,
+                scenarios=config.scenarios,
             )
             for s in skills
         }

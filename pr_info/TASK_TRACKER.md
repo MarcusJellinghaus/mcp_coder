@@ -28,6 +28,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] [Step 3](./steps/step_3.md) — Loader two-phase + `@group` expansion for config rules
 - [x] [Step 4](./steps/step_4.md) — `toolScenarios` shape (`ScenarioBlock` + schema)
 - [x] [Step 5](./steps/step_5.md) — `skill_frame`: `@ref` lookup + `use:` substitution
-- [ ] [Step 6](./steps/step_6.md) — CLI wiring: D9 load hoist, D12 banner gating
+- [x] [Step 6](./steps/step_6.md) — CLI wiring: D9 load hoist, D12 banner gating
 
 ## Pull Request
