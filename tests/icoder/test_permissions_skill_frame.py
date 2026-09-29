@@ -11,12 +11,17 @@ One test per row of the summary's mapping table / per acceptance criterion.
 
 from __future__ import annotations
 
+from mcp_coder.icoder.permissions.model import (
+    Matcher,
+    PermissionFrame,
+    ScenarioBlock,
+)
 from mcp_coder.icoder.permissions.skill_frame import (
     as_base,
     build_frame,
     two_empties,
 )
-from mcp_coder.icoder.permissions.skill_tools import SkillToolsBlock
+from mcp_coder.icoder.permissions.skill_tools import SkillToolsBlock, parse_tools_block
 
 # --- Models A / B / C (valid rich blocks) ---
 
@@ -78,12 +83,12 @@ def test_none_declared_allow_all_dropped_is_blocked() -> None:
 # --- bare use: ---
 
 
-def test_bare_use_block_is_blocked() -> None:
-    """A bare ``tools: { use: name }`` block is BLOCKED (D7b)."""
+def test_bare_use_block_without_scenarios_is_blocked() -> None:
+    """A ``use:`` with no scenario map is BLOCKED as an unknown scenario."""
     block = SkillToolsBlock(base=None, use="team_defaults")
     result = build_frame(block, None, enforce_skill_tools=False)
     assert result.blocked_reason is not None
-    assert "I4.1" in result.blocked_reason
+    assert "team_defaults" in result.blocked_reason
     assert result.frame is not None
     assert result.frame.base == "none"
 
@@ -147,17 +152,160 @@ def test_deny_caused_block_names_deny_cause_not_empty_allow() -> None:
     assert result.blocked_reason == deny_caused_reason
 
 
-# --- @ref in allow: dropped + warned, no model change ---
+# --- @ref without a group map: unknown → dropped + warned ---
 
 
-def test_at_ref_in_allow_dropped_and_warned() -> None:
-    """An ``@ref`` allow token is dropped + warned, leaving the model intact."""
+def test_at_ref_in_allow_without_groups_dropped_and_warned() -> None:
+    """Omitting ``groups`` makes an ``@ref`` unknown → dropped + warned."""
     block = SkillToolsBlock(base="inherit", allow=("mcp__s__t", "@grp"))
     result = build_frame(block, None, enforce_skill_tools=False)
     assert result.frame is not None
     assert len(result.frame.allow) == 1  # only the mcp__ token survives
     assert result.frame.base == "inherit"  # allow-side drop doesn't force none
-    assert any("@grp" in w and "I4.1" in w for w in result.warnings)
+    assert any("@grp" in w and "unknown" in w for w in result.warnings)
+    assert result.blocked_reason is None
+
+
+# --- @ref lookup against the expanded group map ---
+
+_GIT_LOG = Matcher("git", "log")
+_GROUPS = {"git": (_GIT_LOG,)}
+
+
+def test_known_ref_in_allow_resolves_without_warning() -> None:
+    """A known ``@git`` in ``allow`` contributes its members, no warning."""
+    block = SkillToolsBlock(base="none", allow=("@git",))
+    result = build_frame(block, None, enforce_skill_tools=False, groups=_GROUPS)
+    assert result.frame is not None
+    assert result.frame.allow == (_GIT_LOG,)
+    assert result.warnings == ()
+    assert result.blocked_reason is None
+
+
+def test_known_ref_in_deny_resolves_without_forcing_none() -> None:
+    """A known ``@git`` in ``deny`` resolves; ``base`` is not forced."""
+    block = SkillToolsBlock(base="inherit", deny=("@git",))
+    result = build_frame(block, None, enforce_skill_tools=False, groups=_GROUPS)
+    assert result.frame is not None
+    assert result.frame.deny == (_GIT_LOG,)
+    assert result.frame.base == "inherit"
+    assert result.warnings == ()
+    assert result.blocked_reason is None
+
+
+def test_unknown_ref_in_allow_dropped_skill_runs() -> None:
+    """An unknown ``@nope`` in ``allow`` drops + warns; the skill still runs."""
+    block = SkillToolsBlock(base="none", allow=("@git", "@nope"))
+    result = build_frame(block, None, enforce_skill_tools=False, groups=_GROUPS)
+    assert result.frame is not None
+    assert result.frame.allow == (_GIT_LOG,)
+    assert result.frame.base == "none"
+    assert any("@nope" in w for w in result.warnings)
+    assert result.blocked_reason is None
+
+
+def test_unknown_ref_in_deny_forces_base_none() -> None:
+    """An unknown ``@nope`` in ``deny`` forces ``base=none`` (I2.4's D3)."""
+    block = SkillToolsBlock(base="inherit", allow=("@git",), deny=("@nope",))
+    result = build_frame(block, None, enforce_skill_tools=False, groups=_GROUPS)
+    assert result.frame is not None
+    assert result.frame.base == "none"
+    assert any("deny narrowed" in w and "@nope" in w for w in result.warnings)
+    assert result.blocked_reason is None
+
+
+def test_unknown_ref_only_allow_under_none_blocked_by_two_empties() -> None:
+    """An unknown ``@nope`` as the only ``allow`` under ``none`` → blocked."""
+    block = SkillToolsBlock(base="none", allow=("@nope",))
+    result = build_frame(block, None, enforce_skill_tools=False, groups=_GROUPS)
+    assert result.blocked_reason == two_empties("none", ("@nope",), (), deny_dropped=())
+
+
+# --- use: <scenario> substitution ---
+
+
+def test_use_known_scenario_substitutes_whole_block() -> None:
+    """``use: review`` → the scenario's whole block, including ``base``."""
+    scenario = ScenarioBlock("inherit", (_GIT_LOG,), (Matcher("git", "push"),))
+    block = SkillToolsBlock(base=None, use="review")
+    result = build_frame(
+        block, None, enforce_skill_tools=False, scenarios={"review": scenario}
+    )
+    assert result.frame == PermissionFrame("inherit", scenario.allow, scenario.deny)
+    assert result.warnings == ()
+    assert result.blocked_reason is None
+
+
+def test_use_scenario_base_none_lands() -> None:
+    """A scenario's ``base: none`` lands on the frame verbatim."""
+    scenario = ScenarioBlock("none", (_GIT_LOG,))
+    block = SkillToolsBlock(base=None, use="review")
+    result = build_frame(
+        block, None, enforce_skill_tools=False, scenarios={"review": scenario}
+    )
+    assert result.frame is not None
+    assert result.frame.base == "none"
+    assert result.blocked_reason is None
+
+
+def test_use_unknown_scenario_is_blocked() -> None:
+    """An unknown ``use: nope`` is blocked, naming the scenario."""
+    block = SkillToolsBlock(base=None, use="nope")
+    result = build_frame(
+        block,
+        None,
+        enforce_skill_tools=False,
+        scenarios={"review": ScenarioBlock("none")},
+    )
+    assert result.blocked_reason is not None
+    assert "nope" in result.blocked_reason
+    assert "I4.1" not in result.blocked_reason
+    assert result.frame is not None
+    assert result.frame.base == "none"
+
+
+def test_use_with_inline_keys_blocked_via_errors() -> None:
+    """Regression (D5): ``use:`` + inline keys → blocked via ``errors``."""
+    block = parse_tools_block({"tools": {"use": "review", "allow": ["mcp__s__t"]}})
+    assert block is not None
+    result = build_frame(
+        block,
+        None,
+        enforce_skill_tools=False,
+        scenarios={"review": ScenarioBlock("inherit")},
+    )
+    assert result.blocked_reason is not None
+    assert "cannot combine" in result.blocked_reason
+
+
+def test_use_scenario_allow_failed_to_expand_is_blocked() -> None:
+    """A scenario whose ``allow`` failed to expand blocks the skill."""
+    error = "scenario 'review': unknown group reference '@nope'"
+    scenario = ScenarioBlock("none", (), (), errors=(error,))
+    block = SkillToolsBlock(base=None, use="review")
+    result = build_frame(
+        block, None, enforce_skill_tools=False, scenarios={"review": scenario}
+    )
+    assert result.frame is not None
+    assert result.frame.base == "none"
+    assert error in result.warnings
+    assert result.blocked_reason is not None
+    assert error in result.blocked_reason
+
+
+def test_use_scenario_deny_failed_to_expand_is_blocked() -> None:
+    """A scenario whose ``deny`` failed is blocked; its ``allow`` is not granted."""
+    error = "scenario 'review': unknown group reference '@nope'"
+    scenario = ScenarioBlock("none", (_GIT_LOG,), (), errors=(error,))
+    block = SkillToolsBlock(base=None, use="review")
+    result = build_frame(
+        block, None, enforce_skill_tools=False, scenarios={"review": scenario}
+    )
+    assert result.frame is not None
+    assert result.frame.allow == ()
+    assert result.blocked_reason is not None
+    assert error in result.blocked_reason
+    assert error in result.warnings
 
 
 # --- non-mcp token ignored (silent) ---

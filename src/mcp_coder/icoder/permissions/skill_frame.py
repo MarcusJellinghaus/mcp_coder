@@ -10,17 +10,26 @@ Blocked-ness is decided **here** and carried on :attr:`SkillFrame.blocked_reason
 (the deliberate deviation from D12 recorded in the summary): the two
 "declared-but-nothing-survived" cases are only knowable after
 :func:`parse_matcher` runs, which this module — not the string-only parser —
-owns. This module imports only the permission leaf (``matcher``, ``model``,
-``skill_tools``): no other ``icoder.*``, no langchain, no UI.
+owns. ``@ref`` tokens and ``use:`` blocks are resolved by lookup into the
+already-expanded ``PermissionConfig.groups``/``.scenarios`` — no second
+expansion pass. This module imports only the permission leaf (``expand``,
+``matcher``, ``model``, ``skill_tools``): no other ``icoder.*``, no langchain,
+no UI.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from mcp_coder.icoder.permissions.expand import is_ref, ref_name
 from mcp_coder.icoder.permissions.matcher import parse_matcher
-from mcp_coder.icoder.permissions.model import Base, Matcher, PermissionFrame
+from mcp_coder.icoder.permissions.model import (
+    Base,
+    Matcher,
+    PermissionFrame,
+    ScenarioBlock,
+)
 from mcp_coder.icoder.permissions.skill_tools import SkillToolsBlock
 
 
@@ -95,7 +104,12 @@ def two_empties(
     return "base: none but no declared allow token survived parsing"
 
 
-def _classify(token: str, *, side: str) -> tuple[list[Matcher], str | None, str | None]:
+def _classify(
+    token: str,
+    *,
+    side: str,
+    groups: Mapping[str, tuple[Matcher, ...]],
+) -> tuple[list[Matcher], str | None, str | None]:
     """Classify one declared token into matchers, a warning, and a drop marker.
 
     The ``dropped`` element is the **token itself** when it was discarded (so
@@ -104,15 +118,22 @@ def _classify(token: str, *, side: str) -> tuple[list[Matcher], str | None, str 
     opposite consequences per side: ``allow`` elevates the whole tool (the
     accepted #1053 over-grant), ``deny`` denies the whole tool (over-deny, safe).
 
+    An ``@ref`` is a plain lookup into the already-expanded ``groups``; a
+    resolved ref emits no warning, an unknown one is dropped (D10 ladder).
+
     Args:
         token: A single raw declared tool token.
         side: ``"allow"`` or ``"deny"`` — selects the arg-predicate wording.
+        groups: Expanded group map, group name to member matchers.
 
     Returns:
         A ``(matchers, warning, dropped)`` tuple.
     """
-    if token.startswith("@"):
-        return [], f"@ref {token!r} not supported until I4.1 (ignored)", token
+    if is_ref(token):
+        members = groups.get(ref_name(token))
+        if members:
+            return list(members), None, None
+        return [], f"unknown group reference {token!r} (ignored)", token
     if not token.startswith("mcp__"):
         return [], None, None  # non-mcp token → silently ignored
     matchers, errors = parse_matcher(token)
@@ -131,7 +152,10 @@ def _classify(token: str, *, side: str) -> tuple[list[Matcher], str | None, str 
 
 
 def _classify_all(
-    tokens: Sequence[str], *, side: str
+    tokens: Sequence[str],
+    *,
+    side: str,
+    groups: Mapping[str, tuple[Matcher, ...]],
 ) -> tuple[list[Matcher], list[str], tuple[str, ...]]:
     """Classify every token, accumulating matchers, warnings, and drops.
 
@@ -140,6 +164,7 @@ def _classify_all(
     Args:
         tokens: The raw declared tokens for one side.
         side: ``"allow"`` or ``"deny"`` — passed through to :func:`_classify`.
+        groups: Expanded group map — passed through to :func:`_classify`.
 
     Returns:
         A ``(matchers, warnings, dropped)`` tuple accumulated over ``tokens``.
@@ -148,7 +173,7 @@ def _classify_all(
     warnings: list[str] = []
     dropped: list[str] = []
     for token in tokens:
-        token_matchers, warning, drop = _classify(token, side=side)
+        token_matchers, warning, drop = _classify(token, side=side, groups=groups)
         matchers.extend(token_matchers)
         if warning is not None:
             warnings.append(warning)
@@ -162,28 +187,41 @@ def build_frame(
     allowed_tools: Sequence[str] | None,
     *,
     enforce_skill_tools: bool,
+    groups: Mapping[str, tuple[Matcher, ...]] | None = None,
+    scenarios: Mapping[str, ScenarioBlock] | None = None,
 ) -> SkillFrame:
     """Map any skill declaration to a :class:`SkillFrame` (the mapping table).
 
     The rich ``tools:`` block wins over the legacy ``allowed_tools`` list and
-    the switch is silent (D14). Blocked-ness (malformed block, bare ``use:``,
-    and either "declared-but-nothing-survived" case) is decided here and carried
-    on :attr:`SkillFrame.blocked_reason`; a blocked skill still gets a
-    fail-closed ``base="none"`` frame for the effective-policy report.
+    the switch is silent (D14). Blocked-ness (malformed block, unknown or
+    broken ``use:`` scenario, and either "declared-but-nothing-survived" case)
+    is decided here and carried on :attr:`SkillFrame.blocked_reason`; a blocked
+    skill still gets a fail-closed ``base="none"`` frame for the
+    effective-policy report.
+
+    A ``use:`` whose scenario is unknown, or whose scenario has ``errors``, is
+    blocked outright rather than routed through the drop ladder (D10): a
+    whole-block reference has no side to drop.
 
     Args:
         tools_block: The parsed rich ``tools:`` block, or ``None`` when absent.
         allowed_tools: The legacy ``allowed-tools`` tokens, or ``None``/empty.
         enforce_skill_tools: On the legacy path only, selects ``base="none"``
             (when True) vs ``base="inherit"`` (when False).
+        groups: Expanded group map (``PermissionConfig.groups``); absent means
+            every ``@ref`` is unknown.
+        scenarios: Expanded scenario map (``PermissionConfig.scenarios``);
+            absent means every ``use:`` is unknown.
 
     Returns:
         A :class:`SkillFrame`; ``frame`` is ``None`` only for no declaration.
     """
+    groups = groups or {}
+    scenarios = scenarios or {}
     if tools_block is None:
         if not allowed_tools:
             return SkillFrame(frame=None)  # neither block → status quo
-        allow, warns, _ = _classify_all(allowed_tools, side="allow")
+        allow, warns, _ = _classify_all(allowed_tools, side="allow", groups=groups)
         base: Base = "none" if enforce_skill_tools else "inherit"
         return SkillFrame(
             PermissionFrame(base, tuple(allow)),
@@ -197,15 +235,29 @@ def build_frame(
             tuple(tools_block.errors),
             blocked_reason="; ".join(tools_block.errors),
         )
-    if tools_block.use is not None:  # bare use: → blocked (D7b)
-        return SkillFrame(
-            PermissionFrame("none"),
-            (),
-            blocked_reason="declares use: <...>, unsupported until I4.1",
-        )
+    if tools_block.use is not None:
+        scenario = scenarios.get(tools_block.use)
+        if scenario is None:
+            return SkillFrame(
+                PermissionFrame("none"),
+                (),
+                blocked_reason=f"declares use: {tools_block.use!r}, unknown scenario",
+            )
+        if scenario.errors:  # a side failed to expand → fail closed
+            return SkillFrame(
+                PermissionFrame("none"),
+                scenario.errors,
+                blocked_reason=f"use: {tools_block.use!r} failed to expand: "
+                + "; ".join(scenario.errors),
+            )
+        return SkillFrame(PermissionFrame(scenario.base, scenario.allow, scenario.deny))
 
-    allow, allow_warns, _ = _classify_all(tools_block.allow, side="allow")
-    deny, deny_warns, deny_dropped = _classify_all(tools_block.deny, side="deny")
+    allow, allow_warns, _ = _classify_all(
+        tools_block.allow, side="allow", groups=groups
+    )
+    deny, deny_warns, deny_dropped = _classify_all(
+        tools_block.deny, side="deny", groups=groups
+    )
     # A dropped deny entry forces base=none (fail-closed, D3); otherwise the
     # stated base (guaranteed "inherit"/"none" here) is narrowed via as_base.
     base = "none" if deny_dropped else as_base(tools_block.base)
