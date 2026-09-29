@@ -17,3 +17,21 @@ I'll gather context first.Now verifying key plan claims against the code.`pr_inf
 Verdict(decision='tasks', tasks=["Reorder pr_info/steps/summary.md so the round cap (current Step 4) lands first and the core.py routing for new reasons (current Step 3) lands before the retry change (current Step 2), so no intermediate commit leaves an unbounded loop where 'no_progress'/'no_progress_after_retries' fall through to progress.completed += 1.", "In pr_info/steps/step_1.md, make the new get_next_task call-site handler catch the non-TaskTrackerError exceptions that the removed blanket except Exception used to absorb (e.g. OSError/UnicodeDecodeError from Path.read_text), so they map to the 'error' reason instead of propagating into run_guarded."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-09-29
+**Findings**:
+I'll gather context first.Now verifying the plan's code claims.`pr_info/steps/summary.md:126` — high — The plan applies "route before emit" to Step 3 but not to Step 4: Step 2's commit makes `process_single_task` return `no_progress`, which the unchanged `process_task_with_retry` passes straight to `core.py`'s else-less chain, so every no-progress round increments `progress.completed` and loops to the round cap (~20 LLM rounds + commits + pushes) until Step 4 lands. Step 4 has no real dependency on Step 2 — it can retry on the `"no_progress"` string before anything emits it, exactly as Step 3 routes a reason nothing emits — so ordering 1, 3, 4, 2 closes the window at zero cost.
+
+`pr_info/steps/summary.md:130` — high — "4 needs both 2 (the reason) and 3 (its route)" is not true: Step 4's tests patch `process_single_task` and its change to `process_task_with_retry`/`previous_reason` compiles and passes without Step 2. The stated dependency is what forces the unbounded-emission window above.
+
+`pr_info/steps/step_4.md:63` — medium — `previous_reason` is read in the call at `:64` on the first iteration but only assigned at `:70`; the pseudocode never initialises it before the loop, so a literal implementation raises `NameError`. (Raised in round 1, not applied.)
+
+`pr_info/steps/step_4.md:69` — medium — `last_detail = outcome.detail` overwrites unconditionally, so a mixed sequence ending in `no_changes` (detail is always `""` at `task_processing.py:498`) reports `no_progress_after_retries` with an empty detail and Step 3's message loses the task name — contradicting the stated "the more informative reason wins".
+
+`pr_info/steps/step_4.md:27` — low — The WHAT signature sketch places `previous_reason` immediately after `attempt` (i.e. before `format_code`/`check_type_hints`), contradicting HOW at `:36` which requires it to be the last parameter. (Raised in round 1, not applied.)
+
+`pr_info/steps/step_2.md:25` — low — Neither Step 2 nor Step 4 updates the exhaustive `Returns:` reason enumerations in the `process_single_task` (`task_processing.py:372-375`) and `process_task_with_retry` (`:567-570`) docstrings, nor adds a `Raises:` to `get_next_task` whose contract changes from "returns None on error" to "propagates". (Raised in round 1, not applied.)
+**Decisions**:
+Verdict(decision='tasks', tasks=['Reorder pr_info/steps/summary.md to 1, 3, 4, 2 and correct the dependency note at :130: Step 4\'s retry keys off the "no_progress" string and needs no emitter, so landing the retry and its route before Step 2 emits the reason closes the window where every no-progress round increments progress.completed and burns the full round cap.', "In pr_info/steps/step_4.md, initialise previous_reason before the retry loop (e.g. previous_reason = None) so the first iteration's call at :64 does not read an unassigned name.", 'In pr_info/steps/step_4.md:69, stop overwriting last_detail unconditionally — keep the more informative detail so a sequence ending in no_changes (detail always "") still reports no_progress_after_retries with the task name in Step 3\'s message.'], escalate_reason=None)
+**Changes**:
+applied

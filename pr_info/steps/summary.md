@@ -79,7 +79,7 @@ workflow matrix for no operational gain. The distinction between "the LLM did no
 
 | File | Purpose |
 |------|---------|
-| `tests/workflows/implement/test_task_progress_gate.py` | the retry-loop reason selection (Step 3) and the progress gate (Step 4) |
+| `tests/workflows/implement/test_task_progress_gate.py` | the retry-loop reason selection (Step 3) and the progress gate (Step 4); Step 4 adds the same autouse progress fixture here as in `test_task_processing.py` |
 
 ### Not touched
 

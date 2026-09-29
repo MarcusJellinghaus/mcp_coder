@@ -11,7 +11,7 @@ intermediate commit.
 ## WHERE
 
 - `src/mcp_coder/workflows/implement/task_processing.py`
-- `tests/workflows/implement/test_task_progress_gate.py` (extend — created in Step 3)
+- `tests/workflows/implement/test_task_progress_gate.py` (extend — created in Step 3; autouse fixture)
 - `tests/workflows/implement/test_task_processing.py` (autouse fixture + 2 rewritten tests)
 
 ## WHAT
@@ -121,7 +121,8 @@ Extend `tests/workflows/implement/test_task_progress_gate.py` (created in Step 3
 8. Zero file changes still returns `"no_changes"`, not `"no_progress"` — the existing gate wins
    because it runs first.
 
-In `tests/workflows/implement/test_task_processing.py`:
+The same autouse fixture goes in **both** test files — `test_task_processing.py` and
+`test_task_progress_gate.py`:
 
 ```python
 @pytest.fixture(autouse=True)
@@ -135,6 +136,14 @@ def _tracker_count_always_decreases():
 
 Function-scoped, so each test gets a fresh strictly-decreasing sequence regardless of how many
 reads its code path performs.
+
+`test_task_progress_gate.py` needs it too: Step 3's prompt-assembly test (`step_3.md:128`)
+calls `process_single_task` directly and patches only `prompt_llm` / `get_next_task`, so without
+the fixture the new before-read hits the real tracker, returns `"error"` before the LLM call and
+the test fails — Step 4 would not land with checks green. The fixture is compatible with the
+gate tests above: a `@patch(... _count_incomplete_tasks)` decorator is applied when the test
+function is called, i.e. *after* fixture setup, so the per-test patch wins and is restored
+cleanly.
 
 Rewrite the two tests that assert the swallowed error:
 
@@ -162,7 +171,9 @@ Rewrite the two tests that assert the swallowed error:
 > `Path.read_text` raises `OSError` / `UnicodeDecodeError`, which are not `TaskTrackerError`, and
 > without it they would escape `process_single_task` into `run_guarded` with no message.
 > Any failure on the *after*-read counts as no progress, not a crash.
-> Add the autouse fixture to `test_task_processing.py` so the existing ~24 `process_single_task`
-> tests keep passing, and rewrite the two tests that assert `get_next_task` returns None on a
-> tracker error.
+> Add the autouse fixture to **both** `test_task_processing.py` (so the existing ~24
+> `process_single_task` tests keep passing) and `test_task_progress_gate.py` (so Step 3's
+> prompt-assembly test, which patches only `prompt_llm` / `get_next_task`, does not hit the new
+> real before-read and bail out with `"error"`). Rewrite the two tests that assert `get_next_task`
+> returns None on a tracker error.
 > Run `run_format_code`, then pylint, pytest and mypy; fix everything before finishing.
