@@ -1,8 +1,11 @@
 # Step 3 — Failure surface for `no_progress_after_retries`
 
-See [summary.md](./summary.md). Depends on Step 2, which produces the reason. Gives it a label,
-a comment category and a route in `core.py`, and fixes the neighbouring `error` branch that
-throws away its detail.
+See [summary.md](./summary.md). Lands **before** Step 4, which produces the reason: `core.py`'s
+failure chain has no `else`, so the route must exist before anything can emit the reason.
+Gives it a label, a comment category and a route in `core.py`, and fixes the neighbouring
+`error` branch that throws away the detail Step 2 now sets.
+
+Nothing here needs Step 4 to exist — the tests construct `TaskOutcome` directly.
 
 ## WHERE
 
@@ -31,8 +34,9 @@ Two edits in `core.py`'s failure chain (`:156-205`).
 - There is no exhaustive key-set test over `FAILURE_LABELS` / `CATEGORY_DISPLAY`, so adding a
   reason touches only the two dicts plus one new assertion.
 - **The failure chain has no `else`.** `core.py:156-205` is a chain of `if`s; an unrouted reason
-  falls through to `progress.completed += 1` at `:207` and loops again. `no_progress_after_retries`
-  must be routed or it becomes a silent loop.
+  falls through to `progress.completed += 1` at `:207` and loops again — which is exactly why
+  this step precedes Step 4 rather than following it. `no_progress_after_retries` must be routed
+  before it can be emitted.
 - Place the new branch immediately next to the `no_changes_after_retries` branch at `:189`.
 
 ## ALGORITHM
@@ -49,7 +53,7 @@ if outcome.reason == "no_progress_after_retries":
 ```
 
 The `error` branch at `:199-205` currently hardcodes `message="Task processing failed"` and drops
-`outcome.detail`, which would discard Step 1's tracker message:
+`outcome.detail`, which would discard Step 2's tracker message:
 
 ```
 return fail("general", stage="Task implementation",
@@ -99,6 +103,8 @@ pattern at `:105`:
 
 > Implement Step 3 of `pr_info/steps/step_3.md`, with `pr_info/steps/summary.md` for context.
 > Steps 1 and 2 must be complete first. Write the tests first, then the implementation.
+> Nothing emits `no_progress_after_retries` yet — Step 4 does. Route it here anyway; the tests
+> construct the outcome directly.
 > Add `no_progress_after_retries` to `FAILURE_LABELS` (mapped to the **existing**
 > `no_changes_after_retries` label id) and to `CATEGORY_DISPLAY`. Do not create a new label and do
 > not touch `labels.json`, `define_labels.py`, the docs table or the workflow-matrix HTML.
@@ -106,5 +112,5 @@ pattern at `:105`:
 > the chain has no `else`, so an unrouted reason silently loops. Include the retry count and the
 > task name from `outcome.detail` in the message.
 > Change the neighbouring `error` branch to use `outcome.detail or "Task processing failed"` so
-> Step 1's tracker message reaches the failure comment; use a plain fallback, not `append_detail`.
+> Step 2's tracker message reaches the failure comment; use a plain fallback, not `append_detail`.
 > Run `run_format_code`, then pylint, pytest and mypy; fix everything before finishing.

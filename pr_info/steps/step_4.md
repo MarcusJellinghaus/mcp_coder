@@ -1,77 +1,116 @@
-# Step 4 — Round cap on the task loop
+# Step 4 — Retry loop: consume `no_progress`
 
-See [summary.md](./summary.md). Independent of Steps 1–3: the cap is the backstop for the one
-risk the progress predicate cannot cover — the count is written by the agent, so deleting or
-regenerating tracker lines also lowers it.
+See [summary.md](./summary.md). Depends on Step 2, which introduced the `"no_progress"` reason,
+and on Step 3, which already routes the `no_progress_after_retries` this step starts emitting.
+Feeds the new reason into the existing 3-strike budget and gives attempt 2+ a reminder that
+matches what actually went wrong. This is the commit that closes the loop: after it,
+`no_progress` no longer reaches `core.py` at all.
 
 ## WHERE
 
-- `src/mcp_coder/workflows/implement/core.py` (Step 4 loop, `:146`)
-- `tests/workflows/implement/test_core_failure_routing.py`
+- `src/mcp_coder/workflows/implement/task_processing.py`
+- `tests/workflows/implement/test_task_progress_gate.py` (extend)
 
 ## WHAT
 
-No new function, no new reason, no new label. The `while True:` loop becomes bounded.
+```python
+RETRY_REMINDER: str                      # kept — existing tests import this name
+NO_PROGRESS_REMINDER: str                # new
+RETRY_REMINDERS: dict[str, str] = {
+    "no_changes": RETRY_REMINDER,
+    "no_progress": NO_PROGRESS_REMINDER,
+}
+
+def process_single_task(
+    ...,
+    attempt: int = 1,
+    previous_reason: str | None = None,   # new, last parameter
+    ...
+) -> TaskOutcome: ...
+
+def process_task_with_retry(...) -> TaskOutcome:   # signature unchanged
+```
 
 ## HOW
 
-- `progress.total` is already computed just above the loop (`:137-141`) from
-  `get_step_progress`, inside a bare `except Exception: pass`. If that read fails, `total` stays
-  0 and the cap falls back to 20 — which is the intended backstop behaviour, so that bare except
-  is left alone.
-- `progress.total` is **not** a count of remaining tasks: it sums every checkbox under a `### `
-  header, completed ones and meta-tasks included. Since one round can complete a whole step,
-  rounds ≈ number of steps ≪ `progress.total`. The cap is deliberately slack — a backstop, not a
-  bound.
-- Use `for ... else` rather than a manual counter: the loop already `break`s on `no_tasks`, so the
-  `else` clause fires exactly when the cap is exhausted without that break, and the cap cannot be
-  bypassed by a later edit that adds a `continue`.
-- Reuse `fail("general", ...)`, which maps to the existing `implementing_failed` label.
+- `previous_reason` is added as the last parameter with a `None` default, so no existing call
+  site or test needs updating.
+- Reminder selection is a dict lookup, not a branch:
+  `full_prompt += RETRY_REMINDERS.get(previous_reason or "no_changes", RETRY_REMINDER)`,
+  still guarded by `if attempt > 1`.
+- `RETRY_REMINDER` keeps its current name and text — `test_retry_reminder_offers_blocked_exit`
+  (`test_task_processing.py:198`) imports it directly.
 
 ## ALGORITHM
 
+`NO_PROGRESS_REMINDER` text, worded so it asserts nothing about *which* task the previous
+attempt was working on — once a no-progress attempt commits a ticked checkbox, attempt 2 may
+legitimately be handed a different task:
+
 ```
-round_cap = max(progress.total + 10, 20)
-for _ in range(round_cap):
-    ... existing loop body, entirely unchanged ...
-else:
-    return fail("general", stage="Task implementation",
-                message=f"Stopped after {round_cap} rounds without completing all tasks")
+⚠️ The previous attempt changed files but did not complete any task in
+pr_info/TASK_TRACKER.md — no checkbox went from [ ] to [x]. Writing notes, logs or prose
+into a step or plan file is NOT progress and is NOT a way to report a problem. Either do the
+work and tick the box, or — if something blocks you — write one line to pr_info/.blocked.txt
+saying what blocks you, and stop.
 ```
 
-The body is not modified: the `break` on `no_tasks`, every `return fail(...)`, the
-`progress.completed += 1` and the `log_progress_summary` call all stay as they are. Only the
-`while True:` header and the new `else:` clause change.
+`process_task_with_retry`:
+
+```
+terminal = "no_changes_after_retries"
+last_detail = ""
+for attempt in 1..MAX_NO_CHANGE_RETRIES:
+    outcome = process_single_task(..., attempt=attempt, previous_reason=previous_reason)
+    if outcome.reason not in ("no_changes", "no_progress"):
+        return outcome
+    if outcome.reason == "no_progress":
+        terminal = "no_progress_after_retries"     # sticky: the more informative reason wins
+    last_detail = outcome.detail
+    previous_reason = outcome.reason
+    log warning naming attempt, MAX_NO_CHANGE_RETRIES and outcome.reason
+return TaskOutcome(False, terminal, last_detail)
+```
+
+`terminal` is sticky by construction: once set to `no_progress_after_retries` it is never reset,
+so a mixed sequence (one changed-but-flat attempt, two zero-change attempts) reports
+`no_progress_after_retries`. `no_changes_after_retries` survives only when every attempt
+produced zero changes.
 
 ## DATA
 
-| Situation | Result |
-|-----------|--------|
-| `no_tasks` before the cap | `break` → the post-loop phases run, as today |
-| any failure reason | that `fail(...)`, as today |
-| cap exhausted | `fail("general", …)` → `implementing_failed`, exit 1 |
+| Attempt sequence | Return reason |
+|------------------|---------------|
+| all `no_changes` | `no_changes_after_retries` (unchanged) |
+| any `no_progress` | `no_progress_after_retries` |
+| anything else | that outcome, returned unchanged and immediately |
 
-`round_cap` is `max(progress.total + 10, 20)`: 20 when the step-progress read fails or the
-tracker is small.
+`detail` on the terminal outcome carries the last attempt's task name, for the failure message
+Step 3 builds.
+
+## Cost
+
+Both terminal reasons now cost up to 3 full LLM rounds with formatters, commit and push. Per-task
+mypy is *not* in that cost: `RUN_MYPY_AFTER_EACH_TASK = False` in `constants.py`, so
+`task_processing.py` skips it by default. The "at most 3 noise commits" ceiling holds only while
+`MAX_NO_CHANGE_RETRIES` stays at 3.
 
 ## Tests (write first)
 
-In `test_core_failure_routing.py`, patching `process_task_with_retry`, `get_step_progress`,
-the prerequisites and the deliberate failure handler:
+Extend `test_task_progress_gate.py`, patching `process_single_task`:
 
-1. `get_step_progress` returning `{}` (so `total == 0`, cap 20) and `process_task_with_retry`
-   returning `TaskOutcome(True, "completed")` forever → exit 1, `failure.category ==
-   "implementing_failed"`, `failure.stage == "Task implementation"`, the message names the cap,
-   and `process_task_with_retry.call_count == 20`.
-2. A step progress of 100 checkboxes → the cap is 110, not 20 (assert via the message, or via a
-   `side_effect` of 109 successes then `no_tasks`, which must still reach the post-loop phases and
-   return 0).
-3. 19 successes then `no_tasks` under a cap of 20 → exit 0 and no failure handler call: the cap
-   does not fire one round early.
-
-Existing tests need no change: every multi-round core test uses a `side_effect` list ending in a
-terminal outcome, and every `return_value` in those files is already terminal — verified across
-`test_core.py`, `test_core_workflow.py` and `test_core_failure_routing.py`.
+1. Three `no_progress` outcomes → `no_progress_after_retries`, detail preserved.
+2. Three `no_changes` outcomes → `no_changes_after_retries` (regression:
+   `test_retry_exhausted_returns_no_changes_after_retries` must keep passing too).
+3. Mixed `no_changes`, `no_progress`, `no_changes` → `no_progress_after_retries`.
+4. `no_progress` then `completed` → the success outcome, returned as-is.
+5. `previous_reason` forwarding: attempt 2 after `no_progress` receives
+   `previous_reason="no_progress"`; attempt 2 after `no_changes` receives `"no_changes"`.
+6. Prompt-assembly test (patching `prompt_llm`): `previous_reason="no_progress"` with
+   `attempt=2` puts `NO_PROGRESS_REMINDER` in the prompt and `RETRY_REMINDER` not in it;
+   `previous_reason=None` with `attempt=2` puts `RETRY_REMINDER` in it.
+7. `NO_PROGRESS_REMINDER` mentions `pr_info/.blocked.txt` (mirrors the existing
+   `TestBlockedExitInPrompts` assertion) and does **not** name a specific task or step.
 
 ## Checks
 
@@ -80,12 +119,13 @@ terminal outcome, and every `return_value` in those files is already terminal �
 ## LLM prompt
 
 > Implement Step 4 of `pr_info/steps/step_4.md`, with `pr_info/steps/summary.md` for context.
-> Write the tests first, then the implementation.
-> Bound the `while True:` loop in `core.py` Step 4 with `round_cap = max(progress.total + 10, 20)`,
-> using `for _ in range(round_cap): ... else: return fail("general", ...)` so the cap is structural
-> rather than a counter someone can forget. Leave the loop body completely unchanged, including the
-> `break` on `no_tasks`. The failure message must name the cap. Do not add a new reason string or a
-> new label — reuse `fail("general", ...)`.
-> Leave the bare `except Exception: pass` around the `get_step_progress` read above the loop alone:
-> the 20-round fallback it produces is intended.
+> Steps 1–3 must be complete first. Write the tests first, then the implementation.
+> Add `NO_PROGRESS_REMINDER` and the `RETRY_REMINDERS` dict to `task_processing.py`, keeping the
+> existing `RETRY_REMINDER` name and text because a test imports it. Add `previous_reason` as the
+> last parameter of `process_single_task` with a `None` default so no existing call site changes.
+> In `process_task_with_retry`, retry on both `no_changes` and `no_progress`, track the terminal
+> reason in a variable instead of hardcoding it at the return, and make
+> `no_progress_after_retries` sticky so a mixed sequence reports the more informative reason.
+> Word `NO_PROGRESS_REMINDER` so it does not assert which task the previous attempt was about —
+> a retry may legitimately target a different task.
 > Run `run_format_code`, then pylint, pytest and mypy; fix everything before finishing.

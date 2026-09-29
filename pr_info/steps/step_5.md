@@ -1,6 +1,7 @@
 # Step 5 — Prompt wording: prose is not a report
 
-See [summary.md](./summary.md). Independent of Steps 1–4. Fixes the cause at the source: the
+See [summary.md](./summary.md). Independent of Steps 1–4, and last only because it is the one
+step with no effect on the run loop. Fixes the cause at the source: the
 blocked channel works, but it lost to a generated step instruction saying "stop and **report**",
 which the agent satisfied by writing prose into the step file — a file change, which the old gate
 read as success.

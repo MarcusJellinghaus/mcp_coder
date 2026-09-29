@@ -49,10 +49,10 @@ and the plan-creation prompt are reworded so that prose is never a report.
 
 | Reason | Where | Label |
 |--------|-------|-------|
-| `no_progress` | per-attempt, internal to `process_task_with_retry` | — (never reaches `core.py`) |
+| `no_progress` | per-attempt, internal to `process_task_with_retry` once Step 4 lands | — (never reaches `core.py`) |
 | `no_progress_after_retries` | retry budget exhausted, at least one attempt changed files | existing `no_changes_after_retries` |
 | `no_changes_after_retries` | every attempt produced zero changes | unchanged |
-| `error` | tracker unreadable — detail names `pr_info/TASK_TRACKER.md` | existing `implementing_failed` |
+| `error` | tracker unreadable for any reason — detail names `pr_info/TASK_TRACKER.md` | existing `implementing_failed` |
 | `general` | round cap tripped | existing `implementing_failed` |
 
 `no_progress_after_retries` is the only new reason string, and it reuses an existing label: the
@@ -113,12 +113,19 @@ all of them meaning exactly what they mean today, with no per-test edit.
 
 ## Steps
 
-1. **Progress gate** — `_count_incomplete_tasks`, before/after snapshot, `no_progress` reason,
+1. **Round cap** — bound the `while True:` loop in `core.py` Step 4.
+2. **Progress gate** — `_count_incomplete_tasks`, before/after snapshot, `no_progress` reason,
    tracker errors surfaced as `error`.
-2. **Retry loop** — retry on `no_progress`, pick the terminal reason, second reminder variant.
 3. **Failure surface** — new reason in the two dicts, routed in `core.py`, tracker detail plumbed.
-4. **Round cap** — bound the `while True:` loop in `core.py` Step 4.
+4. **Retry loop** — retry on `no_progress`, pick the terminal reason, second reminder variant.
 5. **Prompt wording** — one reword, one addition in `prompts.md`.
 
-Steps 1 and 2 are sequential (2 consumes the reason 1 introduces). Steps 3, 4 and 5 are
-independent of each other and each produces one commit.
+**The order is the safety property, not a preference.** `core.py`'s failure chain has no `else`:
+an unrouted reason falls through to `progress.completed += 1` and the loop goes round again. So
+the cap lands first, before any new reason exists — it bounds every intermediate commit — and
+the route (3) lands before the code that emits the reason it routes (4). Step 2 does emit a
+`no_progress` that nothing routes until Step 4; that window is deliberate and is exactly what
+the Step 1 cap covers.
+
+Sequencing: 2 needs 1 only for the backstop, 4 needs both 2 (the reason) and 3 (its route).
+5 is independent of all of them. Each step produces one commit.

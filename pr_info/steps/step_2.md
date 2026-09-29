@@ -1,114 +1,145 @@
-# Step 2 — Retry loop: consume `no_progress`
+# Step 2 — Progress gate in `process_single_task`
 
-See [summary.md](./summary.md). Depends on Step 1, which introduced the `"no_progress"` reason.
-Feeds the new reason into the existing 3-strike budget and gives attempt 2+ a reminder that
-matches what actually went wrong.
+See [summary.md](./summary.md). Replaces "any file changed = success" with "the count of
+incomplete non-meta tasks decreased", and stops `get_next_task` from swallowing tracker errors.
+
+`no_progress` is consumed by the retry loop in Step 4; until then it reaches `core.py`
+unrouted and falls through to the next round, bounded by the Step 1 round cap.
 
 ## WHERE
 
 - `src/mcp_coder/workflows/implement/task_processing.py`
-- `tests/workflows/implement/test_task_progress_gate.py` (extend)
+- `tests/workflows/implement/test_task_progress_gate.py` (new)
+- `tests/workflows/implement/test_task_processing.py` (autouse fixture + 2 rewritten tests)
 
 ## WHAT
 
 ```python
-RETRY_REMINDER: str                      # kept — existing tests import this name
-NO_PROGRESS_REMINDER: str                # new
-RETRY_REMINDERS: dict[str, str] = {
-    "no_changes": RETRY_REMINDER,
-    "no_progress": NO_PROGRESS_REMINDER,
-}
-
-def process_single_task(
-    ...,
-    attempt: int = 1,
-    previous_reason: str | None = None,   # new, last parameter
-    ...
-) -> TaskOutcome: ...
-
-def process_task_with_retry(...) -> TaskOutcome:   # signature unchanged
+def _count_incomplete_tasks(project_dir: Path) -> int:
+    """Count incomplete non-meta tasks. Raises TaskTrackerError if unreadable."""
 ```
+
+`get_next_task(project_dir) -> Optional[str]` — signature unchanged; the blanket
+`except Exception: return None` at the end is **deleted** so tracker read failures propagate.
+
+`process_single_task(...)` — signature unchanged in this step. New reason `"no_progress"`,
+with `detail` carrying the selected task name.
 
 ## HOW
 
-- `previous_reason` is added as the last parameter with a `None` default, so no existing call
-  site or test needs updating.
-- Reminder selection is a dict lookup, not a branch:
-  `full_prompt += RETRY_REMINDERS.get(previous_reason or "no_changes", RETRY_REMINDER)`,
-  still guarded by `if attempt > 1`.
-- `RETRY_REMINDER` keeps its current name and text — `test_retry_reminder_offers_blocked_exit`
-  (`test_task_processing.py:198`) imports it directly.
+- `TaskTrackerError` is the base class of both `TaskTrackerFileNotFoundError` and
+  `TaskTrackerSectionNotFoundError` (`workflow_utils/task_tracker.py:76-84`). Import it
+  alongside the existing `get_incomplete_tasks` import at `task_processing.py:27`:
+  `from mcp_coder.workflow_utils.task_tracker import TaskTrackerError, get_incomplete_tasks`.
+- One `except TaskTrackerError` clause, not two: the exception text already distinguishes the
+  missing-file case from the missing-header case, so a single branch still yields an accurate
+  message.
+- **The blanket `except Exception` is re-homed, not dropped.** Deleting it from `get_next_task`
+  also un-swallows the non-tracker failures it used to absorb — `Path.read_text` raises
+  `OSError` and `UnicodeDecodeError` unwrapped (`task_tracker.py:103`), and those are *not*
+  `TaskTrackerError`. Catching only `TaskTrackerError` would let them escape
+  `process_single_task` into `run_guarded`, which fails the run as a bare `implementing_failed`
+  with no message — the same silent-cause problem this step exists to fix. The call site
+  therefore keeps a second, broad clause mapping anything else to the same `"error"` reason.
+  The move is deliberate: the reason mapping stays where it can name the tracker in `detail`.
+- `_count_incomplete_tasks` stays private — `__init__.py` and the public surface do not change.
+- The after-read goes at the **very end** of the function, replacing only the final
+  `return TaskOutcome(True, "completed")`. Steps 7–10 (mypy, formatters, commit, push) are not
+  moved, not extracted and not re-ordered: commit and push cannot change checkbox counts, and
+  the no-progress work must be committed anyway.
 
 ## ALGORITHM
 
-`NO_PROGRESS_REMINDER` text, worded so it asserts nothing about *which* task the previous
-attempt was working on — once a no-progress attempt commits a ticked checkbox, attempt 2 may
-legitimately be handed a different task:
+Replace the `next_task = get_next_task(...)` block near `:388`:
 
 ```
-⚠️ The previous attempt changed files but did not complete any task in
-pr_info/TASK_TRACKER.md — no checkbox went from [ ] to [x]. Writing notes, logs or prose
-into a step or plan file is NOT progress and is NOT a way to report a problem. Either do the
-work and tick the box, or — if something blocks you — write one line to pr_info/.blocked.txt
-saying what blocks you, and stop.
+try:
+    next_task = get_next_task(project_dir)
+    tasks_before = _count_incomplete_tasks(project_dir)
+except TaskTrackerError as e:
+    return TaskOutcome(False, "error", f"Cannot read pr_info/TASK_TRACKER.md: {e}")
+except Exception as e:  # pylint: disable=broad-exception-caught
+    return TaskOutcome(False, "error",
+                       f"Cannot read pr_info/TASK_TRACKER.md: unexpected {type(e).__name__}: {e}")
+if not next_task:
+    return TaskOutcome(False, "no_tasks")
 ```
 
-`process_task_with_retry`:
+Replace the final `return TaskOutcome(True, "completed")` at `:541-542`:
 
 ```
-terminal = "no_changes_after_retries"
-last_detail = ""
-for attempt in 1..MAX_NO_CHANGE_RETRIES:
-    outcome = process_single_task(..., attempt=attempt, previous_reason=previous_reason)
-    if outcome.reason not in ("no_changes", "no_progress"):
-        return outcome
-    if outcome.reason == "no_progress":
-        terminal = "no_progress_after_retries"     # sticky: the more informative reason wins
-    last_detail = outcome.detail
-    previous_reason = outcome.reason
-    log warning naming attempt, MAX_NO_CHANGE_RETRIES and outcome.reason
-return TaskOutcome(False, terminal, last_detail)
+try:
+    tasks_after = _count_incomplete_tasks(project_dir)
+except Exception:                           # pylint: disable=broad-exception-caught
+    tasks_after = None                      # unreadable after-read == no progress, not a crash
+if tasks_after is None or tasks_after >= tasks_before:
+    log warning naming next_task, tasks_before, tasks_after
+    return TaskOutcome(False, "no_progress", next_task)
+return TaskOutcome(True, "completed")
 ```
 
-`terminal` is sticky by construction: once set to `no_progress_after_retries` it is never reset,
-so a mixed sequence (one changed-but-flat attempt, two zero-change attempts) reports
-`no_progress_after_retries`. `no_changes_after_retries` survives only when every attempt
-produced zero changes.
+Everything between the two blocks — the blocked/timeout/`mcp_unavailable` branches, the
+zero-change `no_changes` check, mypy, formatters, commit, push — is untouched.
 
 ## DATA
 
-| Attempt sequence | Return reason |
-|------------------|---------------|
-| all `no_changes` | `no_changes_after_retries` (unchanged) |
-| any `no_progress` | `no_progress_after_retries` |
-| anything else | that outcome, returned unchanged and immediately |
+| Situation | Return |
+|-----------|--------|
+| count decreased | `TaskOutcome(True, "completed")` |
+| count flat or higher | `TaskOutcome(False, "no_progress", <task name>)` |
+| after-read raises anything | `TaskOutcome(False, "no_progress", <task name>)` |
+| before-read raises `TaskTrackerError` | `TaskOutcome(False, "error", "Cannot read pr_info/TASK_TRACKER.md: …")` |
+| before-read raises anything else | `TaskOutcome(False, "error", "Cannot read pr_info/TASK_TRACKER.md: unexpected …")` |
+| no tasks | `TaskOutcome(False, "no_tasks")` — unchanged |
 
-`detail` on the terminal outcome carries the last attempt's task name, for the failure message
-Step 3 builds.
-
-## Cost
-
-Both terminal reasons now cost up to 3 full LLM rounds with formatters, commit and push. Per-task
-mypy is *not* in that cost: `RUN_MYPY_AFTER_EACH_TASK = False` in `constants.py`, so
-`task_processing.py` skips it by default. The "at most 3 noise commits" ceiling holds only while
-`MAX_NO_CHANGE_RETRIES` stays at 3.
+Two tracker reads per round instead of one. Both are small local markdown reads; the second
+read is deliberately not shared with `get_next_task` so that the ~24 existing tests patching
+`get_next_task` keep working unchanged.
 
 ## Tests (write first)
 
-Extend `test_task_progress_gate.py`, patching `process_single_task`:
+New `tests/workflows/implement/test_task_progress_gate.py`, patching `get_next_task`,
+`_count_incomplete_tasks`, `get_prompt`, `prompt_llm`, `store_session`, `get_full_status`,
+`commit_changes`, `push_changes`:
 
-1. Three `no_progress` outcomes → `no_progress_after_retries`, detail preserved.
-2. Three `no_changes` outcomes → `no_changes_after_retries` (regression:
-   `test_retry_exhausted_returns_no_changes_after_retries` must keep passing too).
-3. Mixed `no_changes`, `no_progress`, `no_changes` → `no_progress_after_retries`.
-4. `no_progress` then `completed` → the success outcome, returned as-is.
-5. `previous_reason` forwarding: attempt 2 after `no_progress` receives
-   `previous_reason="no_progress"`; attempt 2 after `no_changes` receives `"no_changes"`.
-6. Prompt-assembly test (patching `prompt_llm`): `previous_reason="no_progress"` with
-   `attempt=2` puts `NO_PROGRESS_REMINDER` in the prompt and `RETRY_REMINDER` not in it;
-   `previous_reason=None` with `attempt=2` puts `RETRY_REMINDER` in it.
-7. `NO_PROGRESS_REMINDER` mentions `pr_info/.blocked.txt` (mirrors the existing
-   `TestBlockedExitInPrompts` assertion) and does **not** name a specific task or step.
+1. `side_effect=[3, 2]` → `TaskOutcome(True, "completed")`.
+2. `side_effect=[3, 3]` → reason `"no_progress"`, `detail` is the task name, **and**
+   `commit_changes` / `push_changes` were both called.
+3. `side_effect=[3, 4]` → `"no_progress"` (a rise is not progress).
+4. After-read raises `TaskTrackerFileNotFoundError` → `"no_progress"`, no exception escapes.
+5. Before-read (`get_next_task`) raises `TaskTrackerFileNotFoundError` → reason `"error"`,
+   `"TASK_TRACKER.md"` in `detail`.
+6. `TaskTrackerSectionNotFoundError` on the before-read → same, with the section fault named
+   in `detail`.
+7. Before-read raises a **non**-`TaskTrackerError` (`OSError`, and `UnicodeDecodeError` as a
+   second parameterized case) → reason `"error"` with `"TASK_TRACKER.md"` in `detail`; nothing
+   escapes `process_single_task`. This is the behaviour the deleted blanket `except` used to
+   provide and the narrow clause alone would lose.
+8. Zero file changes still returns `"no_changes"`, not `"no_progress"` — the existing gate wins
+   because it runs first.
+
+In `tests/workflows/implement/test_task_processing.py`:
+
+```python
+@pytest.fixture(autouse=True)
+def _tracker_count_always_decreases():
+    with patch(
+        "mcp_coder.workflows.implement.task_processing._count_incomplete_tasks",
+        side_effect=itertools.count(5, -1),
+    ):
+        yield
+```
+
+Function-scoped, so each test gets a fresh strictly-decreasing sequence regardless of how many
+reads its code path performs.
+
+Rewrite the two tests that assert the swallowed error:
+
+- `test_get_next_task_exception` (`:71-77`) → `pytest.raises(TaskTrackerError)` when
+  `get_incomplete_tasks` raises `TaskTrackerFileNotFoundError`. Keep a separate case showing a
+  non-tracker `Exception` also propagates now.
+- `test_error_recovery_patterns` (`:968-979`) → same change; it asserts the same removed
+  behaviour.
 
 ## Checks
 
@@ -118,12 +149,17 @@ Extend `test_task_progress_gate.py`, patching `process_single_task`:
 
 > Implement Step 2 of `pr_info/steps/step_2.md`, with `pr_info/steps/summary.md` for context.
 > Step 1 must be complete first. Write the tests first, then the implementation.
-> Add `NO_PROGRESS_REMINDER` and the `RETRY_REMINDERS` dict to `task_processing.py`, keeping the
-> existing `RETRY_REMINDER` name and text because a test imports it. Add `previous_reason` as the
-> last parameter of `process_single_task` with a `None` default so no existing call site changes.
-> In `process_task_with_retry`, retry on both `no_changes` and `no_progress`, track the terminal
-> reason in a variable instead of hardcoding it at the return, and make
-> `no_progress_after_retries` sticky so a mixed sequence reports the more informative reason.
-> Word `NO_PROGRESS_REMINDER` so it does not assert which task the previous attempt was about —
-> a retry may legitimately target a different task.
+> Add `_count_incomplete_tasks` to `task_processing.py`, snapshot the count next to the
+> `get_next_task` call, and re-read it at the very end of `process_single_task` — replacing only
+> the final `return TaskOutcome(True, "completed")`. Do not move, extract or reorder the mypy,
+> formatter, commit or push blocks: a no-progress round must still be committed and pushed.
+> Delete the blanket `except Exception` from `get_next_task` and re-home it at the call site:
+> an `except TaskTrackerError` clause plus a broad `except Exception` clause, both returning
+> reason `"error"` with a detail naming `pr_info/TASK_TRACKER.md`. The broad clause is required —
+> `Path.read_text` raises `OSError` / `UnicodeDecodeError`, which are not `TaskTrackerError`, and
+> without it they would escape `process_single_task` into `run_guarded` with no message.
+> Any failure on the *after*-read counts as no progress, not a crash.
+> Add the autouse fixture to `test_task_processing.py` so the existing ~24 `process_single_task`
+> tests keep passing, and rewrite the two tests that assert `get_next_task` returns None on a
+> tracker error.
 > Run `run_format_code`, then pylint, pytest and mypy; fix everything before finishing.
