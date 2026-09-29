@@ -1,6 +1,5 @@
 """Tests for the progress gate and the retry loop's reason selection."""
 
-import itertools
 from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -26,14 +25,11 @@ _TP = "mcp_coder.workflows.implement.task_processing"
 
 @pytest.fixture(autouse=True)
 def _tracker_count_always_decreases(request: pytest.FixtureRequest) -> Iterator[None]:
-    """Make every progress-gate read look like progress unless opted out."""
+    """Make the progress-gate after-read look like progress unless opted out."""
     if request.node.get_closest_marker("real_tracker_count"):
         yield
         return
-    with patch(
-        f"{_TP}._count_incomplete_tasks",
-        side_effect=itertools.count(5, -1),
-    ):
+    with patch(f"{_TP}._count_incomplete_tasks", return_value=0):
         yield
 
 
@@ -160,8 +156,8 @@ class TestReminderSelection:
                 return_value="Template",
             ),
             patch(
-                "mcp_coder.workflows.implement.task_processing.get_next_task",
-                return_value="Step 1: Test task",
+                "mcp_coder.workflows.implement.task_processing.get_incomplete_tasks",
+                return_value=["Step 1: Test task"],
             ),
             patch(
                 "mcp_coder.workflows.implement.task_processing.get_full_status",
@@ -208,25 +204,23 @@ class TestProgressGate:
     """process_single_task scores a round by the incomplete-task count."""
 
     TASK = "Step 2: Implement thing"
+    THREE_TASKS = [TASK, "Step 2: Second", "Step 3: Third"]
 
     @staticmethod
     def _run(
-        count: MagicMock,
-        next_task: MagicMock | None = None,
+        before: MagicMock,
+        after: MagicMock,
         changes: list[str] | None = None,
     ) -> tuple[TaskOutcome, MagicMock, MagicMock]:
-        """Run one round with everything but the tracker reads mocked."""
+        """Run one round; `before` is the task-list read, `after` the count."""
         status = {
             "staged": [],
             "modified": ["src/x.py"] if changes is None else changes,
             "untracked": [],
         }
         with (
-            patch(f"{_TP}._count_incomplete_tasks", count),
-            patch(
-                f"{_TP}.get_next_task",
-                next_task or MagicMock(return_value=TestProgressGate.TASK),
-            ),
+            patch(f"{_TP}.get_incomplete_tasks", before),
+            patch(f"{_TP}._count_incomplete_tasks", after),
             patch(f"{_TP}.get_prompt", return_value="Template"),
             patch(f"{_TP}.prompt_llm", return_value=_make_llm_response()),
             patch(f"{_TP}.store_session"),
@@ -237,15 +231,34 @@ class TestProgressGate:
             outcome = process_single_task(Path("/test/project"), "claude")
         return outcome, mock_commit, mock_push
 
-    def test_count_decreased_is_completed(self) -> None:
-        """A lower count after the round is progress."""
-        outcome, _, _ = self._run(MagicMock(side_effect=[3, 2]))
+    def _three_tasks(self) -> MagicMock:
+        """Task-list read returning three incomplete tasks, TASK first."""
+        return MagicMock(return_value=list(self.THREE_TASKS))
+
+    def test_one_read_selects_task_and_snapshots_count(self) -> None:
+        """The before-count is len() of the same read that selects the task."""
+        before = self._three_tasks()
+        after = MagicMock(return_value=2)
+
+        outcome, _, _ = self._run(before, after)
 
         assert outcome == TaskOutcome(True, "completed")
+        before.assert_called_once_with(
+            str(Path("/test/project") / "pr_info"), exclude_meta_tasks=True
+        )
+        after.assert_called_once_with(Path("/test/project"))
+
+    def test_first_task_is_selected(self) -> None:
+        """The first incomplete task is the one reported on no progress."""
+        outcome, _, _ = self._run(self._three_tasks(), MagicMock(return_value=3))
+
+        assert outcome.detail == self.TASK
 
     def test_flat_count_is_no_progress_but_still_committed(self) -> None:
         """Changed files without a tick are committed, then scored no_progress."""
-        outcome, mock_commit, mock_push = self._run(MagicMock(side_effect=[3, 3]))
+        outcome, mock_commit, mock_push = self._run(
+            self._three_tasks(), MagicMock(return_value=3)
+        )
 
         assert outcome == TaskOutcome(False, "no_progress", self.TASK)
         mock_commit.assert_called_once()
@@ -253,25 +266,26 @@ class TestProgressGate:
 
     def test_rising_count_is_no_progress(self) -> None:
         """Adding tasks is not progress."""
-        outcome, _, _ = self._run(MagicMock(side_effect=[3, 4]))
+        outcome, _, _ = self._run(self._three_tasks(), MagicMock(return_value=4))
 
         assert outcome.reason == "no_progress"
 
     def test_after_read_failure_is_no_progress(self) -> None:
         """An unreadable tracker after the round scores no_progress, not a crash."""
         outcome, _, _ = self._run(
-            MagicMock(side_effect=[3, TaskTrackerFileNotFoundError("gone")])
+            self._three_tasks(),
+            MagicMock(side_effect=TaskTrackerFileNotFoundError("gone")),
         )
 
         assert outcome == TaskOutcome(False, "no_progress", self.TASK)
 
     def test_missing_tracker_before_round_is_error(self) -> None:
         """A missing tracker fails loudly instead of reading as 'no tasks'."""
-        next_task = MagicMock(
+        before = MagicMock(
             side_effect=TaskTrackerFileNotFoundError("TASK_TRACKER.md not found")
         )
 
-        outcome, mock_commit, _ = self._run(MagicMock(), next_task=next_task)
+        outcome, mock_commit, _ = self._run(before, MagicMock())
 
         assert outcome.reason == "error"
         assert "TASK_TRACKER.md" in outcome.detail
@@ -279,11 +293,11 @@ class TestProgressGate:
 
     def test_missing_section_before_round_is_error(self) -> None:
         """A tracker without a tasks section names the section fault."""
-        next_task = MagicMock(
+        before = MagicMock(
             side_effect=TaskTrackerSectionNotFoundError("Tasks section not found")
         )
 
-        outcome, _, _ = self._run(MagicMock(), next_task=next_task)
+        outcome, _, _ = self._run(before, MagicMock())
 
         assert outcome.reason == "error"
         assert "TASK_TRACKER.md" in outcome.detail
@@ -298,7 +312,7 @@ class TestProgressGate:
     )
     def test_non_tracker_error_before_round_is_error(self, exc: Exception) -> None:
         """Read failures outside TaskTrackerError still map to 'error'."""
-        outcome, _, _ = self._run(MagicMock(), next_task=MagicMock(side_effect=exc))
+        outcome, _, _ = self._run(MagicMock(side_effect=exc), MagicMock())
 
         assert outcome.reason == "error"
         assert "TASK_TRACKER.md" in outcome.detail
@@ -306,7 +320,9 @@ class TestProgressGate:
 
     def test_zero_changes_still_no_changes(self) -> None:
         """The zero-change gate runs first and wins."""
-        outcome, mock_commit, _ = self._run(MagicMock(side_effect=[3, 3]), changes=[])
+        outcome, mock_commit, _ = self._run(
+            self._three_tasks(), MagicMock(return_value=3), changes=[]
+        )
 
         assert outcome == TaskOutcome(False, "no_changes")
         mock_commit.assert_not_called()

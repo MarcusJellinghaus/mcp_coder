@@ -202,11 +202,11 @@ def run_implement_workflow(
                         ),
                     )
                 if outcome.reason == "no_progress_after_retries":
-                    # Files changed every round, but no checkbox was ever ticked
+                    # At least one attempt changed files, but no checkbox was ticked
                     msg = (
                         f"No task was completed after {MAX_NO_CHANGE_RETRIES}"
-                        f" attempts (files changed, but no checkbox in"
-                        f" pr_info/TASK_TRACKER.md was ticked)"
+                        f" attempts (at least one attempt changed files, but no"
+                        f" checkbox in pr_info/TASK_TRACKER.md was ticked)"
                     )
                     if outcome.detail:
                         msg += f" — last task: {outcome.detail}"

@@ -19,7 +19,6 @@ from .prerequisites import (
 )
 from .task_processing import (
     check_and_fix_mypy,
-    get_next_task,
     process_single_task,
 )
 from .task_tracker_prep import log_progress_summary, prepare_task_tracker
@@ -31,7 +30,6 @@ __all__ = [
     "has_implementation_tasks",
     "check_and_fix_mypy",
     "commit_changes",
-    "get_next_task",
     "process_single_task",
     "push_changes",
     "run_formatters",

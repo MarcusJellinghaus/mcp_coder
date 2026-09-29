@@ -83,34 +83,6 @@ class TaskOutcome:
     detail: str = ""
 
 
-def get_next_task(project_dir: Path) -> Optional[str]:
-    """Get next incomplete task from task tracker (excluding meta-tasks).
-
-    TaskTrackerError, OSError and UnicodeDecodeError from the tracker read
-    propagate to the caller, which maps them to a failure reason.
-
-    Args:
-        project_dir: Path to the project directory
-
-    Returns:
-        Next incomplete task name string, or None if no tasks remain.
-    """
-    logger.info("Checking for incomplete tasks...")
-
-    pr_info_dir = str(project_dir / PR_INFO_DIR)
-
-    # Get incomplete tasks, excluding meta-tasks
-    incomplete_tasks = get_incomplete_tasks(pr_info_dir, exclude_meta_tasks=True)
-
-    if not incomplete_tasks:
-        logger.info("No incomplete implementation tasks found (meta-tasks excluded)")
-        return None
-
-    next_task = incomplete_tasks[0]
-    logger.info(f"Found next task: {next_task}")
-    return next_task
-
-
 def _count_incomplete_tasks(project_dir: Path) -> int:
     """Count incomplete non-meta tasks.
 
@@ -418,10 +390,12 @@ def process_single_task(
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
 
-    # Get next incomplete task and snapshot the count for the progress gate
+    # One tracker read both selects the task and snapshots the progress-gate count
+    logger.info("Checking for incomplete tasks...")
     try:
-        next_task = get_next_task(project_dir)
-        tasks_before = _count_incomplete_tasks(project_dir)
+        incomplete_tasks = get_incomplete_tasks(
+            str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True
+        )
     except TaskTrackerError as e:
         logger.error(f"Cannot read task tracker: {e}")
         return TaskOutcome(False, "error", f"Cannot read pr_info/TASK_TRACKER.md: {e}")
@@ -433,9 +407,12 @@ def process_single_task(
             "error",
             f"Cannot read pr_info/TASK_TRACKER.md: unexpected {type(e).__name__}: {e}",
         )
-    if not next_task:
-        logger.info("No incomplete tasks found")
+    if not incomplete_tasks:
+        logger.info("No incomplete implementation tasks found (meta-tasks excluded)")
         return TaskOutcome(False, "no_tasks")
+    next_task = incomplete_tasks[0]
+    tasks_before = len(incomplete_tasks)
+    logger.info(f"Found next task: {next_task}")
 
     # Step 3: Get implementation prompt template
     logger.debug("Loading implementation prompt template...")
