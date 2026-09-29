@@ -25,7 +25,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] [Step 1](./steps/step_1.md) — Model: `Rule.ref`, `Rule.matcher` widening, `origin` `compare=False`, 4 skip guards
 - [x] [Step 2](./steps/step_2.md) — `permissions/expand.py` + import-linter contracts + export
-- [ ] [Step 3](./steps/step_3.md) — Loader two-phase + `@group` expansion for config rules
+- [x] [Step 3](./steps/step_3.md) — Loader two-phase + `@group` expansion for config rules
 - [ ] [Step 4](./steps/step_4.md) — `toolScenarios` shape (`ScenarioBlock` + schema)
 - [ ] [Step 5](./steps/step_5.md) — `skill_frame`: `@ref` lookup + `use:` substitution
 - [ ] [Step 6](./steps/step_6.md) — CLI wiring: D9 load hoist, D12 banner gating

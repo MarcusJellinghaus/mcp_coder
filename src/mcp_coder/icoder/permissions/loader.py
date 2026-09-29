@@ -22,31 +22,36 @@ settings files in precedence order (``user``, ``project``, ``local``), skips
 absent layers silently, resolves each to an absolute path (so ``Rule.source_path``
 provenance is absolute), and never touches ``.claude/*``.
 
-Step 5 adds :func:`_parse_matchers` and :func:`_load_layer`. The former parses a
-single matcher token, pre-detecting ``@ref`` members (unsupported until I4.1)
-before delegating to ``parse_matcher``. The latter reads + JSONC-parses +
-schema-validates one file, then builds rules/groups/scenarios/default. Failure is
-per-layer atomic: any single error (bad JSONC, schema reject, bad matcher, or an
-``@ref``) fails the whole layer — it contributes nothing and every error string
-names the source file plus the offending token/key.
+Loading is two-phase so a ``@group`` ref can resolve against the *merged* group
+map. Phase 1, :func:`_load_layer`, reads + JSONC-parses + schema-validates one
+file and validates every token via :func:`_token_errors`, keeping rule tokens and
+group/scenario members **raw** (``@ref`` resolution is deferred). Structural
+failure (bad JSONC, schema reject, malformed matcher) is per-layer atomic: the
+layer contributes nothing and every error names the source file plus the
+offending token/key.
 
-Step 6 adds the public :func:`load_permission_config` entry point: it emits the
-schema (gated), discovers and loads each layer, then merges the good layers
-(rules concatenated, ``defaultMode`` and ``groups``/``scenarios`` last-layer-wins)
-while degrading fail-closed on any broken layer (``degraded=True``; every error
-both logged and surfaced in ``PermissionConfig.errors``). All layers absent
-yields the empty backward-compat config (``default_policy=None``).
+Phase 2, the public :func:`load_permission_config`, emits the schema (gated),
+merges the good layers' raw ``toolGroups``/``toolScenarios`` last-layer-wins,
+then expands every rule token in authored order. A ``@group`` rule becomes its
+members, each pointing via ``Matcher.origin`` at a synthesised origin rule that
+carries the authored ref. An unresolvable ref kills only its own rule. Any error
+sets ``degraded=True`` and is both logged and surfaced in
+``PermissionConfig.errors``. All layers absent yields the empty backward-compat
+config (``default_policy=None``).
 """
 
 from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import NamedTuple
 
 import jsonschema
 
+from mcp_coder.icoder.permissions.expand import expand, is_ref
 from mcp_coder.icoder.permissions.matcher import parse_matcher
 from mcp_coder.icoder.permissions.model import (
     Matcher,
@@ -226,59 +231,46 @@ class _LayerResult(NamedTuple):
     """The outcome of loading one layer.
 
     On success: the parsed ``default_policy`` (or ``None`` when absent) plus the
-    built ``rules``/``groups``/``scenarios`` and an empty ``errors`` list. On any
-    failure: ``default_policy=None`` with empty collections and a non-empty
-    ``errors`` list — the layer contributes nothing (per-layer atomic
-    fail-closed).
+    validated but **raw** ``rule_tokens``/``groups``/``scenarios`` and an empty
+    ``errors`` list. On any failure: ``default_policy=None`` with empty
+    collections and a non-empty ``errors`` list — the layer contributes nothing
+    (per-layer atomic fail-closed).
     """
 
     default_policy: Policy | None
-    rules: list[Rule]
-    groups: dict[str, tuple[Matcher, ...]]
-    scenarios: dict[str, tuple[Matcher, ...]]
+    rule_tokens: list[tuple[str, Policy]]
+    groups: dict[str, tuple[str, ...]]
+    scenarios: dict[str, tuple[str, ...]]
     errors: list[str]
 
 
-def _parse_matchers(token: str, path: Path) -> tuple[list[Matcher], list[str]]:
-    """Parse one matcher token, pre-detecting ``@ref`` members.
-
-    ``@ref`` is checked *before* delegating to ``parse_matcher`` (which would
-    otherwise emit a generic "malformed matcher"): group references are not
-    supported until I4.1. Every returned error names the source file and the
-    offending token.
+def _token_errors(token: str, path: Path) -> list[str]:
+    """Validate one matcher token, deferring ``@ref`` resolution to the merge.
 
     Args:
-        token: The single matcher token to parse.
+        token: The single matcher token to validate.
         path: The source file the token came from (for error provenance).
 
     Returns:
-        A ``(matchers, errors)`` tuple. Success yields ``(>=1 matchers, [])``;
-        failure yields ``([], [reason, ...])``.
+        Error strings naming the file and the offending token; empty when valid.
     """
-    # Strip before the ``@``-prefix check so a member written with leading or
-    # trailing whitespace (e.g. ``" @git"``) still routes to the specific I4.1
-    # diagnostic instead of falling through to a generic "malformed matcher".
-    if token.strip().startswith("@"):
-        return [], [
-            f"{path}: group references (@…) not supported until I4.1: {token!r}"
-        ]
-    matchers, errs = parse_matcher(token)
-    if errs:
-        return [], [f"{path}: {e} (token {token!r})" for e in errs]
-    return matchers, []
+    if is_ref(token):
+        return []  # resolved after the merge
+    _, errs = parse_matcher(token)
+    return [f"{path}: {e} (token {token!r})" for e in errs]
 
 
 def _load_layer(layer: str, path: Path) -> _LayerResult:
-    """Read + JSONC-parse + schema-validate one file, then build its rules.
+    """Read + JSONC-parse + schema-validate one file, keeping its tokens raw.
 
     Failure is per-layer atomic: on any error (unreadable/unparseable file,
-    schema rejection, bad matcher, or an ``@ref`` token) the layer contributes
-    nothing and ``errors`` is populated, each entry naming the file plus the
-    offending token/key.
+    schema rejection, or a malformed matcher) the layer contributes nothing
+    and ``errors`` is populated, each entry naming the file plus the offending
+    token/key.
 
     Args:
-        layer: The layer tag (``"user"`` | ``"project"`` | ``"local"``) stamped
-            onto each built :class:`~mcp_coder.icoder.permissions.model.Rule`.
+        layer: The layer tag (``"user"`` | ``"project"`` | ``"local"``); unused
+            here, kept so every call site names the layer it loads.
         path: The absolute settings-file path to load.
 
     Returns:
@@ -303,9 +295,9 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
             return _LayerResult(None, [], {}, {}, schema_errors)
 
         errors: list[str] = []
-        rules: list[Rule] = []
-        groups: dict[str, tuple[Matcher, ...]] = {}
-        scenarios: dict[str, tuple[Matcher, ...]] = {}
+        rule_tokens: list[tuple[str, Policy]] = []
+        groups: dict[str, tuple[str, ...]] = {}
+        scenarios: dict[str, tuple[str, ...]] = {}
 
         # All keys optional -> default-safe access. An omitted section yields an
         # empty iterable (never ``None``), so the common "absent section" case
@@ -316,18 +308,16 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
             ("deny", Policy.NEVER),
         ):
             for token in data.get(section, []):
-                matchers, errs = _parse_matchers(token, path)
-                errors += errs
-                rules += [Rule(m, policy, layer, path) for m in matchers]
+                errors += _token_errors(token, path)
+                rule_tokens.append((token, policy))
 
+        # Members stay raw across the merge so ``@ref`` expansion can follow
+        # references into groups defined by other layers.
         for named, store in (("toolGroups", groups), ("toolScenarios", scenarios)):
             for name, members in data.get(named, {}).items():
-                collected: list[Matcher] = []
                 for token in members:
-                    matchers, errs = _parse_matchers(token, path)
-                    errors += errs
-                    collected += matchers
-                store[name] = tuple(collected)
+                    errors += _token_errors(token, path)
+                store[name] = tuple(members)
 
         default = (
             _POLICY_BY_TOKEN.get(data["defaultMode"]) if "defaultMode" in data else None
@@ -335,7 +325,7 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
 
         if errors:
             return _LayerResult(None, [], {}, {}, errors)
-        return _LayerResult(default, rules, groups, scenarios, [])
+        return _LayerResult(default, rule_tokens, groups, scenarios, [])
     # pylint: disable=broad-exception-caught
     # Fail-closed: a bad security layer must degrade, not abort startup.
     except Exception as exc:  # noqa: BLE001
@@ -348,18 +338,95 @@ def _load_layer(layer: str, path: Path) -> _LayerResult:
         )
 
 
+def _merge_named(
+    loaded: list[tuple[str, Path, _LayerResult]],
+) -> tuple[dict[str, tuple[str, ...]], dict[str, tuple[str, ...]]]:
+    """Merge raw ``toolGroups``/``toolScenarios`` last-layer-wins, warning on shadowing.
+
+    Args:
+        loaded: The good layers as ``(tag, path, result)``, lowest precedence first.
+
+    Returns:
+        The merged raw ``(groups, scenarios)`` maps.
+    """
+    groups: dict[str, tuple[str, ...]] = {}
+    scenarios: dict[str, tuple[str, ...]] = {}
+    for _, path, result in loaded:
+        for name, members in result.groups.items():
+            if name in groups:
+                logger.warning("group %r shadowed by %s", name, path)
+            groups[name] = members
+        for name, members in result.scenarios.items():
+            if name in scenarios:
+                logger.warning("scenario %r shadowed by %s", name, path)
+            scenarios[name] = members
+    return groups, scenarios
+
+
+def _expand_rules(
+    loaded: list[tuple[str, Path, _LayerResult]],
+    groups: Mapping[str, Sequence[str]],
+) -> tuple[list[Rule], list[str]]:
+    """Expand every rule token in authored order, synthesising origin rules.
+
+    Args:
+        loaded: The good layers as ``(tag, path, result)``, lowest precedence first.
+        groups: The merged raw group map.
+
+    Returns:
+        ``(rules, errors)``. A token that fails to expand contributes no rules
+        (D11: only its own rule); its errors are prefixed with the source path.
+    """
+    rules: list[Rule] = []
+    errors: list[str] = []
+    for tag, path, result in loaded:
+        for token, policy in result.rule_tokens:
+            matchers, errs = expand(token, groups)
+            if errs:
+                errors += [f"{path}: {e}" for e in errs]
+                continue
+            if is_ref(token):
+                # Provenance only: never a member of ``config.rules`` (D13).
+                origin = Rule(None, policy, tag, path, ref=token)
+                matchers = [replace(m, origin=origin) for m in matchers]
+            rules += [Rule(m, policy, tag, path) for m in matchers]
+    return rules, errors
+
+
+def _expanded_members(
+    tokens: Sequence[str], groups: Mapping[str, Sequence[str]]
+) -> tuple[Matcher, ...]:
+    """Expand member tokens against ``groups``; ``()`` if any member fails.
+
+    Args:
+        tokens: Raw member tokens of one group or scenario.
+        groups: The merged raw group map.
+
+    Returns:
+        All expanded matchers, or ``()`` on any error — never a partial result.
+    """
+    out: list[Matcher] = []
+    for token in tokens:
+        matchers, errs = expand(token, groups)
+        if errs:
+            return ()
+        out += matchers
+    return tuple(out)
+
+
 def load_permission_config(project_dir: Path) -> PermissionConfig:
     """Load all layers into a merged :class:`PermissionConfig`.
 
-    Concatenates good layers' rules (the resolver owns precedence); ``defaultMode``
-    and ``groups``/``scenarios`` are last-layer-wins. A present-but-broken layer
-    contributes nothing and sets ``degraded=True`` (plus its ``errors``). Emits
-    ``settings.schema.json`` as a gated side effect. All layers absent ->
-    ``default_policy=None`` (backward compat: the resolver then answers ALWAYS).
+    Concatenates good layers' expanded rules (the resolver owns precedence);
+    ``defaultMode`` and ``groups``/``scenarios`` are last-layer-wins. A
+    present-but-broken layer contributes nothing and sets ``degraded=True``
+    (plus its ``errors``); an unresolvable ``@ref`` does the same for its own
+    rule only. Emits ``settings.schema.json`` as a gated side effect. All
+    layers absent -> ``default_policy=None`` (backward compat: the resolver
+    then answers ALWAYS).
 
     Every collected error is both logged at ``ERROR`` and surfaced in
-    :attr:`PermissionConfig.errors`. ``Matcher.origin`` and ``Degraded.layer``
-    stay ``None`` (not populated here).
+    :attr:`PermissionConfig.errors`. ``Degraded.layer`` stays ``None``.
 
     Args:
         project_dir: The project root whose ``.icoder/`` layers are loaded.
@@ -374,9 +441,7 @@ def load_permission_config(project_dir: Path) -> PermissionConfig:
         # resolver at its ALWAYS backward-compat default.
         return PermissionConfig()
 
-    rules: list[Rule] = []
-    groups: dict[str, tuple[Matcher, ...]] = {}
-    scenarios: dict[str, tuple[Matcher, ...]] = {}
+    loaded: list[tuple[str, Path, _LayerResult]] = []
     errors: list[str] = []
     default: Policy | None = None
 
@@ -386,17 +451,23 @@ def load_permission_config(project_dir: Path) -> PermissionConfig:
             # A present-but-broken layer grants nothing (fail-closed).
             errors += result.errors
             continue
-        rules += result.rules
+        loaded.append((tag, path, result))
         if result.default_policy is not None:
             default = result.default_policy  # last-layer-wins
-        for name, members in result.groups.items():
-            if name in groups:
-                logger.warning("group %r shadowed by %s", name, path)
-            groups[name] = members
-        for name, members in result.scenarios.items():
-            if name in scenarios:
-                logger.warning("scenario %r shadowed by %s", name, path)
-            scenarios[name] = members
+
+    raw_groups, raw_scenarios = _merge_named(loaded)
+    rules, rule_errors = _expand_rules(loaded, raw_groups)
+    errors += rule_errors
+
+    # A group/scenario that fails to expand is stored as ``()`` wholesale, and its
+    # errors stay out of ``errors``: only a rule referencing it degrades.
+    # Scenario members are expanded against the GROUP map — a ``@x`` there is a
+    # group reference.
+    groups = {n: _expanded_members((f"@{n}",), raw_groups) for n in raw_groups}
+    scenarios = {
+        n: _expanded_members(members, raw_groups)
+        for n, members in raw_scenarios.items()
+    }
 
     degraded = bool(errors)
     for err in errors:
