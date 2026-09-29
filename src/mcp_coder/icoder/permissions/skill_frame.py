@@ -118,8 +118,9 @@ def _classify(
     opposite consequences per side: ``allow`` elevates the whole tool (the
     accepted #1053 over-grant), ``deny`` denies the whole tool (over-deny, safe).
 
-    An ``@ref`` is a plain lookup into the already-expanded ``groups``; a
-    resolved ref emits no warning, an unknown one is dropped (D10 ladder).
+    An ``@ref`` is a plain lookup into the already-expanded ``groups``; its
+    members get the same arg-predicate warning, and an unknown or empty group
+    is dropped (D10 ladder).
 
     Args:
         token: A single raw declared tool token.
@@ -130,25 +131,47 @@ def _classify(
         A ``(matchers, warning, dropped)`` tuple.
     """
     if is_ref(token):
-        members = groups.get(ref_name(token))
-        if members:
-            return list(members), None, None
-        return [], f"unknown group reference {token!r} (ignored)", token
+        name = ref_name(token)
+        if name not in groups:
+            return [], f"unknown group reference {token!r} (ignored)", token
+        members = list(groups[name])
+        if not members:  # empty, cyclic, or a broken nested ref at load
+            return (
+                [],
+                f"group reference {token!r} resolved to no rules (ignored)",
+                token,
+            )
+        return members, _arg_warning(members, side=side, label=token), None
     if not token.startswith("mcp__"):
         return [], None, None  # non-mcp token → silently ignored
     matchers, errors = parse_matcher(token)
     if errors:
         return [], f"unparseable tool token {token!r} ignored: {errors[0]}", token
-    if any(m.arg is not None for m in matchers):
-        warning = (
+    return matchers, _arg_warning(matchers, side=side, label=token), None
+
+
+def _arg_warning(matchers: Sequence[Matcher], *, side: str, label: str) -> str | None:
+    """Return the #1053 warning if any matcher carries an unenforced arg predicate.
+
+    Args:
+        matchers: The matchers a token (or ``use:`` side) resolved to.
+        side: ``"allow"`` or ``"deny"`` — selects the consequence wording.
+        label: The authored token or ``use:`` reference, named in the warning.
+
+    Returns:
+        The warning string, or ``None`` when no matcher is arg-scoped.
+    """
+    if all(m.arg is None for m in matchers):
+        return None
+    if side == "allow":
+        return (
             f"allow: arg predicate not enforced until #1053 — "
-            f"elevates the whole tool ({token!r})"
-            if side == "allow"
-            else f"deny: arg predicate not enforced until #1053 — "
-            f"denies the whole tool ({token!r})"
+            f"elevates the whole tool ({label!r})"
         )
-        return matchers, warning, None
-    return matchers, None, None
+    return (
+        f"deny: arg predicate not enforced until #1053 — "
+        f"denies the whole tool ({label!r})"
+    )
 
 
 def _classify_all(
@@ -250,7 +273,15 @@ def build_frame(
                 blocked_reason=f"use: {tools_block.use!r} failed to expand: "
                 + "; ".join(scenario.errors),
             )
-        return SkillFrame(PermissionFrame(scenario.base, scenario.allow, scenario.deny))
+        label = f"use: {tools_block.use}"
+        use_warns = (
+            _arg_warning(scenario.allow, side="allow", label=label),
+            _arg_warning(scenario.deny, side="deny", label=label),
+        )
+        return SkillFrame(
+            PermissionFrame(scenario.base, scenario.allow, scenario.deny),
+            tuple(w for w in use_warns if w is not None),
+        )
 
     allow, allow_warns, _ = _classify_all(
         tools_block.allow, side="allow", groups=groups

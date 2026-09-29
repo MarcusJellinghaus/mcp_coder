@@ -12,6 +12,7 @@ One test per row of the summary's mapping table / per acceptance criterion.
 from __future__ import annotations
 
 from mcp_coder.icoder.permissions.model import (
+    ArgPredicate,
     Matcher,
     PermissionFrame,
     ScenarioBlock,
@@ -222,6 +223,49 @@ def test_unknown_ref_only_allow_under_none_blocked_by_two_empties() -> None:
 
 
 # --- use: <scenario> substitution ---
+
+
+_GIT_PUSH_ARG = Matcher("git", "push", ArgPredicate(name="branch", value="main"))
+
+
+def test_empty_group_ref_reported_as_resolved_to_no_rules() -> None:
+    """A defined-but-empty group is not reported as unknown."""
+    block = SkillToolsBlock(base="inherit", allow=("@git", "@spare"))
+    result = build_frame(
+        block,
+        None,
+        enforce_skill_tools=False,
+        groups={**_GROUPS, "spare": ()},
+    )
+    assert result.frame is not None
+    assert result.frame.allow == (_GIT_LOG,)
+    assert any("@spare" in w and "resolved to no rules" in w for w in result.warnings)
+    assert not any("unknown" in w for w in result.warnings)
+
+
+def test_ref_with_arg_scoped_member_warns_on_allow() -> None:
+    """An arg-scoped member reached via ``@ref`` gets the #1053 warning."""
+    block = SkillToolsBlock(base="none", allow=("@push",))
+    result = build_frame(
+        block, None, enforce_skill_tools=False, groups={"push": (_GIT_PUSH_ARG,)}
+    )
+    assert result.frame is not None
+    assert result.frame.allow == (_GIT_PUSH_ARG,)
+    assert any(
+        "#1053" in w and "elevates" in w and "@push" in w for w in result.warnings
+    )
+
+
+def test_use_scenario_with_arg_scoped_member_warns() -> None:
+    """Arg-scoped members of a ``use:`` scenario get the #1053 warning per side."""
+    scenario = ScenarioBlock("none", (_GIT_PUSH_ARG,), (_GIT_PUSH_ARG,))
+    block = SkillToolsBlock(base=None, use="review")
+    result = build_frame(
+        block, None, enforce_skill_tools=False, scenarios={"review": scenario}
+    )
+    assert result.blocked_reason is None
+    assert any("elevates" in w and "review" in w for w in result.warnings)
+    assert any("denies" in w and "review" in w for w in result.warnings)
 
 
 def test_use_known_scenario_substitutes_whole_block() -> None:
