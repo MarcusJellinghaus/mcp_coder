@@ -60,22 +60,34 @@ class ArgPredicate:
 
 @dataclass(frozen=True)
 class Rule:
-    """A single permission rule carrying its layer and provenance."""
+    """A single permission rule carrying its layer and provenance.
 
-    matcher: "Matcher"
+    ``matcher`` is ``None`` only for a synthesised origin rule — the authored
+    ``@group`` rule its expanded members point at via :attr:`Matcher.origin`.
+    Such a rule never enters ``PermissionConfig.rules`` (D13). ``ref`` holds
+    the literal authored token (e.g. ``"@github-write"``) and is non-``None``
+    only on an origin rule.
+    """
+
+    matcher: "Matcher | None"
     policy: Policy
     layer: str  # "user" | "project" | "local" | "runtime"
     source_path: Path | None = None  # declared here, populated by I2.2
+    ref: str | None = None
 
 
 @dataclass(frozen=True)
 class Matcher:
-    """A server/tool(/arg) matcher; ``*`` on server/tool means wildcard."""
+    """A server/tool(/arg) matcher; ``*`` on server/tool means wildcard.
+
+    ``origin`` is excluded from equality and hash, so provenance never changes
+    matcher identity.
+    """
 
     server: str  # concrete or WILDCARD
     tool: str  # concrete or WILDCARD
     arg: ArgPredicate | None = None
-    origin: Rule | None = None  # provenance hook; populated downstream (I2.2/I4.1)
+    origin: Rule | None = field(default=None, compare=False)  # provenance hook
 
 
 @dataclass(frozen=True)

@@ -1904,6 +1904,7 @@ async def test_session_choice_writes_a_runtime_rule(
         rule = added[0]
         assert rule.layer == "runtime"
         assert rule.policy is Policy.ALWAYS
+        assert rule.matcher is not None
         assert matches(rule.matcher, _APPROVAL_TOOL)
 
 
@@ -2092,6 +2093,7 @@ async def test_persist_choice_also_applies_the_runtime_rule(
     assert len(added) == 1
     assert added[0].layer == "runtime"
     assert added[0].policy is Policy.ALWAYS
+    assert added[0].matcher is not None
     assert matches(added[0].matcher, _APPROVAL_TOOL)
 
 
