@@ -7,6 +7,7 @@ boundary is pinned by the ``permissions_leaf_isolation`` import-linter contract.
 
 from __future__ import annotations
 
+from mcp_coder.icoder.permissions.expand import expand
 from mcp_coder.icoder.permissions.loader import load_permission_config
 from mcp_coder.icoder.permissions.matcher import parse_matcher
 from mcp_coder.icoder.permissions.model import (
@@ -42,6 +43,7 @@ __all__ = [
     "Rule",
     "Source",
     "Specificity",
+    "expand",
     "load_permission_config",
     "parse_matcher",
     "resolve",
