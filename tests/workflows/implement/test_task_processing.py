@@ -1,5 +1,7 @@
 """Tests for implement workflow task processing."""
 
+import itertools
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Callable, Optional
 from unittest.mock import ANY, MagicMock, patch
@@ -11,6 +13,10 @@ from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.workflow_steps.constants import BLOCKED_FILE
+from mcp_coder.workflow_utils.task_tracker import (
+    TaskTrackerError,
+    TaskTrackerFileNotFoundError,
+)
 from mcp_coder.workflows.implement.constants import (
     BLOCKED_FILE as IMPLEMENT_BLOCKED_FILE,
 )
@@ -38,6 +44,19 @@ def _make_llm_response(text: str = "LLM response") -> dict[str, object]:
         "provider": "claude",
         "raw_response": {},
     }
+
+
+@pytest.fixture(autouse=True)
+def _tracker_count_always_decreases(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Make every progress-gate read look like progress unless opted out."""
+    if request.node.get_closest_marker("real_tracker_count"):
+        yield
+        return
+    with patch(
+        "mcp_coder.workflows.implement.task_processing._count_incomplete_tasks",
+        side_effect=itertools.count(5, -1),
+    ):
+        yield
 
 
 class TestGetNextTask:
@@ -69,15 +88,25 @@ class TestGetNextTask:
 
     @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_get_next_task_exception(self, mock_get_incomplete: MagicMock) -> None:
-        """Test getting next task handles exceptions."""
-        mock_get_incomplete.side_effect = Exception("Task tracker error")
+        """A tracker error propagates instead of reading as 'no tasks'."""
+        mock_get_incomplete.side_effect = TaskTrackerFileNotFoundError("missing")
 
-        result = get_next_task(Path("/test/project"))
+        with pytest.raises(TaskTrackerError):
+            get_next_task(Path("/test/project"))
 
-        assert result is None
         mock_get_incomplete.assert_called_once_with(
             str(Path("/test/project") / "pr_info"), exclude_meta_tasks=True
         )
+
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
+    def test_get_next_task_non_tracker_exception_propagates(
+        self, mock_get_incomplete: MagicMock
+    ) -> None:
+        """Non-tracker failures propagate too; the caller maps them."""
+        mock_get_incomplete.side_effect = OSError("disk error")
+
+        with pytest.raises(OSError):
+            get_next_task(Path("/test/project"))
 
 
 class TestCommitMessageFile:
@@ -969,13 +998,13 @@ Please implement this task step by step."""
         """Test various error recovery scenarios."""
         project_dir = Path("/test/project")
 
-        # Test individual function resilience
+        # Tracker failures are no longer swallowed into "no tasks"
         with patch(
             "mcp_coder.workflows.implement.task_processing.get_incomplete_tasks",
-            side_effect=Exception("DB error"),
+            side_effect=TaskTrackerFileNotFoundError("missing"),
         ):
-            task_result = get_next_task(project_dir)
-            assert task_result is None
+            with pytest.raises(TaskTrackerError):
+                get_next_task(project_dir)
 
 
 class TestProcessTaskWithRetry:

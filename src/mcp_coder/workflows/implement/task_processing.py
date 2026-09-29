@@ -24,7 +24,10 @@ from mcp_coder.workflow_steps.commit import (
     run_formatters,
 )
 from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
-from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
+from mcp_coder.workflow_utils.task_tracker import (
+    TaskTrackerError,
+    get_incomplete_tasks,
+)
 
 from .constants import (
     BLOCKED_FILE,
@@ -88,30 +91,33 @@ def get_next_task(project_dir: Path) -> Optional[str]:
 
     Returns:
         Next incomplete task name string, or None if no tasks remain.
+
+    Raises:
+        TaskTrackerError: If the tracker is missing or has no tasks section.
+            Other read failures (OSError, UnicodeDecodeError) propagate too;
+            the caller maps them to a failure reason.
     """
     logger.info("Checking for incomplete tasks...")
 
-    try:
-        pr_info_dir = str(project_dir / PR_INFO_DIR)
+    pr_info_dir = str(project_dir / PR_INFO_DIR)
 
-        # Get incomplete tasks, excluding meta-tasks
-        incomplete_tasks = get_incomplete_tasks(pr_info_dir, exclude_meta_tasks=True)
+    # Get incomplete tasks, excluding meta-tasks
+    incomplete_tasks = get_incomplete_tasks(pr_info_dir, exclude_meta_tasks=True)
 
-        if not incomplete_tasks:
-            logger.info(
-                "No incomplete implementation tasks found (meta-tasks excluded)"
-            )
-            return None
-
-        next_task = incomplete_tasks[0]
-        logger.info(f"Found next task: {next_task}")
-        return next_task
-
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.error(f"Error getting incomplete tasks: {e}")
+    if not incomplete_tasks:
+        logger.info("No incomplete implementation tasks found (meta-tasks excluded)")
         return None
+
+    next_task = incomplete_tasks[0]
+    logger.info(f"Found next task: {next_task}")
+    return next_task
+
+
+def _count_incomplete_tasks(project_dir: Path) -> int:
+    """Count incomplete non-meta tasks. Raises TaskTrackerError if unreadable."""
+    return len(
+        get_incomplete_tasks(str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True)
+    )
 
 
 def _run_mypy_check(project_dir: Path) -> Optional[str]:
@@ -386,12 +392,16 @@ def process_single_task(
     Returns:
         TaskOutcome where:
         - success: True if task completed successfully
-        - reason: 'completed' | 'no_tasks' | 'no_changes' | 'blocked' | 'error'
-          | 'timeout' | 'mcp_unavailable'. The two LLM failures (inactivity
-          timeout, MCP servers unavailable) are categorized here into their
-          reason strings so the orchestrator can map them to a failure label.
+        - reason: 'completed' | 'no_tasks' | 'no_changes' | 'no_progress'
+          | 'blocked' | 'error' | 'timeout' | 'mcp_unavailable'. The two LLM
+          failures (inactivity timeout, MCP servers unavailable) are
+          categorized here into their reason strings so the orchestrator can
+          map them to a failure label. 'no_progress' means files changed (and
+          were committed) but the incomplete-task count did not decrease.
         - detail: free-text explanation; carries the blocked marker text for
-          the 'blocked', 'timeout' and 'mcp_unavailable' reasons, else empty.
+          the 'blocked', 'timeout' and 'mcp_unavailable' reasons, the task
+          name for 'no_progress', and the tracker fault for an unreadable
+          tracker ('error'), else empty.
     """
     # Cleanup stale files from previous failed runs
     _cleanup_commit_message_file(project_dir)
@@ -401,8 +411,21 @@ def process_single_task(
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
 
-    # Get next incomplete task
-    next_task = get_next_task(project_dir)
+    # Get next incomplete task and snapshot the count for the progress gate
+    try:
+        next_task = get_next_task(project_dir)
+        tasks_before = _count_incomplete_tasks(project_dir)
+    except TaskTrackerError as e:
+        logger.error(f"Cannot read task tracker: {e}")
+        return TaskOutcome(False, "error", f"Cannot read pr_info/TASK_TRACKER.md: {e}")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        # OSError / UnicodeDecodeError from the file read are not TaskTrackerError
+        logger.error(f"Cannot read task tracker: {e}")
+        return TaskOutcome(
+            False,
+            "error",
+            f"Cannot read pr_info/TASK_TRACKER.md: unexpected {type(e).__name__}: {e}",
+        )
     if not next_task:
         logger.info("No incomplete tasks found")
         return TaskOutcome(False, "no_tasks")
@@ -556,6 +579,20 @@ Please implement this task step by step."""
     # Step 10: Push changes to remote
     if not push_changes(project_dir):
         return TaskOutcome(False, "error")
+
+    # Progress gate: files changing is not enough, a task must have been ticked
+    tasks_after: int | None
+    try:
+        tasks_after = _count_incomplete_tasks(project_dir)
+    except Exception:  # pylint: disable=broad-exception-caught
+        # An unreadable tracker after the round is no progress, not a crash
+        tasks_after = None
+    if tasks_after is None or tasks_after >= tasks_before:
+        logger.warning(
+            f"No progress on task: {next_task} "
+            f"(incomplete tasks before={tasks_before}, after={tasks_after})"
+        )
+        return TaskOutcome(False, "no_progress", next_task)
 
     logger.info(f"Task completed successfully: {next_task}")
     return TaskOutcome(True, "completed")

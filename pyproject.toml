@@ -153,6 +153,7 @@ markers = [
     "integration: general integration tests",
     # Regenerate snapshot baselines: pytest tests/icoder/test_snapshots.py --snapshot-update
     "textual_integration: tests requiring Textual TUI (headless app, pilot, snapshots)",
+    "real_tracker_count: opt out of the autouse _count_incomplete_tasks patch in implement tests",
 ]
 # RECOMMENDED usage patterns:
 # pytest (no markers) - All unit tests (fast, mocked, default for CI)
