@@ -19,7 +19,16 @@ intermediate commit.
 ```python
 def _count_incomplete_tasks(project_dir: Path) -> int:
     """Count incomplete non-meta tasks. Raises TaskTrackerError if unreadable."""
+    return len(
+        get_incomplete_tasks(str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True)
+    )
 ```
+
+The body is not a sketch: it must reproduce `get_next_task`'s path derivation exactly
+(`task_processing.py:81-84`) — `str(project_dir / PR_INFO_DIR)`, not `project_dir`, and
+`exclude_meta_tasks=True`. Passing `project_dir` itself reads a directory with no
+`TASK_TRACKER.md` in it, so every before-read raises and every round returns `"error"`.
+`PR_INFO_DIR` is already imported in `task_processing.py`.
 
 `get_next_task(project_dir) -> Optional[str]` — signature unchanged; the blanket
 `except Exception: return None` at the end is **deleted** so tracker read failures propagate.
@@ -120,13 +129,31 @@ Extend `tests/workflows/implement/test_task_progress_gate.py` (created in Step 3
    provide and the narrow clause alone would lose.
 8. Zero file changes still returns `"no_changes"`, not `"no_progress"` — the existing gate wins
    because it runs first.
+9. **`_count_incomplete_tasks` itself, unpatched** — the only test that touches the real
+   function, so the path derivation and the meta-exclusion flag are not covered by mocks.
+   Write `tmp_path / "pr_info" / "TASK_TRACKER.md"` with an `## Implementation Steps` section
+   holding two incomplete non-meta tasks, one completed task, and one incomplete meta task
+   (`All Step 1 tasks completed`), then assert `_count_incomplete_tasks(tmp_path) == 2`. This
+   pins both properties at once: a count of 2 is only reachable if the function appended
+   `PR_INFO_DIR` to `project_dir` (otherwise it raises `TaskTrackerFileNotFoundError`) *and*
+   passed `exclude_meta_tasks=True` (otherwise the count is 3). Add a second case with no
+   `pr_info` directory asserting `pytest.raises(TaskTrackerFileNotFoundError)`.
+
+   This test must **opt out of the autouse fixture below** — it is the one test that needs the
+   real function. Put it in its own class carrying
+   `@pytest.mark.usefixtures()`-style opt-out, or simplest: give the autouse fixture a
+   `request.node.get_closest_marker("real_tracker_count")` early-return and mark this test
+   with `@pytest.mark.real_tracker_count` (registered in `pyproject.toml`'s marker list).
 
 The same autouse fixture goes in **both** test files — `test_task_processing.py` and
 `test_task_progress_gate.py`:
 
 ```python
 @pytest.fixture(autouse=True)
-def _tracker_count_always_decreases():
+def _tracker_count_always_decreases(request):
+    if request.node.get_closest_marker("real_tracker_count"):
+        yield          # test 9 needs the real function
+        return
     with patch(
         "mcp_coder.workflows.implement.task_processing._count_incomplete_tasks",
         side_effect=itertools.count(5, -1),
@@ -161,7 +188,11 @@ Rewrite the two tests that assert the swallowed error:
 
 > Implement Step 4 of `pr_info/steps/step_4.md`, with `pr_info/steps/summary.md` for context.
 > Steps 1–3 must be complete first. Write the tests first, then the implementation.
-> Add `_count_incomplete_tasks` to `task_processing.py`, snapshot the count next to the
+> Add `_count_incomplete_tasks` to `task_processing.py` — it must call
+> `get_incomplete_tasks(str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True)`, the same path
+> derivation `get_next_task` uses; passing `project_dir` directly reads the wrong directory and
+> makes every round return `"error"`. Cover it with one unpatched test against a `tmp_path`
+> tracker that pins both the path derivation and the meta-task exclusion. Snapshot the count next to the
 > `get_next_task` call, and re-read it at the very end of `process_single_task` — replacing only
 > the final `return TaskOutcome(True, "completed")`. Do not move, extract or reorder the mypy,
 > formatter, commit or push blocks: a no-progress round must still be committed and pushed.

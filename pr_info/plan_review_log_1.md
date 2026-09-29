@@ -35,3 +35,19 @@ I'll gather context first.Now verifying the plan's code claims.`pr_info/steps/su
 Verdict(decision='tasks', tasks=['Reorder pr_info/steps/summary.md to 1, 3, 4, 2 and correct the dependency note at :130: Step 4\'s retry keys off the "no_progress" string and needs no emitter, so landing the retry and its route before Step 2 emits the reason closes the window where every no-progress round increments progress.completed and burns the full round cap.', "In pr_info/steps/step_4.md, initialise previous_reason before the retry loop (e.g. previous_reason = None) so the first iteration's call at :64 does not read an unassigned name.", 'In pr_info/steps/step_4.md:69, stop overwriting last_detail unconditionally — keep the more informative detail so a sequence ending in no_changes (detail always "") still reports no_progress_after_retries with the task name in Step 3\'s message.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 3 — 2026-09-29
+**Findings**:
+I'll gather context first.`pr_info/steps/step_4.md:127` — high — The autouse `_count_incomplete_tasks` fixture is added only to `test_task_processing.py`, but Step 3 creates `test_task_progress_gate.py` containing a prompt-assembly test (`step_3.md:128`) that calls `process_single_task` directly and patches only `prompt_llm`/`get_next_task`. After Step 4 that test hits the new real before-read, returns `"error"` before the LLM call, and fails — so Step 4 cannot land with checks green as written.
+
+`pr_info/steps/step_4.md:105` — medium — The test list for Step 4 patches `_count_incomplete_tasks` per-test in `test_task_progress_gate.py`, which contradicts `:112` (after-read raises `TaskTrackerFileNotFoundError`) and `:113-120` (before-read raises) only being reachable via `side_effect` on that same patch; the plan never states which of the two reads each `side_effect` element/exception belongs to when `get_next_task` is separately patched.
+
+`pr_info/steps/step_4.md:20` — medium — `_count_incomplete_tasks(project_dir: Path)` is specified without saying it must reproduce `get_next_task`'s path derivation (`str(project_dir / PR_INFO_DIR)`, `exclude_meta_tasks=True`); a literal implementation passing `project_dir` would read the wrong directory and always raise, turning every round into `"error"`.
+
+`pr_info/steps/step_4.md:24` — low — `get_next_task`'s docstring contract changes from "returns None on error" to "propagates", and the exhaustive `Returns:` reason enumerations in `process_single_task` (`task_processing.py:372-375`) and `process_task_with_retry` (`:567-570`) are not updated for `no_progress` / `no_progress_after_retries`. (Raised in rounds 1 and 2, not applied.)
+
+`pr_info/steps/step_5.md:63` — low — Tests 2 and 4 assert `stop and report` is absent from prompt sections that never contained it; both pass before the edit and guard nothing.
+**Decisions**:
+Verdict(decision='tasks', tasks=['In pr_info/steps/step_4.md, extend the autouse _count_incomplete_tasks fixture (or add an equivalent) to test_task_progress_gate.py so Step 3\'s prompt-assembly test at step_3.md:128, which patches only prompt_llm/get_next_task, does not hit the new real before-read and return "error" before the LLM call — Step 4 must land with checks green.'], escalate_reason=None)
+**Changes**:
+applied
