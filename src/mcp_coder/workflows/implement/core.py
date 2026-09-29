@@ -201,12 +201,28 @@ def run_implement_workflow(
                             f" {MAX_NO_CHANGE_RETRIES} retry attempts"
                         ),
                     )
+                if outcome.reason == "no_progress_after_retries":
+                    # Files changed every round, but no checkbox was ever ticked
+                    msg = (
+                        f"No task was completed after {MAX_NO_CHANGE_RETRIES}"
+                        f" attempts (files changed, but no checkbox in"
+                        f" pr_info/TASK_TRACKER.md was ticked)"
+                    )
+                    if outcome.detail:
+                        msg += f" — last task: {outcome.detail}"
+                    return fail(
+                        "no_progress_after_retries",
+                        stage="Task implementation",
+                        message=msg,
+                    )
                 if outcome.reason == "error":
-                    # Error occurred during task processing
+                    # Error occurred during task processing. A plain fallback,
+                    # not append_detail: "(agent reported: ...)" is the wrong
+                    # framing for e.g. an unreadable tracker.
                     return fail(
                         "general",
                         stage="Task implementation",
-                        message="Task processing failed",
+                        message=outcome.detail or "Task processing failed",
                     )
 
             progress.completed += 1

@@ -25,6 +25,9 @@ FAILURE_LABELS: dict[str, str] = {
     "mcp_unavailable": "mcp_unavailable",
     "task_tracker_prep_failed": "task_tracker_prep_failed",
     "no_changes_after_retries": "no_changes_after_retries",
+    # Deliberately shares the label above: the operator action is identical
+    # whether the agent did nothing or did plenty and moved nothing.
+    "no_progress_after_retries": "no_changes_after_retries",
     "blocked": "implementation_blocked",
     "ci_fix_exhausted": "ci_fix_needed",
 }
@@ -39,6 +42,7 @@ CATEGORY_DISPLAY: dict[str, str] = {
     "mcp_unavailable": "Mcp Unavailable",
     "task_tracker_prep_failed": "Task Tracker Prep Failed",
     "no_changes_after_retries": "No Changes After Retries",
+    "no_progress_after_retries": "No Progress After Retries",
     "blocked": "Blocked",
     "ci_fix_exhausted": "Ci Fix Exhausted",
 }

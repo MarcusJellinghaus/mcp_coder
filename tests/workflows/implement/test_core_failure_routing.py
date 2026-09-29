@@ -137,6 +137,83 @@ class TestRunImplementWorkflowFailureRouting:
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_no_progress_after_retries_routes_to_failure(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """No progress after retries shares the no_changes_after_retries label."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = TaskOutcome(
+            False, "no_progress_after_retries", "Step 2: Failure surface"
+        )
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 1
+        mock_handle_failure.assert_called_once()
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "no_changes_after_retries"
+        assert failure_arg.stage == "Task implementation"
+        assert (
+            "Step 2: Failure surface"
+            in mock_handle_failure.call_args[1]["comment_body"]
+        )
+
+    @patch(_DELIBERATE_HANDLER)
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_error_detail_reaches_the_failure_message(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """An 'error' detail replaces the generic message, keeping its label."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = True
+        mock_prepare.return_value = True
+        mock_process.return_value = TaskOutcome(
+            False, "error", "Cannot read pr_info/TASK_TRACKER.md: file missing"
+        )
+
+        result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 1
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "implementing_failed"
+        assert "TASK_TRACKER.md" in failure_arg.message
+
+    @patch(_DELIBERATE_HANDLER)
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
     def test_error_calls_handle_failure_with_general(
         self,
         mock_git_clean: MagicMock,
@@ -148,7 +225,7 @@ class TestRunImplementWorkflowFailureRouting:
         mock_progress: MagicMock,
         mock_handle_failure: MagicMock,
     ) -> None:
-        """When task errors, deliberate failure labels implementing_failed."""
+        """Without a detail, the generic message survives unchanged."""
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
@@ -163,6 +240,7 @@ class TestRunImplementWorkflowFailureRouting:
         failure_arg = mock_handle_failure.call_args[1]["failure"]
         assert failure_arg.category == "implementing_failed"
         assert failure_arg.stage == "Task implementation"
+        assert failure_arg.message == "Task processing failed"
 
 
 class TestBlockedRouting:
