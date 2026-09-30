@@ -32,8 +32,6 @@ dependencies = [
     "pywin32>=306; sys_platform == 'win32'",
     "python-frontmatter>=1.0.0",
     "jsonschema>=4.0.0",
-    # _depcheck.py imports this at package import time; do not remove. It used
-    # to arrive transitively via black — see #1176.
     "packaging>=21.0",
     "rich>=13.0",
 ]
@@ -340,7 +338,7 @@ ignore = [
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-# Dependency-declaration hygiene. Run as `deptry src` — see #1176.
+# Dependency-declaration hygiene. Run as `deptry src`.
 # src only: running it over tests/ yields DEP004 noise and no signal.
 [tool.deptry]
 known_first_party = ["mcp_coder"]
@@ -352,14 +350,22 @@ known_first_party = ["mcp_coder"]
 pywin32 = ["win32gui", "win32process"]
 
 [tool.deptry.per_rule_ignores]
-# DEP002: dev/CI tools invoked as executables, never imported.
-# black and isort leave this list when #1174 and #1175 remove them from
-# [project.dependencies].
+# DEP002: declared but never imported. All are executables run by the CI matrix
+# and the tools/ scripts, or stubs read by mypy — grouped by where they are
+# declared above.
 DEP002 = [
-    "black", "isort", "mypy", "ruff", "tach", "vulture", "pycycle", "pydeps",
-    "import-linter", "pytest-asyncio", "pytest-xdist", "pytest-textual-snapshot",
-    "textual-dev", "types-requests", "types-tabulate", "types-jsonschema",
-    "deptry",
+    # [project.dependencies] — formatters, invoked through mcp-tools-py
+    "black", "isort",
+    # dev extra — architecture, lint and dependency checks
+    "import-linter", "pycycle", "pydeps", "tach", "vulture", "ruff", "deptry",
+    # typecheck extra
+    "mypy",
+    # types extra — stub-only distributions, consumed by mypy, never by src
+    "types-requests", "types-tabulate", "types-jsonschema",
+    # test extra — pytest plugins, loaded by pytest itself
+    "pytest-asyncio", "pytest-xdist", "pytest-textual-snapshot",
+    # tui extra
+    "textual-dev",
 ]
 # DEP003: optional provider SDKs, imported behind try/except ImportError and
 # supplied by the langchain-* extras. Each is a hard requirement of the
