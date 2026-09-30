@@ -1,5 +1,6 @@
 """Tests for implement workflow task processing."""
 
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Callable, Optional
 from unittest.mock import ANY, MagicMock, patch
@@ -21,7 +22,6 @@ from mcp_coder.workflows.implement.task_processing import (
     TaskOutcome,
     _cleanup_commit_message_file,
     check_and_fix_mypy,
-    get_next_task,
     process_single_task,
     process_task_with_retry,
     read_and_clear_blocked,
@@ -40,44 +40,21 @@ def _make_llm_response(text: str = "LLM response") -> dict[str, object]:
     }
 
 
-class TestGetNextTask:
-    """Test get_next_task function."""
+@pytest.fixture(autouse=True)
+def _tracker_count_always_decreases(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Make the progress-gate after-read look like progress unless opted out.
 
-    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
-    def test_get_next_task_success(self, mock_get_incomplete: MagicMock) -> None:
-        """Test getting next task when incomplete tasks exist."""
-        mock_get_incomplete.return_value = ["Task 1", "Task 2", "Task 3"]
-
-        result = get_next_task(Path("/test/project"))
-
-        assert result == "Task 1"
-        mock_get_incomplete.assert_called_once_with(
-            str(Path("/test/project") / "pr_info"), exclude_meta_tasks=True
-        )
-
-    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
-    def test_get_next_task_no_tasks(self, mock_get_incomplete: MagicMock) -> None:
-        """Test getting next task when no incomplete tasks exist."""
-        mock_get_incomplete.return_value = []
-
-        result = get_next_task(Path("/test/project"))
-
-        assert result is None
-        mock_get_incomplete.assert_called_once_with(
-            str(Path("/test/project") / "pr_info"), exclude_meta_tasks=True
-        )
-
-    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
-    def test_get_next_task_exception(self, mock_get_incomplete: MagicMock) -> None:
-        """Test getting next task handles exceptions."""
-        mock_get_incomplete.side_effect = Exception("Task tracker error")
-
-        result = get_next_task(Path("/test/project"))
-
-        assert result is None
-        mock_get_incomplete.assert_called_once_with(
-            str(Path("/test/project") / "pr_info"), exclude_meta_tasks=True
-        )
+    The before-count is len() of the mocked task list, which is never empty
+    past the no_tasks exit, so an after-count of 0 is always a decrease.
+    """
+    if request.node.get_closest_marker("real_tracker_count"):
+        yield
+        return
+    with patch(
+        "mcp_coder.workflows.implement.task_processing._count_incomplete_tasks",
+        return_value=0,
+    ):
+        yield
 
 
 class TestCommitMessageFile:
@@ -220,6 +197,26 @@ class TestBlockedExitInPrompts:
             if "before finishing" in line and "[x]" in line
         )
         assert "unless something blocks you" in gate
+
+    def test_blocked_file_is_the_only_report_channel(self) -> None:
+        """The blocked bullet claims exclusivity, so prose is not a report."""
+        prompt_template = get_prompt(
+            str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker"
+        )
+
+        bullet = next(b for b in prompt_template.split("\n- ") if BLOCKED_FILE in b)
+        assert "ONLY" in bullet
+        assert "stop and report" not in prompt_template
+
+    def test_plan_creation_prompt_offers_blocked_exit(self) -> None:
+        """Generated step preconditions must point at the marker file."""
+        prompt_template = get_prompt(
+            str(PROMPTS_FILE_PATH), "Implementation Plan Creation"
+        )
+
+        assert BLOCKED_FILE in prompt_template
+        # The prompt quotes the phrase once, as the thing never to write.
+        assert "stop and report" not in prompt_template.replace('"stop and report"', "")
 
 
 class TestCheckAndFixMypy:
@@ -365,10 +362,10 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_success(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -380,7 +377,7 @@ class TestProcessSingleTask:
     ) -> None:
         """Test processing single task successfully."""
         # Setup mocks
-        mock_get_next_task.return_value = "Step 1: Create test file"
+        mock_get_incomplete.return_value = ["Step 1: Create test file"]
         mock_get_prompt.return_value = "Implementation template"
         mock_prompt_llm.return_value = _make_llm_response("LLM response")
         mock_get_status.return_value = {
@@ -404,7 +401,7 @@ class TestProcessSingleTask:
         assert outcome.reason == "completed"
 
         # Verify all steps were called
-        mock_get_next_task.assert_called_once()
+        mock_get_incomplete.assert_called_once()
         mock_get_prompt.assert_called_once()
         mock_prompt_llm.assert_called_once()
         mock_get_status.assert_called_once()
@@ -424,10 +421,10 @@ class TestProcessSingleTask:
             or (call_kwargs.args[2] if len(call_kwargs.args) >= 3 else "")
         )
 
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
-    def test_process_single_task_no_tasks(self, mock_get_next_task: MagicMock) -> None:
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
+    def test_process_single_task_no_tasks(self, mock_get_incomplete: MagicMock) -> None:
         """Test processing single task when no tasks available."""
-        mock_get_next_task.return_value = None
+        mock_get_incomplete.return_value = []
 
         outcome = process_single_task(Path("/test/project"), "claude")
 
@@ -435,12 +432,12 @@ class TestProcessSingleTask:
         assert outcome.reason == "no_tasks"
 
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_prompt_error(
-        self, mock_get_next_task: MagicMock, mock_get_prompt: MagicMock
+        self, mock_get_incomplete: MagicMock, mock_get_prompt: MagicMock
     ) -> None:
         """Test processing single task with prompt loading error."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.side_effect = Exception("Prompt error")
 
         outcome = process_single_task(Path("/test/project"), "claude")
@@ -450,15 +447,15 @@ class TestProcessSingleTask:
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_llm_error(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
     ) -> None:
         """Test processing single task with LLM error."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = Exception("LLM error")
 
@@ -469,17 +466,17 @@ class TestProcessSingleTask:
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_llm_timeout(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
     ) -> None:
         """Test processing single task returns 'timeout' on LLMTimeoutError."""
         from mcp_coder.llm.interface import LLMTimeoutError
 
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = LLMTimeoutError(
             "LLM request timed out after 3600s"
@@ -492,10 +489,10 @@ class TestProcessSingleTask:
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_llm_timeout_error(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
     ) -> None:
@@ -506,7 +503,7 @@ class TestProcessSingleTask:
         """
         from mcp_coder.llm.interface import LLMTimeoutError
 
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         # Simulate langchain timeout normalized by prompt_llm
         mock_prompt_llm.side_effect = LLMTimeoutError(
@@ -520,10 +517,10 @@ class TestProcessSingleTask:
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_mcp_unavailable(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
     ) -> None:
@@ -532,7 +529,7 @@ class TestProcessSingleTask:
             McpServersUnavailableError,
         )
 
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = McpServersUnavailableError(
             "MCP servers unavailable",
@@ -548,17 +545,17 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_no_changes(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
         mock_get_status: MagicMock,
     ) -> None:
         """Test processing single task when no files changed."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
@@ -580,10 +577,10 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_formatters_fail(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -592,7 +589,7 @@ class TestProcessSingleTask:
         mock_run_formatters: MagicMock,
     ) -> None:
         """Test processing single task when formatters fail."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {
@@ -613,16 +610,16 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_attempt_appends_reminder(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
     ) -> None:
         """When attempt=2, the prompt passed to prompt_llm contains the retry reminder."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
 
@@ -642,16 +639,16 @@ class TestProcessSingleTask:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_attempt_1_no_reminder(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
     ) -> None:
         """When attempt=1 (default), the prompt does NOT contain the retry reminder."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
 
@@ -678,10 +675,10 @@ class TestProcessSingleTaskGating:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_skips_formatters_when_format_code_false(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -692,7 +689,7 @@ class TestProcessSingleTaskGating:
         mock_push: MagicMock,
     ) -> None:
         """Verify run_formatters not called when format_code=False."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {
@@ -719,10 +716,10 @@ class TestProcessSingleTaskGating:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_runs_formatters_when_format_code_true(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -733,7 +730,7 @@ class TestProcessSingleTaskGating:
         mock_push: MagicMock,
     ) -> None:
         """Verify run_formatters called when format_code=True."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {
@@ -762,10 +759,10 @@ class TestProcessSingleTaskGating:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_skips_mypy_when_check_type_hints_false(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -776,7 +773,7 @@ class TestProcessSingleTaskGating:
         mock_push: MagicMock,
     ) -> None:
         """Verify check_and_fix_mypy not called when check_type_hints=False."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {
@@ -806,10 +803,10 @@ class TestProcessSingleTaskGating:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_process_single_task_runs_mypy_when_check_type_hints_true(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -820,7 +817,7 @@ class TestProcessSingleTaskGating:
         mock_push: MagicMock,
     ) -> None:
         """Verify check_and_fix_mypy called when check_type_hints=True."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {
@@ -874,12 +871,12 @@ class TestIntegration:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     @patch("mcp_coder.workflows.implement.task_processing.prepare_llm_environment")
     def test_full_task_processing_workflow(
         self,
         mock_prepare_env: MagicMock,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -897,7 +894,7 @@ class TestIntegration:
             "MCP_CODER_PROJECT_DIR": "C:\\test\\project",
             "MCP_CODER_VENV_DIR": "C:\\Users\\Marcus\\Documents\\GitHub\\mcp_coder\\.venv",
         }
-        mock_get_next_task.return_value = "Step 2: Implement feature X"
+        mock_get_incomplete.return_value = ["Step 2: Implement feature X"]
         mock_get_prompt.return_value = "Implementation Prompt: [task_info]"
         mock_prompt_llm.return_value = _make_llm_response("I'll implement feature X...")
         mock_get_status.return_value = {
@@ -920,7 +917,9 @@ class TestIntegration:
         assert outcome.reason == "completed"
 
         # Verify workflow steps executed in order
-        mock_get_next_task.assert_called_once_with(project_dir)
+        mock_get_incomplete.assert_called_once_with(
+            str(project_dir / "pr_info"), exclude_meta_tasks=True
+        )
         mock_get_prompt.assert_called_once()
 
         # Verify LLM call with correct prompt
@@ -964,18 +963,6 @@ Please implement this task step by step."""
             settings_file=None,
         )
         mock_push.assert_called_once_with(project_dir)
-
-    def test_error_recovery_patterns(self) -> None:
-        """Test various error recovery scenarios."""
-        project_dir = Path("/test/project")
-
-        # Test individual function resilience
-        with patch(
-            "mcp_coder.workflows.implement.task_processing.get_incomplete_tasks",
-            side_effect=Exception("DB error"),
-        ):
-            task_result = get_next_task(project_dir)
-            assert task_result is None
 
 
 class TestProcessTaskWithRetry:
@@ -1073,10 +1060,10 @@ class TestProcessTaskWithRetry:
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_mcp_unavailable_categorized_as_reason(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
     ) -> None:
@@ -1091,7 +1078,7 @@ class TestProcessTaskWithRetry:
             McpServersUnavailableError,
         )
 
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = McpServersUnavailableError(
             "MCP servers unavailable",
@@ -1141,10 +1128,10 @@ class TestProcessSingleTaskBlocked:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_blocked_wins_over_changed_files(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -1160,7 +1147,7 @@ class TestProcessSingleTaskBlocked:
         check ran first the run would commit the marker and report success -
         the exact inversion this feature exists to prevent.
         """
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = self._llm_writes_marker(
             tmp_path, "pytest never finishes"
@@ -1185,10 +1172,10 @@ class TestProcessSingleTaskBlocked:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_empty_marker_is_blocked_not_no_changes(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -1196,7 +1183,7 @@ class TestProcessSingleTaskBlocked:
         tmp_path: Path,
     ) -> None:
         """A whitespace-only marker still reports blocked, never no_changes."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = self._llm_writes_marker(tmp_path, "   \n\t")
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
@@ -1210,16 +1197,16 @@ class TestProcessSingleTaskBlocked:
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_marker_plus_timeout_keeps_timeout_label(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         tmp_path: Path,
     ) -> None:
         """The typed LLM failure wins the label; the marker text rides along."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = self._llm_writes_marker(
             tmp_path,
@@ -1236,16 +1223,16 @@ class TestProcessSingleTaskBlocked:
 
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_marker_plus_mcp_unavailable_keeps_mcp_label(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Same precedence for an unavailable MCP server."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = self._llm_writes_marker(
             tmp_path,
@@ -1266,10 +1253,10 @@ class TestProcessSingleTaskBlocked:
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_marker_plus_empty_response_reports_blocked(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_get_status: MagicMock,
@@ -1289,7 +1276,7 @@ class TestProcessSingleTaskBlocked:
             self._write_marker(tmp_path, "cannot verify - checks never return")
             return _make_llm_response("")
 
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.side_effect = _empty_response_with_marker
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
@@ -1301,13 +1288,13 @@ class TestProcessSingleTaskBlocked:
         assert outcome.detail == "cannot verify - checks never return"
         assert not (tmp_path / BLOCKED_FILE).exists()
 
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_stale_marker_removed_at_task_start(
-        self, mock_get_next_task: MagicMock, tmp_path: Path
+        self, mock_get_incomplete: MagicMock, tmp_path: Path
     ) -> None:
         """A marker left by a previous run is cleared before any work starts."""
         marker = self._write_marker(tmp_path, "left over from last run")
-        mock_get_next_task.return_value = None
+        mock_get_incomplete.return_value = []
 
         outcome = process_single_task(tmp_path, "claude")
 
@@ -1319,10 +1306,10 @@ class TestProcessSingleTaskBlocked:
     @patch("mcp_coder.workflows.implement.task_processing.store_session")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_no_marker_still_reports_no_changes(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
@@ -1330,7 +1317,7 @@ class TestProcessSingleTaskBlocked:
         tmp_path: Path,
     ) -> None:
         """Regression guard: without a marker, behaviour is unchanged."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}
@@ -1367,10 +1354,10 @@ class TestBranchNameSource:
     @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_next_task")
+    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
     def test_implementation_path_reads_branch_from_project_dir(
         self,
-        mock_get_next_task: MagicMock,
+        mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
         mock_prompt_llm: MagicMock,
         mock_get_status: MagicMock,
@@ -1378,7 +1365,7 @@ class TestBranchNameSource:
         mock_branch_name: MagicMock,
     ) -> None:
         """The branch lookup and the subprocess cwd both come from project_dir."""
-        mock_get_next_task.return_value = "Step 1: Test task"
+        mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
         mock_get_status.return_value = {"staged": [], "modified": [], "untracked": []}

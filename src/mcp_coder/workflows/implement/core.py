@@ -142,8 +142,13 @@ def run_implement_workflow(
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
-        # Step 4: Process all incomplete tasks in a loop
-        while True:
+        # Step 4: Process all incomplete tasks in a bounded loop. The cap is a
+        # backstop, not a bound: one round can complete a whole step, so rounds
+        # are far fewer than `progress.total` (which counts every checkbox,
+        # completed ones included). `for ... else` keeps the cap structural -
+        # the `else` fires exactly when the `no_tasks` break never did.
+        round_cap = max(progress.total + 10, 20)
+        for _ in range(round_cap):
             outcome = process_task_with_retry(
                 project_dir,
                 provider,
@@ -196,12 +201,28 @@ def run_implement_workflow(
                             f" {MAX_NO_CHANGE_RETRIES} retry attempts"
                         ),
                     )
+                if outcome.reason == "no_progress_after_retries":
+                    # At least one attempt changed files, but no checkbox was ticked
+                    msg = (
+                        f"No task was completed after {MAX_NO_CHANGE_RETRIES}"
+                        f" attempts (at least one attempt changed files, but no"
+                        f" checkbox in pr_info/TASK_TRACKER.md was ticked)"
+                    )
+                    if outcome.detail:
+                        msg += f" — last task: {outcome.detail}"
+                    return fail(
+                        "no_progress_after_retries",
+                        stage="Task implementation",
+                        message=msg,
+                    )
                 if outcome.reason == "error":
-                    # Error occurred during task processing
+                    # Error occurred during task processing. A plain fallback,
+                    # not append_detail: "(agent reported: ...)" is the wrong
+                    # framing for e.g. an unreadable tracker.
                     return fail(
                         "general",
                         stage="Task implementation",
-                        message="Task processing failed",
+                        message=outcome.detail or "Task processing failed",
                     )
 
             progress.completed += 1
@@ -209,6 +230,12 @@ def run_implement_workflow(
 
             # Show updated progress after each task
             log_progress_summary(project_dir)
+        else:
+            return fail(
+                "general",
+                stage="Task implementation",
+                message=f"Stopped after {round_cap} rounds without completing all tasks",
+            )
 
         # Step 5: Run final mypy check if not running after each task
         if (

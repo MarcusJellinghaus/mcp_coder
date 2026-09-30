@@ -24,7 +24,10 @@ from mcp_coder.workflow_steps.commit import (
     run_formatters,
 )
 from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
-from mcp_coder.workflow_utils.task_tracker import get_incomplete_tasks
+from mcp_coder.workflow_utils.task_tracker import (
+    TaskTrackerError,
+    get_incomplete_tasks,
+)
 
 from .constants import (
     BLOCKED_FILE,
@@ -50,6 +53,20 @@ RETRY_REMINDER = (
     "pr_info/.blocked.txt saying what, and stop."
 )
 
+NO_PROGRESS_REMINDER = (
+    "\n\n⚠️ The previous attempt changed files but did not complete any task in "
+    "pr_info/TASK_TRACKER.md — no checkbox went from [ ] to [x]. Writing notes, "
+    "logs or prose into a step or plan file is NOT progress and is NOT a way to "
+    "report a problem. Either do the work and tick the box, or — if something "
+    "blocks you — write one line to pr_info/.blocked.txt saying what blocks you, "
+    "and stop."
+)
+
+RETRY_REMINDERS: dict[str, str] = {
+    "no_changes": RETRY_REMINDER,
+    "no_progress": NO_PROGRESS_REMINDER,
+}
+
 
 @dataclass(frozen=True)
 class TaskOutcome:
@@ -66,38 +83,20 @@ class TaskOutcome:
     detail: str = ""
 
 
-def get_next_task(project_dir: Path) -> Optional[str]:
-    """Get next incomplete task from task tracker (excluding meta-tasks).
+def _count_incomplete_tasks(project_dir: Path) -> int:
+    """Count incomplete non-meta tasks.
+
+    TaskTrackerError propagates if the tracker is unreadable.
 
     Args:
         project_dir: Path to the project directory
 
     Returns:
-        Next incomplete task name string, or None if no tasks remain.
+        Number of incomplete non-meta tasks.
     """
-    logger.info("Checking for incomplete tasks...")
-
-    try:
-        pr_info_dir = str(project_dir / PR_INFO_DIR)
-
-        # Get incomplete tasks, excluding meta-tasks
-        incomplete_tasks = get_incomplete_tasks(pr_info_dir, exclude_meta_tasks=True)
-
-        if not incomplete_tasks:
-            logger.info(
-                "No incomplete implementation tasks found (meta-tasks excluded)"
-            )
-            return None
-
-        next_task = incomplete_tasks[0]
-        logger.info(f"Found next task: {next_task}")
-        return next_task
-
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.error(f"Error getting incomplete tasks: {e}")
-        return None
+    return len(
+        get_incomplete_tasks(str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True)
+    )
 
 
 def _run_mypy_check(project_dir: Path) -> Optional[str]:
@@ -354,6 +353,7 @@ def process_single_task(
     attempt: int = 1,
     format_code: bool = False,
     check_type_hints: bool = False,
+    previous_reason: str | None = None,
 ) -> TaskOutcome:
     """Process a single implementation task.
 
@@ -365,16 +365,22 @@ def process_single_task(
         attempt: 1-based attempt number; appends retry reminder when > 1
         format_code: If True, run code formatters after implementation
         check_type_hints: If True, run mypy type checking after implementation
+        previous_reason: Reason the previous attempt returned; selects which
+            retry reminder is appended when attempt > 1
 
     Returns:
         TaskOutcome where:
         - success: True if task completed successfully
-        - reason: 'completed' | 'no_tasks' | 'no_changes' | 'blocked' | 'error'
-          | 'timeout' | 'mcp_unavailable'. The two LLM failures (inactivity
-          timeout, MCP servers unavailable) are categorized here into their
-          reason strings so the orchestrator can map them to a failure label.
+        - reason: 'completed' | 'no_tasks' | 'no_changes' | 'no_progress'
+          | 'blocked' | 'error' | 'timeout' | 'mcp_unavailable'. The two LLM
+          failures (inactivity timeout, MCP servers unavailable) are
+          categorized here into their reason strings so the orchestrator can
+          map them to a failure label. 'no_progress' means files changed (and
+          were committed) but the incomplete-task count did not decrease.
         - detail: free-text explanation; carries the blocked marker text for
-          the 'blocked', 'timeout' and 'mcp_unavailable' reasons, else empty.
+          the 'blocked', 'timeout' and 'mcp_unavailable' reasons, the task
+          name for 'no_progress', and the tracker fault for an unreadable
+          tracker ('error'), else empty.
     """
     # Cleanup stale files from previous failed runs
     _cleanup_commit_message_file(project_dir)
@@ -384,11 +390,29 @@ def process_single_task(
     # Prepare environment variables for LLM subprocess
     env_vars = prepare_llm_environment(project_dir)
 
-    # Get next incomplete task
-    next_task = get_next_task(project_dir)
-    if not next_task:
-        logger.info("No incomplete tasks found")
+    # One tracker read both selects the task and snapshots the progress-gate count
+    logger.info("Checking for incomplete tasks...")
+    try:
+        incomplete_tasks = get_incomplete_tasks(
+            str(project_dir / PR_INFO_DIR), exclude_meta_tasks=True
+        )
+    except TaskTrackerError as e:
+        logger.error(f"Cannot read task tracker: {e}")
+        return TaskOutcome(False, "error", f"Cannot read pr_info/TASK_TRACKER.md: {e}")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        # OSError / UnicodeDecodeError from the file read are not TaskTrackerError
+        logger.error(f"Cannot read task tracker: {e}")
+        return TaskOutcome(
+            False,
+            "error",
+            f"Cannot read pr_info/TASK_TRACKER.md: unexpected {type(e).__name__}: {e}",
+        )
+    if not incomplete_tasks:
+        logger.info("No incomplete implementation tasks found (meta-tasks excluded)")
         return TaskOutcome(False, "no_tasks")
+    next_task = incomplete_tasks[0]
+    tasks_before = len(incomplete_tasks)
+    logger.info(f"Found next task: {next_task}")
 
     # Step 3: Get implementation prompt template
     logger.debug("Loading implementation prompt template...")
@@ -418,7 +442,9 @@ Current task from TASK_TRACKER.md: {next_task}
 Please implement this task step by step."""
 
         if attempt > 1:
-            full_prompt += RETRY_REMINDER
+            full_prompt += RETRY_REMINDERS.get(
+                previous_reason or "no_changes", RETRY_REMINDER
+            )
 
         branch_name = get_branch_name_for_logging(str(project_dir))
         llm_response = prompt_llm(
@@ -538,6 +564,20 @@ Please implement this task step by step."""
     if not push_changes(project_dir):
         return TaskOutcome(False, "error")
 
+    # Progress gate: files changing is not enough, a task must have been ticked
+    tasks_after: int | None
+    try:
+        tasks_after = _count_incomplete_tasks(project_dir)
+    except Exception:  # pylint: disable=broad-exception-caught
+        # An unreadable tracker after the round is no progress, not a crash
+        tasks_after = None
+    if tasks_after is None or tasks_after >= tasks_before:
+        logger.warning(
+            f"No progress on task: {next_task} "
+            f"(incomplete tasks before={tasks_before}, after={tasks_after})"
+        )
+        return TaskOutcome(False, "no_progress", next_task)
+
     logger.info(f"Task completed successfully: {next_task}")
     return TaskOutcome(True, "completed")
 
@@ -553,7 +593,8 @@ def process_task_with_retry(
     """Process a single task with bounded retry on zero-change results.
 
     Calls process_single_task up to MAX_NO_CHANGE_RETRIES times.
-    Retries only on "no_changes" reason. Timeouts and errors propagate immediately.
+    Retries on "no_changes" and "no_progress". Timeouts and errors propagate
+    immediately.
 
     Args:
         project_dir: Path to the project directory
@@ -567,8 +608,13 @@ def process_task_with_retry(
         TaskOutcome whose reason may be:
         - 'completed' | 'no_tasks' | 'blocked' | 'error' | 'timeout' |
           'mcp_unavailable' (from process_single_task, returned unchanged)
-        - 'no_changes_after_retries' (exhausted all retry attempts)
+        - 'no_changes_after_retries' (every attempt produced zero changes)
+        - 'no_progress_after_retries' (at least one attempt changed files
+          without completing a task)
     """
+    terminal = "no_changes_after_retries"
+    last_detail = ""
+    previous_reason: str | None = None
     for attempt in range(1, MAX_NO_CHANGE_RETRIES + 1):
         outcome = process_single_task(
             project_dir,
@@ -578,8 +624,20 @@ def process_task_with_retry(
             attempt=attempt,
             format_code=format_code,
             check_type_hints=check_type_hints,
+            previous_reason=previous_reason,
         )
-        if outcome.reason != "no_changes":
+        if outcome.reason not in ("no_changes", "no_progress"):
             return outcome
-        logger.warning(f"No changes on attempt {attempt}/{MAX_NO_CHANGE_RETRIES}")
-    return TaskOutcome(False, "no_changes_after_retries")
+        if outcome.reason == "no_progress":
+            # Sticky: the more informative reason wins over a later no_changes
+            terminal = "no_progress_after_retries"
+        if outcome.detail:
+            # Sticky too: a zero-change attempt carries no detail and must not
+            # erase the task name a no_progress attempt supplied
+            last_detail = outcome.detail
+        previous_reason = outcome.reason
+        logger.warning(
+            f"No progress on attempt {attempt}/{MAX_NO_CHANGE_RETRIES}"
+            f" ({outcome.reason})"
+        )
+    return TaskOutcome(False, terminal, last_detail)

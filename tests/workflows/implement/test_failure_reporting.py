@@ -33,6 +33,13 @@ class TestFailureLabels:
         assert FAILURE_LABELS["blocked"] == "implementation_blocked"
         assert CATEGORY_DISPLAY["blocked"] == "Blocked"
 
+    def test_no_progress_shares_the_no_changes_label(self) -> None:
+        """Both no-movement reasons share one label - same operator action."""
+        assert FAILURE_LABELS["no_progress_after_retries"] == "no_changes_after_retries"
+        assert CATEGORY_DISPLAY["no_progress_after_retries"] == (
+            "No Progress After Retries"
+        )
+
 
 class TestAppendDetail:
     """Tests for append_detail."""
@@ -101,6 +108,21 @@ class TestFormatFailureComment:
 
         assert "**Category:** Blocked" in result
         assert "**Error:** pytest times out at 300s" in result
+
+    def test_no_progress_renders_its_own_category(self) -> None:
+        """Reason 'no_progress_after_retries' does not fall back to 'General'."""
+        result = format_failure_comment(
+            "no_progress_after_retries",
+            "Task implementation",
+            "nothing got ticked",
+            completed=0,
+            total=0,
+            elapsed=None,
+            build_url=None,
+            diff_stat="",
+        )
+
+        assert "**Category:** No Progress After Retries" in result
 
     def test_includes_progress_when_set(self) -> None:
         """Includes progress info when total > 0."""
