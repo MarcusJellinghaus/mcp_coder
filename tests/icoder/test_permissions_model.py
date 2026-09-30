@@ -24,6 +24,7 @@ from mcp_coder.icoder.permissions import (
     PermissionFrame,
     Policy,
     Rule,
+    ScenarioBlock,
     Source,
     Specificity,
 )
@@ -77,6 +78,17 @@ def test_permission_frame_construction_defaults() -> None:
     assert frame.base == "inherit"
     assert frame.allow == ()
     assert frame.deny == ()
+
+
+def test_scenario_block_requires_base_and_defaults_sides() -> None:
+    """ScenarioBlock needs ``base``; allow/deny/errors default to empty."""
+    block = ScenarioBlock(base="none")
+    assert block.base == "none"
+    assert block.allow == ()
+    assert block.deny == ()
+    assert block.errors == ()
+    with pytest.raises(TypeError):
+        ScenarioBlock()  # type: ignore[call-arg]  # pylint: disable=no-value-for-parameter
 
 
 def test_permission_config_empty_is_valid() -> None:
@@ -262,6 +274,40 @@ def test_matcher_origin_populatable() -> None:
     assert m.origin is rule
 
 
+def test_matcher_equality_ignores_origin() -> None:
+    """Matchers differing only in ``origin`` compare and hash equal (D14)."""
+    origin = Rule(None, Policy.ALWAYS, "project", ref="@git")
+    plain = Matcher(server="git", tool="push")
+    with_origin = Matcher(server="git", tool="push", origin=origin)
+    assert plain == with_origin
+    assert hash(plain) == hash(with_origin)
+
+
+def test_rule_ref_defaults_none_and_round_trips() -> None:
+    """Rule.ref defaults to None and keeps the authored token verbatim."""
+    rule = Rule(Matcher(server="s", tool="t"), Policy.ALWAYS, "user")
+    assert rule.ref is None
+    assert Rule(None, Policy.ALWAYS, "user", ref="@github-write").ref == (
+        "@github-write"
+    )
+
+
+def test_rule_constructible_without_matcher() -> None:
+    """A matcher-less (origin) Rule keeps its policy/layer/source_path/ref."""
+    rule = Rule(
+        matcher=None,
+        policy=Policy.NEVER,
+        layer="local",
+        source_path=Path("settings.json"),
+        ref="@git",
+    )
+    assert rule.matcher is None
+    assert rule.policy is Policy.NEVER
+    assert rule.layer == "local"
+    assert rule.source_path == Path("settings.json")
+    assert rule.ref == "@git"
+
+
 def test_rule_source_path_populatable() -> None:
     """Rule.source_path can be populated with a Path."""
     rule = Rule(
@@ -276,7 +322,7 @@ def test_rule_source_path_populatable() -> None:
 def test_permission_config_groups_and_scenarios_populatable() -> None:
     """PermissionConfig stores groups and scenarios mappings."""
     grp = {"g1": (Matcher(server="s", tool="t"),)}
-    scn = {"s1": (Matcher(server="a", tool="b"),)}
+    scn = {"s1": ScenarioBlock("inherit", allow=(Matcher(server="a", tool="b"),))}
     cfg = PermissionConfig(groups=grp, scenarios=scn)
     assert cfg.groups == grp
     assert cfg.scenarios == scn

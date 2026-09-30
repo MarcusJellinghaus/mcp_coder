@@ -158,7 +158,13 @@ class LangchainEnforcementGateway:
                 kept.append(tool)
                 continue
             rule = decision.matched_rule
-            if rule is not None and rule.matcher.arg is not None:
+            # A matcher-less rule here is a ``@group`` origin rule (D13): no arg
+            # to read, so the tool is hidden — fail closed rather than crash.
+            if (
+                rule is not None
+                and rule.matcher is not None
+                and rule.matcher.arg is not None
+            ):
                 kept.append(tool)  # arg-scoped never -> visible, refused at call
         return kept
 

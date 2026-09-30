@@ -59,8 +59,14 @@ def _rule_sort_key(
         (earlier declaration wins).
     """
     index, rule = ir
+    # Unreachable: ``_resolve_config`` filters matcher-less rules out first.
+    spec = (
+        specificity(rule.matcher)
+        if rule.matcher is not None
+        else Specificity(-1, -1, -1)
+    )
     return (
-        specificity(rule.matcher),
+        spec,
         1 if rule.policy is Policy.NEVER else 0,
         1 if rule.layer in _PERSONAL_LAYERS else 0,
         rule.policy.rank,
@@ -171,10 +177,12 @@ def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision:
             None,
         )
 
+    # A matcher-less (origin) rule never enters ``config.rules`` (D13); skip one
+    # rather than crash a live session if that ever regresses.
     cands = [
         (i, rule)
         for i, rule in enumerate(config.rules)
-        if matches(rule.matcher, tool_name)
+        if rule.matcher is not None and matches(rule.matcher, tool_name)
     ]
     if cands:
         # ``runtime`` is a stage, not just a layer. The personal bit in
@@ -203,7 +211,7 @@ def _resolve_config(tool_name: str, config: PermissionConfig) -> Decision:
             cands = runtime
 
         _, best = max(cands, key=_rule_sort_key)
-        matched = best.matcher.origin or best
+        matched = (best.matcher.origin if best.matcher is not None else None) or best
         return Decision(best.policy, Layer(best.layer), matched, None)
 
     pol = config.default_policy or Policy.ALWAYS

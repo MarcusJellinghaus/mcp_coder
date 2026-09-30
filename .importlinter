@@ -382,6 +382,7 @@ source_modules =
     mcp_coder.icoder.permissions.model
     mcp_coder.icoder.permissions.matcher
     mcp_coder.icoder.permissions.resolver
+    mcp_coder.icoder.permissions.expand
     mcp_coder.icoder.permissions.loader
     mcp_coder.icoder.permissions.skill_tools
     mcp_coder.icoder.permissions.skill_frame
@@ -411,6 +412,7 @@ source_modules =
     mcp_coder.icoder.permissions.model
     mcp_coder.icoder.permissions.matcher
     mcp_coder.icoder.permissions.resolver
+    mcp_coder.icoder.permissions.expand
 forbidden_modules =
     json
     jsonschema

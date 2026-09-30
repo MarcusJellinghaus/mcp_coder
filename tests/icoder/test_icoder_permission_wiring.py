@@ -5,7 +5,9 @@ Three concerns are covered here:
 * **Wiring** — ``execute_icoder`` loads the permission config once, constructs
   the gateway, injects its interceptor into ``MCPManager``, and hands the *same*
   gateway to ``RealLLMService`` (only on the ``langchain`` + ``mcp_config``
-  path). Outside that path no config is loaded and ``gateway`` stays ``None``.
+  path). The config is loaded for every provider (skills resolve ``@group``/
+  ``use:`` against it), but outside that path ``gateway`` stays ``None`` and
+  ``permission_degraded`` stays ``False``.
 * **Ordering** — the adapter capability check fires *before* ``MCPManager``
   builds tools, so a ``<0.3.0`` adapter yields the clear ``ImportError`` rather
   than the raw ``TypeError`` at the first ``convert_...(tool_interceptors=...)``
@@ -31,8 +33,13 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.icoder.permissions import PermissionConfig
-from tests.icoder.conftest import make_icoder_args, patch_icoder_deps
+from mcp_coder.icoder.permissions import Matcher, PermissionConfig, ScenarioBlock
+from mcp_coder.icoder.permissions.skill_tools import SkillToolsBlock
+from tests.icoder.conftest import (
+    _patch_all_icoder_deps,
+    make_icoder_args,
+    patch_icoder_deps,
+)
 
 # ======================================================================
 # Helpers
@@ -174,7 +181,7 @@ def test_icoder_injects_interceptor_into_manager(
 def test_icoder_no_gateway_without_langchain(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Non-langchain provider -> gateway is None; config is never loaded."""
+    """Non-langchain provider -> config is loaded (D9), but no gateway/manager."""
     from mcp_coder.cli.commands.icoder import execute_icoder
 
     (tmp_path / "logs").mkdir()
@@ -210,11 +217,92 @@ def test_icoder_no_gateway_without_langchain(
     result = execute_icoder(make_icoder_args(tmp_path))
 
     assert result == 0
-    assert load_calls == []
+    assert load_calls == [Path(str(tmp_path)).resolve()]
     assert manager_calls == []
     assert len(llm_calls) == 1
     assert llm_calls[0]["gateway"] is None
     assert llm_calls[0]["mcp_manager"] is None
+
+
+def test_icoder_degraded_config_no_banner_off_langchain(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Claude provider + degraded config -> ``permission_degraded`` stays False (D12).
+
+    The banner claims MCP calls are being denied, which is false where nothing
+    is enforced, so the flag is only surfaced on the langchain gate.
+    """
+    from mcp_coder.cli.commands.icoder import execute_icoder
+
+    (tmp_path / "logs").mkdir()
+    captured_app_core = _patch_all_icoder_deps(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.load_permission_config",
+        lambda _project_dir: PermissionConfig(degraded=True, errors=("bad",)),
+    )
+
+    result = execute_icoder(make_icoder_args(tmp_path))
+
+    assert result == 0
+    assert len(captured_app_core) == 1
+    assert captured_app_core[0].permission_degraded is False
+
+
+def test_icoder_skill_refs_resolve_off_langchain(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Claude provider: ``@group`` and ``use:`` skills resolve against the config.
+
+    Without ``groups``/``scenarios`` reaching ``build_frame`` both skills would
+    be blocked (unknown ref / unknown scenario).
+    """
+    from mcp_coder.cli.commands.icoder import execute_icoder
+    from mcp_coder.icoder.skills import ClaudeSkill
+
+    (tmp_path / "logs").mkdir()
+    _patch_all_icoder_deps(monkeypatch, tmp_path)
+    member = Matcher(server="srv", tool="read")
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.load_permission_config",
+        lambda _project_dir: PermissionConfig(
+            groups={"reads": (member,)},
+            scenarios={"reader": ScenarioBlock(base="inherit", allow=(member,))},
+        ),
+    )
+    skills = [
+        ClaudeSkill(
+            name="group_skill",
+            description="d",
+            prompt_template="body",
+            tools_block=SkillToolsBlock(base="none", allow=("@reads",)),
+        ),
+        ClaudeSkill(
+            name="scenario_skill",
+            description="d",
+            prompt_template="body",
+            tools_block=SkillToolsBlock(base=None, use="reader"),
+        ),
+    ]
+    monkeypatch.setattr("mcp_coder.icoder.skills.load_skills", lambda _: skills)
+    reasons: dict[str, str | None] = {}
+
+    def fake_register(
+        registry: object,
+        skills: object,
+        provider: object,
+        disabled_reasons: dict[str, str | None],
+    ) -> list[object]:
+        reasons.update(disabled_reasons)
+        return []
+
+    monkeypatch.setattr(
+        "mcp_coder.icoder.skills.register_skill_commands", fake_register
+    )
+
+    result = execute_icoder(make_icoder_args(tmp_path))
+
+    assert result == 0
+    assert reasons == {"group_skill": None, "scenario_skill": None}
 
 
 def test_icoder_asserts_adapter_capability_before_manager(

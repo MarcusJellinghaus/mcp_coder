@@ -124,6 +124,12 @@ def _patch_all_icoder_deps(
         "mcp_coder.cli.commands.icoder.resolve_mcp_config_path",
         lambda *a, **_kw: None,
     )
+    # The permission config now loads for every provider (D9); keep it off the
+    # user's real ``.icoder`` layers.
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.icoder.load_permission_config",
+        lambda _project_dir: PermissionConfig(),
+    )
     monkeypatch.setattr(
         "mcp_coder.icoder.skills.load_skills",
         lambda _: [],
