@@ -211,6 +211,15 @@ _._isolate_crash_logging_state
 # test_ssl_setup.py - Autouse fixture to reset ssl_setup._injected module state
 _._reset_injected
 
+# implement/test_task_processing.py + test_task_progress_gate.py - Autouse fixture
+# making the progress-gate after-read look like progress unless opted out
+_._tracker_count_always_decreases
+
+# implement/test_core_failure_routing.py - @patch decorator parameters for the
+# round-cap tests (get_step_progress / run_finalisation must be patched, unused)
+_.mock_step_progress
+_.mock_finalisation
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================
