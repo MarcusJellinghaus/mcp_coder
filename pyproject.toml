@@ -32,6 +32,8 @@ dependencies = [
     "pywin32>=306; sys_platform == 'win32'",
     "python-frontmatter>=1.0.0",
     "jsonschema>=4.0.0",
+    "packaging>=21.0",
+    "rich>=13.0",
 ]
 
 [project.optional-dependencies]
@@ -107,6 +109,7 @@ dev = [
     "tach>=0.6.0",
     "vulture>=2.14",
     "ruff>=0.9.0",
+    "deptry>=0.25.1",
 ]
 
 [project.scripts]
@@ -335,6 +338,39 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+# Dependency-declaration hygiene. Run as `deptry src`.
+# src only: running it over tests/ yields DEP004 noise and no signal.
+[tool.deptry]
+known_first_party = ["mcp_coder"]
+
+[tool.deptry.package_module_name_map]
+# pywin32 carries a sys_platform marker, so it is absent on the Linux CI runner
+# and deptry cannot read its module names from installed metadata. Stating the
+# mapping keeps DEP001 live for genuinely undeclared imports.
+pywin32 = ["win32gui", "win32process"]
+
+[tool.deptry.per_rule_ignores]
+# DEP002: declared but never imported — tools invoked as executables, plus type
+# stubs read only by mypy. Grouped by where they actually come from.
+DEP002 = [
+    # Mandatory dependencies of mcp-tools-py, so they arrive in every install
+    # whether or not mcp_coder declares them. Re-declared here to pin a floor.
+    "black", "isort", "mypy", "ruff", "tach", "vulture", "import-linter",
+    "pytest-asyncio", "pytest-xdist",
+    # In mcp-tools-py's dev extra only, so they do not propagate — mcp_coder
+    # must declare these itself.
+    "pycycle", "pydeps",
+    # mcp_coder only; no sibling provides them.
+    "deptry", "pytest-textual-snapshot", "textual-dev",
+    "types-requests", "types-tabulate", "types-jsonschema",
+]
+# DEP003: optional provider SDKs, imported behind try/except ImportError and
+# supplied by the langchain-* extras. Each is a hard requirement of the
+# langchain-* wrapper that gates it, so it cannot be absent when reached.
+DEP003 = [
+    "openai", "anthropic", "google", "ollama", "pydantic",
+]
 
 [tool.mcp-coder.install]
 # Extras `mcp-coder install` passes to `uv` when provisioning this repo.

@@ -401,6 +401,7 @@ jobs:
           - {name: "tach", cmd: "tach check"}
           - {name: "pycycle", cmd: "pycycle --here"}
           - {name: "vulture", cmd: "vulture src tests --min-confidence 60"}
+          - {name: "deptry", cmd: "deptry src"}
     name: ${{ matrix.check.name }}
     steps:
       - uses: actions/checkout@v4

@@ -99,12 +99,14 @@ All architecture tools have corresponding scripts in the `tools/` directory that
 ./tools/tach_check.sh
 ./tools/pycycle_check.sh
 ./tools/vulture_check.sh
+./tools/deptry_check.sh
 
 # Instead of direct commands
 lint-imports
 tach check
 pycycle --here
 vulture src tests vulture_whitelist.py --min-confidence 60
+deptry src
 ```
 
 (For Claude Code MCP tool equivalents, see the Quality Check Tools section below.)
@@ -152,6 +154,22 @@ vulture src tests vulture_whitelist.py --min-confidence 60
 - **Documentation:** [vulture docs](https://github.com/jendrikseipp/vulture)
 - **Example config:** See `vulture_whitelist.py` in this repository
 
+### Dependency Declaration Hygiene
+
+> **Customize (`[tool.deptry]` in `pyproject.toml`):** Per-rule ignores and the
+> package-to-module name map.
+
+**Tool: deptry**
+
+- **Purpose:** Detects imports that are undeclared or reach the code only as a transitive dependency. No other tool in this stack checks the declaration direction — `_depcheck.py` checks the opposite one, that declared deps are installed.
+- **Execution:** `./tools/deptry_check.sh` (Linux/macOS) or `tools\deptry_check.bat` (Windows)
+- **Direct:** `deptry src`
+- **Documentation:** [deptry docs](https://deptry.com/)
+- **Example config:** See `[tool.deptry]` in `pyproject.toml`
+
+Runs against `src` only — over `tests/` it reports dev dependencies as production
+imports (`DEP004`) with no signal to show for it.
+
 ## CI Workflow for Python
 
 The general CI workflow structure is documented in [github.md](github.md#code-quality-ci). The matrix items are Python-specific:
@@ -167,6 +185,7 @@ The general CI workflow structure is documented in [github.md](github.md#code-qu
 | `tach` | Architectural boundary check |
 | `pycycle` | Circular dependency detection |
 | `vulture` | Dead code detection |
+| `deptry` | Dependency declaration check |
 
 ## Development Tools
 
@@ -205,6 +224,7 @@ For the `[tool.black]` and `[tool.isort]` config items these tools read, see [Ke
 | `tach_check.sh/bat` | Run tach architecture check | Optional (CI runs it) |
 | `pycycle_check.sh/bat` | Check circular dependencies | Optional (CI runs it) |
 | `vulture_check.sh/bat` | Check dead code | Optional (CI runs it) |
+| `deptry_check.sh/bat` | Check dependency declarations | Optional (CI runs it) |
 | `pylint_check_for_errors.bat` | Run pylint errors only | Optional (CI runs it) |
 | `mypy.bat` | Run type checking | Optional (CI runs it) |
 
