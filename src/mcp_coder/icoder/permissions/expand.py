@@ -68,12 +68,28 @@ def expand(
     return matchers, errors
 
 
+def expand_group(
+    name: str,
+    groups: Mapping[str, Sequence[str]],
+) -> tuple[list[Matcher], list[str]]:
+    """Expand the group stored under the exact key ``name`` (no stripping).
+
+    Args:
+        name: A key of ``groups``, used verbatim.
+        groups: Merged group map, group name to raw member tokens.
+
+    Returns:
+        A ``(matchers, errors)`` tuple for the group's members.
+    """
+    return _expand_name(name, groups, set())
+
+
 def _expand_ref(
     token: str,
     groups: Mapping[str, Sequence[str]],
     visited: set[str],
 ) -> tuple[list[Matcher], list[str]]:
-    """Recursive worker: expand one ``@ref``, recording visited group names.
+    """Expand one ``@ref`` token via its whitespace-stripped group name.
 
     Args:
         token: A ``@group`` reference token.
@@ -83,7 +99,24 @@ def _expand_ref(
     Returns:
         A ``(matchers, errors)`` tuple for this ref's members.
     """
-    name = ref_name(token)
+    return _expand_name(ref_name(token), groups, visited)
+
+
+def _expand_name(
+    name: str,
+    groups: Mapping[str, Sequence[str]],
+    visited: set[str],
+) -> tuple[list[Matcher], list[str]]:
+    """Recursive worker: expand group ``name``, recording visited group names.
+
+    Args:
+        name: The exact group key.
+        groups: Merged group map, group name to raw member tokens.
+        visited: Group names already expanded; shared and mutated in place.
+
+    Returns:
+        A ``(matchers, errors)`` tuple for this group's members.
+    """
     if name in visited:
         return [], []
     if name not in groups:

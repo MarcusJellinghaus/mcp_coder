@@ -51,7 +51,7 @@ from typing import NamedTuple
 
 import jsonschema
 
-from mcp_coder.icoder.permissions.expand import expand, is_ref
+from mcp_coder.icoder.permissions.expand import expand, expand_group, is_ref
 from mcp_coder.icoder.permissions.matcher import parse_matcher
 from mcp_coder.icoder.permissions.model import (
     Base,
@@ -450,6 +450,22 @@ def _expanded_members(
     return (() if errors else tuple(out)), errors
 
 
+def _expanded_group(
+    name: str, groups: Mapping[str, Sequence[str]]
+) -> tuple[Matcher, ...]:
+    """Expand the group under the exact key ``name``; ``()`` on any error.
+
+    Args:
+        name: A key of ``groups``, used verbatim (not re-parsed as ``@name``).
+        groups: The merged raw group map.
+
+    Returns:
+        The group's matchers, or ``()`` if any member fails.
+    """
+    matchers, errors = expand_group(name, groups)
+    return () if errors else tuple(matchers)
+
+
 def _build_scenario(
     name: str, raw: _RawScenario, groups: Mapping[str, Sequence[str]]
 ) -> ScenarioBlock:
@@ -525,7 +541,7 @@ def load_permission_config(project_dir: Path) -> PermissionConfig:
     # stay out of ``errors``: only a rule referencing it degrades. Scenario
     # members are expanded against the GROUP map — a ``@x`` there is a group
     # reference; their errors live on the block.
-    groups = {n: _expanded_members((f"@{n}",), raw_groups)[0] for n in raw_groups}
+    groups = {n: _expanded_group(n, raw_groups) for n in raw_groups}
     scenarios = {
         n: _build_scenario(n, raw, raw_groups) for n, raw in raw_scenarios.items()
     }

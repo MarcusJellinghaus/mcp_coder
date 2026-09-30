@@ -269,6 +269,19 @@ def test_unreferenced_broken_group_fails_wholesale_without_degrading(
     assert config.groups["broken"] == ()
 
 
+def test_group_map_expands_by_exact_key(layers: _Layers) -> None:
+    """A ``"git "`` key keeps its own members, not stripped ``"git"``'s."""
+    layers.write(
+        "project",
+        {"toolGroups": {"git": ["mcp__git__status"], "git ": ["mcp__git__log"]}},
+    )
+
+    config = load_permission_config(layers.project_dir)
+
+    assert [m.tool for m in config.groups["git "]] == ["log"]
+    assert [m.tool for m in config.groups["git"]] == ["status"]
+
+
 def test_scenario_member_group_ref_resolves(layers: _Layers) -> None:
     """A ``@git`` scenario member expands against the group map."""
     layers.write(
