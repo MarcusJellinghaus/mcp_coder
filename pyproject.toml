@@ -350,22 +350,19 @@ known_first_party = ["mcp_coder"]
 pywin32 = ["win32gui", "win32process"]
 
 [tool.deptry.per_rule_ignores]
-# DEP002: declared but never imported. All are executables run by the CI matrix
-# and the tools/ scripts, or stubs read by mypy — grouped by where they are
-# declared above.
+# DEP002: declared but never imported — tools invoked as executables, plus type
+# stubs read only by mypy. Grouped by where they actually come from.
 DEP002 = [
-    # [project.dependencies] — formatters, invoked through mcp-tools-py
-    "black", "isort",
-    # dev extra — architecture, lint and dependency checks
-    "import-linter", "pycycle", "pydeps", "tach", "vulture", "ruff", "deptry",
-    # typecheck extra
-    "mypy",
-    # types extra — stub-only distributions, consumed by mypy, never by src
+    # Mandatory dependencies of mcp-tools-py, so they arrive in every install
+    # whether or not mcp_coder declares them. Re-declared here to pin a floor.
+    "black", "isort", "mypy", "ruff", "tach", "vulture", "import-linter",
+    "pytest-asyncio", "pytest-xdist",
+    # In mcp-tools-py's dev extra only, so they do not propagate — mcp_coder
+    # must declare these itself.
+    "pycycle", "pydeps",
+    # mcp_coder only; no sibling provides them.
+    "deptry", "pytest-textual-snapshot", "textual-dev",
     "types-requests", "types-tabulate", "types-jsonschema",
-    # test extra — pytest plugins, loaded by pytest itself
-    "pytest-asyncio", "pytest-xdist", "pytest-textual-snapshot",
-    # tui extra
-    "textual-dev",
 ]
 # DEP003: optional provider SDKs, imported behind try/except ImportError and
 # supplied by the langchain-* extras. Each is a hard requirement of the
