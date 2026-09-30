@@ -345,12 +345,6 @@ convention = "google"
 [tool.deptry]
 known_first_party = ["mcp_coder"]
 
-[tool.deptry.package_module_name_map]
-# pywin32 carries a sys_platform marker, so it is absent on the Linux CI runner
-# and deptry cannot read its module names from installed metadata. Stating the
-# mapping keeps DEP001 live for genuinely undeclared imports.
-pywin32 = ["win32gui", "win32process"]
-
 [tool.deptry.per_rule_ignores]
 # DEP002: dev/CI tools invoked as executables, never imported.
 # black and isort leave this list when #1174 and #1175 remove them from
