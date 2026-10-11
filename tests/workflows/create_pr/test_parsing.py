@@ -23,6 +23,8 @@ class TestEnsureClosingReference:
             "Fix #123",
             "resolve #123",
             "text\n\nCloses  #123.",
+            "Closes: #123",
+            "Fixes:#123",
         ],
     )
     def test_detects_existing_reference(self, body: str) -> None:

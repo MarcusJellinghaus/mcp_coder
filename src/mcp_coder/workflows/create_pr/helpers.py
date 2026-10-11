@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # GitHub closing keywords followed by an issue reference, e.g. "Closes #123"
 _CLOSING_REF_RE = re.compile(
-    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*#(\d+)\b", re.IGNORECASE
+    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b:?\s*#(\d+)\b", re.IGNORECASE
 )
 
 
