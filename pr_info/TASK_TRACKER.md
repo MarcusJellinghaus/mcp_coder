@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Base-branch source and missing-base helper
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `BaseBranchSource`, `detect_base_branch_with_source`, `check_base_branch_on_origin` with tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `BaseBranchSource`, `detect_base_branch_with_source`, `check_base_branch_on_origin` with tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `mcp-coder rebase` trusts an issue-named base and checks it exists
 See [step_2.md](./steps/step_2.md)
