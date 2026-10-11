@@ -23,4 +23,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
+### Step 1: Closing-reference helper — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `ensure_closing_reference` in `helpers.py`, re-export from `core.py`, tests in `test_parsing.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Always resolve the issue number and inject the closing reference — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: remove `update_issue_labels` gate and inject closing reference in `run_create_pr_workflow`; new `conftest.py`, tests in `test_workflow.py`, patches in `test_create_pr_integration.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against `main`
+- [ ] PR summary prepared
