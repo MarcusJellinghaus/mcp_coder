@@ -35,9 +35,8 @@ config-file table and the TOML example.
 tokens, choose *Fine-grained tokens* or *Tokens (classic)*, then add the token to the
 config file.
 
-Add one sentence: the list covers what `verify` checks. Workflow automation that writes
-(pushes, labels, comments, PRs) needs `Read and write` on `Contents`, `Issues` and
-`Pull requests`. Do not list permissions for the #1180 security-settings rows.
+Do not list write permissions for workflow automation, and do not list permissions for
+the #1180 security-settings rows. Both are out of scope.
 
 ## Commit
 

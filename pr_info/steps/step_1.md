@@ -18,9 +18,13 @@
 `TestBranchProtectionNesting.test_children_suppressed_when_parent_unverifiable(self) -> None`.
 This is the 403 case.
 
-Also prefix the docstrings of the two existing tests with their status codes (no logic change):
-- `test_children_indented_when_parent_ok`: "200: Children render …"
-- `test_children_suppressed_when_parent_fails`: "404: Only parent line appears …"
+Also update the two existing tests so that they cover 200 and 404:
+- `test_children_indented_when_parent_ok`: prefix the docstring with "200: Children render …" (no logic change).
+- `test_children_suppressed_when_parent_fails`: prefix the docstring with "404: Only parent line appears …".
+  Change the parent payload to upstream's 404 shape,
+  `{"ok": False, "value": "not configured", "severity": "warning"}`, and add an
+  assertion that the parent row contains `[ERR]` and `not configured`. This test
+  already passes before the fix.
 
 ### Implementation
 
