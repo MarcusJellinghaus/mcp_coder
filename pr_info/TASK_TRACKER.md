@@ -21,6 +21,56 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Base-branch source and missing-base helper
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `BaseBranchSource`, `detect_base_branch_with_source`, `check_base_branch_on_origin` with tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `mcp-coder rebase` trusts an issue-named base and checks it exists
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: `_resolve_base_branch` uses source, origin guard in `run_rebase_workflow`, `--base-branch` help text, with tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: create-plan checks the base branch before creating a branch
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: `BaseBranchMissingError` in `manage_branch`, failure handling in `core.py`, with tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: create-pr checks the base branch before opening the PR
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: origin check in `create_pull_request`, with tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Implement workflow's rebase step checks the base branch
+See [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation: warn and skip in `_attempt_rebase_and_push` on missing base, with tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: `gh-tool get-base-branch` handles failed detection and documents the real order
+See [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation: `None` check, warning text and docstring order in `execute_get_base_branch`, with tests
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Document the epic-branch procedure and fix the CLI reference
+See [step_7.md](./steps/step_7.md)
+
+- [ ] Implementation: update `docs/cli-reference.md` and `docs/repository-setup/github.md` (Epic Branches section)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against `pr_info/steps/summary.md`
+- [ ] PR summary prepared
