@@ -11,7 +11,10 @@ from typing import Optional
 
 from mcp_coder.mcp_workspace_git import get_full_status, rebase_onto_branch
 from mcp_coder.workflow_steps.commit import push_changes
-from mcp_coder.workflow_utils.base_branch import detect_base_branch
+from mcp_coder.workflow_utils.base_branch import (
+    check_base_branch_on_origin,
+    detect_base_branch,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +60,8 @@ def _attempt_rebase_and_push(project_dir: Path) -> bool:
     Returns:
         True if rebase and push succeeded.
         False if the working tree has staged or modified tracked changes
-        (untracked files alone do not count), or if rebase skipped, failed,
-        or no target detected.
+        (untracked files alone do not count), if the base branch does not
+        exist on origin, or if rebase skipped, failed, or no target detected.
     """
     # Checked before target detection: detect_base_branch fetches from the
     # remote, and there is no point paying for it when the rebase cannot start.
@@ -72,6 +75,10 @@ def _attempt_rebase_and_push(project_dir: Path) -> bool:
 
     target = _get_rebase_target_branch(project_dir)
     if target:
+        missing_err = check_base_branch_on_origin(project_dir, target)
+        if missing_err:
+            logger.warning("Skipping rebase: %s", missing_err)
+            return False
         logger.info("Rebasing onto origin/%s...", target)
         if rebase_onto_branch(project_dir, target):
             # Push rebased branch with force_with_lease

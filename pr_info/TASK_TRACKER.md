@@ -52,9 +52,9 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: Implement workflow's rebase step checks the base branch
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: warn and skip in `_attempt_rebase_and_push` on missing base, with tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: warn and skip in `_attempt_rebase_and_push` on missing base, with tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: `gh-tool get-base-branch` handles failed detection and documents the real order
 See [step_6.md](./steps/step_6.md)

@@ -1,6 +1,7 @@
 """Tests for the rebase-and-push workflow step."""
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -11,6 +12,16 @@ from mcp_coder.workflow_steps.rebase import (
     _get_rebase_target_branch,
 )
 from mcp_coder.workflows.implement.core import run_implement_workflow
+
+
+@pytest.fixture(autouse=True)
+def mock_check_base_on_origin() -> Iterator[MagicMock]:
+    """Treat every base branch as present on origin unless a test overrides it."""
+    with patch(
+        "mcp_coder.workflow_steps.rebase.check_base_branch_on_origin",
+        return_value=None,
+    ) as mock_check:
+        yield mock_check
 
 
 class TestGetRebaseTargetBranch:
@@ -156,6 +167,43 @@ class TestDirtyWorkingTreeGuard:
 
         assert result is True
         mock_rebase.assert_called_once_with(tmp_path, "main")
+
+
+class TestMissingBaseGuard:
+    """Tests for the missing-on-origin guard in _attempt_rebase_and_push."""
+
+    @patch("mcp_coder.workflow_steps.rebase.push_changes")
+    @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
+    @patch("mcp_coder.workflow_steps.rebase._get_rebase_target_branch")
+    @patch("mcp_coder.workflow_steps.rebase.get_full_status")
+    def test_missing_base_skips_rebase(
+        self,
+        mock_status: MagicMock,
+        mock_get_target: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        mock_check_base_on_origin: MagicMock,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test a base branch missing on origin skips the rebase with a warning."""
+        mock_status.return_value = {"staged": [], "modified": [], "untracked": []}
+        mock_get_target.return_value = "epic/x"
+        mock_check_base_on_origin.return_value = (
+            "Base branch 'epic/x' does not exist on origin"
+        )
+
+        with caplog.at_level(logging.WARNING):
+            result = _attempt_rebase_and_push(tmp_path)
+
+        assert result is False
+        mock_check_base_on_origin.assert_called_once_with(tmp_path, "epic/x")
+        mock_rebase.assert_not_called()
+        mock_push.assert_not_called()
+        assert any(
+            r.levelno == logging.WARNING and "epic/x" in r.getMessage()
+            for r in caplog.records
+        )
 
 
 class TestRebaseIntegration:
