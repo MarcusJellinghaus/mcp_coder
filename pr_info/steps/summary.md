@@ -39,6 +39,7 @@ Modified (source):
 - `src/mcp_coder/workflows/create_pr/core.py` — check in `create_pull_request`
 - `src/mcp_coder/workflow_steps/rebase.py` — check in `_attempt_rebase_and_push`
 - `src/mcp_coder/cli/commands/gh_tool.py` — `None` check, docstring order
+- `src/mcp_coder/cli/parsers.py` — rebase `--base-branch` help text
 
 Modified (tests):
 - `tests/workflow_utils/test_base_branch.py`

@@ -7,6 +7,7 @@
 ## WHERE
 
 - `src/mcp_coder/workflows/rebase.py`
+- `src/mcp_coder/cli/parsers.py` — `--base-branch` help text
 - `tests/workflows/rebase/test_guards.py`
 - `tests/workflows/rebase/test_workflow.py`
 
@@ -32,6 +33,7 @@ def _resolve_base_branch(
   ```
   This applies to an explicit `--base-branch` too.
 - Update the `_resolve_base_branch` docstring (issue-named bases are accepted).
+- In `cli/parsers.py`, change the rebase `--base-branch` help to: "Base branch to rebase onto (default: auto-detect; needed only when the detected base is not main/master and not named in the issue's ### Base Branch)".
 
 ## ALGORITHM
 
