@@ -59,9 +59,9 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: `gh-tool get-base-branch` handles failed detection and documents the real order
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: `None` check, warning text and docstring order in `execute_get_base_branch`, with tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `None` check, warning text and docstring order in `execute_get_base_branch`, with tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Document the epic-branch procedure and fix the CLI reference
 See [step_7.md](./steps/step_7.md)

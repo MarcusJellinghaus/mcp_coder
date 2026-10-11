@@ -66,16 +66,18 @@ class TestGetBaseBranchExitCodes:
         self,
         mock_detect_base_branch: MagicMock,
         mock_resolve_project_dir: MagicMock,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test exit code 1 when detection fails but no error occurred."""
         project_dir = Path("/test/project")
         mock_resolve_project_dir.return_value = project_dir
-        mock_detect_base_branch.return_value = "unknown"
+        mock_detect_base_branch.return_value = None
 
         args = argparse.Namespace(project_dir=None)
         result = execute_get_base_branch(args)
 
         assert result == 1
+        assert capsys.readouterr().out == ""
 
     def test_get_base_branch_exit_code_error_not_git_repo(
         self,
