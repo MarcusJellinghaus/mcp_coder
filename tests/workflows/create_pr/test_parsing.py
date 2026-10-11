@@ -1,6 +1,60 @@
 """Tests for create_PR workflow PR parsing functionality."""
 
-from mcp_coder.workflows.create_pr.core import parse_pr_summary
+import logging
+
+import pytest
+
+from mcp_coder.workflows.create_pr.core import (
+    ensure_closing_reference,
+    parse_pr_summary,
+)
+
+
+class TestEnsureClosingReference:
+    """Test ensure_closing_reference function."""
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            "Closes #123",
+            "fixes #123",
+            "RESOLVED #123",
+            "close #123",
+            "Fix #123",
+            "resolve #123",
+            "text\n\nCloses  #123.",
+        ],
+    )
+    def test_detects_existing_reference(self, body: str) -> None:
+        """Body already closing the issue is returned unchanged."""
+        assert ensure_closing_reference(body, 123) == body
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            "No reference",
+            "Closes #1234",
+            "prefixes #123",
+            "See #123",
+        ],
+    )
+    def test_appends_when_missing(self, body: str) -> None:
+        """Closing reference is appended when the body lacks one."""
+        assert ensure_closing_reference(body, 123) == body + "\n\nCloses #123"
+
+    def test_other_issue_appends_and_warns(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Body closing other issues gets the reference and one warning."""
+        with caplog.at_level(logging.WARNING):
+            result = ensure_closing_reference("Closes #7\nFixes #9\nCloses #7", 123)
+
+        assert result.endswith("\n\nCloses #123")
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1
+        message = warnings[0].getMessage()
+        assert "7" in message
+        assert "9" in message
 
 
 class TestParsePrSummary:

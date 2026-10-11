@@ -46,6 +46,9 @@ from mcp_coder.workflow_utils.task_tracker import (
     get_incomplete_tasks,
 )
 from mcp_coder.workflows.create_pr.helpers import (
+    ensure_closing_reference as ensure_closing_reference,
+)
+from mcp_coder.workflows.create_pr.helpers import (
     format_failure_comment as _format_failure_comment_impl,
 )
 from mcp_coder.workflows.create_pr.helpers import (
