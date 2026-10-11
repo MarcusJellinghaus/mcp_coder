@@ -208,8 +208,8 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
         if key == "branch_protection":
             bp_ok = ok
         elif key in _BRANCH_PROTECTION_CHILDREN:
-            if bp_ok is False:
-                continue  # suppress children when parent failed
+            if bp_ok is not True:
+                continue  # suppress children when parent failed or is unverifiable
             if key == "strict_mode":
                 lines.append(_format_row(label, "", value, indent=4))
             else:
