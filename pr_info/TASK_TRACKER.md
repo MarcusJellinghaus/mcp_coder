@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: `mcp-coder rebase` trusts an issue-named base and checks it exists
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `_resolve_base_branch` uses source, origin guard in `run_rebase_workflow`, `--base-branch` help text, with tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_resolve_base_branch` uses source, origin guard in `run_rebase_workflow`, `--base-branch` help text, with tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: create-plan checks the base branch before creating a branch
 See [step_3.md](./steps/step_3.md)

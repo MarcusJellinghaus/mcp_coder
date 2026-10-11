@@ -4,7 +4,7 @@ Covers ``_preflight``, ``_resolve_base_branch`` and
 ``_check_pr_info_absent_on_base``. ``_preflight`` and the pr_info guard touch a
 real git repository (with a local ``origin`` remote), so they are marked
 ``git_integration``. ``_resolve_base_branch`` delegates detection to
-``detect_base_branch``, which is patched here so the resolve tests stay
+``detect_base_branch_with_source``, which is patched here so the resolve tests stay
 deterministic and offline.
 """
 
@@ -14,6 +14,7 @@ from typing import Any
 import pytest
 from git import Repo
 
+from mcp_coder.workflow_utils.base_branch import BaseBranchSource
 from mcp_coder.workflows import rebase as rebase_module
 from mcp_coder.workflows.rebase import (
     _check_pr_info_absent_on_base,
@@ -65,9 +66,9 @@ class TestResolveBaseBranch:
         """An explicit ``base_branch_arg`` wins and skips detection entirely."""
 
         def _fail(*_args: Any, **_kwargs: Any) -> str:
-            raise AssertionError("detect_base_branch must not be called")
+            raise AssertionError("detect_base_branch_with_source must not be called")
 
-        monkeypatch.setattr(rebase_module, "detect_base_branch", _fail)
+        monkeypatch.setattr(rebase_module, "detect_base_branch_with_source", _fail)
 
         base, error = _resolve_base_branch(tmp_path, "develop")
 
@@ -78,30 +79,62 @@ class TestResolveBaseBranch:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A detected standard base ``main`` is accepted without an error."""
-        monkeypatch.setattr(rebase_module, "detect_base_branch", lambda _p: "main")
+        monkeypatch.setattr(
+            rebase_module,
+            "detect_base_branch_with_source",
+            lambda _p: ("main", BaseBranchSource.DEFAULT),
+        )
 
         base, error = _resolve_base_branch(tmp_path, None)
 
         assert base == "main"
         assert error is None
 
-    def test_non_standard_detected_errors(
+    def test_issue_named_base_accepted(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A non-standard detected base is refused with a ``--base-branch`` hint."""
-        monkeypatch.setattr(rebase_module, "detect_base_branch", lambda _p: "develop")
+        """A non-standard base named in the issue is trusted."""
+        monkeypatch.setattr(
+            rebase_module,
+            "detect_base_branch_with_source",
+            lambda _p: ("epic/x", BaseBranchSource.ISSUE),
+        )
+
+        base, error = _resolve_base_branch(tmp_path, None)
+
+        assert base == "epic/x"
+        assert error is None
+
+    @pytest.mark.parametrize(
+        "source", [BaseBranchSource.PR, BaseBranchSource.MERGE_BASE]
+    )
+    def test_non_standard_heuristic_base_errors(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        source: BaseBranchSource,
+    ) -> None:
+        """A non-standard base not named in the issue is refused."""
+        monkeypatch.setattr(
+            rebase_module,
+            "detect_base_branch_with_source",
+            lambda _p: ("develop", source),
+        )
 
         base, error = _resolve_base_branch(tmp_path, None)
 
         assert base is None
         assert error is not None
         assert "--base-branch" in error
+        assert "### Base Branch" in error
 
     def test_no_detection_errors(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Failed detection (``None``) yields a ``--base-branch`` request."""
-        monkeypatch.setattr(rebase_module, "detect_base_branch", lambda _p: None)
+        monkeypatch.setattr(
+            rebase_module, "detect_base_branch_with_source", lambda _p: None
+        )
 
         base, error = _resolve_base_branch(tmp_path, None)
 

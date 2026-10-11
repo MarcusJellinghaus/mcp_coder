@@ -33,7 +33,11 @@ from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
-from mcp_coder.workflow_utils.base_branch import detect_base_branch
+from mcp_coder.workflow_utils.base_branch import (
+    BaseBranchSource,
+    check_base_branch_on_origin,
+    detect_base_branch_with_source,
+)
 from mcp_coder.workflows.rebase_checks import (
     CheckRunError,
     FailureKey,
@@ -249,19 +253,25 @@ def _resolve_base_branch(
     """Return ``(base_branch, error)`` — exactly one side is non-``None``.
 
     An explicit ``base_branch_arg`` wins verbatim (no detection). Otherwise
-    ``detect_base_branch`` runs and only the standard ``main``/``master`` bases
-    are accepted automatically; a non-standard or undetectable base returns an
-    error asking for an explicit ``--base-branch``.
+    ``detect_base_branch_with_source`` runs; a base named in the issue's
+    ``### Base Branch`` is trusted, and a base found by the PR, merge-base or
+    default heuristics is accepted only when it is ``main``/``master``. Any
+    other or undetectable base returns an error asking for ``--base-branch``.
     """
     if base_branch_arg:
         return (base_branch_arg, None)
 
-    detected = detect_base_branch(project_dir)
+    detected = detect_base_branch_with_source(project_dir)
     if detected is None:
         return (None, "Could not detect base branch; pass --base-branch")
-    if detected in _STANDARD_BASES:
-        return (detected, None)
-    return (None, f"Non-standard base '{detected}'; pass --base-branch to confirm")
+    branch, source = detected
+    if source is BaseBranchSource.ISSUE or branch in _STANDARD_BASES:
+        return (branch, None)
+    return (
+        None,
+        f"Base '{branch}' was detected from {source.value}, not named in the "
+        "issue; add '### Base Branch' to the issue or pass --base-branch",
+    )
 
 
 def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | None:
@@ -440,6 +450,11 @@ def run_rebase_workflow(
     assert base is not None  # nosec B101 — guaranteed by _resolve_base_branch
 
     fetch_remote(project_dir, "origin")
+
+    missing_err = check_base_branch_on_origin(project_dir, base)
+    if missing_err:
+        logger.error("Base-branch guard failed: %s", missing_err)
+        return 2
 
     pr_info_err = _check_pr_info_absent_on_base(project_dir, base)
     if pr_info_err:
