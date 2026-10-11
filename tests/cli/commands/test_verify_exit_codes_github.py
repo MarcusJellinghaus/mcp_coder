@@ -97,3 +97,48 @@ class TestGitHubExitCode:
             )
             == 1
         )
+
+    def test_unverifiable_branch_protection_does_not_affect_exit(self) -> None:
+        """Exit 0 when branch-protection rows are unverifiable (ok=None).
+
+        Every branch-protection row is severity="warning", overall_ok counts
+        only error-severity checks, and _compute_exit_code reads only
+        github_result["overall_ok"].
+        """
+        row = {
+            "ok": None,
+            "value": "not verifiable — token lacks Administration: Read",
+            "error": (
+                "get_protection failed: HTTP 403: "
+                "Resource not accessible by personal access token"
+            ),
+            "severity": "warning",
+        }
+        payload = {
+            "token_configured": {
+                "ok": True,
+                "value": "configured (scopes: unknown)",
+                "severity": "error",
+            },
+            "repo_accessible": {
+                "ok": True,
+                "value": "accessible",
+                "severity": "error",
+            },
+            "branch_protection": dict(row),
+            "ci_checks_required": dict(row),
+            "strict_mode": dict(row),
+            "force_push": dict(row),
+            "branch_deletion": dict(row),
+            "overall_ok": True,
+        }
+        assert (
+            _compute_exit_code(
+                "claude",
+                _claude_ok(),
+                None,
+                _mlflow_not_installed(),
+                github_result=payload,
+            )
+            == 0
+        )
