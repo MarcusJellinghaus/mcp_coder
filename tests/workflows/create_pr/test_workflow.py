@@ -173,6 +173,92 @@ class TestRunCreatePrWorkflow:
         assert result == 0
         mock_generate.assert_called_once_with(tmp_path, "claude", None, None)
 
+    @patch(
+        "mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage",
+        return_value=123,
+    )
+    @patch("mcp_coder.workflows.create_pr.core._add_pr_assignee_best_effort")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    def test_workflow_appends_closing_reference_without_label_updates(
+        self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        _mock_add_assignee: MagicMock,
+        mock_validate: MagicMock,
+    ) -> None:
+        """Linked issue is closed by the PR body even without label updates."""
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Title", "Body")
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
+
+        result = run_create_pr_workflow(Path("/test"), "claude")
+
+        assert result == 0
+        mock_validate.assert_called_once_with(Path("/test"))
+        mock_create_pr.assert_called_once_with(
+            Path("/test"), "Title", "Body\n\nCloses #123"
+        )
+
+    @patch("mcp_coder.workflows.create_pr.core._add_pr_assignee_best_effort")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    def test_workflow_leaves_body_unchanged_when_not_linked(
+        self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        _mock_add_assignee: MagicMock,
+    ) -> None:
+        """PR body is passed through unchanged when the branch is not linked."""
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Title", "Body")
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
+
+        result = run_create_pr_workflow(Path("/test"), "claude")
+
+        assert result == 0
+        mock_create_pr.assert_called_once_with(Path("/test"), "Title", "Body")
+
     @patch("mcp_coder.workflows.create_pr.core.update_workflow_label")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")

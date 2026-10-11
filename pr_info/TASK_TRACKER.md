@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Always resolve the issue number and inject the closing reference — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: remove `update_issue_labels` gate and inject closing reference in `run_create_pr_workflow`; new `conftest.py`, tests in `test_workflow.py`, patches in `test_create_pr_integration.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: remove `update_issue_labels` gate and inject closing reference in `run_create_pr_workflow`; new `conftest.py`, tests in `test_workflow.py`, patches in `test_create_pr_integration.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

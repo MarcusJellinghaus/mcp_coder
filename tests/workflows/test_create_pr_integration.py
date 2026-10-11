@@ -366,10 +366,15 @@ class TestWorkflowErrorHandling:
 class TestWorkflowMainFunction:
     """Test the main workflow orchestration function."""
 
+    @patch(
+        "mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     def test_main_workflow_prerequisite_failure(
         self,
         mock_check_prereqs: MagicMock,
+        _mock_validate: MagicMock,
     ) -> None:
         """Test main workflow exits early when prerequisites fail."""
         # Setup mocks
@@ -384,6 +389,10 @@ class TestWorkflowMainFunction:
         # Verify prerequisite check was called
         mock_check_prereqs.assert_called_once_with(Path("/test/project"))
 
+    @patch(
+        "mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
@@ -398,6 +407,7 @@ class TestWorkflowMainFunction:
         mock_cleanup: MagicMock,
         mock_generate_summary: MagicMock,
         mock_check_prereqs: MagicMock,
+        _mock_validate: MagicMock,
     ) -> None:
         """Test main workflow handles PR creation failure."""
         # Setup mocks for successful prerequisites but failed PR creation

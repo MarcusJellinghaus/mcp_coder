@@ -487,17 +487,13 @@ def run_create_pr_workflow(
     # Cache branch-issue linkage BEFORE PR creation.
     # GitHub automatically removes linkedBranches when a PR is created from a branch
     # (the link transfers to the PR). If we query linkedBranches after PR creation,
-    # it returns empty, causing label updates to fail. By validating early and caching
-    # the issue number, we can still update labels after PR creation succeeds.
-    cached_issue_number: Optional[int] = None
-    if update_issue_labels:
-        cached_issue_number = validate_branch_issue_linkage(project_dir)
-        if cached_issue_number:
-            logger.log(OUTPUT, "Branch linked to issue #%s", cached_issue_number)
-        else:
-            logger.warning(
-                "Branch not linked to any issue, label update will be skipped"
-            )
+    # it returns empty. The cached issue number is used both for the PR body's closing
+    # reference and for label updates after PR creation succeeds.
+    cached_issue_number: Optional[int] = validate_branch_issue_linkage(project_dir)
+    if cached_issue_number:
+        logger.log(OUTPUT, "Branch linked to issue #%s", cached_issue_number)
+    else:
+        logger.warning("Branch not linked to any issue")
 
     def body() -> int:
         nonlocal cached_issue_number
@@ -623,6 +619,8 @@ def run_create_pr_workflow(
 
         # Step 5: Create pull request
         logger.log(OUTPUT, "Step 5/5: Creating pull request...")
+        if cached_issue_number:
+            body = ensure_closing_reference(body, cached_issue_number)
         pr_result, pr_error = create_pull_request(project_dir, title, body)
         if not pr_result:
             error_msg = pr_error or "Failed to create pull request"
