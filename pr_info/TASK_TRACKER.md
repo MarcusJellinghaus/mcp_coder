@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: create-pr checks the base branch before opening the PR
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: origin check in `create_pull_request`, with tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: origin check in `create_pull_request`, with tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Implement workflow's rebase step checks the base branch
 See [step_5.md](./steps/step_5.md)

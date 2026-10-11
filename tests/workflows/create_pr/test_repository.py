@@ -120,6 +120,10 @@ class TestCleanupRepository:
 class TestCreatePullRequest:
     """Test create_pull_request function."""
 
+    @patch(
+        "mcp_coder.workflows.create_pr.core.check_base_branch_on_origin",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
@@ -128,6 +132,7 @@ class TestCreatePullRequest:
         mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
+        _mock_check_origin: MagicMock,
     ) -> None:
         """Test successful pull request creation."""
         mock_current_branch.return_value = "feature-branch"
@@ -190,6 +195,38 @@ class TestCreatePullRequest:
         assert error is not None
         assert "base branch" in error
 
+    @patch("mcp_coder.workflows.create_pr.core.check_base_branch_on_origin")
+    @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    def test_create_pull_request_base_branch_missing_on_origin(
+        self,
+        mock_detect_base_branch: MagicMock,
+        mock_current_branch: MagicMock,
+        mock_pr_manager: MagicMock,
+        mock_check_origin: MagicMock,
+    ) -> None:
+        """Test pull request creation fails when the base is missing on origin."""
+        mock_current_branch.return_value = "feature-branch"
+        mock_detect_base_branch.return_value = "epic/x"
+        mock_check_origin.return_value = (
+            "Base branch 'epic/x' not found on origin; push it first."
+        )
+
+        result, error = create_pull_request(
+            Path("/test/project"), "Test PR Title", "Test PR Body"
+        )
+
+        assert result is None
+        assert error is not None
+        assert "epic/x" in error
+        mock_check_origin.assert_called_once_with(Path("/test/project"), "epic/x")
+        mock_pr_manager.assert_not_called()
+
+    @patch(
+        "mcp_coder.workflows.create_pr.core.check_base_branch_on_origin",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
@@ -198,6 +235,7 @@ class TestCreatePullRequest:
         mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
+        _mock_check_origin: MagicMock,
     ) -> None:
         """Test pull request creation when PullRequestManager raises."""
         mock_current_branch.return_value = "feature-branch"
@@ -215,6 +253,10 @@ class TestCreatePullRequest:
         assert error is not None
         assert "test error" in error
 
+    @patch(
+        "mcp_coder.workflows.create_pr.core.check_base_branch_on_origin",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
@@ -223,6 +265,7 @@ class TestCreatePullRequest:
         mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
+        _mock_check_origin: MagicMock,
     ) -> None:
         """Test pull request creation when exception occurs."""
         mock_current_branch.return_value = "feature-branch"
@@ -238,6 +281,10 @@ class TestCreatePullRequest:
         assert error is not None
         assert "GitHub API error" in error
 
+    @patch(
+        "mcp_coder.workflows.create_pr.core.check_base_branch_on_origin",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
@@ -246,6 +293,7 @@ class TestCreatePullRequest:
         mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
+        _mock_check_origin: MagicMock,
     ) -> None:
         """Test pull request creation when GitHub API returns validation error."""
         mock_current_branch.return_value = "feature-branch"
@@ -265,6 +313,10 @@ class TestCreatePullRequest:
         assert error is not None
         assert "Validation Failed" in error
 
+    @patch(
+        "mcp_coder.workflows.create_pr.core.check_base_branch_on_origin",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
@@ -273,6 +325,7 @@ class TestCreatePullRequest:
         mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
+        _mock_check_origin: MagicMock,
     ) -> None:
         """Test successful pull request creation with URL logging."""
         mock_current_branch.return_value = "feature-branch"
@@ -299,6 +352,10 @@ class TestCreatePullRequest:
             body="Detailed description",
         )
 
+    @patch(
+        "mcp_coder.workflows.create_pr.core.check_base_branch_on_origin",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
@@ -307,6 +364,7 @@ class TestCreatePullRequest:
         mock_detect_base_branch: MagicMock,
         mock_current_branch: MagicMock,
         mock_pr_manager: MagicMock,
+        _mock_check_origin: MagicMock,
     ) -> None:
         """Test successful pull request creation without URL in response."""
         mock_current_branch.return_value = "feature-branch"
