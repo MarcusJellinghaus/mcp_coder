@@ -35,6 +35,7 @@ from mcp_coder.workflow_utils.failure_handling import (
 )
 
 from .prerequisites import (
+    BaseBranchMissingError,
     check_pr_info_not_exists,
     check_prerequisites,
     create_pr_info_structure,
@@ -545,12 +546,29 @@ def run_create_plan_workflow(
         base_branch = issue_data.get("base_branch")
         if base_branch:
             logger.info(f"Using base branch from issue: {base_branch}")
-        branch_name = manage_branch(
-            project_dir,
-            issue_number,
-            issue_data["title"],
-            base_branch=base_branch,
-        )
+        try:
+            branch_name = manage_branch(
+                project_dir,
+                issue_number,
+                issue_data["title"],
+                base_branch=base_branch,
+            )
+        except BaseBranchMissingError as e:
+            logger.error("%s", e)
+            failure = WorkflowFailure(
+                category=FAILURE_LABELS["prereq"],
+                stage="Branch management (base branch missing)",
+                message=str(e),
+                elapsed_time=time.time() - start_time,
+            )
+            _handle_workflow_failure(
+                failure,
+                project_dir,
+                update_issue_labels,
+                post_issue_comments,
+                issue_number=issue_number,
+            )
+            return 1
         if branch_name is None:
             logger.error("Branch management failed")
             failure = WorkflowFailure(

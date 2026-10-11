@@ -12,6 +12,7 @@ from mcp_coder.workflows.create_plan import (
     _handle_workflow_failure,
     run_create_plan_workflow,
 )
+from mcp_coder.workflows.create_plan.prerequisites import BaseBranchMissingError
 
 # Common patch prefix
 _CORE = "mcp_coder.workflows.create_plan.core"
@@ -212,6 +213,29 @@ class TestFailureHandling:
         failure = mock_handler.call_args[0][0]
         assert failure.category == "planning_prereq_failed"
         assert failure.stage == "Branch management (branch creation failed)"
+        assert mock_handler.call_args.kwargs["issue_number"] == 123
+
+    def test_base_branch_missing_failure(
+        self, mock_issue_data: IssueData, tmp_path: Path
+    ) -> None:
+        """Test failure handling when the issue's base branch is missing on origin."""
+        (tmp_path / ".git").mkdir()
+        error = BaseBranchMissingError("Base branch 'epic/x' not found on origin.")
+
+        with (
+            patch(f"{_CORE}.is_working_directory_clean", return_value=True),
+            patch(f"{_CORE}.check_prerequisites", return_value=(True, mock_issue_data)),
+            patch(f"{_CORE}.manage_branch", side_effect=error),
+            patch(f"{_CORE}._handle_workflow_failure") as mock_handler,
+        ):
+            result = run_create_plan_workflow(123, tmp_path, "claude")
+
+        assert result == 1
+        mock_handler.assert_called_once()
+        failure = mock_handler.call_args[0][0]
+        assert failure.category == "planning_prereq_failed"
+        assert failure.stage == "Branch management (base branch missing)"
+        assert "epic/x" in failure.message
         assert mock_handler.call_args.kwargs["issue_number"] == 123
 
     def test_pr_info_exists_failure(

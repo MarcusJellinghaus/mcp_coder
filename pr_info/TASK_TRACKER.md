@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: create-plan checks the base branch before creating a branch
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: `BaseBranchMissingError` in `manage_branch`, failure handling in `core.py`, with tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `BaseBranchMissingError` in `manage_branch`, failure handling in `core.py`, with tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: create-pr checks the base branch before opening the PR
 See [step_4.md](./steps/step_4.md)
