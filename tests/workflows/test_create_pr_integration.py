@@ -225,11 +225,12 @@ This tracks **Feature Implementation** consisting of multiple **Implementation S
         (pr_info_dir / "TASK_TRACKER.md").write_text(tracker_content)
 
         # Commit initial structure
+        # GitPython rejects paths that alias Git metadata, so skip .git/ itself
         repo.index.add(
             [
-                str(f.relative_to(project_dir))
+                f.relative_to(project_dir).as_posix()
                 for f in project_dir.rglob("*")
-                if f.is_file()
+                if f.is_file() and ".git" not in f.relative_to(project_dir).parts
             ]
         )
         repo.index.commit("Initial project structure")
