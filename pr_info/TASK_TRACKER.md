@@ -29,8 +29,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Document `--inexact` in config.md
 
-- [ ] Implementation (docs update)
-- [ ] Commit message prepared
+- [x] Implementation (docs update)
+- [x] Commit message prepared
 
 ## Pull Request
 

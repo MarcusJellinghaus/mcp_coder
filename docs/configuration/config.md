@@ -864,7 +864,7 @@ When using mcp-coder in automated Jenkins workflows, there are two separate Pyth
 │  mcp-workspace, claude CLI, pytest, mypy, pylint            │
 └─────────────────────────────────────────────────────────────┘
                            │
-                           │ 1. uv sync --extra types (in repo/)
+                           │ 1. uv sync --inexact --extra types (in repo/)
                            │ 2. mcp-coder implement
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -877,7 +877,7 @@ When using mcp-coder in automated Jenkins workflows, there are two separate Pyth
 
 The MCP tools-py server runs mypy against **project code** using the **project's virtual environment**. For mypy to resolve types correctly, type stub packages (e.g., `types-requests`, `types-tabulate`) must be installed in the project's `.venv`, not the execution environment.
 
-The coordinator command templates automatically run `uv sync --extra types` in the project directory before executing mcp-coder commands.
+The coordinator command templates automatically run `uv sync --inexact --extra types` in the project directory before executing mcp-coder commands. The `--inexact` flag installs the `types` extra without removing packages a prior provisioning step (e.g. AutoRunner's `uv sync --extra dev`) already installed.
 
 ### Configuring Your Project for Automated Workflows
 
@@ -900,7 +900,8 @@ dev = [
 
 This ensures:
 
-- Automated workflows install only type stubs (`uv sync --extra types`)
+- Automated workflows install only type stubs, without removing anything
+  already installed (`uv sync --inexact --extra types`)
 - Local development installs everything (`pip install -e ".[dev]"`)
 
 ## Troubleshooting
