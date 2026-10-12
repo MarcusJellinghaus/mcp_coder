@@ -22,7 +22,7 @@ export MCP_TIMEOUT=30000
 # Environment setup
 export MCP_CODER_PROJECT_DIR='/workspace/repo'
 export MCP_CODER_VENV_DIR='/workspace/.venv'
-uv sync --extra types
+uv sync --inexact --extra types
 # Claude CLI verification
 which claude
 claude --mcp-config .mcp.json --strict-mcp-config mcp list
@@ -79,7 +79,7 @@ set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
-uv sync --project %WORKSPACE%\repo --extra types
+uv sync --inexact --project %WORKSPACE%\repo --extra types
 
 echo llm verification =====================================
 mcp-coder verify
@@ -135,7 +135,7 @@ export DISABLE_AUTOUPDATER=1
 export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-uv sync --extra types
+uv sync --inexact --extra types
 mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 echo RC=$RC
@@ -155,7 +155,7 @@ export DISABLE_AUTOUPDATER=1
 export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-uv sync --extra types
+uv sync --inexact --extra types
 mcp-coder --log-level {log_level} implement --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 echo RC=$RC
@@ -175,7 +175,7 @@ export DISABLE_AUTOUPDATER=1
 export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-uv sync --extra types
+uv sync --inexact --extra types
 mcp-coder --log-level {log_level} create-pr --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 echo RC=$RC
@@ -195,7 +195,7 @@ export DISABLE_AUTOUPDATER=1
 export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-uv sync --extra types
+uv sync --inexact --extra types
 mcp-coder --log-level {log_level} review-plan --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 echo RC=$RC
@@ -215,7 +215,7 @@ export DISABLE_AUTOUPDATER=1
 export MCP_TIMEOUT=30000
 which mcp-coder && mcp-coder --version
 which claude && claude --version
-uv sync --extra types
+uv sync --inexact --extra types
 mcp-coder --log-level {log_level} review-implementation --project-dir /workspace/repo --mcp-config .mcp.json
 RC=$?
 echo RC=$RC
@@ -253,7 +253,7 @@ set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
-uv sync --project %WORKSPACE%\repo --extra types
+uv sync --inexact --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
 mcp-coder --log-level {log_level} create-plan {issue_number} --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
@@ -291,7 +291,7 @@ set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
-uv sync --project %WORKSPACE%\repo --extra types
+uv sync --inexact --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
 mcp-coder --log-level {log_level} implement --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
@@ -329,7 +329,7 @@ set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
-uv sync --project %WORKSPACE%\repo --extra types
+uv sync --inexact --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
 mcp-coder --log-level {log_level} create-pr --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
@@ -367,7 +367,7 @@ set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
-uv sync --project %WORKSPACE%\repo --extra types
+uv sync --inexact --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
 mcp-coder --log-level {log_level} review-plan --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
@@ -405,7 +405,7 @@ set DISABLE_AUTOUPDATER=1
 set MCP_TIMEOUT=30000
 
 echo Install type stubs in project environment ====================
-uv sync --project %WORKSPACE%\repo --extra types
+uv sync --inexact --project %WORKSPACE%\repo --extra types
 
 echo command execution  =====================================
 mcp-coder --log-level {log_level} review-implementation --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
