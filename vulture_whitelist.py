@@ -220,6 +220,10 @@ _._tracker_count_always_decreases
 _.mock_step_progress
 _.mock_finalisation
 
+# workflows/create_pr/conftest.py - Autouse fixture defaulting branch-issue
+# linkage validation to "not linked" so tests opt in with their own @patch
+_._no_branch_issue_link
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================

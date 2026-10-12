@@ -5,6 +5,7 @@ from core.py to keep module size manageable.
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -15,6 +16,35 @@ from mcp_coder.workflow_utils.failure_handling import (
 )
 
 logger = logging.getLogger(__name__)
+
+# GitHub closing keywords followed by an issue reference, e.g. "Closes #123"
+_CLOSING_REF_RE = re.compile(
+    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b:?\s*#(\d+)\b", re.IGNORECASE
+)
+
+
+def ensure_closing_reference(body: str, issue_number: int) -> str:
+    """Return body guaranteed to contain a closing keyword for issue_number.
+
+    Args:
+        body: PR body text
+        issue_number: Issue the PR should close on merge
+
+    Returns:
+        The body unchanged if it already closes the issue, otherwise the body
+        with ``Closes #<issue_number>`` appended.
+    """
+    numbers = {int(n) for n in _CLOSING_REF_RE.findall(body)}
+    if issue_number in numbers:
+        return body
+    others = sorted(numbers)
+    if others:
+        logger.warning(
+            "PR body already closes other issue(s) %s; also adding Closes #%s",
+            ", ".join(f"#{n}" for n in others),
+            issue_number,
+        )
+    return f"{body}\n\nCloses #{issue_number}"
 
 
 def parse_pr_summary(llm_response: str) -> Tuple[str, str]:
