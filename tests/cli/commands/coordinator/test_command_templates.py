@@ -16,6 +16,8 @@ from mcp_coder.cli.commands.coordinator import (
     CREATE_PR_COMMAND_WINDOWS,
     DEFAULT_TEST_COMMAND,
     DEFAULT_TEST_COMMAND_WINDOWS,
+    FIX_CONFLICT_COMMAND_TEMPLATE,
+    FIX_CONFLICT_COMMAND_WINDOWS,
     IMPLEMENT_COMMAND_TEMPLATE,
     IMPLEMENT_COMMAND_WINDOWS,
     REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
@@ -403,6 +405,10 @@ class TestWorkflowTemplates:
         assert WORKFLOW_TEMPLATES["review-implementation"] == (
             REVIEW_IMPLEMENTATION_COMMAND_TEMPLATE,
             REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
+        )
+        assert WORKFLOW_TEMPLATES["fix-conflict"] == (
+            FIX_CONFLICT_COMMAND_TEMPLATE,
+            FIX_CONFLICT_COMMAND_WINDOWS,
         )
 
     def test_all_templates_format_uniformly_with_all_kwargs(self) -> None:
