@@ -294,6 +294,16 @@ def add_create_pr_parser(subparsers: Any) -> None:
     )
 
 
+def add_fix_conflict_parser(subparsers: Any) -> None:
+    """Add the fix-conflict command parser (project-dir only, no LLM args)."""
+    fix_conflict_parser = subparsers.add_parser(
+        "fix-conflict",
+        help=COMMAND_DESCRIPTIONS["fix-conflict"],
+        formatter_class=WideHelpFormatter,
+    )
+    add_project_dir_arg(fix_conflict_parser)
+
+
 def add_coordinator_parsers(subparsers: Any) -> None:
     """Add coordinator command parser (direct command, no subcommands)."""
     coordinator_parser = subparsers.add_parser(
