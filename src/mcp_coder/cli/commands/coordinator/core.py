@@ -353,7 +353,11 @@ def get_cached_eligible_issues(
 
 
 def build_jenkins_label(repo_name: str, identifier: str, action: str) -> str:
-    """Build the Jenkins job LABEL parameter."""
+    """Build the Jenkins job LABEL parameter.
+
+    Returns:
+        Formatted label string.
+    """
     return f"{repo_name} - {identifier} - {action}"
 
 
