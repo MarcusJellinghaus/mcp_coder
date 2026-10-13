@@ -6,9 +6,11 @@ from typing import Any
 
 import pytest
 
+from mcp_coder.mcp_workspace_github import CommentData
 from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
 from mcp_coder.workflows.vscodeclaude.types import read_session_spec
 from mcp_coder.workflows.vscodeclaude.workspace import (
+    _find_marked_comment,
     create_startup_script,
     create_status_file,
     create_vscode_task,
@@ -635,3 +637,50 @@ class TestValidateMcpJsonPerPlatform:
         with pytest.raises(FileNotFoundError) as exc_info:
             validate_mcp_json(tmp_path)
         assert expected_file in str(exc_info.value)
+
+
+def _comment(body: str) -> CommentData:
+    return CommentData(
+        id=1, body=body, user=None, created_at=None, updated_at=None, url=""
+    )
+
+
+class TestFindMarkedComment:
+    """Tests for the _find_marked_comment scan helper."""
+
+    def test_most_recent_marked_returns_its_body(self) -> None:
+        """A marked most-recent comment within the window wins."""
+        comments = [
+            _comment("first"),
+            _comment("second"),
+            _comment("## ❌ Implementation Failed\ndetails"),
+        ]
+        assert _find_marked_comment(comments) == "## ❌ Implementation Failed\ndetails"
+
+    def test_scans_backwards_past_unmarked_comment(self) -> None:
+        """An unmarked human reply after the marked comment is skipped."""
+        comments = [
+            _comment("## ❌ Implementation Failed\ndetails"),
+            _comment("human reply"),
+        ]
+        assert _find_marked_comment(comments) == "## ❌ Implementation Failed\ndetails"
+
+    def test_none_marked_returns_none(self) -> None:
+        """No marker in the window yields None."""
+        comments = [_comment("first"), _comment("second"), _comment("third")]
+        assert _find_marked_comment(comments) is None
+
+    def test_fewer_than_window_comments_no_index_error(self) -> None:
+        """A single comment is scanned without an index error."""
+        comments = [_comment("## ❌ Implementation Failed\ndetails")]
+        assert _find_marked_comment(comments) == "## ❌ Implementation Failed\ndetails"
+
+    def test_marker_on_second_line_not_matched(self) -> None:
+        """A marker outside the first line of the body is not matched."""
+        comments = [_comment("Implementation Failed\n❌ details")]
+        assert _find_marked_comment(comments) is None
+
+    def test_empty_body_in_window_no_crash(self) -> None:
+        """An empty body is treated as unmarked, not a crash."""
+        comments = [_comment(""), _comment("second")]
+        assert _find_marked_comment(comments) is None

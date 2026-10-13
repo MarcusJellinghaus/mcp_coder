@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp_coder.mcp_workspace_git import checkout_branch, fetch_remote
+from mcp_coder.mcp_workspace_github import CommentData
 
 from ...utils.subprocess_runner import (
     CalledProcessError,
@@ -623,6 +624,20 @@ def create_vscode_task(folder_path: Path, script_path: Path) -> None:
     # Write tasks.json
     tasks_file = vscode_dir / "tasks.json"
     tasks_file.write_text(content, encoding="utf-8")
+
+
+def _find_marked_comment(
+    comments: list[CommentData],
+    *,
+    marker: str = "❌",
+    window: int = 3,
+) -> str | None:
+    """Return the body of the most recent ❌-marked comment, or None."""
+    for comment in reversed(comments[-window:]):
+        first_line = comment["body"].splitlines()[0] if comment["body"] else ""
+        if marker in first_line:
+            return comment["body"]
+    return None
 
 
 def create_status_file(

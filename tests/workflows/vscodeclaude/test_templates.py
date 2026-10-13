@@ -5,6 +5,7 @@ from mcp_coder.workflows.vscodeclaude.templates import (
     INTERVENTION_WARNING,
     LAUNCHER_POSIX,
     LAUNCHER_WINDOWS,
+    STATUS_NOTE_TEMPLATE,
 )
 
 
@@ -62,3 +63,12 @@ def test_intervention_warning_text() -> None:
     )
     assert "No automated analysis will run." in INTERVENTION_WARNING
     assert "{" not in INTERVENTION_WARNING
+
+
+def test_status_note_template_format_substitution() -> None:
+    """STATUS_NOTE_TEMPLATE wraps a comment body under a literal header."""
+    rendered = STATUS_NOTE_TEMPLATE.format(
+        comment_body="## ❌ Implementation Failed\nSome detail text."
+    )
+    assert "❌ Last automated note:" in rendered
+    assert "## ❌ Implementation Failed\nSome detail text." in rendered
