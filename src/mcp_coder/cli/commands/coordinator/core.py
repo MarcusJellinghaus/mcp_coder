@@ -352,6 +352,11 @@ def get_cached_eligible_issues(
         return get_eligible_issues(issue_manager)
 
 
+def build_jenkins_label(repo_name: str, identifier: str, action: str) -> str:
+    """Build the Jenkins job LABEL parameter."""
+    return f"{repo_name} - {identifier} - {action}"
+
+
 def dispatch_workflow(
     issue: IssueData,
     workflow_name: str,  # pylint: disable=unused-argument
@@ -439,7 +444,9 @@ def dispatch_workflow(
         "BRANCH_NAME": branch_name,
         "COMMAND": command,
         "GITHUB_CREDENTIALS_ID": repo_config["github_credentials_id"],
-        "LABEL": f"{repo_name} - #{issue['number']} - {workflow_config['workflow']}",
+        "LABEL": build_jenkins_label(
+            repo_name, f"#{issue['number']}", workflow_config["workflow"]
+        ),
     }
 
     # Step 5: Trigger Jenkins job
