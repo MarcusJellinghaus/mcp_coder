@@ -300,6 +300,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         issue=issue,
                         workflow_name=workflow_name,
                         repo_config=validated_config,
+                        repo_name=repo_name,
                         jenkins_client=jenkins_client,
                         issue_manager=issue_manager,
                         branch_manager=branch_manager,

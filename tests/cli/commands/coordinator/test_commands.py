@@ -287,6 +287,8 @@ class TestExecuteCoordinatorRun:
 
         # Verify - dispatch_workflow was called twice (once for each issue)
         assert mock_dispatch_workflow.call_count == 2
+        for call in mock_dispatch_workflow.call_args_list:
+            assert call.kwargs["repo_name"] == "mcp_coder"
 
     @patch("mcp_coder.cli.commands.coordinator.commands.IssueManager")
     @patch("mcp_coder.cli.commands.coordinator.commands.IssueBranchManager")

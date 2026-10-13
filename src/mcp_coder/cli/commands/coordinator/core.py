@@ -356,6 +356,7 @@ def dispatch_workflow(
     issue: IssueData,
     workflow_name: str,  # pylint: disable=unused-argument
     repo_config: dict[str, str],
+    repo_name: str,
     jenkins_client: JenkinsClient,
     issue_manager: IssueManager,
     branch_manager: IssueBranchManager,
@@ -367,6 +368,7 @@ def dispatch_workflow(
         issue: GitHub issue data
         workflow_name: Workflow to execute ("create-plan", "implement", "create-pr")
         repo_config: Repository configuration with repo_url, executor_job_path, credentials
+        repo_name: Repository name, used to build the Jenkins job's LABEL
         jenkins_client: Jenkins client for job triggering
         issue_manager: IssueManager for label updates
         branch_manager: IssueBranchManager for branch resolution
@@ -400,13 +402,13 @@ def dispatch_workflow(
             )
             return
 
-        repo_owner, repo_name = repo_id.owner, repo_id.repo_name
+        repo_owner, issue_repo_name = repo_id.owner, repo_id.repo_name
 
         # Resolve branch with PR fallback (checks linkedBranches then draft/open PRs)
         resolved_branch = branch_manager.get_branch_with_pr_fallback(
             issue_number=issue["number"],
             repo_owner=repo_owner,
-            repo_name=repo_name,
+            repo_name=issue_repo_name,
         )
 
         if not resolved_branch:
@@ -437,6 +439,7 @@ def dispatch_workflow(
         "BRANCH_NAME": branch_name,
         "COMMAND": command,
         "GITHUB_CREDENTIALS_ID": repo_config["github_credentials_id"],
+        "LABEL": f"{repo_name} - #{issue['number']} - {workflow_config['workflow']}",
     }
 
     # Step 5: Trigger Jenkins job
