@@ -26,8 +26,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: dispatch_workflow(): add repo_name parameter and LABEL
 
 - [x] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: execute_coordinator_test(): add LABEL
 
