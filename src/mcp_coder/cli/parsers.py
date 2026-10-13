@@ -263,8 +263,9 @@ def add_rebase_parser(subparsers: Any) -> None:
         type=str,
         default=None,
         metavar="BRANCH",
-        help="Base branch to rebase onto (default: auto-detect; required for "
-        "non-main/master bases)",
+        help="Base branch to rebase onto (default: auto-detect; needed only when "
+        "the detected base is not main/master and not named in the issue's "
+        "### Base Branch)",
     )
 
 

@@ -182,6 +182,19 @@ The base branch is validated at branch creation time:
 - If the branch doesn't exist, branch creation fails with a clear error
 - The `/issue_analyse` command will warn if the specified branch doesn't exist
 
+create-plan, create-pr, `mcp-coder rebase` and the implement workflow's rebase step all check that the base branch exists on origin and report a clear error — except the implement step, which only warns and skips the rebase.
+
+### Epic Branches
+
+An epic is delivered on its own branch (e.g. `epic/multi-language`), merged to main last.
+
+1. Create and push the epic branch from main: `git checkout -b epic/<name> origin/main`, then `git push -u origin epic/<name>`.
+2. Add `### Base Branch` with `epic/<name>` to each sub-issue. create-plan, implement, `mcp-coder rebase`, review and create-pr then use it without flags.
+3. Sub-PRs target and merge into the epic branch.
+4. Finish by opening the epic-to-main PR manually — `mcp-coder create-pr` does not apply, since the epic branch has no issue number. GitHub does not auto-close issues on merges to a non-default branch, so the PR body must list every sub-issue with `Closes #N` (`Closes owner/repo#N` for other repos).
+5. Multi-repo epics: a base branch is resolved in the sub-issue's own repo, so create one epic branch per repo, ideally with the same name.
+6. Rebasing the epic branch onto main rewrites its history. Rebase each open sub-branch onto the new tip manually: `git rebase --onto <new-epic-tip> <old-epic-tip>`.
+
 ### Backward Compatibility
 
 Existing issues without a `### Base Branch` section continue to work as before, using the repository's default branch (typically `main` or `master`).

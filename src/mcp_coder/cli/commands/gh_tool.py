@@ -19,9 +19,10 @@ def execute_get_base_branch(args: argparse.Namespace) -> int:
     """Execute get-base-branch command.
 
     Detection priority:
-    1. GitHub PR base branch (if open PR exists)
-    2. Linked issue's ### Base Branch section
-    3. Default branch (main/master)
+    1. Linked issue's ### Base Branch section
+    2. Open PR base branch
+    3. Git merge-base
+    4. Default branch (main/master)
 
     Args:
         args: Parsed arguments with project_dir option
@@ -40,8 +41,10 @@ def execute_get_base_branch(args: argparse.Namespace) -> int:
         # Use the shared detect_base_branch function
         base_branch = detect_base_branch(project_dir)
 
-        if base_branch == "unknown":
-            logger.warning("Could not detect base branch from PR, issue, or default")
+        if base_branch is None:
+            logger.warning(
+                "Could not detect base branch from issue, PR, merge-base, or default"
+            )
             return 1
 
         print(base_branch)

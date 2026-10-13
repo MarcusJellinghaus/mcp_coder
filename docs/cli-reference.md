@@ -424,9 +424,9 @@ mcp-coder rebase [OPTIONS]
 - `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
 - `--mcp-config PATH` - Path to MCP configuration file
 - `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--base-branch BRANCH` - Base branch to rebase onto (default: auto-detect; required for non-main/master bases)
+- `--base-branch BRANCH` - Base branch to rebase onto (default: auto-detect). Needed only when the detected base is not `main`/`master` and was not named in the issue's `### Base Branch` section.
 
-**Description:** Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. The base branch is auto-detected unless `--base-branch` is given (required when the base is not `main`/`master`). This is the same rebase step the `review-implementation` workflow runs between rounds.
+**Description:** Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. The base branch is auto-detected: a base named in the issue's `### Base Branch` section is trusted; a base found from an open PR, git merge-base or the default branch is accepted automatically only when it is `main`/`master` — otherwise pass `--base-branch`. The command fails (exit 2) if the base does not exist on origin. This is the same rebase step the `review-implementation` workflow runs between rounds.
 
 **Exit codes:** `0` = success or no-op (already current); `1` = aborted / needs human; `2` = error (bad repo/args, push rejected).
 
@@ -933,9 +933,10 @@ mcp-coder gh-tool get-base-branch [OPTIONS]
 
 **Description:** Detects the appropriate base branch for git operations (diff, rebase) using a priority-based approach:
 
-1. **GitHub PR base branch** - If an open PR exists for the current branch
-2. **Linked issue's base branch** - Extracts issue number from branch name and checks the `### Base Branch` section in the issue body
-3. **Default branch** - Falls back to the repository's default branch (main/master)
+1. **Linked issue's base branch** - Extracts issue number from branch name and checks the `### Base Branch` section in the issue body
+2. **GitHub PR base branch** - If an open PR exists for the current branch
+3. **Git merge-base** - The branch point found via `git merge-base`
+4. **Default branch** - Falls back to the repository's default branch (main/master)
 
 **Exit Codes:**
 - `0` - Success, base branch printed to stdout

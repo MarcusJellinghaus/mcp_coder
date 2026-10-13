@@ -12,7 +12,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
-from mcp_coder.workflow_utils.base_branch import detect_base_branch
+from mcp_coder.utils.subprocess_runner import CommandResult
+from mcp_coder.workflow_utils.base_branch import (
+    BaseBranchSource,
+    check_base_branch_on_origin,
+    detect_base_branch,
+    detect_base_branch_with_source,
+)
 
 # ============================================================================
 # Fixtures
@@ -367,3 +373,109 @@ class TestDetectBaseBranchEdgeCases:
 
         assert result == "develop"
         mocks.git.branch.assert_called_once_with(project_dir)
+
+
+class TestDetectBaseBranchWithSource:
+    """Tests for detect_base_branch_with_source."""
+
+    @pytest.mark.parametrize(
+        ("issue_base", "pr_base", "merge_base", "expected"),
+        [
+            ("epic/x", None, None, ("epic/x", BaseBranchSource.ISSUE)),
+            (None, "develop", None, ("develop", BaseBranchSource.PR)),
+            (None, None, "parent", ("parent", BaseBranchSource.MERGE_BASE)),
+            (None, None, None, ("main", BaseBranchSource.DEFAULT)),
+        ],
+    )
+    def test_reports_source(
+        self,
+        mocks: BaseBranchMocks,
+        issue_base: str | None,
+        pr_base: str | None,
+        merge_base: str | None,
+        expected: tuple[str, BaseBranchSource],
+    ) -> None:
+        """Each detection path reports its own source."""
+        project_dir = Path("/test/project")
+        mocks.git.extract.return_value = 370
+        mocks.git.default.return_value = "main"
+        mocks.issue_manager.return_value.get_issue.return_value = {
+            "number": 370,
+            "base_branch": issue_base,
+        }
+        mocks.pr_manager.return_value.list_pull_requests.return_value = (
+            [{"head_branch": "370-feature", "base_branch": pr_base}] if pr_base else []
+        )
+
+        with patch(
+            "mcp_coder.workflow_utils.base_branch.detect_parent_branch_via_merge_base",
+            return_value=merge_base,
+        ):
+            result = detect_base_branch_with_source(
+                project_dir, current_branch="370-feature"
+            )
+
+        assert result == expected
+
+    def test_returns_none_when_all_detection_fails(
+        self, mocks: BaseBranchMocks
+    ) -> None:
+        """All methods fail returns None."""
+        mocks.git.extract.return_value = None
+        mocks.git.default.return_value = None
+        mocks.pr_manager.return_value.list_pull_requests.return_value = []
+
+        result = detect_base_branch_with_source(
+            Path("/test/project"), current_branch="feature-no-issue"
+        )
+
+        assert result is None
+
+
+class TestCheckBaseBranchOnOrigin:
+    """Tests for check_base_branch_on_origin."""
+
+    @staticmethod
+    def _result(return_code: int, stderr: str = "") -> CommandResult:
+        return CommandResult(
+            return_code=return_code, stdout="", stderr=stderr, timed_out=False
+        )
+
+    def test_returns_none_when_branch_exists(self) -> None:
+        """Return code 0 means the branch exists on origin."""
+        project_dir = Path("/test/project")
+        with patch(
+            "mcp_coder.workflow_utils.base_branch.execute_command",
+            return_value=self._result(0),
+        ) as mock_exec:
+            result = check_base_branch_on_origin(project_dir, "epic/x")
+
+        assert result is None
+        mock_exec.assert_called_once_with(
+            ["git", "ls-remote", "--exit-code", "--heads", "origin", "epic/x"],
+            cwd=str(project_dir),
+        )
+
+    def test_returns_message_when_branch_missing(self) -> None:
+        """Return code 2 means no matching ref on origin."""
+        with patch(
+            "mcp_coder.workflow_utils.base_branch.execute_command",
+            return_value=self._result(2),
+        ):
+            result = check_base_branch_on_origin(Path("/test/project"), "epic/x")
+
+        assert result is not None
+        assert "epic/x" in result
+        assert "origin" in result
+
+    def test_message_includes_stderr(self) -> None:
+        """Other failures include git's stderr in the message."""
+        with patch(
+            "mcp_coder.workflow_utils.base_branch.execute_command",
+            return_value=self._result(128, "fatal: could not read from remote\n"),
+        ):
+            result = check_base_branch_on_origin(Path("/test/project"), "epic/x")
+
+        assert result is not None
+        assert "epic/x" in result
+        assert "fatal: could not read from remote" in result

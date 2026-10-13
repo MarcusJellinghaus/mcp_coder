@@ -16,11 +16,16 @@ from mcp_coder.mcp_workspace_github import (
     IssueManager,
 )
 from mcp_coder.utils.repo_config import get_repo_flag
+from mcp_coder.workflow_utils.base_branch import check_base_branch_on_origin
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+
+class BaseBranchMissingError(Exception):
+    """The issue's base branch does not exist on origin."""
 
 
 def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, IssueData]:
@@ -96,6 +101,10 @@ def manage_branch(
 
     Returns:
         Branch name if successful, None on error
+
+    Raises:
+        BaseBranchMissingError: If a new branch is needed and ``base_branch``
+            does not exist on origin.
     """
     logger.info("Managing branch for issue #%d...", issue_number)
 
@@ -111,6 +120,11 @@ def manage_branch(
             branch_name = linked_branches[0]
             logger.info("Using existing linked branch: %s", branch_name)
         else:
+            if base_branch:
+                missing_err = check_base_branch_on_origin(project_dir, base_branch)
+                if missing_err:
+                    raise BaseBranchMissingError(missing_err)
+
             # Create new branch on GitHub
             result = manager.create_remote_branch_for_issue(
                 issue_number,
@@ -132,6 +146,8 @@ def manage_branch(
         logger.info("Switched to branch: %s", branch_name)
         return branch_name
 
+    except BaseBranchMissingError:
+        raise
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type

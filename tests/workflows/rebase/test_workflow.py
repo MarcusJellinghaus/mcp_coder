@@ -41,6 +41,9 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         rebase_module, "_resolve_base_branch", lambda _pd, _arg: ("main", None)
     )
     monkeypatch.setattr(
+        rebase_module, "check_base_branch_on_origin", lambda _pd, _b: None
+    )
+    monkeypatch.setattr(
         rebase_module, "_check_pr_info_absent_on_base", lambda _pd, _b: None
     )
 
@@ -164,10 +167,31 @@ def test_non_standard_base_without_arg_returns_2(
     monkeypatch.setattr(
         rebase_module,
         "_resolve_base_branch",
-        lambda _pd, _arg: (None, "Non-standard base 'develop'; pass --base-branch"),
+        lambda _pd, _arg: (
+            None,
+            "Base 'develop' was detected from pr, not named in the issue; "
+            "add '### Base Branch' to the issue or pass --base-branch",
+        ),
     )
 
     assert _run(tmp_path) == 2
+    patched.prompt.assert_not_called()
+
+
+def test_base_missing_on_origin_returns_2(
+    patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A base branch missing on origin maps to ``2`` before the pr_info/ guard."""
+    monkeypatch.setattr(
+        rebase_module,
+        "check_base_branch_on_origin",
+        lambda _pd, _b: "Base branch 'epic/x' does not exist on origin",
+    )
+    pr_info_guard = MagicMock(return_value=None)
+    monkeypatch.setattr(rebase_module, "_check_pr_info_absent_on_base", pr_info_guard)
+
+    assert _run(tmp_path) == 2
+    pr_info_guard.assert_not_called()
     patched.prompt.assert_not_called()
 
 

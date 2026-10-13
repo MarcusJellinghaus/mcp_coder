@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflows.create_plan import manage_branch
+from mcp_coder.workflows.create_plan.prerequisites import BaseBranchMissingError
 
 
 class TestManageBranch:
@@ -213,10 +214,18 @@ class TestManageBranch:
 class TestManageBranchBaseBranch:
     """Tests for base_branch parameter in manage_branch()."""
 
+    @patch(
+        "mcp_coder.workflows.create_plan.prerequisites.check_base_branch_on_origin",
+        return_value=None,
+    )
     @patch("mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager")
     @patch("mcp_coder.workflows.create_plan.prerequisites.checkout_branch")
     def test_manage_branch_passes_base_branch_to_create(
-        self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
+        self,
+        mock_checkout: MagicMock,
+        mock_manager_class: MagicMock,
+        mock_check: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """base_branch is passed to create_remote_branch_for_issue()."""
         mock_manager = MagicMock()
@@ -237,17 +246,53 @@ class TestManageBranchBaseBranch:
             base_branch="feature/v2",
         )
 
-        # Verify base_branch was passed
+        # Verify base_branch was checked and passed
+        mock_check.assert_called_once_with(tmp_path, "feature/v2")
         mock_manager.create_remote_branch_for_issue.assert_called_once_with(
             123,
             base_branch="feature/v2",
         )
         assert result == "123-test-issue"
 
+    @patch(
+        "mcp_coder.workflows.create_plan.prerequisites.check_base_branch_on_origin",
+        return_value="Base branch 'epic/x' not found on origin.",
+    )
+    @patch("mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager")
+    @patch("mcp_coder.workflows.create_plan.prerequisites.checkout_branch")
+    def test_manage_branch_missing_base_branch_raises(
+        self,
+        mock_checkout: MagicMock,
+        mock_manager_class: MagicMock,
+        mock_check: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """A base branch missing on origin raises before creating a branch."""
+        mock_manager = MagicMock()
+        mock_manager.get_linked_branches.return_value = []
+        mock_manager_class.return_value = mock_manager
+
+        with pytest.raises(BaseBranchMissingError, match="epic/x"):
+            manage_branch(
+                project_dir=tmp_path,
+                issue_number=123,
+                issue_title="Test Issue",
+                base_branch="epic/x",
+            )
+
+        mock_check.assert_called_once_with(tmp_path, "epic/x")
+        mock_manager.create_remote_branch_for_issue.assert_not_called()
+        mock_checkout.assert_not_called()
+
+    @patch("mcp_coder.workflows.create_plan.prerequisites.check_base_branch_on_origin")
     @patch("mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager")
     @patch("mcp_coder.workflows.create_plan.prerequisites.checkout_branch")
     def test_manage_branch_without_base_branch_uses_default(
-        self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
+        self,
+        mock_checkout: MagicMock,
+        mock_manager_class: MagicMock,
+        mock_check: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Without base_branch, None is passed (uses repo default)."""
         mock_manager = MagicMock()
@@ -268,17 +313,23 @@ class TestManageBranchBaseBranch:
             # No base_branch provided
         )
 
-        # Verify base_branch=None was passed
+        # Verify base_branch=None was passed and no origin check ran
+        mock_check.assert_not_called()
         mock_manager.create_remote_branch_for_issue.assert_called_once_with(
             123,
             base_branch=None,
         )
         assert result == "123-test-issue"
 
+    @patch("mcp_coder.workflows.create_plan.prerequisites.check_base_branch_on_origin")
     @patch("mcp_coder.workflows.create_plan.prerequisites.IssueBranchManager")
     @patch("mcp_coder.workflows.create_plan.prerequisites.checkout_branch")
     def test_manage_branch_existing_branch_ignores_base_branch(
-        self, mock_checkout: MagicMock, mock_manager_class: MagicMock, tmp_path: Path
+        self,
+        mock_checkout: MagicMock,
+        mock_manager_class: MagicMock,
+        mock_check: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """If branch already exists, base_branch is ignored."""
         mock_manager = MagicMock()
@@ -293,6 +344,7 @@ class TestManageBranchBaseBranch:
             base_branch="feature/v2",  # Should be ignored
         )
 
-        # Verify create was NOT called (existing branch used)
+        # Verify neither check nor create was called (existing branch used)
+        mock_check.assert_not_called()
         mock_manager.create_remote_branch_for_issue.assert_not_called()
         assert result == "123-existing-branch"

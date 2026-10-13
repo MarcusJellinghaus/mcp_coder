@@ -9,6 +9,7 @@ of a feature branch by checking multiple sources in priority order:
 """
 
 import logging
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -20,8 +21,18 @@ from mcp_coder.mcp_workspace_git import (
     get_default_branch_name,
 )
 from mcp_coder.mcp_workspace_github import IssueData, IssueManager, PullRequestManager
+from mcp_coder.utils.subprocess_runner import execute_command
 
 logger = logging.getLogger(__name__)
+
+
+class BaseBranchSource(Enum):
+    """Where a detected base branch came from."""
+
+    ISSUE = "issue"
+    PR = "pr"
+    MERGE_BASE = "merge-base"
+    DEFAULT = "default"
 
 
 def detect_base_branch(
@@ -30,6 +41,27 @@ def detect_base_branch(
     issue_data: Optional[IssueData] = None,
 ) -> Optional[str]:
     """Detect the base branch for the current feature branch.
+
+    See detect_base_branch_with_source for the detection priority.
+
+    Args:
+        project_dir: Path to git repository
+        current_branch: Optional current branch name (avoids git call if provided)
+        issue_data: Optional pre-fetched issue data (avoids duplicate API calls)
+
+    Returns:
+        Branch name string, or None if detection fails.
+    """
+    result = detect_base_branch_with_source(project_dir, current_branch, issue_data)
+    return result[0] if result else None
+
+
+def detect_base_branch_with_source(
+    project_dir: Path,
+    current_branch: Optional[str] = None,
+    issue_data: Optional[IssueData] = None,
+) -> Optional[tuple[str, BaseBranchSource]]:
+    """Detect the base branch and the source it was detected from.
 
     Detection priority:
     1. Linked issue's `### Base Branch` section (explicit user intent)
@@ -49,7 +81,7 @@ def detect_base_branch(
         issue_data: Optional pre-fetched issue data (avoids duplicate API calls)
 
     Returns:
-        Branch name string, or None if detection fails.
+        Tuple of (branch name, source), or None if detection fails.
 
     Note:
         Makes up to 2 GitHub API calls if issue_data not provided:
@@ -69,13 +101,13 @@ def detect_base_branch(
     logger.debug("Attempting base branch detection via issue base_branch")
     base_branch = _detect_from_issue(project_dir, current_branch, issue_data)
     if base_branch:
-        return base_branch
+        return base_branch, BaseBranchSource.ISSUE
 
     # 2. Try PR lookup (existing PR knows its base)
     logger.debug("Attempting base branch detection via PR lookup")
     base_branch = _detect_from_pr(project_dir, current_branch)
     if base_branch:
-        return base_branch
+        return base_branch, BaseBranchSource.PR
 
     # 3. Try git merge-base (heuristic fallback)
     logger.debug("Attempting base branch detection via git merge-base")
@@ -83,19 +115,45 @@ def detect_base_branch(
         project_dir, current_branch, MERGE_BASE_DISTANCE_THRESHOLD
     )
     if base_branch:
-        return base_branch
+        return base_branch, BaseBranchSource.MERGE_BASE
 
     # 4. Fall back to default branch
     logger.debug("Attempting base branch detection via default branch")
     base_branch = _detect_default_branch(project_dir)
     if base_branch:
-        return base_branch
+        return base_branch, BaseBranchSource.DEFAULT
 
     # All detection methods failed - return None
     logger.warning(
         "Could not detect base branch from issue, PR, merge-base, or default"
     )
     return None
+
+
+def check_base_branch_on_origin(project_dir: Path, base_branch: str) -> Optional[str]:
+    """Check that the base branch exists on origin.
+
+    Asks the remote directly via ``git ls-remote``, so it works in a fresh
+    clone that lacks ``origin/<base_branch>``.
+
+    Args:
+        project_dir: Path to git repository
+        base_branch: Base branch name to look up
+
+    Returns:
+        None if the branch exists on origin, else an error message.
+    """
+    result = execute_command(
+        ["git", "ls-remote", "--exit-code", "--heads", "origin", base_branch],
+        cwd=str(project_dir),
+    )
+    if result.return_code == 0:
+        return None
+    detail = result.stderr.strip()
+    message = (
+        f"Base branch '{base_branch}' not found on origin; create and push it first"
+    )
+    return f"{message} ({detail})" if detail else message
 
 
 def _detect_from_pr(project_dir: Path, current_branch: str) -> Optional[str]:

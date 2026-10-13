@@ -34,7 +34,10 @@ from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
-from mcp_coder.workflow_utils.base_branch import detect_base_branch
+from mcp_coder.workflow_utils.base_branch import (
+    check_base_branch_on_origin,
+    detect_base_branch,
+)
 from mcp_coder.workflow_utils.failure_handling import (
     format_mcp_unavailable_message,
     llm_failure_reason,
@@ -355,6 +358,11 @@ def create_pull_request(
             "Tip: Add '### Base Branch' section to your GitHub issue."
         )
         return None, "Could not detect base branch for PR creation"
+
+    missing_err = check_base_branch_on_origin(project_dir, base_branch)
+    if missing_err:
+        logger.error(missing_err)
+        return None, missing_err
 
     try:
         # Create PR using PullRequestManager
