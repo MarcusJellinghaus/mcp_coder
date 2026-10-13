@@ -684,3 +684,127 @@ class TestFindMarkedComment:
         """An empty body is treated as unmarked, not a crash."""
         comments = [_comment(""), _comment("second")]
         assert _find_marked_comment(comments) is None
+
+
+class TestCreateStatusFileNote:
+    """Tests for the _fetch_marked_comment wiring into create_status_file."""
+
+    def _create(self, tmp_path: Path) -> str:
+        create_status_file(
+            folder_path=tmp_path,
+            issue_number=123,
+            issue_title="Add feature",
+            status="status-07:code-review",
+            repo_full_name="owner/repo",
+            branch_name="feature-123",
+            issue_url="https://github.com/owner/repo/issues/123",
+            is_intervention=False,
+        )
+        return (tmp_path / ".vscodeclaude_status.txt").read_text(encoding="utf-8")
+
+    def test_marked_comment_found_appends_note(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """A ❌-marked comment among the last 3 gets appended to the status file."""
+        marked_body = "## ❌ Implementation Failed\nSome detail text."
+        comments = [
+            _comment("first"),
+            _comment("second"),
+            _comment(marked_body),
+        ]
+
+        class FakeIssueManager:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            def get_comments(self, issue_number: int) -> list[CommentData]:
+                return comments
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.IssueManager",
+            FakeIssueManager,
+        )
+
+        content = self._create(tmp_path)
+
+        assert "❌ Last automated note:" in content
+        assert marked_body in content
+
+    def test_no_marked_comment_leaves_status_file_unchanged(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """No marker in the last 3 comments means no new block is appended."""
+        comments = [_comment("first"), _comment("second"), _comment("third")]
+
+        class FakeIssueManager:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            def get_comments(self, issue_number: int) -> list[CommentData]:
+                return comments
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.IssueManager",
+            FakeIssueManager,
+        )
+
+        content = self._create(tmp_path)
+
+        assert "❌ Last automated note:" not in content
+
+    def test_fetch_failure_leaves_status_file_unchanged_and_logs_warning(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A raising fetch is swallowed; no block appended, warning logged."""
+
+        class FailingIssueManager:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.IssueManager",
+            FailingIssueManager,
+        )
+
+        with caplog.at_level("WARNING"):
+            content = self._create(tmp_path)
+
+        assert "❌ Last automated note:" not in content
+        assert "123" in caplog.text
+
+    def test_fewer_than_three_comments_still_finds_marked(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """A single marked comment is found even below the 3-comment window."""
+        marked_body = "## ❌ Implementation Failed\nonly comment"
+        comments = [_comment(marked_body)]
+
+        class FakeIssueManager:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            def get_comments(self, issue_number: int) -> list[CommentData]:
+                return comments
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.IssueManager",
+            FakeIssueManager,
+        )
+
+        content = self._create(tmp_path)
+
+        assert "❌ Last automated note:" in content
+        assert marked_body in content
