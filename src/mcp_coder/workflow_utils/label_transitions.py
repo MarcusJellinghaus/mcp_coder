@@ -115,13 +115,6 @@ def update_workflow_label(
                 return False
 
         # Step 4: Load label config and build lookups
-        if issue_manager.project_dir is None:
-            logger.error(
-                "Cannot load label config without project_dir. "
-                "Label update is not supported for repo_url mode."
-            )
-            return False
-
         config_path = get_labels_config_path(issue_manager.project_dir)
         label_config = load_labels_config(config_path)
         label_lookups = build_label_lookups(label_config)

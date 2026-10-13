@@ -436,6 +436,37 @@ class TestLabelTransitions:
 
             assert result is False
 
+    def test_update_workflow_label_repo_url_mode_with_validated_issue_number(
+        self, tmp_path: Path
+    ) -> None:
+        """Tests repo_url-mode manager (project_dir=None) with validated_issue_number.
+
+        Branch detection/linkage is skipped via validated_issue_number, so the
+        only remaining project_dir dependency is loading the label config —
+        which must fall back to the bundled config when project_dir is None.
+        """
+        with (
+            patch(
+                "mcp_coder.workflow_utils.label_transitions.load_labels_config",
+                return_value=MOCK_LABELS_CONFIG,
+            ),
+            patch.object(
+                IssueManager, "transition_issue_label", return_value=True
+            ) as mock_transition,
+        ):
+            manager = IssueManager(
+                repo_url="https://github.com/owner/repo", github_token="dummy-token"
+            )
+            result = update_workflow_label(
+                manager, "implementing", "code_review", validated_issue_number=123
+            )
+
+            assert result is True
+            mock_transition.assert_called_once()
+            call_args = mock_transition.call_args
+            assert call_args[0][0] == 123
+            assert call_args[0][1] == "status-07:code-review"
+
     def test_update_workflow_label_race_condition_scenario(
         self, mock_github: Mock, _mock_git_repo: Any, tmp_path: Path
     ) -> None:
