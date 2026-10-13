@@ -45,23 +45,40 @@ Add `repo_name` to the docstring `Args:` block.
 
 ## ALGORITHM
 
-Inside `dispatch_workflow()`, right after `workflow_config =
-WORKFLOW_MAPPING[current_label]` and before the `if workflow_config["branch_strategy"]
-== "main":` branch:
+The `from_issue` branch (`else:` of `workflow_config["branch_strategy"] ==
+"main"`) currently does:
 
 ```python
-label = f"{repo_name} - #{issue['number']} - {workflow_config['workflow']}"
+repo_owner, repo_name = repo_id.owner, repo_id.repo_name
+
+resolved_branch = branch_manager.get_branch_with_pr_fallback(
+    issue_number=issue["number"],
+    repo_owner=repo_owner,
+    repo_name=repo_name,
+)
 ```
 
-Computing it here — before the `from_issue` branch runs — means the local
-`repo_owner, repo_name = repo_id.owner, repo_id.repo_name` assignment inside
-that branch (unchanged by this step) cannot affect `label`, even though it
-reuses the name `repo_name` for an unrelated value afterward.
-
-Then, in the existing `params = {...}` dict (Step 4 of the function), add:
+This local `repo_name` would shadow the new `repo_name` parameter for the
+rest of the function. Rename it to `issue_repo_name` (its downstream use in
+the same call is the only other occurrence):
 
 ```python
-"LABEL": label,
+repo_owner, issue_repo_name = repo_id.owner, repo_id.repo_name
+
+resolved_branch = branch_manager.get_branch_with_pr_fallback(
+    issue_number=issue["number"],
+    repo_owner=repo_owner,
+    repo_name=issue_repo_name,
+)
+```
+
+Internal rename only — no change to `get_branch_with_pr_fallback`'s
+behavior. With the shadowing gone, the new `repo_name` parameter stays valid
+for the rest of the function, so `LABEL` can be built directly in the
+existing `params = {...}` dict (Step 4 of the function):
+
+```python
+"LABEL": f"{repo_name} - #{issue['number']} - {workflow_config['workflow']}",
 ```
 
 ## DATA

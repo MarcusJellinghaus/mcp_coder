@@ -22,13 +22,12 @@ confined to two existing functions in the `coordinator` package:
   holds it as a loop variable). The function builds a `LABEL` string from
   `repo_name`, the issue number, and the resolved workflow verb, and adds it
   to the Jenkins job `params` dict it already builds.
-- The label is computed immediately after `workflow_config` is resolved —
-  before the `branch_strategy == "from_issue"` branch runs. That branch
-  parses `repo_config["repo_url"]` via `RepoIdentifier` into local variables
-  `repo_owner, repo_name`, which would otherwise shadow the new parameter of
-  the same name for the rest of the function. Capturing the label string
-  early sidesteps the shadowing without touching the branch-resolution code
-  at all — simpler than renaming the local variable.
+- The `branch_strategy == "from_issue"` branch parses `repo_config["repo_url"]`
+  via `RepoIdentifier` into local variables `repo_owner, repo_name`, which
+  would otherwise shadow the new `repo_name` parameter for the rest of the
+  function. That local variable is renamed to `issue_repo_name` (and its one
+  downstream use) so the parameter stays valid everywhere, including when
+  `LABEL` is built in the `params` dict.
 - `execute_coordinator_test()` (a manual smoke-test path with no issue or
   workflow) builds its own `LABEL` from `args.repo_name` and `args.branch_name`
   plus the literal `"test"`. It does not call `dispatch_workflow()`.
