@@ -130,7 +130,7 @@ def format_failure_comment(
         Formatted GitHub comment string.
     """
     lines = [
-        "## PR Creation Failed",
+        "## ❌ PR Creation Failed",
         f"**Stage:** {stage}",
         f"**Error:** {message}",
     ]

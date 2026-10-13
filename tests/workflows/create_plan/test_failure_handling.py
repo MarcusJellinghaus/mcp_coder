@@ -30,7 +30,7 @@ class TestFormatFailureComment:
             elapsed_time=2.0,
         )
         comment = _format_failure_comment(failure, "")
-        assert "## Planning Failed" in comment
+        assert "## ❌ Planning Failed" in comment
         assert "**Stage:** Output validation" in comment
         assert "**Error:** Required output files not found" in comment
         assert "Category" not in comment

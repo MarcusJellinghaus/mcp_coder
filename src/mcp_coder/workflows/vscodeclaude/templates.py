@@ -124,6 +124,15 @@ Started: {started_at}
 INTERVENTION_LINE = """Mode:    ⚠️ INTERVENTION
 """
 
+# Status-file block surfacing the most recent automated failure/handoff
+# comment (see workspace._find_marked_comment), appended after the banner.
+STATUS_NOTE_TEMPLATE = (
+    "❌ Last automated note:\n"
+    "--------------------------------------------------------------------------\n"
+    "{comment_body}\n"
+    "--------------------------------------------------------------------------\n"
+)
+
 # Name of the per-session status file, shared with `workspace.get_status_file_path`
 # so the gitignore block and the path helper cannot drift apart.
 STATUS_FILE_NAME = ".vscodeclaude_status.txt"

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp_coder.mcp_workspace_git import checkout_branch, fetch_remote
+from mcp_coder.mcp_workspace_github import CommentData, IssueManager
 
 from ...utils.subprocess_runner import (
     CalledProcessError,
@@ -625,6 +626,38 @@ def create_vscode_task(folder_path: Path, script_path: Path) -> None:
     tasks_file.write_text(content, encoding="utf-8")
 
 
+def _find_marked_comment(
+    comments: list[CommentData],
+    *,
+    marker: str = "❌",
+    window: int = 3,
+) -> str | None:
+    """Return the body of the most recent ❌-marked comment, or None."""
+    for comment in reversed(comments[-window:]):
+        first_line = comment["body"].splitlines()[0] if comment["body"] else ""
+        if marker in first_line:
+            return comment["body"]
+    return None
+
+
+def _fetch_marked_comment(project_dir: Path, issue_number: int) -> str | None:
+    """Best-effort fetch of the most recent ❌-marked issue comment.
+
+    Never raises: any failure (network, auth, rate limit, or project_dir not
+    being a usable git repo yet) is logged as a warning and treated the same
+    as "no marked comment found".
+
+    Returns:
+        The marked comment's full body, or None on no-match or any failure.
+    """
+    try:
+        comments = IssueManager(project_dir=project_dir).get_comments(issue_number)
+        return _find_marked_comment(comments)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to fetch issue comments for #%s: %s", issue_number, exc)
+        return None
+
+
 def create_status_file(
     folder_path: Path,
     issue_number: int,
@@ -647,7 +680,7 @@ def create_status_file(
         issue_url: GitHub issue URL
         is_intervention: If True, add intervention warning
     """
-    from .templates import INTERVENTION_LINE, STATUS_FILE_TEMPLATE
+    from .templates import INTERVENTION_LINE, STATUS_FILE_TEMPLATE, STATUS_NOTE_TEMPLATE
 
     # Get emoji for status from config
     config = get_vscodeclaude_config(status)
@@ -668,6 +701,10 @@ def create_status_file(
         intervention_line=intervention_line,
         issue_url=issue_url,
     )
+
+    note = _fetch_marked_comment(folder_path, issue_number)
+    if note is not None:
+        content += STATUS_NOTE_TEMPLATE.format(comment_body=note)
 
     # Write status file
     status_file = get_status_file_path(folder_path)

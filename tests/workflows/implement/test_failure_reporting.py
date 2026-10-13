@@ -72,7 +72,7 @@ class TestFormatFailureComment:
             diff_stat="",
         )
 
-        assert "## Implementation Failed" in result
+        assert "## ❌ Implementation Failed" in result
         assert "General" in result
         assert "test stage" in result
         assert "something failed" in result

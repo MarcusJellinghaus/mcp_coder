@@ -55,7 +55,7 @@ def test_route_flushes_comments_labels_returns_zero(
     assert result == 0
     routed.flush.assert_called_once_with(tmp_path, only=log_path)
     routed.issue_manager.return_value.add_comment.assert_called_once_with(
-        42, "handing off"
+        42, "❌ handing off"
     )
     kwargs = routed.update_workflow_label.call_args.kwargs
     assert kwargs["from_label_id"] == REVIEW_PLAN.busy_label_id

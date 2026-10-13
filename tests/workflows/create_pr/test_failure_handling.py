@@ -21,7 +21,7 @@ class TestFormatFailureComment:
             stage="prerequisites",
             message="Working directory not clean",
         )
-        assert "## PR Creation Failed" in comment
+        assert "## ❌ PR Creation Failed" in comment
         assert "**Stage:** prerequisites" in comment
         assert "**Error:** Working directory not clean" in comment
         assert "**Elapsed:**" not in comment
