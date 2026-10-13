@@ -18,10 +18,21 @@ adjacent statements, with `issue_manager`/`branch_manager` already built via
 `repo_url=repo_url` above both. If this structure has changed, write one
 line to `pr_info/.blocked.txt` and stop.
 
+Also read `update_workflow_label` in
+`src/mcp_coder/workflow_utils/label_transitions.py`. Confirm it still has
+the `if issue_manager.project_dir is None: ... return False` guard
+immediately before loading the label config (see "Fix:
+`update_workflow_label` in repo_url mode" below). If that guard is gone or
+reshaped, the fix below may already be moot or may need adapting — write
+one line to `pr_info/.blocked.txt` and stop rather than guessing.
+
 ## WHERE
 
 - `src/mcp_coder/workflows/vscodeclaude/session_launch.py` (modify)
 - `tests/workflows/vscodeclaude/test_session_launch_process_issues.py` (modify)
+- `src/mcp_coder/workflow_utils/label_transitions.py` (modify — see "Fix:
+  `update_workflow_label` in repo_url mode" below)
+- `tests/workflow_utils/test_label_transitions.py` (modify)
 
 ## WHAT
 
@@ -72,6 +83,38 @@ inside `process_eligible_issues()`.
   `issue_manager`/`branch_manager` are the ones already constructed earlier
   in the function via `repo_url=repo_url`.
 
+### Fix: `update_workflow_label` in repo_url mode
+
+`issue_manager` here is `IssueManager(repo_url=repo_url)`, so
+`issue_manager.project_dir is None`. `update_workflow_label`
+(`workflow_utils/label_transitions.py`) currently has an unconditional
+guard — reached even when `validated_issue_number` is supplied and branch
+detection is skipped entirely — that returns `False` before loading the
+label config:
+
+```python
+if issue_manager.project_dir is None:
+    logger.error(
+        "Cannot load label config without project_dir. "
+        "Label update is not supported for repo_url mode."
+    )
+    return False
+
+config_path = get_labels_config_path(issue_manager.project_dir)
+```
+
+This makes `_check_merge_conflict`'s `update_workflow_label(...)` call a
+guaranteed no-op: `status-71:merge-conflict` would never actually get set.
+`get_labels_config_path(None)` already falls back to the bundled
+`labels.json` by design (its own docstring: "Without project directory
+(coordinator / remote mode): Uses bundled config") — the guard is simply
+stricter than the function it's protecting. Delete the guard and call
+`get_labels_config_path(issue_manager.project_dir)` unconditionally; passing
+`None` through is exactly the already-supported "coordinator / remote mode"
+path. This only changes behavior for calls that previously hit this `return
+False` — i.e. `project_dir is None` — so no existing `project_dir`-mode
+caller is affected.
+
 ## ALGORITHM
 
 `_check_merge_conflict`:
@@ -107,31 +150,43 @@ cache refresh will see `status-71:merge-conflict` and route accordingly.
 
 ## TDD order
 
-1. In `tests/workflows/vscodeclaude/test_session_launch_process_issues.py`,
+1. In `tests/workflow_utils/test_label_transitions.py`, add a test that
+   constructs `IssueManager(repo_url="https://github.com/owner/repo",
+   github_token="dummy-token")` (`project_dir=None`) and calls
+   `update_workflow_label(manager, "implementing", "code_review",
+   validated_issue_number=123)`, mocking `load_labels_config` and
+   `IssueManager.transition_issue_label` the same way the existing
+   project_dir-mode tests do. Assert the result is `True` and
+   `transition_issue_label` was called with issue number `123` — this is
+   the case the current `project_dir is None` guard blocks. Confirm it
+   fails against current code (guard returns `False` first). Then remove
+   the guard in `label_transitions.py` per the "Fix" note above and confirm
+   it passes, without breaking any of the file's existing project_dir-mode
+   tests.
+2. In `tests/workflows/vscodeclaude/test_session_launch_process_issues.py`,
    add a new test class covering `process_eligible_issues` with a
-   `status-10:pr-created` issue in the cached batch:
-   - mock `session_launch.PullRequestManager` and
-     `session_launch.BaseGitHubManager` (or patch `_build_pr_manager`
-     directly, whichever is simpler to assert against) so
-     `find_pull_request_by_head` returns a `PullRequestData`-shaped dict
-     with `"mergeable_state": "dirty"`; assert `mock_issue_manager`'s
-     underlying `transition_issue_label`/label-update path was invoked for
-     `status-71:merge-conflict` (via monkeypatching
-     `session_launch.update_workflow_label` directly is simplest — assert
-     it was called with `from_label_id="pr_created",
-     to_label_id="merge_conflict", validated_issue_number=<issue number>`).
+   `status-10:pr-created` issue in the cached batch. Do not monkeypatch
+   `update_workflow_label` itself — mock only at the GitHub-API boundary
+   (`session_launch.PullRequestManager`/`BaseGitHubManager`, or patch
+   `_build_pr_manager` directly, plus `IssueManager.transition_issue_label`
+   and `load_labels_config`) so the real `update_workflow_label` body runs
+   and the test would have caught the repo_url-mode bug fixed in step 1:
+   - `find_pull_request_by_head` returns a `PullRequestData`-shaped dict
+     with `"mergeable_state": "dirty"` → assert `transition_issue_label`
+     was called with the issue's number and
+     `"status-71:merge-conflict"`.
    - a second case with `"mergeable_state": "clean"` → assert
-     `update_workflow_label` was *not* called.
+     `transition_issue_label` was *not* called.
    - a third case with `branch_manager.get_branch_with_pr_fallback`
-     returning `None` → assert no `PullRequestManager`/`update_workflow_label`
-     call happens at all.
+     returning `None` → assert no `PullRequestManager`/
+     `transition_issue_label` call happens at all.
    - a fourth case where `find_pull_request_by_head` raises → assert
      `process_eligible_issues` does not raise and existing issues are still
      processed normally.
    Confirm these fail against current code.
-2. Implement `_build_pr_manager`, `_check_merge_conflict`, and the splice
+3. Implement `_build_pr_manager`, `_check_merge_conflict`, and the splice
    in `process_eligible_issues()` to make them pass.
-3. Re-run the full `test_session_launch_process_issues.py` file and
+4. Re-run the full `test_session_launch_process_issues.py` file and
    `test_session_launch.py` to confirm no existing test (e.g. the
    status-01/status-04 branch-requirement tests already in the file) broke.
 
@@ -149,13 +204,17 @@ feat(vscodeclaude): detect merge conflicts on status-10 PRs
 ## LLM prompt for this step
 
 > Read `pr_info/steps/summary.md` for the overall design, then implement
-> `pr_info/steps/step_5.md` exactly as written. Follow TDD: add the new
-> test cases to
+> `pr_info/steps/step_5.md` exactly as written. Follow TDD: first add the
+> repo_url-mode test to `tests/workflow_utils/test_label_transitions.py`
+> and confirm it fails, then remove the `project_dir is None` guard in
+> `update_workflow_label` (`src/mcp_coder/workflow_utils/label_transitions.py`)
+> per the "Fix: `update_workflow_label` in repo_url mode" section and
+> confirm it passes. Then add the new test cases to
 > `tests/workflows/vscodeclaude/test_session_launch_process_issues.py`
 > first and confirm they fail, then add `_build_pr_manager`,
 > `_check_merge_conflict`, and the splice into `process_eligible_issues()`
 > in `src/mcp_coder/workflows/vscodeclaude/session_launch.py` to make them
-> pass, without breaking any existing test in that file. If this step's
+> pass, without breaking any existing test in either file. If this step's
 > "Precondition check" section fails, write one line to
 > `pr_info/.blocked.txt` and stop. Otherwise make one commit containing all
 > the changes, after formatters/pylint/pytest/mypy all pass.

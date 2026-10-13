@@ -105,6 +105,11 @@ Jenkins shell template. Its parser takes only `--project-dir`: no
 - `tests/cli/commands/test_help.py` — command count/list
 - `src/mcp_coder/workflows/vscodeclaude/session_launch.py` — merge-conflict detection splice
 - `tests/workflows/vscodeclaude/test_session_launch_process_issues.py` — detection tests
+- `src/mcp_coder/workflow_utils/label_transitions.py` — drop the
+  `project_dir is None` guard in `update_workflow_label` (the detection
+  step's `issue_manager` is repo_url-mode; `get_labels_config_path(None)`
+  already supports this)
+- `tests/workflow_utils/test_label_transitions.py` — repo_url-mode coverage
 
 ## Implementation steps
 
