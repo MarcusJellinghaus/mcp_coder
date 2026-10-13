@@ -23,4 +23,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
+### Step 1: Mark all six comment-posting sites with `❌`
+
+See [step_1.md](./steps/step_1.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Pure building blocks — scan-rule helper + status-file note template
+
+See [step_2.md](./steps/step_2.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Wire the comment fetch into `create_status_file`
+
+See [step_3.md](./steps/step_3.md).
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
 ## Pull Request
+
+- [ ] Review full diff against `pr_info/steps/summary.md`
+- [ ] Write PR summary
