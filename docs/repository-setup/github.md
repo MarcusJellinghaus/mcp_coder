@@ -22,16 +22,27 @@ The workflow automation requires a GitHub token configured in your user config f
 token = "ghp_your_github_token_here"
 ```
 
-**Required permissions:**
+**Token options** (either one works):
 
-- `repo` scope (for private repositories)
-- `public_repo` scope (for public repositories)
+1. **Fine-grained PAT** (least privilege). Grant repository access to the target repos
+   with these read permissions, which are the ones `mcp-coder verify` probes:
+   - `Contents: Read`
+   - `Administration: Read` (branch protection)
+   - `Pull requests: Read`
+   - `Issues: Read`
+   - `Actions: Read`
+   - `Commit statuses: Read`
 
-**How to create a GitHub token:**
+   Without `Administration: Read`, `verify` shows branch protection as
+   `[WARN] not verifiable`. That is not an error, and the exit code is unaffected.
 
-1. Go to GitHub → Settings → Developer settings → Personal access tokens
-2. Generate new token (classic) with appropriate repo permissions
-3. Copy token and add to config file
+2. **Classic PAT** (simpler, broader). Use the `repo` scope (`public_repo` covers public
+   repositories only). Classic scopes grant permissions in bundles, so a `repo`-scope
+   token satisfies all of the checks above.
+
+**How to create:** go to GitHub → Settings → Developer settings → Personal access
+tokens, choose *Fine-grained tokens* or *Tokens (classic)*, then add the token to the
+config file.
 
 ## Workflow Labels Setup
 
