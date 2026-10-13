@@ -322,6 +322,8 @@ line-length = 88
 [tool.ruff.lint]
 # Only enable docstring rules for now
 # preview needed for DOC rules (pydoclint)
+#
+# TRY (tryceratops), including TRY400, rejected: duplicates stack traces — see #1172.
 preview = true
 explicit-preview-rules = true   # preview rules fire only when selected by exact code
 select = [
