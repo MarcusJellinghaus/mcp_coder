@@ -110,7 +110,7 @@ def format_failure_comment(
         Formatted GitHub comment string.
     """
     lines = [
-        "## Implementation Failed",
+        "## ❌ Implementation Failed",
         f"**Category:** {CATEGORY_DISPLAY.get(reason, CATEGORY_DISPLAY['general'])}",
         f"**Stage:** {stage}",
         f"**Error:** {message}",

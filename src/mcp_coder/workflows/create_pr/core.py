@@ -726,7 +726,7 @@ def run_create_pr_workflow(
         project_dir=project_dir,
         from_label_id="pr_creating",
         general_category="pr_creating_failed",
-        comment_header="## PR Creation Failed",
+        comment_header="## ❌ PR Creation Failed",
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
         issue_number=cached_issue_number,

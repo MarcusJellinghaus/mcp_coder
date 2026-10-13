@@ -408,7 +408,7 @@ def _route_to_human(
         _flush_round_log(project_dir, only=log_path)
     if post_issue_comments and issue_number is not None:
         try:
-            IssueManager(project_dir).add_comment(issue_number, comment_body)
+            IssueManager(project_dir).add_comment(issue_number, f"❌ {comment_body}")
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("Failed to post handoff comment: %s", exc)
     _set_label(config, project_dir, config.escalate_label_id, update_issue_labels)

@@ -73,7 +73,7 @@ def _format_failure_comment(
         Formatted GitHub comment string describing the planning failure.
     """
     lines = [
-        "## Planning Failed",
+        "## ❌ Planning Failed",
         f"**Stage:** {failure.stage}",
         f"**Error:** {failure.message}",
     ]
@@ -732,7 +732,7 @@ def run_create_plan_workflow(
         project_dir=project_dir,
         from_label_id="planning",
         general_category=FAILURE_LABELS["general"],
-        comment_header="## Planning Failed",
+        comment_header="## ❌ Planning Failed",
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
         issue_number=issue_number,
