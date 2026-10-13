@@ -126,6 +126,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
             "BRANCH_NAME": args.branch_name,
             "COMMAND": test_command,  # OS-aware selection
             "GITHUB_CREDENTIALS_ID": validated_config["github_credentials_id"],
+            "LABEL": f"{args.repo_name} - {args.branch_name} - test",
         }
 
         # Start job (API token in Basic Auth bypasses CSRF)

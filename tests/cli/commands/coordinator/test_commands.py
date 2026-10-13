@@ -128,6 +128,7 @@ class TestExecuteCoordinatorTest:
                 "BRANCH_NAME": "feature-x",
                 "COMMAND": DEFAULT_TEST_COMMAND.format(log_level="DEBUG"),
                 "GITHUB_CREDENTIALS_ID": "github-pat",
+                "LABEL": "mcp_coder - feature-x - test",
             },
         )
 
