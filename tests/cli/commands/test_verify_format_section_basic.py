@@ -91,7 +91,7 @@ class TestBranchProtectionNesting:
         return {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
 
     def test_children_indented_when_parent_ok(self) -> None:
-        """Children render at 4-space indent under parent when ok=True."""
+        """200: Children render at 4-space indent under parent when ok=True."""
         result: dict[str, Any] = {
             "branch_protection": {"ok": True, "value": "main protected"},
             "ci_checks_required": {"ok": True, "value": "8 checks configured"},
@@ -116,9 +116,13 @@ class TestBranchProtectionNesting:
             ), f"{child_label} should be at 4-space indent"
 
     def test_children_suppressed_when_parent_fails(self) -> None:
-        """Only parent line appears when branch_protection ok=False."""
+        """404: Only parent line appears when branch_protection ok=False."""
         result: dict[str, Any] = {
-            "branch_protection": {"ok": False, "value": "main is not protected"},
+            "branch_protection": {
+                "ok": False,
+                "value": "not configured",
+                "severity": "warning",
+            },
             "ci_checks_required": {
                 "ok": False,
                 "value": "unknown",
@@ -143,8 +147,40 @@ class TestBranchProtectionNesting:
         }
         output = _format_section("GITHUB", result, self._symbols())
         # Parent line present
-        assert "Branch protection" in output
+        parent_lines = [l for l in output.split("\n") if "Branch protection" in l]
+        assert len(parent_lines) == 1
+        assert "[ERR]" in parent_lines[0]
+        assert "not configured" in parent_lines[0]
         # Children suppressed
+        assert "CI checks required" not in output
+        assert "Strict mode" not in output
+        assert "Force push" not in output
+        assert "Branch deletion" not in output
+
+    def test_children_suppressed_when_parent_unverifiable(self) -> None:
+        """403: Parent shows [WARN] and children are suppressed when ok=None."""
+        value = "not verifiable — token lacks Administration: Read"
+        error = (
+            "get_protection failed: HTTP 403: "
+            "Resource not accessible by personal access token"
+        )
+        row = {"ok": None, "value": value, "error": error, "severity": "warning"}
+        result: dict[str, Any] = {
+            "branch_protection": dict(row),
+            "ci_checks_required": dict(row),
+            "strict_mode": dict(row),
+            "force_push": dict(row),
+            "branch_deletion": dict(row),
+            "overall_ok": True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        parent_lines = [l for l in output.split("\n") if "Branch protection" in l]
+        assert len(parent_lines) == 1
+        assert "[WARN]" in parent_lines[0]
+        assert "not verifiable" in parent_lines[0]
+        assert "[ERR]" not in output
+        assert "not configured" not in output
+        assert "Resource not accessible" not in output
         assert "CI checks required" not in output
         assert "Strict mode" not in output
         assert "Force push" not in output

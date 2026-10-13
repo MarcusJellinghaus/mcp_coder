@@ -32,3 +32,8 @@ class TestLogSuppressionShim:
         """httpx should be at WARNING after setup_logging()."""
         setup_logging("DEBUG")
         assert logging.getLogger("httpx").level == logging.WARNING
+
+    def test_github_retry_suppressed_after_setup(self) -> None:
+        """github.GithubRetry should be at WARNING after setup_logging()."""
+        setup_logging("DEBUG")
+        assert logging.getLogger("github.GithubRetry").level == logging.WARNING

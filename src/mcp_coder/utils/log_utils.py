@@ -39,5 +39,6 @@ def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
     logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 
     # WARNING level
+    logging.getLogger("github.GithubRetry").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
