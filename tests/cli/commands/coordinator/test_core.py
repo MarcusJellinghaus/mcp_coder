@@ -525,6 +525,7 @@ class TestDispatchWorkflow:
             issue=issue,
             workflow_name="create-plan",
             repo_config=repo_config,
+            repo_name="mcp_coder",
             jenkins_client=mock_jenkins,
             issue_manager=mock_issue_mgr,
             branch_manager=mock_branch_mgr,
@@ -592,6 +593,7 @@ class TestDispatchWorkflow:
             issue=issue,
             workflow_name="create-plan",
             repo_config=repo_config,
+            repo_name="mcp_coder",
             jenkins_client=mock_jenkins,
             issue_manager=mock_issue_mgr,
             branch_manager=mock_branch_mgr,
@@ -652,6 +654,7 @@ class TestDispatchWorkflow:
             issue=issue,
             workflow_name="create-pr",
             repo_config=repo_config,
+            repo_name="mcp_coder",
             jenkins_client=mock_jenkins,
             issue_manager=mock_issue_mgr,
             branch_manager=mock_branch_mgr,
@@ -728,6 +731,7 @@ class TestDispatchWorkflow:
             issue=issue,
             workflow_name="implement",
             repo_config=repo_config,
+            repo_name="mcp_coder",
             jenkins_client=mock_jenkins,
             issue_manager=mock_issue_mgr,
             branch_manager=mock_branch_mgr,
@@ -831,6 +835,7 @@ class TestDispatchWorkflowSilentFallthroughGuard:
             issue=issue,
             workflow_name=workflow,
             repo_config=repo_config,
+            repo_name="test_repo",
             jenkins_client=mock_jenkins,
             issue_manager=mock_issue_mgr,
             branch_manager=mock_branch_mgr,
@@ -843,6 +848,7 @@ class TestDispatchWorkflowSilentFallthroughGuard:
         assert (
             f"mcp-coder --log-level INFO {workflow} " in command
         ), f"COMMAND for {workflow!r} ({executor_os}) missing its verb"
+        assert params["LABEL"] == f"test_repo - #777 - {workflow}"
 
 
 class TestCacheFilePath:

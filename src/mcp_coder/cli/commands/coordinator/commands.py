@@ -25,6 +25,7 @@ from ....utils.user_config import (
 from ...utils import log_command_startup
 from .command_templates import TEST_COMMAND_TEMPLATES
 from .core import (
+    build_jenkins_label,
     dispatch_workflow,
     get_cached_eligible_issues,
     get_eligible_issues,
@@ -126,6 +127,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
             "BRANCH_NAME": args.branch_name,
             "COMMAND": test_command,  # OS-aware selection
             "GITHUB_CREDENTIALS_ID": validated_config["github_credentials_id"],
+            "LABEL": build_jenkins_label(args.repo_name, args.branch_name, "test"),
         }
 
         # Start job (API token in Basic Auth bypasses CSRF)
@@ -300,6 +302,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         issue=issue,
                         workflow_name=workflow_name,
                         repo_config=validated_config,
+                        repo_name=repo_name,
                         jenkins_client=jenkins_client,
                         issue_manager=issue_manager,
                         branch_manager=branch_manager,
