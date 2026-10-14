@@ -24,10 +24,7 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
         ValueError: If path is invalid, doesn't exist, not a directory, not accessible, or not a git repo
     """
     # Use current directory if no argument provided
-    if project_dir_arg is None:
-        project_path = Path.cwd()
-    else:
-        project_path = Path(project_dir_arg)
+    project_path = Path.cwd() if project_dir_arg is None else Path(project_dir_arg)
 
     # Resolve to absolute path
     try:

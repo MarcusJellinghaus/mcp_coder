@@ -55,10 +55,7 @@ def store_session(
         .mcp-coder/responses/response_2025-10-02T14-30-00.json
     """
     # Determine storage directory
-    if store_path is None:
-        storage_dir = ".mcp-coder/responses"
-    else:
-        storage_dir = store_path
+    storage_dir = ".mcp-coder/responses" if store_path is None else store_path
 
     # Create storage directory if it doesn't exist
     os.makedirs(storage_dir, exist_ok=True)

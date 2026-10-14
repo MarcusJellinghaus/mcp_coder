@@ -54,7 +54,9 @@ def _require_langchain_config() -> None:
             pytest.skip(
                 "No Gemini credentials: set GEMINI_API_KEY or [llm.langchain] api_key"
             )
-    elif backend == "anthropic":
+    # noqa: SIM102 -- collapsing overflows line length and breaks symmetry
+    # with the openai/gemini branches above
+    elif backend == "anthropic":  # noqa: SIM102
         if not os.getenv("ANTHROPIC_API_KEY") and not cfg.get("api_key"):
             pytest.skip(
                 "No Anthropic credentials: set ANTHROPIC_API_KEY "

@@ -87,9 +87,10 @@ def _compute_exit_code(
     # Active provider determines primary pass/fail
     if active_provider == "claude" and not claude_result.get("overall_ok"):
         return 1
-    if active_provider == "langchain":
-        if langchain_result is None or not langchain_result.get("overall_ok"):
-            return 1
+    if active_provider == "langchain" and (
+        langchain_result is None or not langchain_result.get("overall_ok")
+    ):
+        return 1
 
     # MCP server failures affect exit code when langchain is active
     if (
@@ -110,9 +111,12 @@ def _compute_exit_code(
 
     # MLflow: only fail if enabled AND broken
     mlflow_enabled = mlflow_result.get("enabled", {})
-    if isinstance(mlflow_enabled, dict) and mlflow_enabled.get("ok") is True:
-        if not mlflow_result.get("overall_ok"):
-            return 1
+    if (
+        isinstance(mlflow_enabled, dict)
+        and mlflow_enabled.get("ok") is True
+        and not mlflow_result.get("overall_ok")
+    ):
+        return 1
 
     return 0
 

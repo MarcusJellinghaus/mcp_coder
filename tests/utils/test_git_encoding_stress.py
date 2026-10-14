@@ -90,12 +90,10 @@ class TestGitEncodingStress:
         # Build 10,000 character string by repeating and cycling through special chars
         target_length = 10000
         test_content_chars = []
-        char_index = 0
 
         for i in range(target_length):
             # Cycle through special characters
-            test_content_chars.append(special_chars[char_index % len(special_chars)])
-            char_index += 1
+            test_content_chars.append(special_chars[i % len(special_chars)])
 
             # Add newlines every 100 characters for realistic file structure
             if i > 0 and i % 100 == 0:

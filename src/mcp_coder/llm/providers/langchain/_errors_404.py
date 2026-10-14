@@ -8,6 +8,7 @@ detection predicate (:func:`_is_404_error`) and the user-facing hint
 
 from __future__ import annotations
 
+import contextlib
 import os
 
 
@@ -87,8 +88,6 @@ def _format_404_hint(config: dict[str, str | None]) -> str:
             "base URL (e.g. …/v1); mcp-coder appends /chat/completions."
         )
     hint = f"Model {model!r} not found."
-    try:
+    with contextlib.suppress(Exception):
         hint += _get_model_suggestions(config)
-    except Exception:  # pylint: disable=broad-except
-        pass
     return hint

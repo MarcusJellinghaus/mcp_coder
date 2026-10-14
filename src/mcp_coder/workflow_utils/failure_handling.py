@@ -4,6 +4,7 @@ Provides common failure handling logic used by both the implement and
 create-pr workflows: failure logging, label transitions, and comment posting.
 """
 
+import contextlib
 import logging
 import signal
 import sys
@@ -336,7 +337,5 @@ def run_guarded(
         return 1
     finally:
         if previous_handler is not None:
-            try:
+            with contextlib.suppress(OSError, ValueError):
                 signal.signal(signal.SIGTERM, previous_handler)
-            except (OSError, ValueError):
-                pass

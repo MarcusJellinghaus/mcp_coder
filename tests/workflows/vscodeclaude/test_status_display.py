@@ -412,7 +412,7 @@ class TestStatusDisplay:
 
         captured = capsys.readouterr()
         assert "#123" in captured.out
-        assert "owner/repo".split("/")[-1] in captured.out  # "repo"
+        assert ["owner", "repo"][-1] in captured.out  # "repo"
 
     def test_display_status_table_with_eligible_issue(
         self,

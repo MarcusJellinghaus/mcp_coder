@@ -5,6 +5,7 @@ auto-fixes them silently, warns, or prompts the user to abort.
 """
 
 import atexit
+import contextlib
 import ctypes
 import logging
 import os
@@ -74,10 +75,8 @@ class TuiChecker:
             raise TuiPreflightAbort("Aborted by user (EOF).") from None
         if choice.startswith("i"):
             logger.log(OUTPUT, instruction_text)
-            try:
+            with contextlib.suppress(EOFError):
                 input("Press Enter to exit...")
-            except EOFError:
-                pass
             raise TuiPreflightAbort("Aborted after viewing instructions.")
         raise TuiPreflightAbort("Aborted by user.")
 

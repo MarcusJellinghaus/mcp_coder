@@ -547,9 +547,8 @@ Please implement this task step by step."""
         logger.info("Skipping mypy check (will run after all tasks complete)")
 
     # Step 8: Run formatters
-    if format_code:
-        if not run_formatters(project_dir):
-            return TaskOutcome(False, "error")
+    if format_code and not run_formatters(project_dir):
+        return TaskOutcome(False, "error")
 
     # Step 9: Commit changes (same session params as the step's main LLM call)
     if not commit_changes(

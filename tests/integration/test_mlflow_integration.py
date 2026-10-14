@@ -1,5 +1,6 @@
 """Integration tests for MLflow functionality."""
 
+import contextlib
 import json
 import os
 import sqlite3
@@ -406,17 +407,13 @@ class TestMLflowWithRealInstallation:
             ), "Branch name mismatch"
 
             # Properly cleanup MLflow to release file locks (critical on Windows)
-            try:
+            with contextlib.suppress(Exception):
                 # End any active MLflow runs
                 mlflow_module.end_run()
-            except Exception:
-                pass
 
-            try:
+            with contextlib.suppress(Exception):
                 # Clear tracking URI to force close the tracking store
                 mlflow_module.set_tracking_uri("")
-            except Exception:
-                pass
 
             # Give Windows time to release file handles
             import time

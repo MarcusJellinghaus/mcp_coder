@@ -218,10 +218,7 @@ def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
         Validated absolute Path to the project directory. Calls sys.exit(1) on validation failure.
     """
     # Use current directory if no argument provided
-    if project_dir_arg is None:
-        project_path = Path.cwd()
-    else:
-        project_path = Path(project_dir_arg)
+    project_path = Path.cwd() if project_dir_arg is None else Path(project_dir_arg)
 
     # Resolve to absolute path
     try:

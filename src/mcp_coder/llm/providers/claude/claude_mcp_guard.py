@@ -298,10 +298,9 @@ def _parse_stream_lines(lines: list[str]) -> ParsedStreamResponse:
         elif msg_type == "result":
             result_message = msg
             # Result message also contains the final text
-            if "result" in msg:
+            if "result" in msg and not text_parts:
                 # Only use result text if we didn't get text from assistant messages
-                if not text_parts:
-                    text_parts.append(str(msg["result"]))
+                text_parts.append(str(msg["result"]))
 
     return ParsedStreamResponse(
         text="".join(text_parts).strip(),

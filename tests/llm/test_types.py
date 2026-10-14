@@ -377,7 +377,7 @@ def test_response_assembler_raw_line_excluded_from_events() -> None:
 
 def test_transient_event_types_membership() -> None:
     """TRANSIENT_EVENT_TYPES names exactly the two never-persisted event types."""
-    assert TRANSIENT_EVENT_TYPES == frozenset({"raw_line", "approval_request"})
+    assert frozenset({"raw_line", "approval_request"}) == TRANSIENT_EVENT_TYPES
 
 
 def test_response_assembler_approval_request_excluded_from_events() -> None:
@@ -539,7 +539,7 @@ def test_usage_info_importable_from_llm_package() -> None:
 
 def test_supported_providers_contains_expected_values() -> None:
     """Test SUPPORTED_PROVIDERS contains exactly claude, langchain, copilot."""
-    assert SUPPORTED_PROVIDERS == {"claude", "langchain", "copilot"}
+    assert {"claude", "langchain", "copilot"} == SUPPORTED_PROVIDERS
 
 
 def test_supported_providers_is_frozenset() -> None:

@@ -373,13 +373,16 @@ class ICoderApp(StreamViewApp):
         self._render_branch_state()
         if new_value:
             info = self._last_branch_info
-            if info is not None and info.issue_number is not None:
+            if (
+                info is not None
+                and info.issue_number is not None
+                and self._branch_service.begin_pr_fetch()
+            ):
                 # Route through begin_pr_fetch so the in-flight guard is
                 # uniform across toggle-on and refresh-PR launch paths.
-                if self._branch_service.begin_pr_fetch():
-                    self._branch_loading.add("pr")
-                    self._render_branch_state()
-                    self._launch_pr_worker(info.issue_number)
+                self._branch_loading.add("pr")
+                self._render_branch_state()
+                self._launch_pr_worker(info.issue_number)
 
     def _launch_pr_worker(self, issue_number: int) -> None:
         """Capture a PR-fetch generation and spawn the worker."""

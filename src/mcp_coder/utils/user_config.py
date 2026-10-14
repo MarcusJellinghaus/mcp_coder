@@ -235,16 +235,20 @@ def get_config_values(
         value = _get_nested_value(config_data, section, key)
 
         # Schema-driven type validation
-        if value is not None and field_def is not None:
-            if not isinstance(value, field_def.field_type) or (
-                field_def.field_type is int and isinstance(value, bool)
-            ):
-                raise ValueError(
-                    f"Config error in [{section}] {key}: "
-                    f"expected {field_def.field_type.__name__}, "
-                    f"got {type(value).__name__} ('{value}'). "
-                    f"Check your config.toml \u2014 use native TOML types."
-                )
+        if (
+            value is not None
+            and field_def is not None
+            and (
+                not isinstance(value, field_def.field_type)
+                or (field_def.field_type is int and isinstance(value, bool))
+            )
+        ):
+            raise ValueError(
+                f"Config error in [{section}] {key}: "
+                f"expected {field_def.field_type.__name__}, "
+                f"got {type(value).__name__} ('{value}'). "
+                f"Check your config.toml \u2014 use native TOML types."
+            )
 
         results[(section, key)] = value
 
@@ -496,9 +500,10 @@ def _verify_wildcard_repos(
     has_error = False
     for repo_name, repo_data in repos.items():
         section_name = f"coordinator.repos.{repo_name}"
-        if isinstance(repo_data, dict):
-            if _verify_section(section_name, repo_data, fields, entries):
-                has_error = True
+        if isinstance(repo_data, dict) and _verify_section(
+            section_name, repo_data, fields, entries
+        ):
+            has_error = True
 
     return has_error
 
