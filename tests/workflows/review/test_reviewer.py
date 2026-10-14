@@ -31,19 +31,19 @@ def mock_llm(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 
 def _call(**overrides: Any) -> None:
     """Invoke _run_reviewer with sensible defaults, applying overrides."""
-    kwargs: dict[str, Any] = dict(
-        config=REVIEW_IMPLEMENTATION,
-        project_dir=Path("/p"),
-        provider="claude",
-        mcp_config=None,
-        settings_file=None,
-        issue_number=1,
-        base_branch="main",
-        round_number=1,
-        max_rounds=5,
-        session_id=None,
-        tasks=None,
-    )
+    kwargs: dict[str, Any] = {
+        "config": REVIEW_IMPLEMENTATION,
+        "project_dir": Path("/p"),
+        "provider": "claude",
+        "mcp_config": None,
+        "settings_file": None,
+        "issue_number": 1,
+        "base_branch": "main",
+        "round_number": 1,
+        "max_rounds": 5,
+        "session_id": None,
+        "tasks": None,
+    }
     kwargs.update(overrides)
     reviewer._run_reviewer(**kwargs)
 
@@ -192,17 +192,17 @@ def test_supervisor_header_substitutes_round_and_tie_break(
 
 def _call_get_verdict(**overrides: Any) -> tuple[Any, str | None]:
     """Invoke _get_verdict with sensible defaults, applying overrides."""
-    kwargs: dict[str, Any] = dict(
-        config=REVIEW_IMPLEMENTATION,
-        project_dir=Path("/p"),
-        provider="langchain",
-        mcp_config=None,
-        settings_file=None,
-        supervisor_sid=None,
-        report="NO FINDINGS",
-        round_number=1,
-        max_rounds=5,
-    )
+    kwargs: dict[str, Any] = {
+        "config": REVIEW_IMPLEMENTATION,
+        "project_dir": Path("/p"),
+        "provider": "langchain",
+        "mcp_config": None,
+        "settings_file": None,
+        "supervisor_sid": None,
+        "report": "NO FINDINGS",
+        "round_number": 1,
+        "max_rounds": 5,
+    }
     kwargs.update(overrides)
     return reviewer._get_verdict(**kwargs)
 
