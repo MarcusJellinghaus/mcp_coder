@@ -25,7 +25,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: E741 — rename `l` → `label` in `define_labels.py`
 
-- [ ] Implementation (tests + production code)
+- [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
