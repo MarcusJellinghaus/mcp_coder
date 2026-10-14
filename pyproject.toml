@@ -335,11 +335,13 @@ select = [
     "SIM",
     # SIM905 is preview-only; see explicit-preview-rules note above.
     "SIM905",
+    "E",
 ]
 ignore = [
     "D104",  # missing docstring in __init__.py (low value)
     "D107",  # missing docstring in __init__ method (redundant with class docstring)
     "ANN401",  # Any is correct at library/CLI boundaries; mypy strict covers the rest
+    "E501",  # line length is owned by the formatter (black); not re-checked here
 ]
 
 [tool.ruff.lint.per-file-ignores]
