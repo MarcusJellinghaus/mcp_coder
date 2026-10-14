@@ -197,7 +197,7 @@ class TestFormatDiagnostics:
     def test_proxy_detected_all_variants(self, var: str) -> None:
         """Each proxy env var variant is detected."""
         exc = OSError("fail")
-        env = {v: "" for v in _PROXY_VARS}
+        env = dict.fromkeys(_PROXY_VARS, "")
         env[var] = "http://proxy:8080"
         with patch.dict("os.environ", env, clear=False):
             # Clear all then set only our target
