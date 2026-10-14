@@ -336,6 +336,7 @@ select = [
     # SIM905 is preview-only; see explicit-preview-rules note above.
     "SIM905",
     "E",
+    "C4", "B",
 ]
 ignore = [
     "D104",  # missing docstring in __init__.py (low value)
