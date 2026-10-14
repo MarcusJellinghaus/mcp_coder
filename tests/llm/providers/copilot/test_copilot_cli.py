@@ -42,25 +42,33 @@ class TestParseCopilotJsonlLine:
 class TestParseCopilotJsonlOutput:
     """Tests for parse_copilot_jsonl_output."""
 
-    def test_parse_output_extracts_text(self, make_copilot_jsonl_output) -> None:  # type: ignore[no-untyped-def]
+    def test_parse_output_extracts_text(
+        self, make_copilot_jsonl_output: Callable[..., list[str]]
+    ) -> None:
         """Text from assistant.message content blocks is extracted."""
         lines = make_copilot_jsonl_output(text="Test response")
         result = parse_copilot_jsonl_output(lines)
         assert result["text"] == "Test response"
 
-    def test_parse_output_extracts_session_id(self, make_copilot_jsonl_output) -> None:  # type: ignore[no-untyped-def]
+    def test_parse_output_extracts_session_id(
+        self, make_copilot_jsonl_output: Callable[..., list[str]]
+    ) -> None:
         """sessionId from result message is extracted."""
         lines = make_copilot_jsonl_output(session_id="sess-abc-789")
         result = parse_copilot_jsonl_output(lines)
         assert result["session_id"] == "sess-abc-789"
 
-    def test_parse_output_maps_usage(self, make_copilot_jsonl_output) -> None:  # type: ignore[no-untyped-def]
+    def test_parse_output_maps_usage(
+        self, make_copilot_jsonl_output: Callable[..., list[str]]
+    ) -> None:
         """outputTokens is mapped to output_tokens."""
         lines = make_copilot_jsonl_output(output_tokens=100)
         result = parse_copilot_jsonl_output(lines)
         assert result["usage"]["output_tokens"] == 100
 
-    def test_parse_output_skips_ephemeral_types(self, make_copilot_jsonl_output) -> None:  # type: ignore[no-untyped-def]
+    def test_parse_output_skips_ephemeral_types(
+        self, make_copilot_jsonl_output: Callable[..., list[str]]
+    ) -> None:
         """Ephemeral types like session.info don't appear in text."""
         lines = make_copilot_jsonl_output(
             text="Real content",
@@ -71,7 +79,9 @@ class TestParseCopilotJsonlOutput:
         # Ephemeral messages are still in messages list but don't affect text
         assert len(result["messages"]) == 4  # 2 ephemeral + assistant + result
 
-    def test_parse_output_handles_tool_requests(self, make_copilot_jsonl_output) -> None:  # type: ignore[no-untyped-def]
+    def test_parse_output_handles_tool_requests(
+        self, make_copilot_jsonl_output: Callable[..., list[str]]
+    ) -> None:
         """toolRequests in assistant.message are preserved in messages."""
         lines = make_copilot_jsonl_output(include_tool_request=True)
         result = parse_copilot_jsonl_output(lines)
@@ -96,7 +106,9 @@ class TestParseCopilotJsonlOutput:
         assert result["usage"] == {}
         assert result["raw_result"] is None
 
-    def test_parse_output_raw_result_preserved(self, make_copilot_jsonl_output) -> None:  # type: ignore[no-untyped-def]
+    def test_parse_output_raw_result_preserved(
+        self, make_copilot_jsonl_output: Callable[..., list[str]]
+    ) -> None:
         """The result JSONL message is stored in raw_result."""
         lines = make_copilot_jsonl_output()
         result = parse_copilot_jsonl_output(lines)
