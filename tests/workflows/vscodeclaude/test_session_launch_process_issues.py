@@ -477,6 +477,33 @@ MOCK_MERGE_CONFLICT_LABELS_CONFIG: dict[str, Any] = {
     "ignore_labels": [],
 }
 
+MOCK_CI_LABELS_CONFIG: dict[str, Any] = {
+    "workflow_labels": [
+        {
+            "internal_id": "pr_created",
+            "name": "status-10:pr-created",
+            "color": "8b5cf6",
+            "description": "Pull request created, awaiting approval/merge",
+            "category": "human_action",
+        },
+        {
+            "internal_id": "merge_conflict",
+            "name": "status-71:merge-conflict",
+            "color": "fda4af",
+            "description": "PR is no longer cleanly mergeable against its base",
+            "category": "bot_pickup",
+        },
+        {
+            "internal_id": "failing_ci",
+            "name": "status-81:failing-ci",
+            "color": "f87171",
+            "description": "PR's latest CI run failed",
+            "category": "bot_pickup",
+        },
+    ],
+    "ignore_labels": [],
+}
+
 
 class TestProcessEligibleIssuesMergeConflictDetection:
     """Tests for merge-conflict detection on status-10:pr-created issues."""
@@ -502,7 +529,10 @@ class TestProcessEligibleIssuesMergeConflictDetection:
         mock_issue: IssueData,
         mock_issue_manager: MagicMock,
         mock_branch_manager: MagicMock,
-    ) -> None:
+        labels_config: dict[str, Any] | None = None,
+    ) -> MagicMock:
+        if labels_config is None:
+            labels_config = MOCK_MERGE_CONFLICT_LABELS_CONFIG
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
@@ -510,6 +540,12 @@ class TestProcessEligibleIssuesMergeConflictDetection:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
+        )
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {"run": {}, "jobs": []}
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
+            lambda **kwargs: mock_ci_manager,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
@@ -533,8 +569,9 @@ class TestProcessEligibleIssuesMergeConflictDetection:
         )
         monkeypatch.setattr(
             "mcp_coder.workflow_utils.label_transitions.load_labels_config",
-            lambda *args, **kwargs: MOCK_MERGE_CONFLICT_LABELS_CONFIG,
+            lambda *args, **kwargs: labels_config,
         )
+        return mock_ci_manager
 
     def test_dirty_pr_transitions_to_merge_conflict(
         self, monkeypatch: pytest.MonkeyPatch
@@ -665,6 +702,12 @@ class TestProcessEligibleIssuesMergeConflictDetection:
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
         )
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {"run": {}, "jobs": []}
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
+            lambda **kwargs: mock_ci_manager,
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
             lambda *args, **kwargs: [pr_issue, other_issue],
@@ -711,3 +754,240 @@ class TestProcessEligibleIssuesMergeConflictDetection:
         # other_issue (status-01) is still processed and launched normally
         mock_launch.assert_called_once()
         assert len(result) == 1
+
+
+class TestProcessEligibleIssuesCIDetection:
+    """Tests for failing-CI detection on status-10:pr-created issues."""
+
+    def test_failed_ci_run_transitions_to_failing_ci(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A status-10 issue whose latest CI run failed gets escalated to status-81."""
+        helper = TestProcessEligibleIssuesMergeConflictDetection()
+        mock_issue = helper._make_pr_issue(995)
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.project_dir = None
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = "995-fix"
+        helper._setup_common_mocks(
+            monkeypatch,
+            mock_issue,
+            mock_issue_manager,
+            mock_branch_manager,
+            labels_config=MOCK_CI_LABELS_CONFIG,
+        )
+
+        mock_pr_manager = MagicMock()
+        mock_pr_manager.find_pull_request_by_head.return_value = [
+            {"number": 1, "mergeable_state": "clean"}
+        ]
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            lambda repo_url: mock_pr_manager,
+        )
+
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {
+            "run": {"status": "completed", "conclusion": "failure"},
+            "jobs": [],
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
+            lambda **kwargs: mock_ci_manager,
+        )
+
+        process_eligible_issues(
+            repo_name="test-repo",
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
+            max_sessions=3,
+            current_count=0,
+        )
+
+        mock_issue_manager.transition_issue_label.assert_called_once()
+        call_args = mock_issue_manager.transition_issue_label.call_args
+        assert call_args[0][0] == 995
+        assert call_args[0][1] == "status-81:failing-ci"
+
+    def test_successful_ci_run_does_not_transition(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A status-10 issue whose latest CI run succeeded is left untouched."""
+        helper = TestProcessEligibleIssuesMergeConflictDetection()
+        mock_issue = helper._make_pr_issue(994)
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.project_dir = None
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = "994-fix"
+        helper._setup_common_mocks(
+            monkeypatch,
+            mock_issue,
+            mock_issue_manager,
+            mock_branch_manager,
+            labels_config=MOCK_CI_LABELS_CONFIG,
+        )
+
+        mock_pr_manager = MagicMock()
+        mock_pr_manager.find_pull_request_by_head.return_value = [
+            {"number": 1, "mergeable_state": "clean"}
+        ]
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            lambda repo_url: mock_pr_manager,
+        )
+
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {
+            "run": {"status": "completed", "conclusion": "success"},
+            "jobs": [],
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
+            lambda **kwargs: mock_ci_manager,
+        )
+
+        process_eligible_issues(
+            repo_name="test-repo",
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
+            max_sessions=3,
+            current_count=0,
+        )
+
+        mock_issue_manager.transition_issue_label.assert_not_called()
+
+    def test_pending_ci_run_does_not_transition(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A status-10 issue whose latest CI run is still in progress is left untouched."""
+        helper = TestProcessEligibleIssuesMergeConflictDetection()
+        mock_issue = helper._make_pr_issue(993)
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.project_dir = None
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = "993-fix"
+        helper._setup_common_mocks(
+            monkeypatch,
+            mock_issue,
+            mock_issue_manager,
+            mock_branch_manager,
+            labels_config=MOCK_CI_LABELS_CONFIG,
+        )
+
+        mock_pr_manager = MagicMock()
+        mock_pr_manager.find_pull_request_by_head.return_value = [
+            {"number": 1, "mergeable_state": "clean"}
+        ]
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            lambda repo_url: mock_pr_manager,
+        )
+
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {
+            "run": {"status": "in_progress", "conclusion": None},
+            "jobs": [],
+        }
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
+            lambda **kwargs: mock_ci_manager,
+        )
+
+        process_eligible_issues(
+            repo_name="test-repo",
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
+            max_sessions=3,
+            current_count=0,
+        )
+
+        mock_issue_manager.transition_issue_label.assert_not_called()
+
+    def test_merge_conflict_escalation_skips_ci_check_same_poll(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A status-10 issue whose PR is dirty never has its CI status checked."""
+        helper = TestProcessEligibleIssuesMergeConflictDetection()
+        mock_issue = helper._make_pr_issue(992)
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.project_dir = None
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = "992-fix"
+        helper._setup_common_mocks(
+            monkeypatch,
+            mock_issue,
+            mock_issue_manager,
+            mock_branch_manager,
+            labels_config=MOCK_CI_LABELS_CONFIG,
+        )
+
+        mock_pr_manager = MagicMock()
+        mock_pr_manager.find_pull_request_by_head.return_value = [
+            {"number": 1, "mergeable_state": "dirty"}
+        ]
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            lambda repo_url: mock_pr_manager,
+        )
+
+        mock_ci_manager = MagicMock()
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
+            lambda **kwargs: mock_ci_manager,
+        )
+
+        process_eligible_issues(
+            repo_name="test-repo",
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
+            max_sessions=3,
+            current_count=0,
+        )
+
+        mock_ci_manager.get_latest_ci_status.assert_not_called()
+
+    def test_ci_manager_exception_is_swallowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A CIResultsManager exception is swallowed; it does not raise."""
+        helper = TestProcessEligibleIssuesMergeConflictDetection()
+        mock_issue = helper._make_pr_issue(991)
+        mock_issue_manager = MagicMock()
+        mock_issue_manager.project_dir = None
+        mock_branch_manager = MagicMock()
+        mock_branch_manager.get_branch_with_pr_fallback.return_value = "991-fix"
+        helper._setup_common_mocks(
+            monkeypatch,
+            mock_issue,
+            mock_issue_manager,
+            mock_branch_manager,
+            labels_config=MOCK_CI_LABELS_CONFIG,
+        )
+
+        mock_pr_manager = MagicMock()
+        mock_pr_manager.find_pull_request_by_head.return_value = [
+            {"number": 1, "mergeable_state": "clean"}
+        ]
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            lambda repo_url: mock_pr_manager,
+        )
+
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = RuntimeError(
+            "GitHub API boom"
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
+            lambda **kwargs: mock_ci_manager,
+        )
+
+        process_eligible_issues(
+            repo_name="test-repo",
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
+            max_sessions=3,
+            current_count=0,
+        )
+
+        mock_issue_manager.transition_issue_label.assert_not_called()

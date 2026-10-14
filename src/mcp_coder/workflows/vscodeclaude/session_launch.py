@@ -8,6 +8,7 @@ from typing import cast
 
 from ...mcp_workspace_github import (
     BaseGitHubManager,
+    CIResultsManager,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -357,8 +358,52 @@ def _check_merge_conflict(
     issue_manager: IssueManager,
     repo_owner: str,
     repo_name: str,
-) -> None:
+) -> bool:
     """Escalate a status-10 PR to status-71 if GitHub reports it as "dirty".
+
+    Never raises: any failure is logged and swallowed so one bad issue
+    can't block the rest of the batch this poll.
+
+    Returns:
+        True iff the issue was escalated to merge_conflict this call.
+    """
+    try:
+        branch = branch_manager.get_branch_with_pr_fallback(
+            issue["number"], repo_owner, repo_name
+        )
+        if branch is None:
+            return False
+        pr_manager = _build_pr_manager(f"https://github.com/{repo_owner}/{repo_name}")
+        prs = pr_manager.find_pull_request_by_head(branch)
+        if prs and prs[0]["mergeable_state"] == "dirty":
+            update_workflow_label(
+                issue_manager,
+                "pr_created",
+                "merge_conflict",
+                validated_issue_number=issue["number"],
+            )
+            return True
+        return False
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        logger.warning(
+            "Failed to check merge conflict for issue #%d: %s",
+            issue["number"],
+            exc,
+        )
+        return False
+
+
+def _check_ci(
+    issue: IssueData,
+    ci_manager: CIResultsManager,
+    branch_manager: IssueBranchManager,
+    issue_manager: IssueManager,
+    repo_owner: str,
+    repo_name: str,
+) -> None:
+    """Escalate a status-10 PR to status-81 if its latest CI run failed.
 
     Never raises: any failure is logged and swallowed so one bad issue
     can't block the rest of the batch this poll.
@@ -369,20 +414,20 @@ def _check_merge_conflict(
         )
         if branch is None:
             return
-        pr_manager = _build_pr_manager(f"https://github.com/{repo_owner}/{repo_name}")
-        prs = pr_manager.find_pull_request_by_head(branch)
-        if prs and prs[0]["mergeable_state"] == "dirty":
+        status = ci_manager.get_latest_ci_status(branch)
+        run = status.get("run", {})
+        if run.get("status") == "completed" and run.get("conclusion") != "success":
             update_workflow_label(
                 issue_manager,
                 "pr_created",
-                "merge_conflict",
+                "failing_ci",
                 validated_issue_number=issue["number"],
             )
     except (
         Exception
     ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning(
-            "Failed to check merge conflict for issue #%d: %s",
+            "Failed to check CI status for issue #%d: %s",
             issue["number"],
             exc,
         )
@@ -446,6 +491,7 @@ def process_eligible_issues(
     )
     issue_manager = IssueManager(repo_url=repo_url)
     branch_manager = IssueBranchManager(repo_url=repo_url)
+    ci_manager = CIResultsManager(repo_url=repo_url)
 
     # Get all cached issues and filter for vscodeclaude eligibility
     if all_cached_issues is None:
@@ -465,9 +511,18 @@ def process_eligible_issues(
     repo_owner, repo_name_str = repo_full_name.split("/", 1)
     for issue in eligible_issues:
         if get_issue_status(issue) == "status-10:pr-created":
-            _check_merge_conflict(
+            escalated = _check_merge_conflict(
                 issue, branch_manager, issue_manager, repo_owner, repo_name_str
             )
+            if not escalated:
+                _check_ci(
+                    issue,
+                    ci_manager,
+                    branch_manager,
+                    issue_manager,
+                    repo_owner,
+                    repo_name_str,
+                )
 
     # Filter to statuses that are eligible for sessions (config-driven)
     actionable_issues: list[IssueData] = [
