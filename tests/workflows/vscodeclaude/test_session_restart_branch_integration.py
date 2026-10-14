@@ -217,6 +217,7 @@ class TestBranchHandlingIntegration:
     ) -> None:
         """Status-04 without branch: doesn't create session, shows indicator."""
         import logging
+        from unittest.mock import MagicMock
 
         # Test process_eligible_issues skipping
         monkeypatch.setattr(
@@ -240,6 +241,12 @@ class TestBranchHandlingIntegration:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
+        )
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {"run": {}, "jobs": []}
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
+            lambda **kwargs: mock_ci_manager,
         )
 
         # Mock issue at status-04
