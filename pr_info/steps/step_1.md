@@ -85,8 +85,11 @@ N/A (static config).
 1. In `tests/cli/commands/test_define_labels.py`, change the asserted count
    from `41` to `45` (one line, around `len(labels_config["workflow_labels"]) == 41`).
 2. In `tests/cli/commands/test_define_labels_label_changes.py`, change the
-   asserted created-count from `40` to `44` (one line, update the trailing
-   comment too: `# 44 new labels (45 total - 1 existing)`).
+   asserted created-count from `40` to `44` at all three occurrences (lines
+   308, 311, and 366): `len(result["created"]) == 40` (two test methods) and
+   `mock_labels_manager.create_label.call_count == 40` (one test method).
+   Update the trailing comment on line 308 too:
+   `# 44 new labels (45 total - 1 existing)`.
 3. Run these two test files — confirm they now fail against the current
    41-label file (red).
 4. Edit `labels.json` to add the 4 entries above.

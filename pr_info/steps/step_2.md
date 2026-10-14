@@ -67,9 +67,15 @@ def _check_ci(
 - `_check_merge_conflict()`'s body is unchanged except: `return True` right
   after the `update_workflow_label(...)` call inside the `if prs and
   prs[0]["mergeable_state"] == "dirty":` branch, and `return False` at the
-  very end of the `try` block (both existing early-return points — the
-  `except` branch logs and falls through to implicitly return `False`, which
-  is correct: a failed *check* should not block the CI check this poll).
+  very end of the `try` block. The function is typed `-> bool`, so both of
+  its other exit points must also return `False` explicitly — falling off
+  the end of a Python function returns `None`, not `False`, which would fail
+  mypy against the `bool` return type. Change the bare `if branch is None:
+  return` inside the `try` block to `return False`, and add an explicit
+  `return False` at the end of the `except` block (after the
+  `logger.warning(...)` call) — a failed *check* should not block the CI
+  check this poll, and now says so with a typed return instead of an
+  implicit `None`.
 
 ## ALGORITHM (`_check_ci`)
 
