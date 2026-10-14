@@ -61,7 +61,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: Enable ruff `ANN` (excluding `ANN401`) ([details](./steps/step_7.md))
 
-- [ ] Implementation (tests + production code)
+- [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
