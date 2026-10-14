@@ -73,9 +73,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 9: `B007` — unused loop variable in `issue_stats.py` (checked, not a bug)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 10: Enable `C4` and `B` in `pyproject.toml`; full verification
 
