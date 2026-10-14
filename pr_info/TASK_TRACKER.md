@@ -32,7 +32,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 2: Enable `SIM` in ruff config with tests carve-out for `SIM117`
 
 - [x] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
 ## Pull Request
