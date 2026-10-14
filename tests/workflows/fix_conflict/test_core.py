@@ -4,9 +4,12 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from mcp_coder.workflows.fix_conflict.core import run_fix_conflict_workflow
 
 MODULE = "mcp_coder.workflows.fix_conflict.core"
+_SHARED_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
 PROJECT_DIR = Path("/fake/project")
 BRANCH_NAME = "123-fix-something"
 
@@ -114,7 +117,26 @@ def test_no_current_branch_returns_1_without_rebase() -> None:
 
 
 def test_unexpected_exception_is_caught_and_returns_1() -> None:
-    with patch(f"{MODULE}.get_current_branch_name", side_effect=RuntimeError("boom")):
+    with (
+        patch(f"{MODULE}.get_current_branch_name", side_effect=RuntimeError("boom")),
+        patch(_SHARED_HANDLER) as mock_shared,
+    ):
         result = run_fix_conflict_workflow(PROJECT_DIR)
 
     assert result == 1
+    mock_shared.assert_called_once()
+    netted_failure = mock_shared.call_args[0][0]
+    assert netted_failure.category == "merge_conflict_failed"
+
+
+def test_system_exit_is_netted_and_reraised() -> None:
+    with (
+        patch(f"{MODULE}.get_current_branch_name", side_effect=SystemExit(1)),
+        patch(_SHARED_HANDLER) as mock_shared,
+    ):
+        with pytest.raises(SystemExit):
+            run_fix_conflict_workflow(PROJECT_DIR)
+
+    mock_shared.assert_called_once()
+    netted_failure = mock_shared.call_args[0][0]
+    assert netted_failure.category == "merge_conflict_failed"

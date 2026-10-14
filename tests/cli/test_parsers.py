@@ -287,3 +287,19 @@ class TestFixConflictParser:
         assert args.command == "fix-conflict"
         assert hasattr(args, "project_dir")
         assert not hasattr(args, "llm_method")
+
+
+class TestFixCiParser:
+    """Tests for the fix-ci subparser wiring."""
+
+    def _parse(self, *args: str) -> argparse.Namespace:
+        """Parse CLI args using the full parser."""
+        parser = create_parser()
+        return parser.parse_args(list(args))
+
+    def test_fix_ci_parses_with_llm_arguments(self) -> None:
+        """fix-ci has --project-dir and the LLM-related arguments."""
+        args = self._parse("fix-ci")
+        assert args.command == "fix-ci"
+        assert hasattr(args, "project_dir")
+        assert hasattr(args, "llm_method") is True

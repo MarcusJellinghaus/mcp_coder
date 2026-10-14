@@ -26,6 +26,7 @@ from .commands.coordinator.issue_stats import execute_coordinator_issue_stats
 from .commands.create_plan import execute_create_plan
 from .commands.create_pr import execute_create_pr
 from .commands.define_labels import execute_define_labels
+from .commands.fix_ci import execute_fix_ci
 from .commands.fix_conflict import execute_fix_conflict
 from .commands.gh_tool import execute_checkout_issue_branch, execute_get_base_branch
 from .commands.git_tool import execute_compact_diff
@@ -47,6 +48,7 @@ from .parsers import (
     add_coordinator_parsers,
     add_create_plan_parser,
     add_create_pr_parser,
+    add_fix_ci_parser,
     add_fix_conflict_parser,
     add_icoder_parser,
     add_implement_parser,
@@ -144,6 +146,7 @@ def create_parser() -> argparse.ArgumentParser:
     add_review_implementation_parser(subparsers)
     add_create_pr_parser(subparsers)
     add_fix_conflict_parser(subparsers)
+    add_fix_ci_parser(subparsers)
     add_coordinator_parsers(subparsers)
     add_check_parsers(subparsers)
     add_gh_tool_parsers(subparsers)
@@ -363,6 +366,8 @@ def main() -> int:
             return execute_create_pr(args)
         elif args.command == "fix-conflict":
             return execute_fix_conflict(args)
+        elif args.command == "fix-ci":
+            return execute_fix_ci(args)
         elif args.command == "coordinator":
             return _handle_coordinator_command(args)
         elif args.command == "check":

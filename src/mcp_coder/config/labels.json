@@ -153,6 +153,53 @@
       }
     },
     {
+      "internal_id": "failing_ci",
+      "name": "status-81:failing-ci",
+      "color": "fda4af",
+      "description": "PR's CI is failing and mergeable (conflict checked first)",
+      "category": "bot_pickup"
+    },
+    {
+      "internal_id": "fixing_ci",
+      "name": "status-82:fixing-ci",
+      "color": "fb7185",
+      "description": "CI auto-fix loop in progress (auto/in-progress)",
+      "category": "bot_busy",
+      "stale_timeout_minutes": 120
+    },
+    {
+      "internal_id": "ci_fix_failed",
+      "name": "status-83:ci-fix-failed",
+      "color": "e99695",
+      "description": "status-82 Jenkins job died without transitioning the label (crash watchdog)",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "⚠️",
+        "display_name": "CI FIX FAILED",
+        "stage_short": "ci-fix-fail",
+        "commands": ["/check_branch_status"],
+        "requires_branch": true,
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "pr_ci_failed",
+      "name": "status-84:pr-ci-failed",
+      "color": "b60205",
+      "description": "CI auto-fix loop exhausted or hit an LLM failure - needs manual fix",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "⚠️",
+        "display_name": "PR CI FAILED",
+        "stage_short": "pr-ci-fail",
+        "commands": ["/check_branch_status"],
+        "requires_branch": true,
+        "color": "red"
+      }
+    },
+    {
       "internal_id": "planning_llm_timeout",
       "name": "status-03f-timeout:planning-llm-timeout",
       "color": "e99695",
