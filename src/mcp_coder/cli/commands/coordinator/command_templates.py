@@ -229,6 +229,26 @@ ls -la logs
 exit $RC
 """
 
+FIX_CI_COMMAND_TEMPLATE: str = """git checkout {branch_name}
+git pull
+export DISABLE_AUTOUPDATER=1
+export MCP_TIMEOUT=30000
+which mcp-coder && mcp-coder --version
+which claude && claude --version
+uv sync --inexact --extra types
+mcp-coder --log-level {log_level} fix-ci --project-dir /workspace/repo --mcp-config .mcp.json
+RC=$?
+echo RC=$RC
+
+mcp-coder gh-tool set-status status-83:ci-fix-failed --from-status status-82:fixing-ci --project-dir /workspace/repo --force || true
+
+echo "archive after execution ======================================="
+ls -la .mcp-coder/create_plan_sessions
+ls -la logs
+
+exit $RC
+"""
+
 FIX_CONFLICT_COMMAND_TEMPLATE: str = """git checkout {branch_name}
 git pull
 export DISABLE_AUTOUPDATER=1
@@ -438,6 +458,44 @@ dir logs
 exit /b %RC%
 """
 
+FIX_CI_COMMAND_WINDOWS: str = r"""@echo ON
+
+echo current WORKSPACE directory===================================
+cd %WORKSPACE%
+
+echo switch to python execution environment =====================
+cd %VENV_BASE_DIR%
+
+echo python environment ================================
+if "%VENV_BASE_DIR%"=="" (
+    echo ERROR: VENV_BASE_DIR environment variable not set
+    exit /b 1
+)
+
+if "%VIRTUAL_ENV%"=="" (
+    %VENV_BASE_DIR%\.venv\Scripts\activate.bat
+)
+
+set DISABLE_AUTOUPDATER=1
+set MCP_TIMEOUT=30000
+
+echo Install type stubs in project environment ====================
+uv sync --inexact --project %WORKSPACE%\repo --extra types
+
+echo command execution  =====================================
+mcp-coder --log-level {log_level} fix-ci --project-dir %WORKSPACE%\repo --mcp-config .mcp.json
+set RC=%ERRORLEVEL%
+echo RC=%RC%
+
+mcp-coder gh-tool set-status status-83:ci-fix-failed --from-status status-82:fixing-ci --project-dir %WORKSPACE%\repo --force
+
+echo archive after execution =======================================
+dir .mcp-coder\create_plan_sessions
+dir logs
+
+exit /b %RC%
+"""
+
 FIX_CONFLICT_COMMAND_WINDOWS: str = r"""@echo ON
 
 echo current WORKSPACE directory===================================
@@ -489,6 +547,7 @@ WORKFLOW_TEMPLATES: dict[str, tuple[str, str]] = {
         REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
     ),
     "fix-conflict": (FIX_CONFLICT_COMMAND_TEMPLATE, FIX_CONFLICT_COMMAND_WINDOWS),
+    "fix-ci": (FIX_CI_COMMAND_TEMPLATE, FIX_CI_COMMAND_WINDOWS),
 }
 
 # Priority order for processing issues (highest to lowest).
