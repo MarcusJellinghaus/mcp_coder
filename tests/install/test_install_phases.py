@@ -25,12 +25,13 @@ import pytest
 from mcp_coder.install import InstallConfig, _env, _phases, install
 from mcp_coder.install._env import REPORT_BINARIES, exe
 
-# Reached through getattr rather than `_env.shutil` / `_env.subprocess`:
-# mypy's no-implicit-reexport rejects the attribute form, and importing
-# subprocess here directly would break the subprocess_isolation contract,
-# which grants tests.install no exemption.
-_shutil = getattr(_env, "shutil")  # noqa: B009
-_subprocess = getattr(_env, "subprocess")  # noqa: B009
+# Reached via attribute access with a type: ignore rather than a bare
+# `import shutil` / `import subprocess`: the latter would break the
+# subprocess_isolation contract, which grants tests.install no exemption.
+# mypy's no-implicit-reexport flags the attribute form as attr-defined
+# since _env doesn't explicitly re-export these stdlib modules.
+_shutil = _env.shutil  # type: ignore[attr-defined]
+_subprocess = _env.subprocess  # type: ignore[attr-defined]
 
 # Stands in for a real uv binary wherever the installer looks one up.
 _STUB_UV = "/stub/bin/uv"
