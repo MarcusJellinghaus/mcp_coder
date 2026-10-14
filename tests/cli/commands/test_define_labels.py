@@ -66,10 +66,10 @@ class TestWorkflowLabelsFromConfig:
         # Load the actual config to test against
         labels_config = load_labels_config(labels_config_path)
 
-        # Verify we have exactly 37 labels
+        # Verify we have exactly 41 labels
         assert (
-            len(labels_config["workflow_labels"]) == 37
-        ), "Config should contain exactly 37 workflow labels"
+            len(labels_config["workflow_labels"]) == 41
+        ), "Config should contain exactly 41 workflow labels"
 
         # Verify each label has correct structure
         for i, label in enumerate(labels_config["workflow_labels"], start=1):
@@ -116,6 +116,10 @@ class TestWorkflowLabelsFromConfig:
             "status-08:ready-pr",
             "status-09:pr-creating",
             "status-10:pr-created",
+            "status-71:merge-conflict",
+            "status-72:fixing-merge-conflict",
+            "status-73:merge-conflict-failed",
+            "status-74:pr-merge-conflict",
             "status-03f-timeout:planning-llm-timeout",
             "status-03f-mcp:planning-mcp-unavailable",
             "status-03f-prereq:planning-prereq-failed",

@@ -271,3 +271,19 @@ class TestLlmMethodCopilotChoice:
         """--llm-method copilot is accepted by implement parser."""
         args = self._parse("implement", "--llm-method", "copilot")
         assert args.llm_method == "copilot"
+
+
+class TestFixConflictParser:
+    """Tests for the fix-conflict subparser wiring."""
+
+    def _parse(self, *args: str) -> argparse.Namespace:
+        """Parse CLI args using the full parser."""
+        parser = create_parser()
+        return parser.parse_args(list(args))
+
+    def test_fix_conflict_parses_with_project_dir_only(self) -> None:
+        """fix-conflict has --project-dir and no LLM-related arguments."""
+        args = self._parse("fix-conflict")
+        assert args.command == "fix-conflict"
+        assert hasattr(args, "project_dir")
+        assert not hasattr(args, "llm_method")

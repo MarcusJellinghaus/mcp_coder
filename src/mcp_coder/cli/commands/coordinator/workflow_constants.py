@@ -64,4 +64,9 @@ WORKFLOW_MAPPING: dict[str, WorkflowConfig] = {
         "branch_strategy": "from_issue",
         "next_label": "status-17i:code-reviewing",
     },
+    "status-71:merge-conflict": {
+        "workflow": "fix-conflict",
+        "branch_strategy": "from_issue",
+        "next_label": "status-72:fixing-merge-conflict",
+    },
 }
