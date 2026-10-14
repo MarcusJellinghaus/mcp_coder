@@ -26,7 +26,7 @@ def _make_tools_response(count: int) -> MagicMock:
 def _make_tools_response_with_names(names: list[str]) -> MagicMock:
     """Create a mock ListToolsResult with named tools."""
     tool_mocks = [MagicMock() for _ in names]
-    for mock, tool_name in zip(tool_mocks, names):
+    for mock, tool_name in zip(tool_mocks, names, strict=True):
         mock.name = tool_name
         mock.description = None
     result = MagicMock()
@@ -39,7 +39,7 @@ def _make_tools_response_with_descriptions(
 ) -> MagicMock:
     """Create a mock ListToolsResult with named tools and descriptions."""
     tool_mocks = [MagicMock() for _ in tools]
-    for mock, (tool_name, desc) in zip(tool_mocks, tools):
+    for mock, (tool_name, desc) in zip(tool_mocks, tools, strict=True):
         mock.name = tool_name
         mock.description = desc if desc else None
     result = MagicMock()
