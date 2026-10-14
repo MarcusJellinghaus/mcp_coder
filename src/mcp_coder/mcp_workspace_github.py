@@ -19,6 +19,7 @@ from mcp_workspace.github_operations import (
     CIStatusData,
     LabelData,
     LabelsManager,
+    PullRequestData,
     PullRequestManager,
     RepoIdentifier,
     get_authenticated_username,
@@ -50,11 +51,6 @@ from mcp_workspace.github_operations.issues import _save_cache_file as save_cach
 from mcp_workspace.github_operations.issues import (
     get_all_cached_issues,
     update_issue_labels_in_cache,
-)
-
-# PR submodule (PullRequestData TypedDict)
-from mcp_workspace.github_operations.pr_manager import (
-    PullRequestData,
 )
 
 __all__: List[str] = [
