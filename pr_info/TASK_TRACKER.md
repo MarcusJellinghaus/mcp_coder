@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Add the 4 CI-health labels
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: CI detection in the VSCodeClaude coordinator poll
 
