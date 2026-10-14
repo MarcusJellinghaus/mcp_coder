@@ -103,13 +103,13 @@ class TestBranchProtectionNesting:
         output = _format_section("GITHUB", result, self._symbols())
         lines = output.split("\n")
         # Parent at 2-space indent
-        parent_lines = [l for l in lines if "Branch protection" in l]
+        parent_lines = [line for line in lines if "Branch protection" in line]
         assert len(parent_lines) == 1
         assert parent_lines[0].startswith("  ")
         assert "[OK]" in parent_lines[0]
         # Children at 4-space indent
         for child_label in ("CI checks required", "Force push", "Branch deletion"):
-            child_lines = [l for l in lines if child_label in l]
+            child_lines = [line for line in lines if child_label in line]
             assert len(child_lines) == 1, f"Expected 1 line for {child_label}"
             assert child_lines[0].startswith(
                 "    "
@@ -147,7 +147,9 @@ class TestBranchProtectionNesting:
         }
         output = _format_section("GITHUB", result, self._symbols())
         # Parent line present
-        parent_lines = [l for l in output.split("\n") if "Branch protection" in l]
+        parent_lines = [
+            line for line in output.split("\n") if "Branch protection" in line
+        ]
         assert len(parent_lines) == 1
         assert "[ERR]" in parent_lines[0]
         assert "not configured" in parent_lines[0]
@@ -174,7 +176,9 @@ class TestBranchProtectionNesting:
             "overall_ok": True,
         }
         output = _format_section("GITHUB", result, self._symbols())
-        parent_lines = [l for l in output.split("\n") if "Branch protection" in l]
+        parent_lines = [
+            line for line in output.split("\n") if "Branch protection" in line
+        ]
         assert len(parent_lines) == 1
         assert "[WARN]" in parent_lines[0]
         assert "not verifiable" in parent_lines[0]
@@ -198,7 +202,7 @@ class TestBranchProtectionNesting:
         }
         output = _format_section("GITHUB", result, self._symbols())
         lines = output.split("\n")
-        strict_lines = [l for l in lines if "Strict mode" in l]
+        strict_lines = [line for line in lines if "Strict mode" in line]
         assert len(strict_lines) == 1
         strict_line = strict_lines[0]
         assert "enabled" in strict_line
@@ -215,7 +219,9 @@ class TestBranchProtectionNesting:
         }
         output = _format_section("BASIC VERIFICATION", result, self._symbols())
         lines = output.split("\n")
-        content_lines = [l for l in lines if l.strip() and not l.startswith("===")]
+        content_lines = [
+            line for line in lines if line.strip() and not line.startswith("===")
+        ]
         for line in content_lines:
             assert line.startswith("  "), f"Expected 2-space indent: {line!r}"
             assert not line.startswith(

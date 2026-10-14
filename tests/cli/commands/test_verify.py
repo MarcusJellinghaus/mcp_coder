@@ -392,8 +392,10 @@ class TestEnvironmentSection:
         )
         _print_environment_section()
         lines = capsys.readouterr().out.splitlines()
-        python_line = next(l for l in lines if "Python version" in l)
-        mcp_coder_line = next(l for l in lines if l.lstrip().startswith("mcp-coder "))
+        python_line = next(line for line in lines if "Python version" in line)
+        mcp_coder_line = next(
+            line for line in lines if line.lstrip().startswith("mcp-coder ")
+        )
         expected_col = _expected_value_column(indent=2)
         assert expected_col == _VALUE_COLUMN_INDENT
         for line in (python_line, mcp_coder_line):
@@ -417,8 +419,8 @@ class TestEnvironmentSection:
         )
         _print_environment_section()
         lines = capsys.readouterr().out.splitlines()
-        python_line = next(l for l in lines if "Python version" in l)
-        err_line = next(l for l in lines if "mcp-tools-py" in l)
+        python_line = next(line for line in lines if "Python version" in line)
+        err_line = next(line for line in lines if "mcp-tools-py" in line)
         expected_col = _expected_value_column(indent=2)
         for line in (python_line, err_line):
             _assert_value_at_column(line, expected_col)
@@ -697,7 +699,7 @@ class TestProjectSection:
             in out
         )
         # Both should be "not configured"
-        lines = [l for l in out.splitlines() if "not configured" in l]
+        lines = [line for line in out.splitlines() if "not configured" in line]
         assert len(lines) == 2
 
     def test_project_section_non_python(
@@ -725,8 +727,10 @@ class TestProjectSection:
         symbols = {"success": "[OK]", "failure": "[ERR]", "warning": "[WARN]"}
         _print_project_section(tmp_path, symbols)
         lines = capsys.readouterr().out.splitlines()
-        format_code_line = next(l for l in lines if "format_code" in l)
-        check_type_hints_line = next(l for l in lines if "check_type_hints" in l)
+        format_code_line = next(line for line in lines if "format_code" in line)
+        check_type_hints_line = next(
+            line for line in lines if "check_type_hints" in line
+        )
         expected_col = _expected_value_column(indent=4)
         assert expected_col == _VALUE_COLUMN_INDENT + 2
         for line in (format_code_line, check_type_hints_line):

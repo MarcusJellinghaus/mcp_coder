@@ -184,7 +184,7 @@ class TestCreateDefaultConfig:
         assert "# default_config_path" in content
         # Ensure [mcp] does NOT appear as an uncommented section
         lines = content.splitlines()
-        uncommented_mcp = [l for l in lines if l.strip() == "[mcp]"]
+        uncommented_mcp = [line for line in lines if line.strip() == "[mcp]"]
         assert len(uncommented_mcp) == 0
 
     def test_create_default_config_handles_permission_error(
