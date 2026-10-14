@@ -29,8 +29,8 @@ from mcp_coder.install._env import REPORT_BINARIES, exe
 # mypy's no-implicit-reexport rejects the attribute form, and importing
 # subprocess here directly would break the subprocess_isolation contract,
 # which grants tests.install no exemption.
-_shutil = getattr(_env, "shutil")
-_subprocess = getattr(_env, "subprocess")
+_shutil = getattr(_env, "shutil")  # noqa: B009
+_subprocess = getattr(_env, "subprocess")  # noqa: B009
 
 # Stands in for a real uv binary wherever the installer looks one up.
 _STUB_UV = "/stub/bin/uv"

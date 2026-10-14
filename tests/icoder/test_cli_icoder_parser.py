@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -70,7 +71,7 @@ def test_execute_icoder_importable() -> None:
 
 def test_main_routes_icoder(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify main() dispatches 'icoder' to execute_icoder."""
-    called: dict[str, object] = {}
+    called: dict[str, Any] = {}
 
     def mock_execute(args: argparse.Namespace) -> int:
         called["args"] = args
@@ -85,7 +86,7 @@ def test_main_routes_icoder(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert result == 0
     args_obj = called["args"]
-    assert getattr(args_obj, "command") == "icoder"
+    assert args_obj.command == "icoder"
 
 
 def test_icoder_initial_color_flag() -> None:
