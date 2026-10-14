@@ -39,7 +39,11 @@ def _fail(
     update_issue_labels: bool,
     post_issue_comments: bool,
 ) -> int:
-    """Deliberate fix_ci failure: comment (Category/Stage/Error) + status-84 label."""
+    """Deliberate fix_ci failure: comment (Category/Stage/Error) + status-84 label.
+
+    Returns:
+        1, indicating failure.
+    """
     comment = (
         "## ❌ CI Fix Failed\n"
         f"**Category:** {category_display}\n"
