@@ -14,6 +14,7 @@ from typing import Optional
 from mcp_coder.mcp_workspace_git import get_current_branch_name
 from mcp_coder.mcp_workspace_github import IssueManager, PullRequestManager
 from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
+from mcp_coder.workflow_utils.failure_handling import run_guarded
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 logger = logging.getLogger(__name__)
@@ -46,12 +47,12 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
 
     Returns:
         0 on any handled outcome (resolved clean, resolved still conflicting,
-        or still unknown after the poll cap). 1 only on an unexpected
-        exception - the Jenkins shell template's watchdog line is the
-        actual safety net for a silent crash, this is just the reported
-        exit code.
+        or still unknown after the poll cap). 1 on a netted crash - the
+        Jenkins shell template's watchdog line is a further safety net for
+        a silent crash, this is just the reported exit code.
     """
-    try:
+
+    def body() -> int:
         branch = get_current_branch_name(project_dir)
         if branch is None:
             logger.error("Could not determine current branch")
@@ -78,6 +79,13 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
                 "status-72 for next coordinator poll"
             )
         return 0
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.error("fix_conflict workflow failed: %s", exc)
-        return 1
+
+    return run_guarded(
+        body,
+        project_dir=project_dir,
+        from_label_id="fixing_merge_conflict",
+        general_category="merge_conflict_failed",
+        comment_header="## ❌ Fix Conflict Crashed",
+        update_issue_labels=True,
+        post_issue_comments=True,
+    )

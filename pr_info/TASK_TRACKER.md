@@ -55,7 +55,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Retrofit `fix_conflict/core.py` with `run_guarded()`
 
-- [ ] Implementation (tests + production code)
+- [x] Implementation (tests + production code)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
