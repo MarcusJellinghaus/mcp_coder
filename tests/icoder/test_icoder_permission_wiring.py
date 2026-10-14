@@ -40,6 +40,7 @@ from tests.icoder.conftest import (
     make_icoder_args,
     patch_icoder_deps,
 )
+from tests.langchain_doubles import make_scripted_chat_model
 
 # ======================================================================
 # Helpers
@@ -601,17 +602,10 @@ async def test_denied_call_keeps_history_paired_and_agent_continues() -> None:
     pytest.importorskip("langgraph")
     pytest.importorskip("mcp")
 
-    from langchain_core.language_models.chat_models import (  # pylint: disable=import-error
-        BaseChatModel,
-    )
     from langchain_core.messages import (  # pylint: disable=import-error
         AIMessage,
         HumanMessage,
         ToolMessage,
-    )
-    from langchain_core.outputs import (  # pylint: disable=import-error
-        ChatGeneration,
-        ChatResult,
     )
     from langchain_mcp_adapters.tools import (  # pylint: disable=import-error
         convert_mcp_tool_to_langchain_tool,
@@ -630,38 +624,13 @@ async def test_denied_call_keeps_history_paired_and_agent_continues() -> None:
         LangchainEnforcementGateway,
     )
 
-    class _ScriptedModel(BaseChatModel):  # type: ignore[misc]
-        """Deterministic 2-step model: tool_call first, then plain text.
-
-        ``bind_tools`` must be overridden (``BaseChatModel.bind_tools`` raises
-        and ``create_react_agent`` calls it). Only the ASYNC ``_agenerate`` is
-        implemented: the agent path is async and the default ``_agenerate``
-        would hand ``_generate`` to a thread pool. ``invoke_count`` doubles as
-        the script index.
-        """
-
-        invoke_count: int = 0
-
-        def bind_tools(self, tools: Any, **kw: Any) -> "_ScriptedModel":
-            return self
-
-        def _generate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
-            raise NotImplementedError("scripted model implements _agenerate")
-
-        async def _agenerate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
-            self.invoke_count += 1
-            if self.invoke_count == 1:
-                message = AIMessage(
-                    content="",
-                    tool_calls=[{"name": "do_it", "args": {}, "id": "call_1"}],
-                )
-            else:
-                message = AIMessage(content="done")
-            return ChatResult(generations=[ChatGeneration(message=message)])
-
-        @property
-        def _llm_type(self) -> str:
-            return "scripted"
+    def _next(n: int) -> AIMessage:
+        if n == 1:
+            return AIMessage(
+                content="",
+                tool_calls=[{"name": "do_it", "args": {}, "id": "call_1"}],
+            )
+        return AIMessage(content="done")
 
     # Empty-object schema so ``args={}`` passes ToolNode's schema validation,
     # which runs BEFORE the tool coroutine and therefore before the interceptor.
@@ -697,7 +666,7 @@ async def test_denied_call_keeps_history_paired_and_agent_continues() -> None:
         tool_interceptors=[_capturing_interceptor],
     )
 
-    model = _ScriptedModel()
+    model = make_scripted_chat_model(_next, llm_type="scripted")
     agent = create_react_agent(model, [tool])
 
     result = await agent.ainvoke({"messages": [HumanMessage("go")]})
