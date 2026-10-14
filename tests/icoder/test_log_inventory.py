@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -182,7 +183,7 @@ def test_logsummary_is_frozen_and_hashable() -> None:
         first_prompt="hello",
     )
     # Frozen: cannot be mutated.
-    with pytest.raises(Exception):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         summary.n_turns = 4  # type: ignore[misc]
     # Hashable: can be put in a set.
     assert {summary} == {summary}
