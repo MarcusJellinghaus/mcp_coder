@@ -304,6 +304,31 @@ def add_fix_conflict_parser(subparsers: Any) -> None:
     add_project_dir_arg(fix_conflict_parser)
 
 
+def add_fix_ci_parser(subparsers: Any) -> None:
+    """Add the fix-ci command parser."""
+    fix_ci_parser = subparsers.add_parser(
+        "fix-ci",
+        help=COMMAND_DESCRIPTIONS["fix-ci"],
+        formatter_class=WideHelpFormatter,
+    )
+    add_project_dir_arg(fix_ci_parser)
+    add_llm_method_arg(fix_ci_parser)
+    add_mcp_config_arg(fix_ci_parser)
+    add_settings_arg(fix_ci_parser)
+    fix_ci_parser.add_argument(
+        "--update-issue-labels",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Update GitHub issue labels on success/failure (default: from config)",
+    )
+    fix_ci_parser.add_argument(
+        "--post-issue-comments",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Post GitHub comments on workflow failure (default: from config)",
+    )
+
+
 def add_coordinator_parsers(subparsers: Any) -> None:
     """Add coordinator command parser (direct command, no subcommands)."""
     coordinator_parser = subparsers.add_parser(

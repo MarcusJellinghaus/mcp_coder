@@ -49,6 +49,7 @@ def test_command_categories_contains_all_commands() -> None:
         "review-implementation",
         "create-pr",
         "fix-conflict",
+        "fix-ci",
         "coordinator",
         "icoder",
         "vscodeclaude launch",
@@ -64,7 +65,7 @@ def test_command_categories_contains_all_commands() -> None:
         "gh-tool issue-stats",
         "git-tool compact-diff",
     ]
-    assert len(all_command_names) == 24
+    assert len(all_command_names) == 25
     for cmd in expected_commands:
         assert cmd in all_command_names, f"Missing command: {cmd}"
 
