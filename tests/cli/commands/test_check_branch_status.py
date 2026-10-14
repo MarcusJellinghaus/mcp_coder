@@ -20,6 +20,7 @@ from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
 from mcp_coder.utils.log_utils import OUTPUT
+from tests.cli.commands.conftest import unavailable_command_stub
 
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
@@ -29,9 +30,7 @@ try:
 except ImportError:
     CHECK_BRANCH_STATUS_MODULE_AVAILABLE = False
 
-    # Create a mock for type checking in tests
-    def execute_check_branch_status(*args, **kwargs):  # type: ignore
-        """Stub for when check_branch_status module is unavailable."""
+    execute_check_branch_status = unavailable_command_stub
 
 
 @pytest.fixture

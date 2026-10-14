@@ -14,6 +14,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from tests.cli.commands.conftest import unavailable_command_stub
+
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
     from mcp_coder.cli.commands.implement import execute_implement
@@ -22,9 +24,7 @@ try:
 except ImportError:
     IMPLEMENT_MODULE_AVAILABLE = False
 
-    # Create a mock for type checking in tests
-    def execute_implement(*args, **kwargs):  # type: ignore
-        """Stub for when implement module is unavailable."""
+    execute_implement = unavailable_command_stub
 
 
 @pytest.mark.skipif(

@@ -13,6 +13,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from tests.cli.commands.conftest import unavailable_command_stub
+
 # Test-first approach: Try to import the module, skip dependent tests if not available
 try:
     from mcp_coder.cli.commands.create_pr import execute_create_pr
@@ -26,9 +28,7 @@ except Exception as e:  # pylint: disable=broad-exception-caught
     print("\n\n")
     CREATE_PR_MODULE_AVAILABLE = False
 
-    # Create a mock for type checking in tests
-    def execute_create_pr(*args, **kwargs):  # type: ignore
-        """Stub for when create_pr module is unavailable."""
+    execute_create_pr = unavailable_command_stub
 
 
 @pytest.mark.skipif(
