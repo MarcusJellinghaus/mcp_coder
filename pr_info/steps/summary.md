@@ -19,7 +19,11 @@ This is a lint-policy change, not a runtime architecture change:
 
 - `pyproject.toml`: add `"SIM"` to `[tool.ruff.lint] select`; extend the
   existing `"tests/**/*.py"` per-file-ignore (currently `["D", "DOC"]`) to
-  also ignore `SIM117`.
+  also ignore `SIM117`. `SIM905` is a preview rule (per #1164); with
+  `explicit-preview-rules = true` a bare `"SIM"` prefix would silently
+  exclude it, so `"SIM905"` is also added as an exact code — the same
+  pattern #1164 used for `DOC` — rather than leaving it as an
+  undocumented enforcement gap.
 - No new modules, abstractions, or behavior. All code changes are local,
   behavior-preserving rewrites of existing control flow at ~31 call sites:
   nested-`if` merges (`SIM102`), `try/except/pass` → `contextlib.suppress`

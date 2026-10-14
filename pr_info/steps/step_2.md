@@ -22,7 +22,11 @@ line to `pr_info/.blocked.txt` describing what's left and stop.**
 
 No functions. Two config edits:
 
-1. Add `"SIM"` to the `select` list.
+1. Add `"SIM"` to the `select` list, **plus the exact code `"SIM905"` alongside
+   it**. `SIM905` is a preview rule (per #1164); with
+   `explicit-preview-rules = true`, a bare `"SIM"` prefix silently excludes
+   preview rules within it, the same trap #1164 closed for `DOC`. Listing
+   `"SIM905"` explicitly keeps it enforced going forward.
 2. Add `"SIM117"` to the existing `"tests/**/*.py"` per-file-ignore entry.
 
 ## HOW
@@ -45,7 +49,7 @@ Target state:
 select = [
     "D",
     "DOC201", "DOC202", "DOC402", "DOC403", "DOC501", "DOC502",
-    "SIM",
+    "SIM", "SIM905",
 ]
 ...
 [tool.ruff.lint.per-file-ignores]
@@ -57,10 +61,11 @@ Use `mcp__mcp-workspace__edit_file` for both edits.
 ## ALGORITHM
 
 ```
-edit select list: append "SIM"
+edit select list: append "SIM", "SIM905"
 edit tests/**/*.py per-file-ignore: append "SIM117"
 run ruff check (full project default select) -> expect 0 findings
 run ruff check --select SIM117 on src/ only -> expect 0 (acceptance criterion: SIM117 in src/ stays 0)
+run ruff check --select SIM905 on src/ + tests/ -> expect 0 (confirms the exact code is live, not silently excluded)
 ```
 
 ## DATA
@@ -74,6 +79,9 @@ not selected" to "0 findings, rule enabled."
   clean.
 - `mcp__mcp-tools-py__run_ruff_check(select=["SIM117"], target_directories=["src"])`
   — must report 0.
+- `mcp__mcp-tools-py__run_ruff_check(select=["SIM905"], target_directories=["src","tests"])`
+  — must report 0, confirming the exact code is enforced and not silently
+  dropped by the bare `"SIM"` prefix (preview-rule trap, see WHAT).
 - `mcp__mcp-tools-py__run_pytest_check(...)` (same filter as Step 1),
   `run_pylint_check`, `run_mypy_check` — must pass (config-only change, no
   behavior impact expected).
