@@ -6,6 +6,16 @@ Enable the `C4` (flake8-comprehensions) and `B` (flake8-bugbear) ruff rule
 groups in `pyproject.toml`, and fix all 22 current findings with real code
 changes — no blanket suppression.
 
+**Known deviation, requires sign-off before merge:** 3 of the 22 findings
+(`B009` ×2 in step 5, `B010` ×1 in step 6) are resolved via a scoped
+`# noqa`, not a real code fix — a rewrite would trip mypy's
+`no-implicit-reexport` check or the `subprocess_isolation` import-linter
+contract. This conflicts with issue #1165's acceptance criterion "All 22
+findings fixed, not suppressed." Flagged here rather than suppressed
+silently — confirm with the issue owner before landing steps 5 and 6, or
+find an alternative fix that satisfies both the lint rule and the existing
+mypy/import-linter contracts.
+
 ## Architectural / design changes
 
 **None.** This is a lint-hygiene change: every fix is a local, behavior-preserving
@@ -95,6 +105,9 @@ mcp__mcp-tools-py__run_pytest_check  (extra_args=["-n","auto", unit-test marker 
 mcp__mcp-tools-py__run_mypy_check
 ```
 
-Out of scope here (tracked separately, per the issue): propagating `C4`/`B`
-to the `mcp-tools-py` and `mcp-workspace` repos, and enabling `I` (isort) —
-that is issue #1174.
+Out of scope here. Enabling `I` (isort) is tracked separately as issue
+#1174. Propagating `C4`/`B` to the `mcp-tools-py` and `mcp-workspace` repos
+is a *different* out-of-scope item — #1174 does not cover it. Per epic
+#1163, that propagation is handled by the epic's separate Chore Propagation
+process, not by a specific issue number; flagging it here so the work isn't
+dropped for lack of an owner.

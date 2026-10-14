@@ -1,7 +1,15 @@
 # Step 5 — `B009`: `getattr` with a constant attribute
 
-Context: see `pr_info/steps/summary.md`. Fixes all 4 `B009` findings — 2 by
-rewriting to dot-access, 2 by a scoped, documented `noqa`.
+Context: see `pr_info/steps/summary.md`. Fixes 2 of 4 `B009` findings by
+rewriting to dot-access. The other 2 get a scoped, documented `noqa`
+instead of a real fix.
+
+**Deviation, requires sign-off:** issue #1165's acceptance criterion is
+"All 22 findings fixed, not suppressed." Sites 3 and 4 below do not meet
+that bar — they suppress rather than fix. Confirm with the issue owner
+before committing this step, unless a rewrite is found that satisfies
+`B009` without tripping mypy's `no-implicit-reexport` or the
+`subprocess_isolation` import-linter contract.
 
 ## WHERE and WHAT
 

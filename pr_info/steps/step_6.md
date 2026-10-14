@@ -1,6 +1,13 @@
 # Step 6 — `B010`: `setattr` with a constant attribute (reposition existing `noqa`)
 
-Context: see `pr_info/steps/summary.md`. Fixes the 1 `B010` finding.
+Context: see `pr_info/steps/summary.md`. Resolves the 1 `B010` finding by
+repositioning an existing `noqa` — not a real code fix.
+
+**Deviation, requires sign-off:** issue #1165's acceptance criterion is
+"All 22 findings fixed, not suppressed." This site suppresses rather than
+fixes. Confirm with the issue owner before committing this step, unless a
+rewrite is found that satisfies `B010` without losing the Windows-only
+`winerror` attribute's cross-platform mypy bypass.
 
 ## WHERE
 
