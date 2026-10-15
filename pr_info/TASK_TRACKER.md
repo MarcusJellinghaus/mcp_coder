@@ -85,5 +85,5 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Pull Request
 
-- [ ] PR review (self-review diff, confirm sign-off on B009/B010 noqa deviations)
+- [x] PR review (self-review diff, confirm sign-off on B009/B010 noqa deviations) — both resolved as real fixes (no noqa remains), no sign-off needed; see implementation_review_log_2.md
 - [ ] PR summary written
