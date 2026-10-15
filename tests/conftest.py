@@ -1,5 +1,6 @@
 """Global test configuration and shared fixtures for all tests."""
 
+import contextlib
 import logging
 import os
 import shutil
@@ -138,13 +139,14 @@ def cleanup_test_artifacts() -> Generator[None, None, None]:
 
     # Clean up any directories that might have been created during tests
     for item in test_dir.iterdir():
-        if item.is_dir() and item.name not in preserve_dirs:
+        if (
+            item.is_dir()
+            and item.name not in preserve_dirs
+            and any(marker in item.name.lower() for marker in ["temp", "tmp", "test_"])
+        ):
             # Check if it looks like a test artifact directory
-            if any(marker in item.name.lower() for marker in ["temp", "tmp", "test_"]):
-                try:
-                    shutil.rmtree(item, ignore_errors=True)
-                except (OSError, PermissionError):
-                    pass
+            with contextlib.suppress(OSError, PermissionError):
+                shutil.rmtree(item, ignore_errors=True)
 
 
 @pytest.fixture
@@ -308,7 +310,7 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
             repo.git.checkout("main")
         except Exception:  # pylint: disable=broad-exception-caught  # test helper
             # Try master if main doesn't exist
-            try:
+            try:  # noqa: SIM105 -- pass holds the "Use current branch" comment; suppress() has nowhere to put it
                 repo.git.checkout("master")
             except Exception:  # pylint: disable=broad-exception-caught  # test helper
                 pass  # Use current branch

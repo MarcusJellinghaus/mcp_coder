@@ -13,6 +13,7 @@ progress display.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import shutil
 import stat
@@ -227,10 +228,8 @@ def ensure_system_uv() -> str:
 
 def _rmtree_onexc(func: Callable[[str], Any], path: str, _exc: BaseException) -> None:
     """Rmtree error handler: clear the read-only bit and retry."""
-    try:
+    with contextlib.suppress(OSError):
         os.chmod(path, stat.S_IWRITE)
-    except OSError:
-        pass
     func(path)
 
 

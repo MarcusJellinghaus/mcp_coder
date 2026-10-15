@@ -312,10 +312,7 @@ def safe_delete_folder(
 
     # Resolve staging_dir
     resolved_staging: Path | None
-    if staging_dir is not None:
-        resolved_staging = Path(staging_dir)
-    else:
-        resolved_staging = None  # Will use default in helper functions
+    resolved_staging = Path(staging_dir) if staging_dir is not None else None
 
     for attempt in range(MAX_RETRIES):
         # Check if folder is already gone (e.g., moved in previous iteration)

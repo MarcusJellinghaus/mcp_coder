@@ -456,9 +456,8 @@ def get_session_for_issue(
         if (
             session["repo"] == repo_full_name
             and session["issue_number"] == issue_number
-        ):
-            if Path(session["folder"]).name not in to_be_deleted:
-                matches.append(session)
+        ) and Path(session["folder"]).name not in to_be_deleted:
+            matches.append(session)
 
     if len(matches) > 1:
         logger.error("Multiple active folders for %s #%d", repo_full_name, issue_number)
@@ -499,9 +498,13 @@ def warn_orphan_folders(
         return
 
     for entry in workspace_path.iterdir():
-        if entry.is_dir() and pattern.match(entry.name):
-            if entry.name not in to_be_deleted and entry.name not in session_folders:
-                logger.warning("Orphan folder detected: %s", entry.name)
+        if (
+            entry.is_dir()
+            and pattern.match(entry.name)
+            and entry.name not in to_be_deleted
+            and entry.name not in session_folders
+        ):
+            logger.warning("Orphan folder detected: %s", entry.name)
 
 
 def add_session(session: VSCodeClaudeSession) -> None:

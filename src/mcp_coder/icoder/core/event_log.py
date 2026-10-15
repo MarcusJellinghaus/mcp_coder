@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -161,10 +162,8 @@ class EventLog:
             logger.warning(
                 "iCoder chat mirror write failed (%s): %s", self._chat_path, exc
             )
-            try:
+            with contextlib.suppress(OSError):
                 self._chat_file.close()
-            except OSError:
-                pass
             self._chat_file = None
 
     def rotate(self) -> Path:

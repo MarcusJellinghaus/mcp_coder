@@ -147,9 +147,7 @@ def convert_settings_to_copilot_tools(
         elif entry.startswith("Bash("):
             converted = "shell(" + entry[5:]
             allow_tools.append(converted)
-        elif entry.startswith("Skill("):
-            logger.warning("Skipping unmappable permission entry: %s", entry)
-        elif entry.startswith("WebFetch("):
+        elif entry.startswith("Skill(") or entry.startswith("WebFetch("):
             logger.warning("Skipping unmappable permission entry: %s", entry)
         else:
             logger.warning("Skipping unknown permission format: %s", entry)
@@ -233,10 +231,7 @@ def _read_settings_allow(cwd: str | None) -> list[str] | None:
     Returns:
         List of allow entries, or None if file not found.
     """
-    if cwd:
-        base_dir = Path(cwd)
-    else:
-        base_dir = Path.cwd()
+    base_dir = Path(cwd) if cwd else Path.cwd()
 
     settings_path = base_dir / ".claude" / "settings.local.json"
     if not settings_path.exists():

@@ -134,10 +134,11 @@ def check_file_sizes(
         if entry not in file_paths_set:
             # File doesn't exist
             stale_entries.append(entry)
-        elif entry in metrics_by_path:
+        elif (
+            entry in metrics_by_path and metrics_by_path[entry].line_count <= max_lines
+        ):
             # File exists but is under the limit
-            if metrics_by_path[entry].line_count <= max_lines:
-                stale_entries.append(entry)
+            stale_entries.append(entry)
 
     # Sort violations by line_count descending
     violations.sort(key=lambda m: m.line_count, reverse=True)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import queue
@@ -2282,10 +2283,10 @@ class _ApprovalPendingLLMService:
             # so it catches at the thread top instead. Same observable result,
             # which is what the pilot tests below assert: a silent thread exit
             # and no stray traceback over a live Textual screen.
-            try:
+            with contextlib.suppress(
+                BaseException
+            ):  # pylint: disable=broad-exception-caught
                 asyncio.run(_ask())
-            except BaseException:  # pylint: disable=broad-exception-caught
-                pass
 
         self._engine.attach(q.put)
         thread = threading.Thread(target=_agent_main, daemon=True)

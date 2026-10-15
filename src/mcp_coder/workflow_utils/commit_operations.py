@@ -279,12 +279,9 @@ def parse_llm_commit_response(response: Optional[str]) -> Tuple[str, Optional[st
                 has_more_content = any(
                     lines[j].strip() for j in range(i + 1, len(lines))
                 )
-                if has_more_content:
+                if has_more_content and (not body_lines or body_lines[-1] != ""):
                     # Only add one empty line, even if there are multiple consecutive empty lines
-                    if not body_lines or body_lines[-1] != "":
-                        body_lines.append(
-                            ""
-                        )  # Preserve single empty line between content
+                    body_lines.append("")  # Preserve single empty line between content
 
     # Create body string if we have content
     body = "\n".join(body_lines) if body_lines else None
