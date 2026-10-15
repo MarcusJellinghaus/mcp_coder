@@ -106,7 +106,7 @@ def _assert_strictly_sequential(intervals: list[_CallInterval]) -> None:
     start time, every interval must end at-or-before the next one starts.
     """
     ordered = sorted(intervals, key=lambda c: c.start)
-    for prev, curr in zip(ordered, ordered[1:]):
+    for prev, curr in zip(ordered, ordered[1:], strict=False):
         assert prev.end <= curr.start, (
             f"calls ran concurrently: {prev.label} ended at {prev.end:.6f} but "
             f"{curr.label} started at {curr.start:.6f} (intervals must not overlap)"

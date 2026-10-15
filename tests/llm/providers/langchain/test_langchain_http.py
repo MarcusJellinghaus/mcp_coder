@@ -114,7 +114,7 @@ class TestCreateHttpClient:
     def test_logs_proxy_configured_true(self, caplog: pytest.LogCaptureFixture) -> None:
         """Logs proxy_configured=True when HTTPS_PROXY is set."""
         mock_httpx_mod = MagicMock()
-        env = {v: "" for v in _PROXY_VARS}
+        env = dict.fromkeys(_PROXY_VARS, "")
         env["HTTPS_PROXY"] = "http://proxy:8080"
 
         with (
@@ -140,7 +140,7 @@ class TestCreateHttpClient:
         """Logs proxy_configured=True when https_proxy (lowercase) is set."""
         mock_httpx_mod = MagicMock()
 
-        clean_env = {v: "" for v in _PROXY_VARS}
+        clean_env = dict.fromkeys(_PROXY_VARS, "")
         with (
             patch(
                 "mcp_coder.llm.providers.langchain._http.create_ssl_context",

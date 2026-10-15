@@ -697,7 +697,7 @@ class TestAskClaudeCodeCliStream:
             raw_lines = [e for e in events if e["type"] == "raw_line"]
 
             assert len(raw_lines) == 3
-            for raw_event, original_line in zip(raw_lines, lines):
+            for raw_event, original_line in zip(raw_lines, lines, strict=True):
                 assert raw_event["line"] == original_line
 
     @patch(

@@ -1031,7 +1031,7 @@ class TestPromptLlmLangchainRouting:
         assert call_kwargs is not None
         args, kwargs = call_kwargs
         all_args = {
-            **dict(zip(["question", "session_id", "timeout"], args)),
+            **dict(zip(["question", "session_id", "timeout"], args, strict=False)),
             **kwargs,
         }
         assert all_args.get("session_id") == "my-sid"

@@ -115,7 +115,7 @@ class TestSessionResolution:
 
         try:
             json.loads(invalid_json)
-            assert False, "Should have raised JSONDecodeError"
+            raise AssertionError("Should have raised JSONDecodeError")
         except json.JSONDecodeError:
             # Expected behavior - session resolution should handle this
             pass

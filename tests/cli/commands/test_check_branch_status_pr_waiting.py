@@ -25,37 +25,37 @@ except ImportError:
 
 def _make_base_args(**overrides: object) -> argparse.Namespace:
     """Create a Namespace with sensible defaults for execute_check_branch_status."""
-    defaults: dict[str, object] = dict(
-        project_dir="/test/project",
-        ci_timeout=0,
-        fix=0,
-        llm_truncate=False,
-        llm_method="claude",
-        mcp_config=None,
-        settings=None,
-        wait_for_pr=False,
-        pr_timeout=600,
-        fail_on_reviews=False,
-    )
+    defaults: dict[str, object] = {
+        "project_dir": "/test/project",
+        "ci_timeout": 0,
+        "fix": 0,
+        "llm_truncate": False,
+        "llm_method": "claude",
+        "mcp_config": None,
+        "settings": None,
+        "wait_for_pr": False,
+        "pr_timeout": 600,
+        "fail_on_reviews": False,
+    }
     defaults.update(overrides)
     return argparse.Namespace(**defaults)
 
 
 def _make_report(**overrides: object) -> BranchStatusReport:
     """Create a sample BranchStatusReport with optional overrides."""
-    kwargs: dict[str, object] = dict(
-        branch_name="feature/test-branch",
-        base_branch="main",
-        ci_status=CIStatus.PASSED,
-        ci_details=None,
-        rebase_needed=False,
-        rebase_reason="Branch is up to date with main",
-        tasks_status=TaskTrackerStatus.COMPLETE,
-        tasks_reason="All tasks complete",
-        tasks_is_blocking=False,
-        current_github_label="status-implementation",
-        recommendations=["Ready to merge"],
-    )
+    kwargs: dict[str, object] = {
+        "branch_name": "feature/test-branch",
+        "base_branch": "main",
+        "ci_status": CIStatus.PASSED,
+        "ci_details": None,
+        "rebase_needed": False,
+        "rebase_reason": "Branch is up to date with main",
+        "tasks_status": TaskTrackerStatus.COMPLETE,
+        "tasks_reason": "All tasks complete",
+        "tasks_is_blocking": False,
+        "current_github_label": "status-implementation",
+        "recommendations": ["Ready to merge"],
+    }
     kwargs.update(overrides)
     return BranchStatusReport(**kwargs)  # type: ignore[arg-type]
 

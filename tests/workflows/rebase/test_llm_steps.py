@@ -225,9 +225,8 @@ class TestFormatFailureKeys:
             ("mypy", "src/mod.py", "arg-type", "Bad argument"),
             ("pytest", "tests/test_a.py::test_one"),
         ]
-        assert _format_failure_keys(set(items)) == _format_failure_keys(
-            set(reversed(items))
-        )
+        reordered = [items[2], items[0], items[1]]
+        assert _format_failure_keys(set(items)) == _format_failure_keys(set(reordered))
 
     def test_empty_set_returns_empty_string(self) -> None:
         """An empty key set renders as ""."""

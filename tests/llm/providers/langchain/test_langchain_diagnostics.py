@@ -6,6 +6,7 @@ proxy / SSL troubleshooting.
 """
 
 import ssl
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -43,9 +44,7 @@ class TestIsConnectionReset:
     def test_oserror_winerror_10054(self) -> None:
         """WinError 10054 detected via winerror attribute."""
         exc = OSError()
-        setattr(
-            exc, "winerror", 10054
-        )  # noqa: B010  # Windows-only attr; bypass type checker for cross-platform CI
+        cast(Any, exc).winerror = 10054
         assert _is_connection_reset(exc) is True
 
     def test_string_connection_reset(self) -> None:
@@ -197,7 +196,7 @@ class TestFormatDiagnostics:
     def test_proxy_detected_all_variants(self, var: str) -> None:
         """Each proxy env var variant is detected."""
         exc = OSError("fail")
-        env = {v: "" for v in _PROXY_VARS}
+        env = dict.fromkeys(_PROXY_VARS, "")
         env[var] = "http://proxy:8080"
         with patch.dict("os.environ", env, clear=False):
             # Clear all then set only our target

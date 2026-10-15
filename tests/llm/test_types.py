@@ -524,7 +524,7 @@ def test_usage_info_total_false() -> None:
     usage: UsageInfo = {"input_tokens": 100}
     assert usage["input_tokens"] == 100
     # Verify TypedDict has total=False
-    assert getattr(UsageInfo, "__total__") is False
+    assert UsageInfo.__total__ is False  # pylint: disable=no-member
 
 
 def test_usage_info_importable_from_llm_package() -> None:

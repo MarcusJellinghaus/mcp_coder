@@ -109,7 +109,7 @@ def test_group_and_suppressed_not_listed() -> None:
 
 def test_every_description_categorized() -> None:
     """Every description key appears in exactly one category; layout matches."""
-    counts: dict[str, int] = {name: 0 for name in COMMAND_DESCRIPTIONS}
+    counts: dict[str, int] = dict.fromkeys(COMMAND_DESCRIPTIONS, 0)
     for _title, names in COMMAND_CATEGORIES:
         for name in names:
             assert name in counts, f"Category lists unknown command: {name}"

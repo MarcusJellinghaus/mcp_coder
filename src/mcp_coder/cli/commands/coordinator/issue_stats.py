@@ -263,7 +263,7 @@ def display_statistics(
     error_issues = no_status_count + multiple_status_count
 
     for category_key, _ in categories_to_display:
-        for label_name, issues_list in grouped_issues[category_key].items():
+        for _, issues_list in grouped_issues[category_key].items():
             count = len(issues_list)
             total_issues += count
             valid_issues += count
