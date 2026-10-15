@@ -6,6 +6,7 @@ proxy / SSL troubleshooting.
 """
 
 import ssl
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -43,7 +44,7 @@ class TestIsConnectionReset:
     def test_oserror_winerror_10054(self) -> None:
         """WinError 10054 detected via winerror attribute."""
         exc = OSError()
-        setattr(exc, "winerror", 10054)  # noqa: B010 (Windows-only OSError attribute)
+        cast(Any, exc).winerror = 10054
         assert _is_connection_reset(exc) is True
 
     def test_string_connection_reset(self) -> None:
