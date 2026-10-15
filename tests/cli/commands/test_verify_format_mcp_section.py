@@ -54,7 +54,9 @@ class TestFormatMcpSection:
         output_lines = output.split("\n")
         # Should have more than just header + 1 line (wrapping occurred)
         content_lines = [
-            l for l in output_lines if "tools:" in l or l.startswith("  " + " " * 20)
+            line
+            for line in output_lines
+            if "tools:" in line or line.startswith("  " + " " * 20)
         ]
         assert len(content_lines) >= 2, f"Expected wrapping, got: {output}"
         # All content lines should be <= 80 chars
@@ -129,7 +131,7 @@ class TestFormatMcpSection:
         assert "Beta tool" in output
         # Each tool should be on its own indented line
         lines = output.split("\n")
-        tool_lines = [l for l in lines if "alpha" in l or "beta" in l]
+        tool_lines = [line for line in lines if "alpha" in line or "beta" in line]
         assert len(tool_lines) == 2
         for line in tool_lines:
             assert line.startswith("    ")
@@ -183,7 +185,7 @@ class TestFormatMcpSection:
         }
         output = _format_mcp_section(mcp_results, self._symbols(), list_mcp_tools=True)
         lines = output.split("\n")
-        no_desc_line = [l for l in lines if "tool_no_desc" in l][0]
+        no_desc_line = [line for line in lines if "tool_no_desc" in line][0]
         # Should end with the tool name (stripped), no trailing spaces or placeholder
         assert no_desc_line == no_desc_line.rstrip()
         assert "Has description" not in no_desc_line
@@ -251,7 +253,9 @@ class TestFormatMcpSection:
         # No tool detail lines (lines starting with 4 spaces of indentation for tools)
         lines = output.split("\n")
         tool_detail_lines = [
-            l for l in lines if l.startswith("    ") and not l.strip().startswith("[")
+            line
+            for line in lines
+            if line.startswith("    ") and not line.strip().startswith("[")
         ]
         assert len(tool_detail_lines) == 0
 
@@ -313,7 +317,7 @@ class TestFormatClaudeMcpSection:
         output = _format_claude_mcp_section(statuses, self._symbols())
         # Name should be padded to 22 chars
         lines = output.split("\n")
-        server_line = [l for l in lines if "mcp-tools-py" in l][0]
+        server_line = [line for line in lines if "mcp-tools-py" in line][0]
         # "  mcp-tools-py" + padding (10 spaces) + " [OK] Connected"
         assert "mcp-tools-py          " in server_line
 

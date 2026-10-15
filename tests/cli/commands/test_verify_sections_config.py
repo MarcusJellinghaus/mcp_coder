@@ -119,8 +119,12 @@ class TestEffectiveConfigSection:
         result, output = self._run(lc_result, capsys)
         details = output[output.index("=== LLM PROVIDER DETAILS") :]
 
-        redirect_row = next(l for l in details.splitlines() if "Base URL redirect" in l)
-        override_row = next(l for l in details.splitlines() if "API key override" in l)
+        redirect_row = next(
+            line for line in details.splitlines() if "Base URL redirect" in line
+        )
+        override_row = next(
+            line for line in details.splitlines() if "API key override" in line
+        )
         assert "[WARN]" in redirect_row
         assert "[WARN]" in override_row
         assert result == 0

@@ -64,15 +64,15 @@ def test_llm_response_dict_field_types() -> None:
 
     hints = get_type_hints(LLMResponseDict)
 
-    assert hints["version"] == str
-    assert hints["timestamp"] == str
-    assert hints["text"] == str
+    assert hints["version"] is str
+    assert hints["timestamp"] is str
+    assert hints["text"] is str
     # session_id is str | None (Optional[str])
     assert (
         hints["session_id"] == str | None
         or hints["session_id"] == typing.Union[str, None]
     )
-    assert hints["provider"] == str
+    assert hints["provider"] is str
     assert hints["raw_response"] == dict[str, object]
 
 

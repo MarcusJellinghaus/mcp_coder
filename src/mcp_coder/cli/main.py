@@ -3,6 +3,9 @@
 isort:skip_file
 """
 
+# ruff: noqa: E402 — faulthandler.enable() must run before the heavy
+# imports below it; see the comment at its call site.
+
 import argparse
 import faulthandler
 import logging

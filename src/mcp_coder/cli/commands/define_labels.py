@@ -580,7 +580,11 @@ def execute_define_labels(args: argparse.Namespace) -> int:
 
         # Find default label from config
         default_label = next(
-            (l for l in labels_config["workflow_labels"] if l.get("default")),
+            (
+                label
+                for label in labels_config["workflow_labels"]
+                if label.get("default")
+            ),
             None,
         )
         if default_label is None:

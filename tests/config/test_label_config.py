@@ -179,7 +179,9 @@ def test_error_statuses_have_vscodeclaude_commands(internal_id: str) -> None:
     """Error statuses must have commands so a Claude session launches."""
     config = load_labels_config(get_labels_config_path(None))
     label = next(
-        l for l in config["workflow_labels"] if l["internal_id"] == internal_id
+        entry
+        for entry in config["workflow_labels"]
+        if entry["internal_id"] == internal_id
     )
     assert "vscodeclaude" in label, f"{internal_id}: missing vscodeclaude block"
     assert label["vscodeclaude"].get("commands") == ["/check_branch_status"], (
@@ -192,7 +194,9 @@ def test_pr_created_has_no_commands() -> None:
     """status-10:pr-created intentionally has no commands."""
     config = load_labels_config(get_labels_config_path(None))
     label = next(
-        l for l in config["workflow_labels"] if l["internal_id"] == "pr_created"
+        entry
+        for entry in config["workflow_labels"]
+        if entry["internal_id"] == "pr_created"
     )
     assert "vscodeclaude" in label
     assert "commands" not in label["vscodeclaude"]
@@ -247,7 +251,11 @@ def test_review_labels_present(internal_id: str, name: str, category: str) -> No
     """Each of the 15 review labels exists with the expected name and category."""
     config = load_labels_config(get_labels_config_path(None))
     label = next(
-        (l for l in config["workflow_labels"] if l["internal_id"] == internal_id),
+        (
+            entry
+            for entry in config["workflow_labels"]
+            if entry["internal_id"] == internal_id
+        ),
         None,
     )
     assert label is not None, f"Missing review label: {internal_id}"
@@ -270,7 +278,9 @@ def test_review_bot_busy_labels_have_stale_timeout() -> None:
     config = load_labels_config(get_labels_config_path(None))
     for internal_id in ("plan_reviewing", "code_reviewing"):
         label = next(
-            l for l in config["workflow_labels"] if l["internal_id"] == internal_id
+            entry
+            for entry in config["workflow_labels"]
+            if entry["internal_id"] == internal_id
         )
         assert isinstance(label.get("stale_timeout_minutes"), int)
         assert label["stale_timeout_minutes"] > 0
@@ -281,7 +291,9 @@ def test_review_failure_labels_shape(internal_id: str) -> None:
     """Review failure labels are failure:true and launch /check_branch_status."""
     config = load_labels_config(get_labels_config_path(None))
     label = next(
-        l for l in config["workflow_labels"] if l["internal_id"] == internal_id
+        entry
+        for entry in config["workflow_labels"]
+        if entry["internal_id"] == internal_id
     )
     assert label.get("failure") is True
     assert "vscodeclaude" in label
@@ -292,9 +304,9 @@ def test_open_tasks_label_recovery_command() -> None:
     """code_review_open_tasks is a failure label recovered via /implementation_finalise."""
     config = load_labels_config(get_labels_config_path(None))
     label = next(
-        l
-        for l in config["workflow_labels"]
-        if l["internal_id"] == "code_review_open_tasks"
+        entry
+        for entry in config["workflow_labels"]
+        if entry["internal_id"] == "code_review_open_tasks"
     )
     assert label["failure"] is True
     assert label["vscodeclaude"]["commands"] == ["/implementation_finalise"]

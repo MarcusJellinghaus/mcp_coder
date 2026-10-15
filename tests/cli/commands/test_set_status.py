@@ -149,15 +149,15 @@ class TestSetStatusHelpers:
         # "bb" line should have the name padded to width 4
         short_lines = short_result.split("\n")
         # Find line with "a" - it should be padded to same width as "bb"
-        a_line = [l for l in short_lines if "short" in l][0]
-        bb_line = [l for l in short_lines if "medium" in l][0]
+        a_line = [line for line in short_lines if "short" in line][0]
+        bb_line = [line for line in short_lines if "medium" in line][0]
         # Both descriptions should start at the same column
         assert a_line.index("short") == bb_line.index("medium")
 
         # In long_config, max name length is 20, so width = 22
         long_lines = long_result.split("\n")
-        desc1_line = [l for l in long_lines if "desc1" in l][0]
-        desc2_line = [l for l in long_lines if "desc2" in l][0]
+        desc1_line = [line for line in long_lines if "desc1" in line][0]
+        desc2_line = [line for line in long_lines if "desc2" in line][0]
         assert desc1_line.index("desc1") == desc2_line.index("desc2")
 
         # The description column should be further right in long_config

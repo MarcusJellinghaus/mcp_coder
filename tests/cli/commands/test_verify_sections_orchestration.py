@@ -82,7 +82,7 @@ class TestMcpConfigValidityRow:
         result, output = self._run(tmp_path, content, capsys)
         lines = output.splitlines()
 
-        config_row = next(l for l in lines if ".mcp.json" in l)
+        config_row = next(line for line in lines if ".mcp.json" in line)
         assert "[OK]" in config_row
         assert "well-formed" in config_row
 
@@ -97,7 +97,7 @@ class TestMcpConfigValidityRow:
     ) -> None:
         """A malformed config surfaces a ``[ERR]`` row (not swallowed) and exit 1."""
         result, output = self._run(tmp_path, "{not json", capsys)
-        config_row = next(l for l in output.splitlines() if ".mcp.json" in l)
+        config_row = next(line for line in output.splitlines() if ".mcp.json" in line)
         assert "[ERR]" in config_row
         assert "invalid JSON" in config_row
         assert result == 1
@@ -108,7 +108,7 @@ class TestMcpConfigValidityRow:
         """An empty ``mcpServers`` renders a ``[WARN]`` row and keeps exit 0."""
         content = json.dumps({"mcpServers": {}})
         result, output = self._run(tmp_path, content, capsys)
-        config_row = next(l for l in output.splitlines() if ".mcp.json" in l)
+        config_row = next(line for line in output.splitlines() if ".mcp.json" in line)
         assert "[WARN]" in config_row
         assert result == 0
 
@@ -134,7 +134,7 @@ class TestMcpConfigValidityRow:
         output = capsys.readouterr().out
 
         # The single upstream diagnostic is printed...
-        config_row = next(l for l in output.splitlines() if ".mcp.json" in l)
+        config_row = next(line for line in output.splitlines() if ".mcp.json" in line)
         assert "[ERR]" in config_row
 
         # ...and every downstream MCP check is short-circuited.

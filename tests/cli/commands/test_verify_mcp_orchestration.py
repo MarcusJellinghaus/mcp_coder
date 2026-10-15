@@ -629,8 +629,8 @@ class TestMcpConfigWarningsDynamicWidth:
         lines = output.splitlines()
         long_label = f"{long_server} / PYTHONPATH"
         short_label = f"{short_server} / X"
-        long_line = next(l for l in lines if long_label in l)
-        short_line = next(l for l in lines if short_label in l)
+        long_line = next(line for line in lines if long_label in line)
+        short_line = next(line for line in lines if short_label in line)
 
         # All rows in this section align at the same value column.
         assert long_line.index("${VAR_A}") == short_line.index("${VAR_B}")

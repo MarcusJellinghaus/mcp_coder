@@ -146,7 +146,7 @@ class TestStreamingNdjsonFormat:
 
         assert result == 0
         captured = capsys.readouterr()
-        lines = [l for l in captured.out.strip().split("\n") if l.strip()]
+        lines = [line for line in captured.out.strip().split("\n") if line.strip()]
         assert len(lines) >= 2  # at least text_delta + done/result
         # Each line should be valid JSON
         for line in lines:
@@ -178,7 +178,9 @@ class TestStreamingNdjsonFormat:
         assert result == 0
         captured = capsys.readouterr()
         lines = captured.out.strip().split("\n")
-        result_lines = [json.loads(l) for l in lines if l.strip() and '"result"' in l]
+        result_lines = [
+            json.loads(line) for line in lines if line.strip() and '"result"' in line
+        ]
         assert len(result_lines) == 1
         assert result_lines[0].get("session_id") == "my-session-id"
 
@@ -207,7 +209,7 @@ class TestStreamingNdjsonFormat:
         assert result == 0
         captured = capsys.readouterr()
         lines = captured.out.strip().split("\n")
-        all_parsed = [json.loads(l) for l in lines if l.strip()]
+        all_parsed = [json.loads(line) for line in lines if line.strip()]
         types = [p["type"] for p in all_parsed]
         assert "assistant" in types  # tool_use_start maps to assistant
         assert "user" in types  # tool_result maps to user
@@ -276,7 +278,7 @@ class TestStreamingJsonRawFormat:
 
         assert result == 0
         captured = capsys.readouterr()
-        lines = [l for l in captured.out.strip().split("\n") if l.strip()]
+        lines = [line for line in captured.out.strip().split("\n") if line.strip()]
         assert len(lines) == 2
         assert json.loads(lines[0])["seq"] == 1
         assert json.loads(lines[1])["seq"] == 2
