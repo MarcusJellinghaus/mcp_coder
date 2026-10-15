@@ -46,6 +46,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from tests.langchain_doubles import make_scripted_chat_model
+
 #: The tool name the fake model asks for, and the default blocking-tool name.
 TOOL_NAME = "ping"
 
@@ -93,44 +95,17 @@ def make_fake_chat_model() -> Any:
     """
     require_real_langchain("langchain_core")
 
-    from langchain_core.language_models.chat_models import (  # pylint: disable=import-error
-        BaseChatModel,
-    )
     from langchain_core.messages import AIMessage  # pylint: disable=import-error
-    from langchain_core.outputs import (  # pylint: disable=import-error
-        ChatGeneration,
-        ChatResult,
-    )
 
-    class _FakeChatModel(BaseChatModel):  # type: ignore[misc]
-        """Scripted model: tool call on the first invoke, plain text after."""
-
-        invoke_count: int = 0
-
-        def bind_tools(self, tools: Any, **kw: Any) -> "_FakeChatModel":
-            return self
-
-        def _generate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
-            raise NotImplementedError(
-                "_FakeChatModel implements _agenerate, not _generate"
+    def _next(n: int) -> AIMessage:
+        if n == 1:
+            return AIMessage(
+                content="",
+                tool_calls=[{"name": TOOL_NAME, "args": {}, "id": "call_1"}],
             )
+        return AIMessage(content="done")
 
-        async def _agenerate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
-            self.invoke_count += 1
-            if self.invoke_count == 1:
-                message = AIMessage(
-                    content="",
-                    tool_calls=[{"name": TOOL_NAME, "args": {}, "id": "call_1"}],
-                )
-            else:
-                message = AIMessage(content="done")
-            return ChatResult(generations=[ChatGeneration(message=message)])
-
-        @property
-        def _llm_type(self) -> str:
-            return "fake-approval"
-
-    return _FakeChatModel()
+    return make_scripted_chat_model(_next, llm_type="fake-approval")
 
 
 @dataclass

@@ -65,7 +65,7 @@ class MLflowLogger:
 
     _MAX_SESSION_MAP_SIZE: int = 100
 
-    def __init__(self, config: Optional[MLflowConfig] = None):
+    def __init__(self, config: Optional[MLflowConfig] = None) -> None:
         """Initialize MLflow logger.
 
         Args:

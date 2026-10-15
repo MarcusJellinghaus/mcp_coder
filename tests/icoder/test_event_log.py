@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
+from typing import IO, Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -387,11 +389,11 @@ def test_chat_open_failure_is_best_effort(
     """When the chat file cannot be opened, JSONL still works and write_chat is a no-op."""
     real_open = open
 
-    def fake_open(file, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def fake_open(file: str | os.PathLike[str], *args: Any, **kwargs: Any) -> IO[str]:
         path_str = str(file)
         if path_str.endswith("_chat.txt"):
             raise OSError("simulated open failure")
-        return real_open(file, *args, **kwargs)
+        return cast(IO[str], real_open(file, *args, **kwargs))
 
     monkeypatch.setattr(event_log_module, "open", fake_open, raising=False)
 

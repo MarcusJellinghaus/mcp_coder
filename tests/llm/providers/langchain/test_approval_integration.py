@@ -63,6 +63,7 @@ from mcp_coder.icoder.permissions.model import (
     Rule,
 )
 from mcp_coder.llm.types import StreamEvent
+from tests.langchain_doubles import make_scripted_chat_model
 from tests.llm.providers.langchain.approval_harness import (
     TOOL_NAME,
     make_fake_chat_model,
@@ -253,47 +254,20 @@ def _make_two_call_model() -> Any:
     """
     require_real_langchain("langchain_core")
 
-    from langchain_core.language_models.chat_models import (  # pylint: disable=import-error
-        BaseChatModel,
-    )
     from langchain_core.messages import AIMessage  # pylint: disable=import-error
-    from langchain_core.outputs import (  # pylint: disable=import-error
-        ChatGeneration,
-        ChatResult,
-    )
 
-    class _TwoCallModel(BaseChatModel):  # type: ignore[misc]
-        """Two parallel tool calls on the first invoke, plain text after."""
-
-        invoke_count: int = 0
-
-        def bind_tools(self, tools: Any, **kw: Any) -> "_TwoCallModel":
-            return self
-
-        def _generate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
-            raise NotImplementedError(
-                "_TwoCallModel implements _agenerate, not _generate"
+    def _next(n: int) -> AIMessage:
+        if n == 1:
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {"name": TOOL_NAME, "args": {}, "id": "call_1"},
+                    {"name": _UNGATED, "args": {}, "id": "call_2"},
+                ],
             )
+        return AIMessage(content="done")
 
-        async def _agenerate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
-            self.invoke_count += 1
-            if self.invoke_count == 1:
-                message = AIMessage(
-                    content="",
-                    tool_calls=[
-                        {"name": TOOL_NAME, "args": {}, "id": "call_1"},
-                        {"name": _UNGATED, "args": {}, "id": "call_2"},
-                    ],
-                )
-            else:
-                message = AIMessage(content="done")
-            return ChatResult(generations=[ChatGeneration(message=message)])
-
-        @property
-        def _llm_type(self) -> str:
-            return "fake-approval-two-call"
-
-    return _TwoCallModel()
+    return make_scripted_chat_model(_next, llm_type="fake-approval-two-call")
 
 
 def _make_looping_model(tool_name: str) -> Any:
@@ -312,47 +286,15 @@ def _make_looping_model(tool_name: str) -> Any:
     """
     require_real_langchain("langchain_core")
 
-    from langchain_core.language_models.chat_models import (  # pylint: disable=import-error
-        BaseChatModel,
-    )
     from langchain_core.messages import AIMessage  # pylint: disable=import-error
-    from langchain_core.outputs import (  # pylint: disable=import-error
-        ChatGeneration,
-        ChatResult,
-    )
 
-    class _LoopingModel(BaseChatModel):  # type: ignore[misc]
-        """Never answers: one tool call per invoke, forever."""
+    def _next(n: int) -> AIMessage:
+        return AIMessage(
+            content="",
+            tool_calls=[{"name": tool_name, "args": {}, "id": f"call_{n}"}],
+        )
 
-        invoke_count: int = 0
-
-        def bind_tools(self, tools: Any, **kw: Any) -> "_LoopingModel":
-            return self
-
-        def _generate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
-            raise NotImplementedError(
-                "_LoopingModel implements _agenerate, not _generate"
-            )
-
-        async def _agenerate(self, messages, stop=None, run_manager=None, **kw):  # type: ignore[no-untyped-def]
-            self.invoke_count += 1
-            message = AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "name": tool_name,
-                        "args": {},
-                        "id": f"call_{self.invoke_count}",
-                    }
-                ],
-            )
-            return ChatResult(generations=[ChatGeneration(message=message)])
-
-        @property
-        def _llm_type(self) -> str:
-            return "fake-approval-looping"
-
-    return _LoopingModel()
+    return make_scripted_chat_model(_next, llm_type="fake-approval-looping")
 
 
 @contextmanager

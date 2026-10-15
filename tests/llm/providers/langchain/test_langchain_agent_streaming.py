@@ -16,7 +16,7 @@ _STORAGE_MOD_PATH = "mcp_coder.llm.storage.session_storage"
 class _RaisingAsyncIter:
     """Async iterator that raises on first __anext__ call."""
 
-    def __init__(self, exc: BaseException):
+    def __init__(self, exc: BaseException) -> None:
         self._exc = exc
 
     def __aiter__(self) -> "_RaisingAsyncIter":

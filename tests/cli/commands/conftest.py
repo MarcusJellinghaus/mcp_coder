@@ -15,6 +15,11 @@ from mcp_coder.cli.commands.verify_formatting import (
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
 
+def unavailable_command_stub(args: argparse.Namespace) -> int:
+    """Stand-in for a CLI command module that failed to import."""
+    raise NotImplementedError("command module unavailable")
+
+
 def _expected_value_column(indent: int, *, label_width: int = _LABEL_WIDTH) -> int:
     """Return the 0-indexed column where the value SHOULD begin.
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 from unittest.mock import patch
 
 import pytest
@@ -71,7 +72,7 @@ def test_main_routes_icoder(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify main() dispatches 'icoder' to execute_icoder."""
     called: dict[str, object] = {}
 
-    def mock_execute(args):  # type: ignore[no-untyped-def]
+    def mock_execute(args: argparse.Namespace) -> int:
         called["args"] = args
         return 0
 
