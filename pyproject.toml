@@ -52,6 +52,7 @@ test = [
     "pytest-asyncio",
     "pytest-xdist",
     "pytest-textual-snapshot>=1.0.0",
+    "pytest-cov",
 ]
 
 # MLflow integration - for conversation logging and analytics
@@ -110,6 +111,7 @@ dev = [
     "vulture>=2.14",
     "ruff>=0.9.0",
     "deptry>=0.25.1",
+    "diff-cover",
 ]
 
 [project.scripts]
@@ -379,6 +381,7 @@ DEP002 = [
     "pycycle", "pydeps",
     # mcp_coder only; no sibling provides them.
     "deptry", "pytest-textual-snapshot", "textual-dev",
+    "pytest-cov", "diff-cover",
     "types-requests", "types-tabulate", "types-jsonschema",
 ]
 # DEP003: optional provider SDKs, imported behind try/except ImportError and
