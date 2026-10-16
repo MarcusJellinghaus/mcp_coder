@@ -9,6 +9,7 @@ from typing import cast
 from ...mcp_workspace_github import (
     BaseGitHubManager,
     CIResultsManager,
+    EventData,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -350,6 +351,34 @@ def _build_pr_manager(repo_url: str) -> PullRequestManager:
     manager = PullRequestManager.__new__(PullRequestManager)
     BaseGitHubManager.__init__(manager, repo_url=repo_url)
     return manager
+
+
+def _review_comments_watermark(
+    events: list[EventData],
+    review_label_name: str,
+    created_label_name: str,
+) -> str | None:
+    """Derive the comment-watermark timestamp from an issue's label history.
+
+    Returns:
+        The ``created_at`` of the ``status-10`` relabel that followed the
+        last ``status-91`` event, or ``None`` if there is no such event pair
+        (first-ever arrival, or no relabel followed it) — meaning "no
+        filter, every existing comment counts."
+    """
+    last_review_idx: int | None = None
+    for idx, event in enumerate(events):
+        if event["label"] == review_label_name:
+            last_review_idx = idx
+
+    if last_review_idx is None:
+        return None
+
+    for event in events[last_review_idx + 1 :]:
+        if event["label"] == created_label_name:
+            return event["created_at"]
+
+    return None
 
 
 def _check_merge_conflict(
