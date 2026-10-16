@@ -6,12 +6,12 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_coder.mcp_workspace_github import EventData, IssueData
-from mcp_coder.workflows.vscodeclaude.session_launch import (
+from mcp_coder.workflows.vscodeclaude.checks import (
     _check_ci,
     _check_review_comments,
     _review_comments_watermark,
-    process_eligible_issues,
 )
+from mcp_coder.workflows.vscodeclaude.session_launch import process_eligible_issues
 
 from .test_session_launch_process_issues import (
     MOCK_CI_LABELS_CONFIG,
@@ -270,7 +270,7 @@ class TestCheckReviewComments:
         pr_manager.find_pull_request_by_head.return_value = [{"number": pr_number}]
         pr_manager.get_pr_feedback.return_value = feedback
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: pr_manager,
         )
         return pr_manager
@@ -462,7 +462,7 @@ class TestCheckReviewComments:
         issue_manager = MagicMock()
         mock_build_pr_manager = MagicMock()
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             mock_build_pr_manager,
         )
         issue = _make_issue(8)
@@ -488,7 +488,7 @@ class TestCheckReviewComments:
         pr_manager = MagicMock()
         pr_manager.find_pull_request_by_head.return_value = []
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: pr_manager,
         )
         issue = _make_issue(9)
@@ -517,7 +517,7 @@ class TestCheckReviewComments:
         pr_manager.find_pull_request_by_head.return_value = [{"number": 1}]
         pr_manager.get_pr_feedback.side_effect = RuntimeError("boom")
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: pr_manager,
         )
         issue = _make_issue(10)
@@ -587,7 +587,7 @@ class TestProcessEligibleIssuesPriorityChaining:
             {"number": 1, "mergeable_state": "dirty"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 
@@ -631,7 +631,7 @@ class TestProcessEligibleIssuesPriorityChaining:
             {"number": 1, "mergeable_state": "clean"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 
