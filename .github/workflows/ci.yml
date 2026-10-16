@@ -101,8 +101,6 @@ jobs:
           - {name: "isort", cmd: "isort --version && isort --check --profile=black --float-to-top src tests"}
           - {name: "pylint", cmd: "pylint --version && pylint ./src ./tests"}  # configuration via pyproject.toml
           - {name: "ruff-docstrings", cmd: "ruff version && ruff check src tests"}
-          - {name: "unit-tests", cmd: "pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --junitxml=unit-tests.xml"}
-          - {name: "integration-tests", cmd: "pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
           - {name: "mypy", install: ".[typecheck]", cmd: "mypy --version && mypy --strict src tests"}
           - {name: "file-size", cmd: "mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist"}
           - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
@@ -132,6 +130,165 @@ jobs:
           
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
+
+      - name: Run unit-tests
+        env:
+          COVERAGE_FILE: .coverage.unit
+        run: |
+          pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --cov=src/mcp_coder --cov-report= --junitxml=unit-tests.xml
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-unit
+          path: .coverage.unit
+          include-hidden-files: true
+          retention-days: 1
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
+
+      - name: Run integration-tests
+        env:
+          COVERAGE_FILE: .coverage.integration
+        run: |
+          pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --cov=src/mcp_coder --cov-report= --junitxml=integration-tests.xml
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-integration
+          path: .coverage.integration
+          include-hidden-files: true
+          retention-days: 1
+
+  langchain-integration:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      MCP_CODER_LLM_LANGCHAIN_BACKEND: ${{ secrets.MCP_CODER_LLM_LANGCHAIN_BACKEND }}
+      MCP_CODER_LLM_LANGCHAIN_MODEL: ${{ secrets.MCP_CODER_LLM_LANGCHAIN_MODEL }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
+
+      - name: Run LangChain integration tests
+        env:
+          COVERAGE_FILE: .coverage.langchain
+        run: |
+          pytest tests/llm/providers/langchain/test_langchain_integration.py \
+            tests/icoder/test_icoder_permission_wiring.py \
+            -m langchain_integration \
+            -v -s \
+            --cov=src/mcp_coder --cov-report= \
+            --junitxml=langchain-integration-tests.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: langchain-integration-results
+          path: langchain-integration-tests.xml
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-langchain
+          path: .coverage.langchain
+          include-hidden-files: true
+          retention-days: 1
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, langchain-integration]
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Install coverage tools
+        run: pip install coverage diff-cover
+
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-data-*
+          path: coverage-data
+          merge-multiple: true
+
+      - name: Combine coverage data
+        run: |
+          coverage combine coverage-data
+          coverage xml -o coverage.xml
+
+      - name: Run diff-cover
+        if: github.event_name == 'pull_request'
+        run: |
+          diff-cover coverage.xml \
+            --compare-branch=origin/${{ github.event.pull_request.base.ref }} \
+            --format markdown:diff-coverage.md || true
+
+      - name: Write coverage step summary
+        run: |
+          if [ -f diff-coverage.md ]; then
+            python tools/ci_coverage_summary.py --coverage-xml coverage.xml --diff-report diff-coverage.md --output "$GITHUB_STEP_SUMMARY"
+          else
+            python tools/ci_coverage_summary.py --coverage-xml coverage.xml --output "$GITHUB_STEP_SUMMARY"
+          fi
 
   # Exercises the install sequence that vscodeclaude sessions run at launch.
   # The argv is built by
