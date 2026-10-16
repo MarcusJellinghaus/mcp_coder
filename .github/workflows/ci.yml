@@ -193,6 +193,56 @@ jobs:
           path: .coverage.integration
           retention-days: 1
 
+  langchain-integration:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      MCP_CODER_LLM_LANGCHAIN_BACKEND: ${{ secrets.MCP_CODER_LLM_LANGCHAIN_BACKEND }}
+      MCP_CODER_LLM_LANGCHAIN_MODEL: ${{ secrets.MCP_CODER_LLM_LANGCHAIN_MODEL }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
+
+      - name: Run LangChain integration tests
+        env:
+          COVERAGE_FILE: .coverage.langchain
+        run: |
+          pytest tests/llm/providers/langchain/test_langchain_integration.py \
+            tests/icoder/test_icoder_permission_wiring.py \
+            -m langchain_integration \
+            -v -s \
+            --cov=src/mcp_coder --cov-report= \
+            --junitxml=langchain-integration-tests.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: langchain-integration-results
+          path: langchain-integration-tests.xml
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-langchain
+          path: .coverage.langchain
+          retention-days: 1
+
   # Exercises the install sequence that vscodeclaude sessions run at launch.
   # The argv is built by
   # src/mcp_coder/workflows/vscodeclaude/session_setup.py:build_install_argv

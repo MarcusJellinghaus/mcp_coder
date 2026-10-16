@@ -43,9 +43,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: [Fold langchain-integration.yml into ci.yml, with coverage](steps/step_4.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: [New coverage job: combine, coverage xml, diff-cover, step summary](steps/step_5.md)
 
