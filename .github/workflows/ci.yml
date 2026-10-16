@@ -101,8 +101,6 @@ jobs:
           - {name: "isort", cmd: "isort --version && isort --check --profile=black --float-to-top src tests"}
           - {name: "pylint", cmd: "pylint --version && pylint ./src ./tests"}  # configuration via pyproject.toml
           - {name: "ruff-docstrings", cmd: "ruff version && ruff check src tests"}
-          - {name: "unit-tests", cmd: "pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --junitxml=unit-tests.xml"}
-          - {name: "integration-tests", cmd: "pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --junitxml=integration-tests.xml"}
           - {name: "mypy", install: ".[typecheck]", cmd: "mypy --version && mypy --strict src tests"}
           - {name: "file-size", cmd: "mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist"}
           - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
@@ -132,6 +130,68 @@ jobs:
           
       - name: Run ${{ matrix.check.name }}
         run: ${{ matrix.check.cmd }}
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
+
+      - name: Run unit-tests
+        env:
+          COVERAGE_FILE: .coverage.unit
+        run: |
+          pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --cov=src/mcp_coder --cov-report= --junitxml=unit-tests.xml
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-unit
+          path: .coverage.unit
+          retention-days: 1
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          mapfile -t SPECS < <(python tools/read_github_deps.py --specs)
+          uv pip install --system "${SPECS[@]}" ".[dev,langchain]"
+
+      - name: Run integration-tests
+        env:
+          COVERAGE_FILE: .coverage.integration
+        run: |
+          pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --cov=src/mcp_coder --cov-report= --junitxml=integration-tests.xml
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-integration
+          path: .coverage.integration
+          retention-days: 1
 
   # Exercises the install sequence that vscodeclaude sessions run at launch.
   # The argv is built by
