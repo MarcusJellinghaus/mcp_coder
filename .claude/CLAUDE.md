@@ -6,7 +6,7 @@
 
 **Do NOT use native Claude Code file tools** (`Read`, `Write`, `Edit`, `Glob`, `Grep`, `Bash`) for any operation that has an MCP equivalent. Always use the `mcp__mcp-workspace__*` tools instead. This applies to all file reading, writing, editing, searching, listing, and git operations. If no MCP equivalent exists, use Bash. Check the tool mapping table below first.
 
-**Justify Bash.** Before a Bash command or script, say in chat, on two lines:
+**Justify any native tool.** Before Read, Write, Edit, Glob, Grep, or Bash, say in chat, on two lines:
 
 - *What it does* — one sentence.
 - *Why MCP doesn't* — which tool you'd have used, and what stops it.
