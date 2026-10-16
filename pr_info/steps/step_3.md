@@ -90,7 +90,7 @@ def _check_review_comments(
     ```
     with:
     ```python
-    _check_merge_conflict(
+    _ = _check_merge_conflict(
         issue, branch_manager, issue_manager, repo_owner, repo_name_str
     ) or _check_ci(
         issue, ci_manager, branch_manager, issue_manager, repo_owner, repo_name_str
@@ -106,14 +106,19 @@ def _check_review_comments(
     ```
     `or` short-circuits left-to-right, so each check only runs if every
     earlier one returned `False` — identical gating to the current nested
-    `if`, one line instead of four.
+    `if`, one line instead of four. The `_ = ` assignment is required: a bare
+    `a() or b() or c()` expression statement trips pylint's
+    `W0106 expression-not-assigned` (confirmed against this project's pylint
+    config, which does not disable `W0106`); assigning the result to `_`
+    keeps the short-circuit one-liner while satisfying pylint.
 
 ## ALGORITHM (`_check_review_comments` body)
 
 ```
 branch = branch_manager.get_branch_with_pr_fallback(issue.number, owner, repo)
 if branch is None: return False
-prs = _build_pr_manager(url).find_pull_request_by_head(branch)
+pr_manager = _build_pr_manager(url)
+prs = pr_manager.find_pull_request_by_head(branch)
 if not prs: return False
 feedback = pr_manager.get_pr_feedback(prs[0]["number"])
 if feedback["unresolved_threads"] or feedback["changes_requested"]:

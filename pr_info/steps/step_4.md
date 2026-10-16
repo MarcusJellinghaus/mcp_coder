@@ -41,6 +41,7 @@ allowed-tools:
   - mcp__mcp-workspace__save_file
   - mcp__mcp-workspace__github_review_comment_reply
   - mcp__mcp-workspace__github_review_thread_resolve
+  - mcp__mcp-workspace__github_issue_comment
   - mcp__mcp-tools-py__run_format_code
   - mcp__mcp-tools-py__run_pylint_check
   - mcp__mcp-tools-py__run_pytest_check
@@ -48,7 +49,6 @@ allowed-tools:
   - "Bash(git add *)"
   - "Bash(git commit *)"
   - "Bash(git push *)"
-  - "Bash(gh pr comment *)"
   - "Bash(mcp-coder gh-tool set-status *)"
 ---
 
@@ -67,7 +67,8 @@ comments.
   - Unresolved-thread item (has `comment_id`): inline reply via
     `mcp__mcp-workspace__github_review_comment_reply(pr_number, comment_id, body)`.
   - Plain conversation comment or changes-requested review (no id): general PR
-    comment via `gh pr comment`.
+    comment via `mcp__mcp-workspace__github_issue_comment(pr_number, body)`
+    (GitHub's comment endpoint is shared between issues and PRs).
 - **Decline**: out of scope — say why, same reply path as above.
 - **Resolve**: once an unresolved-thread item has been addressed (fixed or
   replied to), resolve it via
