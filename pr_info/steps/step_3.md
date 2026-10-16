@@ -116,12 +116,20 @@ if branch is None: return False
 prs = _build_pr_manager(url).find_pull_request_by_head(branch)
 if not prs: return False
 feedback = pr_manager.get_pr_feedback(prs[0]["number"])
-if feedback.unresolved_threads or feedback.changes_requested:
+if feedback["unresolved_threads"] or feedback["changes_requested"]:
     triggered = True
 else:
     events = issue_manager.get_issue_events(issue.number, IssueEventType.LABELED)
     watermark = _review_comments_watermark(events, review_label_name, created_label_name)
-    triggered = any comment where watermark is None or comment.created_at > watermark
+    # created_at is Optional[str] (mcp-workspace fetch_conversation_comments can
+    # return None) - treat a missing timestamp as newer than any watermark,
+    # never compare None to a string
+    triggered = any(
+        comment["created_at"] is None
+        or watermark is None
+        or comment["created_at"] > watermark
+        for comment in feedback["conversation_comments"]
+    )
 if triggered:
     update_workflow_label(issue_manager, "pr_created", "pr_review_comments",
                            validated_issue_number=issue.number)
@@ -158,6 +166,9 @@ Mirror the structure already used for merge-conflict/CI detection
     **not** escalate.
   - conversation comment's `created_at` after the computed watermark →
     escalates.
+  - conversation comment's `created_at` is `None` (optional field,
+    `fetch_conversation_comments` can return it unset) → escalates, never
+    raises `TypeError` from comparing `None` to the watermark string.
   - no branch / no PR found → returns `False`, never calls `get_pr_feedback`.
   - `get_pr_feedback` or `get_issue_events` raising → swallowed, returns
     `False`.
