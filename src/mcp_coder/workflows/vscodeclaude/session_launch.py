@@ -6,12 +6,18 @@ import shutil
 from pathlib import Path
 from typing import cast
 
+from ...config.label_config import (
+    build_label_lookups,
+    get_labels_config_path,
+    load_labels_config,
+)
 from ...mcp_workspace_github import (
     BaseGitHubManager,
     CIResultsManager,
     EventData,
     IssueBranchManager,
     IssueData,
+    IssueEventType,
     IssueManager,
     PullRequestManager,
     RepoIdentifier,
@@ -431,18 +437,21 @@ def _check_ci(
     issue_manager: IssueManager,
     repo_owner: str,
     repo_name: str,
-) -> None:
+) -> bool:
     """Escalate a status-10 PR to status-81 if its latest CI run failed.
 
     Never raises: any failure is logged and swallowed so one bad issue
     can't block the rest of the batch this poll.
+
+    Returns:
+        True iff the issue was escalated to failing_ci this call.
     """
     try:
         branch = branch_manager.get_branch_with_pr_fallback(
             issue["number"], repo_owner, repo_name
         )
         if branch is None:
-            return
+            return False
         status = ci_manager.get_latest_ci_status(branch)
         run = status.get("run", {})
         if run.get("status") == "completed" and run.get("conclusion") != "success":
@@ -452,6 +461,8 @@ def _check_ci(
                 "failing_ci",
                 validated_issue_number=issue["number"],
             )
+            return True
+        return False
     except (
         Exception
     ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
@@ -460,6 +471,70 @@ def _check_ci(
             issue["number"],
             exc,
         )
+        return False
+
+
+def _check_review_comments(
+    issue: IssueData,
+    branch_manager: IssueBranchManager,
+    issue_manager: IssueManager,
+    repo_owner: str,
+    repo_name: str,
+    review_label_name: str,
+    created_label_name: str,
+) -> bool:
+    """Escalate a status-10 PR to status-91 on new review feedback.
+
+    Never raises: any failure is logged and swallowed so one bad issue
+    can't block the rest of the batch this poll.
+
+    Returns:
+        True iff the issue was escalated to pr_review_comments this call.
+    """
+    try:
+        branch = branch_manager.get_branch_with_pr_fallback(
+            issue["number"], repo_owner, repo_name
+        )
+        if branch is None:
+            return False
+        pr_manager = _build_pr_manager(f"https://github.com/{repo_owner}/{repo_name}")
+        prs = pr_manager.find_pull_request_by_head(branch)
+        if not prs:
+            return False
+        feedback = pr_manager.get_pr_feedback(prs[0]["number"])
+        if feedback["unresolved_threads"] or feedback["changes_requested"]:
+            triggered = True
+        else:
+            events = issue_manager.get_issue_events(
+                issue["number"], IssueEventType.LABELED
+            )
+            watermark = _review_comments_watermark(
+                events, review_label_name, created_label_name
+            )
+            triggered = any(
+                comment["created_at"] is None
+                or watermark is None
+                or comment["created_at"] > watermark
+                for comment in feedback["conversation_comments"]
+            )
+        if triggered:
+            update_workflow_label(
+                issue_manager,
+                "pr_created",
+                "pr_review_comments",
+                validated_issue_number=issue["number"],
+            )
+            return True
+        return False
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        logger.warning(
+            "Failed to check review comments for issue #%d: %s",
+            issue["number"],
+            exc,
+        )
+        return False
 
 
 def process_eligible_issues(
@@ -522,6 +597,12 @@ def process_eligible_issues(
     branch_manager = IssueBranchManager(repo_url=repo_url)
     ci_manager = CIResultsManager(repo_url=repo_url)
 
+    label_lookups = build_label_lookups(
+        load_labels_config(get_labels_config_path(None))
+    )
+    review_label_name = label_lookups["id_to_name"]["pr_review_comments"]
+    created_label_name = label_lookups["id_to_name"]["pr_created"]
+
     # Get all cached issues and filter for vscodeclaude eligibility
     if all_cached_issues is None:
         logger.debug(
@@ -540,11 +621,11 @@ def process_eligible_issues(
     repo_owner, repo_name_str = repo_full_name.split("/", 1)
     for issue in eligible_issues:
         if get_issue_status(issue) == "status-10:pr-created":
-            escalated = _check_merge_conflict(
-                issue, branch_manager, issue_manager, repo_owner, repo_name_str
-            )
-            if not escalated:
-                _check_ci(
+            _ = (
+                _check_merge_conflict(
+                    issue, branch_manager, issue_manager, repo_owner, repo_name_str
+                )
+                or _check_ci(
                     issue,
                     ci_manager,
                     branch_manager,
@@ -552,6 +633,16 @@ def process_eligible_issues(
                     repo_owner,
                     repo_name_str,
                 )
+                or _check_review_comments(
+                    issue,
+                    branch_manager,
+                    issue_manager,
+                    repo_owner,
+                    repo_name_str,
+                    review_label_name,
+                    created_label_name,
+                )
+            )
 
     # Filter to statuses that are eligible for sessions (config-driven)
     actionable_issues: list[IssueData] = [
