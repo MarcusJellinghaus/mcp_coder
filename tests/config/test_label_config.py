@@ -161,6 +161,22 @@ def test_bundled_labels_schema_validation() -> None:
             ), f"Label {label['internal_id']}: stale_timeout_minutes must be positive"
 
 
+def test_pr_review_comments_label_definition() -> None:
+    """status-91:pr-review-comments exists with the expected shape."""
+    config = load_labels_config(get_labels_config_path(None))
+    label = next(
+        entry
+        for entry in config["workflow_labels"]
+        if entry["internal_id"] == "pr_review_comments"
+    )
+    assert label["name"] == "status-91:pr-review-comments"
+    assert label["category"] == "human_action"
+    assert "failure" not in label
+    assert "promotable" not in label
+    assert label["vscodeclaude"]["commands"] == ["/pr_comment_triage"]
+    assert label["vscodeclaude"]["requires_branch"] is True
+
+
 ERROR_STATUS_IDS = [
     "planning_failed",
     "implementing_failed",
