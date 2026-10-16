@@ -243,6 +243,50 @@ jobs:
           path: .coverage.langchain
           retention-days: 1
 
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, langchain-integration]
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+
+      - name: Install coverage tools
+        run: pip install coverage diff-cover
+
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-data-*
+          path: coverage-data
+          merge-multiple: true
+
+      - name: Combine coverage data
+        run: |
+          coverage combine coverage-data
+          coverage xml -o coverage.xml
+
+      - name: Run diff-cover
+        if: github.event_name == 'pull_request'
+        run: |
+          diff-cover coverage.xml \
+            --compare-branch=origin/${{ github.event.pull_request.base.ref }} \
+            --format markdown:diff-coverage.md || true
+
+      - name: Write coverage step summary
+        run: |
+          if [ -f diff-coverage.md ]; then
+            python tools/ci_coverage_summary.py --coverage-xml coverage.xml --diff-report diff-coverage.md --output "$GITHUB_STEP_SUMMARY"
+          else
+            python tools/ci_coverage_summary.py --coverage-xml coverage.xml --output "$GITHUB_STEP_SUMMARY"
+          fi
+
   # Exercises the install sequence that vscodeclaude sessions run at launch.
   # The argv is built by
   # src/mcp_coder/workflows/vscodeclaude/session_setup.py:build_install_argv
