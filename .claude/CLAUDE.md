@@ -146,6 +146,10 @@ This repo uses `mcp-coder-utils` for subprocess execution, logging, and redactio
 
 Before sending, cut any sentence that doesn't tell the reader something new or change what they do next — chat, commits, PRs, docs, comments, skill output alike. No pleasantries, no hedging, no filler opens or closes; hedge only when the uncertainty changes the action. Stay readable: short clauses or arrow chains over dense paragraphs; lead with the outcome.
 
+## Progress during loops
+
+Repeating the same action across 3+ items (e.g. files, issues, repos) → one short line per item as it completes, not just a final summary.
+
 ## Asking questions
 
 Never use the AskUserQuestion tool. Ask questions as plain text in the chat.
