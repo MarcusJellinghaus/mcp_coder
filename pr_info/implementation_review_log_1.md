@@ -1,0 +1,15 @@
+# review-implementation review log 1
+
+## Round 1 — 2026-10-16
+**Findings**:
+I'll gather context in parallel: knowledge base files, the issue, and pr_info docs.tools/ci_coverage_summary.py:56 — high — `top_level_package_name` assumes Cobertura `<package name>` carries an `mcp_coder.` prefix (e.g. `mcp_coder.llm.providers`). Verified empirically (probe run of `coverage xml` against `--cov=src/mcp_coder`, matching the real ci.yml invocation): the root package is named `.` and subpackages drop the `mcp_coder` prefix entirely (`llm.providers`, `cli.commands`, `icoder.ui`, etc.). Every loose top-level module in `src/mcp_coder/` — including the issue's own named follow-up targets `mcp_tools_py.py` and `prompt_sources.py` — gets bucketed under an empty-string package name instead of a readable `mcp_coder` row, breaking the per-package rollup acceptance criterion. The grand-total headline % is unaffected (it doesn't depend on bucket name).
+
+tests/tools/test_ci_coverage_summary.py:48 — high — Test fixtures use the same wrong `mcp_coder.`-prefixed package names (`mcp_coder.llm.providers`, `mcp_coder.llm.utils`), so they pass while exercising a schema that doesn't match real `coverage xml` output — the bug above went undetected because the fixture matched the (wrong) assumption instead of the probed reality.
+
+tools/ci_coverage_summary.py:23 — medium — `MARKER_TRAP_CAVEAT` lists 5 never-run-in-CI markers but omits `llm_integration`, which is also never run in any `ci.yml` job (excluded from `unit-tests`' marker expression, not included in `integration-tests`' or the folded-in `langchain-integration` job). A real test (`tests/integration/test_verify_llm_integration.py`) carries this marker, so any module only covered by it will show low coverage without the caveat naming the cause — undermining the issue's "nobody reads a low % as a real gap without seeing the caveat" criterion.
+
+Ran pytest/pylint/mypy/ruff/lint-imports on the changed files — all pass; these are the only substantive findings.
+**Decisions**:
+Verdict(decision='tasks', tasks=['In tools/ci_coverage_summary.py, fix top_level_package_name to match real Cobertura output from `coverage xml` on this project (root package name is `.`, subpackages drop the `mcp_coder.` prefix, e.g. `llm.providers`, `cli.commands`). Ensure loose top-level modules like mcp_tools_py.py and prompt_sources.py bucket into a readable `mcp_coder` row instead of an empty-string package name.', 'In tests/tools/test_ci_coverage_summary.py, replace the fixture package names (e.g. `mcp_coder.llm.providers`, `mcp_coder.llm.utils`) with the real unprefixed schema (e.g. `llm.providers`, `llm.utils`, root as `.`) so the tests exercise actual coverage xml output instead of the incorrect assumption.', "In tools/ci_coverage_summary.py, add `llm_integration` to MARKER_TRAP_CAVEAT since it is excluded from unit-tests' marker expression and not run in integration-tests or the folded-in langchain-integration job, matching the other listed never-run-in-CI markers."], escalate_reason=None)
+**Changes**:
+applied
