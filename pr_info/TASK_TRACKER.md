@@ -23,4 +23,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
+### Step 1: Add the `status-91:pr-review-comments` label
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `EventData` shim export + pure watermark helper
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `_check_review_comments()`, `_check_ci()` bool change, priority chaining
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `/pr_comment_triage` skill
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
 ## Pull Request
+
+- [ ] PR review
+- [ ] PR summary
