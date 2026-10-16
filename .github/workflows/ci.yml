@@ -160,6 +160,7 @@ jobs:
         with:
           name: coverage-data-unit
           path: .coverage.unit
+          include-hidden-files: true
           retention-days: 1
 
   integration-tests:
@@ -191,6 +192,7 @@ jobs:
         with:
           name: coverage-data-integration
           path: .coverage.integration
+          include-hidden-files: true
           retention-days: 1
 
   langchain-integration:
@@ -241,6 +243,7 @@ jobs:
         with:
           name: coverage-data-langchain
           path: .coverage.langchain
+          include-hidden-files: true
           retention-days: 1
 
   coverage:
