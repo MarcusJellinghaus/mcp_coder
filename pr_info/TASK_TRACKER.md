@@ -31,9 +31,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: [tools/ci_coverage_summary.py (TDD): Cobertura parsing + summary rendering](steps/step_2.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: [Split unit-tests/integration-tests into standalone jobs, add coverage](steps/step_3.md)
 
