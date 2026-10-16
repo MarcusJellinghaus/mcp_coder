@@ -41,9 +41,9 @@ def _coverage_xml(packages_xml: str) -> str:
 @pytest.mark.parametrize(
     "full_name, expected",
     [
-        ("mcp_coder.llm.providers", "llm"),
-        ("mcp_coder", "mcp_coder"),
-        ("tools", "tools"),
+        ("llm.providers", "llm"),
+        (".", "mcp_coder"),
+        ("cli", "cli"),
     ],
 )
 def test_top_level_package_name(full_name: str, expected: str) -> None:
@@ -52,9 +52,9 @@ def test_top_level_package_name(full_name: str, expected: str) -> None:
 
 def test_parse_coverage_xml_aggregates_by_top_level(tmp_path: Path) -> None:
     xml = _coverage_xml("""\
-    <package name="mcp_coder.llm.providers">
+    <package name="llm.providers">
       <classes>
-        <class name="anthropic.py" filename="src/mcp_coder/llm/providers/anthropic.py">
+        <class name="anthropic.py" filename="llm/providers/anthropic.py">
           <lines>
             <line number="1" hits="1"/>
             <line number="2" hits="0"/>
@@ -62,9 +62,9 @@ def test_parse_coverage_xml_aggregates_by_top_level(tmp_path: Path) -> None:
         </class>
       </classes>
     </package>
-    <package name="mcp_coder.llm.utils">
+    <package name="llm.utils">
       <classes>
-        <class name="tokens.py" filename="src/mcp_coder/llm/utils/tokens.py">
+        <class name="tokens.py" filename="llm/utils/tokens.py">
           <lines>
             <line number="1" hits="1"/>
             <line number="2" hits="1"/>
@@ -72,9 +72,9 @@ def test_parse_coverage_xml_aggregates_by_top_level(tmp_path: Path) -> None:
         </class>
       </classes>
     </package>
-    <package name="tools">
+    <package name=".">
       <classes>
-        <class name="ci_coverage_summary.py" filename="tools/ci_coverage_summary.py">
+        <class name="mcp_tools_py.py" filename="mcp_tools_py.py">
           <lines>
             <line number="1" hits="1"/>
           </lines>
@@ -90,11 +90,11 @@ def test_parse_coverage_xml_aggregates_by_top_level(tmp_path: Path) -> None:
     assert summary.lines_valid == 5
     assert summary.lines_covered == 4
     rollups = {p.name: p for p in summary.packages}
-    assert set(rollups) == {"llm", "tools"}
+    assert set(rollups) == {"llm", "mcp_coder"}
     assert rollups["llm"].lines_valid == 4
     assert rollups["llm"].lines_covered == 3
-    assert rollups["tools"].lines_valid == 1
-    assert rollups["tools"].lines_covered == 1
+    assert rollups["mcp_coder"].lines_valid == 1
+    assert rollups["mcp_coder"].lines_covered == 1
 
 
 def test_render_step_summary_includes_caveat_and_table() -> None:
@@ -149,9 +149,9 @@ def test_main_writes_markdown_to_output_file(
     xml_path = tmp_path / "coverage.xml"
     xml_path.write_text(
         _coverage_xml("""\
-    <package name="mcp_coder">
+    <package name=".">
       <classes>
-        <class name="__init__.py" filename="src/mcp_coder/__init__.py">
+        <class name="__init__.py" filename="__init__.py">
           <lines>
             <line number="1" hits="1"/>
           </lines>
@@ -183,9 +183,9 @@ def test_main_appends_to_github_step_summary_env(
     xml_path = tmp_path / "coverage.xml"
     xml_path.write_text(
         _coverage_xml("""\
-    <package name="mcp_coder">
+    <package name=".">
       <classes>
-        <class name="__init__.py" filename="src/mcp_coder/__init__.py">
+        <class name="__init__.py" filename="__init__.py">
           <lines>
             <line number="1" hits="1"/>
           </lines>

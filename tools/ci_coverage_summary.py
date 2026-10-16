@@ -22,8 +22,9 @@ from typing import List, Optional
 
 MARKER_TRAP_CAVEAT = (
     "_Markers excluded in CI (`claude_cli_integration`, `claude_api_integration`, "
-    "`copilot_cli_integration`, `jenkins_integration`, `textual_integration`) never "
-    "run here, so lines only reachable under them show as uncovered._"
+    "`copilot_cli_integration`, `jenkins_integration`, `llm_integration`, "
+    "`textual_integration`) never run here, so lines only reachable under them "
+    "show as uncovered._"
 )
 
 
@@ -56,15 +57,15 @@ class CoverageSummary:
 def top_level_package_name(full_name: str) -> str:
     """Bucket a Cobertura package name under its top-level segment.
 
-    ``mcp_coder.llm.providers`` -> ``llm`` (the second segment, since every
-    real package lives under the ``mcp_coder`` root). Anything else
-    (``tools``, a loose top-level module reported as just ``mcp_coder``)
-    buckets under its own first segment.
+    ``coverage xml`` for ``--cov=src/mcp_coder`` reports package names
+    relative to that measured root, dropping the ``mcp_coder`` prefix:
+    ``llm.providers`` -> ``llm``, ``cli.commands`` -> ``cli``. The root
+    package itself (loose top-level modules like ``mcp_tools_py.py``) is
+    reported as ``.``, which buckets into the readable ``mcp_coder`` row.
     """
-    segments = full_name.split(".")
-    if segments[0] == "mcp_coder" and len(segments) > 1:
-        return segments[1]
-    return segments[0]
+    if full_name == ".":
+        return "mcp_coder"
+    return full_name.split(".")[0]
 
 
 def parse_coverage_xml(xml_path: Path) -> CoverageSummary:
