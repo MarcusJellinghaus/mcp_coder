@@ -156,7 +156,7 @@ jobs:
           pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --cov=src/mcp_coder --cov-report= --junitxml=unit-tests.xml
 
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-data-unit
           path: .coverage.unit
@@ -188,7 +188,7 @@ jobs:
           pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --cov=src/mcp_coder --cov-report= --junitxml=integration-tests.xml
 
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-data-integration
           path: .coverage.integration
@@ -233,13 +233,13 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: langchain-integration-results
           path: langchain-integration-tests.xml
 
       - name: Upload coverage data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-data-langchain
           path: .coverage.langchain
@@ -264,7 +264,7 @@ jobs:
         run: pip install coverage diff-cover
 
       - name: Download coverage data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: coverage-data-*
           path: coverage-data
