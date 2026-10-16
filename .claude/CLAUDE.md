@@ -144,13 +144,7 @@ This repo uses `mcp-coder-utils` for subprocess execution, logging, and redactio
 
 ## Writing style
 
-Be concise. Shorter is better — chat, commits, PRs, docs, comments alike.
-
-Say it once. Never restate what the reader can already see: the diff, the code, the issue, or my own earlier message. Cut it; don't rephrase it.
-
-If a sentence isn't load-bearing, delete it.
-
-Readable beats short. Cut what I don't need; don't compress what stays — complete sentences, no arrow chains or invented abbreviations. Lead with the outcome.
+Before sending, cut any sentence that doesn't tell the reader something new or change what they do next — chat, commits, PRs, docs, comments, skill output alike. No pleasantries, no hedging, no filler opens or closes; hedge only when the uncertainty changes the action. Stay readable: short clauses or arrow chains over dense paragraphs; lead with the outcome.
 
 ## Asking questions
 
