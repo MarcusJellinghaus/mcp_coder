@@ -348,13 +348,14 @@ ignore = [
     "D107",  # missing docstring in __init__ method (redundant with class docstring)
     "ANN401",  # Any is correct at library/CLI boundaries; mypy strict covers the rest
     "E501",  # line length is owned by the formatter (black); not re-checked here
-    "S101",  # assert: the pytest idiom; src-side asserts are invariants, not security
     "S404",  # importing subprocess is this tool's core function
     "S603",  # subprocess without shell=True is the SAFE form; argv is internally built
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["D", "DOC", "SIM117", "S105", "S106", "S108"]
+# tests: assert is the pytest idiom (S101); S105/S106/S108 fire on fake
+# credentials and "/tmp/..." literals used as test data, never opened.
+"tests/**/*.py" = ["D", "DOC", "SIM117", "S101", "S105", "S106", "S108"]
 "src/mcp_coder/llm/serialization.py" = ["DOC502"]
 "src/mcp_coder/utils/user_config.py" = ["DOC502"]
 "src/mcp_coder/llm/providers/claude/claude_code_cli.py" = ["DOC502"]

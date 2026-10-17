@@ -47,7 +47,7 @@ def _resolve_rebase_settings(settings_arg: str | None, project_dir: str | None) 
     if settings_arg is not None:
         resolved = resolve_claude_settings_path(settings_arg, project_dir=project_dir)
         # Explicit paths are strict: the resolver returns a str or raises.
-        assert resolved is not None  # nosec B101
+        assert resolved is not None  # noqa: S101  # nosec B101
         return resolved
 
     with tempfile.NamedTemporaryFile(

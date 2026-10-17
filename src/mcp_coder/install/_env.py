@@ -261,7 +261,7 @@ def rmtree_with_retry(path: Path, attempts: int = 3, delay: float = 1.0) -> None
             last_err = e
             if i < attempts - 1:
                 time.sleep(delay)
-    assert last_err is not None
+    assert last_err is not None  # noqa: S101 -- set whenever the loop falls through
     locked = last_err.filename or "<unknown>"
     sys.exit(
         f"ERROR: could not delete {path}\n"

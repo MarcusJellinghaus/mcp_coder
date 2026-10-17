@@ -447,7 +447,8 @@ def run_rebase_workflow(
     if base_err:
         logger.error("Base-branch guard failed: %s", base_err)
         return 2
-    assert base is not None  # nosec B101 — guaranteed by _resolve_base_branch
+    # Guaranteed by _resolve_base_branch when base_err is falsy.
+    assert base is not None  # noqa: S101  # nosec B101
 
     fetch_remote(project_dir, "origin")
 

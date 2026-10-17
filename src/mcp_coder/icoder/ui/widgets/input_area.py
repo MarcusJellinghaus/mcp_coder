@@ -102,7 +102,7 @@ class InputArea(TextArea):
 
     def _emit_ac_event(self, prev: AutocompleteState, new: AutocompleteState) -> None:
         """Emit autocomplete transition events based on state diff."""
-        assert self._event_log is not None
+        assert self._event_log is not None  # noqa: S101 -- caller checks before calling
         if not prev.visible and new.visible:
             self._event_log.emit(
                 "autocomplete_shown",

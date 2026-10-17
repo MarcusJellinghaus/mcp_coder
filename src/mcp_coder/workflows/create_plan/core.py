@@ -643,7 +643,8 @@ def run_create_plan_workflow(
         )
         if not prompt_success:
             logger.error("Planning prompts execution failed")
-            assert prompt_failure is not None
+            # prompt_failure is set whenever prompt_success is falsy.
+            assert prompt_failure is not None  # noqa: S101
             prompt_failure = replace(
                 prompt_failure, elapsed_time=time.time() - start_time
             )
