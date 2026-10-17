@@ -200,6 +200,20 @@
       }
     },
     {
+      "internal_id": "pr_review_comments",
+      "name": "status-91:pr-review-comments",
+      "color": "b60205",
+      "description": "PR has new review comments, unresolved threads, or a changes-requested review",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "💬",
+        "display_name": "PR REVIEW COMMENTS",
+        "stage_short": "pr-comments",
+        "commands": ["/pr_comment_triage"],
+        "requires_branch": true
+      }
+    },
+    {
       "internal_id": "planning_llm_timeout",
       "name": "status-03f-timeout:planning-llm-timeout",
       "color": "e99695",

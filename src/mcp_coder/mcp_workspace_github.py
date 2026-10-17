@@ -35,6 +35,7 @@ from mcp_workspace.github_operations.ci_results_manager import (
 from mcp_workspace.github_operations.issues import (
     CacheData,
     CommentData,
+    EventData,
     IssueBranchManager,
     IssueData,
     IssueEventType,
@@ -79,6 +80,7 @@ __all__: List[str] = [
     "IssueData",
     "CommentData",
     "CacheData",
+    "EventData",
     "get_all_cached_issues",
     "update_issue_labels_in_cache",
     # Cache helpers (public re-exports drop the underscore)

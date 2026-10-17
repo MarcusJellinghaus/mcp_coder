@@ -627,7 +627,7 @@ class TestProcessEligibleIssuesMergeConflictDetection:
             {"number": 1, "mergeable_state": "dirty"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 
@@ -662,7 +662,7 @@ class TestProcessEligibleIssuesMergeConflictDetection:
             {"number": 1, "mergeable_state": "clean"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 
@@ -691,7 +691,7 @@ class TestProcessEligibleIssuesMergeConflictDetection:
 
         mock_build_pr_manager = MagicMock()
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             mock_build_pr_manager,
         )
 
@@ -774,7 +774,7 @@ class TestProcessEligibleIssuesMergeConflictDetection:
             raise RuntimeError("GitHub API boom")
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             _raise,
         )
 
@@ -818,7 +818,7 @@ class TestProcessEligibleIssuesCIDetection:
             {"number": 1, "mergeable_state": "clean"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 
@@ -868,7 +868,7 @@ class TestProcessEligibleIssuesCIDetection:
             {"number": 1, "mergeable_state": "clean"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 
@@ -915,7 +915,7 @@ class TestProcessEligibleIssuesCIDetection:
             {"number": 1, "mergeable_state": "clean"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 
@@ -962,7 +962,7 @@ class TestProcessEligibleIssuesCIDetection:
             {"number": 1, "mergeable_state": "dirty"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 
@@ -1005,7 +1005,7 @@ class TestProcessEligibleIssuesCIDetection:
             {"number": 1, "mergeable_state": "clean"}
         ]
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch._build_pr_manager",
+            "mcp_coder.workflows.vscodeclaude.checks._build_pr_manager",
             lambda repo_url: mock_pr_manager,
         )
 

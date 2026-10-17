@@ -6,13 +6,16 @@ import shutil
 from pathlib import Path
 from typing import cast
 
+from ...config.label_config import (
+    build_label_lookups,
+    get_labels_config_path,
+    load_labels_config,
+)
 from ...mcp_workspace_github import (
-    BaseGitHubManager,
     CIResultsManager,
     IssueBranchManager,
     IssueData,
     IssueManager,
-    PullRequestManager,
     RepoIdentifier,
     get_all_cached_issues,
 )
@@ -24,7 +27,7 @@ from ...utils.subprocess_runner import (
     launch_process,
 )
 from ...utils.user_config import get_cache_refresh_minutes
-from ...workflow_utils.label_transitions import update_workflow_label
+from . import checks
 from .config import (
     get_github_username,
     get_repo_full_name,
@@ -338,101 +341,6 @@ def prepare_and_launch_session(
         raise
 
 
-def _build_pr_manager(repo_url: str) -> PullRequestManager:
-    """Build a PullRequestManager from a repo URL only, no local checkout.
-
-    Bypasses PullRequestManager.__init__ (which requires project_dir) the
-    same way label_transitions.py already does for IssueBranchManager.
-
-    Returns:
-        A PullRequestManager instance backed by the given repo URL.
-    """
-    manager = PullRequestManager.__new__(PullRequestManager)
-    BaseGitHubManager.__init__(manager, repo_url=repo_url)
-    return manager
-
-
-def _check_merge_conflict(
-    issue: IssueData,
-    branch_manager: IssueBranchManager,
-    issue_manager: IssueManager,
-    repo_owner: str,
-    repo_name: str,
-) -> bool:
-    """Escalate a status-10 PR to status-71 if GitHub reports it as "dirty".
-
-    Never raises: any failure is logged and swallowed so one bad issue
-    can't block the rest of the batch this poll.
-
-    Returns:
-        True iff the issue was escalated to merge_conflict this call.
-    """
-    try:
-        branch = branch_manager.get_branch_with_pr_fallback(
-            issue["number"], repo_owner, repo_name
-        )
-        if branch is None:
-            return False
-        pr_manager = _build_pr_manager(f"https://github.com/{repo_owner}/{repo_name}")
-        prs = pr_manager.find_pull_request_by_head(branch)
-        if prs and prs[0]["mergeable_state"] == "dirty":
-            update_workflow_label(
-                issue_manager,
-                "pr_created",
-                "merge_conflict",
-                validated_issue_number=issue["number"],
-            )
-            return True
-        return False
-    except (
-        Exception
-    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
-        logger.warning(
-            "Failed to check merge conflict for issue #%d: %s",
-            issue["number"],
-            exc,
-        )
-        return False
-
-
-def _check_ci(
-    issue: IssueData,
-    ci_manager: CIResultsManager,
-    branch_manager: IssueBranchManager,
-    issue_manager: IssueManager,
-    repo_owner: str,
-    repo_name: str,
-) -> None:
-    """Escalate a status-10 PR to status-81 if its latest CI run failed.
-
-    Never raises: any failure is logged and swallowed so one bad issue
-    can't block the rest of the batch this poll.
-    """
-    try:
-        branch = branch_manager.get_branch_with_pr_fallback(
-            issue["number"], repo_owner, repo_name
-        )
-        if branch is None:
-            return
-        status = ci_manager.get_latest_ci_status(branch)
-        run = status.get("run", {})
-        if run.get("status") == "completed" and run.get("conclusion") != "success":
-            update_workflow_label(
-                issue_manager,
-                "pr_created",
-                "failing_ci",
-                validated_issue_number=issue["number"],
-            )
-    except (
-        Exception
-    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
-        logger.warning(
-            "Failed to check CI status for issue #%d: %s",
-            issue["number"],
-            exc,
-        )
-
-
 def process_eligible_issues(
     repo_name: str,
     repo_config: dict[str, str],
@@ -493,6 +401,12 @@ def process_eligible_issues(
     branch_manager = IssueBranchManager(repo_url=repo_url)
     ci_manager = CIResultsManager(repo_url=repo_url)
 
+    label_lookups = build_label_lookups(
+        load_labels_config(get_labels_config_path(None))
+    )
+    review_label_name = label_lookups["id_to_name"]["pr_review_comments"]
+    created_label_name = label_lookups["id_to_name"]["pr_created"]
+
     # Get all cached issues and filter for vscodeclaude eligibility
     if all_cached_issues is None:
         logger.debug(
@@ -511,11 +425,11 @@ def process_eligible_issues(
     repo_owner, repo_name_str = repo_full_name.split("/", 1)
     for issue in eligible_issues:
         if get_issue_status(issue) == "status-10:pr-created":
-            escalated = _check_merge_conflict(
-                issue, branch_manager, issue_manager, repo_owner, repo_name_str
-            )
-            if not escalated:
-                _check_ci(
+            _ = (
+                checks._check_merge_conflict(
+                    issue, branch_manager, issue_manager, repo_owner, repo_name_str
+                )
+                or checks._check_ci(
                     issue,
                     ci_manager,
                     branch_manager,
@@ -523,6 +437,16 @@ def process_eligible_issues(
                     repo_owner,
                     repo_name_str,
                 )
+                or checks._check_review_comments(
+                    issue,
+                    branch_manager,
+                    issue_manager,
+                    repo_owner,
+                    repo_name_str,
+                    review_label_name,
+                    created_label_name,
+                )
+            )
 
     # Filter to statuses that are eligible for sessions (config-driven)
     actionable_issues: list[IssueData] = [
