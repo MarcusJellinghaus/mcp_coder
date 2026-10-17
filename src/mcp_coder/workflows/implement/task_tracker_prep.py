@@ -180,10 +180,14 @@ def log_progress_summary(project_dir: Path) -> None:
             incomplete_list_val = step_info["incomplete_tasks"]
 
             # Type narrowing assertions
-            assert isinstance(total_val, int), "total should be int"
-            assert isinstance(completed_val, int), "completed should be int"
-            assert isinstance(incomplete_val, int), "incomplete should be int"
-            assert isinstance(
+            assert isinstance(total_val, int), "total should be int"  # noqa: S101
+            assert isinstance(  # noqa: S101
+                completed_val, int
+            ), "completed should be int"
+            assert isinstance(  # noqa: S101
+                incomplete_val, int
+            ), "incomplete should be int"
+            assert isinstance(  # noqa: S101
                 incomplete_list_val, list
             ), "incomplete_tasks should be list"
 

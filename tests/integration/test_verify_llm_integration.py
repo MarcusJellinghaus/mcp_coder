@@ -82,7 +82,7 @@ class TestVerifyEndToEndWithRealLLM:
         try:
             mlflow.end_run()
             mlflow.set_tracking_uri("")
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110 -- best-effort cleanup
             pass
         import mcp_coder.llm.mlflow_logger as _ml  # noqa: PLW0127
 

@@ -96,7 +96,7 @@ def _resolve_package_path(source: str) -> Optional[Path]:
             except (FileNotFoundError, ImportError):
                 pass
 
-    except (
+    except (  # noqa: S110 -- package resolution is best-effort; caller falls back to normal path handling
         Exception
     ):  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
         # If anything goes wrong with package resolution, fall back to normal path handling
@@ -133,7 +133,7 @@ def _load_content(source: str) -> str:
                 try:
                     with open(resolved_path, "r", encoding="utf-8") as f:
                         return f.read()
-                except (
+                except (  # noqa: S110 -- falls through to normal path handling
                     Exception
                 ):  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
                     # Fall through to normal path handling if package resolution fails

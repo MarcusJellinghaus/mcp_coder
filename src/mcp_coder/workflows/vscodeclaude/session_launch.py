@@ -173,9 +173,12 @@ def launch_vscode(
         paths.append(get_status_file_path(session_working_dir))
 
     if is_windows:
-        # On Windows, 'code' is a .cmd file which requires shell=True
+        # On Windows, 'code' is a .cmd file which requires shell=True. A list argv
+        # would not help: Python routes .cmd files through cmd.exe anyway and
+        # does not escape cmd metacharacters.
         quoted = " ".join(f'"{path}"' for path in paths)
-        return launch_process(f"code {quoted}", shell=True)
+        # Both paths are built by mcp-coder (workspace file, session status file).
+        return launch_process(f"code {quoted}", shell=True)  # noqa: S604
     else:
         return launch_process(["code", *(str(path) for path in paths)])
 

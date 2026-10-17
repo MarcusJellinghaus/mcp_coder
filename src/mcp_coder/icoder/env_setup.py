@@ -76,7 +76,9 @@ def _get_claude_code_version() -> str:
         )
         if result.return_code == 0 and result.stdout.strip():
             return result.stdout.strip()
-    except Exception:  # pylint: disable=broad-exception-caught
+    except (  # noqa: S110 -- best-effort probe; "unknown" is the fallback
+        Exception
+    ):  # pylint: disable=broad-exception-caught
         pass
     return "unknown"
 

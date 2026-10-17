@@ -369,7 +369,11 @@ def run_setup_commands(
     """
     for command in commands:
         logger.info("Running: %s", command)
-        options = CommandOptions(cwd=str(folder_path), check=True, shell=True)
+        # Setup commands come from the user's own vscodeclaude config; shell
+        # syntax (pipes, &&, call) is the feature.
+        options = CommandOptions(  # noqa: S604
+            cwd=str(folder_path), check=True, shell=True
+        )
         execute_subprocess(
             [command],  # Shell commands passed as single-element list with shell=True
             options,

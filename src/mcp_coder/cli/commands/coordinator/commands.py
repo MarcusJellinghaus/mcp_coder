@@ -98,9 +98,9 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
 
         # Type narrowing: validate_repo_config raises if any fields are None
         # Assert to help mypy understand the values are str after validation
-        assert isinstance(repo_config["repo_url"], str)
-        assert isinstance(repo_config["executor_job_path"], str)
-        assert isinstance(repo_config["github_credentials_id"], str)
+        assert isinstance(repo_config["repo_url"], str)  # noqa: S101
+        assert isinstance(repo_config["executor_job_path"], str)  # noqa: S101
+        assert isinstance(repo_config["github_credentials_id"], str)  # noqa: S101
         validated_config: dict[str, str] = {
             "repo_url": repo_config["repo_url"],
             "executor_job_path": repo_config["executor_job_path"],
@@ -115,7 +115,7 @@ def execute_coordinator_test(args: argparse.Namespace) -> int:
 
         # Select template based on OS using dictionary mapping
         # executor_os is guaranteed to be non-None and one of {"windows", "linux"} after validation
-        assert isinstance(repo_config["executor_os"], str)
+        assert isinstance(repo_config["executor_os"], str)  # noqa: S101
         executor_os: str = repo_config["executor_os"]
         test_command = TEST_COMMAND_TEMPLATES[executor_os].format(
             log_level=args.log_level
@@ -230,9 +230,9 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
 
             # Type narrowing: validate_repo_config raises if any fields are None
             # Assert to help mypy understand the values are str after validation
-            assert isinstance(repo_config["repo_url"], str)
-            assert isinstance(repo_config["executor_job_path"], str)
-            assert isinstance(repo_config["github_credentials_id"], str)
+            assert isinstance(repo_config["repo_url"], str)  # noqa: S101
+            assert isinstance(repo_config["executor_job_path"], str)  # noqa: S101
+            assert isinstance(repo_config["github_credentials_id"], str)  # noqa: S101
             executor_os_val = repo_config.get("executor_os")
             validated_config: dict[str, str] = {
                 "repo_url": repo_config["repo_url"],

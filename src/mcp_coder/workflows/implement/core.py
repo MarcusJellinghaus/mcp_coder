@@ -137,9 +137,12 @@ def run_implement_workflow(
             step_progress = get_step_progress(pr_info_path)
             for step in step_progress.values():
                 step_total = step["total"]
-                assert isinstance(step_total, int)
+                # Type narrowing for mypy: step totals are always ints.
+                assert isinstance(step_total, int)  # noqa: S101
                 progress.total += step_total
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (  # noqa: S110 -- progress total is cosmetic; the loop cap has a floor
+            Exception
+        ):  # pylint: disable=broad-exception-caught
             pass
 
         # Step 4: Process all incomplete tasks in a bounded loop. The cap is a

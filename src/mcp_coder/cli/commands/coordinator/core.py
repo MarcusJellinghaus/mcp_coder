@@ -168,9 +168,9 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
         )
 
     # Type narrowing: if we reach here, all values are non-None strings
-    assert isinstance(server_url, str)
-    assert isinstance(username, str)
-    assert isinstance(api_token, str)
+    assert isinstance(server_url, str)  # noqa: S101
+    assert isinstance(username, str)  # noqa: S101
+    assert isinstance(api_token, str)  # noqa: S101
 
     return (server_url, username, api_token)
 
