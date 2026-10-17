@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     
     - name: Check for forbidden folders in PR
       run: |
@@ -106,7 +106,7 @@ jobs:
           - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
     name: ${{ matrix.check.name }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -134,7 +134,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -166,7 +166,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -205,7 +205,7 @@ jobs:
       MCP_CODER_LLM_LANGCHAIN_BACKEND: ${{ secrets.MCP_CODER_LLM_LANGCHAIN_BACKEND }}
       MCP_CODER_LLM_LANGCHAIN_MODEL: ${{ secrets.MCP_CODER_LLM_LANGCHAIN_MODEL }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -251,7 +251,7 @@ jobs:
     needs: [unit-tests, integration-tests, langchain-integration]
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -301,7 +301,7 @@ jobs:
   vscodeclaude-template-install:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -360,7 +360,7 @@ jobs:
           - {name: "deptry", cmd: "deptry --version && ./tools/deptry_check.sh"}
     name: ${{ matrix.check.name }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       
       - name: Install uv
         uses: astral-sh/setup-uv@v7
