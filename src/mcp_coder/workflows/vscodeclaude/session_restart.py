@@ -19,7 +19,7 @@ from ...utils.subprocess_runner import (
 )
 from ...utils.user_config import get_cache_refresh_minutes
 from .config import _get_configured_repos
-from .helpers import get_issue_status, truncate_title
+from .helpers import get_issue_status
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
@@ -53,7 +53,6 @@ class BranchPrepResult(NamedTuple):
 
 __all__ = [
     "restart_closed_sessions",
-    "handle_pr_created_issues",
 ]
 
 
@@ -465,30 +464,3 @@ def restart_closed_sessions(
             )
 
     return restarted
-
-
-def handle_pr_created_issues(issues: list[IssueData]) -> None:
-    """Display PR URLs for status-10:pr-created issues.
-
-    Args:
-        issues: Issues with status-10:pr-created
-
-    Prints issue URLs to stdout (no session created).
-    The issue URL typically links to the PR for pr-created issues.
-    """
-    if not issues:
-        return
-
-    print("\n" + "=" * 60)
-    print("PR-CREATED ISSUES (no session needed)")
-    print("=" * 60)
-
-    for issue in issues:
-        issue_number = issue["number"]
-        title = truncate_title(issue["title"], 40)
-        issue_url = issue.get("url", "N/A")
-
-        print(f"  #{issue_number}: {title}")
-        print(f"    Issue: {issue_url}")
-
-    print("=" * 60 + "\n")

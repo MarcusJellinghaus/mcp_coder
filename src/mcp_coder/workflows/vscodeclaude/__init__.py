@@ -308,10 +308,7 @@ from .session_launch import (
 )
 
 # Session restart
-from .session_restart import (
-    handle_pr_created_issues,
-    restart_closed_sessions,
-)
+from .session_restart import restart_closed_sessions
 
 # Session management
 from .sessions import (
@@ -455,7 +452,6 @@ __all__ = [
     "validate_target_repo",
     # Session restart
     "restart_closed_sessions",
-    "handle_pr_created_issues",
     # Helpers
     "TO_BE_DELETED_FILENAME",
     "add_to_be_deleted",
