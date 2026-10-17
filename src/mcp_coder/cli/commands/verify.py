@@ -56,6 +56,7 @@ from .verify_sections import (
     _PROVIDER_ENV_VAR,
     _DropUnexpandedWarnings,
     _print_environment_section,
+    _print_github_security_section,
     _print_langchain_readiness_warning,
     _print_project_section,
     _print_retired_env_var_warning,
@@ -249,6 +250,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     # 0e. GitHub verification section
     github_result = verify_github(project_dir)
     print(_format_section("GITHUB", github_result, symbols))
+    _print_github_security_section(project_dir, symbols)
 
     # 0f. Jenkins verification sections (both empty when [jenkins] is unset)
     jenkins_result, jenkins_jobs_result = verify_jenkins()
