@@ -96,15 +96,24 @@ mcp-coder --log-level debug vscodeclaude launch
 
 The coordinator looks for issues with these status labels (in priority order):
 
-1. `status-10:pr-created` - PR created (displayed only, no session needed)
-2. `status-07:code-review` - Code review needed
-3. `status-04:plan-review` - Plan review needed  
-4. `status-01:created` - New issue needs analysis
+1. `status-07:code-review` - Code review needed
+2. `status-04:plan-review` - Plan review needed  
+3. `status-01:created` - New issue needs analysis
 
 Issues must also:
 
 - Be assigned to the configured GitHub user
 - Not already have an active session
+
+### PR-health checks for `status-10:pr-created`
+
+`status-10:pr-created` issues never get a session themselves, but on every `coordinator vscodeclaude` run the coordinator checks each one's PR (live GitHub data, no local checkout needed). There is no internal loop — how often this happens depends on how often you run (or schedule) the command. The checks currently run only while the session limit has not been reached. The checks run in a fixed order and at most one acts per poll — the rest are re-checked next poll:
+
+1. **Merge conflict** → `status-71:merge-conflict` (Jenkins runs `fix-conflict`)
+2. **Failing CI** → `status-81:failing-ci` (Jenkins runs `fix-ci`)
+3. **New review feedback** (unresolved thread, changes-requested review, or new conversation comment) → `status-91:pr-review-comments`
+
+`status-91` and the escalation labels `status-73`, `74`, `83` and `84` open an interactive session: `/pr_comment_triage` for `91`, `/check_branch_status` for the others. See [PR-health](processes-prompts/development-process.md#10-pr-health-status-10) for the full label flow.
 
 ### Session Lifecycle
 

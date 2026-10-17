@@ -192,6 +192,7 @@ For the MCP Coder and its processes, a number of skills have been defined.
 | `/plan_approve` | Approve plan for implementation |
 | `/implementation_review` | Code review (human-supervised: Claude presents findings, you decide) |
 | `/implementation_review_supervisor` | Code review (autonomous: Claude supervisor delegates to subagents, decides based on knowledge base, escalates only when unsure) |
+| `/pr_comment_triage` | Triage new PR comments and review threads (opened by `status-91:pr-review-comments`) |
 | `/commit_push` | Format, commit, and push changes |
 | `/rebase` | Rebase branch onto base branch |
 

@@ -72,6 +72,12 @@ Skills provide structured workflows for common tasks. Run `mcp-coder init` to de
 | `/commit_push` | Format, commit, and push changes |
 | `/rebase` | Rebase feature branch onto base branch with conflict resolution |
 
+**PR stage:**
+
+| Command | Purpose |
+|---------|---------|
+| `/pr_comment_triage` | Triage new PR comments and review threads: fix, reply or decline, resolve threads, then return the issue to `status-10:pr-created` |
+
 **Meta:**
 
 | Command | Purpose |

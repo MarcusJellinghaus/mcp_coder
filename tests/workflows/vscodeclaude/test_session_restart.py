@@ -14,7 +14,6 @@ from mcp_coder.workflows.vscodeclaude.session_launch import (
 )
 from mcp_coder.workflows.vscodeclaude.session_restart import (
     BranchPrepResult,
-    handle_pr_created_issues,
     restart_closed_sessions,
 )
 from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
@@ -542,41 +541,6 @@ class TestSessionRestart:
         assert "Zombie session for issue #123" in caplog.text
         loaded = load_sessions()
         assert len(loaded["sessions"]) == 1
-
-    def test_handle_pr_created_issues_prints_url(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Prints issue URL for pr-created issues."""
-
-        issue: IssueData = {
-            "number": 123,
-            "title": "Test issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-10:pr-created"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/123",
-            "locked": False,
-        }
-        issues: list[IssueData] = [issue]
-
-        handle_pr_created_issues(issues)
-
-        captured = capsys.readouterr()
-        assert "#123" in captured.out
-        assert "https://github.com/owner/repo/issues/123" in captured.out
-
-    def test_handle_pr_created_issues_empty_list(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Does nothing for empty list."""
-        handle_pr_created_issues([])
-
-        captured = capsys.readouterr()
-        assert captured.out == ""
 
     def test_restart_closed_sessions_skips_blocked_issues(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

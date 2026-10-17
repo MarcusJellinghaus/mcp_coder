@@ -287,6 +287,24 @@ The default workflow uses these status labels:
 | `status-09:pr-creating` | Pull request being created (in progress) |
 | `status-10:pr-created` | PR created, awaiting merge |
 
+### PR-Health Labels
+
+After a PR is created (`status-10:pr-created`), the coordinator checks it on every poll and moves the issue to one of these labels when it needs attention. They are always active — no config flag. Conflicts are checked before CI, CI before review comments.
+
+| Label | Description |
+|-------|-------------|
+| `status-71:merge-conflict` | PR no longer mergeable; picked up by the bot for `fix-conflict` |
+| `status-72:fixing-merge-conflict` | Mechanical rebase in progress (auto/in-progress) |
+| `status-73:merge-conflict-failed` | The rebase job died without finishing (crash watchdog) — needs a human |
+| `status-74:pr-merge-conflict` | Rebase could not resolve the conflict — needs manual resolution |
+| `status-81:failing-ci` | PR's CI is failing; picked up by the bot for `fix-ci` |
+| `status-82:fixing-ci` | CI auto-fix loop in progress (auto/in-progress) |
+| `status-83:ci-fix-failed` | The CI-fix job crashed (crash watchdog) — needs a human |
+| `status-84:pr-ci-failed` | Fix attempts exhausted, or LLM timeout / MCP unavailable — needs a human |
+| `status-91:pr-review-comments` | New review comments, unresolved threads or a changes-requested review — human triage via `/pr_comment_triage` |
+
+Successful automated fixes return the issue to `status-10:pr-created`. Like the other bot labels, `71`/`81` wait unprocessed if Jenkins is not configured for the repo.
+
 ### Optional Automated Review Labels
 
 These labels are used only when automated review is enabled via `auto_review_plan` / `auto_review_implementation` (see [Configuration Guide](../configuration/config.md)). With the flags off (default) they go unused.
