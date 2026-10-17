@@ -14,12 +14,17 @@ import re
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Any, cast
 
+import yaml
+
+from ...mcp_workspace_github import CheckResult, verify_github_security
 from ...utils.pyproject_config import get_implement_config
 from .verify_formatting import (
     _VALUE_COLUMN_INDENT,
     STATUS_SYMBOLS,
     _format_row,
+    _format_section,
     _pad,
 )
 
@@ -42,6 +47,8 @@ _RETIRED_ENV_VARS: dict[str, str] = {
 # reports when it is the one that won.
 _PROVIDER_ENV_VAR: str = "MCP_CODER_LLM_PROVIDER"
 _PROVIDER_ENV_SOURCE: str = f"env {_PROVIDER_ENV_VAR}"
+
+_CODEQL_ACTION_PREFIX = "github/codeql-action"
 
 
 class _DropUnexpandedWarnings(logging.Filter):
@@ -91,6 +98,181 @@ def _validate_mcp_config(
     if not servers:
         return (None, "config present but no servers defined", warnings)
     return (True, "well-formed", warnings)
+
+
+def _schedule_interval(entry: dict[str, Any]) -> Any:
+    """Return a dependabot entry's ``schedule.interval``, or ``"?"`` if absent."""
+    schedule = entry.get("schedule")
+    if isinstance(schedule, dict):
+        return schedule.get("interval", "?")
+    return "?"
+
+
+def _workflow_uses_codeql(path: Path) -> bool:
+    """Return True if any job step in the workflow uses github/codeql-action.
+
+    Unreadable, unparseable, or oddly shaped files count as False.
+    """
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        return False
+    jobs = data.get("jobs") if isinstance(data, dict) else None
+    if not isinstance(jobs, dict):
+        return False
+    for job in jobs.values():
+        steps = job.get("steps") if isinstance(job, dict) else None
+        if not isinstance(steps, list):
+            continue
+        for step in steps:
+            uses = step.get("uses") if isinstance(step, dict) else None
+            if isinstance(uses, str) and uses.startswith(_CODEQL_ACTION_PREFIX):
+                return True
+    return False
+
+
+def _check_dependabot_config(project_dir: Path) -> CheckResult:
+    """Check .github/dependabot.yml (or .yaml) for configured ecosystems and schedules.
+
+    Args:
+        project_dir: Path to the project directory.
+
+    Returns:
+        ``CheckResult`` with ``ok=True`` when at least one ecosystem is
+        configured, ``ok=False`` otherwise (missing file, invalid YAML, or no
+        ecosystems). Always uses warning severity — this section is
+        exit-neutral regardless of what any row reports.
+    """
+    path = next(
+        (
+            p
+            for p in (
+                project_dir / ".github" / "dependabot.yml",
+                project_dir / ".github" / "dependabot.yaml",
+            )
+            if p.exists()
+        ),
+        None,
+    )
+    if path is None:
+        return CheckResult(ok=False, value="not present", severity="warning")
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return CheckResult(ok=False, value=f"invalid YAML ({exc})", severity="warning")
+    except (OSError, UnicodeDecodeError):
+        return CheckResult(ok=False, value="unreadable", severity="warning")
+    updates = data.get("updates") if isinstance(data, dict) else None
+    if not isinstance(updates, list) or not updates:
+        return CheckResult(
+            ok=False, value="no ecosystems configured", severity="warning"
+        )
+    pairs = [
+        (
+            entry.get("package-ecosystem", "?"),
+            _schedule_interval(entry),
+        )
+        for entry in updates
+        if isinstance(entry, dict)
+    ]
+    if not pairs:
+        return CheckResult(
+            ok=False, value="no ecosystems configured", severity="warning"
+        )
+    intervals = {interval for _, interval in pairs}
+    if len(intervals) == 1:
+        ecosystems = ", ".join(eco for eco, _ in pairs)
+        value = f".github/{path.name} ({ecosystems}: {intervals.pop()})"
+    else:
+        parts = ", ".join(f"{eco}: {interval}" for eco, interval in pairs)
+        value = f".github/{path.name} ({parts})"
+    return CheckResult(ok=True, value=value, severity="warning")
+
+
+def _check_codeql_workflow(project_dir: Path) -> CheckResult:
+    """Scan .github/workflows/*.yml|*.yaml for a step using github/codeql-action.
+
+    Args:
+        project_dir: Path to the project directory.
+
+    Returns:
+        ``CheckResult`` with ``ok=True`` when a workflow step's ``uses:``
+        value references ``github/codeql-action``, ``ok=False`` otherwise.
+        Detection is content-based, not filename-based. Always
+        ``severity="warning"``.
+    """
+    workflows_dir = project_dir / ".github" / "workflows"
+    if workflows_dir.is_dir():
+        filenames = sorted(
+            p.name for p in workflows_dir.iterdir() if p.suffix in (".yml", ".yaml")
+        )
+        for filename in filenames:
+            if _workflow_uses_codeql(workflows_dir / filename):
+                return CheckResult(
+                    ok=True, value=f"found in {filename}", severity="warning"
+                )
+    return CheckResult(
+        ok=False,
+        value="no workflow step uses github/codeql-action",
+        severity="warning",
+    )
+
+
+def _derive_code_scanning_alerts(codeql_result: CheckResult) -> CheckResult:
+    """Derive the Code scanning alerts row from CodeQL presence only (no real counts).
+
+    Args:
+        codeql_result: The ``_check_codeql_workflow`` result.
+
+    Returns:
+        A ``CheckResult``-shaped dict with ``ok=None`` always — it reflects
+        whether CodeQL is configured, never a verified alert count. Always
+        ``severity="warning"``.
+    """
+    # CheckResult.ok is typed as bool upstream, but this row is always
+    # unverified (ok=None) per the tri-state convention — cast past the
+    # mismatch rather than widening the shared upstream type.
+    if codeql_result["ok"] is True:
+        return cast(
+            CheckResult,
+            {
+                "ok": None,
+                "value": "configured (alert counts not checked)",
+                "severity": "warning",
+            },
+        )
+    return cast(
+        CheckResult,
+        {
+            "ok": None,
+            "value": "not configured (no CodeQL workflow)",
+            "severity": "warning",
+        },
+    )
+
+
+def _print_github_security_section(project_dir: Path, symbols: dict[str, str]) -> None:
+    """Merge local-file and API-backed security rows, print GITHUB SECURITY.
+
+    Calls `_check_codeql_workflow` once and reuses the result for both the
+    `codeql_workflow` row and the `_derive_code_scanning_alerts` input.
+    """
+    security_api_result = verify_github_security(project_dir)
+    codeql_result = _check_codeql_workflow(project_dir)
+    github_security_result: dict[str, Any] = {
+        "dependabot_config": _check_dependabot_config(project_dir),
+        "dependabot_alerts": security_api_result["dependabot_alerts"],
+        "dependabot_security_updates": security_api_result[
+            "dependabot_security_updates"
+        ],
+        "secret_scanning": security_api_result["secret_scanning"],
+        "secret_scanning_push_protection": security_api_result[
+            "secret_scanning_push_protection"
+        ],
+        "codeql_workflow": codeql_result,
+        "code_scanning_alerts": _derive_code_scanning_alerts(codeql_result),
+    }
+    print(_format_section("GITHUB SECURITY", github_security_result, symbols))
 
 
 def _print_environment_section() -> None:

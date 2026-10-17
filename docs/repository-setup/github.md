@@ -44,6 +44,44 @@ token = "ghp_your_github_token_here"
 tokens, choose *Fine-grained tokens* or *Tokens (classic)*, then add the token to the
 config file.
 
+## Repo Security Configuration Checks
+
+`mcp-coder verify` prints a `GITHUB SECURITY` section right after `GITHUB`, reporting
+— not changing — the repo's security configuration:
+
+```
+=== GITHUB SECURITY =======================================================
+  Dependabot config      [OK]   .github/dependabot.yml (pip: weekly)
+  Dependabot alerts      [OK]   enabled
+  Dependabot security    [WARN] security updates disabled
+  Secret scanning        [ERR]  disabled
+  Secret push protection [ERR]  disabled
+  CodeQL workflow        [ERR]  no workflow step uses github/codeql-action
+  Code scanning alerts   [WARN] not configured (no CodeQL workflow)
+```
+
+Two local-file rows need no token:
+
+- **Dependabot config** reads `.github/dependabot.yml` (or `.yaml`) directly.
+- **CodeQL workflow** scans `.github/workflows/*.yml` for a step using
+  `github/codeql-action`.
+
+Four rows are API-backed and need `Administration: Read` on the GitHub token (the same
+permission already listed in the fine-grained PAT table above) — without it, they show
+`[WARN] not accessible` instead of a real on/off state:
+
+- Dependabot alerts
+- Dependabot security
+- Secret scanning
+- Secret push protection
+
+**Code scanning alerts** reflects only whether CodeQL is configured (from the row
+above); it does not query real alert counts — that needs a different permission scope
+and there is no repo with CodeQL enabled yet to verify it against.
+
+The whole section is report-only and exit-neutral: it never fails the `verify`
+command. Turning features on or off happens in the GitHub web UI, not through `verify`.
+
 ## Workflow Labels Setup
 
 ### About Status Labels

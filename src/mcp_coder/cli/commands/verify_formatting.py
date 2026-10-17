@@ -154,6 +154,14 @@ _LABEL_MAP: dict[str, str] = {
     "perm_issues_read": "Issues: Read",
     "perm_workflows_read": "Actions: Read",
     "perm_statuses_read": "Commit statuses: Read",
+    # GitHub security section
+    "dependabot_config": "Dependabot config",
+    "dependabot_alerts": "Dependabot alerts",
+    "dependabot_security_updates": "Dependabot security",
+    "secret_scanning": "Secret scanning",
+    "secret_scanning_push_protection": "Secret push protection",
+    "codeql_workflow": "CodeQL workflow",
+    "code_scanning_alerts": "Code scanning alerts",
     # Git section
     "git_binary": "Git binary",
     "git_repo": "Repository",

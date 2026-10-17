@@ -24,6 +24,7 @@ from mcp_workspace.github_operations import (
     RepoIdentifier,
     get_authenticated_username,
     verify_github,
+    verify_github_security,
 )
 
 # CI results submodule (TypedDicts + helpers)
@@ -61,6 +62,7 @@ __all__: List[str] = [
     # Verification
     "CheckResult",
     "verify_github",
+    "verify_github_security",
     # CI results
     "CIResultsManager",
     "CIStatusData",

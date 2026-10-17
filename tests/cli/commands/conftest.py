@@ -182,6 +182,30 @@ def _mock_verify_git() -> Generator[MagicMock, None, None]:
         yield mock
 
 
+@pytest.fixture(autouse=True)
+def _mock_verify_github_security() -> Generator[MagicMock, None, None]:
+    """Auto-mock verify_github_security to an all-ok default (keeps CLI tests hermetic)."""
+    default = {
+        "dependabot_alerts": {"ok": True, "value": "enabled", "severity": "warning"},
+        "dependabot_security_updates": {
+            "ok": True,
+            "value": "enabled",
+            "severity": "warning",
+        },
+        "secret_scanning": {"ok": True, "value": "enabled", "severity": "warning"},
+        "secret_scanning_push_protection": {
+            "ok": True,
+            "value": "enabled",
+            "severity": "warning",
+        },
+    }
+    with patch(
+        "mcp_coder.cli.commands.verify_sections.verify_github_security",
+        return_value=default,
+    ) as mock:
+        yield mock
+
+
 @contextmanager
 def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
     """Patch the additional execute_verify mock surface for alignment smoke tests.
