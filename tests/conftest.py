@@ -312,7 +312,9 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
             # Try master if main doesn't exist
             try:  # noqa: SIM105 -- pass holds the "Use current branch" comment; suppress() has nowhere to put it
                 repo.git.checkout("master")
-            except Exception:  # pylint: disable=broad-exception-caught  # test helper
+            except (  # noqa: S110 -- test helper; use current branch
+                Exception
+            ):  # pylint: disable=broad-exception-caught  # test helper
                 pass  # Use current branch
     except Exception as e:  # pylint: disable=broad-exception-caught
         pytest.skip(f"Could not clone test repository {test_repo_url}: {e}")

@@ -139,7 +139,9 @@ def run_implement_workflow(
                 step_total = step["total"]
                 assert isinstance(step_total, int)
                 progress.total += step_total
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (  # noqa: S110 -- progress total is cosmetic; the loop cap has a floor
+            Exception
+        ):  # pylint: disable=broad-exception-caught
             pass
 
         # Step 4: Process all incomplete tasks in a bounded loop. The cap is a

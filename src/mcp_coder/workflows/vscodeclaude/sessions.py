@@ -289,7 +289,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[tuple[int, str]]:
                     _, pid = win32process.GetWindowThreadProcessId(hwnd)
                     if pid in vscode_pids:
                         entries.append((pid, title))
-        except (
+        except (  # noqa: S110 -- one bad window must not abort the enumeration
             Exception
         ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             pass  # Ignore errors for individual windows

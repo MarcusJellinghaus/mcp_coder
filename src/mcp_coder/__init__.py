@@ -31,7 +31,7 @@ try:
     from . import _depcheck
 
     _depcheck.ensure_dependencies()
-except Exception:  # noqa: BLE001 — fail-open: never break a healthy install
+except Exception:  # noqa: BLE001, S110 — fail-open: never break a healthy install
     pass
 
 from .checks.branch_status import collect_branch_status

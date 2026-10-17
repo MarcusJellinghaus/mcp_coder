@@ -31,7 +31,9 @@ def find_missing_dependencies() -> list[str]:
     for spec in reqs:
         try:
             req = Requirement(spec)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (  # noqa: S112 -- unparseable spec has no name to check
+            Exception
+        ):  # pylint: disable=broad-exception-caught
             # Unparseable spec has no usable name to check — skip it.
             continue
         try:
@@ -39,7 +41,9 @@ def find_missing_dependencies() -> list[str]:
             # packaging versions; off-platform markers drop too.
             if req.marker and not req.marker.evaluate(environment={"extra": ""}):
                 continue
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (  # noqa: S110 -- fall through to presence check
+            Exception
+        ):  # pylint: disable=broad-exception-caught
             # Odd marker still has a name — don't fail-open; fall through to
             # the presence check below.
             pass
