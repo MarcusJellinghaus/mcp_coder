@@ -1188,7 +1188,7 @@ Every round appends a detailed log to `pr_info/plan_review_log_{n}.md` / `pr_inf
 
 ### 10. PR-Health (status-10)
 
-While a PR sits at `status-10:pr-created`, the vscodeclaude coordinator checks it on every poll for three problems. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag. The checks run in a fixed order and at most one acts per poll; the rest are re-checked next poll.
+While a PR sits at `status-10:pr-created`, the vscodeclaude coordinator checks it on every `coordinator vscodeclaude` run (while below the session limit) for three problems. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag. The checks run in a fixed order and at most one acts per poll; the rest are re-checked next poll.
 
 ```
 status-10:pr-created

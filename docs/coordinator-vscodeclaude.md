@@ -107,7 +107,7 @@ Issues must also:
 
 ### PR-health checks for `status-10:pr-created`
 
-`status-10:pr-created` issues never get a session themselves, but on every poll the coordinator checks each one's PR (live GitHub data, no local checkout needed). The checks run in a fixed order and at most one acts per poll — the rest are re-checked next poll:
+`status-10:pr-created` issues never get a session themselves, but on every `coordinator vscodeclaude` run the coordinator checks each one's PR (live GitHub data, no local checkout needed). There is no internal loop — how often this happens depends on how often you run (or schedule) the command. The checks currently run only while the session limit has not been reached. The checks run in a fixed order and at most one acts per poll — the rest are re-checked next poll:
 
 1. **Merge conflict** → `status-71:merge-conflict` (Jenkins runs `fix-conflict`)
 2. **Failing CI** → `status-81:failing-ci` (Jenkins runs `fix-ci`)
