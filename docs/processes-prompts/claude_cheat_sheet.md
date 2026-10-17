@@ -24,6 +24,7 @@ For a complete overview of the process, see [development-process.md](development
 | `/implementation_needs_rework` | Return to implementation for fixes |
 | `/implementation_new_tasks` | Add new implementation steps |
 | `/check_branch_status` | Check branch readiness and auto-fix CI |
+| `/pr_comment_triage` | Triage new PR comments and review threads: fix, reply or decline, then resolve |
 | `/commit_push` | Format, commit, and push changes |
 | `/discuss` | Step-by-step discussion of open questions |
 | `/rebase` | Rebase branch onto base branch |

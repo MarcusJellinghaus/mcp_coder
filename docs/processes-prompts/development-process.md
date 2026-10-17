@@ -138,6 +138,7 @@ flowchart TD
 | **Plan Review** | `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` |
 | **Implementation** | `/implementation_finalise` |
 | **Code Review** | `/implementation_review`, `/implementation_review_supervisor`, `/discuss`, `/implementation_new_tasks`, `/commit_push`, `/implementation_approve`, `/implementation_needs_rework` |
+| **PR Review Comments** | `/pr_comment_triage` (via `/check_branch_status`) |
 | **Utility** | `/check_branch_status`, `/commit_push`, `/discuss`, `/rebase` |
 
 **Quick Reference:** See [Claude Code Cheat Sheet](claude_cheat_sheet.md) for a compact command overview.
@@ -1116,6 +1117,8 @@ flowchart LR
 - Approve and merge PR
 - Close related issue (automatically done by GitHub)
 
+While the PR waits, the coordinator monitors it — see [PR-health](#10-pr-health-status-10).
+
 ---
 
 ### 8. Failure Handling
@@ -1142,6 +1145,10 @@ Automated workflows can fail at several points. When a failure occurs, the issue
 | `status-17f-mcp:code-review-mcp-unavailable` | MCP server unavailable during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-tasks:code-review-open-tasks` | `review-implementation` refused to start because `## Tasks` in `TASK_TRACKER.md` still has unchecked items | run `/implementation_finalise`, then `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-ci-unknown:code-review-ci-undeterminable` | The final dismiss gate could not prove CI green (status pending / not configured / unknown / unavailable) | run `/check_branch_status` (check the GitHub token / whether CI exists), then `mcp-coder gh-tool set-status status-17:code-review-bot` |
+| `status-73:merge-conflict-failed` | The `fix-conflict` job died without finishing | session opens with `/check_branch_status`; fix, then `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-74:pr-merge-conflict` | Rebase could not resolve the conflict | resolve manually (`/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-83:ci-fix-failed` | The `fix-ci` job crashed | session opens with `/check_branch_status`; fix, then `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-84:pr-ci-failed` | CI-fix attempts exhausted, LLM timeout or MCP unavailable (see the issue comment's Category line) | fix CI manually (`/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
 
 To recover from a failure, investigate the root cause (logs, CI output, API errors), resolve the underlying issue, then use `mcp-coder gh-tool set-status` to transition the issue back to a retry-ready state as shown in the table above. The bot will automatically pick up the issue again from the recovery status.
 
@@ -1178,3 +1185,30 @@ implement ────▶ status-17:code-review-bot ──▶ (coordinator dispa
 Every round appends a detailed log to `pr_info/plan_review_log_{n}.md` / `pr_info/implementation_review_log_{n}.md` — the source of truth for an escalation handoff (no separate issue comment is posted for escalations). Rebase-needed or still-red CI is a gate: it routes to needs-human or error, never success. Failure labels and their recovery are in the [Failure Handling](#8-failure-handling) table above.
 
 > **Quality gate before enabling.** Before setting `auto_review_*=true` on a repo, validate that the bot's review quality matches a trusted reference (the interactive supervisor or a human) on real branches. The deterministic behavior is unit-tested and the session interleave is integration-tested, but the model-judgment match is a manual pre-enable check, not something CI enforces.
+
+### 10. PR-Health (status-10)
+
+While a PR sits at `status-10:pr-created`, the vscodeclaude coordinator checks it on every poll for three problems. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag. The checks run in a fixed order and at most one acts per poll; the rest are re-checked next poll.
+
+```
+status-10:pr-created
+  ├─ merge conflict   → status-71 ─▶ (Jenkins: fix-conflict) ─▶ status-72
+  │                        ├─ rebased cleanly  → status-10:pr-created
+  │                        ├─ still blocked    → status-74  (human)
+  │                        └─ job crashed      → status-73  (human)
+  ├─ failing CI       → status-81 ─▶ (Jenkins: fix-ci) ─▶ status-82
+  │                        ├─ CI green         → status-10:pr-created
+  │                        ├─ fix exhausted / LLM timeout / MCP unavailable → status-84  (human)
+  │                        └─ job crashed      → status-83  (human)
+  └─ review feedback  → status-91  (human, /pr_comment_triage)
+```
+
+**Order matters.** Conflicts come first because a branch that is behind its base can itself make CI fail; fixing the symptom first would waste CI-fix attempts. Review comments come last.
+
+**Mechanical fixes run on Jenkins.** `status-71` and `status-81` are bot-pickup labels: the existing `coordinator` loop dispatches `fix-conflict` / `fix-ci` (see [CLI Reference](../cli-reference.md#fix-conflict)) and the job sets the final label itself. `fix-conflict` is a plain rebase with no LLM; `fix-ci` reuses the `implement` CI-fix loop. Without Jenkins configured for a repo, these issues wait unprocessed, like any other bot label.
+
+**Humans handle the rest.** `73`, `74`, `83` and `84` open an interactive session with `/check_branch_status`; recovery commands are in the [Failure Handling](#8-failure-handling) table. `status-91` opens a session with `/pr_comment_triage`.
+
+**Review feedback is never auto-fixed.** Answering a human reviewer is a judgment call, and a wrong automated answer is public. `status-91` triggers on any unresolved review thread, changes-requested review or new top-level PR comment. Code-scanning alerts are excluded. Unresolved threads and changes-requested reviews use GitHub's own live state. Plain conversation comments have no such state, so only comments newer than the last time the issue returned to `status-10` after a `status-91` count as new (derived from the issue's label history; nothing is stored locally).
+
+**Triage session.** `/pr_comment_triage` ([`.claude/skills/pr_comment_triage/SKILL.md`](../../.claude/skills/pr_comment_triage/SKILL.md)) starts with `/check_branch_status`, then for each item either fixes (quality checks, commit, push), replies or declines. Inline replies are used for review threads; a general PR comment for conversation comments and changes-requested reviews, which carry no thread id. Addressed threads are resolved so they do not re-trigger `status-91`. When nothing is left, the session sets `status-10:pr-created`.

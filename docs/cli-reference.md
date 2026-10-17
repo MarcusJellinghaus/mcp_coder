@@ -33,6 +33,8 @@ End-to-end development automation from planning to pull requests.
 | [`rebase`](#rebase) | Automatically rebase the current branch onto its base branch |
 | [`review-implementation`](#review-implementation) | Run automated review of an implementation |
 | [`create-pr`](#create-pr) | Create pull request with AI-generated summary |
+| [`fix-conflict`](#fix-conflict) | Rebase a PR onto its base branch to resolve a merge conflict |
+| [`fix-ci`](#fix-ci) | Run the CI auto-fix loop on a PR with failing CI |
 
 ### Interactive Development
 Interactive coding tools and local workspace management.
@@ -501,6 +503,51 @@ mcp-coder review-implementation
 
 # Update labels and post comments on the outcome
 mcp-coder review-implementation --update-issue-labels --post-issue-comments
+```
+
+---
+
+### fix-conflict
+
+Rebase a PR onto its base branch to resolve a merge conflict.
+
+```bash
+mcp-coder fix-conflict [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+
+**Description:** Jenkins-dispatched workflow for `status-71:merge-conflict` (see [PR-health](processes-prompts/development-process.md#10-pr-health-status-10)). Runs the mechanical rebase only — no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself: back to `status-10:pr-created` on success, or `status-74:pr-merge-conflict` if the PR is still blocked. If the state stays `unknown`, the issue stays at `status-72:fixing-merge-conflict` for the next coordinator poll. Crashes are caught by `run_guarded()`, which comments and sets `status-73:merge-conflict-failed`. Normally run by the coordinator, not by hand.
+
+**Examples:**
+```bash
+mcp-coder fix-conflict --project-dir /path/to/repo
+```
+
+---
+
+### fix-ci
+
+Run the CI auto-fix loop on a PR with failing CI.
+
+```bash
+mcp-coder fix-ci [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH` - Project directory path (default: current directory)
+- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
+- `--mcp-config PATH` - Path to MCP configuration file
+- `--settings PATH` - Path to Claude Code settings file. Forwarded to Claude via its `--settings` flag; auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
+- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
+- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
+
+**Description:** Jenkins-dispatched workflow for `status-81:failing-ci` (see [PR-health](processes-prompts/development-process.md#10-pr-health-status-10)). Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the issue to `status-10:pr-created`. Exhausted fix attempts, an LLM timeout or an unavailable MCP server post a comment (the Category line gives the reason) and set `status-84:pr-ci-failed`. Unexpected crashes are caught by `run_guarded()`, which comments and sets `status-83:ci-fix-failed`. Normally run by the coordinator, not by hand.
+
+**Examples:**
+```bash
+mcp-coder fix-ci --update-issue-labels --post-issue-comments
 ```
 
 ---
