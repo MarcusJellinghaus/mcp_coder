@@ -49,5 +49,5 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Pull Request
 
-- [ ] PR review
+- [x] PR review
 - [ ] PR summary
