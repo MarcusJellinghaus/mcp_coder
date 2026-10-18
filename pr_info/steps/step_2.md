@@ -25,6 +25,10 @@ One commit: tests + implementation + docs, all three checks passing.
 If any of these fail, **stop** and report that the upstream dependency has not landed. Do
 not stub, vendor, or locally re-implement the upstream names.
 
+> **Unblocked 2026-10-18:** the upstream merge landed on mcp-workspace `main`, which also added
+> `LinkedBranchStatus.LINKED_VIA_PR` (non-blocking, maps to 0). Implemented with that extra
+> mapping row. The history below is retained for reference only.
+>
 > **Blocked on mcp-workspace #268 (re-checked through 2026-08-30).** `origin/main` of
 > mcp-workspace exports neither `LinkedBranchStatus` nor `linked_branch_blocks`; branch
 > `origin/268-check-branch-status-verify-the-issue-s-linked-branch-matches-the-current-branch`

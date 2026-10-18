@@ -18,7 +18,9 @@ from ...checks.branch_status import (
     GITHUB_TOKEN_HINT,
     BranchStatusReport,
     CIStatus,
+    LinkedBranchStatus,
     collect_branch_status,
+    linked_branch_blocks,
 )
 from ...checks.ci_policy import assess_ci
 from ...mcp_workspace_github import (
@@ -139,21 +141,31 @@ def _exit_code(report: BranchStatusReport, fail_on_reviews: bool) -> int:
 
     Precedence: undeterminable (2) wins over blocking (1) wins over clean (0).
 
+    Three causes feed the ladder: the CI verdict, the issue's linked-branch
+    state, and PR-review feedback. Only the review terms are gated on
+    fail_on_reviews; the linked-branch terms participate whenever the check ran,
+    mirroring upstream, which suppresses "Ready to merge" on a blocking linked
+    branch regardless of the flag.
+
     Args:
         report: Collected branch status report.
         fail_on_reviews: When True, PR-review feedback participates in the gate;
-            when False, only CI status drives the code.
+            when False, it is informational only.
 
     Returns:
-        2 if CI truth or (gated) review state is undeterminable; 1 if determined
-        and blocking; 0 if proven clean.
+        2 if CI truth, the linked-branch lookup, or the (gated) review state is
+        undeterminable; 1 if determined and blocking; 0 if proven clean.
     """
     verdict = assess_ci(report.ci_status, require_proven=False)
     if verdict == "undeterminable":
         return 2
+    if report.linked_branch_status is LinkedBranchStatus.UNKNOWN:
+        return 2
     if fail_on_reviews and report.pr_feedback_undeterminable:
         return 2
     if verdict == "failed":
+        return 1
+    if linked_branch_blocks(report.linked_branch_status):
         return 1
     if fail_on_reviews and report.pr_feedback_blocks_merge:
         return 1

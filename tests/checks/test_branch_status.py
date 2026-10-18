@@ -13,9 +13,11 @@ import mcp_coder.checks.branch_status as branch_status
 from mcp_coder.checks.branch_status import (
     BranchStatusReport,
     CIStatus,
+    LinkedBranchStatus,
     collect_branch_status,
     create_empty_report,
     get_failed_jobs_summary,
+    linked_branch_blocks,
 )
 
 
@@ -27,6 +29,9 @@ def test_shim_reexports_expected_names() -> None:
     assert callable(collect_branch_status)
     assert callable(create_empty_report)
     assert callable(get_failed_jobs_summary)
+    assert callable(linked_branch_blocks)
+    assert isinstance(LinkedBranchStatus.OK, LinkedBranchStatus)
+    assert {"LinkedBranchStatus", "linked_branch_blocks"} <= set(branch_status.__all__)
 
 
 def test_ci_status_has_degradation_members() -> None:
