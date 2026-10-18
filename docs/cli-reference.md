@@ -780,7 +780,7 @@ mcp-coder check branch-status [OPTIONS]
 | 1 | Failure | CI failed, `--wait-for-pr` expired without a PR appearing, or fix operations failed; the issue's linked branch is missing, ambiguous, or is not the current branch; or (with `--fail-on-reviews`) PR reviews block merge |
 | 2 | Technical Error or Undeterminable | Invalid arguments, Git errors, API errors, unexpected exceptions, missing GitHub token (CI unavailable); the linked-branch lookup could not be completed; or (with `--fail-on-reviews`) PR review state is undeterminable |
 
-> **Note:** the linked-branch causes are **not** gated on `--fail-on-reviews` — they apply whenever the branch name yields an issue number, so a default run can exit non-zero on a stale linked branch. A branch linked only through a closing PR is accepted.
+> **Note:** the linked-branch causes are **not** gated on `--fail-on-reviews` — they apply whenever the branch name yields an issue number, so a default run can exit non-zero on a stale linked branch. The check only reads GitHub's linked-branches list (the Development panel's "Create a branch" link); a branch connected to the issue solely through a closing PR reference has no such entry and is treated as `NOT_LINKED`, which blocks (exit 1).
 
 > **Known limitation:** neither `--fail-on-reviews` nor the linked-branch check is evaluated when `--fix` resolves CI — the `--fix` success path returns before the exit-code gate.
 
