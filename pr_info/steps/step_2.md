@@ -25,9 +25,18 @@ One commit: tests + implementation + docs, all three checks passing.
 If any of these fail, **stop** and report that the upstream dependency has not landed. Do
 not stub, vendor, or locally re-implement the upstream names.
 
-> **Unblocked 2026-10-18:** the upstream merge landed on mcp-workspace `main`, which also added
-> `LinkedBranchStatus.LINKED_VIA_PR` (non-blocking, maps to 0). Implemented with that extra
-> mapping row. The history below is retained for reference only.
+> **Unblocked 2026-10-18:** the upstream merge landed on mcp-workspace `main`. An earlier note
+> here claimed upstream also added `LinkedBranchStatus.LINKED_VIA_PR` (non-blocking, maps to
+> 0) and that a mapping row was added for it — that claim was never verified against upstream
+> source and was false. Re-checked directly against the mcp-workspace reference project at
+> `main` commit `636161d` (`feat(github_operations): add security settings probes (#315)`):
+> `src/mcp_workspace/checks/branch_status_rendering.py` defines `LinkedBranchStatus` with
+> exactly six members (`OK`, `MISMATCH`, `AMBIGUOUS`, `NOT_LINKED`, `UNKNOWN`,
+> `NOT_CHECKED`) and no `LINKED_VIA_PR`; a full-history grep of the mcp-workspace repo for
+> `LINKED_VIA_PR` returns zero matches. The bogus `(LinkedBranchStatus.LINKED_VIA_PR, 0)` row
+> was removed from
+> `tests/cli/commands/test_check_branch_status_exit_code.py::TestLinkedBranchExitCode`. The
+> history below is retained for reference only.
 >
 > **Blocked on mcp-workspace #268 (re-checked through 2026-08-30).** `origin/main` of
 > mcp-workspace exports neither `LinkedBranchStatus` nor `linked_branch_blocks`; branch

@@ -22,6 +22,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 - [x] [Step 1: `implementation_approve` skill gates on `Ready to merge`](./steps/step_1.md) — not blocked
-- [x] [Step 2: Linked-branch state feeds `_exit_code`](./steps/step_2.md) — unblocked: mcp-workspace `main` now exports `LinkedBranchStatus` and `linked_branch_blocks` (observed 2026-10-18). Upstream added a seventh member `LINKED_VIA_PR` (non-blocking); covered by an extra mapping row.
+- [x] [Step 2: Linked-branch state feeds `_exit_code`](./steps/step_2.md) — unblocked: mcp-workspace `main` now exports `LinkedBranchStatus` and `linked_branch_blocks` (observed 2026-10-18). The earlier note about a seventh `LINKED_VIA_PR` member was wrong — re-checked directly against upstream `main` (commit `636161d`): the enum still has exactly the original six members. The bogus mapping row was removed from the test.
 
 ## Pull Request

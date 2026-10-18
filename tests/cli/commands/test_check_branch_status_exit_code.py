@@ -118,7 +118,6 @@ class TestLinkedBranchExitCode:
         ("linked_branch_status", "expected"),
         [
             (LinkedBranchStatus.OK, 0),
-            (LinkedBranchStatus.LINKED_VIA_PR, 0),
             (LinkedBranchStatus.NOT_CHECKED, 0),
             (LinkedBranchStatus.MISMATCH, 1),
             (LinkedBranchStatus.AMBIGUOUS, 1),
