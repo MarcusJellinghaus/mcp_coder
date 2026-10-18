@@ -23,3 +23,16 @@ NO FINDINGS otherwise.
 Verdict(decision='tasks', tasks=["Fix docs/cli-reference.md:781 — remove or correct the claim that 'a branch linked only through a closing PR is accepted'. Per the shipped implementation, `_collect_linked_branch_status` only queries GitHub's `linkedBranches` GraphQL connection with no PR-timeline fallback, so a branch linked solely via a closing PR resolves to `NOT_LINKED`, which `linked_branch_blocks` treats as blocking (exit 1). Update the doc text to accurately describe this behavior, consistent with the plan in pr_info/steps/step_2.md."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 3 — 2026-10-18
+**Findings**:
+No local `main` branch; use `origin/main`.Confirmed installed `mcp_workspace` matches the plan exactly — six states, correct predicate. No `LINKED_VIA_PR`, consistent with the step_2.md correction already applied.This matches the actual shipped behavior accurately and resolves round 2's finding correctly.
+
+Everything in the diff — shim re-export, `_exit_code` terms/ordering/docstring, docs table, SKILL.md wording, and tests — matches the verified upstream API and the plan. Round 1 and round 2 findings are both resolved correctly. Ruff and mypy pass on touched files; pytest could not run due to an unrelated environment issue (`verify_github_security` missing from installed `mcp_workspace.github_operations`, surfaced via `mcp_coder/mcp_workspace_github.py`, a file untouched by this diff) that blocks collection of the entire test suite, not specific to this change.
+
+NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+rebase-needed
+**Escalate reason**: rebase
