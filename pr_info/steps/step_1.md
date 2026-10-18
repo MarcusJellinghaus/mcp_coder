@@ -71,6 +71,14 @@ In `tests/utils/test_text_io.py`:
    captured `kwargs["newline"] == "\n"`. This is the test that fails on every
    OS (not just Windows) if the helper stops passing `newline="\n"`.
 
+6. `test_lf_only_input_is_written_byte_identical` — parametrized over
+   `append in (False, True)` and `text in ("", "no newline", "a\nb", "a\n\nb\n")`.
+   For `append=True`, pre-seed the file with `b"seed\n"` and assert
+   `read_bytes() == b"seed\n" + text.encode()`; for `append=False`, assert
+   `read_bytes() == text.encode()`. This pins the contract that LF-only input
+   is never altered (no added/removed trailing newline, no other rewrite) in
+   either mode — tests 1 and 3 cover the common case, this one covers edges.
+
 Example for test 5:
 
 ```python
