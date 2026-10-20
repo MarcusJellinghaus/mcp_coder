@@ -43,9 +43,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Switch the label-workflow YAML writes to `write_lf_text` ([details](./steps/step_4.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Switch the iCoder schema write to `write_lf_text` ([details](./steps/step_5.md))
 

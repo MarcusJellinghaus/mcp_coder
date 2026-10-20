@@ -8,6 +8,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from mcp_coder.utils.text_io import write_lf_text
+
 logger = logging.getLogger(__name__)
 
 
@@ -207,5 +209,5 @@ def write_github_actions(
     for path, content in files_to_write.items():
         if path.exists():
             logger.warning("Overwriting: %s", path)
-        path.write_text(content, encoding="utf-8")
+        write_lf_text(path, content)
     return [str(p) for p in files_to_write]
