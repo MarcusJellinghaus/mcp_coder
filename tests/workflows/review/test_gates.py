@@ -213,28 +213,71 @@ class TestCheckCiProvenGate:
         assert "could not prove CI ran green" not in details
         assert "GitHub token" not in details
 
-    @pytest.mark.parametrize(
-        "ci_status",
-        [
-            CIStatus.PENDING,
-            CIStatus.NOT_CONFIGURED,
-            CIStatus.UNKNOWN,
-            CIStatus.UNAVAILABLE,
-        ],
-    )
-    def test_unprovable_states_are_ci_unknown(
-        self, monkeypatch: pytest.MonkeyPatch, ci_status: CIStatus
-    ) -> None:
-        """Every non-PASSED, non-FAILED status -> ("ci_unknown", details).
-
-        The details name the observed status and point at the token / CI-exists
-        recovery rather than "fix the code".
-        """
-        self._patch_ci(monkeypatch, ci_status)
+    def test_pending_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """PENDING -> ("ci_unknown", details) saying CI has not finished."""
+        self._patch_ci(monkeypatch, CIStatus.PENDING)
 
         reason, details = check_ci_proven_gate(Path("/repo"))
 
         assert reason == "ci_unknown"
         assert details is not None
-        assert ci_status.value in details
+        assert CIStatus.PENDING.value in details
+        assert "has not finished" in details
+        assert "GitHub token" not in details
+
+    def test_unknown_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """UNKNOWN -> ("ci_unknown", details) saying status could not be collected."""
+        self._patch_ci(monkeypatch, CIStatus.UNKNOWN)
+
+        reason, details = check_ci_proven_gate(Path("/repo"))
+
+        assert reason == "ci_unknown"
+        assert details is not None
+        assert CIStatus.UNKNOWN.value in details
+        assert "could not be collected" in details
+        assert "GitHub token" not in details
+
+    def test_not_configured_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """NOT_CONFIGURED -> ("ci_unknown", details) saying no CI runs were found."""
+        self._patch_ci(monkeypatch, CIStatus.NOT_CONFIGURED)
+
+        reason, details = check_ci_proven_gate(Path("/repo"))
+
+        assert reason == "ci_unknown"
+        assert details is not None
+        assert CIStatus.NOT_CONFIGURED.value in details
+        assert "No CI runs were found" in details
+        assert "GitHub token" not in details
+
+    def test_unavailable_message_mentions_token(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """UNAVAILABLE -> ("ci_unknown", details) is the one status keeping token wording."""
+        self._patch_ci(monkeypatch, CIStatus.UNAVAILABLE)
+
+        reason, details = check_ci_proven_gate(Path("/repo"))
+
+        assert reason == "ci_unknown"
+        assert details is not None
+        assert CIStatus.UNAVAILABLE.value in details
         assert "GitHub token" in details
+
+    def test_generic_fallback_for_unlisted_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An unlisted CIStatus -> ("ci_unknown", details) using the generic fallback."""
+        collect = MagicMock(
+            return_value=SimpleNamespace(ci_status=SimpleNamespace(value="WEIRD")),
+            name="collect_branch_status",
+        )
+        monkeypatch.setattr(gates, "collect_branch_status", collect)
+        monkeypatch.setattr(
+            gates, "assess_ci", MagicMock(return_value="undeterminable")
+        )
+
+        reason, details = check_ci_proven_gate(Path("/repo"))
+
+        assert reason == "ci_unknown"
+        assert details is not None
+        assert "WEIRD" in details
+        assert "GitHub token" not in details

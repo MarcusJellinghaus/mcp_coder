@@ -19,7 +19,7 @@ Gate 2) and are a no-op for the plan lane.
 
 from pathlib import Path
 
-from mcp_coder.checks.branch_status import collect_branch_status
+from mcp_coder.checks.branch_status import CIStatus, collect_branch_status
 from mcp_coder.checks.ci_policy import assess_ci
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
@@ -31,6 +31,34 @@ from .config import ReviewConfig
 # Cap the open-task listing in the failure comment so a large tracker does not
 # produce an unreadable wall of text; the total count is still reported.
 MAX_LISTED_TASKS = 10
+
+# Per-status wording for check_ci_proven_gate's ci_unknown case. Only
+# UNAVAILABLE's message mentions the GitHub token; the others are transient or
+# missing-CI conditions where re-running is the right first move.
+_CI_UNKNOWN_MESSAGES: dict[CIStatus, str] = {
+    CIStatus.PENDING: (
+        "CI has not finished for the latest commit — re-run the review "
+        "once CI completes."
+    ),
+    CIStatus.UNKNOWN: (
+        "CI status could not be collected (GitHub lookup failed) — re-run "
+        "the review; if it persists, check GitHub API availability and "
+        "rate limits."
+    ),
+    CIStatus.UNAVAILABLE: (
+        "CI status is unavailable — check the GitHub token and its " "permissions."
+    ),
+    CIStatus.NOT_CONFIGURED: (
+        "No CI runs were found, or status could not be collected — re-run "
+        "the review; if it persists, check that the repo has a CI "
+        "workflow."
+    ),
+}
+
+_CI_UNKNOWN_GENERIC_MESSAGE = (
+    "could not be proven green — re-run the review; if it persists, "
+    "investigate the CI status collector."
+)
 
 
 def check_open_tasks_gate(
@@ -85,7 +113,10 @@ def check_ci_proven_gate(project_dir: Path) -> tuple[str | None, str | None]:
     ``CIStatus.PASSED`` proves green; ``FAILED`` is the existing determinably-red
     ``"ci"`` case, and every other status (``PENDING``, ``NOT_CONFIGURED``,
     ``UNKNOWN``, ``UNAVAILABLE``, or any future member) is ``"ci_unknown"`` —
-    "could not tell", whose fix is to check the token / whether CI exists.
+    "could not tell" — with a per-status recovery hint from
+    ``_CI_UNKNOWN_MESSAGES``: only ``UNAVAILABLE`` points at the GitHub token,
+    the others suggest re-running or checking that CI is configured, and any
+    unlisted status falls back to a generic, token-free message.
 
     The caller gates this on ``config.enforce_implementation_gates``, so this
     function itself takes only ``project_dir`` (kept pure and testable).
@@ -108,7 +139,10 @@ def check_ci_proven_gate(project_dir: Path) -> tuple[str | None, str | None]:
             f"CI status is `{status.value}` — CI ran and failed. "
             f"Fix the failing code, then re-run the review."
         )
-    return "ci_unknown", (
-        f"CI status is `{status.value}` — could not prove CI ran green. "
-        f"Check the GitHub token and whether this repo has a CI workflow."
-    )
+    try:
+        message = _CI_UNKNOWN_MESSAGES.get(status, _CI_UNKNOWN_GENERIC_MESSAGE)
+    except TypeError:
+        # status is not a hashable CIStatus member (e.g. a test double standing
+        # in for a future member) — treat it like any other unlisted status.
+        message = _CI_UNKNOWN_GENERIC_MESSAGE
+    return "ci_unknown", f"CI status is `{status.value}` — {message}"
