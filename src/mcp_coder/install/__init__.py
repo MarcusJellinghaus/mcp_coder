@@ -70,7 +70,13 @@ def install(config: InstallConfig) -> None:
     print(f"    source: {src_label}")
 
     phase_venv(config, venv)
-    phase_bootstrap_pip_uv(config, py_v)
+    if not (config.source == "local" and config.use_sync):
+        # `uv sync` (below) reconciles the venv to the lockfile and removes
+        # pip+uv right back out since they are not project dependencies, so
+        # bootstrapping them here would just be written and then deleted a
+        # moment later -- on Windows that delete can lose a race with an AV
+        # scan of the freshly-written uv.exe and fail the whole install.
+        phase_bootstrap_pip_uv(config, py_v)
     is_editable = phase_install_main(config, uv_bin, py_v)
     phase_overrides(config, uv_bin, py_v, is_editable)
 

@@ -51,6 +51,11 @@ def phase_bootstrap_pip_uv(config: InstallConfig, py_v: Path) -> None:
     to populate the venv. Falls back to in-venv pip when only a
     stdlib venv exists.
 
+    Skipped by ``install()`` for the local+``use_sync`` path: ``uv sync``
+    reconciles the venv to the lockfile and removes pip+uv again since
+    they are not project dependencies, so running this phase first would
+    only add a write-then-delete of ``uv.exe`` moments apart.
+
     Args:
         config: Resolved install configuration.
         py_v: Path to the venv's python executable.
