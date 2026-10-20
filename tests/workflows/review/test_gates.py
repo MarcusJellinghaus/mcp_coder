@@ -15,6 +15,7 @@ A single ``core``-level test confirms Gate 1 is wired at the top of ``body()``:
 a blocking gate returns ``1`` without entering the round loop.
 """
 
+from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -266,8 +267,14 @@ class TestCheckCiProvenGate:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """An unlisted CIStatus -> ("ci_unknown", details) using the generic fallback."""
+
+        class _UnlistedCIStatus(str, Enum):
+            """Hashable stand-in for a future CIStatus member, like the real enum."""
+
+            WEIRD = "WEIRD"
+
         collect = MagicMock(
-            return_value=SimpleNamespace(ci_status=SimpleNamespace(value="WEIRD")),
+            return_value=SimpleNamespace(ci_status=_UnlistedCIStatus.WEIRD),
             name="collect_branch_status",
         )
         monkeypatch.setattr(gates, "collect_branch_status", collect)

@@ -139,10 +139,5 @@ def check_ci_proven_gate(project_dir: Path) -> tuple[str | None, str | None]:
             f"CI status is `{status.value}` — CI ran and failed. "
             f"Fix the failing code, then re-run the review."
         )
-    try:
-        message = _CI_UNKNOWN_MESSAGES.get(status, _CI_UNKNOWN_GENERIC_MESSAGE)
-    except TypeError:
-        # status is not a hashable CIStatus member (e.g. a test double standing
-        # in for a future member) — treat it like any other unlisted status.
-        message = _CI_UNKNOWN_GENERIC_MESSAGE
+    message = _CI_UNKNOWN_MESSAGES.get(status, _CI_UNKNOWN_GENERIC_MESSAGE)
     return "ci_unknown", f"CI status is `{status.value}` — {message}"
