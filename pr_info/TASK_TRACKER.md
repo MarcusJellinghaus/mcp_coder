@@ -55,9 +55,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Round log carries `details`, not just the bare reason code ([step_6.md](./steps/step_6.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

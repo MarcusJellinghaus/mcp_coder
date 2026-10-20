@@ -327,7 +327,7 @@ def run_review_workflow(
                         round_number,
                         findings=report,
                         decisions=str(verdict),
-                        changes=reason,
+                        changes=details or reason,
                         escalate_reason=reason,
                     )
                     _flush_round_log(project_dir)

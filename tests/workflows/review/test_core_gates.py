@@ -101,3 +101,42 @@ def test_gate2_skipped_on_plan_lane(env: SimpleNamespace, tmp_path: Path) -> Non
     env.gate_collect_branch_status.assert_not_called()
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_PLAN.success_label_id
+
+
+# --- Step 6: round log carries `details`, not just the bare reason code ---
+
+
+def test_gate2_failure_details_reach_round_log(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Gate 2 UNKNOWN -> the committed round log's Changes line carries details."""
+    env.gate_collect_branch_status.return_value = _status(ci_status=CIStatus.UNKNOWN)
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    log_text = (
+        tmp_path / "pr_info" / f"{REVIEW_IMPLEMENTATION.log_stem}_review_log_1.md"
+    ).read_text()
+    lines = log_text.splitlines()
+    changes_value = lines[lines.index("**Changes**:") + 1]
+    assert "could not be collected" in changes_value
+
+
+def test_after_steps_failure_falls_back_to_bare_reason(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """An after-steps failure (no Gate 2 details) -> Changes line is the bare reason."""
+    env.check_and_fix_ci.return_value = False
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    log_text = (
+        tmp_path / "pr_info" / f"{REVIEW_IMPLEMENTATION.log_stem}_review_log_1.md"
+    ).read_text()
+    lines = log_text.splitlines()
+    changes_value = lines[lines.index("**Changes**:") + 1]
+    assert changes_value == "ci"
