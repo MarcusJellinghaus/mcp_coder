@@ -10,7 +10,7 @@ def test_all_exports_defined() -> None:
     """__all__ has expected count."""
     from mcp_coder.mcp_workspace_github import __all__
 
-    assert len(__all__) == 27
+    assert len(__all__) == 28
 
 
 def test_get_github_token_importable() -> None:
@@ -27,6 +27,7 @@ def test_key_symbols_importable() -> None:
         BaseGitHubManager,
         CheckResult,
         CIResultsManager,
+        GithubException,
         IssueManager,
         LabelsManager,
         PullRequestData,
@@ -41,6 +42,7 @@ def test_key_symbols_importable() -> None:
     assert BaseGitHubManager is not None
     assert CheckResult is not None
     assert CIResultsManager is not None
+    assert GithubException is not None
     assert IssueManager is not None
     assert LabelsManager is not None
     assert PullRequestManager is not None

@@ -25,8 +25,8 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Shared exception classifier + `GithubException` shim re-export ([step_1.md](./steps/step_1.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
 ### Step 2: Wire the classifier into `_poll_for_ci_completion`'s exception branch ([step_2.md](./steps/step_2.md))

@@ -9,8 +9,10 @@ import pytest
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
+from mcp_coder.mcp_workspace_github import GithubException
 from mcp_coder.workflow_steps.ci import (
     CIFixConfig,
+    _classify_ci_exception,
     _poll_for_ci_completion,
     _run_ci_analysis,
     _run_ci_fix,
@@ -485,3 +487,64 @@ class TestRunCiFixAbsorbsLlmFailures:
 
         result = _run_ci_fix(_make_config(), "problem", fix_attempt=0)
         assert result is False
+
+
+class TestClassifyCiException:
+    """Tests for _classify_ci_exception."""
+
+    def test_rate_limit_with_retry_after_header(self) -> None:
+        """Status 403 with Retry-After header is classified as rate limit."""
+        exc = GithubException(status=403, data=None, headers={"Retry-After": "30"})
+
+        result = _classify_ci_exception(exc)
+
+        assert "rate limit" in result
+        assert "30" in result
+
+    def test_rate_limit_with_remaining_zero_and_reset_header(self) -> None:
+        """Status 429 with remaining=0 and reset header reports the reset time."""
+        exc = GithubException(
+            status=429,
+            data=None,
+            headers={
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": "1700000000",
+            },
+        )
+
+        result = _classify_ci_exception(exc)
+
+        assert "rate limit" in result
+        assert "resets at" in result
+        assert "T" in result
+        assert "+00:00" in result
+
+    def test_rate_limit_status_without_matching_headers_is_not_rate_limit(
+        self,
+    ) -> None:
+        """Status 403 with no rate-limit headers is an auth/permission error."""
+        exc = GithubException(status=403, data=None, headers={})
+
+        result = _classify_ci_exception(exc)
+
+        assert "auth/permission" in result
+        assert "rate limit" not in result
+
+    def test_auth_status_without_headers(self) -> None:
+        """Status 401 with headers=None does not raise and is auth/permission."""
+        exc = GithubException(status=401, data=None, headers=None)
+
+        result = _classify_ci_exception(exc)
+
+        assert "auth/permission" in result
+
+    def test_non_github_exception_is_generic(self) -> None:
+        """A non-GithubException is classified as a generic unexpected error."""
+        exc = ValueError("boom")
+
+        result = _classify_ci_exception(exc)
+
+        assert "unexpected error" in result
+        assert "boom" in result
+        assert "auth/permission" not in result
+        assert "rate limit" not in result

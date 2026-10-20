@@ -11,6 +11,7 @@ review workflow can override them per review round.
 import logging
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -24,6 +25,7 @@ from mcp_coder.mcp_workspace_git import get_latest_commit_sha
 from mcp_coder.mcp_workspace_github import (
     CIResultsManager,
     CIStatusData,
+    GithubException,
 )
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
@@ -259,6 +261,37 @@ def _run_ci_fix(
         return False
 
     return True
+
+
+def _classify_ci_exception(exc: Exception) -> str:
+    """Classify a raised CI-lookup exception for the INFO diagnostic line.
+
+    Does not log anything itself - callers do the ``logger.info(...)`` so
+    the ``CI_API_ERROR`` prefix stays visible at the call site.
+    """
+    if not isinstance(exc, GithubException):
+        return f"unexpected error: {exc}"
+
+    status = exc.status
+    headers = {k.lower(): v for k, v in (exc.headers or {}).items()}
+
+    is_rate_limit = status in (403, 429) and (
+        "retry-after" in headers or headers.get("x-ratelimit-remaining") == "0"
+    )
+
+    if is_rate_limit:
+        retry_after = headers.get("retry-after")
+        reset_epoch = headers.get("x-ratelimit-reset")
+        if retry_after is not None:
+            when = f"retry after {retry_after}s"
+        elif reset_epoch is not None:
+            reset_time = datetime.fromtimestamp(int(reset_epoch), tz=timezone.utc)
+            when = f"resets at {reset_time.isoformat()}"
+        else:
+            when = "reset time unknown"
+        return f"GitHub rate limit hit (status {status}, {when}): {exc}"
+
+    return f"GitHub auth/permission error (status {status}): {exc}"
 
 
 def _poll_for_ci_completion(
