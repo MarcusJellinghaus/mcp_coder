@@ -21,6 +21,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+- [x] [step_1.md](./steps/step_1.md) — Remove the type-stub `uv sync` step from coordinator templates
+- [x] [step_2.md](./steps/step_2.md) — Rewrite the type-stub documentation in config.md
 
 ## Pull Request
