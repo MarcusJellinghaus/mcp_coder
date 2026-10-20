@@ -280,6 +280,70 @@ class TestPhaseOverridesDryRun:
         assert "mlflow" in joined
 
 
+class TestBootstrapSkippedOnlyForLocalSync:
+    """Regression test for the Windows uv.exe write-then-delete race.
+
+    The local+use_sync path runs `uv sync`, which reconciles the venv to
+    the lockfile and strips pip/uv right back out since they are not
+    project dependencies. Bootstrapping them first (phase_bootstrap_pip_uv)
+    therefore only writes uv.exe for `uv sync` to delete a moment later --
+    on Windows that delete can lose a race with an AV scan of the
+    freshly-written exe and fail the whole install. install() skips the
+    bootstrap phase for exactly this one config; every other source/sync
+    combination still needs it.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _stub_uv_lookup(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "mcp_coder.install.ensure_system_uv", lambda: _STUB_UV, raising=True
+        )
+        monkeypatch.setattr(_shutil, "which", lambda _: _STUB_UV)
+
+    def test_skipped_for_local_use_sync(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[object] = []
+        monkeypatch.setattr(
+            "mcp_coder.install.phase_bootstrap_pip_uv",
+            lambda *a, **k: calls.append(a),
+            raising=True,
+        )
+        install(
+            InstallConfig.from_args(
+                _namespace(
+                    check=True,
+                    target=tmp_path,
+                    source="local",
+                    local_path=tmp_path,
+                    use_sync=True,
+                )
+            )
+        )
+        assert calls == []
+
+    @pytest.mark.parametrize("source", ["git", "pypi", "local"])
+    def test_runs_for_every_other_source(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source: str
+    ) -> None:
+        calls: list[object] = []
+        monkeypatch.setattr(
+            "mcp_coder.install.phase_bootstrap_pip_uv",
+            lambda *a, **k: calls.append(a),
+            raising=True,
+        )
+        overrides: dict[str, Any] = {
+            "check": True,
+            "target": tmp_path,
+            "source": source,
+        }
+        if source == "local":
+            # use_sync defaults to False -- this is the editable-install path.
+            overrides["local_path"] = tmp_path
+        install(InstallConfig.from_args(_namespace(**overrides)))
+        assert len(calls) == 1
+
+
 class TestEnsureSystemUv:
     """Auto-install fallback for missing system uv."""
 
