@@ -153,7 +153,7 @@ jobs:
         env:
           COVERAGE_FILE: .coverage.unit
         run: |
-          pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration' --cov=src/mcp_coder --cov-report= --junitxml=unit-tests.xml
+          pytest --version && pytest -m 'not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not install_integration and not langchain_integration and not llm_integration and not textual_integration' --cov=src/mcp_coder --cov-report= --junitxml=unit-tests.xml
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
@@ -185,7 +185,7 @@ jobs:
         env:
           COVERAGE_FILE: .coverage.integration
         run: |
-          pytest --version && pytest -m 'git_integration or formatter_integration or github_integration' --cov=src/mcp_coder --cov-report= --junitxml=integration-tests.xml
+          pytest --version && pytest -m 'git_integration or formatter_integration or github_integration or install_integration' --cov=src/mcp_coder --cov-report= --junitxml=integration-tests.xml
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
