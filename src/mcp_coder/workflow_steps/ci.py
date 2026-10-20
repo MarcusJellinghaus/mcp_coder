@@ -11,6 +11,7 @@ review workflow can override them per review round.
 import logging
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -24,6 +25,7 @@ from mcp_coder.mcp_workspace_git import get_latest_commit_sha
 from mcp_coder.mcp_workspace_github import (
     CIResultsManager,
     CIStatusData,
+    GithubException,
 )
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
@@ -35,6 +37,7 @@ from mcp_coder.workflow_steps.commit import (
 
 from .constants import (
     CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
+    CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS,
     CI_MAX_FIX_ATTEMPTS,
     CI_MAX_POLL_ATTEMPTS,
     CI_NEW_RUN_MAX_POLL_ATTEMPTS,
@@ -261,6 +264,43 @@ def _run_ci_fix(
     return True
 
 
+def _classify_ci_exception(exc: Exception) -> str:
+    """Classify a raised CI-lookup exception for the INFO diagnostic line.
+
+    Does not log anything itself - callers do the ``logger.info(...)`` so
+    the ``CI_API_ERROR`` prefix stays visible at the call site.
+
+    Returns:
+        Human-readable classification string: ``"unexpected error: ..."``
+        for a non-GitHub exception, a rate-limit message including status
+        and reset/retry timing when GitHub rate-limited the request, or a
+        GitHub auth/permission error message otherwise.
+    """
+    if not isinstance(exc, GithubException):
+        return f"unexpected error: {exc}"
+
+    status = exc.status
+    headers = {k.lower(): v for k, v in (exc.headers or {}).items()}
+
+    is_rate_limit = status in (403, 429) and (
+        "retry-after" in headers or headers.get("x-ratelimit-remaining") == "0"
+    )
+
+    if is_rate_limit:
+        retry_after = headers.get("retry-after")
+        reset_epoch = headers.get("x-ratelimit-reset")
+        if retry_after is not None:
+            when = f"retry after {retry_after}s"
+        elif reset_epoch is not None:
+            reset_time = datetime.fromtimestamp(int(reset_epoch), tz=timezone.utc)
+            when = f"resets at {reset_time.isoformat()}"
+        else:
+            when = "reset time unknown"
+        return f"GitHub rate limit hit (status {status}, {when}): {exc}"
+
+    return f"GitHub auth/permission error (status {status}): {exc}"
+
+
 def _poll_for_ci_completion(
     ci_manager: CIResultsManager,
     branch: str,
@@ -292,17 +332,28 @@ def _poll_for_ci_completion(
     # Attempts spent looking at a run for some *other* commit; bounded
     # separately from the overall cap (see CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS).
     other_commit_attempts = 0
+    # Consecutive swallowed-lookup-failure reads (mcp-workspace#318's
+    # `lookup_failed` flag); bounded separately too (see
+    # CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS). Resets on any other kind of read.
+    lookup_failed_attempts = 0
 
     for poll_attempt in range(CI_MAX_POLL_ATTEMPTS):
         try:
             ci_status = ci_manager.get_latest_ci_status(branch)
         except Exception as e:
             logger.info(
-                f"CI_API_ERROR: Could not retrieve CI status - skipping CI check ({e})"
+                "CI_API_ERROR: Could not retrieve CI status - skipping CI check "
+                f"({_classify_ci_exception(e)})"
             )
             return None, True  # Graceful exit on API errors
 
         run_info = ci_status.get("run", {})
+        lookup_failed = bool(run_info.get("lookup_failed"))
+
+        if lookup_failed:
+            lookup_failed_attempts += 1
+        else:
+            lookup_failed_attempts = 0
 
         elapsed = time.time() - poll_start_time
         elapsed_min, elapsed_sec = divmod(int(elapsed), 60)
@@ -319,16 +370,28 @@ def _poll_for_ci_completion(
         if is_other_commit:
             other_commit_attempts += 1
 
-        if len(run_info) == 0 or is_other_commit:
-            budget_spent = other_commit_attempts >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
-            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1 and not (
-                is_other_commit and budget_spent
-            ):
+        if lookup_failed or len(run_info) == 0 or is_other_commit:
+            if lookup_failed:
+                budget_spent = (
+                    lookup_failed_attempts >= CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS
+                )
+            elif is_other_commit:
+                budget_spent = (
+                    other_commit_attempts >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+                )
+            else:
+                budget_spent = False
+
+            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1 and not budget_spent:
                 waiting_for = (
-                    f"Latest CI run is for {_short_sha(observed_sha or 'unknown')}, "
-                    f"waiting for {_short_sha(expected_sha or 'unknown')}"
-                    if is_other_commit
-                    else "No CI run found yet"
+                    "GitHub lookup failed for the latest CI run"
+                    if lookup_failed
+                    else (
+                        f"Latest CI run is for {_short_sha(observed_sha or 'unknown')}, "
+                        f"waiting for {_short_sha(expected_sha or 'unknown')}"
+                        if is_other_commit
+                        else "No CI run found yet"
+                    )
                 )
                 logger.debug(
                     f"{waiting_for} (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS}, "
@@ -336,7 +399,13 @@ def _poll_for_ci_completion(
                 )
                 time.sleep(CI_POLL_INTERVAL_SECONDS)
                 continue
-            if is_other_commit:
+            if lookup_failed:
+                logger.info(
+                    "CI_API_ERROR: GitHub lookup failed %d consecutive time(s) - "
+                    "skipping CI check",
+                    lookup_failed_attempts,
+                )
+            elif is_other_commit:
                 logger.info(
                     "CI_TIMEOUT: No CI run appeared for %s after %d attempts "
                     "- skipping CI check",
@@ -410,8 +479,11 @@ def _wait_for_new_ci_run(
         try:
             new_status = ci_manager.get_latest_ci_status(branch)
         except Exception as e:
-            logger.warning(f"API error checking for new CI run: {e}")
-            continue
+            logger.info(
+                "CI_API_ERROR: Could not retrieve CI status while waiting for "
+                f"a new run - skipping CI check ({_classify_ci_exception(e)})"
+            )
+            return None, False
 
         new_run_ids = set(new_status.get("run", {}).get("run_ids", []))
 

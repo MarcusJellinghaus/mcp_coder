@@ -17,6 +17,7 @@ from mcp_workspace.github_operations import (
     CheckResult,
     CIResultsManager,
     CIStatusData,
+    GithubException,
     LabelData,
     LabelsManager,
     PullRequestData,
@@ -67,6 +68,9 @@ __all__: List[str] = [
     "CIResultsManager",
     "CIStatusData",
     "JobData",
+    # Re-exported so ci.py can classify raised exceptions without a direct
+    # `github` import, which the github_library_isolation contract forbids.
+    "GithubException",
     # Labels
     "LabelData",
     "LabelsManager",
