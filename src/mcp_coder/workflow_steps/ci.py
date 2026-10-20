@@ -269,6 +269,12 @@ def _classify_ci_exception(exc: Exception) -> str:
 
     Does not log anything itself - callers do the ``logger.info(...)`` so
     the ``CI_API_ERROR`` prefix stays visible at the call site.
+
+    Returns:
+        Human-readable classification string: ``"unexpected error: ..."``
+        for a non-GitHub exception, a rate-limit message including status
+        and reset/retry timing when GitHub rate-limited the request, or a
+        GitHub auth/permission error message otherwise.
     """
     if not isinstance(exc, GithubException):
         return f"unexpected error: {exc}"
