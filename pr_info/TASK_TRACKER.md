@@ -27,7 +27,7 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 - [x] Implementation (tests + production code)
 - [x] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Commit message prepared
 
 ### Step 2: Wire the classifier into `_poll_for_ci_completion`'s exception branch ([step_2.md](./steps/step_2.md))
 
