@@ -361,6 +361,12 @@ class TestCreatePrInfoStructure:
                 for call in all_calls
             )
 
+    def test_task_tracker_has_no_crlf_bytes(self, tmp_path: Path) -> None:
+        """Test TASK_TRACKER.md is written with LF-only line endings."""
+        create_pr_info_structure(tmp_path)
+        task_tracker_path = tmp_path / "pr_info" / "TASK_TRACKER.md"
+        assert b"\r" not in task_tracker_path.read_bytes()
+
     def test_logs_error_on_failure(self, tmp_path: Path) -> None:
         """Test create_pr_info_structure logs error on failure."""
         # Setup: create a file where pr_info/ should be (to cause conflict)

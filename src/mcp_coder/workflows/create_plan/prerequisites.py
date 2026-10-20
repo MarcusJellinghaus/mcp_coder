@@ -16,6 +16,7 @@ from mcp_coder.mcp_workspace_github import (
     IssueManager,
 )
 from mcp_coder.utils.repo_config import get_repo_flag
+from mcp_coder.utils.text_io import write_lf_text
 from mcp_coder.workflow_utils.base_branch import check_base_branch_on_origin
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
@@ -196,7 +197,7 @@ def create_pr_info_structure(project_dir: Path) -> bool:
 
         # Write TASK_TRACKER_TEMPLATE to pr_info/TASK_TRACKER.md
         task_tracker_path = pr_info_dir / "TASK_TRACKER.md"
-        task_tracker_path.write_text(TASK_TRACKER_TEMPLATE, encoding="utf-8")
+        write_lf_text(task_tracker_path, TASK_TRACKER_TEMPLATE)
 
         logger.info("Created pr_info/ directory structure successfully")
         return True
