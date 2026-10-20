@@ -157,6 +157,7 @@ markers = [
     "llm_integration: end-to-end tests with real LLM call, real MLflow logging, real DB check (slow, requires provider credentials)",
     "langchain_integration: tests requiring LangChain and provider API access (network, auth needed)",
     "copilot_cli_integration: tests that use real Copilot CLI executable (slow)",
+    "install_integration: tests that run real uv subprocesses via mcp_coder.install",
     "integration: general integration tests",
     # Regenerate snapshot baselines: pytest tests/icoder/test_snapshots.py --snapshot-update
     "textual_integration: tests requiring Textual TUI (headless app, pilot, snapshots)",

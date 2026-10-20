@@ -15,8 +15,6 @@ break it.
 
 from __future__ import annotations
 
-import argparse
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -25,36 +23,18 @@ import pytest
 from mcp_coder.install import InstallConfig, _env, _phases, install
 from mcp_coder.install._env import REPORT_BINARIES, exe
 
+from .conftest import namespace as _namespace
+from .conftest import subprocess as _subprocess
+
 # Reached via attribute access with a type: ignore rather than a bare
-# `import shutil` / `import subprocess`: the latter would break the
-# subprocess_isolation contract, which grants tests.install no exemption.
-# mypy's no-implicit-reexport flags the attribute form as attr-defined
-# since _env doesn't explicitly re-export these stdlib modules.
+# `import shutil`: the latter would break the subprocess_isolation
+# contract's spirit for this module's sibling import, and mypy's
+# no-implicit-reexport flags the attribute form as attr-defined since
+# _env doesn't explicitly re-export this stdlib module.
 _shutil = _env.shutil  # type: ignore[attr-defined]
-_subprocess = _env.subprocess  # type: ignore[attr-defined]
 
 # Stands in for a real uv binary wherever the installer looks one up.
 _STUB_UV = "/stub/bin/uv"
-
-
-def _namespace(**overrides: Any) -> argparse.Namespace:
-    """Build the Namespace add_install_parser would produce."""
-    defaults: dict[str, Any] = {
-        "target": Path("."),
-        "source": "git",
-        "ref": "main",
-        "local_path": None,
-        "extras": None,
-        "extra_packages": "",
-        "use_sync": False,
-        "skip_overrides": False,
-        "refresh": False,
-        "clean": False,
-        "python": sys.executable,
-        "check": False,
-    }
-    defaults.update(overrides)
-    return argparse.Namespace(**defaults)
 
 
 def _write_pyproject(
@@ -278,6 +258,70 @@ class TestPhaseOverridesDryRun:
         joined = "\n".join(cmds)
         assert "langchain" in joined
         assert "mlflow" in joined
+
+
+class TestBootstrapSkippedOnlyForLocalSync:
+    """Regression test for the Windows uv.exe write-then-delete race.
+
+    The local+use_sync path runs `uv sync`, which reconciles the venv to
+    the lockfile and strips pip/uv right back out since they are not
+    project dependencies. Bootstrapping them first (phase_bootstrap_pip_uv)
+    therefore only writes uv.exe for `uv sync` to delete a moment later --
+    on Windows that delete can lose a race with an AV scan of the
+    freshly-written exe and fail the whole install. install() skips the
+    bootstrap phase for exactly this one config; every other source/sync
+    combination still needs it.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _stub_uv_lookup(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "mcp_coder.install.ensure_system_uv", lambda: _STUB_UV, raising=True
+        )
+        monkeypatch.setattr(_shutil, "which", lambda _: _STUB_UV)
+
+    def test_skipped_for_local_use_sync(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[object] = []
+        monkeypatch.setattr(
+            "mcp_coder.install.phase_bootstrap_pip_uv",
+            lambda *a, **_k: calls.append(a),
+            raising=True,
+        )
+        install(
+            InstallConfig.from_args(
+                _namespace(
+                    check=True,
+                    target=tmp_path,
+                    source="local",
+                    local_path=tmp_path,
+                    use_sync=True,
+                )
+            )
+        )
+        assert calls == []
+
+    @pytest.mark.parametrize("source", ["git", "pypi", "local"])
+    def test_runs_for_every_other_source(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source: str
+    ) -> None:
+        calls: list[object] = []
+        monkeypatch.setattr(
+            "mcp_coder.install.phase_bootstrap_pip_uv",
+            lambda *a, **_k: calls.append(a),
+            raising=True,
+        )
+        overrides: dict[str, Any] = {
+            "check": True,
+            "target": tmp_path,
+            "source": source,
+        }
+        if source == "local":
+            # use_sync defaults to False -- this is the editable-install path.
+            overrides["local_path"] = tmp_path
+        install(InstallConfig.from_args(_namespace(**overrides)))
+        assert len(calls) == 1
 
 
 class TestEnsureSystemUv:
