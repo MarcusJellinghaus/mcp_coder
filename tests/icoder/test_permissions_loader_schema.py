@@ -218,10 +218,10 @@ def test_unwritable_schema_does_not_abort_load(
         '{"allow": ["mcp__s__t"]}', encoding="utf-8"
     )
 
-    def _raise(*_args: object, **_kwargs: object) -> int:
+    def _raise(*_args: object, **_kwargs: object) -> None:
         raise OSError("read-only")
 
-    monkeypatch.setattr(Path, "write_text", _raise)
+    monkeypatch.setattr("mcp_coder.icoder.permissions.loader.write_lf_text", _raise)
 
     with caplog.at_level(logging.WARNING, logger="mcp_coder.icoder.permissions"):
         config = load_permission_config(tmp_path)
@@ -230,3 +230,11 @@ def test_unwritable_schema_does_not_abort_load(
     assert len(config.rules) == 1
     assert "settings.schema.json" in caplog.text
     assert "read-only" in caplog.text
+
+
+def test_emit_schema_writes_no_crlf_bytes(tmp_path: Path) -> None:
+    """Written schema file has LF-only bytes (Windows regression guard)."""
+    (tmp_path / ".icoder").mkdir()
+    assert emit_schema(tmp_path) is True
+    target = tmp_path / ".icoder" / "settings.schema.json"
+    assert b"\r" not in target.read_bytes()

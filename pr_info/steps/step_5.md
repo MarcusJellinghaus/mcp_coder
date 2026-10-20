@@ -69,7 +69,33 @@ def test_emit_schema_writes_no_crlf_bytes(tmp_path: Path) -> None:
 
 Write this test first, confirm it fails on Windows / passes trivially on
 Linux against the current code, then apply the implementation change above.
-All existing tests in this file must stay green unmodified.
+All existing tests in this file must stay green, with one amendment:
+
+### Amendment: `test_unwritable_schema_does_not_abort_load`
+
+That test simulates a write failure by monkeypatching `Path.write_text`.
+`write_lf_text` writes via `Path.open`, not `Path.write_text`, so the
+monkeypatch no longer intercepts anything there. Patching `Path.open`
+globally is not a safe substitute either — `Path.read_text` (used
+elsewhere in this same code path to read `settings.json`) is implemented
+on top of `Path.open`, so a global patch also breaks that unrelated read
+and degrades the config for the wrong reason.
+
+The fix targets `write_lf_text` itself, at the name `loader.py` imports
+it under — same failure being simulated, same assertions, only the
+patched target changes:
+
+```python
+monkeypatch.setattr(Path, "write_text", _raise)
+```
+
+becomes
+
+```python
+monkeypatch.setattr("mcp_coder.icoder.permissions.loader.write_lf_text", _raise)
+```
+
+No other test in this file is modified.
 
 ## Checks
 
