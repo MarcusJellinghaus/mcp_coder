@@ -200,3 +200,11 @@ class TestWriteGithubActions:
 
         assert any("label-new-issues.yml" in p for p in result)
         assert any("approve-command.yml" in p for p in result)
+
+    def test_written_files_have_no_crlf_bytes(self, tmp_path: Path) -> None:
+        """Written workflow files contain no CRLF bytes."""
+        config = self._make_config()
+        write_github_actions(tmp_path, config)
+        workflows_dir = tmp_path / ".github" / "workflows"
+        for name in ("label-new-issues.yml", "approve-command.yml"):
+            assert b"\r" not in (workflows_dir / name).read_bytes()

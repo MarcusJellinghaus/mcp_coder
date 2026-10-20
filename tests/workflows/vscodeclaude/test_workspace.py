@@ -390,6 +390,22 @@ class TestWorkspaceSetup:
         assert content["tasks"][0]["presentation"]["reveal"] == "always"
         assert content["tasks"][0]["presentation"]["focus"] is False
 
+    def test_create_vscode_task_writes_no_crlf_bytes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """tasks.json has LF-only bytes even if the template contains CRLF."""
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.templates.TASKS_JSON_TEMPLATE",
+            '{{\r\n  "command": "{script_path}"\r\n}}\r\n',
+        )
+        script_path = tmp_path / ".vscodeclaude_start.bat"
+        script_path.touch()
+
+        create_vscode_task(tmp_path, script_path)
+
+        content = (tmp_path / ".vscode" / "tasks.json").read_bytes()
+        assert b"\r" not in content
+
     def test_no_folder_open_task_invokes_code(self, tmp_path: Path) -> None:
         """No auto-run task shells out to `code` (it raises background windows)."""
         script_path = tmp_path / ".vscodeclaude_start.bat"

@@ -355,6 +355,11 @@ def generate_report_html(reports: dict[str, str]) -> str:
 '''
 
 
+def _write_lf(path: Path, text: str) -> None:
+    """Write text with LF-only line endings (the HTML files are committed)."""
+    path.write_text(text.replace("\r\n", "\n"), encoding="utf-8", newline="\n")
+
+
 def main():
     """Generate architecture documentation."""
     print("Generating architecture documentation...")
@@ -367,7 +372,7 @@ def main():
     print("  - Generating dependency graph...")
     graph_html = generate_graph_html(get_mermaid_diagram())
     graph_path = output_dir / "dependency_graph.html"
-    graph_path.write_text(graph_html, encoding="utf-8")
+    _write_lf(graph_path, graph_html)
     print(f"    Created: {graph_path}")
     
     # Generate detailed reports for each module
@@ -389,7 +394,7 @@ def main():
     
     report_html = generate_report_html(reports)
     report_path = output_dir / "dependency_report.html"
-    report_path.write_text(report_html, encoding="utf-8")
+    _write_lf(report_path, report_html)
     print(f"    Created: {report_path}")
     
     print("\nDone! Open docs/architecture/dependency_graph.html to view.")

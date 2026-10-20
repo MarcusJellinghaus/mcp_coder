@@ -27,6 +27,7 @@ from ...prompts.prompt_loader import (
     load_prompts,
 )
 from ...utils.mcp_verification import ClaudeMCPStatus, parse_claude_mcp_list
+from ...utils.text_io import write_lf_text
 from ...utils.user_config import verify_config
 from ..utils import (
     find_context_claude_md,
@@ -92,7 +93,7 @@ def _run_mcp_edit_smoke_test(
     label = "MCP edit smoke test"
     test_file = project_dir / ".mcp_coder_verify.md"
     try:
-        test_file.write_text("A\n\nC\n", encoding="utf-8")
+        write_lf_text(test_file, "A\n\nC\n")
         prompt_llm(
             "Edit the file .mcp_coder_verify.md to insert a line 'B' between 'A' and 'C'",
             provider=provider,

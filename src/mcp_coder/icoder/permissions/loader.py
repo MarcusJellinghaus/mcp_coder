@@ -61,6 +61,7 @@ from mcp_coder.icoder.permissions.model import (
     Rule,
     ScenarioBlock,
 )
+from mcp_coder.utils.text_io import write_lf_text
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
 logger = logging.getLogger(__name__)
@@ -216,7 +217,7 @@ def emit_schema(project_dir: Path) -> bool:
     try:
         if target.exists() and target.read_text(encoding="utf-8") == new:
             return False
-        target.write_text(new, encoding="utf-8")
+        write_lf_text(target, new)
     except OSError as exc:
         logger.warning("could not write %s: %s", target, exc)
         return False
