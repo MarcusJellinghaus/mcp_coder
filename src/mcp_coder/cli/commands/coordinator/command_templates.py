@@ -104,11 +104,10 @@ TEST_COMMAND_TEMPLATES: dict[str, str] = {
 #   1. Checkout appropriate branch (main for planning, feature branch for implementation/PR)
 #   2. Pull latest code
 #   3. Verify tool versions
-#   4. Sync dependencies
-#   5. Execute mcp-coder command
-#   6. Capture exit code and run watchdog set-status
-#   7. Archive logs
-#   8. Exit with captured RC
+#   4. Execute mcp-coder command
+#   5. Capture exit code and run watchdog set-status
+#   6. Archive logs
+#   7. Exit with captured RC
 #
 # Silent-death recovery watchdog (see issue #713)
 #
