@@ -21,6 +21,7 @@ from ...utils.subprocess_runner import (
     CommandOptions,
     execute_subprocess,
 )
+from ...utils.text_io import write_lf_text
 from .config import get_vscodeclaude_config, sanitize_folder_name
 from .helpers import load_to_be_deleted
 from .templates import STATUS_FILE_NAME
@@ -627,7 +628,7 @@ def create_vscode_task(folder_path: Path, script_path: Path) -> None:
 
     # Write tasks.json
     tasks_file = vscode_dir / "tasks.json"
-    tasks_file.write_text(content, encoding="utf-8")
+    write_lf_text(tasks_file, content)
 
 
 def _find_marked_comment(

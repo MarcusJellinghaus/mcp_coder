@@ -55,9 +55,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Switch the `.vscode/tasks.json` write to `write_lf_text` ([details](./steps/step_6.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Switch the verify smoke-test probe write to `write_lf_text` ([details](./steps/step_7.md))
 
