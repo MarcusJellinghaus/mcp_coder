@@ -804,7 +804,6 @@ The default test command performs the following checks:
 
 - Sets `MCP_CODER_PROJECT_DIR=/workspace/repo`
 - Sets `MCP_CODER_VENV_DIR=/workspace/.venv`
-- Syncs dependencies using `uv sync --extra dev`
 
 #### 3. Claude CLI Verification
 
@@ -835,7 +834,6 @@ mcp-coder verify
 # Environment setup
 export MCP_CODER_PROJECT_DIR='/workspace/repo'
 export MCP_CODER_VENV_DIR='/workspace/.venv'
-uv sync --extra dev
 # Claude CLI verification
 which claude
 claude mcp list
@@ -864,45 +862,37 @@ When using mcp-coder in automated Jenkins workflows, there are two separate Pyth
 │  mcp-workspace, claude CLI, pytest, mypy, pylint            │
 └─────────────────────────────────────────────────────────────┘
                            │
-                           │ 1. uv sync --inexact --extra types (in repo/)
-                           │ 2. mcp-coder implement
+                           │ mcp-coder install --use-sync (in repo/)
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  Project Environment (repo/.venv)                           │
-│  Per-run: project dependencies + type stubs                 │
+│  Per-run: project dependencies + type stubs, per the        │
+│  target repo's own [tool.mcp-coder.install] extras          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Why Type Stubs Need Separate Installation
+### Why Type Stubs Are the Target Repo's Responsibility
 
 The MCP tools-py server runs mypy against **project code** using the **project's virtual environment**. For mypy to resolve types correctly, type stub packages (e.g., `types-requests`, `types-tabulate`) must be installed in the project's `.venv`, not the execution environment.
 
-The coordinator command templates automatically run `uv sync --inexact --extra types` in the project directory before executing mcp-coder commands. The `--inexact` flag installs the `types` extra without removing packages a prior provisioning step (e.g. AutoRunner's `uv sync --extra dev`) already installed.
+There is no separate per-run sync step for this. The Jenkins provisioning step (`mcp-coder install --source local --local-path <repo> --use-sync --refresh`) installs the target repo and its dependencies in one pass, honoring both `[tool.mcp-coder.install-from-github]` overrides and the target repo's own `[tool.mcp-coder.install] extras`. Whatever extras that setting names — including `types`, if the target repo defines one — are installed then; nothing afterwards re-syncs or reverts that result.
 
 ### Configuring Your Project for Automated Workflows
 
-If your project uses mcp-coder workflows, define a `types` extra in your `pyproject.toml`:
+If your project uses mcp-coder workflows and wants type stubs installed automatically, add a `types` extra to its own `pyproject.toml` and reference it from `[tool.mcp-coder.install]`:
 
 ```toml
 [project.optional-dependencies]
-# Type stubs required for mypy in automated workflows
 types = [
     "types-requests>=2.28.0",
     # Add other type stubs your project needs
 ]
 
-# Full dev setup for local development
-dev = [
-    "your-project[types]",
-    # Other dev dependencies...
-]
+[tool.mcp-coder.install]
+extras = "types"  # or e.g. "dev" if dev already includes types
 ```
 
-This ensures:
-
-- Automated workflows install only type stubs, without removing anything
-  already installed (`uv sync --inexact --extra types`)
-- Local development installs everything (`pip install -e ".[dev]"`)
+Without `types` named there, `mcp-coder install` will not install type stubs and mypy will degrade gracefully (no error) rather than fail.
 
 ## Troubleshooting
 
