@@ -130,6 +130,18 @@ class TestWriteRoundLog:
         )
         assert "Escalate reason" not in path.read_text(encoding="utf-8")
 
+    def test_round_log_bytes_have_no_crlf(self, tmp_path: Path) -> None:
+        path = write_round_log(
+            tmp_path,
+            REVIEW_IMPLEMENTATION,
+            run_number=1,
+            round_number=1,
+            findings="f",
+            decisions="d",
+            changes="c",
+        )
+        assert b"\r" not in path.read_bytes()
+
     def test_run_number_reflected_in_filename_and_header(self, tmp_path: Path) -> None:
         path = write_round_log(
             tmp_path,

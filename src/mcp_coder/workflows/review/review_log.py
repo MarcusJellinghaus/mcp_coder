@@ -11,6 +11,8 @@ import re
 from datetime import date
 from pathlib import Path
 
+from mcp_coder.utils.text_io import write_lf_text
+
 from .config import ReviewConfig
 
 
@@ -81,7 +83,6 @@ def write_round_log(
     if escalate_reason:
         parts.append(f"**Escalate reason**: {escalate_reason}\n")
 
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write("".join(parts))
+    write_lf_text(path, "".join(parts), append=True)
 
     return path
