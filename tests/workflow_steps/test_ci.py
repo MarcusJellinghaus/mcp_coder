@@ -16,11 +16,13 @@ from mcp_coder.workflow_steps.ci import (
     _poll_for_ci_completion,
     _run_ci_analysis,
     _run_ci_fix,
+    _wait_for_new_ci_run,
 )
 from mcp_coder.workflow_steps.constants import (
     CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
     CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS,
     CI_MAX_POLL_ATTEMPTS,
+    CI_NEW_RUN_MAX_POLL_ATTEMPTS,
 )
 
 
@@ -719,3 +721,66 @@ class TestPollExceptionClassification:
         assert "unexpected error" in caplog.text
         assert "boom" in caplog.text
         assert "auth/permission" not in caplog.text
+
+
+class TestWaitForNewCiRunNoRetryOnException:
+    """_wait_for_new_ci_run exits immediately (no retry) on a raised exception."""
+
+    def test_raised_exception_exits_immediately_no_retry(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A rate-limit GithubException exits with (None, False), no retry."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = GithubException(
+            status=403, data=None, headers={"Retry-After": "5"}
+        )
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                result = _wait_for_new_ci_run(
+                    mock_ci_manager, "main", previous_run_ids=set()
+                )
+
+        assert result == (None, False)
+        assert mock_ci_manager.get_latest_ci_status.call_count == 1
+        assert "rate limit" in caplog.text
+
+    def test_raised_generic_exception_also_exits_immediately(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A non-GithubException also exits with (None, False), no retry."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = ValueError("boom")
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                result = _wait_for_new_ci_run(
+                    mock_ci_manager, "main", previous_run_ids=set()
+                )
+
+        assert result == (None, False)
+        assert mock_ci_manager.get_latest_ci_status.call_count == 1
+        assert "unexpected error" in caplog.text
+        assert "No new CI run detected after 30s" not in caplog.text
+
+    def test_timeout_without_exception_still_warns_as_before(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """No-exception timeout path is unchanged: warns and returns (None, False)."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {
+            "run": {"run_ids": []},
+            "jobs": [],
+        }
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.WARNING):
+                result = _wait_for_new_ci_run(
+                    mock_ci_manager, "main", previous_run_ids=set()
+                )
+
+        assert result == (None, False)
+        assert mock_ci_manager.get_latest_ci_status.call_count == (
+            CI_NEW_RUN_MAX_POLL_ATTEMPTS
+        )
+        assert "No new CI run detected after 30s" in caplog.text

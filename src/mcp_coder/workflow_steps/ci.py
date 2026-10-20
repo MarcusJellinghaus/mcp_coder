@@ -473,8 +473,11 @@ def _wait_for_new_ci_run(
         try:
             new_status = ci_manager.get_latest_ci_status(branch)
         except Exception as e:
-            logger.warning(f"API error checking for new CI run: {e}")
-            continue
+            logger.info(
+                "CI_API_ERROR: Could not retrieve CI status while waiting for "
+                f"a new run - skipping CI check ({_classify_ci_exception(e)})"
+            )
+            return None, False
 
         new_run_ids = set(new_status.get("run", {}).get("run_ids", []))
 

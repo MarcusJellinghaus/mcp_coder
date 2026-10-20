@@ -43,9 +43,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: No-retry classified exit in `_wait_for_new_ci_run` ([step_4.md](./steps/step_4.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Per-`CIStatus` messages in `check_ci_proven_gate` ([step_5.md](./steps/step_5.md))
 
