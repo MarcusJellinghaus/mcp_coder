@@ -37,6 +37,7 @@ from mcp_coder.workflow_steps.commit import (
 
 from .constants import (
     CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
+    CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS,
     CI_MAX_FIX_ATTEMPTS,
     CI_MAX_POLL_ATTEMPTS,
     CI_NEW_RUN_MAX_POLL_ATTEMPTS,
@@ -325,6 +326,10 @@ def _poll_for_ci_completion(
     # Attempts spent looking at a run for some *other* commit; bounded
     # separately from the overall cap (see CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS).
     other_commit_attempts = 0
+    # Consecutive swallowed-lookup-failure reads (mcp-workspace#318's
+    # `lookup_failed` flag); bounded separately too (see
+    # CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS). Resets on any other kind of read.
+    lookup_failed_attempts = 0
 
     for poll_attempt in range(CI_MAX_POLL_ATTEMPTS):
         try:
@@ -337,6 +342,12 @@ def _poll_for_ci_completion(
             return None, True  # Graceful exit on API errors
 
         run_info = ci_status.get("run", {})
+        lookup_failed = bool(run_info.get("lookup_failed"))
+
+        if lookup_failed:
+            lookup_failed_attempts += 1
+        else:
+            lookup_failed_attempts = 0
 
         elapsed = time.time() - poll_start_time
         elapsed_min, elapsed_sec = divmod(int(elapsed), 60)
@@ -353,16 +364,28 @@ def _poll_for_ci_completion(
         if is_other_commit:
             other_commit_attempts += 1
 
-        if len(run_info) == 0 or is_other_commit:
-            budget_spent = other_commit_attempts >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
-            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1 and not (
-                is_other_commit and budget_spent
-            ):
+        if lookup_failed or len(run_info) == 0 or is_other_commit:
+            if lookup_failed:
+                budget_spent = (
+                    lookup_failed_attempts >= CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS
+                )
+            elif is_other_commit:
+                budget_spent = (
+                    other_commit_attempts >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+                )
+            else:
+                budget_spent = False
+
+            if poll_attempt < CI_MAX_POLL_ATTEMPTS - 1 and not budget_spent:
                 waiting_for = (
-                    f"Latest CI run is for {_short_sha(observed_sha or 'unknown')}, "
-                    f"waiting for {_short_sha(expected_sha or 'unknown')}"
-                    if is_other_commit
-                    else "No CI run found yet"
+                    "GitHub lookup failed for the latest CI run"
+                    if lookup_failed
+                    else (
+                        f"Latest CI run is for {_short_sha(observed_sha or 'unknown')}, "
+                        f"waiting for {_short_sha(expected_sha or 'unknown')}"
+                        if is_other_commit
+                        else "No CI run found yet"
+                    )
                 )
                 logger.debug(
                     f"{waiting_for} (attempt {poll_attempt + 1}/{CI_MAX_POLL_ATTEMPTS}, "
@@ -370,7 +393,13 @@ def _poll_for_ci_completion(
                 )
                 time.sleep(CI_POLL_INTERVAL_SECONDS)
                 continue
-            if is_other_commit:
+            if lookup_failed:
+                logger.info(
+                    "CI_API_ERROR: GitHub lookup failed %d consecutive time(s) - "
+                    "skipping CI check",
+                    lookup_failed_attempts,
+                )
+            elif is_other_commit:
                 logger.info(
                     "CI_TIMEOUT: No CI run appeared for %s after %d attempts "
                     "- skipping CI check",

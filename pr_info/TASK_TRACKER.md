@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Bounded `lookup_failed` retry budget in `_poll_for_ci_completion` ([step_3.md](./steps/step_3.md))
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: No-retry classified exit in `_wait_for_new_ci_run` ([step_4.md](./steps/step_4.md))
 
