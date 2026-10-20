@@ -2,44 +2,23 @@
 
 The installer no longer owns a parser (``mcp-coder install`` is the only
 entry point, defined in ``cli/parsers.py``), so these tests build the
-Namespace the parser would produce with a local ``_namespace`` helper and
-call ``InstallConfig.from_args`` directly. The defaults that helper mirrors
-are pinned in ``tests/cli/commands/test_install``.
+Namespace the parser would produce with the shared ``_namespace`` helper
+(see ``conftest.py``) and call ``InstallConfig.from_args`` directly. The
+defaults that helper mirrors are pinned in ``tests/cli/commands/test_install``.
 """
 
 from __future__ import annotations
 
-import argparse
 import dataclasses
-import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from mcp_coder.install import InstallConfig
 
+from .conftest import namespace as _namespace
+
 MALFORMED_TOML = "this is not valid toml {{{"
-
-
-def _namespace(**overrides: Any) -> argparse.Namespace:
-    """Build the Namespace add_install_parser would produce."""
-    defaults: dict[str, Any] = {
-        "target": Path("."),
-        "source": "git",
-        "ref": "main",
-        "local_path": None,
-        "extras": None,
-        "extra_packages": "",
-        "use_sync": False,
-        "skip_overrides": False,
-        "refresh": False,
-        "clean": False,
-        "python": sys.executable,
-        "check": False,
-    }
-    defaults.update(overrides)
-    return argparse.Namespace(**defaults)
 
 
 def _write_pyproject(tmp_path: Path, body: str) -> None:

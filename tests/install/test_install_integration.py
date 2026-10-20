@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import shutil
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -31,29 +30,25 @@ import pytest
 
 from mcp_coder.install import InstallConfig, _env, install
 
-_subprocess = _env.subprocess  # type: ignore[attr-defined]
+from .conftest import namespace as _base_namespace
+from .conftest import subprocess as _subprocess
 
 pytestmark = pytest.mark.install_integration
 
 
 def _namespace(**overrides: Any) -> argparse.Namespace:
-    """Build the Namespace add_install_parser would produce."""
-    defaults: dict[str, Any] = {
-        "target": Path("."),
+    """Build the Namespace add_install_parser would produce.
+
+    Layers this module's local+sync-by-default needs on top of the
+    shared helper's git/editable defaults.
+    """
+    local_defaults: dict[str, Any] = {
         "source": "local",
-        "ref": "main",
-        "local_path": None,
         "extras": "",
-        "extra_packages": "",
-        "use_sync": False,
         "skip_overrides": True,
-        "refresh": False,
-        "clean": False,
-        "python": sys.executable,
-        "check": False,
     }
-    defaults.update(overrides)
-    return argparse.Namespace(**defaults)
+    local_defaults.update(overrides)
+    return _base_namespace(**local_defaults)
 
 
 def _write_fixture_project(path: Path) -> None:

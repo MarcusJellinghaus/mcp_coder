@@ -258,7 +258,7 @@ Provisions a target environment: `<target>/.venv` plus mcp-coder from git, PyPI 
 - `__init__.py` - `install(config)` sequences the phases; re-exports `InstallConfig` and the module constants
 - `_env.py` - `InstallConfig` (resolved from the parsed CLI namespace) and the subprocess / venv / filesystem helpers, including the module constants `_phases` consumes
 - `_phases.py` - the five phases: venv, pip+uv bootstrap, main install, GitHub overrides, version report
-- Tests: `tests/install/test_install_env.py`, `tests/install/test_install_phases.py`
+- Tests: `tests/install/test_install_env.py`, `tests/install/test_install_phases.py`, `tests/install/test_install_integration.py`
 - Boundary: tach layer `domain` with `depends_on = [utils]`, and one import-linter `subprocess` exemption — raw `subprocess.run` with inherited stdio is deliberate, since the shared helpers either capture output and time out or mangle `uv`'s progress display
 
 ### iCoder Interactive TUI (`src/mcp_coder/icoder/`)
@@ -424,6 +424,9 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
   - `github_integration`: GitHub API access (network, auth needed) in `utils/github_operations/test_*.py`
     - **When to use**: Testing GitHub operations, PR management, issue workflows
     - **Requirements**: GitHub API tokens, network access
+  - `install_integration`: Real-subprocess installer tests (uv venv/sync/pip) in `tests/install/test_install_integration.py`
+    - **When to use**: Testing the installer against a real local fixture package
+    - **Requirements**: `uv` on PATH
   - `langchain_integration`: LangChain API tests (network, auth needed)
     in `llm/providers/langchain/test_*.py`
     - **When to use**: Testing LangChain provider integrations, real API calls
@@ -437,7 +440,7 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
     - **Note**: Snapshot tests are Windows-only to avoid baseline drift
 - **Fast development**: Use exclusion pattern to skip slow integration tests
 - **Parallel execution**: Always use `extra_args: ["-n", "auto"]`
-- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not langchain_integration and not llm_integration and not textual_integration"`
+- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not install_integration and not langchain_integration and not llm_integration and not textual_integration"`
 - **Integration testing**: Use specific markers when developing integration features
 - **CI/CD**: Run all tests including integration tests in automated pipelines
 
