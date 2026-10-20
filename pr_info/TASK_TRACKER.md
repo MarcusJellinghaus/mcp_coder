@@ -61,9 +61,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: Switch the verify smoke-test probe write to `write_lf_text` ([details](./steps/step_7.md))
 
-- [ ] Implementation (production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: LF-only writes in `tools/tach_docs.py` ([details](./steps/step_8.md))
 
