@@ -331,7 +331,8 @@ def _poll_for_ci_completion(
             ci_status = ci_manager.get_latest_ci_status(branch)
         except Exception as e:
             logger.info(
-                f"CI_API_ERROR: Could not retrieve CI status - skipping CI check ({e})"
+                "CI_API_ERROR: Could not retrieve CI status - skipping CI check "
+                f"({_classify_ci_exception(e)})"
             )
             return None, True  # Graceful exit on API errors
 

@@ -548,3 +548,61 @@ class TestClassifyCiException:
         assert "boom" in result
         assert "auth/permission" not in result
         assert "rate limit" not in result
+
+
+class TestPollExceptionClassification:
+    """_poll_for_ci_completion's exception branch logs a classified message."""
+
+    def test_rate_limit_exception_exits_immediately_with_classified_line(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A rate-limit GithubException exits with (None, True), no retry."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = GithubException(
+            status=403, data=None, headers={"Retry-After": "10"}
+        )
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+
+        assert status is None
+        assert passed is True
+        assert mock_ci_manager.get_latest_ci_status.call_count == 1
+        assert "rate limit" in caplog.text
+
+    def test_auth_exception_exits_immediately_with_classified_line(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An auth GithubException exits with (None, True), no retry."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = GithubException(
+            status=401, data=None, headers=None
+        )
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+
+        assert status is None
+        assert passed is True
+        assert mock_ci_manager.get_latest_ci_status.call_count == 1
+        assert "auth/permission" in caplog.text
+
+    def test_non_github_exception_still_exits_immediately(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A non-GithubException also exits with (None, True), no retry."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = ValueError("boom")
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+
+        assert status is None
+        assert passed is True
+        assert mock_ci_manager.get_latest_ci_status.call_count == 1
+        assert "unexpected error" in caplog.text
+        assert "boom" in caplog.text
+        assert "auth/permission" not in caplog.text
