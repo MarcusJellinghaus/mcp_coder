@@ -56,8 +56,9 @@ class _UnlistedCIStatus(StrEnum):
 6. `run_format_code`.
 7. Verify (green):
    - `run_ruff_check()` (project config) reports 0 issues. If UP findings remain
-     that ruff cannot fix, write one line to `pr_info/.blocked.txt` and stop.
-     Do not add `noqa` or `ignore`.
+     after the autofix runs, fix them by hand (issue step 3: "or by hand"). Write
+     one line to `pr_info/.blocked.txt` and stop only for a site that cannot be
+     fixed without adding a `noqa` comment or an `ignore` entry. Never add either.
    - `run_mypy_check()` is clean.
    - `run_pylint_check()` is clean.
    - `run_pytest_check(extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not install_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"])` is green.
