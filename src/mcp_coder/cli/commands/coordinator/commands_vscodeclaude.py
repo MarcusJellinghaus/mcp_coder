@@ -28,6 +28,7 @@ from ....workflows.vscodeclaude import (
     VSCodeClaudeSession,
     apply_assessments,
     build_assessments,
+    check_pr_health,
     cleanup_stale_sessions,
     load_repo_vscodeclaude_config,
     load_sessions,
@@ -302,6 +303,9 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             all_cached_issues = list(
                 cached_issues_by_repo.get(repo_full_name, {}).values()
             )
+
+            # PR-health checks run for every repo, independent of capacity
+            check_pr_health(repo_name, validated_config, all_cached_issues)
 
             started = process_eligible_issues(
                 repo_name=repo_name,

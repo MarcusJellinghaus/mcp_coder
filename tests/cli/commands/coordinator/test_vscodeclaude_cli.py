@@ -12,6 +12,15 @@ import pytest
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeConfig
 
 
+@pytest.fixture(autouse=True)
+def _no_pr_health(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    mock = MagicMock()
+    monkeypatch.setattr(
+        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.check_pr_health", mock
+    )
+    return mock
+
+
 class TestTemplates:
     """Test template strings."""
 

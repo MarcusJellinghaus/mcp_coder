@@ -6,13 +6,7 @@ import shutil
 from pathlib import Path
 from typing import cast
 
-from ...config.label_config import (
-    build_label_lookups,
-    get_labels_config_path,
-    load_labels_config,
-)
 from ...mcp_workspace_github import (
-    CIResultsManager,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -27,7 +21,6 @@ from ...utils.subprocess_runner import (
     launch_process,
 )
 from ...utils.user_config import get_cache_refresh_minutes
-from . import checks
 from .config import (
     get_github_username,
     get_repo_full_name,
@@ -402,13 +395,6 @@ def process_eligible_issues(
     )
     issue_manager = IssueManager(repo_url=repo_url)
     branch_manager = IssueBranchManager(repo_url=repo_url)
-    ci_manager = CIResultsManager(repo_url=repo_url)
-
-    label_lookups = build_label_lookups(
-        load_labels_config(get_labels_config_path(None))
-    )
-    review_label_name = label_lookups["id_to_name"]["pr_review_comments"]
-    created_label_name = label_lookups["id_to_name"]["pr_created"]
 
     # Get all cached issues and filter for vscodeclaude eligibility
     if all_cached_issues is None:
@@ -424,32 +410,6 @@ def process_eligible_issues(
     eligible_issues = _filter_eligible_vscodeclaude_issues(
         all_cached_issues, github_username
     )
-
-    repo_owner, repo_name_str = repo_full_name.split("/", 1)
-    for issue in eligible_issues:
-        if get_issue_status(issue) == "status-10:pr-created":
-            _ = (
-                checks._check_merge_conflict(
-                    issue, branch_manager, issue_manager, repo_owner, repo_name_str
-                )
-                or checks._check_ci(
-                    issue,
-                    ci_manager,
-                    branch_manager,
-                    issue_manager,
-                    repo_owner,
-                    repo_name_str,
-                )
-                or checks._check_review_comments(
-                    issue,
-                    branch_manager,
-                    issue_manager,
-                    repo_owner,
-                    repo_name_str,
-                    review_label_name,
-                    created_label_name,
-                )
-            )
 
     # Filter to statuses that are eligible for sessions (config-driven)
     actionable_issues: list[IssueData] = [
