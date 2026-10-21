@@ -65,9 +65,12 @@ class TestClaudeCliStreamIntegration:
                 logs_dir=tmpdir,
             )
 
-            # Check cost info in response
+            # Check cost info in response: it travels on the stream's done event
             raw = result["raw_response"]
-            assert "total_cost_usd" in raw, "Expected cost in response"
+            events = raw["events"]
+            assert isinstance(events, list)
+            done = next(e for e in events if e["type"] == "done")
+            assert done["cost_usd"] > 0, "Expected cost in response"
             assert "usage" in raw, "Expected usage in response"
 
             # Verify from stream file too

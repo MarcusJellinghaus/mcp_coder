@@ -142,6 +142,7 @@ class TestSubprocessCwdParameter:
             verbosity="just-text",
             session_id=None,
             mcp_config=None,
+            settings=None,
         )
 
         # Stand outside the project directory: "from any shell working directory"

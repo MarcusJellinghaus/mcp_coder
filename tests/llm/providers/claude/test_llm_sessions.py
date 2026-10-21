@@ -54,6 +54,7 @@ class MockClaudeCLI:
         cwd: str | None = None,
         env_vars: dict[str, str] | None = None,
         mcp_config: str | None = None,
+        settings_file: str | None = None,
         branch_name: str | None = None,
         logs_dir: str | None = None,
         append_system_prompt: str | None = None,
