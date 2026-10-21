@@ -20,6 +20,8 @@ Tests:
 - `tests/workflows/vscodeclaude/test_checks.py` (rewrite)
 - `tests/workflows/vscodeclaude/test_checks_review_comments.py` (rewrite)
 - `tests/workflows/vscodeclaude/test_checks_orchestration.py` (create only if `test_checks.py` > 750 lines)
+- `tests/workflows/vscodeclaude/test_session_launch.py`, `test_session_launch_process_issues.py`,
+  `test_session_restart_branch_integration.py` (interim `checks.check_pr_health` patch)
 
 ## WHAT — `checks.py`
 
@@ -146,6 +148,13 @@ for issue in pr_issues:
   - keep the module imports (`CIResultsManager`, `...config.label_config`, `from . import checks`):
     existing tests still patch `session_launch.CIResultsManager`; step 3 removes imports and patches together
   - keep the capacity early return, `issue_manager`, `branch_manager`
+- Remaining `process_eligible_issues` tests in `test_session_launch.py`,
+  `test_session_launch_process_issues.py` and `test_session_restart_branch_integration.py`:
+  patch `mcp_coder.workflows.vscodeclaude.checks.check_pr_health` (with a `MagicMock`), via a
+  per-file autouse fixture or per-test `monkeypatch.setattr`. Without it, the interim call
+  reaches `checks.get_github_username` (a real GitHub API call) and the real managers, because
+  those tests only patch the `session_launch.*` names. Step 3 removes this patch together with
+  the interim call.
 
 ## DATA
 

@@ -67,6 +67,8 @@ Remove:
 - every `monkeypatch.setattr("mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager", ...)`
   (and its now-unused `mock_ci_manager`) in `test_session_launch.py`, `test_session_restart_branch_integration.py`,
   `test_session_launch_process_issues.py` — the attribute no longer exists, so `monkeypatch` would raise
+- the step-2 patch of `mcp_coder.workflows.vscodeclaude.checks.check_pr_health` (autouse fixture or
+  per-test patch) in the same three files — `process_eligible_issues` no longer calls it
 
 ## Commit
 
