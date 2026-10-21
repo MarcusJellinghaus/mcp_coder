@@ -41,11 +41,12 @@
 If removing a name empties its `from … import` line, delete the whole line.
 
 **Optional-dependency checks: `import x` + `del x`.** Remove `# noqa: F401` and
-`unused-import` from each line. Keep every other pragma.
+`unused-import` from each line. Keep every other pragma, except the mlflow
+`# type: ignore[...]` (see below).
 
 | File:line | New code |
 |---|---|
-| `mlflow_logger.py:48` | `import mlflow  # type: ignore[import-untyped,import-not-found]  # pylint: disable=import-error` then `del mlflow` |
+| `mlflow_logger.py:48` | `import mlflow  # pylint: disable=import-error` then `del mlflow` (drop the `# type: ignore[...]` too — see below) |
 | `agent.py:49` | `import langchain_mcp_adapters` then `del langchain_mcp_adapters` |
 | `agent.py:53` | `import langgraph` then `del langgraph` |
 | `_exceptions.py:237` | `import truststore  # pylint: disable=import-outside-toplevel` then `del truststore` (before `return True`) |
@@ -53,6 +54,13 @@ If removing a name empties its `from … import` line, delete the whole line.
 
 If pylint reports `import-outside-toplevel` at an `agent.py` site after the change, add
 that disable on the import line. Do not re-add `unused-import`.
+
+`mlflow_logger.py:48`: today the `# type: ignore[...]` follows `# noqa: F401`, so mypy
+ignores it. With the `noqa` gone it would become the first comment and mypy would act on
+it. `pyproject.toml` already covers mlflow (`ignore_missing_imports`,
+`disable_error_code = ["import-untyped"]`), so strict mode would report it as an unused
+ignore. Drop it, matching the other `import mlflow` sites. Run `run_mypy_check` after
+the change and confirm it passes.
 
 ## ALGORITHM (each optional-dependency site)
 
