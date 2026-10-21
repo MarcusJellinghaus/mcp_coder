@@ -66,9 +66,9 @@ See [step_6.md](./steps/step_6.md)
 ### Step 7: verify: `format_code`, Formatter and leftover-key rows; exit code
 See [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: implement: pre-flight, remove old `format_code` plumbing, remove repo key
 See [step_8.md](./steps/step_8.md)

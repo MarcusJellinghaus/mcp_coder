@@ -617,3 +617,33 @@ class TestPromptsExitCode:
             )
             == 0
         )
+
+
+class TestProjectExitCode:
+    """Exit-code effect of the project_ok signal (provider-independent)."""
+
+    def test_project_not_ok_exit_1(self) -> None:
+        """Exit 1 when the PROJECT section printed an [ERR] row."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                project_ok=False,
+            )
+            == 1
+        )
+
+    def test_project_ok_true_no_effect(self) -> None:
+        """Exit 0 when project_ok=True."""
+        assert (
+            _compute_exit_code(
+                "claude",
+                _make_claude_result(),
+                None,
+                _make_mlflow_result(installed=False),
+                project_ok=True,
+            )
+            == 0
+        )

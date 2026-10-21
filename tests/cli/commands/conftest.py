@@ -11,6 +11,7 @@ from mcp_coder.cli.commands.verify_formatting import (
     _LABEL_WIDTH,
     _MARKER_SLOT_WIDTH,
     _format_row,
+    _pad,
 )
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus
 
@@ -173,6 +174,27 @@ def _mock_verify_git() -> Generator[MagicMock, None, None]:
     default = {"overall_ok": True}
     with patch(
         "mcp_coder.cli.commands.verify.verify_git", return_value=default
+    ) as mock:
+        yield mock
+
+
+@pytest.fixture(autouse=True)
+def _mock_print_project_section() -> Generator[MagicMock, None, None]:
+    """Auto-mock the PROJECT section: prints its header, returns True.
+
+    execute_verify would otherwise resolve the formatter from whatever
+    project_dir the test runs in. Tests that need a failing PROJECT section
+    can override by patching _print_project_section explicitly. Tests calling
+    it directly import from verify_sections and are unaffected.
+    """
+
+    def _print_header(*_args: Any, **_kwargs: Any) -> bool:
+        print(_pad("PROJECT"))
+        return True
+
+    with patch(
+        "mcp_coder.cli.commands.verify._print_project_section",
+        side_effect=_print_header,
     ) as mock:
         yield mock
 

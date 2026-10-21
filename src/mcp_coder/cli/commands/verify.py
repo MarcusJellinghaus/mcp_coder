@@ -242,7 +242,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     print("\n".join(prompt_lines))
 
     # 0c. Project configuration section
-    _print_project_section(project_dir, symbols)
+    project_ok = _print_project_section(project_dir, symbols)
 
     # 0d. Git verification section
     git_result = verify_git(project_dir, actually_sign=True)
@@ -580,6 +580,7 @@ def execute_verify(args: argparse.Namespace) -> int:
         mcp_config_ok=mcp_config_ok,
         jenkins_ok=jenkins_ok,
         prompts_ok=prompts_ok,
+        project_ok=project_ok,
     )
     logger.info("Verify command completed with exit code %d", exit_code)
     return exit_code
