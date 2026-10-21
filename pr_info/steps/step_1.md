@@ -39,13 +39,23 @@ if __name__ == "__main__":
 ```python
 STRICT_ENV_VAR = "MCP_CODER_IMPORT_TEST_STRICT"
 
-# classification unit tests (plain functions)
-def test_missing_absent_package_is_skip() -> None
-def test_missing_submodule_of_present_package_is_fail() -> None
-def test_cannot_import_name_is_fail() -> None
-def test_import_error_from_module_not_found_is_skip() -> None   # via __cause__
-def test_import_error_with_context_module_not_found_is_skip() -> None  # via __context__
-def test_non_import_error_is_fail() -> None
+# classification: one parametrized test; each case = (builder, expected)
+def _absent_package() -> BaseException
+def _submodule_of_present_package() -> BaseException
+def _cannot_import_name() -> BaseException
+def _import_error_from_module_not_found() -> BaseException   # via __cause__
+def _import_error_with_context_module_not_found() -> BaseException  # via __context__
+def _non_import_error() -> BaseException
+
+@pytest.mark.parametrize(("build_exc", "expected"), [...])
+def test_missing_optional_package(
+    build_exc: Callable[[], BaseException], expected: str | None
+) -> None
+
+# walker: a submodule raising SystemExit at import is recorded, walk continues
+def test_walk_records_system_exit_module(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None
 
 # the import-health test
 def test_all_mcp_coder_modules_import(tmp_path: Path) -> None
@@ -53,14 +63,23 @@ def test_all_mcp_coder_modules_import(tmp_path: Path) -> None
 
 ## HOW
 
-- Unit tests: `from tests._import_walker import missing_optional_package`
+- Unit tests: `from tests._import_walker import missing_optional_package, walk`
   (same pattern as `from tests.langchain_doubles import ...`).
-- Build exceptions directly, e.g.
+- Parametrize cases with ids; expected is the missing top-level name
+  (`"nonexistent_pkg_xyz"`) for skip cases, `None` for fail cases.
+- Builders construct exceptions directly, e.g.
   `ModuleNotFoundError("No module named 'x'", name="nonexistent_pkg_xyz.sub")`;
   "present package" case uses `name="json.nonexistent_sub"`;
   cause case: `raise ImportError("install extra") from ModuleNotFoundError(...)`
   inside `try/except` to get a real `__cause__`; context case: raise inside an
-  `except ModuleNotFoundError:` block.
+  `except ModuleNotFoundError:` block; each builder returns the caught exception.
+- `test_walk_records_system_exit_module`: write a throwaway package
+  `tmp_path/_walker_probe_pkg/` with `__init__.py`, `exits.py`
+  (`raise SystemExit(3)`) and `ok.py`; `monkeypatch.syspath_prepend(tmp_path)`;
+  call `walk("_walker_probe_pkg")` in-process; assert `failures` has exactly one
+  entry with module `_walker_probe_pkg.exits` and type `SystemExit`, and that
+  `_walker_probe_pkg.ok` was imported (in `sys.modules`). In a `finally`,
+  pop every `sys.modules` key starting with `_walker_probe_pkg`.
 - Import-health test runs:
   ```python
   execute_subprocess(
@@ -92,7 +111,8 @@ def visit(path, prefix):
     for info in pkgutil.iter_modules(path, prefix):
         if info.name in SKIPPED_MODULES: continue
         try: mod = importlib.import_module(info.name)
-        except Exception as exc: append {module, type, message} to skips (with "missing") if missing_optional_package(exc) else failures; continue
+        except KeyboardInterrupt: raise
+        except BaseException as exc: append {module, type, message} to skips (with "missing") if missing_optional_package(exc) else failures; continue
         if info.ispkg: visit(mod.__path__, info.name + ".")
 visit(pkg.__path__, package_name + ".")
 ```
