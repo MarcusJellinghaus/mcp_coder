@@ -37,3 +37,16 @@ Supervisor-driven review of `_exit_code` linked-branch terms (shim re-export, ex
 **Decisions**: accept — trivial, and it describes the known limitation this issue extends (docs note already updated).
 **Changes**: comment now names both `--fail-on-reviews` and the linked-branch check. Comment only. mypy/pytest (5808 passed) clean; pylint clean on `src/mcp_coder/cli/commands` (full-project run timed out).
 **Status**: committed
+
+## Round 4 — 2026-10-21
+**Findings**: none.
+**Decisions**: —
+**Changes**: none.
+**Status**: no changes needed
+
+## Final Status
+- Rounds: 4 (3 with changes, the 4th clean).
+- Commits: `7e04a2f` (LINKED_VIA_PR doc + test row), `25b239b` (approve-skill `Ready to merge` match), `1da6f7d` (`--fix` path comment). Plus `4701367` (settings permission, user-requested).
+- vulture: clean. lint-imports: 21 contracts kept, 0 broken.
+- pytest unit set 5808 passed / 2 skipped; mypy and pylint clean.
+- Open: branch is 9 commits behind `origin/main` and needs a rebase. The tool's auto-rebase reported it could not rebase cleanly; no file-level overlap with main was found.
