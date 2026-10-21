@@ -8,14 +8,6 @@ from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
 
-# Test-first approach: Try to import the module, skip dependent tests if not available
-try:
-    from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status
-
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = True
-except ImportError:
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = False
-
 
 @pytest.fixture
 def failed_ci_report() -> BranchStatusReport:
@@ -56,10 +48,6 @@ def sample_report() -> BranchStatusReport:
     )
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestRunAutoFixes:
     """Tests for _run_auto_fixes function."""
 
@@ -140,10 +128,6 @@ class TestRunAutoFixes:
         assert result is False
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestFixRetryLogic:
     """Test fix retry logic with multiple attempts."""
 

@@ -427,7 +427,6 @@ def test_execute_icoder_creates_registry_with_skills(
 
     assert result == 0
     assert len(captured_app_core) == 1
-    from mcp_coder.icoder.core.app_core import AppCore
 
     core: AppCore = captured_app_core[0]  # type: ignore[assignment]
     # Verify skill is registered

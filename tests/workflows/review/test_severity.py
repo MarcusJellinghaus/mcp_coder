@@ -6,8 +6,6 @@ line, and must tolerate the formatting a fresh reviewer LLM actually emits
 (em-dash *or* ASCII hyphen separators; optionally backticked severity token).
 """
 
-import pytest
-
 from mcp_coder.workflows.review.severity import max_severity
 
 

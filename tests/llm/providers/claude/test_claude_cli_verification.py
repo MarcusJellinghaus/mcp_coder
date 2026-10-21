@@ -3,8 +3,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from mcp_coder.llm.providers.claude.claude_cli_verification import (
     _verify_claude_before_use,
     verify_claude,

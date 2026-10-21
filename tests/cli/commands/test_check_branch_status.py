@@ -19,18 +19,8 @@ import pytest
 from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
+from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status
 from mcp_coder.utils.log_utils import OUTPUT
-from tests.cli.commands.conftest import unavailable_command_stub
-
-# Test-first approach: Try to import the module, skip dependent tests if not available
-try:
-    from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status
-
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = True
-except ImportError:
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = False
-
-    execute_check_branch_status = unavailable_command_stub
 
 
 @pytest.fixture
@@ -72,10 +62,6 @@ def failed_ci_report() -> BranchStatusReport:
     )
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestExecuteCheckBranchStatus:
     """Tests for execute_check_branch_status function.
 
@@ -383,10 +369,6 @@ class TestExecuteCheckBranchStatus:
         mock_collect.assert_called_once_with(project_dir)
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestMissingTokenGuards:
     """Tests for missing-GitHub-token handling (CIStatus.UNAVAILABLE).
 

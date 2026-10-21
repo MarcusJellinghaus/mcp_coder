@@ -33,9 +33,6 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
     McpServersUnavailableError,
     ask_claude_code_cli,
 )
-from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
-    ask_claude_code_cli_stream,
-)
 from mcp_coder.llm.providers.claude.claude_mcp_guard import (
     StreamMessage,
     parse_stream_json_file,

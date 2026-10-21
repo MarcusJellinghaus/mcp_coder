@@ -1,7 +1,5 @@
 """Tests for LLM type definitions."""
 
-import pytest
-
 from mcp_coder.llm.types import (
     LLM_RESPONSE_VERSION,
     SUPPORTED_PROVIDERS,

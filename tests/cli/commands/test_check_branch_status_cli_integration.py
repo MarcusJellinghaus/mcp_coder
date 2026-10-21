@@ -1,18 +1,9 @@
 """Tests for check_branch_status CLI integration functionality."""
 
 import argparse
-import sys
 from unittest.mock import Mock, patch
 
 import pytest
-
-# Test-first approach: Try to import the module, skip dependent tests if not available
-try:
-    from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status
-
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = True
-except ImportError:
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = False
 
 
 class TestCheckBranchStatusParserEnhancements:

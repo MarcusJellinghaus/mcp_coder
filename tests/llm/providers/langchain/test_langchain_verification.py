@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from mcp_coder.llm.providers.langchain.verification import (
     _check_mcp_adapter_packages,
     _check_model_listed,

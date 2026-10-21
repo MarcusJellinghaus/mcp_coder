@@ -7,8 +7,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from mcp_coder.config import MLflowConfig
 from mcp_coder.llm.mlflow_db_utils import TrackingStats
 from mcp_coder.llm.mlflow_verify import verify_mlflow

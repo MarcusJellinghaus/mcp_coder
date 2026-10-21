@@ -13,7 +13,6 @@ import pytest
 
 from mcp_coder.llm.mlflow_logger import get_mlflow_logger
 from mcp_coder.llm.storage.session_storage import store_session
-from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.utils import load_mlflow_config
 
 
@@ -207,20 +206,16 @@ class TestMLflowWithRealInstallation:
 
     def test_real_mlflow_available(self) -> None:
         """Test with real MLflow installation if available."""
-        try:
-            import mlflow
+        pytest.importorskip("mlflow")
 
-            # Reset availability cache to test real detection
-            import mcp_coder.llm.mlflow_logger
+        # Reset availability cache to test real detection
+        import mcp_coder.llm.mlflow_logger
 
-            mcp_coder.llm.mlflow_logger._mlflow_available = None
+        mcp_coder.llm.mlflow_logger._mlflow_available = None
 
-            from mcp_coder.llm.mlflow_logger import is_mlflow_available
+        from mcp_coder.llm.mlflow_logger import is_mlflow_available
 
-            assert is_mlflow_available() is True
-
-        except ImportError:
-            pytest.skip("MLflow not installed - skipping real installation test")
+        assert is_mlflow_available() is True
 
     def test_sqlite_backend_with_tilde_expansion(self, tmp_path: Path) -> None:
         """Test MLflow SQLite backend with ~ expansion in path.
@@ -229,196 +224,188 @@ class TestMLflowWithRealInstallation:
         It creates a temporary SQLite database, logs a conversation, and verifies
         the data was actually written to the database.
         """
-        try:
-            import mlflow
+        pytest.importorskip("mlflow")
 
-            from mcp_coder.config.mlflow_config import MLflowConfig
-            from mcp_coder.llm.mlflow_logger import MLflowLogger
+        from mcp_coder.config.mlflow_config import MLflowConfig
+        from mcp_coder.llm.mlflow_logger import MLflowLogger
 
-            # Use pytest's tmp_path fixture for better cleanup handling
-            # Create a SQLite database path
-            db_path = tmp_path / "mlflow_test.db"
+        # Use pytest's tmp_path fixture for better cleanup handling
+        # Create a SQLite database path
+        db_path = tmp_path / "mlflow_test.db"
 
-            # Test with sqlite:/// URI format (absolute path)
-            sqlite_uri = f"sqlite:///{db_path}"
+        # Test with sqlite:/// URI format (absolute path)
+        sqlite_uri = f"sqlite:///{db_path}"
 
-            # Use tmp_path for artifacts to prevent creating mlruns/ in project root
-            artifact_location = str(tmp_path / "artifacts")
+        # Use tmp_path for artifacts to prevent creating mlruns/ in project root
+        artifact_location = str(tmp_path / "artifacts")
 
-            config = MLflowConfig(
-                enabled=True,
-                tracking_uri=sqlite_uri,
-                experiment_name="test-sqlite-expansion",
-                artifact_location=artifact_location,
-            )
+        config = MLflowConfig(
+            enabled=True,
+            tracking_uri=sqlite_uri,
+            experiment_name="test-sqlite-expansion",
+            artifact_location=artifact_location,
+        )
 
-            # Initialize logger with SQLite backend
-            logger = MLflowLogger(config)
-            assert logger._mlflow_module is not None
-            assert logger.config.enabled is True
-            mlflow_module = logger._mlflow_module
+        # Initialize logger with SQLite backend
+        logger = MLflowLogger(config)
+        assert logger._mlflow_module is not None
+        assert logger.config.enabled is True
+        mlflow_module = logger._mlflow_module
 
-            # Simulate logging a conversation
-            prompt = "Test prompt for SQLite backend"
-            response_data: Dict[str, Any] = {
-                "text": "Response for SQLite test",
-                "session_id": "sqlite-test-session-789",
-                "version": "1.0",
-                "timestamp": "2024-01-01T00:00:00Z",
-                "provider": "claude",
-                "raw_response": {
-                    "session_info": {
-                        "model": "claude-3-sonnet",
-                        "usage": {"input_tokens": 10, "output_tokens": 20},
-                    }
-                },
-            }
+        # Simulate logging a conversation
+        prompt = "Test prompt for SQLite backend"
+        response_data: Dict[str, Any] = {
+            "text": "Response for SQLite test",
+            "session_id": "sqlite-test-session-789",
+            "version": "1.0",
+            "timestamp": "2024-01-01T00:00:00Z",
+            "provider": "claude",
+            "raw_response": {
+                "session_info": {
+                    "model": "claude-3-sonnet",
+                    "usage": {"input_tokens": 10, "output_tokens": 20},
+                }
+            },
+        }
 
-            metadata = {
-                "model": "claude-3-sonnet",
-                "branch_name": "test-branch",
-                "working_directory": str(tmp_path),
-            }
+        metadata = {
+            "model": "claude-3-sonnet",
+            "branch_name": "test-branch",
+            "working_directory": str(tmp_path),
+        }
 
-            # Start a run and log the conversation
-            run_id = logger.start_run()
-            assert run_id is not None, "Failed to start MLflow run"
+        # Start a run and log the conversation
+        run_id = logger.start_run()
+        assert run_id is not None, "Failed to start MLflow run"
 
-            logger.log_conversation(prompt, response_data, metadata)
+        logger.log_conversation(prompt, response_data, metadata)
 
-            # End the run
-            logger.end_run()
+        # End the run
+        logger.end_run()
 
-            # Verify the SQLite database was created and contains data
-            assert db_path.exists(), f"Database file not created at {db_path}"
+        # Verify the SQLite database was created and contains data
+        assert db_path.exists(), f"Database file not created at {db_path}"
 
-            # Query the database to verify data was logged
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
+        # Query the database to verify data was logged
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
 
-            # Check experiments table
-            cursor.execute(
-                "SELECT name FROM experiments WHERE name = ?",
-                ("test-sqlite-expansion",),
-            )
-            experiments = cursor.fetchall()
-            assert len(experiments) > 0, "Experiment not found in database"
-            assert experiments[0][0] == "test-sqlite-expansion"
+        # Check experiments table
+        cursor.execute(
+            "SELECT name FROM experiments WHERE name = ?",
+            ("test-sqlite-expansion",),
+        )
+        experiments = cursor.fetchall()
+        assert len(experiments) > 0, "Experiment not found in database"
+        assert experiments[0][0] == "test-sqlite-expansion"
 
-            # Check runs table
-            cursor.execute("SELECT COUNT(*) FROM runs")
-            run_count = cursor.fetchone()[0]
-            assert run_count > 0, "No runs found in database"
+        # Check runs table
+        cursor.execute("SELECT COUNT(*) FROM runs")
+        run_count = cursor.fetchone()[0]
+        assert run_count > 0, "No runs found in database"
 
-            # Check metrics table
-            cursor.execute("SELECT key, value FROM metrics")
-            metrics = cursor.fetchall()
-            assert len(metrics) > 0, "No metrics found in database"
+        # Check metrics table
+        cursor.execute("SELECT key, value FROM metrics")
+        metrics = cursor.fetchall()
+        assert len(metrics) > 0, "No metrics found in database"
 
-            # Verify expected metrics exist
-            metric_keys = {metric[0] for metric in metrics}
-            assert "usage_input_tokens" in metric_keys
-            assert "usage_output_tokens" in metric_keys
+        # Verify expected metrics exist
+        metric_keys = {metric[0] for metric in metrics}
+        assert "usage_input_tokens" in metric_keys
+        assert "usage_output_tokens" in metric_keys
 
-            # Check parameters table
-            cursor.execute("SELECT key, value FROM params")
-            params = cursor.fetchall()
-            assert len(params) > 0, "No parameters found in database"
+        # Check parameters table
+        cursor.execute("SELECT key, value FROM params")
+        params = cursor.fetchall()
+        assert len(params) > 0, "No parameters found in database"
 
-            # Verify expected parameters (only stable params at step 0)
-            param_dict = {param[0]: param[1] for param in params}
-            assert param_dict.get("model") == "claude-3-sonnet"
-            assert param_dict.get("provider") == "claude"
-            # branch_name is now in step_0_all_params.json artifact, not params
-            assert "branch_name" not in param_dict
+        # Verify expected parameters (only stable params at step 0)
+        param_dict = {param[0]: param[1] for param in params}
+        assert param_dict.get("model") == "claude-3-sonnet"
+        assert param_dict.get("provider") == "claude"
+        # branch_name is now in step_0_all_params.json artifact, not params
+        assert "branch_name" not in param_dict
 
-            # Verify prompt_length is now a metric, not a param
-            assert "prompt_length" not in param_dict
-            assert "prompt_length" in metric_keys
+        # Verify prompt_length is now a metric, not a param
+        assert "prompt_length" not in param_dict
+        assert "prompt_length" in metric_keys
 
-            # Verify artifacts are referenced in the database
-            cursor.execute(
-                "SELECT run_uuid, artifact_uri FROM runs ORDER BY start_time DESC LIMIT 1"
-            )
-            run_result = cursor.fetchone()
-            assert run_result is not None, "No run found"
-            _, artifact_uri = run_result
-            assert artifact_uri is not None, "No artifact URI in database"
+        # Verify artifacts are referenced in the database
+        cursor.execute(
+            "SELECT run_uuid, artifact_uri FROM runs ORDER BY start_time DESC LIMIT 1"
+        )
+        run_result = cursor.fetchone()
+        assert run_result is not None, "No run found"
+        _, artifact_uri = run_result
+        assert artifact_uri is not None, "No artifact URI in database"
 
-            conn.close()
+        conn.close()
 
-            # Verify artifact files exist and contain conversation data
-            # Extract artifact path from artifact_uri (format: file:///.../artifacts)
-            import urllib.parse
+        # Verify artifact files exist and contain conversation data
+        # Extract artifact path from artifact_uri (format: file:///.../artifacts)
+        import urllib.parse
 
-            artifact_path_str = urllib.parse.urlparse(artifact_uri).path
-            # On Windows, urlparse may include leading slash like /C:/...
-            if artifact_path_str.startswith("/") and ":" in artifact_path_str:
-                artifact_path_str = artifact_path_str[1:]  # Remove leading slash
-            artifact_path = Path(artifact_path_str) / "conversation_data"
+        artifact_path_str = urllib.parse.urlparse(artifact_uri).path
+        # On Windows, urlparse may include leading slash like /C:/...
+        if artifact_path_str.startswith("/") and ":" in artifact_path_str:
+            artifact_path_str = artifact_path_str[1:]  # Remove leading slash
+        artifact_path = Path(artifact_path_str) / "conversation_data"
 
-            # Verify conversation_data directory exists
-            assert (
-                artifact_path.exists()
-            ), f"Artifact directory not found at {artifact_path}"
-            assert (
-                artifact_path.is_dir()
-            ), f"Artifact path is not a directory: {artifact_path}"
+        # Verify conversation_data directory exists
+        assert (
+            artifact_path.exists()
+        ), f"Artifact directory not found at {artifact_path}"
+        assert (
+            artifact_path.is_dir()
+        ), f"Artifact path is not a directory: {artifact_path}"
 
-            # Verify step_0_prompt.txt exists and contains prompt
-            prompt_file = artifact_path / "step_0_prompt.txt"
-            assert prompt_file.exists(), f"step_0_prompt.txt not found at {prompt_file}"
-            prompt_content = prompt_file.read_text(encoding="utf-8")
-            assert (
-                prompt in prompt_content
-            ), "Prompt text not found in step_0_prompt.txt"
+        # Verify step_0_prompt.txt exists and contains prompt
+        prompt_file = artifact_path / "step_0_prompt.txt"
+        assert prompt_file.exists(), f"step_0_prompt.txt not found at {prompt_file}"
+        prompt_content = prompt_file.read_text(encoding="utf-8")
+        assert prompt in prompt_content, "Prompt text not found in step_0_prompt.txt"
 
-            # Verify step_0_conversation.json exists and contains conversation data
-            conversation_file = artifact_path / "step_0_conversation.json"
-            assert (
-                conversation_file.exists()
-            ), f"step_0_conversation.json not found at {conversation_file}"
-            conversation_json = json.loads(
-                conversation_file.read_text(encoding="utf-8")
-            )
+        # Verify step_0_conversation.json exists and contains conversation data
+        conversation_file = artifact_path / "step_0_conversation.json"
+        assert (
+            conversation_file.exists()
+        ), f"step_0_conversation.json not found at {conversation_file}"
+        conversation_json = json.loads(conversation_file.read_text(encoding="utf-8"))
 
-            # Verify conversation JSON structure and content
-            assert (
-                "prompt" in conversation_json
-            ), "prompt field missing in conversation.json"
-            assert (
-                conversation_json["prompt"] == prompt
-            ), "Prompt mismatch in conversation.json"
+        # Verify conversation JSON structure and content
+        assert (
+            "prompt" in conversation_json
+        ), "prompt field missing in conversation.json"
+        assert (
+            conversation_json["prompt"] == prompt
+        ), "Prompt mismatch in conversation.json"
 
-            assert "response_data" in conversation_json, "response_data field missing"
-            assert (
-                conversation_json["response_data"]["text"] == response_data["text"]
-            ), "Response text mismatch"
-            assert (
-                conversation_json["response_data"]["provider"] == "claude"
-            ), "Provider mismatch"
+        assert "response_data" in conversation_json, "response_data field missing"
+        assert (
+            conversation_json["response_data"]["text"] == response_data["text"]
+        ), "Response text mismatch"
+        assert (
+            conversation_json["response_data"]["provider"] == "claude"
+        ), "Provider mismatch"
 
-            assert "metadata" in conversation_json, "metadata field missing"
-            assert (
-                conversation_json["metadata"]["model"] == "claude-3-sonnet"
-            ), "Model mismatch in metadata"
-            assert (
-                conversation_json["metadata"]["branch_name"] == "test-branch"
-            ), "Branch name mismatch"
+        assert "metadata" in conversation_json, "metadata field missing"
+        assert (
+            conversation_json["metadata"]["model"] == "claude-3-sonnet"
+        ), "Model mismatch in metadata"
+        assert (
+            conversation_json["metadata"]["branch_name"] == "test-branch"
+        ), "Branch name mismatch"
 
-            # Properly cleanup MLflow to release file locks (critical on Windows)
-            with contextlib.suppress(Exception):
-                # End any active MLflow runs
-                mlflow_module.end_run()
+        # Properly cleanup MLflow to release file locks (critical on Windows)
+        with contextlib.suppress(Exception):
+            # End any active MLflow runs
+            mlflow_module.end_run()
 
-            with contextlib.suppress(Exception):
-                # Clear tracking URI to force close the tracking store
-                mlflow_module.set_tracking_uri("")
+        with contextlib.suppress(Exception):
+            # Clear tracking URI to force close the tracking store
+            mlflow_module.set_tracking_uri("")
 
-            # Give Windows time to release file handles
-            import time
+        # Give Windows time to release file handles
+        import time
 
-            time.sleep(0.2)
-
-        except ImportError:
-            pytest.skip("MLflow not installed - skipping SQLite backend test")
+        time.sleep(0.2)

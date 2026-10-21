@@ -10,7 +10,6 @@ and the ``.to_be_deleted`` retry loop.
 """
 
 import json
-import logging
 import shutil
 from pathlib import Path
 

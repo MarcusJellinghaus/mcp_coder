@@ -8,7 +8,6 @@ import argparse
 import json
 import logging
 from typing import Any
-from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytest

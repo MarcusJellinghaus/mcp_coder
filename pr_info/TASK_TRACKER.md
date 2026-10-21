@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Remove unused imports in tests — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: hand edits A1–A4 (smoke-test asserts, `try/except ImportError` sites, `F811` re-imports, obsolete test-first guards + `skipif`s in `check_branch_status` / `implement` / `create_pr` tests, delete `unavailable_command_stub`), then `ruff --fix` `F401` sweep on `tests` and review of removed imports
-- [ ] Quality checks: pylint, pytest (unit + `git_integration`, mlflow file once), mypy, ruff `F401`/`F811` on `tests` — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: hand edits A1–A4 (smoke-test asserts, `try/except ImportError` sites, `F811` re-imports, obsolete test-first guards + `skipif`s in `check_branch_status` / `implement` / `create_pr` tests, delete `unavailable_command_stub`), then `ruff --fix` `F401` sweep on `tests` and review of removed imports
+- [x] Quality checks: pylint, pytest (unit + `git_integration`, mlflow file once), mypy, ruff `F401`/`F811` on `tests` — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Enable ruff `F` and clean `src` — [step_3.md](./steps/step_3.md)
 

@@ -4,7 +4,6 @@ Tests subprocess encoding handling with large amounts of special characters
 to ensure the git diff operation doesn't hang or fail on Windows.
 """
 
-import tempfile
 from pathlib import Path
 from typing import Any
 

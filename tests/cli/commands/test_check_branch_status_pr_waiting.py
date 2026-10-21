@@ -13,14 +13,7 @@ import pytest
 from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
-
-# Test-first approach: Try to import the module, skip dependent tests if not available
-try:
-    from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status
-
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = True
-except ImportError:
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = False
+from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status
 
 
 def _make_base_args(**overrides: object) -> argparse.Namespace:
@@ -146,10 +139,6 @@ class TestHasRemoteTrackingBranch:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestRemoteTrackingGuard:
     """Tests for the remote tracking branch guard in PR waiting."""
 
@@ -226,10 +215,6 @@ class TestRemoteTrackingGuard:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestPRPolling:
     """Tests for PR discovery polling behaviour."""
 
@@ -397,10 +382,6 @@ class TestPRPolling:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestCIPendingHint:
     """Tests for the CI pending hint after report display."""
 
@@ -494,10 +475,6 @@ class TestCIPendingHint:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestNoPRWaitingSkipsPolling:
     """Verify that wait_for_pr=False preserves existing behaviour."""
 
@@ -532,10 +509,6 @@ class TestNoPRWaitingSkipsPolling:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not CHECK_BRANCH_STATUS_MODULE_AVAILABLE,
-    reason="check_branch_status module not yet implemented",
-)
 class TestReportFormatterWiring:
     """The report flows unenriched into the formatter, with the review flag."""
 

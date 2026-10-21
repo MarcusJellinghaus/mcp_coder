@@ -6,10 +6,8 @@ These tests verify the complete workflow integration including:
 - Git repository state management
 """
 
-import os
-import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest

@@ -59,7 +59,7 @@ class _RegistryApp(App[None]):
 
 async def test_output_log_write_records_text() -> None:
     """OutputLog.write() with a Rich renderable also appends to _recorded."""
-    from textual.app import App, ComposeResult
+    from textual.app import App
 
     class TestApp(App[None]):
         def compose(self) -> ComposeResult:
@@ -84,7 +84,7 @@ async def test_output_log_write_records_text() -> None:
 
 async def test_output_log_append_text_records() -> None:
     """OutputLog.append_text() records text in _recorded (existing behavior)."""
-    from textual.app import App, ComposeResult
+    from textual.app import App
 
     class TestApp(App[None]):
         def compose(self) -> ComposeResult:
@@ -100,7 +100,7 @@ async def test_output_log_append_text_records() -> None:
 
 async def test_mirror_called_for_blank_line_spacer() -> None:
     """OutputLog.write('') invokes mirror but does NOT pollute _recorded."""
-    from textual.app import App, ComposeResult
+    from textual.app import App
 
     mock = Mock()
 
@@ -122,7 +122,7 @@ async def test_mirror_called_for_blank_line_spacer() -> None:
 
 async def test_mirror_called_for_markdown_write() -> None:
     """OutputLog.write(Markdown(...)) mirrors the same markup recorded."""
-    from textual.app import App, ComposeResult
+    from textual.app import App
 
     mock = Mock()
 
@@ -147,7 +147,7 @@ async def test_mirror_called_for_markdown_write() -> None:
 
 async def test_mirror_called_for_append_text() -> None:
     """OutputLog.append_text() mirrors both plain and styled writes."""
-    from textual.app import App, ComposeResult
+    from textual.app import App
 
     mock = Mock()
 
@@ -169,7 +169,7 @@ async def test_mirror_called_for_append_text() -> None:
 
 async def test_no_mirror_when_callback_is_none() -> None:
     """OutputLog() with default mirror=None still works and records correctly."""
-    from textual.app import App, ComposeResult
+    from textual.app import App
 
     class TestApp(App[None]):
         def compose(self) -> ComposeResult:

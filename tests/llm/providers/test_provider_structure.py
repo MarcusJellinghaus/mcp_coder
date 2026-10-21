@@ -6,6 +6,9 @@ def test_providers_package_structure() -> None:
     import mcp_coder.llm.providers
     import mcp_coder.llm.providers.claude
 
+    assert mcp_coder.llm.providers
+    assert mcp_coder.llm.providers.claude
+
     # Verify claude provider modules importable
     from mcp_coder.llm.providers.claude import (
         claude_code_cli,
@@ -48,6 +51,6 @@ def test_provider_package_init() -> None:
 
 def test_langchain_package_exists() -> None:
     """Verify the langchain sub-package exists and exposes ask_langchain."""
-    from mcp_coder.llm.providers import langchain  # noqa: F401
+    from mcp_coder.llm.providers import langchain
 
     assert hasattr(langchain, "ask_langchain")

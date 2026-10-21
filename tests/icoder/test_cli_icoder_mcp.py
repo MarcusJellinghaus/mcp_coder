@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
-from tests.icoder.conftest import FAKE_RUNTIME_INFO, make_icoder_args, patch_icoder_deps
+from tests.icoder.conftest import make_icoder_args, patch_icoder_deps
 
 
 def test_mcp_manager_created_for_langchain(

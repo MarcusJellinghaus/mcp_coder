@@ -532,7 +532,6 @@ class TestRestartClosedSessionsBranchHandling:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """regenerate_session_files reads current branch from git after checkout."""
-        from unittest.mock import MagicMock
 
         # Create working folder structure
         working_folder = tmp_path / "repo_123"

@@ -3,7 +3,6 @@
 import argparse
 import json
 import logging
-from typing import Any, Dict
 from unittest.mock import Mock, mock_open, patch
 
 import pytest

@@ -3,7 +3,7 @@
 import argparse
 import logging
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
