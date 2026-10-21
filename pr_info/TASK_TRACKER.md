@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: `update_workflow_label()` uses `is_branch_linked_to_issue`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: re-patch `tests/workflow_utils/test_label_transitions.py`, add closing-PR parametrized test, update `label_transitions.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: re-patch `tests/workflow_utils/test_label_transitions.py`, add closing-PR parametrized test, update `label_transitions.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `validate_branch_issue_linkage()` uses `is_branch_linked_to_issue` (closes #708)
 See [step_3.md](./steps/step_3.md)

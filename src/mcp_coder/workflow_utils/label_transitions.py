@@ -21,6 +21,7 @@ from mcp_coder.mcp_workspace_github import (
     IssueBranchManager,
     IssueManager,
 )
+from mcp_coder.workflow_utils.branch_linkage import is_branch_linked_to_issue
 
 logger = logging.getLogger(__name__)
 
@@ -104,14 +105,9 @@ def update_workflow_label(
                 repo_url=repo_url,
                 github_token=issue_manager.github_token,
             )
-            linked_branches = branch_manager.get_linked_branches(issue_number)
-
-            if actual_branch_name not in linked_branches:
-                logger.warning(
-                    f"Branch '{actual_branch_name}' is not linked to "
-                    f"issue #{issue_number}. "
-                    f"Linked branches: {linked_branches}"
-                )
+            if not is_branch_linked_to_issue(
+                branch_manager, issue_number, actual_branch_name
+            ):
                 return False
 
         # Step 4: Load label config and build lookups
