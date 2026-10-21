@@ -34,8 +34,8 @@ instead of assuming the skill reads well unattended.
 
 `issue-approver` follows the same pattern against `.claude/skills/issue_approve/SKILL.md`. It
 stayed inlined longer than the other two and had drifted in both directions: the agent had
-grown the post-approval sleep and cross-repo handling, while the skill held the issue-number
-resolution the agent lacked. The sleep and `--repo` handling moved into the skill,
+grown cross-repo handling, while the skill held the issue-number
+resolution the agent lacked. The `--repo` handling moved into the skill,
 so both paths now do the same thing; what remains in the agent is only the two inputs that
 genuinely differ unattended — where the issue number comes from, and what counts as
 validation.

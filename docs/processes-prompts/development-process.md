@@ -251,7 +251,7 @@ Use this command after discussing a new feature or bug to create a GitHub issue 
 
 > **Slash Command:** `/issue_approve` ([`.claude/skills/issue_approve/SKILL.md`](../../.claude/skills/issue_approve/SKILL.md))
 >
-> **Additional capability:** Comments `/approve` on the issue to trigger status promotion via GitHub Actions.
+> **Additional capability:** Sets the next status directly via `mcp-coder gh-tool set-status`.
 
 Use this command after issue analysis is complete to transition the issue to `status:awaiting-planning`.
 
