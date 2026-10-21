@@ -73,7 +73,7 @@ class TestRunImplementWorkflow:
         assert first_call_args == (Path("/test/project"), "claude", None, None)
         # Verify config booleans passed (defaults from missing pyproject.toml)
         first_call_kwargs = mock_process_task.call_args_list[0][1]
-        assert first_call_kwargs["format_code"] is False
+        assert "format_code" not in first_call_kwargs
         assert first_call_kwargs["check_type_hints"] is False
         assert mock_log_progress.call_count >= 2  # Initial + final progress
 
@@ -146,6 +146,37 @@ class TestRunImplementWorkflow:
 
         assert result == 1
         mock_prepare_tracker.assert_called_once()
+
+    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
+    @patch(
+        "mcp_coder.workflows.implement.core.check_formatter_config",
+        return_value="No formatter configured",
+    )
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_formatter_config_error_fails_before_task_tracker(
+        self,
+        _mock_check_git: MagicMock,
+        _mock_check_branch: MagicMock,
+        _mock_check_prereq: MagicMock,
+        mock_prepare_tracker: MagicMock,
+        mock_check_formatter: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """A formatter config error fails as general before any LLM call."""
+        result = run_implement_workflow(Path("/test/project"), "claude")
+
+        assert result == 1
+        mock_check_formatter.assert_called_once_with(
+            Path("/test/project"), warn_legacy_key=True
+        )
+        mock_prepare_tracker.assert_not_called()
+        failure_arg = mock_handle_failure.call_args[1]["failure"]
+        assert failure_arg.category == "implementing_failed"
+        assert failure_arg.stage == "Formatter configuration"
+        assert failure_arg.message == "No formatter configured"
 
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
@@ -227,9 +258,7 @@ class TestRunImplementWorkflow:
 
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
-        mock_get_config.return_value = ImplementConfig(
-            format_code=False, check_type_hints=False
-        )
+        mock_get_config.return_value = ImplementConfig(check_type_hints=False)
 
         run_implement_workflow(Path("/test/project"), "claude")
 
@@ -277,9 +306,7 @@ class TestRunImplementWorkflow:
         """Test that config booleans are passed to process_task_with_retry."""
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
-        mock_get_config.return_value = ImplementConfig(
-            format_code=True, check_type_hints=True
-        )
+        mock_get_config.return_value = ImplementConfig(check_type_hints=True)
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
@@ -292,7 +319,6 @@ class TestRunImplementWorkflow:
         run_implement_workflow(Path("/test/project"), "claude")
 
         first_call_kwargs = mock_process_task.call_args_list[0][1]
-        assert first_call_kwargs["format_code"] is True
         assert first_call_kwargs["check_type_hints"] is True
 
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
@@ -330,9 +356,7 @@ class TestRunImplementWorkflow:
         """Test that check_type_hints=False skips final mypy in Step 5."""
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
-        mock_get_config.return_value = ImplementConfig(
-            format_code=True, check_type_hints=False
-        )
+        mock_get_config.return_value = ImplementConfig(check_type_hints=False)
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
@@ -370,7 +394,7 @@ class TestRunImplementWorkflow:
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
     @patch("mcp_coder.workflows.implement.core.read_and_clear_blocked")
-    def test_final_mypy_clears_marker_and_skips_formatting_when_disabled(
+    def test_final_mypy_clears_marker_and_formats(
         self,
         mock_read_blocked: MagicMock,
         mock_check_git: MagicMock,
@@ -388,12 +412,10 @@ class TestRunImplementWorkflow:
         mock_check_ci: MagicMock,
         mock_get_config: MagicMock,
     ) -> None:
-        """format_code=False skips formatters; the marker is cleared before staging."""
+        """Formatters always run (gate is inside them); marker cleared before staging."""
         from mcp_coder.utils.pyproject_config import ImplementConfig
 
-        mock_get_config.return_value = ImplementConfig(
-            format_code=False, check_type_hints=True
-        )
+        mock_get_config.return_value = ImplementConfig(check_type_hints=True)
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
@@ -413,157 +435,18 @@ class TestRunImplementWorkflow:
         assert result == 0
         # mypy should still be called since check_type_hints=True
         mock_check_mypy.assert_called_once()
-        # but formatters should NOT be called since format_code=False
-        mock_run_formatters.assert_not_called()
+        # run_formatters owns the format_code gate, so it is always called
+        mock_run_formatters.assert_called_once_with(Path("/test/project"))
         call_names = [name for name, _, _ in manager.mock_calls]
         assert call_names.index("read_blocked") < call_names.index("get_status")
 
-    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
+    @patch("mcp_coder.workflow_steps.commit.run_format_code")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
     @patch(
         "mcp_coder.workflows.implement.core.get_full_status",
         return_value={"staged": [], "modified": [], "untracked": []},
     )
-    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy")
-    @patch(
-        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
-    )
-    @patch(
-        "mcp_coder.workflows.implement.core.get_current_branch_name",
-        return_value="feature/test-branch",
-    )
-    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_final_mypy_timeout_categorized_as_llm_timeout(
-        self,
-        mock_check_git: MagicMock,
-        mock_check_branch: MagicMock,
-        mock_check_prereq: MagicMock,
-        mock_prepare_tracker: MagicMock,
-        mock_log_progress: MagicMock,
-        mock_process_task: MagicMock,
-        mock_get_branch: MagicMock,
-        mock_prepare_env: MagicMock,
-        mock_check_mypy: MagicMock,
-        mock_run_formatters: MagicMock,
-        mock_get_status: MagicMock,
-        _mock_run_finalisation: MagicMock,
-        mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
-        mock_handle_failure: MagicMock,
-    ) -> None:
-        """A final-mypy LLMTimeoutError is categorized to LLM_TIMEOUT (was swallowed)."""
-        from mcp_coder.llm.interface import LLMTimeoutError
-        from mcp_coder.utils.pyproject_config import ImplementConfig
-
-        mock_get_config.return_value = ImplementConfig(
-            format_code=False, check_type_hints=True
-        )
-        mock_check_git.return_value = True
-        mock_check_branch.return_value = True
-        mock_check_prereq.return_value = True
-        mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [
-            TaskOutcome(True, "completed"),
-            TaskOutcome(False, "no_tasks"),
-        ]
-        mock_check_mypy.side_effect = LLMTimeoutError("timed out")
-
-        result = run_implement_workflow(Path("/test/project"), "claude")
-
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[1]["failure"]
-        assert failure_arg.category == "llm_timeout"
-        assert failure_arg.stage == "Final mypy check"
-
-    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
-    @patch(
-        "mcp_coder.workflows.implement.core.get_full_status",
-        return_value={"staged": [], "modified": [], "untracked": []},
-    )
-    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy")
-    @patch(
-        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
-    )
-    @patch(
-        "mcp_coder.workflows.implement.core.get_current_branch_name",
-        return_value="feature/test-branch",
-    )
-    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_final_mypy_mcp_unavailable_categorized_as_mcp_unavailable(
-        self,
-        mock_check_git: MagicMock,
-        mock_check_branch: MagicMock,
-        mock_check_prereq: MagicMock,
-        mock_prepare_tracker: MagicMock,
-        mock_log_progress: MagicMock,
-        mock_process_task: MagicMock,
-        mock_get_branch: MagicMock,
-        mock_prepare_env: MagicMock,
-        mock_check_mypy: MagicMock,
-        mock_run_formatters: MagicMock,
-        mock_get_status: MagicMock,
-        _mock_run_finalisation: MagicMock,
-        mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
-        mock_handle_failure: MagicMock,
-    ) -> None:
-        """A final-mypy McpServersUnavailableError is categorized to MCP_UNAVAILABLE."""
-        from mcp_coder.llm.providers.claude.claude_code_cli import (
-            McpServersUnavailableError,
-        )
-        from mcp_coder.utils.pyproject_config import ImplementConfig
-
-        mock_get_config.return_value = ImplementConfig(
-            format_code=False, check_type_hints=True
-        )
-        mock_check_git.return_value = True
-        mock_check_branch.return_value = True
-        mock_check_prereq.return_value = True
-        mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [
-            TaskOutcome(True, "completed"),
-            TaskOutcome(False, "no_tasks"),
-        ]
-        mock_check_mypy.side_effect = McpServersUnavailableError(
-            "MCP servers unavailable",
-            {"mcp-tools-py": "failed"},
-        )
-
-        result = run_implement_workflow(Path("/test/project"), "claude")
-
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[1]["failure"]
-        assert failure_arg.category == "mcp_unavailable"
-        assert failure_arg.stage == "Final mypy check"
-
-    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
-    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
-    @patch(
-        "mcp_coder.workflows.implement.core.get_full_status",
-        return_value={"staged": [], "modified": [], "untracked": []},
-    )
-    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
     @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
     @patch(
         "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
@@ -574,120 +457,42 @@ class TestRunImplementWorkflow:
     )
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_ci_analysis_timeout_categorized_as_llm_timeout(
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.read_and_clear_blocked")
+    def test_format_code_false_skips_formatter(
         self,
-        mock_check_git: MagicMock,
-        mock_check_branch: MagicMock,
-        mock_check_prereq: MagicMock,
-        mock_prepare_tracker: MagicMock,
-        mock_log_progress: MagicMock,
+        _mock_read_blocked: MagicMock,
+        _mock_check_git: MagicMock,
+        _mock_check_branch: MagicMock,
+        _mock_check_prereq: MagicMock,
+        _mock_prepare_tracker: MagicMock,
+        _mock_log_progress: MagicMock,
         mock_process_task: MagicMock,
-        mock_get_branch: MagicMock,
-        mock_prepare_env: MagicMock,
+        _mock_get_branch: MagicMock,
+        _mock_prepare_env: MagicMock,
         mock_check_mypy: MagicMock,
-        mock_run_formatters: MagicMock,
-        mock_get_status: MagicMock,
+        _mock_get_status: MagicMock,
         _mock_run_finalisation: MagicMock,
-        mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
-        mock_handle_failure: MagicMock,
+        _mock_check_ci: MagicMock,
+        mock_run_format_code: MagicMock,
+        tmp_path: Path,
     ) -> None:
-        """A CI-analysis LLMTimeoutError propagates and is categorized to LLM_TIMEOUT."""
-        from mcp_coder.llm.interface import LLMTimeoutError
-        from mcp_coder.utils.pyproject_config import ImplementConfig
-
-        mock_get_config.return_value = ImplementConfig(
-            format_code=False, check_type_hints=True
+        """``format_code = false`` → the post-mypy formatting never calls the formatter."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder]\nformat_code = false\n\n"
+            "[tool.mcp-coder.implement]\ncheck_type_hints = true\n",
+            encoding="utf-8",
         )
-        mock_check_git.return_value = True
-        mock_check_branch.return_value = True
-        mock_check_prereq.return_value = True
-        mock_prepare_tracker.return_value = True
         mock_process_task.side_effect = [
             TaskOutcome(True, "completed"),
             TaskOutcome(False, "no_tasks"),
         ]
-        mock_check_ci.side_effect = LLMTimeoutError("timed out")
 
-        result = run_implement_workflow(Path("/test/project"), "claude")
+        result = run_implement_workflow(tmp_path, "claude")
 
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[1]["failure"]
-        assert failure_arg.category == "llm_timeout"
-        assert failure_arg.stage == "CI pipeline analysis"
-
-    @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
-    @patch("mcp_coder.workflows.implement.core.get_implement_config")
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
-    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
-    @patch(
-        "mcp_coder.workflows.implement.core.get_full_status",
-        return_value={"staged": [], "modified": [], "untracked": []},
-    )
-    @patch("mcp_coder.workflows.implement.core.run_formatters", return_value=True)
-    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
-    @patch(
-        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
-    )
-    @patch(
-        "mcp_coder.workflows.implement.core.get_current_branch_name",
-        return_value="feature/test-branch",
-    )
-    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
-    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
-    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
-    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
-    @patch("mcp_coder.workflows.implement.core.check_main_branch")
-    @patch("mcp_coder.workflows.implement.core.check_git_clean")
-    def test_ci_analysis_mcp_unavailable_categorized_as_mcp_unavailable(
-        self,
-        mock_check_git: MagicMock,
-        mock_check_branch: MagicMock,
-        mock_check_prereq: MagicMock,
-        mock_prepare_tracker: MagicMock,
-        mock_log_progress: MagicMock,
-        mock_process_task: MagicMock,
-        mock_get_branch: MagicMock,
-        mock_prepare_env: MagicMock,
-        mock_check_mypy: MagicMock,
-        mock_run_formatters: MagicMock,
-        mock_get_status: MagicMock,
-        _mock_run_finalisation: MagicMock,
-        mock_check_ci: MagicMock,
-        mock_get_config: MagicMock,
-        mock_handle_failure: MagicMock,
-    ) -> None:
-        """A CI-analysis McpServersUnavailableError is categorized to MCP_UNAVAILABLE."""
-        from mcp_coder.llm.providers.claude.claude_code_cli import (
-            McpServersUnavailableError,
-        )
-        from mcp_coder.utils.pyproject_config import ImplementConfig
-
-        mock_get_config.return_value = ImplementConfig(
-            format_code=False, check_type_hints=True
-        )
-        mock_check_git.return_value = True
-        mock_check_branch.return_value = True
-        mock_check_prereq.return_value = True
-        mock_prepare_tracker.return_value = True
-        mock_process_task.side_effect = [
-            TaskOutcome(True, "completed"),
-            TaskOutcome(False, "no_tasks"),
-        ]
-        mock_check_ci.side_effect = McpServersUnavailableError(
-            "MCP servers unavailable",
-            {"mcp-tools-py": "failed"},
-        )
-
-        result = run_implement_workflow(Path("/test/project"), "claude")
-
-        assert result == 1
-        mock_handle_failure.assert_called_once()
-        failure_arg = mock_handle_failure.call_args[1]["failure"]
-        assert failure_arg.category == "mcp_unavailable"
-        assert failure_arg.stage == "CI pipeline analysis"
+        assert result == 0
+        mock_check_mypy.assert_called_once()
+        mock_run_format_code.assert_not_called()

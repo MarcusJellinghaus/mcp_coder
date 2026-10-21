@@ -508,7 +508,7 @@ flowchart LR
 **✨ Quality Gates:**
 
 - All code changes validated through: **pylint** → **pytest** → **mypy**, by llm and by routine when implementation is done
-- Automated formatting with **black** and **isort**
+- Automated formatting with the project's configured formatter
 - Git commits only after all checks pass
 
 **🔄 Iteration Support:**
@@ -524,7 +524,7 @@ flowchart LR
 - Updates TASK_TRACKER.md with implementation steps
 - Implements each step from the tracker
 - Runs quality checks (pylint → pytest → mypy) after each step
-- Formats code (black, isort, ruff)
+- Formats code with the project's configured formatter
 - Commits changes with descriptive messages
 - Uses prompts (🔗 [prompts.md](../../src/mcp_coder/prompts/prompts.md)):
   - 🔗 [Implementation Prompt Template](../../src/mcp_coder/prompts/prompts.md#implementation-prompt-template-using-task-tracker)

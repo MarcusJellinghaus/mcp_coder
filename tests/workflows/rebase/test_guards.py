@@ -191,6 +191,41 @@ class TestPreflight:
         assert message is not None
         assert "origin" in message.lower()
 
+    def test_formatter_config_error_returned(
+        self,
+        feature_repo_with_origin: tuple[Repo, Path],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A formatter config error is the pre-flight message."""
+        _, project_dir = feature_repo_with_origin
+        calls: list[tuple[Path, bool]] = []
+
+        def _check(pd: Path, warn_legacy_key: bool = False) -> str:
+            calls.append((pd, warn_legacy_key))
+            return "No formatter declared: add [tool.ruff.format]"
+
+        monkeypatch.setattr(rebase_module, "check_formatter_config", _check)
+
+        assert (
+            _preflight(project_dir) == "No formatter declared: add [tool.ruff.format]"
+        )
+        assert calls == [(project_dir, True)]
+
+    def test_formatter_config_ok_returns_none(
+        self,
+        feature_repo_with_origin: tuple[Repo, Path],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A resolvable formatter config lets pre-flight pass."""
+        _, project_dir = feature_repo_with_origin
+        monkeypatch.setattr(
+            rebase_module,
+            "check_formatter_config",
+            lambda _pd, warn_legacy_key=False: None,
+        )
+
+        assert _preflight(project_dir) is None
+
 
 @pytest.mark.git_integration
 class TestCheckPrInfoAbsentOnBase:

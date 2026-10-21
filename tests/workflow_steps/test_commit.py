@@ -1,16 +1,165 @@
 """Tests for workflow_steps commit/push/run_formatters steps."""
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.mcp_tools_py import resolve_steps as real_resolve_steps
 from mcp_coder.workflow_steps.commit import (
     FALLBACK_COMMIT_MESSAGE,
+    FormatterConfigError,
+    check_formatter_config,
     commit_changes,
     push_changes,
     run_formatters,
 )
+
+LEGACY_WARNING = "[tool.mcp-coder.implement] format_code is ignored"
+
+
+def _write_pyproject(project_dir: Path, content: str) -> None:
+    (project_dir / "pyproject.toml").write_text(content, encoding="utf-8")
+
+
+def _raise_value_error(_p: Path) -> list[str]:
+    raise ValueError("No formatter declared")
+
+
+class TestRunFormattersGate:
+    """Test the format_code gate and config errors in run_formatters."""
+
+    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    def test_disabled_skips_formatting(
+        self, mock_run_format_code: MagicMock, tmp_path: Path
+    ) -> None:
+        """format_code = false → run_format_code not called, True."""
+        _write_pyproject(tmp_path, "[tool.mcp-coder]\nformat_code = false\n")
+
+        assert run_formatters(tmp_path) is True
+        mock_run_format_code.assert_not_called()
+
+    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    def test_key_absent_runs_formatting(
+        self, mock_run_format_code: MagicMock, tmp_path: Path
+    ) -> None:
+        """Key absent → run_format_code called."""
+        mock_run_format_code.return_value = {}
+
+        assert run_formatters(tmp_path) is True
+        mock_run_format_code.assert_called_once_with(tmp_path)
+
+    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    def test_resolve_error_raises_config_error(
+        self,
+        mock_run_format_code: MagicMock,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """resolve_steps ValueError → FormatterConfigError with its message."""
+        monkeypatch.setattr(
+            "mcp_coder.workflow_steps.commit.resolve_steps", _raise_value_error
+        )
+
+        with pytest.raises(FormatterConfigError, match="No formatter declared"):
+            run_formatters(tmp_path)
+        mock_run_format_code.assert_not_called()
+
+    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    def test_resolve_error_inside_wrapper_raises_config_error(
+        self, mock_run_format_code: MagicMock, tmp_path: Path
+    ) -> None:
+        """resolve_steps ValueError raised inside run_format_code → config error."""
+        mock_run_format_code.side_effect = ValueError("No formatter declared")
+
+        with pytest.raises(FormatterConfigError, match="No formatter declared") as exc:
+            run_formatters(tmp_path)
+        assert isinstance(exc.value.__cause__, ValueError)
+
+    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    def test_non_bool_format_code_raises_config_error(
+        self, mock_run_format_code: MagicMock, tmp_path: Path
+    ) -> None:
+        """Non-bool format_code → FormatterConfigError."""
+        _write_pyproject(tmp_path, '[tool.mcp-coder]\nformat_code = "false"\n')
+
+        with pytest.raises(FormatterConfigError, match="format_code"):
+            run_formatters(tmp_path)
+        mock_run_format_code.assert_not_called()
+
+
+class TestCheckFormatterConfig:
+    """Test check_formatter_config helper."""
+
+    def test_disabled_returns_none_even_if_resolve_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """format_code = false → None without resolving."""
+        _write_pyproject(tmp_path, "[tool.mcp-coder]\nformat_code = false\n")
+        monkeypatch.setattr(
+            "mcp_coder.workflow_steps.commit.resolve_steps", _raise_value_error
+        )
+
+        assert check_formatter_config(tmp_path) is None
+
+    def test_resolves_cleanly_returns_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A declared formatter resolves with the real resolve_steps → None."""
+        monkeypatch.setattr(
+            "mcp_coder.workflow_steps.commit.resolve_steps", real_resolve_steps
+        )
+        _write_pyproject(tmp_path, "[tool.black]\nline-length = 88\n")
+
+        assert check_formatter_config(tmp_path) is None
+
+    def test_resolve_error_returns_message(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """resolve_steps ValueError → its message."""
+        monkeypatch.setattr(
+            "mcp_coder.workflow_steps.commit.resolve_steps", _raise_value_error
+        )
+
+        assert check_formatter_config(tmp_path) == "No formatter declared"
+
+    def test_non_bool_format_code_returns_message(self, tmp_path: Path) -> None:
+        """Non-bool format_code → error message naming the key."""
+        _write_pyproject(tmp_path, '[tool.mcp-coder]\nformat_code = "false"\n')
+
+        message = check_formatter_config(tmp_path)
+
+        assert message is not None
+        assert "format_code" in message
+
+    def test_legacy_warning_only_when_requested(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Legacy key warning is logged only with warn_legacy_key=True."""
+        _write_pyproject(tmp_path, "[tool.mcp-coder.implement]\nformat_code = true\n")
+
+        with caplog.at_level(logging.WARNING):
+            check_formatter_config(tmp_path)
+        assert LEGACY_WARNING not in caplog.text
+
+        with caplog.at_level(logging.WARNING):
+            check_formatter_config(tmp_path, warn_legacy_key=True)
+        assert LEGACY_WARNING in caplog.text
+
+    def test_legacy_warning_when_formatting_disabled(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Legacy key warning is logged even when format_code = false."""
+        _write_pyproject(
+            tmp_path,
+            "[tool.mcp-coder]\nformat_code = false\n\n"
+            "[tool.mcp-coder.implement]\nformat_code = true\n",
+        )
+
+        with caplog.at_level(logging.WARNING):
+            assert check_formatter_config(tmp_path, warn_legacy_key=True) is None
+        assert LEGACY_WARNING in caplog.text
 
 
 class TestRunFormatters:
@@ -49,7 +198,7 @@ class TestRunFormatters:
 
     @patch("mcp_coder.workflow_steps.commit.run_format_code")
     def test_run_formatters_exception(self, mock_run_format_code: MagicMock) -> None:
-        """Test running formatters with exception."""
+        """A generic exception from run_format_code is not a config error → False."""
         mock_run_format_code.side_effect = Exception("Formatter error")
 
         result = run_formatters(Path("/test/project"))

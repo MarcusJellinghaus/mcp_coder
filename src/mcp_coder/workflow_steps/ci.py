@@ -635,6 +635,7 @@ def check_and_fix_ci(
             during the analysis-phase LLM call. Propagated for categorization
             into mcp_unavailable. Fix-phase occurrences are absorbed (Decision
             10) and never reach here.
+        FormatterConfigError: From run_formatters on invalid formatter config.
     """
     logger.info("Starting CI check and fix process...")
 

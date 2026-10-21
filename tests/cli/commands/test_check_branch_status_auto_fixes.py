@@ -1,12 +1,15 @@
 """Tests for check_branch_status auto-fixes functionality."""
 
+import logging
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
+from mcp_coder.workflow_steps import commit
+from tests.ci_fix_drive import patch_ci_fix_externals
 
 
 @pytest.fixture
@@ -126,6 +129,44 @@ class TestRunAutoFixes:
         result = _run_auto_fixes(project_dir, failed_ci_report, "claude", None)
 
         assert result is False
+
+    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
+    @patch("mcp_coder.cli.commands.check_branch_status.check_formatter_config")
+    def test_run_auto_fixes_formatter_config_error(
+        self,
+        mock_check_formatter: Mock,
+        mock_check_ci: Mock,
+        failed_ci_report: BranchStatusReport,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Unresolvable formatter → False, error logged, no CI fix."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        project_dir = Path("/test/project")
+        mock_check_formatter.return_value = "No formatter declared: X"
+
+        with caplog.at_level(logging.ERROR):
+            result = _run_auto_fixes(project_dir, failed_ci_report, "claude", None)
+
+        assert result is False
+        mock_check_formatter.assert_called_once_with(project_dir, warn_legacy_key=True)
+        assert any(
+            r.levelno == logging.ERROR and r.getMessage() == "No formatter declared: X"
+            for r in caplog.records
+        )
+        mock_check_ci.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.check_branch_status.check_formatter_config")
+    def test_run_auto_fixes_ci_not_failed_skips_formatter_check(
+        self, mock_check_formatter: Mock, sample_report: BranchStatusReport
+    ) -> None:
+        """CI not failed → formatter config is not checked."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        result = _run_auto_fixes(Path("/test/project"), sample_report, "claude", None)
+
+        assert result is True
+        mock_check_formatter.assert_not_called()
 
 
 class TestFixRetryLogic:
@@ -374,3 +415,29 @@ class TestFixRetryLogic:
         )
 
         assert result is False  # Timeout counts as failure
+
+
+def test_auto_fix_format_code_false_skips_formatter(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_ci_report: BranchStatusReport,
+) -> None:
+    """``format_code = false`` → ``--fix`` commits without calling the formatter."""
+    from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
+    )
+    commit_changes = patch_ci_fix_externals(monkeypatch)
+    wrapper = MagicMock(return_value={})
+    monkeypatch.setattr(commit, "run_format_code", wrapper)
+
+    with patch(
+        "mcp_coder.cli.commands.check_branch_status.get_current_branch_name",
+        return_value="feature/test-branch",
+    ):
+        result = _run_auto_fixes(tmp_path, failed_ci_report, "claude", None)
+
+    assert result is True
+    commit_changes.assert_called_once()
+    wrapper.assert_not_called()

@@ -30,6 +30,7 @@ from ...mcp_workspace_github import (
 )
 from ...utils.log_utils import OUTPUT
 from ...workflow_steps.ci import check_and_fix_ci
+from ...workflow_steps.commit import check_formatter_config
 from ...workflows.utils import resolve_project_dir
 from ..utils import (
     parse_llm_method_from_args,
@@ -404,6 +405,11 @@ def _run_auto_fixes(
             "No auto-fixable issues found - all fixes require manual intervention"
         )
         return True  # Success when no fixes needed
+
+    formatter_err = check_formatter_config(project_dir, warn_legacy_key=True)
+    if formatter_err:
+        logger.error(formatter_err)
+        return False
 
     logger.info("CI failures detected - attempting automatic fixes")
 

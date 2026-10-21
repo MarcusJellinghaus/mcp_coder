@@ -20,6 +20,7 @@ from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import (
+    check_formatter_config,
     commit_changes,
     push_changes,
     run_formatters,
@@ -118,6 +119,12 @@ def run_implement_workflow(
     )
 
     def body() -> int:
+        formatter_err = check_formatter_config(project_dir, warn_legacy_key=True)
+        if formatter_err:
+            return fail(
+                "general", stage="Formatter configuration", message=formatter_err
+            )
+
         # Read implement config from pyproject.toml
         implement_config = get_implement_config(project_dir)
 
@@ -157,7 +164,6 @@ def run_implement_workflow(
                 provider,
                 mcp_config,
                 settings_file,
-                format_code=implement_config.format_code,
                 check_type_hints=implement_config.check_type_hints,
             )
 
@@ -277,7 +283,7 @@ def run_implement_workflow(
                     )
 
                 # Format code after mypy fixes
-                if implement_config.format_code and not run_formatters(project_dir):
+                if not run_formatters(project_dir):
                     logger.error("Formatting failed after final mypy check")
                     return fail(
                         "general",

@@ -19,7 +19,6 @@ from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
-from mcp_coder.mcp_tools_py import run_format_code
 from mcp_coder.mcp_workspace_git import (
     fetch_remote,
     get_current_branch_name,
@@ -32,6 +31,7 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.subprocess_runner import execute_command
+from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_utils.base_branch import (
     BaseBranchSource,
@@ -227,7 +227,8 @@ def _preflight(project_dir: Path) -> str | None:
     """Return ``None`` if the repo is safe to rebase, else an error message.
 
     Checks, in order: a clean working tree, no rebase/merge in progress, HEAD not
-    on ``main``/``master``, and an ``origin`` remote present. Each failing check
+    on ``main``/``master``, an ``origin`` remote present, and a resolvable
+    formatter configuration. Each failing check
     short-circuits with a human-readable reason (the caller maps this to exit
     code ``2``).
     """
@@ -244,7 +245,7 @@ def _preflight(project_dir: Path) -> str | None:
     if _run_git(project_dir, "remote", "get-url", "origin").returncode != 0:
         return "Remote 'origin' not found"
 
-    return None
+    return check_formatter_config(project_dir, warn_legacy_key=True)
 
 
 def _resolve_base_branch(
@@ -609,7 +610,7 @@ def run_rebase_workflow(
                 settings_file=settings_file,
                 step_name=f"fix_{attempt}",
             )
-            run_format_code(project_dir)
+            run_formatters(project_dir)
             _run_git(project_dir, "add", "-A")
             # An empty commit exits non-zero — harmless (re-check runs anyway;
             # identical regressions then hit the stall guard or attempt cap).

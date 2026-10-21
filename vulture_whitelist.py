@@ -162,6 +162,12 @@ _.mock_get_git_diff_for_commit
 # conftest.py - Autouse fixture to isolate MLflow artifacts from project root
 _.isolate_mlflow_artifacts
 
+# conftest.py - Autouse fixture making formatter resolution succeed in test dirs
+_._resolvable_formatter
+
+# cli/commands/conftest.py - Autouse fixture to mock _print_project_section
+_._mock_print_project_section
+
 # cli/commands/conftest.py - Autouse fixture to mock verify_config
 _._mock_verify_config
 

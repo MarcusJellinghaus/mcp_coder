@@ -17,9 +17,12 @@ import pytest
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.utils.log_utils import OUTPUT
+from mcp_coder.workflow_steps import commit as commit_module
 from mcp_coder.workflows import rebase as rebase_module
-from mcp_coder.workflows.rebase import _GitResult, run_rebase_workflow
+from mcp_coder.workflows.rebase import _GitResult, _preflight, run_rebase_workflow
 from mcp_coder.workflows.rebase_checks import CheckRunError, FailureKey
+
+_REAL_PREFLIGHT = _preflight
 
 _OK = _GitResult(0, "", "")
 _FAIL = _GitResult(1, "", "boom")
@@ -72,9 +75,9 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 
     # Checks + formatter.
     all_checks = MagicMock(return_value=set())
-    format_code = MagicMock(return_value={})
+    formatters = MagicMock(return_value=True)
     monkeypatch.setattr(rebase_module, "_run_all_checks", all_checks)
-    monkeypatch.setattr(rebase_module, "run_format_code", format_code)
+    monkeypatch.setattr(rebase_module, "run_formatters", formatters)
 
     # Raw git calls (initial rebase, --cached probe, --skip, add, commit).
     git_calls: list[tuple[str, ...]] = []
@@ -118,7 +121,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     return SimpleNamespace(
         prompt=prompt,
         all_checks=all_checks,
-        format_code=format_code,
+        formatters=formatters,
         run_git=run_git,
         git_calls=git_calls,
         set_git=set_git,
@@ -158,6 +161,24 @@ def test_preflight_error_returns_2_without_llm(
 
     assert _run(tmp_path) == 2
     patched.prompt.assert_not_called()
+
+
+def test_formatter_config_error_returns_2_without_llm(
+    patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A formatter config error in the real pre-flight maps to ``2``, no LLM."""
+    monkeypatch.setattr(rebase_module, "_preflight", _REAL_PREFLIGHT)
+    monkeypatch.setattr(rebase_module, "is_working_directory_clean", lambda _pd: True)
+    monkeypatch.setattr(rebase_module, "get_current_branch_name", lambda _pd: "feature")
+    monkeypatch.setattr(
+        rebase_module,
+        "check_formatter_config",
+        lambda _pd, warn_legacy_key=False: "No formatter declared: ...",
+    )
+
+    assert _run(tmp_path) == 2
+    patched.prompt.assert_not_called()
+    patched.formatters.assert_not_called()
 
 
 def test_non_standard_base_without_arg_returns_2(
@@ -409,13 +430,30 @@ def test_regression_fixed_on_first_attempt(
     assert _run(tmp_path) == 0
     patched.prompt.assert_called_once()
     assert patched.prompt.call_args.args[0].startswith("FIX:")
-    patched.format_code.assert_called_once()
+    patched.formatters.assert_called_once_with(tmp_path)
     assert (
         "commit",
         "-m",
         "fix: resolve regressions from rebase onto origin/main",
     ) in patched.git_calls
     patched.push.assert_called_once()
+
+
+def test_regression_fix_formats_through_run_formatters(
+    patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The fix loop formats via the gated ``run_formatters``, not the wrapper."""
+    monkeypatch.setattr(rebase_module, "run_formatters", commit_module.run_formatters)
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
+    )
+    wrapper = MagicMock(return_value={})
+    monkeypatch.setattr(commit_module, "run_format_code", wrapper)
+    patched.all_checks.side_effect = [set(), set(_REGRESSION), set()]
+
+    assert _run(tmp_path) == 0
+    assert not hasattr(rebase_module, "run_format_code")
+    wrapper.assert_not_called()
 
 
 def test_identical_regression_text_stalls_and_resets(

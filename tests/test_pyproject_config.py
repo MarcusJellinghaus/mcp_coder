@@ -27,7 +27,6 @@ def test_pyproject_implement_config_exists() -> None:
 
     implement = config["tool"]["mcp-coder"]["implement"]
 
-    assert implement["format_code"] is True
     assert implement["check_type_hints"] is True
 
 

@@ -18,8 +18,13 @@ from typing import Any, cast
 
 import yaml
 
+from ...mcp_tools_py import resolve_steps
 from ...mcp_workspace_github import CheckResult, verify_github_security
-from ...utils.pyproject_config import get_implement_config
+from ...utils.pyproject_config import (
+    get_format_code,
+    get_implement_config,
+    has_legacy_format_code_key,
+)
 from .verify_formatting import (
     _VALUE_COLUMN_INDENT,
     STATUS_SYMBOLS,
@@ -325,50 +330,101 @@ def _print_environment_section() -> None:
             )
 
 
-def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> None:
+def _format_code_row(project_dir: Path, symbols: dict[str, str]) -> bool:
+    """Print the ``[tool.mcp-coder] format_code`` row.
+
+    Args:
+        project_dir: Path to the project directory.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+
+    Returns:
+        False if the value is invalid (row printed as [ERR]).
+    """
+    try:
+        setting = get_format_code(project_dir)
+    except ValueError as exc:
+        print(_format_row("format_code", symbols["failure"], str(exc), indent=4))
+        return False
+    if not setting.enabled:
+        value = "disabled"
+    elif setting.explicit:
+        value = "enabled"
+    else:
+        value = "enabled (default)"
+    print(_format_row("format_code", symbols["success"], value, indent=4))
+    return True
+
+
+def _formatter_row(
+    project_dir: Path, symbols: dict[str, str], *, indent: int = 4
+) -> bool:
+    """Print the Formatter row with the steps mcp-tools-py resolves.
+
+    Args:
+        project_dir: Path to the project directory.
+        symbols: Dict with 'success', 'failure', 'warning' keys.
+        indent: Number of leading spaces.
+
+    Returns:
+        False if no formatter can be resolved (row printed as [ERR]).
+    """
+    try:
+        steps = resolve_steps(project_dir)
+    except ValueError as exc:
+        print(_format_row("Formatter", symbols["failure"], str(exc), indent=indent))
+        return False
+    print(
+        _format_row("Formatter", symbols["success"], " → ".join(steps), indent=indent)
+    )
+    return True
+
+
+def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> bool:
     """Print the PROJECT section showing language detection and tool config.
 
     Args:
         project_dir: Path to the project directory.
         symbols: Dict with 'success', 'failure', 'warning' keys.
+
+    Returns:
+        False if any row printed [ERR].
     """
     print(_pad("PROJECT"))
     pyproject_exists = (project_dir / "pyproject.toml").exists()
-    if pyproject_exists:
-        print(_format_row("pyproject.toml", symbols["success"], "found", indent=2))
-        print(
-            _format_row("Language", symbols["success"], "Python (detected)", indent=2)
-        )
-        config = get_implement_config(project_dir)
-        print()
-        print("  [Python]")
-        if config.format_code:
-            print(_format_row("format_code", symbols["success"], "enabled", indent=4))
-        else:
-            print(
-                _format_row(
-                    "format_code",
-                    symbols["warning"],
-                    "not configured (default: disabled)",
-                    indent=4,
-                )
-            )
-        if config.check_type_hints:
-            print(
-                _format_row("check_type_hints", symbols["success"], "enabled", indent=4)
-            )
-        else:
-            print(
-                _format_row(
-                    "check_type_hints",
-                    symbols["warning"],
-                    "not configured (default: disabled)",
-                    indent=4,
-                )
-            )
-    else:
+    if not pyproject_exists:
         print(_format_row("pyproject.toml", symbols["warning"], "not found", indent=2))
         print(_format_row("Language", symbols["success"], "(none detected)", indent=2))
+        return _formatter_row(project_dir, symbols, indent=2)
+    print(_format_row("pyproject.toml", symbols["success"], "found", indent=2))
+    print(_format_row("Language", symbols["success"], "Python (detected)", indent=2))
+    print()
+    print("  [Python]")
+    ok = _format_code_row(project_dir, symbols)
+    ok = _formatter_row(project_dir, symbols) and ok
+    if has_legacy_format_code_key(project_dir):
+        print(
+            _format_row(
+                "legacy format_code",
+                symbols["failure"],
+                "[tool.mcp-coder.implement] format_code ignored"
+                " — use [tool.mcp-coder] format_code",
+                indent=4,
+            )
+        )
+        ok = False
+    config = get_implement_config(project_dir)
+    if config.check_type_hints:
+        print(_format_row("check_type_hints", symbols["success"], "enabled", indent=4))
+    else:
+        print(
+            _format_row(
+                "check_type_hints",
+                symbols["warning"],
+                "not configured (default: disabled)",
+                indent=4,
+            )
+        )
+    return ok
 
 
 def _prompt_source(configured: str | None, default_label: str) -> str:
