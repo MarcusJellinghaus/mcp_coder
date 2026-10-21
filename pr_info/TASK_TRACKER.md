@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Remove the session-limit caveat from the docs
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: edit `docs/coordinator-vscodeclaude.md` and `docs/processes-prompts/development-process.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: edit `docs/coordinator-vscodeclaude.md` and `docs/processes-prompts/development-process.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
