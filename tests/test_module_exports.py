@@ -1,7 +1,5 @@
 """Tests for module-level exports."""
 
-import pytest
-
 
 def test_prompt_llm_exported_from_main_module() -> None:
     """Test that prompt_llm can be imported from main module."""
@@ -146,19 +144,18 @@ def test_import_all_from_mcp_coder() -> None:
 
 def test_no_import_errors() -> None:
     """Test that importing mcp_coder doesn't raise errors."""
-    try:
-        import mcp_coder
-        from mcp_coder import (
-            LLM_RESPONSE_VERSION,
-            LLMResponseDict,
-            collect_branch_status,
-            deserialize_llm_response,
-            generate_commit_message_with_llm,
-            prompt_llm,
-            serialize_llm_response,
-            verify_claude,
-            verify_langchain,
-            verify_mlflow,
-        )
-    except ImportError as e:
-        pytest.fail(f"Import failed: {e}")
+    import mcp_coder
+
+    for name in (
+        "LLM_RESPONSE_VERSION",
+        "LLMResponseDict",
+        "collect_branch_status",
+        "deserialize_llm_response",
+        "generate_commit_message_with_llm",
+        "prompt_llm",
+        "serialize_llm_response",
+        "verify_claude",
+        "verify_langchain",
+        "verify_mlflow",
+    ):
+        assert hasattr(mcp_coder, name), name

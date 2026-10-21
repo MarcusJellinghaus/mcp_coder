@@ -12,7 +12,6 @@ from mcp_coder.llm.providers.copilot.copilot_cli_streaming import (
     _map_copilot_message_to_event,
     ask_copilot_cli_stream,
 )
-from mcp_coder.llm.types import StreamEvent
 
 # ──────────────────────────────────────────────────────────────────────
 # Event mapping tests (unit, no subprocess)

@@ -45,7 +45,9 @@ def is_mlflow_available() -> bool:
 
     if _mlflow_available is None:
         try:
-            import mlflow  # noqa: F401  # type: ignore[import-untyped,import-not-found]  # pylint: disable=import-error,unused-import
+            import mlflow  # pylint: disable=import-error
+
+            del mlflow
 
             _mlflow_available = True
             logger.debug("MLflow is available")

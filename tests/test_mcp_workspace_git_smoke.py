@@ -3,7 +3,9 @@
 
 def test_shim_importable() -> None:
     """Shim module can be imported."""
-    import mcp_coder.mcp_workspace_git  # noqa: F401
+    import mcp_coder.mcp_workspace_git
+
+    assert mcp_coder.mcp_workspace_git
 
 
 def test_key_symbols_accessible() -> None:
@@ -21,6 +23,9 @@ def test_key_symbols_accessible() -> None:
     assert CommitResult is not None
     assert callable(checkout_branch)
     assert callable(commit_all_changes)
+    assert callable(get_current_branch_name)
+    assert callable(get_full_status)
+    assert callable(git_push)
     assert isinstance(MERGE_BASE_DISTANCE_THRESHOLD, int)
 
 

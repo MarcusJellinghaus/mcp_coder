@@ -6,10 +6,8 @@ These tests verify the complete workflow integration including:
 - Git repository state management
 """
 
-import os
-import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -19,9 +17,6 @@ from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
     is_working_directory_clean,
 )
-
-# Import git fixtures from utils
-from tests.utils.conftest import git_repo
 
 
 class TestCreatePRWorkflowIntegration:

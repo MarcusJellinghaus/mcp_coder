@@ -46,11 +46,15 @@ def _check_agent_dependencies() -> None:
     """
     missing: list[str] = []
     try:
-        import langchain_mcp_adapters  # noqa: F401  # pylint: disable=unused-import
+        import langchain_mcp_adapters
+
+        del langchain_mcp_adapters
     except ImportError:
         missing.append("langchain-mcp-adapters")
     try:
-        import langgraph  # noqa: F401  # pylint: disable=unused-import
+        import langgraph
+
+        del langgraph
     except ImportError:
         missing.append("langgraph")
     if missing:

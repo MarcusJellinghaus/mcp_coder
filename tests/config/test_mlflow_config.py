@@ -1,10 +1,7 @@
 """Tests for MLflow configuration loading."""
 
-import os
 from typing import Any
 from unittest.mock import patch
-
-import pytest
 
 from mcp_coder.config import MLflowConfig
 from mcp_coder.utils import load_mlflow_config

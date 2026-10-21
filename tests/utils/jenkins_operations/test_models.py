@@ -1,7 +1,5 @@
 """Tests for Jenkins operation models."""
 
-import pytest
-
 from mcp_coder.utils.jenkins_operations.models import JobStatus, QueueSummary
 
 

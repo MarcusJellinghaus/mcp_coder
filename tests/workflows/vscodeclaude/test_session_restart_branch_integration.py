@@ -100,8 +100,6 @@ class TestBranchHandlingIntegration:
         )
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
-        from unittest.mock import MagicMock
-
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
 
@@ -218,7 +216,6 @@ class TestBranchHandlingIntegration:
     ) -> None:
         """Status-04 without branch: doesn't create session, shows indicator."""
         import logging
-        from unittest.mock import MagicMock
 
         # Test process_eligible_issues skipping
         monkeypatch.setattr(
@@ -455,8 +452,6 @@ class TestBranchHandlingIntegration:
 
         # Mock the necessary components for restart flow
         # Mock IssueManager and IssueBranchManager to avoid token validation
-        from unittest.mock import MagicMock
-
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
 

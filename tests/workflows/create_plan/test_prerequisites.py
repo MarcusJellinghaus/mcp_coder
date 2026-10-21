@@ -3,8 +3,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 from mcp_coder.workflows.create_plan import (

@@ -157,7 +157,6 @@ class TestModuleIntegration:
         try:
             import mcp_coder
             import mcp_coder.mcp_workspace_git
-            import mcp_coder.utils
 
             # Try accessing functions through different paths
             func1 = mcp_coder.is_git_repository

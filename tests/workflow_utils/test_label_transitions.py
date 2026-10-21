@@ -11,7 +11,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.mcp_workspace_github import (
-    BaseGitHubManager,
     IssueBranchManager,
     IssueManager,
 )

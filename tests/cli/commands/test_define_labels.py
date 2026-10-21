@@ -23,12 +23,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.define_labels import (
-    apply_labels,
     execute_define_labels,
 )
 from mcp_coder.config.label_config import load_labels_config
 from mcp_coder.workflows.utils import resolve_project_dir
-from tests.utils.conftest import git_repo
 
 
 def _make_namespace(

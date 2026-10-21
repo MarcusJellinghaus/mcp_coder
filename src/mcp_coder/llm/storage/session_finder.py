@@ -9,7 +9,6 @@ import logging
 import os
 import re
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 from ...utils.user_app_data import get_user_app_data_dir

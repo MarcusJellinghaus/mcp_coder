@@ -131,7 +131,6 @@ class TestInitCommand:
 
         from mcp_coder.utils.user_config import (
             create_default_config,
-            get_config_file_path,
         )
 
         config_path = Path(str(tmp_path)) / ".mcp_coder" / "config.toml"

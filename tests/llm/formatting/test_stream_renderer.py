@@ -1,7 +1,6 @@
 """Tests for StreamEventRenderer and private helpers."""
 
 import json
-import time
 
 from mcp_coder.llm.formatting.render_actions import (
     ErrorMessage,
@@ -17,8 +16,6 @@ from mcp_coder.llm.formatting.stream_renderer import (
     _render_tool_output,
     _render_value_compact,
     _render_value_full,
-    format_tool_compressed,
-    format_tool_oneline,
     format_tool_start,
 )
 

@@ -1,7 +1,5 @@
 """Tests to verify orchestrator documentation matches implementation."""
 
-import pytest
-
 from mcp_coder.workflows.vscodeclaude.issues import status_requires_linked_branch
 
 

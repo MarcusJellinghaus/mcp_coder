@@ -8,7 +8,6 @@ audit write), consistent with status being write-free.
 
 import argparse
 from pathlib import Path
-from typing import Any
 from unittest.mock import Mock
 
 import pytest

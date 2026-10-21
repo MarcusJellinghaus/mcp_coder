@@ -2,7 +2,7 @@
 
 import json
 from typing import Any, Dict
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import patch
 
 import pytest
 

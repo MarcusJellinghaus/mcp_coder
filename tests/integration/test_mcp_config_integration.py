@@ -12,14 +12,14 @@ Tests are expected to FAIL until Step 4 (CLI argument implementation) is complet
 import argparse
 from collections.abc import Iterator
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
 import pytest
 
 # Import CLI components
 from mcp_coder.cli.commands.implement import execute_implement
 from mcp_coder.cli.commands.prompt import execute_prompt
-from mcp_coder.cli.main import create_parser, main
+from mcp_coder.cli.main import create_parser
 from mcp_coder.utils.subprocess_runner import CommandResult
 
 

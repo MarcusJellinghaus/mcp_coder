@@ -7,29 +7,14 @@ run independently (like CLI integration checks) are always executed.
 
 import argparse
 import logging
-import sys
 from pathlib import Path
-from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytest
 
-from tests.cli.commands.conftest import unavailable_command_stub
-
-# Test-first approach: Try to import the module, skip dependent tests if not available
-try:
-    from mcp_coder.cli.commands.implement import execute_implement
-
-    IMPLEMENT_MODULE_AVAILABLE = True
-except ImportError:
-    IMPLEMENT_MODULE_AVAILABLE = False
-
-    execute_implement = unavailable_command_stub
+from mcp_coder.cli.commands.implement import execute_implement
 
 
-@pytest.mark.skipif(
-    not IMPLEMENT_MODULE_AVAILABLE, reason="implement module not yet implemented"
-)
 class TestExecuteImplement:
     """Tests for execute_implement function.
 

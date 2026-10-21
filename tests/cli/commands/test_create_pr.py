@@ -8,32 +8,13 @@ run independently (like CLI integration checks) are always executed.
 import argparse
 import logging
 from pathlib import Path
-from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytest
 
-from tests.cli.commands.conftest import unavailable_command_stub
-
-# Test-first approach: Try to import the module, skip dependent tests if not available
-try:
-    from mcp_coder.cli.commands.create_pr import execute_create_pr
-
-    CREATE_PR_MODULE_AVAILABLE = True
-except Exception as e:  # pylint: disable=broad-exception-caught
-    import traceback
-
-    print(f"\n\n*** IMPORT FAILED: {type(e).__name__}: {e} ***")
-    traceback.print_exc()
-    print("\n\n")
-    CREATE_PR_MODULE_AVAILABLE = False
-
-    execute_create_pr = unavailable_command_stub
+from mcp_coder.cli.commands.create_pr import execute_create_pr
 
 
-@pytest.mark.skipif(
-    not CREATE_PR_MODULE_AVAILABLE, reason="create_pr module not yet implemented"
-)
 class TestExecuteCreatePr:
     """Tests for execute_create_pr function.
 

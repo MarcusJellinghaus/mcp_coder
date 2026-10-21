@@ -205,7 +205,7 @@ disable = [
     "W0511",   # fixme/TODO — informational only, not a quality gate
     "W0212",   # protected-access — legitimate in tests and controlled src usage
     "W0613",   # unused-argument — pytest fixtures injected by name
-    "W0611",   # unused-import — fixture imports, conftest re-exports
+    "W0611",   # unused-import — owned by ruff F401 (pylint flags the X-as-X re-export convention)
     "W0404",   # reimported — reimports across test functions
     "W0718",   # broad-exception-caught — intentional catch-all in CLI/workflow error handling
     "W0706",   # try-except-raise — explicit re-raise for clarity in error chains
@@ -325,7 +325,7 @@ target-version = "py311"
 line-length = 88
 
 [tool.ruff.lint]
-# Only enable docstring rules for now
+# Rule selection — see the per-group comments below
 # preview needed for DOC rules (pydoclint)
 #
 # TRY (tryceratops), including TRY400, rejected: duplicates stack traces — see #1172.
@@ -341,6 +341,7 @@ select = [
     # SIM905 is preview-only; see explicit-preview-rules note above.
     "SIM905",
     "E",
+    "F",
     "C4", "B",
     "S",
 ]

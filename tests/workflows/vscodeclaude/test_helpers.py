@@ -8,7 +8,6 @@ from mcp_coder.workflows.vscodeclaude.config import (
     get_repo_short_name,
 )
 from mcp_coder.workflows.vscodeclaude.helpers import (
-    build_session,
     get_issue_status,
     get_repo_short_name_from_full,
     get_stage_display_name,

@@ -226,7 +226,6 @@ class TestSkipGithubInstallThreading:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """prepare_and_launch_session passes skip_github_install=True to create_startup_script."""
-        from unittest.mock import patch
 
         folder_path = tmp_path / "repo_42"
         folder_path.mkdir()

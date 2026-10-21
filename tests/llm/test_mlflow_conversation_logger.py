@@ -1,8 +1,7 @@
 """Tests for MLflow conversation context manager (two-phase logging)."""
 
 import json
-import logging
-from typing import Any, Generator
+from typing import Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest

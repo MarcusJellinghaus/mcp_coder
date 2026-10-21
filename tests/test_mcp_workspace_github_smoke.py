@@ -3,7 +3,9 @@
 
 def test_shim_importable() -> None:
     """Shim module can be imported."""
-    import mcp_coder.mcp_workspace_github  # noqa: F401
+    import mcp_coder.mcp_workspace_github
+
+    assert mcp_coder.mcp_workspace_github
 
 
 def test_all_exports_defined() -> None:

@@ -14,7 +14,7 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest

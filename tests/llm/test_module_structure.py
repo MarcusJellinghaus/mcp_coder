@@ -1,7 +1,5 @@
 """Test llm package structure and imports."""
 
-import pytest
-
 
 def test_llm_package_structure() -> None:
     """Verify llm package structure and imports."""
@@ -9,6 +7,10 @@ def test_llm_package_structure() -> None:
     import mcp_coder.llm.interface
     import mcp_coder.llm.serialization
     import mcp_coder.llm.types
+
+    assert mcp_coder.llm.interface
+    assert mcp_coder.llm.serialization
+    assert mcp_coder.llm.types
 
     # Verify public API available
     assert hasattr(mcp_coder.llm, "prompt_llm")
@@ -23,6 +25,7 @@ def test_public_api_exports() -> None:
         serialize_llm_response,
     )
 
+    assert LLMResponseDict is not None
     assert callable(prompt_llm)
     assert callable(serialize_llm_response)
 

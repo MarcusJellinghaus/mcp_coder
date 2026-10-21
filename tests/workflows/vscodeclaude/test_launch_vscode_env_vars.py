@@ -6,7 +6,6 @@ of the session's project directory.
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -37,9 +36,6 @@ class TestMCPEnvironmentVariablesBugFix:
         dependencies (git operations, file creation, etc.) while capturing the
         actual parameters passed to the startup script creation.
         """
-        from pathlib import Path
-        from unittest.mock import MagicMock
-
         # Capture the environment variables passed to launch_vscode
         captured_launch_args: dict[str, Path | None] = {}
         original_launch_vscode = launch_vscode

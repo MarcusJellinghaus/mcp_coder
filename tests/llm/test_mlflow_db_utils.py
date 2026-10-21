@@ -4,8 +4,6 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pytest
-
 from mcp_coder.llm.mlflow_db_utils import TrackingStats, query_sqlite_tracking
 
 

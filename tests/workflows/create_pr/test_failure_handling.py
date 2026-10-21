@@ -7,7 +7,6 @@ from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflows.create_pr.core import (
     _format_failure_comment,
-    _handle_create_pr_failure,
     run_create_pr_workflow,
 )
 

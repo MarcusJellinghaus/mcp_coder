@@ -8,45 +8,16 @@ from git import Repo
 
 
 @pytest.fixture
-def git_repo(tmp_path: Path) -> tuple[Repo, Path]:
-    """Create clean, empty git repository for testing.
-
-    Args:
-        tmp_path: Pytest temporary directory fixture
-
-    Returns:
-        tuple[Repo, Path]: Git repository object and path to project directory
-    """
-    project_dir = tmp_path / "test_project"
-    project_dir.mkdir()
-
-    # Initialize git repository
-    repo = Repo.init(project_dir)
-
-    # Configure git user (required for commits)
-    setup_git_config(repo)
-
-    return repo, project_dir
-
-
-@pytest.fixture
-def git_repo_with_files(tmp_path: Path) -> tuple[Repo, Path]:
+def git_repo_with_files(git_repo: tuple[Repo, Path]) -> tuple[Repo, Path]:
     """Create git repository with sample committed files for modification tests.
 
     Args:
-        tmp_path: Pytest temporary directory fixture
+        git_repo: Empty, configured git repository fixture from root conftest
 
     Returns:
         tuple[Repo, Path]: Git repository object and path to project directory with committed files
     """
-    project_dir = tmp_path / "test_project"
-    project_dir.mkdir()
-
-    # Initialize git repository
-    repo = Repo.init(project_dir)
-
-    # Configure git user (required for commits)
-    setup_git_config(repo)
+    repo, project_dir = git_repo
 
     # Create simple test files
     sample_files = {
@@ -62,17 +33,6 @@ def git_repo_with_files(tmp_path: Path) -> tuple[Repo, Path]:
     repo.index.commit("Initial commit with sample files")
 
     return repo, project_dir
-
-
-def setup_git_config(repo: Repo) -> None:
-    """Configure git user for repository.
-
-    Args:
-        repo: Git repository object to configure
-    """
-    with repo.config_writer() as config:
-        config.set_value("user", "name", "Test User")
-        config.set_value("user", "email", "test@example.com")
 
 
 def create_sample_files(project_dir: Path, file_specs: dict[str, str]) -> None:

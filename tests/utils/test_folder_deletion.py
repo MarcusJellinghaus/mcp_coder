@@ -16,7 +16,6 @@ import pytest
 
 from mcp_coder.utils.folder_deletion import (
     DeletionFailureReason,
-    DeletionResult,
     _cleanup_staging,
     _get_default_staging_dir,
     _move_to_staging,
