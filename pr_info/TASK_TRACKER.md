@@ -21,6 +21,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Approve via `set-status` in skill, agent, supervisor and docs
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: edit `issue_approve/SKILL.md`, `issue-approver.md`, `issue_analyse_supervisor/SKILL.md` and the three docs; run the verification searches
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff against `main`
+- [ ] PR summary prepared
