@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: `validate_target_repo` validates `post_install_checks` + tests
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: warning tests in `test_validate_target_repo.py` + strict read in `validate_target_repo`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: warning tests in `test_validate_target_repo.py` + strict read in `validate_target_repo`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `phase_post_install_checks` + wiring in `install()` + tests
 See [step_4.md](./steps/step_4.md)

@@ -13,7 +13,11 @@ from ...mcp_workspace_github import (
     RepoIdentifier,
     get_all_cached_issues,
 )
-from ...utils.pyproject_config import get_github_install_config, get_install_extras
+from ...utils.pyproject_config import (
+    get_github_install_config,
+    get_install_extras,
+    get_post_install_checks,
+)
 from ...utils.subprocess_runner import (
     CalledProcessError,
     CommandOptions,
@@ -101,6 +105,7 @@ def validate_target_repo(folder_path: Path) -> None:
     try:
         declared_extras = get_install_extras(folder_path, strict=True)
         github_config = get_github_install_config(folder_path)
+        get_post_install_checks(folder_path, strict=True)
     except ValueError as exc:
         # An unreadable file is not "no policy declared". `mcp-coder install`
         # reads the same pyproject.toml strictly and aborts on it, so name the

@@ -84,6 +84,23 @@ class TestCompliantRepo:
 
         assert _warnings(caplog) == []
 
+    def test_valid_post_install_checks_adds_no_warning(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A well-formed post_install_checks declaration passes silently."""
+        _make_compliant_repo(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.mcp-coder.install]\nextras = "dev"\n'
+            'post_install_checks = [["mcp-coder", "--version"]]\n\n'
+            '[tool.mcp-coder.install-from-github]\npackages = ["mcp-tools-py"]\n',
+            encoding="utf-8",
+        )
+
+        with caplog.at_level(logging.WARNING, logger=_LOGGER_NAME):
+            validate_target_repo(tmp_path)
+
+        assert _warnings(caplog) == []
+
 
 class TestWarnOnlyRows:
     """Each warn-only row logs exactly one warning and never raises."""
@@ -222,3 +239,22 @@ class TestUnreadablePyproject:
         assert len(messages) == 1
         assert "install-from-github" in messages[0]
         assert "packages" in messages[0]
+
+    def test_malformed_post_install_checks_warns(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A non-string argv element is reported at launch."""
+        _make_compliant_repo(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.mcp-coder.install]\nextras = "dev"\n'
+            'post_install_checks = [["ok"], [1]]\n\n'
+            '[tool.mcp-coder.install-from-github]\npackages = ["mcp-tools-py"]\n',
+            encoding="utf-8",
+        )
+
+        with caplog.at_level(logging.WARNING, logger=_LOGGER_NAME):
+            validate_target_repo(tmp_path)
+
+        messages = _warnings(caplog)
+        assert len(messages) == 1
+        assert "post_install_checks" in messages[0]
