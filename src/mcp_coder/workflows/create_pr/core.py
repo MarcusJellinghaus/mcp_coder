@@ -38,6 +38,7 @@ from mcp_coder.workflow_utils.base_branch import (
     check_base_branch_on_origin,
     detect_base_branch,
 )
+from mcp_coder.workflow_utils.branch_linkage import is_branch_linked_to_issue
 from mcp_coder.workflow_utils.failure_handling import (
     format_mcp_unavailable_message,
     llm_failure_reason,
@@ -386,11 +387,15 @@ def create_pull_request(
 def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
     """Validate current branch is linked to an issue.
 
+    "Linked" means the branch is a linked branch of the issue, or the head
+    of an open PR that closes the issue.
+
     Args:
         project_dir: Path to the project directory
 
     Returns:
-        Issue number if branch is linked, None otherwise
+        Issue number if branch is linked, None otherwise (not linked,
+        lookup failed, or an error occurred)
     """
     try:
         # 1. Get current branch name
@@ -407,19 +412,11 @@ def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
             )
             return None
 
-        # 3. Query linked branches via GitHub API
+        # 3. Check linked branches and open closing PRs (helper logs outcome)
         branch_manager = IssueBranchManager(project_dir=project_dir)
-        linked_branches = branch_manager.get_linked_branches(issue_number)
-
-        # 4. Check if current branch is in linked branches
-        if branch_name in linked_branches:
-            logger.info(f"Branch '{branch_name}' is linked to issue #{issue_number}")
+        if is_branch_linked_to_issue(branch_manager, issue_number, branch_name):
             return issue_number
-        else:
-            logger.warning(
-                f"Branch '{branch_name}' is not linked to issue #{issue_number}"
-            )
-            return None
+        return None
 
     except (
         Exception

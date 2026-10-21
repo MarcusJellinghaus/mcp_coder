@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.mcp_workspace_github import ClosingPRRef
 from mcp_coder.workflows.create_pr.core import (
     _add_pr_assignee_best_effort,
     validate_branch_issue_linkage,
@@ -112,7 +113,10 @@ class TestValidateBranchIssueLinkage:
         mock_get_branch.return_value = "123-feature"
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
-        mock_manager.get_linked_branches.return_value = ["123-feature"]
+        mock_manager.get_linked_branch_and_closing_prs_or_none.return_value = (
+            ["123-feature"],
+            [],
+        )
 
         # Call: validate_branch_issue_linkage(tmp_path)
         result = validate_branch_issue_linkage(tmp_path)
@@ -121,7 +125,9 @@ class TestValidateBranchIssueLinkage:
         assert result == 123
         mock_get_branch.assert_called_once_with(tmp_path)
         mock_manager_class.assert_called_once_with(project_dir=tmp_path)
-        mock_manager.get_linked_branches.assert_called_once_with(123)
+        mock_manager.get_linked_branch_and_closing_prs_or_none.assert_called_once_with(
+            123
+        )
 
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.IssueBranchManager")
@@ -133,7 +139,7 @@ class TestValidateBranchIssueLinkage:
         mock_get_branch.return_value = "123-feature"
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
-        mock_manager.get_linked_branches.return_value = []
+        mock_manager.get_linked_branch_and_closing_prs_or_none.return_value = ([], [])
 
         # Call: validate_branch_issue_linkage(tmp_path)
         result = validate_branch_issue_linkage(tmp_path)
@@ -142,7 +148,48 @@ class TestValidateBranchIssueLinkage:
         assert result is None
         mock_get_branch.assert_called_once_with(tmp_path)
         mock_manager_class.assert_called_once_with(project_dir=tmp_path)
-        mock_manager.get_linked_branches.assert_called_once_with(123)
+        mock_manager.get_linked_branch_and_closing_prs_or_none.assert_called_once_with(
+            123
+        )
+
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.IssueBranchManager")
+    def test_validate_branch_issue_linkage_post_pr_closing_pr(
+        self, mock_manager_class: MagicMock, mock_get_branch: MagicMock, tmp_path: Path
+    ) -> None:
+        """Tests validation succeeds via an open closing PR once a PR exists."""
+        mock_get_branch.return_value = "123-feature"
+        mock_manager = MagicMock()
+        mock_manager_class.return_value = mock_manager
+        mock_manager.get_linked_branch_and_closing_prs_or_none.return_value = (
+            [],
+            [ClosingPRRef(42, "123-feature")],
+        )
+
+        result = validate_branch_issue_linkage(tmp_path)
+
+        assert result == 123
+
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.IssueBranchManager")
+    def test_validate_branch_issue_linkage_lookup_failed(
+        self,
+        mock_manager_class: MagicMock,
+        mock_get_branch: MagicMock,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Tests validation returns None and logs an ERROR when lookup fails."""
+        mock_get_branch.return_value = "123-feature"
+        mock_manager = MagicMock()
+        mock_manager_class.return_value = mock_manager
+        mock_manager.get_linked_branch_and_closing_prs_or_none.return_value = None
+
+        with caplog.at_level(logging.ERROR):
+            result = validate_branch_issue_linkage(tmp_path)
+
+        assert result is None
+        assert any(record.levelno == logging.ERROR for record in caplog.records)
 
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     def test_validate_branch_issue_linkage_no_issue_number(
