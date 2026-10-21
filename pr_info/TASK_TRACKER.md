@@ -52,9 +52,9 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: Declare this repo's post-install checks in `pyproject.toml`
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: add `post_install_checks` to `[tool.mcp-coder.install]`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `post_install_checks` to `[tool.mcp-coder.install]`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Documentation
 See [step_6.md](./steps/step_6.md)
