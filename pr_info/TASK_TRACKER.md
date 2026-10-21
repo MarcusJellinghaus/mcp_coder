@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Run the import-health test against upstream main in CI
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: update `.github/workflows/upstream-mypy-check.yml` (rename job, install extras, independent mypy + strict import-test steps)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `.github/workflows/upstream-mypy-check.yml` (rename job, install extras, independent mypy + strict import-test steps)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
