@@ -467,3 +467,7 @@ _._stub_uv_lookup
 # real-uv tests when uv is not on PATH, instead of letting ensure_system_uv()
 # auto-install it.
 _._require_system_uv
+
+# tests/cli/commands/coordinator/test_vscodeclaude_cli.py - autouse fixture
+# stubbing check_pr_health so CLI handler tests never run real PR-health checks.
+_._no_pr_health
