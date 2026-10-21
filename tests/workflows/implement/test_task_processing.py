@@ -393,7 +393,6 @@ class TestProcessSingleTask:
         outcome = process_single_task(
             Path("/test/project"),
             "claude",
-            format_code=True,
             check_type_hints=True,
         )
 
@@ -601,7 +600,7 @@ class TestProcessSingleTask:
         mock_run_formatters.return_value = False
 
         outcome = process_single_task(
-            Path("/test/project"), "claude", format_code=True, check_type_hints=True
+            Path("/test/project"), "claude", check_type_hints=True
         )
 
         assert outcome.success is False
@@ -665,7 +664,7 @@ class TestProcessSingleTask:
 
 
 class TestProcessSingleTaskGating:
-    """Test format_code and check_type_hints gating in process_single_task."""
+    """Test formatter and check_type_hints gating in process_single_task."""
 
     @patch("mcp_coder.workflows.implement.task_processing.push_changes")
     @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
@@ -676,7 +675,7 @@ class TestProcessSingleTaskGating:
     @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
     @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
     @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
-    def test_process_single_task_skips_formatters_when_format_code_false(
+    def test_process_single_task_always_calls_run_formatters(
         self,
         mock_get_incomplete: MagicMock,
         mock_get_prompt: MagicMock,
@@ -688,48 +687,7 @@ class TestProcessSingleTaskGating:
         mock_commit: MagicMock,
         mock_push: MagicMock,
     ) -> None:
-        """Verify run_formatters not called when format_code=False."""
-        mock_get_incomplete.return_value = ["Step 1: Test task"]
-        mock_get_prompt.return_value = "Template"
-        mock_prompt_llm.return_value = _make_llm_response("Response")
-        mock_get_status.return_value = {
-            "staged": ["file.py"],
-            "modified": [],
-            "untracked": [],
-        }
-        mock_commit.return_value = True
-        mock_push.return_value = True
-
-        outcome = process_single_task(
-            Path("/test/project"), "claude", format_code=False
-        )
-
-        assert outcome.success is True
-        assert outcome.reason == "completed"
-        mock_run_formatters.assert_not_called()
-
-    @patch("mcp_coder.workflows.implement.task_processing.push_changes")
-    @patch("mcp_coder.workflows.implement.task_processing.commit_changes")
-    @patch("mcp_coder.workflows.implement.task_processing.run_formatters")
-    @patch("mcp_coder.workflows.implement.task_processing.check_and_fix_mypy")
-    @patch("mcp_coder.workflows.implement.task_processing.get_full_status")
-    @patch("mcp_coder.workflows.implement.task_processing.store_session")
-    @patch("mcp_coder.workflows.implement.task_processing.prompt_llm")
-    @patch("mcp_coder.workflows.implement.task_processing.get_prompt")
-    @patch("mcp_coder.workflows.implement.task_processing.get_incomplete_tasks")
-    def test_process_single_task_runs_formatters_when_format_code_true(
-        self,
-        mock_get_incomplete: MagicMock,
-        mock_get_prompt: MagicMock,
-        mock_prompt_llm: MagicMock,
-        mock_store_session: MagicMock,
-        mock_get_status: MagicMock,
-        mock_check_mypy: MagicMock,
-        mock_run_formatters: MagicMock,
-        mock_commit: MagicMock,
-        mock_push: MagicMock,
-    ) -> None:
-        """Verify run_formatters called when format_code=True."""
+        """run_formatters owns the format_code gate, so it is always called."""
         mock_get_incomplete.return_value = ["Step 1: Test task"]
         mock_get_prompt.return_value = "Template"
         mock_prompt_llm.return_value = _make_llm_response("Response")
@@ -742,7 +700,7 @@ class TestProcessSingleTaskGating:
         mock_commit.return_value = True
         mock_push.return_value = True
 
-        outcome = process_single_task(Path("/test/project"), "claude", format_code=True)
+        outcome = process_single_task(Path("/test/project"), "claude")
 
         assert outcome.success is True
         assert outcome.reason == "completed"
@@ -841,19 +799,18 @@ class TestProcessSingleTaskGating:
     def test_process_task_with_retry_forwards_config_params(
         self, mock_process: MagicMock
     ) -> None:
-        """Verify process_task_with_retry passes format_code and check_type_hints through."""
+        """Verify process_task_with_retry passes check_type_hints through."""
         mock_process.return_value = TaskOutcome(True, "completed")
 
         process_task_with_retry(
             Path("/test/project"),
             "claude",
-            format_code=True,
             check_type_hints=True,
         )
 
         mock_process.assert_called_once()
         call_kwargs = mock_process.call_args
-        assert call_kwargs.kwargs["format_code"] is True
+        assert "format_code" not in call_kwargs.kwargs
         assert call_kwargs.kwargs["check_type_hints"] is True
 
 
@@ -908,9 +865,7 @@ class TestIntegration:
         mock_push.return_value = True
 
         # Execute workflow
-        outcome = process_single_task(
-            project_dir, "claude", format_code=True, check_type_hints=True
-        )
+        outcome = process_single_task(project_dir, "claude", check_type_hints=True)
 
         # Verify success
         assert outcome.success is True

@@ -351,7 +351,6 @@ def process_single_task(
     mcp_config: str | None = None,
     settings_file: str | None = None,
     attempt: int = 1,
-    format_code: bool = False,
     check_type_hints: bool = False,
     previous_reason: str | None = None,
 ) -> TaskOutcome:
@@ -363,7 +362,6 @@ def process_single_task(
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         attempt: 1-based attempt number; appends retry reminder when > 1
-        format_code: If True, run code formatters after implementation
         check_type_hints: If True, run mypy type checking after implementation
         previous_reason: Reason the previous attempt returned; selects which
             retry reminder is appended when attempt > 1
@@ -547,7 +545,7 @@ Please implement this task step by step."""
         logger.info("Skipping mypy check (will run after all tasks complete)")
 
     # Step 8: Run formatters
-    if format_code and not run_formatters(project_dir):
+    if not run_formatters(project_dir):
         return TaskOutcome(False, "error")
 
     # Step 9: Commit changes (same session params as the step's main LLM call)
@@ -586,7 +584,6 @@ def process_task_with_retry(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-    format_code: bool = False,
     check_type_hints: bool = False,
 ) -> TaskOutcome:
     """Process a single task with bounded retry on zero-change results.
@@ -600,7 +597,6 @@ def process_task_with_retry(
         provider: LLM provider (e.g., 'claude')
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
-        format_code: If True, run code formatters after implementation
         check_type_hints: If True, run mypy type checking after implementation
 
     Returns:
@@ -621,7 +617,6 @@ def process_task_with_retry(
             mcp_config=mcp_config,
             settings_file=settings_file,
             attempt=attempt,
-            format_code=format_code,
             check_type_hints=check_type_hints,
             previous_reason=previous_reason,
         )

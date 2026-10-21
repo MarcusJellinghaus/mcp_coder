@@ -6,6 +6,7 @@ import pytest
 
 from mcp_coder.utils.pyproject_config import (
     FormatCodeSetting,
+    ImplementConfig,
     _load_pyproject,
     get_format_code,
     get_github_install_config,
@@ -126,35 +127,31 @@ packages-no-deps = ["pkg-b @ git+https://example.com/b.git"]
 class TestGetImplementConfig:
     """Tests for get_implement_config."""
 
-    def test_returns_both_true_when_configured(self, tmp_path: Path) -> None:
-        """Both keys set to true are returned."""
+    def test_returns_true_when_configured(self, tmp_path: Path) -> None:
+        """check_type_hints set to true is returned."""
         (tmp_path / "pyproject.toml").write_text(
             """\
 [tool.mcp-coder.implement]
-format_code = true
 check_type_hints = true
 """,
             encoding="utf-8",
         )
         config = get_implement_config(tmp_path)
-        assert config.format_code is True
         assert config.check_type_hints is True
 
     def test_defaults_to_false_when_section_missing(self, tmp_path: Path) -> None:
-        """Missing [tool.mcp-coder.implement] returns False for both."""
+        """Missing [tool.mcp-coder.implement] returns False."""
         (tmp_path / "pyproject.toml").write_text("[tool.mcp-coder]\n", encoding="utf-8")
         config = get_implement_config(tmp_path)
-        assert config.format_code is False
         assert config.check_type_hints is False
 
     def test_defaults_to_false_when_file_missing(self, tmp_path: Path) -> None:
-        """No pyproject.toml returns False for both."""
+        """No pyproject.toml returns False."""
         config = get_implement_config(tmp_path)
-        assert config.format_code is False
         assert config.check_type_hints is False
 
-    def test_partial_keys_default_missing_to_false(self, tmp_path: Path) -> None:
-        """Only format_code set, check_type_hints defaults to False."""
+    def test_legacy_format_code_key_is_ignored(self, tmp_path: Path) -> None:
+        """A leftover format_code key does not affect the config."""
         (tmp_path / "pyproject.toml").write_text(
             """\
 [tool.mcp-coder.implement]
@@ -163,8 +160,7 @@ format_code = true
             encoding="utf-8",
         )
         config = get_implement_config(tmp_path)
-        assert config.format_code is True
-        assert config.check_type_hints is False
+        assert config == ImplementConfig(check_type_hints=False)
 
     def test_handles_invalid_toml(self, tmp_path: Path) -> None:
         """Malformed TOML file returns defaults."""
@@ -172,7 +168,6 @@ format_code = true
             "this is not valid toml {{{", encoding="utf-8"
         )
         config = get_implement_config(tmp_path)
-        assert config.format_code is False
         assert config.check_type_hints is False
 
 
@@ -382,5 +377,4 @@ class TestMalformedTomlRegression:
         """get_implement_config does not raise on malformed TOML."""
         (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
         config = get_implement_config(tmp_path)
-        assert config.format_code is False
         assert config.check_type_hints is False

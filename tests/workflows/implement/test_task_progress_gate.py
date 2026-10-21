@@ -225,6 +225,7 @@ class TestProgressGate:
             patch(f"{_TP}.prompt_llm", return_value=_make_llm_response()),
             patch(f"{_TP}.store_session"),
             patch(f"{_TP}.get_full_status", return_value=status),
+            patch(f"{_TP}.run_formatters", return_value=True),
             patch(f"{_TP}.commit_changes", return_value=True) as mock_commit,
             patch(f"{_TP}.push_changes", return_value=True) as mock_push,
         ):

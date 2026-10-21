@@ -417,5 +417,4 @@ packages-no-deps = [
 ]
 
 [tool.mcp-coder.implement]
-format_code = true
 check_type_hints = true

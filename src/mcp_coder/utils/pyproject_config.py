@@ -148,7 +148,6 @@ def has_legacy_format_code_key(project_dir: Path) -> bool:
 class ImplementConfig:
     """Configuration for the implement workflow."""
 
-    format_code: bool
     check_type_hints: bool
 
 
@@ -208,12 +207,12 @@ def get_implement_config(project_dir: Path) -> ImplementConfig:
         project_dir: Path to directory containing pyproject.toml.
 
     Returns:
-        ImplementConfig with format_code and check_type_hints booleans.
+        ImplementConfig with the check_type_hints boolean. Formatting is
+        governed by [tool.mcp-coder] format_code (see get_format_code).
     """
     data = _load_pyproject(project_dir)
     section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
     return ImplementConfig(
-        format_code=section.get("format_code", False),
         check_type_hints=section.get("check_type_hints", False),
     )
 
