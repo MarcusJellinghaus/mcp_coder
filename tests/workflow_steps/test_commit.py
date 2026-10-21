@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.mcp_tools_py import resolve_steps as real_resolve_steps
 from mcp_coder.workflow_steps.commit import (
     FALLBACK_COMMIT_MESSAGE,
     FormatterConfigError,
@@ -66,6 +67,17 @@ class TestRunFormattersGate:
         mock_run_format_code.assert_not_called()
 
     @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    def test_resolve_error_inside_wrapper_raises_config_error(
+        self, mock_run_format_code: MagicMock, tmp_path: Path
+    ) -> None:
+        """resolve_steps ValueError raised inside run_format_code → config error."""
+        mock_run_format_code.side_effect = ValueError("No formatter declared")
+
+        with pytest.raises(FormatterConfigError, match="No formatter declared") as exc:
+            run_formatters(tmp_path)
+        assert isinstance(exc.value.__cause__, ValueError)
+
+    @patch("mcp_coder.workflow_steps.commit.run_format_code")
     def test_non_bool_format_code_raises_config_error(
         self, mock_run_format_code: MagicMock, tmp_path: Path
     ) -> None:
@@ -91,8 +103,15 @@ class TestCheckFormatterConfig:
 
         assert check_formatter_config(tmp_path) is None
 
-    def test_resolves_cleanly_returns_none(self, tmp_path: Path) -> None:
-        """Resolvable formatter → None."""
+    def test_resolves_cleanly_returns_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A declared formatter resolves with the real resolve_steps → None."""
+        monkeypatch.setattr(
+            "mcp_coder.workflow_steps.commit.resolve_steps", real_resolve_steps
+        )
+        _write_pyproject(tmp_path, "[tool.black]\nline-length = 88\n")
+
         assert check_formatter_config(tmp_path) is None
 
     def test_resolve_error_returns_message(

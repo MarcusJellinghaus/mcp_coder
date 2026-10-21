@@ -84,24 +84,24 @@ def run_formatters(project_dir: Path) -> bool:
 
     try:
         results = run_format_code(project_dir)
-
-        # Check if any formatter failed
-        for formatter_name, result in results.items():
-            if not result.success:
-                logger.error(f"{formatter_name} formatting failed: {result.output}")
-                return False
-            logger.info(f"{formatter_name} formatting completed successfully")
-
-        logger.info("All formatters completed successfully")
-        return True
-
-    except FormatterConfigError:
-        raise
+    except ValueError as e:
+        # resolve_steps inside the wrapper: a config error, not a step failure.
+        raise FormatterConfigError(str(e)) from e
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error running formatters: {e}")
         return False
+
+    # Check if any formatter failed
+    for formatter_name, result in results.items():
+        if not result.success:
+            logger.error(f"{formatter_name} formatting failed: {result.output}")
+            return False
+        logger.info(f"{formatter_name} formatting completed successfully")
+
+    logger.info("All formatters completed successfully")
+    return True
 
 
 def commit_changes(

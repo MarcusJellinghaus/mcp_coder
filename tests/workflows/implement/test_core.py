@@ -440,6 +440,63 @@ class TestRunImplementWorkflow:
         call_names = [name for name, _, _ in manager.mock_calls]
         assert call_names.index("read_blocked") < call_names.index("get_status")
 
+    @patch("mcp_coder.workflow_steps.commit.run_format_code")
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_full_status",
+        return_value={"staged": [], "modified": [], "untracked": []},
+    )
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_mypy", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_llm_environment", return_value={}
+    )
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="feature/test-branch",
+    )
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.read_and_clear_blocked")
+    def test_format_code_false_skips_formatter(
+        self,
+        _mock_read_blocked: MagicMock,
+        _mock_check_git: MagicMock,
+        _mock_check_branch: MagicMock,
+        _mock_check_prereq: MagicMock,
+        _mock_prepare_tracker: MagicMock,
+        _mock_log_progress: MagicMock,
+        mock_process_task: MagicMock,
+        _mock_get_branch: MagicMock,
+        _mock_prepare_env: MagicMock,
+        mock_check_mypy: MagicMock,
+        _mock_get_status: MagicMock,
+        _mock_run_finalisation: MagicMock,
+        _mock_check_ci: MagicMock,
+        mock_run_format_code: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """``format_code = false`` → the post-mypy formatting never calls the formatter."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder]\nformat_code = false\n\n"
+            "[tool.mcp-coder.implement]\ncheck_type_hints = true\n",
+            encoding="utf-8",
+        )
+        mock_process_task.side_effect = [
+            TaskOutcome(True, "completed"),
+            TaskOutcome(False, "no_tasks"),
+        ]
+
+        result = run_implement_workflow(tmp_path, "claude")
+
+        assert result == 0
+        mock_check_mypy.assert_called_once()
+        mock_run_format_code.assert_not_called()
+
     @patch("mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure")
     @patch("mcp_coder.workflows.implement.core.get_implement_config")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
