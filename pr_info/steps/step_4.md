@@ -47,7 +47,8 @@ if os.sep in name or (os.altsep and os.altsep in name):
     p = Path(name) if Path(name).is_absolute() else local_path / name
     return p if p.is_file() else None
 cand = name if name.lower().endswith(".exe") else exe(name)
-for d in [bin_dir, *(Path(e) for e in os.environ.get("PATH", "").split(os.pathsep) if e)]:
+# relative PATH entries (e.g. ".") are skipped: they would search the cwd
+for d in [bin_dir, *(Path(e) for e in os.environ.get("PATH", "").split(os.pathsep) if Path(e).is_absolute())]:
     if (d / cand).is_file(): return d / cand
 return None
 ```
@@ -81,9 +82,9 @@ from a `tmp_path/pyproject.toml` that declares the checks, and a `bin_dir` under
 - all pass → no exit; runner called once per check with the resolved venv path, `cwd=str(local_path)`, `timeout_seconds=300`, `capture_output=False`, and `env["PATH"]` starting with `bin_dir`
 - one fails (return_code 2) → `SystemExit(1)`, summary contains `exit code 2`
 - several fail → all checks run, exactly one summary listing each
-- timeout (`timed_out=True`, `return_code=1`) → reason "timed out after 300 s"
+- timeout (`timed_out=True`, `return_code=1`, `execution_error="Process timed out after 300 seconds"`, as the real runner returns) → reason "timed out after 300 s"; this enforces the `timed_out` → `execution_error` → `return_code` order
 - execution error (`execution_error="PermissionError: ..."`) → its text in the summary
 - not found → runner never called for that check, reason "not found"
-- resolution: venv beats `PATH`; `PATH` fallback; `.exe`-suffixed name gets no double `.exe` (Windows-style; use `monkeypatch.setattr(_phases, "exe", ...)` or skip on POSIX); relative path resolved against `local_path`; absolute path used as-is; cwd is never searched
+- resolution: venv beats `PATH`; `PATH` fallback; `.exe`-suffixed name gets no double `.exe` (Windows-style; use `monkeypatch.setattr(_phases, "exe", ...)` or skip on POSIX); relative path resolved against `local_path`; absolute path used as-is; cwd is never searched, including when `PATH` contains `.` (fake exe in the cwd → "not found")
 - dry-run (`check=True`) → declared argv echoed as `"> ..."` lines, runner not called
 - `install()` driver: on failure the `OK ... complete` line is not printed (patch `ensure_system_uv` and the earlier phases, as `test_install_phases.py` does)
