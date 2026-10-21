@@ -146,6 +146,8 @@ mcp-coder install TARGET [OPTIONS]
 - `--python PATH` - Base interpreter for `python -m venv` (default: current)
 - `--check` - Dry run: print every command without executing it
 
+After the version report, install runs the `[tool.mcp-coder.install] post_install_checks` declared in the pyproject.toml at `--local-path`. Any failing check exits 1; `--check` only prints them.
+
 **Examples:**
 ```bash
 # GitHub HEAD, siblings pinned from a checkout

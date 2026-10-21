@@ -24,6 +24,7 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 | `[tool.mypy]` | `mcp__mcp-tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
 | `[tool.pylint.main]` / `[tool.pylint.messages_control]` | `mcp__mcp-tools-py__run_pylint_check`, pylint CLI | Pylint config |
 | `[tool.ruff]` / `[tool.ruff.lint]` | `tools/ruff_check.sh` / `.bat` | Ruff lint + format config |
+| `[tool.mcp-coder.install]` | mcp-coder install process (`pyproject_config.py`) | `extras`, `post_install_checks` |
 | `[tool.mcp-coder.install-from-github]` | mcp-coder install process (`pyproject_config.py`) | GitHub-based dependency packages (`packages`, `packages-no-deps`) |
 | `[tool.mcp-coder.prompts]` | `prompt_loader.py`, `prompt` command, `icoder` | System/project prompt paths and Claude injection mode |
 

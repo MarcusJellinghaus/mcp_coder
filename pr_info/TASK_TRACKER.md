@@ -59,9 +59,9 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: Documentation
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: update `config.md`, `cli-reference.md`, `repository-setup/README.md`, `repository-setup/python.md`, `architecture.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `config.md`, `cli-reference.md`, `repository-setup/README.md`, `repository-setup/python.md`, `architecture.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

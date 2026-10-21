@@ -94,7 +94,7 @@ The following files in this repository serve as references/templates for other p
 
 ## Target-Repo Contracts
 
-What a repo must declare about itself to be installed into and driven by mcp-coder. `validate_target_repo` checks all four rows at VSCodeClaude launch.
+What a repo must declare about itself to be installed into and driven by mcp-coder. `validate_target_repo` checks all five rows at VSCodeClaude launch.
 
 | Contract | Declared / enforced by | Fails how |
 |---|---|---|
@@ -102,6 +102,7 @@ What a repo must declare about itself to be installed into and driven by mcp-cod
 | extras to install | `[tool.mcp-coder.install] extras`, default `dev` | `uv sync` error — warn |
 | `[tool.mcp-coder.install-from-github]` for sibling pinning | `pyproject_config.get_github_install_config` | silently no overrides — warn |
 | venv at `<repo>/.venv` | installer, `uv sync`, `session_setup` | two venvs / empty venv — warn |
+| post-install checks | `[tool.mcp-coder.install] post_install_checks`, optional | install exits 1; malformed value warned at launch |
 
 A `uv.lock` is **not** required — mcp_coder itself tracks none, so `uv sync` resolves fresh.
 
