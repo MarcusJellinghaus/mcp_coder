@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Import walker, classification tests, import-health test
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `tests/_import_walker.py` + `tests/test_module_imports.py` (classification tests, SystemExit walker test, subprocess import-health test)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `tests/_import_walker.py` + `tests/test_module_imports.py` (classification tests, SystemExit walker test, subprocess import-health test)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Run the import-health test against upstream main in CI
 See [step_2.md](./steps/step_2.md)
