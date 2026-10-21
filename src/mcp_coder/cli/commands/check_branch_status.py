@@ -362,8 +362,9 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
 
             logger.info("Auto-fix operations completed successfully")
             # If fixes succeeded, return success regardless of initial CI status.
-            # Known limitation (intentional): --fail-on-reviews is not evaluated
-            # on this path — the --fix success path returns before the review gate.
+            # Known limitation (intentional): neither --fail-on-reviews nor the
+            # linked-branch check is evaluated on this path — the --fix success
+            # path returns before the exit-code gate (_exit_code).
             return 0
 
         # No fixes attempted — the pure exit-code contract decides (2 -> 1 -> 0).

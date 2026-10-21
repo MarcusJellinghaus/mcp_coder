@@ -29,3 +29,11 @@ Supervisor-driven review of `_exit_code` linked-branch terms (shim re-export, ex
 
 **Changes**: step 3 now matches `Ready to merge` case-sensitively on the `Recommendations:` line (the blocking `Not ready to merge` has a lowercase `r`; `Ready to merge (squash-merge safe)` counts). The Note paragraph also no longer says "bullet". mypy/pylint/pytest (5808 passed) clean.
 **Status**: committed
+
+## Round 3 — 2026-10-21
+**Findings**:
+- `src/mcp_coder/cli/commands/check_branch_status.py:366-367` — the `--fix` success-path comment names only `--fail-on-reviews`; the linked-branch check is skipped there too.
+
+**Decisions**: accept — trivial, and it describes the known limitation this issue extends (docs note already updated).
+**Changes**: comment now names both `--fail-on-reviews` and the linked-branch check. Comment only. mypy/pytest (5808 passed) clean; pylint clean on `src/mcp_coder/cli/commands` (full-project run timed out).
+**Status**: committed
