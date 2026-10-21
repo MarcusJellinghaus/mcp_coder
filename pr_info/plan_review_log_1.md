@@ -1,0 +1,10 @@
+# review-plan review log 1
+
+## Round 1 — 2026-10-21
+**Findings**:
+Checking the review-comments test file's imports and patches against the plan's step 2 rewrite.`pr_info/steps/step_2.md:1` — medium — Step 2 packs too much into one commit: 4 source files, about 8 test files, the new signatures, `check_pr_health`, moving the call site and the CLI regression test. Split it in two. 2a: add `_resolve_pr_target`, `_escalate`, the new check signatures and `check_pr_health` with their `test_checks*` tests; `process_eligible_issues` calls `check_pr_health` in place of its check loop for now. 2b: move the call to the Step 4 loop, drop the `CIResultsManager` and label-lookup leftovers and their test patches, and add the CLI autouse fixture and `test_vscodeclaude_pr_health.py`.
+`pr_info/steps/step_2.md:213` — low — The instruction for `TestProcessEligibleIssuesPriorityChaining` is unclear. "Move … into `test_checks.py` orchestration (covered by the chaining tests above)" can be read as either move it or drop it. State whether it is deleted as redundant or rewritten against `check_pr_health`.
+**Decisions**:
+Verdict(decision='tasks', tasks=['Split pr_info/steps/step_2.md into two steps. Step 2a: add `_resolve_pr_target`, `_escalate`, the new check signatures and `check_pr_health`, plus their `test_checks*` tests; for now `process_eligible_issues` calls `check_pr_health` instead of its check loop. Step 2b: move the call into the Step 4 loop, remove the `CIResultsManager` and label-lookup leftovers and their test patches, and add the CLI autouse fixture and `test_vscodeclaude_pr_health.py`. Update step numbering and cross-references to match.', 'In pr_info/steps/step_2.md:213, say exactly what happens to `TestProcessEligibleIssuesPriorityChaining`: either it is deleted because the `check_pr_health` chaining tests in `test_checks.py` already cover it, or it is rewritten against `check_pr_health` (name the target test class and file). Remove the wording that can mean either.'], escalate_reason=None)
+**Changes**:
+applied
