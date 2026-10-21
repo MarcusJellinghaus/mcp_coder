@@ -8,8 +8,12 @@ here from ``implement/task_processing.py`` so multiple workflows can share them.
 import logging
 from pathlib import Path
 
-from mcp_coder.mcp_tools_py import run_format_code
+from mcp_coder.mcp_tools_py import resolve_steps, run_format_code
 from mcp_coder.mcp_workspace_git import commit_all_changes, git_push
+from mcp_coder.utils.pyproject_config import (
+    get_format_code,
+    has_legacy_format_code_key,
+)
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -25,15 +29,57 @@ logger = logging.getLogger(__name__)
 FALLBACK_COMMIT_MESSAGE = "chore: automated commit (message generation failed)"
 
 
+class FormatterConfigError(ValueError):
+    """Formatter configuration is invalid; formatting cannot run."""
+
+
+def check_formatter_config(
+    project_dir: Path, warn_legacy_key: bool = False
+) -> str | None:
+    """Check that formatting is off or the project's formatter resolves.
+
+    Args:
+        project_dir: Path to the project directory
+        warn_legacy_key: Log a warning if the ignored
+            [tool.mcp-coder.implement] format_code key is present
+
+    Returns:
+        None when formatting is off or resolves cleanly, else the error message.
+    """
+    if warn_legacy_key and has_legacy_format_code_key(project_dir):
+        logger.warning(
+            "[tool.mcp-coder.implement] format_code is ignored; "
+            "use [tool.mcp-coder] format_code"
+        )
+    try:
+        if not get_format_code(project_dir).enabled:
+            return None
+        resolve_steps(project_dir)
+        return None
+    except ValueError as e:
+        return str(e)
+
+
 def run_formatters(project_dir: Path) -> bool:
-    """Run code formatters (black, isort) and return success status.
+    """Run the project's configured formatter and return success status.
 
     Args:
         project_dir: Path to the project directory
 
     Returns:
-        True if all formatters completed successfully, False if any formatter failed.
+        True when formatting is disabled or all steps succeeded, False if a
+        step failed.
+
+    Raises:
+        FormatterConfigError: If the formatter configuration is invalid.
     """
+    message = check_formatter_config(project_dir)
+    if message:
+        raise FormatterConfigError(message)
+    if not get_format_code(project_dir).enabled:
+        logger.info("Code formatting disabled ([tool.mcp-coder] format_code = false)")
+        return True
+
     logger.info("Running code formatters...")
 
     try:
@@ -49,6 +95,8 @@ def run_formatters(project_dir: Path) -> bool:
         logger.info("All formatters completed successfully")
         return True
 
+    except FormatterConfigError:
+        raise
     except (
         Exception
     ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type

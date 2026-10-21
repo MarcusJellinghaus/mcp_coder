@@ -95,6 +95,56 @@ def get_prompts_config(project_dir: Path) -> PromptsConfig:
 
 
 @dataclass(frozen=True)
+class FormatCodeSetting:
+    """[tool.mcp-coder] format_code."""
+
+    enabled: bool  # True when absent
+    explicit: bool  # True when the key is present
+
+
+def get_format_code(project_dir: Path) -> FormatCodeSetting:
+    """Read [tool.mcp-coder] format_code from pyproject.toml.
+
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+
+    Returns:
+        FormatCodeSetting; enabled defaults to True when the key, section or
+        file is absent (or the file is malformed).
+
+    Raises:
+        ValueError: If the value is not a bool. The message names the key
+            and the file.
+    """
+    data = _load_pyproject(project_dir)
+    section = data.get("tool", {}).get("mcp-coder", {})
+    if "format_code" not in section:
+        return FormatCodeSetting(enabled=True, explicit=False)
+    value: Any = section["format_code"]
+    if not isinstance(value, bool):
+        path = project_dir / "pyproject.toml"
+        raise ValueError(
+            f"Invalid [tool.mcp-coder] format_code in {path}\n"
+            f"Expected true or false, got {type(value).__name__}: {value!r}"
+        )
+    return FormatCodeSetting(enabled=value, explicit=True)
+
+
+def has_legacy_format_code_key(project_dir: Path) -> bool:
+    """Check for the no-longer-read [tool.mcp-coder.implement] format_code key.
+
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+
+    Returns:
+        True if [tool.mcp-coder.implement] format_code is present.
+    """
+    data = _load_pyproject(project_dir)
+    section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
+    return "format_code" in section
+
+
+@dataclass(frozen=True)
 class ImplementConfig:
     """Configuration for the implement workflow."""
 

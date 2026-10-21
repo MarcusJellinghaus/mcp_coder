@@ -8,6 +8,7 @@ import tempfile
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any, Generator, Type, TypeVar, cast
+from unittest.mock import patch
 
 import git
 import pytest
@@ -85,6 +86,25 @@ def reset_logging() -> Generator[None, None, None]:
     for handler in initial_handlers:
         root_logger.addHandler(handler)
     root_logger.setLevel(initial_level)
+
+
+@pytest.fixture(autouse=True)
+def _resolvable_formatter() -> Generator[None, None, None]:
+    """Let formatter pre-flights pass in project dirs without pyproject.toml.
+
+    Patches the single lookup site behind check_formatter_config. Real formatting
+    is unaffected (the wrapper uses mcp-tools-py's own resolve_steps). Tests of the
+    helper re-patch it.
+
+    Uses patch() rather than monkeypatch: requesting monkeypatch here would
+    delay its teardown past cleanup_test_artifacts, which then runs with the
+    test's own monkeypatches (e.g. of Path.iterdir) still applied.
+    """
+    with patch(
+        "mcp_coder.workflow_steps.commit.resolve_steps",
+        lambda _p: ["isort", "black"],
+    ):
+        yield
 
 
 @pytest.fixture(autouse=True)
