@@ -1,4 +1,4 @@
-name: Upstream mypy check
+name: Upstream compat check
 
 # Triggered by repository_dispatch when an upstream package's main branch changes.
 # Upstream packages: mcp-coder-utils, mcp-workspace, mcp-tools-py.
