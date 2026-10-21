@@ -21,6 +21,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Shared helper `is_branch_linked_to_issue` + `ClosingPRRef` shim re-export
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `ClosingPRRef` shim re-export, `workflow_utils/branch_linkage.py`, `tests/workflow_utils/test_branch_linkage.py`, architecture doc update
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `update_workflow_label()` uses `is_branch_linked_to_issue`
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: re-patch `tests/workflow_utils/test_label_transitions.py`, add closing-PR parametrized test, update `label_transitions.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `validate_branch_issue_linkage()` uses `is_branch_linked_to_issue` (closes #708)
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: update `TestValidateBranchIssueLinkage` tests, change `validate_branch_issue_linkage()` in `create_pr/core.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against `pr_info/steps/summary.md`
+- [ ] PR summary prepared
