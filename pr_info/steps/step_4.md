@@ -78,13 +78,18 @@ if failures: print summary (one line per failed argv + reason); sys.exit(1)
 ## Tests (`tests/install/test_install_post_checks.py`)
 Call the phase directly with `InstallConfig.from_args(namespace(target=tmp_path))` built
 from a `tmp_path/pyproject.toml` that declares the checks, and a `bin_dir` under `tmp_path`.
+Every phase and resolver test is independent of the host `PATH`: it calls
+`monkeypatch.setenv("PATH", ...)` with a `tmp_path` directory it controls (empty for the
+"not found" case), and names fake executables with `exe(name)`. Tool binaries already
+installed on the machine (`mcp-coder`, `mcp-workspace`, `mcp-tools-py`) then cannot
+change the outcome.
 - no checks declared → nothing printed, runner not called
 - all pass → no exit; runner called once per check with the resolved venv path, `cwd=str(local_path)`, `timeout_seconds=300`, `capture_output=False`, and `env["PATH"]` starting with `bin_dir`
 - one fails (return_code 2) → `SystemExit(1)`, summary contains `exit code 2`
 - several fail → all checks run, exactly one summary listing each
 - timeout (`timed_out=True`, `return_code=1`, `execution_error="Process timed out after 300 seconds"`, as the real runner returns) → reason "timed out after 300 s"; this enforces the `timed_out` → `execution_error` → `return_code` order
 - execution error (`execution_error="PermissionError: ..."`) → its text in the summary
-- not found → runner never called for that check, reason "not found"
-- resolution: venv beats `PATH`; `PATH` fallback; `.exe`-suffixed name gets no double `.exe` (Windows-style; use `monkeypatch.setattr(_phases, "exe", ...)` or skip on POSIX); relative path resolved against `local_path`; absolute path used as-is; cwd is never searched, including when `PATH` contains `.` (fake exe in the cwd → "not found")
+- not found (`PATH` set to an empty `tmp_path` dir) → runner never called for that check, reason "not found"
+- resolution: venv beats `PATH` (same `exe(name)` file in `bin_dir` and in a controlled `PATH` dir); `PATH` fallback (file only in the controlled `PATH` dir); `.exe`-suffixed name gets no double `.exe` (Windows-style; use `monkeypatch.setattr(_phases, "exe", ...)` or skip on POSIX); relative path resolved against `local_path`; absolute path used as-is; cwd is never searched, including when `PATH` contains `.` (fake exe in the cwd → "not found")
 - dry-run (`check=True`) → declared argv echoed as `"> ..."` lines, runner not called
 - `install()` driver: on failure the `OK ... complete` line is not printed (patch `ensure_system_uv` and the earlier phases, as `test_install_phases.py` does)
