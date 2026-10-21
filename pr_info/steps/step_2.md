@@ -65,39 +65,55 @@
 
 **A4 — Obsolete test-first import guards (ruff's fix does not touch these).**
 
-These five files guard the import with a test-first block, written before the module
+These files guard a first-party import with a test-first block, written before the module
 existed:
 
 ```python
 try:
-    from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status
+    from mcp_coder.cli.commands.<module> import execute_<command>
 
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = True
-except ImportError:
-    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = False
+    <MODULE>_MODULE_AVAILABLE = True
+except ImportError:          # test_create_pr.py: `except Exception` + traceback print
+    <MODULE>_MODULE_AVAILABLE = False
+
+    execute_<command> = unavailable_command_stub   # only in some files
 ```
 
-- `tests/cli/commands/test_check_branch_status.py`
-- `tests/cli/commands/test_check_branch_status_auto_fixes.py`
-- `tests/cli/commands/test_check_branch_status_ci_waiting.py`
-- `tests/cli/commands/test_check_branch_status_cli_integration.py`
-- `tests/cli/commands/test_check_branch_status_pr_waiting.py`
+| File | Flag | Stub fallback |
+|---|---|---|
+| `tests/cli/commands/test_check_branch_status.py` | `CHECK_BRANCH_STATUS_MODULE_AVAILABLE` | yes |
+| `tests/cli/commands/test_check_branch_status_auto_fixes.py` | `CHECK_BRANCH_STATUS_MODULE_AVAILABLE` | no |
+| `tests/cli/commands/test_check_branch_status_ci_waiting.py` | `CHECK_BRANCH_STATUS_MODULE_AVAILABLE` | no |
+| `tests/cli/commands/test_check_branch_status_cli_integration.py` | `CHECK_BRANCH_STATUS_MODULE_AVAILABLE` | no |
+| `tests/cli/commands/test_check_branch_status_pr_waiting.py` | `CHECK_BRANCH_STATUS_MODULE_AVAILABLE` | no |
+| `tests/cli/commands/test_implement.py` | `IMPLEMENT_MODULE_AVAILABLE` | yes |
+| `tests/cli/commands/test_create_pr.py` | `CREATE_PR_MODULE_AVAILABLE` | yes |
 
 In each file:
-- Delete the `# Test-first approach ...` comment, the `try/except` block and the
-  `CHECK_BRANCH_STATUS_MODULE_AVAILABLE` flag.
-- Delete every `@pytest.mark.skipif(not CHECK_BRANCH_STATUS_MODULE_AVAILABLE, ...)`
-  decorator (class- and function-level).
-- If any test in the file calls `execute_check_branch_status` through the module-level name
+- Delete the `# Test-first approach ...` comment, the whole `try/except` block (including
+  the stub assignment and, in `test_create_pr.py`, the traceback print) and the flag.
+- Delete every `@pytest.mark.skipif(not <MODULE>_MODULE_AVAILABLE, ...)` decorator
+  (class- and function-level).
+- If any test in the file calls the command function through the module-level name
   (not through a function-local import), keep a plain top-level
-  `from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status`.
+  `from mcp_coder.cli.commands.<module> import execute_<command>`.
   Otherwise drop the import entirely.
+- Delete `from tests.cli.commands.conftest import unavailable_command_stub`.
 - If `pytest` becomes unused after the `skipif` removal, B removes it.
 
-Then sweep the rest of `tests/` for the same pattern:
-`search_files(glob="tests/**/*.py", pattern="_MODULE_AVAILABLE|except ImportError")`.
-Apply the same treatment to any other guard around a first-party `mcp_coder` import. Leave
-guards around optional third-party dependencies alone unless A2 already covers them.
+Then delete the now-dead stub helper:
+- `tests/cli/commands/conftest.py`: delete `unavailable_command_stub` (lines 18-20).
+  `argparse` stays: `_make_args` uses it.
+- `tests/cli/commands/test_conftest_helpers.py`: delete the file. Its only test covers the
+  stub.
+
+Finally, confirm nothing is left:
+`search_files(glob="tests/**/*.py", pattern="_MODULE_AVAILABLE|unavailable_command_stub")`
+must find nothing. The remaining `except ImportError` sites in `tests/` are out of A4's
+scope: A2 covers `test_module_exports.py`, `test_module_integration.py` and the mlflow
+file. The `httpx` / `anthropic` guards in the langchain tests (optional packages, used)
+and the `typing` / `typing_extensions` `TypedDict` fallback in `tests/conftest.py` are
+not F401 findings and stay.
 
 ### B. Auto-fix sweep
 
@@ -120,8 +136,8 @@ run format, pylint, mypy, pytest (unit + git_integration)
 ## DATA
 
 No runtime data changes. Each touched test keeps the same pass/skip behaviour. The mlflow
-tests skip via `importorskip` instead of `pytest.skip`. The `check_branch_status` tests
-lose their `skipif`: a broken import now fails collection instead of skipping silently.
+tests skip via `importorskip` instead of `pytest.skip`. The `check_branch_status`,
+`implement` and `create_pr` tests lose their `skipif`: a broken import now fails collection instead of skipping silently.
 
 ## Postcondition
 

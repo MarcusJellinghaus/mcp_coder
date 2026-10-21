@@ -31,7 +31,8 @@ This is mechanical cleanup. There is no new module, API or `__all__` design.
      wrappers. A `hasattr` loop replaces the import-everything-in-a-`try` block.
    - `tests`: obsolete test-first guards around first-party imports
      (`try: import ... / except ImportError: X_MODULE_AVAILABLE = False` plus `skipif`)
-     are deleted. The import becomes plain, or goes away if unused.
+     are deleted, along with the `unavailable_command_stub` fallback they used. The import
+     becomes plain, or goes away if unused.
 3. **Import smoke tests assert on what they import.** The import stays and is now "used".
 4. **Lint policy.** ruff `F` owns unused-import detection. pylint `W0611` stays disabled,
    with an updated comment that explains why: pylint flags the `X as X` re-export
@@ -57,7 +58,9 @@ nothing has to be restored afterwards.
 
 ## Files modified
 
-No files are created or deleted, apart from the `pr_info/steps/` plan files.
+No files are created. One test file is deleted in step 2
+(`tests/cli/commands/test_conftest_helpers.py`). The `pr_info/steps/` plan files are
+not counted.
 
 Step 1:
 - `tests/conftest.py`: add `git_repo`, `setup_git_config`
@@ -81,7 +84,10 @@ Step 2 (hand edits):
 - `tests/cli/commands/test_check_branch_status_ci_waiting.py`
 - `tests/cli/commands/test_check_branch_status_cli_integration.py`
 - `tests/cli/commands/test_check_branch_status_pr_waiting.py`
-- any further test file with the same first-party guard pattern (found by the A4 sweep)
+- `tests/cli/commands/test_implement.py`
+- `tests/cli/commands/test_create_pr.py`
+- `tests/cli/commands/conftest.py`: delete `unavailable_command_stub`
+- `tests/cli/commands/test_conftest_helpers.py`: **deleted** (only tested the stub)
 
 Step 2 (`ruff --fix` sweep): about 60 further test files under `tests/`, with import lines
 removed only.

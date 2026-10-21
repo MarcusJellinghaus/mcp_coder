@@ -13,3 +13,9 @@ except ImportError` guards in `tests/cli/commands/test_check_branch_status*.py`.
   files. They would hide a broken import as silent skips.
 - **Plain top-level import where the function is used; drop it where unused.**
 - **Sweep the rest of `tests/` for the same first-party guard pattern** within Step 2.
+- **Name `test_implement.py` and `test_create_pr.py` explicitly** instead of relying on
+  the sweep. They have the same guard (`test_create_pr.py` with `except Exception` and a
+  traceback print). Agreed in chat after the readiness check ("Yes").
+- **Delete `unavailable_command_stub` and `test_conftest_helpers.py`.** Once the three
+  stub fallbacks are gone, the helper is only exercised by its own test. Agreed in the
+  same reply.
