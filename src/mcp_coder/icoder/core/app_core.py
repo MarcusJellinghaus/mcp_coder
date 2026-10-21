@@ -11,10 +11,10 @@ must consciously preserve this gate. Full threat model: I5.6 / #1056.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, Literal
+from typing import TYPE_CHECKING, Literal
 
 from mcp_coder.icoder.core.colors import DEFAULT_PROMPT_COLOR, validate_color
 from mcp_coder.icoder.core.command_history import CommandHistory

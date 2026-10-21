@@ -7,9 +7,10 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Iterator
+from typing import IO, TYPE_CHECKING, Any
 
 from mcp_coder.icoder.core.types import EventEntry
 
@@ -28,7 +29,7 @@ def _make_log_filename() -> str:
         on some platforms (notably Windows), so callers must still
         guard against collisions.
     """
-    timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H-%M-%S-%f")
+    timestamp = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H-%M-%S-%f")
     return f"icoder_{timestamp}.jsonl"
 
 
@@ -236,7 +237,7 @@ def emit_session_start(
     event_log: EventLog,
     *,
     provider: str,
-    runtime_info: "RuntimeInfo | None" = None,
+    runtime_info: RuntimeInfo | None = None,
     session_id: str | None = None,
 ) -> EventEntry:
     """Emit a ``session_start`` event into ``event_log``.
@@ -278,7 +279,7 @@ def iter_events(path: Path | str) -> Iterator[dict[str, Any]]:
     Raises FileNotFoundError if path does not exist.
     Raises json.JSONDecodeError on malformed lines (no swallowing).
     """
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             stripped = line.strip()
             if stripped:

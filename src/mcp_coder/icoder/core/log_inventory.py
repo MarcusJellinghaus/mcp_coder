@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from mcp_coder.icoder.core.event_log import iter_events
@@ -33,12 +33,12 @@ def _parse_iso_from_name(path: Path) -> datetime | None:
         parsed = datetime.strptime(raw, fmt)
     except ValueError:
         return None
-    return parsed.replace(tzinfo=timezone.utc)
+    return parsed.replace(tzinfo=UTC)
 
 
 def _mtime_dt(path: Path) -> datetime:
     """Return the file's mtime as a UTC-aware datetime."""
-    return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
 
 
 def list_icoder_logs(

@@ -6,7 +6,7 @@ Handles JSON file I/O for session tracking and VSCode process checking.
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -90,7 +90,7 @@ def save_sessions(store: VSCodeClaudeSessionStore) -> None:
     """
     sessions_file = get_sessions_file_path()
     sessions_file.parent.mkdir(parents=True, exist_ok=True)
-    store["last_updated"] = datetime.now(timezone.utc).isoformat()
+    store["last_updated"] = datetime.now(UTC).isoformat()
     sessions_file.write_text(json.dumps(store, indent=2), encoding="utf-8")
 
 
@@ -604,7 +604,7 @@ def is_session_active(session: VSCodeClaudeSession) -> bool:
         started_at_str = session.get("started_at", "")
         try:
             age = (
-                datetime.now(timezone.utc) - datetime.fromisoformat(started_at_str)
+                datetime.now(UTC) - datetime.fromisoformat(started_at_str)
             ).total_seconds()
         except (ValueError, TypeError):
             age = float("inf")

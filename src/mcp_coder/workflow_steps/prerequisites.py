@@ -7,7 +7,6 @@ git-cleanliness determination lives here (the middle tier) so ``implement`` and
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
 from mcp_coder.mcp_workspace_git import get_full_status, is_working_directory_clean
@@ -59,9 +58,7 @@ def check_git_clean(project_dir: Path) -> bool:
         return False
 
 
-def is_branch_not_base(
-    current_branch: Optional[str], base_branch: Optional[str]
-) -> bool:
+def is_branch_not_base(current_branch: str | None, base_branch: str | None) -> bool:
     """Check that the current branch is a valid, non-base feature branch.
 
     Pure comparison step: it does not resolve either branch itself. Callers

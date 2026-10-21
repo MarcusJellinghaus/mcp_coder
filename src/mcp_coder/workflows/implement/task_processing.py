@@ -8,7 +8,6 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
@@ -99,7 +98,7 @@ def _count_incomplete_tasks(project_dir: Path) -> int:
     )
 
 
-def _run_mypy_check(project_dir: Path) -> Optional[str]:
+def _run_mypy_check(project_dir: Path) -> str | None:
     """Run mypy check using our wrapper and return error output or None if clean.
 
     Args:
@@ -290,7 +289,7 @@ def check_and_fix_mypy(
         return False
 
 
-def read_and_clear_blocked(project_dir: Path) -> Optional[str]:
+def read_and_clear_blocked(project_dir: Path) -> str | None:
     """Read the blocked marker and delete it.
 
     Args:

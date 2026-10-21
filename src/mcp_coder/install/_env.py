@@ -71,7 +71,7 @@ class InstallConfig:
     post_install_checks: tuple[tuple[str, ...], ...]
 
     @classmethod
-    def from_args(cls, args: argparse.Namespace) -> "InstallConfig":
+    def from_args(cls, args: argparse.Namespace) -> InstallConfig:
         """Resolve a parsed argument namespace into an InstallConfig.
 
         Args:

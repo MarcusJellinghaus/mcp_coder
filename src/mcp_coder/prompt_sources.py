@@ -7,7 +7,6 @@ path detection and data-file lookup.
 import glob
 import os
 from pathlib import Path
-from typing import Optional
 
 from .utils.data_files import find_data_file
 
@@ -48,7 +47,7 @@ def _is_package_relative_path(source: str) -> bool:
     return ("/" in source or "\\" in source) and not source.startswith(".")
 
 
-def _resolve_package_path(source: str) -> Optional[Path]:
+def _resolve_package_path(source: str) -> Path | None:
     """Resolve a package-relative path using find_data_file.
 
     This function attempts to parse the source as 'package_name/relative_path'
@@ -131,7 +130,7 @@ def _load_content(source: str) -> str:
             resolved_path = _resolve_package_path(source)
             if resolved_path and resolved_path.exists():
                 try:
-                    with open(resolved_path, "r", encoding="utf-8") as f:
+                    with open(resolved_path, encoding="utf-8") as f:
                         return f.read()
                 except (  # noqa: S110 -- falls through to normal path handling
                     Exception
@@ -148,7 +147,7 @@ def _load_content(source: str) -> str:
             combined_content = []
             for file_path in sorted(md_files):  # Sort for consistent ordering
                 try:
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    with open(file_path, encoding="utf-8") as f:
                         content = f.read()
                         combined_content.append(content)
                 except (
@@ -170,7 +169,7 @@ def _load_content(source: str) -> str:
             for file_path in sorted(matched_files):
                 if file_path.endswith(".md"):
                     try:
-                        with open(file_path, "r", encoding="utf-8") as f:
+                        with open(file_path, encoding="utf-8") as f:
                             content = f.read()
                             combined_content.append(content)
                     except (
@@ -185,7 +184,7 @@ def _load_content(source: str) -> str:
         else:
             # Single file
             try:
-                with open(source, "r", encoding="utf-8") as f:
+                with open(source, encoding="utf-8") as f:
                     return f.read()
             except FileNotFoundError as exc:
                 raise FileNotFoundError(f"File '{source}' not found") from exc

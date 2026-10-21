@@ -13,7 +13,7 @@ as plain bools.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -59,7 +59,7 @@ def capture_detection_snapshot() -> DetectionSnapshot:
         processes=tuple(processes),
         window_titles=tuple(window_titles),
         pids=frozenset(pids),
-        captured_at=datetime.now(timezone.utc),
+        captured_at=datetime.now(UTC),
     )
 
 

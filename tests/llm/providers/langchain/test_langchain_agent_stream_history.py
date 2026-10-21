@@ -15,7 +15,7 @@ import threading
 import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -270,7 +270,7 @@ class TestRunAgentStreamHistory:
 
         from mcp_coder.llm.providers.langchain import _resolve_session_id
 
-        next_sid = _resolve_session_id(cast(Optional[str], done.get("session_id")))
+        next_sid = _resolve_session_id(cast(str | None, done.get("session_id")))
         uuid.UUID(next_sid)
 
     async def test_no_terminal_event_keeps_session_id_of_stored_session(self) -> None:

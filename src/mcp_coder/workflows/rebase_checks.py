@@ -5,8 +5,9 @@ failure keys so the orchestrator in ``rebase.py`` can compare a pre-rebase
 baseline against a post-rebase verification run as a pure set difference.
 """
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from mcp_coder.mcp_tools_py import (
     MypyResult,

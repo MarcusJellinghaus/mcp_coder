@@ -11,9 +11,9 @@ review workflow can override them per review round.
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from mcp_coder.checks.branch_status import get_failed_jobs_summary
 from mcp_coder.constants import PROMPTS_FILE_PATH
@@ -59,7 +59,7 @@ class CIFixConfig:
     project_dir: Path
     provider: str
     env_vars: dict[str, str]
-    mcp_config: Optional[str]
+    mcp_config: str | None
     settings_file: str | None = None
     analysis_prompt_header: str = "CI Failure Analysis Prompt"
     fix_prompt_header: str = "CI Fix Prompt"
@@ -84,8 +84,8 @@ def _run_ci_analysis(
     config: CIFixConfig,
     failed_summary: dict[str, Any],
     fix_attempt: int,
-    branch_name: Optional[str] = None,
-) -> Optional[str]:
+    branch_name: str | None = None,
+) -> str | None:
     """Run CI failure analysis and return problem description.
 
     Args:
@@ -178,7 +178,7 @@ def _run_ci_fix(
     config: CIFixConfig,
     problem_description: str,
     fix_attempt: int,
-    branch_name: Optional[str] = None,
+    branch_name: str | None = None,
 ) -> bool:
     """Attempt to fix CI failure. Returns True if push succeeded.
 
@@ -292,7 +292,7 @@ def _classify_ci_exception(exc: Exception) -> str:
         if retry_after is not None:
             when = f"retry after {retry_after}s"
         elif reset_epoch is not None:
-            reset_time = datetime.fromtimestamp(int(reset_epoch), tz=timezone.utc)
+            reset_time = datetime.fromtimestamp(int(reset_epoch), tz=UTC)
             when = f"resets at {reset_time.isoformat()}"
         else:
             when = "reset time unknown"
@@ -304,8 +304,8 @@ def _classify_ci_exception(exc: Exception) -> str:
 def _poll_for_ci_completion(
     ci_manager: CIResultsManager,
     branch: str,
-    expected_sha: Optional[str] = None,
-) -> tuple[Optional[CIStatusData], bool]:
+    expected_sha: str | None = None,
+) -> tuple[CIStatusData | None, bool]:
     """Poll for CI run completion.
 
     Args:
@@ -460,7 +460,7 @@ def _poll_for_ci_completion(
 
 def _wait_for_new_ci_run(
     ci_manager: CIResultsManager, branch: str, previous_run_ids: set[int]
-) -> tuple[Optional[CIStatusData], bool]:
+) -> tuple[CIStatusData | None, bool]:
     """Wait for a new CI run to start after pushing changes.
 
     Args:
@@ -507,7 +507,7 @@ def _run_ci_analysis_and_fix(
     ci_status: CIStatusData,
     ci_manager: CIResultsManager,
     fix_attempt: int,
-) -> tuple[bool, Optional[bool]]:
+) -> tuple[bool, bool | None]:
     """Run CI failure analysis and attempt a fix.
 
     Args:
@@ -594,13 +594,13 @@ def check_and_fix_ci(
     project_dir: Path,
     branch: str,
     provider: str,
-    mcp_config: Optional[str] = None,
+    mcp_config: str | None = None,
     settings_file: str | None = None,
     *,
     analysis_prompt_header: str = "CI Failure Analysis Prompt",
     fix_prompt_header: str = "CI Fix Prompt",
     session_dir_name: str = "implement_sessions",
-    expected_sha: Optional[str] = None,
+    expected_sha: str | None = None,
 ) -> bool:
     """Check CI status after finalisation and attempt fixes if needed.
 

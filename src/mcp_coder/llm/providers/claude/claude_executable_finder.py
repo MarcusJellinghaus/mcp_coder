@@ -4,18 +4,18 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 from ....utils.subprocess_runner import SubprocessError, execute_command
 
 
-def _get_claude_search_paths() -> List[str]:
+def _get_claude_search_paths() -> list[str]:
     """Get list of common Claude installation paths to search.
 
     Returns:
         List of potential Claude executable paths
     """
-    paths_list: List[str] = []
+    paths_list: list[str] = []
 
     # First check PATH (highest priority)
     # On Windows, prefer .exe to avoid wrapper scripts (.bat/.cmd)
@@ -83,7 +83,7 @@ def find_claude_executable(
     test_execution: bool = False,
     return_none_if_not_found: bool = False,
     fast_mode: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """Find Claude Code CLI executable with flexible options.
 
     Args:
@@ -149,7 +149,7 @@ def find_claude_executable(
     )
 
 
-def setup_claude_path() -> Optional[str]:
+def setup_claude_path() -> str | None:
     """Setup PATH to include Claude CLI location if found.
 
     This function attempts to find Claude CLI and temporarily add its directory

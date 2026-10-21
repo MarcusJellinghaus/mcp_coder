@@ -332,7 +332,7 @@ def parse_stream_json_file(file_path: Path) -> ParsedStreamResponse:
     try:
         content = file_path.read_text(encoding="utf-8")
         return _parse_stream_lines(content.splitlines())
-    except (OSError, IOError) as e:
+    except OSError as e:
         logger.error(f"Failed to read stream file {file_path}: {e}")
         return ParsedStreamResponse(
             text="",

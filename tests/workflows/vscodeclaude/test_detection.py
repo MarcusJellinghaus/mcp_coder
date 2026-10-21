@@ -13,7 +13,7 @@ sessions helpers, so no real VSCode is required. The key behaviours under test:
   the result into immutable tuples.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -40,7 +40,7 @@ def _session(
     """Build a session dict with sensible defaults for detection tests."""
     if started_at is None:
         # Default well outside the launch grace window.
-        started_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        started_at = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
     return {
         "folder": folder,
         "repo": repo,
@@ -67,7 +67,7 @@ def _snapshot(
         processes=processes,
         window_titles=window_titles,
         pids=pids,
-        captured_at=captured_at or datetime.now(timezone.utc),
+        captured_at=captured_at or datetime.now(UTC),
     )
 
 
@@ -250,7 +250,7 @@ class TestGatherSignalsGrace:
         folder = str(tmp_path)
         _force_windows(monkeypatch, enabled=False)
         _stub_pid_alive(monkeypatch, False)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         session = _session(folder, started_at=(now - timedelta(seconds=5)).isoformat())
 
         signals = gather_signals(session, _snapshot(captured_at=now))
@@ -265,7 +265,7 @@ class TestGatherSignalsGrace:
         folder = str(tmp_path)
         _force_windows(monkeypatch, enabled=False)
         _stub_pid_alive(monkeypatch, False)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         session = _session(
             folder, started_at=(now - timedelta(seconds=600)).isoformat()
         )

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -25,7 +25,7 @@ def format_picker_row(summary: LogSummary) -> str:
     return f'{when} · {prov} · {summary.n_turns} turns · "{summary.first_prompt}"'
 
 
-class SessionPickerScreen(ModalScreen[Optional[Path]]):
+class SessionPickerScreen(ModalScreen[Path | None]):
     """Modal session picker. Returns the selected log Path, or None on Esc."""
 
     BINDINGS = [Binding("escape", "cancel", "Cancel", show=False)]
@@ -61,7 +61,7 @@ class SessionPickerScreen(ModalScreen[Optional[Path]]):
         self.dismiss(None)
 
 
-class _StartupPickerApp(App[Optional[Path]]):
+class _StartupPickerApp(App[Path | None]):
     """Tiny App that hosts a single SessionPickerScreen at startup."""
 
     def __init__(self, summaries: list[LogSummary]) -> None:
@@ -71,7 +71,7 @@ class _StartupPickerApp(App[Optional[Path]]):
     def on_mount(self) -> None:
         """Push the picker; its dismissed value becomes the App's exit value."""
 
-        def _on_pick(value: Optional[Path]) -> None:
+        def _on_pick(value: Path | None) -> None:
             self.exit(value)
 
         self.push_screen(SessionPickerScreen(self._summaries), _on_pick)
@@ -80,8 +80,8 @@ class _StartupPickerApp(App[Optional[Path]]):
 def run_startup_picker(
     summaries: list[LogSummary],
     *,
-    app_factory: Optional[Callable[[list[LogSummary]], App[Optional[Path]]]] = None,
-) -> Optional[Path]:
+    app_factory: Callable[[list[LogSummary]], App[Path | None]] | None = None,
+) -> Path | None:
     """Run a tiny modal picker app and return the user's selection.
 
     Used by the icoder CLI to show a session picker synchronously before

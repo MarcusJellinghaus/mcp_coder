@@ -6,7 +6,7 @@ Tests cover:
 - Stale bot process warnings
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -105,9 +105,7 @@ class TestValidateIssues:
         ]
 
         # Create event timestamp 150 minutes ago (over 120 min threshold)
-        stale_timestamp = (
-            datetime.now(timezone.utc) - timedelta(minutes=150)
-        ).isoformat()
+        stale_timestamp = (datetime.now(UTC) - timedelta(minutes=150)).isoformat()
 
         mock_issue_manager = MagicMock()
         mock_issue_manager.get_issue_events.return_value = [
@@ -164,9 +162,7 @@ class TestValidateIssues:
         ]
 
         # Create event timestamp 10 minutes ago (under 120 min threshold)
-        recent_timestamp = (
-            datetime.now(timezone.utc) - timedelta(minutes=10)
-        ).isoformat()
+        recent_timestamp = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
 
         mock_issue_manager = MagicMock()
         mock_issue_manager.get_issue_events.return_value = [
@@ -206,9 +202,7 @@ class TestValidateIssues:
         ]
 
         # Create stale timestamp
-        stale_timestamp = (
-            datetime.now(timezone.utc) - timedelta(minutes=150)
-        ).isoformat()
+        stale_timestamp = (datetime.now(UTC) - timedelta(minutes=150)).isoformat()
 
         mock_issue_manager = MagicMock()
         mock_issue_manager.get_issue_events.return_value = [

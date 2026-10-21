@@ -27,7 +27,7 @@ import json
 import tomllib
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Any, Dict, Optional, TypedDict
+from typing import Any, TypedDict
 
 
 class LabelLookups(TypedDict):
@@ -39,7 +39,7 @@ class LabelLookups(TypedDict):
     name_to_id: dict[str, str]  # label_name -> internal_id
 
 
-def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
+def build_label_lookups(labels_config: dict[str, Any]) -> LabelLookups:
     """Build lookup dictionaries from label configuration.
 
     Args:
@@ -75,7 +75,7 @@ def build_label_lookups(labels_config: Dict[str, Any]) -> LabelLookups:
     )
 
 
-def validate_labels_config(labels_config: Dict[str, Any]) -> None:
+def validate_labels_config(labels_config: dict[str, Any]) -> None:
     """Validate label config constraints. Raises ValueError on problems.
 
     Checks:
@@ -114,7 +114,7 @@ def validate_labels_config(labels_config: Dict[str, Any]) -> None:
 # The TOML boilerplate below duplicates utils.pyproject_config._load_pyproject on
 # purpose: mcp_coder.config sits below mcp_coder.utils in the layer stack, so it
 # cannot import pyproject_config.
-def _get_labels_config_from_pyproject(project_dir: Path) -> Optional[Path]:
+def _get_labels_config_from_pyproject(project_dir: Path) -> Path | None:
     """Read labels-config from [tool.mcp-coder] in pyproject.toml.
 
     Returns:
@@ -137,8 +137,8 @@ def _get_labels_config_from_pyproject(project_dir: Path) -> Optional[Path]:
 
 
 def get_labels_config_path(
-    project_dir: Optional[Path] = None,
-    config_override: Optional[Path] = None,
+    project_dir: Path | None = None,
+    config_override: Path | None = None,
 ) -> Path | Traversable:
     """Get path to labels.json configuration file.
 
@@ -177,7 +177,7 @@ def get_labels_config_path(
     return resources.files("mcp_coder.config") / "labels.json"
 
 
-def load_labels_config(config_path: Path | Traversable) -> Dict[str, Any]:
+def load_labels_config(config_path: Path | Traversable) -> dict[str, Any]:
     """Load label configuration from JSON file.
 
     Args:
@@ -194,7 +194,7 @@ def load_labels_config(config_path: Path | Traversable) -> Dict[str, Any]:
     """
     if isinstance(config_path, Path) and not config_path.exists():
         raise FileNotFoundError(f"Label configuration not found: {config_path}")
-    config: Dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
+    config: dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
 
     # Validate required keys
     if "workflow_labels" not in config:

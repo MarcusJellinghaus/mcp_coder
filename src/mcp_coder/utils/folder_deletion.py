@@ -19,10 +19,10 @@ import sys
 import tempfile
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Union
 
 logger = logging.getLogger(__name__)
 
@@ -274,9 +274,9 @@ def _handle_permission_error(
 
 
 def safe_delete_folder(
-    path: Union[Path, str],
+    path: Path | str,
     *,
-    staging_dir: Union[Path, str, None] = None,
+    staging_dir: Path | str | None = None,
     cleanup_staging: bool = True,
 ) -> DeletionResult:
     """Safely delete a folder, handling locked files via staging directory.

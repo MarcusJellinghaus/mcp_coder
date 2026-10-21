@@ -7,7 +7,7 @@ mlflow_logger.py already imports mlflow.
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -69,9 +69,7 @@ def query_sqlite_tracking(
         # Convert epoch milliseconds to UTC datetime
         last_run_time: datetime | None = None
         if last_run_epoch_ms is not None:
-            last_run_time = datetime.fromtimestamp(
-                last_run_epoch_ms / 1000.0, tz=timezone.utc
-            )
+            last_run_time = datetime.fromtimestamp(last_run_epoch_ms / 1000.0, tz=UTC)
 
         # Check if any run exists with start_time >= since
         test_prompt_logged = False

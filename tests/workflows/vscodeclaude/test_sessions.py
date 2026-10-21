@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -1279,7 +1279,7 @@ class TestIsSessionActiveFallbackChain:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Within grace, PID alive -> active (title check skipped)."""
-        recent = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
+        recent = (datetime.now(UTC) - timedelta(seconds=5)).isoformat()
         folder = tmp_path / "mcp_coder_542"
         folder.mkdir()
 
@@ -1325,7 +1325,7 @@ class TestIsSessionActiveFallbackChain:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Within grace, PID dead + cmdline match w/ new PID -> refresh + active."""
-        recent = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
+        recent = (datetime.now(UTC) - timedelta(seconds=5)).isoformat()
         folder = tmp_path / "mcp_coder_542"
         folder.mkdir()
 
@@ -1386,7 +1386,7 @@ class TestIsSessionActiveFallbackChain:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Within grace, PID dead + cmdline miss -> inactive with INFO summary."""
-        recent = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
+        recent = (datetime.now(UTC) - timedelta(seconds=5)).isoformat()
         folder = tmp_path / "mcp_coder_542"
         folder.mkdir()
 
@@ -1653,7 +1653,7 @@ class TestLaunchGrace:
 
     @staticmethod
     def _started_at(seconds_ago: float) -> str:
-        return (datetime.now(timezone.utc) - timedelta(seconds=seconds_ago)).isoformat()
+        return (datetime.now(UTC) - timedelta(seconds=seconds_ago)).isoformat()
 
     def test_established_no_title_returns_false_no_fallback(
         self,

@@ -1,7 +1,7 @@
 """Test configuration loading for VSCode Claude."""
 
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import pytest
 
@@ -21,7 +21,7 @@ class TestConfiguration:
     ) -> None:
         """Loads config with valid workspace_base."""
         # Mock get_config_values directly
-        _ConfigVal = Union[str, bool, int, list[Any], None]
+        _ConfigVal = str | bool | int | list[Any] | None
         mock_config: dict[tuple[str, str], _ConfigVal] = {
             ("vscodeclaude", "workspace_base"): str(tmp_path),
             ("vscodeclaude", "max_sessions"): 5,
@@ -111,7 +111,7 @@ class TestConfiguration:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Loads repo-specific setup commands."""
-        _ConfigVal = Union[str, bool, int, list[Any], None]
+        _ConfigVal = str | bool | int | list[Any] | None
         mock_config: dict[tuple[str, str], _ConfigVal] = {
             (
                 "coordinator.repos.mcp_coder",
@@ -143,7 +143,7 @@ class TestConfiguration:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Parses setup_commands_macos when supplied as a JSON-string list."""
-        _ConfigVal = Union[str, bool, int, list[Any], None]
+        _ConfigVal = str | bool | int | list[Any] | None
         mock_config: dict[tuple[str, str], _ConfigVal] = {
             ("coordinator.repos.mcp_coder", "setup_commands_macos"): '["a", "b"]',
         }
@@ -165,7 +165,7 @@ class TestConfiguration:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Wraps a non-JSON string value for setup_commands_macos as single-item list."""
-        _ConfigVal = Union[str, bool, int, list[Any], None]
+        _ConfigVal = str | bool | int | list[Any] | None
         mock_config: dict[tuple[str, str], _ConfigVal] = {
             ("coordinator.repos.mcp_coder", "setup_commands_macos"): "brew install x",
         }
@@ -187,7 +187,7 @@ class TestConfiguration:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Omits setup_commands_macos from result when not configured."""
-        _ConfigVal = Union[str, bool, int, list[Any], None]
+        _ConfigVal = str | bool | int | list[Any] | None
         mock_config: dict[tuple[str, str], _ConfigVal] = {}
 
         def mock_get_config_values(

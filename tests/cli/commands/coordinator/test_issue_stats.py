@@ -34,7 +34,7 @@ def test_labels_config(tmp_path: Path) -> dict[str, Any]:
         / "config"
         / "test_labels.json"
     )
-    with open(config_path, "r", encoding="utf-8") as f:
+    with open(config_path, encoding="utf-8") as f:
         return cast(dict[str, Any], json.load(f))
 
 

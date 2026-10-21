@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 from unittest.mock import patch
 
 import pytest
@@ -23,11 +22,11 @@ pytestmark = pytest.mark.textual_integration
 
 def _make_branch_info(
     *,
-    branch: Optional[str] = "main",
+    branch: str | None = "main",
     is_dirty: bool = False,
-    issue_number: Optional[int] = None,
-    issue_title: Optional[str] = None,
-    status_label: Optional[str] = None,
+    issue_number: int | None = None,
+    issue_title: str | None = None,
+    status_label: str | None = None,
 ) -> BranchInfo:
     return BranchInfo(
         is_git_repo=True,
@@ -36,7 +35,7 @@ def _make_branch_info(
         issue_number=issue_number,
         issue_title=issue_title,
         issue_status_label=status_label,
-        cache_last_checked=datetime.now(tz=timezone.utc),
+        cache_last_checked=datetime.now(tz=UTC),
     )
 
 
@@ -332,9 +331,9 @@ async def test_pr_result_none_clears_stale_pr_number(
     app = make_icoder_app(runtime_info=runtime_info)
     info = _make_branch_info(branch="42-x", issue_number=42, issue_title="t")
 
-    pr_results: list[Optional[int]] = [77, None]
+    pr_results: list[int | None] = [77, None]
 
-    def fetch_pr(self: BranchInfoService, _issue: int) -> Optional[int]:
+    def fetch_pr(self: BranchInfoService, _issue: int) -> int | None:
         return pr_results.pop(0)
 
     with (
@@ -373,7 +372,7 @@ async def test_stale_pr_worker_exception_does_not_set_failed_flag(
 
     def fetch_pr_blocking_then_raise(
         self: BranchInfoService, _issue: int
-    ) -> Optional[int]:
+    ) -> int | None:
         block.wait(timeout=5)
         raise RuntimeError("network down")
 

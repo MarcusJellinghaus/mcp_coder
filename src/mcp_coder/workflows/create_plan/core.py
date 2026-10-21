@@ -9,7 +9,6 @@ import sys
 import time
 from dataclasses import replace
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
@@ -186,7 +185,7 @@ def run_planning_prompts(
     project_dir: Path,
     issue_data: IssueData,
     provider: str,
-    mcp_config: Optional[str] = None,
+    mcp_config: str | None = None,
     settings_file: str | None = None,
 ) -> tuple[bool, WorkflowFailure | None]:
     """Execute three planning prompts with session continuation.
@@ -448,7 +447,7 @@ def run_create_plan_workflow(
     issue_number: int,
     project_dir: Path,
     provider: str,
-    mcp_config: Optional[str] = None,
+    mcp_config: str | None = None,
     settings_file: str | None = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,

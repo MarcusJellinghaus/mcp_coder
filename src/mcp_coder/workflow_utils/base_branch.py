@@ -11,7 +11,6 @@ of a feature branch by checking multiple sources in priority order:
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.mcp_workspace_git import (
     MERGE_BASE_DISTANCE_THRESHOLD,
@@ -37,9 +36,9 @@ class BaseBranchSource(Enum):
 
 def detect_base_branch(
     project_dir: Path,
-    current_branch: Optional[str] = None,
-    issue_data: Optional[IssueData] = None,
-) -> Optional[str]:
+    current_branch: str | None = None,
+    issue_data: IssueData | None = None,
+) -> str | None:
     """Detect the base branch for the current feature branch.
 
     See detect_base_branch_with_source for the detection priority.
@@ -58,9 +57,9 @@ def detect_base_branch(
 
 def detect_base_branch_with_source(
     project_dir: Path,
-    current_branch: Optional[str] = None,
-    issue_data: Optional[IssueData] = None,
-) -> Optional[tuple[str, BaseBranchSource]]:
+    current_branch: str | None = None,
+    issue_data: IssueData | None = None,
+) -> tuple[str, BaseBranchSource] | None:
     """Detect the base branch and the source it was detected from.
 
     Detection priority:
@@ -130,7 +129,7 @@ def detect_base_branch_with_source(
     return None
 
 
-def check_base_branch_on_origin(project_dir: Path, base_branch: str) -> Optional[str]:
+def check_base_branch_on_origin(project_dir: Path, base_branch: str) -> str | None:
     """Check that the base branch exists on origin.
 
     Asks the remote directly via ``git ls-remote``, so it works in a fresh
@@ -156,7 +155,7 @@ def check_base_branch_on_origin(project_dir: Path, base_branch: str) -> Optional
     return f"{message} ({detail})" if detail else message
 
 
-def _detect_from_pr(project_dir: Path, current_branch: str) -> Optional[str]:
+def _detect_from_pr(project_dir: Path, current_branch: str) -> str | None:
     """Detect base branch from open PR.
 
     Args:
@@ -189,8 +188,8 @@ def _detect_from_pr(project_dir: Path, current_branch: str) -> Optional[str]:
 def _detect_from_issue(
     project_dir: Path,
     current_branch: str,
-    issue_data: Optional[IssueData] = None,
-) -> Optional[str]:
+    issue_data: IssueData | None = None,
+) -> str | None:
     """Detect base branch from linked issue.
 
     If issue_data is provided, uses its base_branch directly.
@@ -243,7 +242,7 @@ def _detect_from_issue(
         return None
 
 
-def _detect_default_branch(project_dir: Path) -> Optional[str]:
+def _detect_default_branch(project_dir: Path) -> str | None:
     """Detect default branch (main/master).
 
     Args:

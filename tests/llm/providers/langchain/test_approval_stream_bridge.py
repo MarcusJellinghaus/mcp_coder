@@ -128,7 +128,7 @@ class _FakeBridge:
         self._pending = max(0, self._pending - 1)
 
 
-def _as_bridge(bridge: _FakeBridge) -> "ApprovalBridge":
+def _as_bridge(bridge: _FakeBridge) -> ApprovalBridge:
     """Assert (through mypy) that the fake really satisfies the Protocol.
 
     Args:

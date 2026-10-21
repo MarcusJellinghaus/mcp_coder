@@ -6,7 +6,7 @@ import os
 import sqlite3
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -86,7 +86,7 @@ class TestMLflowIntegration:
 
         # Simulate a complete conversation storage workflow
         prompt = "What is machine learning?"
-        response_data: Dict[str, Any] = {
+        response_data: dict[str, Any] = {
             "provider": "claude",
             "session_id": "test-session-123",
             "text": "Machine learning is...",
@@ -115,7 +115,7 @@ class TestMLflowIntegration:
             assert os.path.exists(file_path)
 
             # Verify file contains correct data
-            with open(file_path, "r") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
                 assert data["prompt"] == prompt
                 assert data["response_data"] == response_data
@@ -171,7 +171,7 @@ class TestMLflowIntegration:
             ):
                 # Should not raise exceptions even with MLflow errors
                 prompt = "Test prompt"
-                response_data: Dict[str, Any] = {
+                response_data: dict[str, Any] = {
                     "provider": "claude",
                     "session_id": "test-session-456",
                     "text": "Test response",
@@ -192,7 +192,7 @@ class TestMLflowIntegration:
                     assert os.path.exists(file_path)
 
                     # File should contain the conversation data
-                    with open(file_path, "r") as f:
+                    with open(file_path, encoding="utf-8") as f:
                         import json
 
                         data = json.load(f)
@@ -254,7 +254,7 @@ class TestMLflowWithRealInstallation:
 
         # Simulate logging a conversation
         prompt = "Test prompt for SQLite backend"
-        response_data: Dict[str, Any] = {
+        response_data: dict[str, Any] = {
             "text": "Response for SQLite test",
             "session_id": "sqlite-test-session-789",
             "version": "1.0",

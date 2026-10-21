@@ -6,7 +6,7 @@ only restricts src modules to the ``mcp_coder.mcp_tools_py`` shim).
 """
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -29,8 +29,8 @@ def _make_test(nodeid: str, outcome: str) -> Test:
 
 
 def _make_report(
-    tests: Optional[list[Test]] = None,
-    collectors: Optional[list[Collector]] = None,
+    tests: list[Test] | None = None,
+    collectors: list[Collector] | None = None,
 ) -> PytestReport:
     """Build a minimal ``PytestReport`` around the given tests/collectors."""
     return PytestReport(
@@ -46,7 +46,7 @@ def _make_report(
 
 
 def _pytest_results(
-    report: PytestReport, error_info: Optional[dict[str, Any]] = None
+    report: PytestReport, error_info: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """Wrap a report in the dict shape ``check_code_with_pytest`` returns."""
     return {

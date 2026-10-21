@@ -9,7 +9,6 @@ accordingly. Runs inside the Jenkins job's own checkout, dispatched from
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.mcp_workspace_git import get_current_branch_name
 from mcp_coder.mcp_workspace_github import IssueManager, PullRequestManager
@@ -23,14 +22,14 @@ _POLL_ATTEMPTS = 6
 _POLL_INTERVAL_SECONDS = 5
 
 
-def _poll_mergeable_state(project_dir: Path, branch_name: str) -> Optional[str]:
+def _poll_mergeable_state(project_dir: Path, branch_name: str) -> str | None:
     """Poll ``find_pull_request_by_head`` for a settled mergeable_state.
 
     Returns:
         The last observed mergeable_state (may be "unknown" or None if the
         PR disappeared) after the loop ends.
     """
-    state: Optional[str] = None
+    state: str | None = None
     for attempt in range(_POLL_ATTEMPTS):
         prs = PullRequestManager(project_dir).find_pull_request_by_head(branch_name)
         state = prs[0]["mergeable_state"] if prs else None

@@ -1,7 +1,7 @@
 """Tests for mlflow_db_utils — raw SQLite queries for MLflow tracking."""
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from mcp_coder.llm.mlflow_db_utils import TrackingStats, query_sqlite_tracking
@@ -57,7 +57,7 @@ class TestTrackingStats:
     """Tests for the TrackingStats dataclass."""
 
     def test_dataclass_fields(self) -> None:
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         stats = TrackingStats(run_count=5, last_run_time=now, test_prompt_logged=True)
         assert stats.run_count == 5
         assert stats.last_run_time == now
@@ -139,8 +139,8 @@ class TestQuerySqliteTracking:
         )
         result = query_sqlite_tracking(str(db_path), "exp")
         assert result.last_run_time is not None
-        assert result.last_run_time.tzinfo == timezone.utc
-        expected = datetime.fromtimestamp(ts_ms / 1000.0, tz=timezone.utc)
+        assert result.last_run_time.tzinfo == UTC
+        expected = datetime.fromtimestamp(ts_ms / 1000.0, tz=UTC)
         assert result.last_run_time == expected
 
     def test_since_none_prompt_false(self, tmp_path: Path) -> None:
@@ -159,7 +159,7 @@ class TestQuerySqliteTracking:
 
     def test_since_before_run_true(self, tmp_path: Path) -> None:
         run_ts_ms = 2_000_000_000  # 2000 seconds after epoch
-        since = datetime.fromtimestamp(1_000_000, tz=timezone.utc)  # 1000s after epoch
+        since = datetime.fromtimestamp(1_000_000, tz=UTC)  # 1000s after epoch
         db_path = _make_test_db(
             tmp_path,
             runs=[
@@ -175,7 +175,7 @@ class TestQuerySqliteTracking:
 
     def test_since_after_run_false(self, tmp_path: Path) -> None:
         run_ts_ms = 1_000_000_000  # 1000s after epoch (in ms)
-        since = datetime.fromtimestamp(2_000_000, tz=timezone.utc)  # well after
+        since = datetime.fromtimestamp(2_000_000, tz=UTC)  # well after
         db_path = _make_test_db(
             tmp_path,
             runs=[
@@ -191,7 +191,7 @@ class TestQuerySqliteTracking:
 
     def test_since_exact_boundary_true(self, tmp_path: Path) -> None:
         run_ts_ms = 5_000_000_000  # exact value
-        since = datetime.fromtimestamp(run_ts_ms / 1000.0, tz=timezone.utc)
+        since = datetime.fromtimestamp(run_ts_ms / 1000.0, tz=UTC)
         db_path = _make_test_db(
             tmp_path,
             runs=[

@@ -5,7 +5,7 @@ Tests cover:
 - Stale bot process detection (check_stale_bot_process function)
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 from mcp_coder.cli.commands.define_labels import (
@@ -21,7 +21,7 @@ class TestCalculateElapsedMinutes:
     def test_calculates_minutes_from_iso_timestamp(self) -> None:
         """Test that elapsed minutes are calculated correctly from ISO timestamp."""
         # Create a timestamp 30 minutes ago
-        timestamp = datetime.now(timezone.utc) - timedelta(minutes=30)
+        timestamp = datetime.now(UTC) - timedelta(minutes=30)
         timestamp_str = timestamp.isoformat()
 
         result = calculate_elapsed_minutes(timestamp_str)
@@ -32,7 +32,7 @@ class TestCalculateElapsedMinutes:
     def test_handles_z_suffix(self) -> None:
         """Test that Z suffix timestamps are handled correctly."""
         # Create a timestamp 60 minutes ago with Z suffix
-        timestamp = datetime.now(timezone.utc) - timedelta(minutes=60)
+        timestamp = datetime.now(UTC) - timedelta(minutes=60)
         # Format with Z suffix instead of +00:00
         timestamp_str = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
@@ -44,7 +44,7 @@ class TestCalculateElapsedMinutes:
     def test_handles_timezone_offset(self) -> None:
         """Test that timezone offset in timestamps is handled correctly."""
         # Create a timestamp 15 minutes ago with explicit UTC offset
-        timestamp = datetime.now(timezone.utc) - timedelta(minutes=15)
+        timestamp = datetime.now(UTC) - timedelta(minutes=15)
         timestamp_str = timestamp.isoformat()  # Will include +00:00
 
         result = calculate_elapsed_minutes(timestamp_str)
@@ -73,9 +73,7 @@ class TestCheckStaleBotProcess:
         }
 
         # Create event timestamp 10 minutes ago (under 120 min threshold)
-        recent_timestamp = (
-            datetime.now(timezone.utc) - timedelta(minutes=10)
-        ).isoformat()
+        recent_timestamp = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
 
         mock_issue_manager = MagicMock()
         mock_issue_manager.get_issue_events.return_value = [
@@ -112,9 +110,7 @@ class TestCheckStaleBotProcess:
         }
 
         # Create event timestamp 150 minutes ago (over 120 min threshold)
-        stale_timestamp = (
-            datetime.now(timezone.utc) - timedelta(minutes=150)
-        ).isoformat()
+        stale_timestamp = (datetime.now(UTC) - timedelta(minutes=150)).isoformat()
 
         mock_issue_manager = MagicMock()
         mock_issue_manager.get_issue_events.return_value = [

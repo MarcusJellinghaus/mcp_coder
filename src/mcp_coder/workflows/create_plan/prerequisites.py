@@ -7,7 +7,6 @@ and pr_info directory setup.
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.mcp_workspace_git import checkout_branch
 from mcp_coder.mcp_workspace_github import (
@@ -90,8 +89,8 @@ def manage_branch(
     project_dir: Path,
     issue_number: int,
     issue_title: str,  # pylint: disable=unused-argument
-    base_branch: Optional[str] = None,
-) -> Optional[str]:
+    base_branch: str | None = None,
+) -> str | None:
     """Get existing linked branch or create new one.
 
     Args:
@@ -209,7 +208,7 @@ def create_pr_info_structure(project_dir: Path) -> bool:
         return False
 
 
-def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
+def resolve_project_dir(project_dir_arg: str | None) -> Path:
     """Convert project directory argument to absolute Path, with validation.
 
     Args:

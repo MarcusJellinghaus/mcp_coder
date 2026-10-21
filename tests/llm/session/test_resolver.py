@@ -1,7 +1,7 @@
 """Tests for session resolution and LLM method parsing."""
 
 import json
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -49,7 +49,7 @@ class TestSessionResolution:
     """Tests for session continuation and resolution functionality."""
 
     @pytest.fixture
-    def sample_stored_response(self) -> Dict[str, Any]:
+    def sample_stored_response(self) -> dict[str, Any]:
         """Standard stored response data for continuation tests."""
         return {
             "prompt": "How do I create a Python file?",
@@ -83,7 +83,7 @@ class TestSessionResolution:
 
     def test_continue_from_success(
         self,
-        sample_stored_response: Dict[str, Any],
+        sample_stored_response: dict[str, Any],
     ) -> None:
         """Test successful continuation from stored response file using session_id."""
         # Test the session extraction logic directly

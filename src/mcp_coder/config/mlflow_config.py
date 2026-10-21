@@ -9,7 +9,6 @@ For loading configuration from files/environment variables, see:
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +30,12 @@ class MLflowConfig:
     """
 
     enabled: bool = False
-    tracking_uri: Optional[str] = None
+    tracking_uri: str | None = None
     experiment_name: str = "claude-conversations"
-    artifact_location: Optional[str] = None
+    artifact_location: str | None = None
 
 
-def validate_tracking_uri(uri: Optional[str]) -> None:
+def validate_tracking_uri(uri: str | None) -> None:
     """Validate MLflow tracking URI format and provide helpful error messages.
 
     Args:

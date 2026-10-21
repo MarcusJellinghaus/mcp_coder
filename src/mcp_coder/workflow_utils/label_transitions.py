@@ -5,7 +5,6 @@ state-machine logic from the GitHub manager class.
 """
 
 import logging
-from typing import Optional
 
 from mcp_coder.config.label_config import (
     build_label_lookups,
@@ -32,8 +31,8 @@ def update_workflow_label(
     issue_manager: IssueManager,
     from_label_id: str,
     to_label_id: str,
-    branch_name: Optional[str] = None,
-    validated_issue_number: Optional[int] = None,
+    branch_name: str | None = None,
+    validated_issue_number: int | None = None,
 ) -> bool:
     """Workflow state machine transition.
 

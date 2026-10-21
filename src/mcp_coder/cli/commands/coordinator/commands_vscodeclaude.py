@@ -7,7 +7,7 @@ issues, mirroring the Jenkins-path handlers in ``commands.py``.
 import argparse
 import logging
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 from ....mcp_workspace_github import (
     IssueBranchManager,
@@ -270,7 +270,7 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             restarted
         )
         skip_github_install = getattr(args, "no_install_from_github", False)
-        total_started: List[VSCodeClaudeSession] = []
+        total_started: list[VSCodeClaudeSession] = []
         for repo_name in repo_names:
             # Apply repo filter if specified
             if args.repo and repo_name != args.repo:

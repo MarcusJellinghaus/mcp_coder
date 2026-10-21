@@ -14,7 +14,6 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from typing import Dict
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -999,7 +998,7 @@ class TestStalenessLogging:
             logging.INFO, logger="mcp_workspace.github_operations.issues.cache"
         )
 
-        cached_issues: Dict[str, IssueData] = {
+        cached_issues: dict[str, IssueData] = {
             "123": {
                 "number": 123,
                 "state": "open",
@@ -1014,7 +1013,7 @@ class TestStalenessLogging:
                 "updated_at": "2025-12-31T08:00:00Z",
             }
         }
-        fresh_issues: Dict[str, IssueData] = {
+        fresh_issues: dict[str, IssueData] = {
             "123": {
                 "number": 123,
                 "state": "closed",
@@ -1042,7 +1041,7 @@ class TestStalenessLogging:
             logging.INFO, logger="mcp_workspace.github_operations.issues.cache"
         )
 
-        cached_issues: Dict[str, IssueData] = {
+        cached_issues: dict[str, IssueData] = {
             "123": {
                 "number": 123,
                 "state": "open",
@@ -1057,7 +1056,7 @@ class TestStalenessLogging:
                 "updated_at": "2025-12-31T08:00:00Z",
             }
         }
-        fresh_issues: Dict[str, IssueData] = {
+        fresh_issues: dict[str, IssueData] = {
             "123": {
                 "number": 123,
                 "state": "open",
@@ -1242,7 +1241,7 @@ class TestBuildEligibleIssuesPrefetched:
     must use pre-fetched cached_issues_by_repo when provided and NOT re-call
     get_cached_eligible_vscodeclaude_issues / get_all_cached_issues."""
 
-    def _make_issue(self, number: int, assignee: str) -> Dict[str, object]:
+    def _make_issue(self, number: int, assignee: str) -> dict[str, object]:
         return {
             "number": number,
             "title": f"Issue {number}",
@@ -1307,7 +1306,7 @@ class TestBuildEligibleIssuesPrefetched:
 
         # Pre-fetched issues (mimicking _build_cached_issues_by_repo output)
         issue = self._make_issue(1, "testuser")
-        cached_issues_by_repo: Dict[str, Dict[int, Dict[str, object]]] = {
+        cached_issues_by_repo: dict[str, dict[int, dict[str, object]]] = {
             "owner/repo": {1: issue},
         }
 

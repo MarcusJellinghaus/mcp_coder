@@ -1,6 +1,5 @@
 """High-level LLM interface for extensible provider support."""
 
-import asyncio
 import logging
 import os
 from collections.abc import Iterator
@@ -200,7 +199,7 @@ def prompt_llm(
                     system_prompt=system_prompt,
                     project_prompt=project_prompt,
                 )
-            except asyncio.TimeoutError as e:
+            except TimeoutError as e:
                 logger.error("LLM request timed out after %ds", timeout)
                 logger.error(
                     "Prompt length: %d characters (%d words)",

@@ -5,7 +5,6 @@ This module provides functions for generating commit messages using LLM services
 
 import logging
 from pathlib import Path
-from typing import Optional, Tuple
 
 from mcp_coder.mcp_workspace_git import get_git_diff_for_commit, stage_all_changes
 
@@ -65,9 +64,9 @@ def strip_claude_footers(message: str) -> str:
 def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
     project_dir: Path,
     provider: str = "claude",
-    mcp_config: Optional[str] = None,
-    settings_file: Optional[str] = None,
-) -> Tuple[bool, str, Optional[str]]:
+    mcp_config: str | None = None,
+    settings_file: str | None = None,
+) -> tuple[bool, str, str | None]:
     """Generate commit message using LLM. Returns (success, message, error).
 
     Args:
@@ -231,7 +230,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
         return False, "", error_msg
 
 
-def parse_llm_commit_response(response: Optional[str]) -> Tuple[str, Optional[str]]:
+def parse_llm_commit_response(response: str | None) -> tuple[str, str | None]:
     """Parse LLM response into commit summary and body.
 
     Args:

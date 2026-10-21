@@ -12,7 +12,6 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
@@ -38,12 +37,12 @@ class BranchInfo:
     """Snapshot of the local branch and its linked GitHub issue."""
 
     is_git_repo: bool
-    branch_name: Optional[str]
+    branch_name: str | None
     is_dirty: bool
-    issue_number: Optional[int]
-    issue_title: Optional[str]
-    issue_status_label: Optional[str]
-    cache_last_checked: Optional[datetime]
+    issue_number: int | None
+    issue_title: str | None
+    issue_status_label: str | None
+    cache_last_checked: datetime | None
 
 
 _EMPTY = BranchInfo(
@@ -57,14 +56,14 @@ _EMPTY = BranchInfo(
 )
 
 
-def _pick_status_label(labels: list[str]) -> Optional[str]:
+def _pick_status_label(labels: list[str]) -> str | None:
     for name in labels:
         if name.startswith("status-"):
             return name
     return None
 
 
-def _parse_iso(value: object) -> Optional[datetime]:
+def _parse_iso(value: object) -> datetime | None:
     if not isinstance(value, str) or not value:
         return None
     try:
@@ -91,9 +90,9 @@ def get_branch_info(project_dir: Path) -> BranchInfo:
         extract_issue_number_from_branch(branch) if branch is not None else None
     )
 
-    issue_title: Optional[str] = None
-    status_label: Optional[str] = None
-    last_checked: Optional[datetime] = None
+    issue_title: str | None = None
+    status_label: str | None = None
+    last_checked: datetime | None = None
 
     if issue_number is not None:
         try:
@@ -155,7 +154,7 @@ def get_branch_only(project_dir: Path) -> BranchInfo:
     )
 
 
-def get_pr_for_issue(project_dir: Path, issue_number: int) -> Optional[int]:
+def get_pr_for_issue(project_dir: Path, issue_number: int) -> int | None:
     """Resolve the PR number linked to ``issue_number`` (issue → branch → PR).
 
     Returns:

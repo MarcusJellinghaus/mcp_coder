@@ -28,7 +28,7 @@ Example:
 
 import logging
 import re
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from jenkins import Jenkins, JenkinsException, NotFoundException
 from requests import Session
@@ -242,8 +242,8 @@ class JenkinsClient:
         self,
         exc: JenkinsException,
         context: str,
-        job_path: Optional[str] = None,
-        build_number: Optional[int] = None,
+        job_path: str | None = None,
+        build_number: int | None = None,
     ) -> JenkinsError:
         """Compose a clean, diagnosed JenkinsError for a python-jenkins failure.
 
@@ -306,8 +306,8 @@ class JenkinsClient:
     def start_job(
         self,
         job_path: str,
-        params: Optional[dict[str, Any]] = None,
-        token: Optional[str] = None,
+        params: dict[str, Any] | None = None,
+        token: str | None = None,
     ) -> int:
         """Start a Jenkins job and return queue ID.
 
@@ -382,7 +382,7 @@ class JenkinsClient:
         """
         # Which lookup is in flight, so a 404 can name the right thing. None
         # until the build is known: up to that point only the queue item can 404.
-        build_lookup: Optional[tuple[str, int]] = None
+        build_lookup: tuple[str, int] | None = None
         try:
             # Get queue item information
             item = self._client.get_queue_item(queue_id)

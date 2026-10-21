@@ -4,7 +4,6 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -28,7 +27,7 @@ class TestFindLatestSession:
     ]
 
     def _create_test_files_in_temp_dir(
-        self, temp_dir: str, filenames: List[str]
+        self, temp_dir: str, filenames: list[str]
     ) -> None:
         """Create test response files in temporary directory."""
         for filename in filenames:
@@ -96,7 +95,7 @@ class TestFindLatestSession:
 
             # Verify the file exists and contains expected data
             assert os.path.exists(result)
-            with open(result, "r", encoding="utf-8") as f:
+            with open(result, encoding="utf-8") as f:
                 data = json.load(f)
                 assert data["filename"] == "response_2025-09-19T14-30-25.json"
 
@@ -178,7 +177,7 @@ class TestFindLatestSession:
             assert result == expected_path
 
             # Verify the file contains expected data
-            with open(result, "r", encoding="utf-8") as f:
+            with open(result, encoding="utf-8") as f:
                 data = json.load(f)
                 assert data["filename"] == "response_2025-09-20T10-00-01.json"
 

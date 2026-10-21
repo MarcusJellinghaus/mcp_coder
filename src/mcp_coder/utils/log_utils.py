@@ -5,7 +5,6 @@ adding app-specific third-party log suppression in setup_logging().
 """
 
 import logging
-from typing import Optional
 
 from mcp_coder_utils.log_utils import (
     OUTPUT,
@@ -29,7 +28,7 @@ __all__ = [
 ]
 
 
-def setup_logging(log_level: str, log_file: Optional[str] = None) -> None:
+def setup_logging(log_level: str, log_file: str | None = None) -> None:
     """Configure logging with app-specific third-party log suppression."""
     _upstream_setup_logging(log_level, log_file)
     # App-specific third-party suppression, grouped by level

@@ -1,7 +1,7 @@
 """End-to-end integration test: execute_verify() with real LLM and MLflow."""
 
 import argparse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -56,7 +56,7 @@ class TestVerifyEndToEndWithRealLLM:
 
             _ml._global_logger = None
 
-            before_ts = datetime.now(timezone.utc)
+            before_ts = datetime.now(UTC)
             args = argparse.Namespace(
                 check_models=False,
                 mcp_config=None,

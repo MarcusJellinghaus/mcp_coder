@@ -13,7 +13,7 @@ drift.
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -75,7 +75,7 @@ def append_run(
     data = _load_audit()
     data["runs"].append(
         {
-            "run_at": datetime.now(timezone.utc).isoformat(),
+            "run_at": datetime.now(UTC).isoformat(),
             "records": records,
         }
     )

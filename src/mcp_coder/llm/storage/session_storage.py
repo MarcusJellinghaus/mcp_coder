@@ -9,7 +9,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...utils.user_app_data import get_user_app_data_dir
 from ..types import LLMResponseDict
@@ -30,10 +30,10 @@ __all__ = [
 def store_session(
     response_data: LLMResponseDict,
     prompt: str,
-    store_path: Optional[str] = None,
-    step_name: Optional[str] = None,
-    branch_name: Optional[str] = None,
-    log_file_path: Optional[str] = None,
+    store_path: str | None = None,
+    step_name: str | None = None,
+    branch_name: str | None = None,
+    log_file_path: str | None = None,
 ) -> str:
     """Store complete session data to .mcp-coder/responses/ directory.
 
@@ -101,7 +101,7 @@ def store_session(
     return file_path
 
 
-def extract_session_id(file_path: str) -> Optional[str]:
+def extract_session_id(file_path: str) -> str | None:
     """Extract session_id from a stored response file.
 
     Args:
@@ -124,13 +124,11 @@ def extract_session_id(file_path: str) -> Optional[str]:
             return None
 
         # Read and parse JSON file
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             session_data = json.load(f)
 
         # Extract session_id from LLMResponseDict format: response_data.session_id
-        session_id: Optional[str] = session_data.get("response_data", {}).get(
-            "session_id"
-        )
+        session_id: str | None = session_data.get("response_data", {}).get("session_id")
         if session_id and isinstance(session_id, str):
             logger.debug("Found session_id in response_data: %s", session_id)
             return session_id
@@ -150,7 +148,7 @@ def extract_session_id(file_path: str) -> Optional[str]:
 
 def _langchain_session_path(
     session_id: str,
-    base_dir: Optional[str] = None,
+    base_dir: str | None = None,
 ) -> Path:
     """Return Path for a session's history JSON file.
 
@@ -192,7 +190,7 @@ def extract_langchain_session_id(file_path: str) -> str:
 def store_langchain_history(
     session_id: str,
     messages: list[dict[str, Any]],
-    base_dir: Optional[str] = None,
+    base_dir: str | None = None,
 ) -> str:
     """Persist message history to disk.
 
@@ -207,7 +205,7 @@ def store_langchain_history(
 
 def load_langchain_history(
     session_id: str,
-    base_dir: Optional[str] = None,
+    base_dir: str | None = None,
 ) -> list[dict[str, Any]]:
     """Load message history from disk.
 
@@ -222,7 +220,7 @@ def load_langchain_history(
 
 def langchain_history_exists(
     session_id: str,
-    base_dir: Optional[str] = None,
+    base_dir: str | None = None,
 ) -> bool:
     """Report whether *session_id* has a history file on disk.
 
@@ -243,7 +241,7 @@ def langchain_history_exists(
 
 def require_langchain_history(
     session_id: str,
-    base_dir: Optional[str] = None,
+    base_dir: str | None = None,
 ) -> None:
     """Raise when *session_id* has no history file on disk.
 

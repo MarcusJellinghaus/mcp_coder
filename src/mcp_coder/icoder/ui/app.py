@@ -5,10 +5,11 @@ from __future__ import annotations
 import importlib.metadata
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -88,9 +89,9 @@ class ICoderApp(StreamViewApp):
         self._branch_service = BranchInfoService(self._project_dir)
         self._branch_loading: set[str] = set()
         self._branch_failed: set[str] = set()
-        self._last_branch_info: Optional[BranchInfo] = None
-        self._last_pr_number: Optional[int] = None
-        self._last_view: Optional[BranchInfoView] = None
+        self._last_branch_info: BranchInfo | None = None
+        self._last_pr_number: int | None = None
+        self._last_view: BranchInfoView | None = None
 
     def compose(self) -> ComposeResult:
         """Vertical layout: OutputLog on top, InputArea at bottom.
@@ -185,7 +186,7 @@ class ICoderApp(StreamViewApp):
             output.append_text("No previous sessions in this project.")
             return
 
-        def _on_pick(selected: Optional[Path]) -> None:
+        def _on_pick(selected: Path | None) -> None:
             if selected is not None:
                 self.do_resume(selected)
 
@@ -297,7 +298,7 @@ class ICoderApp(StreamViewApp):
         """Worker body for the 10s branch tick."""
         if not self._branch_service.begin_quick_tick():
             return
-        info: Optional[BranchInfo] = None
+        info: BranchInfo | None = None
         try:
             info = self._timed_fetch(
                 "branch_quick", self._branch_service.fetch_branch_only
@@ -316,7 +317,7 @@ class ICoderApp(StreamViewApp):
             return
         self._branch_loading.add("issue")
         self.call_from_thread(self._render_branch_state)
-        info: Optional[BranchInfo] = None
+        info: BranchInfo | None = None
         try:
             info = self._timed_fetch("branch_full", self._branch_service.fetch_info)
             self._branch_failed.discard("issue")
@@ -339,7 +340,7 @@ class ICoderApp(StreamViewApp):
     def _refresh_issue_work(self) -> None:
         """Worker body for the refresh-issue button."""
         try:
-            info: Optional[BranchInfo] = self._branch_service.fetch_info()
+            info: BranchInfo | None = self._branch_service.fetch_info()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.debug("refresh_issue fetch_info failed: %s", exc)
             self._branch_failed.add("issue")
@@ -389,7 +390,7 @@ class ICoderApp(StreamViewApp):
         gen = self._branch_service.start_pr_fetch()
 
         def work() -> None:
-            pr_number: Optional[int] = None
+            pr_number: int | None = None
             raised = False
             try:
                 pr_number = self._branch_service.fetch_pr(issue_number)
@@ -413,7 +414,7 @@ class ICoderApp(StreamViewApp):
 
     def _apply_branch_state(
         self,
-        info: Optional[BranchInfo],
+        info: BranchInfo | None,
         *,
         merge_with_prior: bool = False,
     ) -> None:
@@ -446,7 +447,7 @@ class ICoderApp(StreamViewApp):
         ):
             self._launch_pr_worker(info.issue_number)
 
-    def _apply_pr_result(self, pr_number: Optional[int]) -> None:
+    def _apply_pr_result(self, pr_number: int | None) -> None:
         """Unconditionally store a PR worker's result and re-render.
 
         Unlike ``_apply_branch_state``, this writes ``pr_number`` even when it
@@ -464,7 +465,7 @@ class ICoderApp(StreamViewApp):
         except NoMatches:
             return
         if self._last_branch_info is None:
-            new_view: Optional[BranchInfoView] = None
+            new_view: BranchInfoView | None = None
         else:
             new_view = BranchInfoView(
                 info=self._last_branch_info,

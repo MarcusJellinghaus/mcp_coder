@@ -8,7 +8,7 @@ Tests cover:
 """
 
 import argparse
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -209,9 +209,7 @@ class TestExecuteDefineLabelsExitCodes:
         }
 
         # Create stale timestamp (150 minutes ago, over 120 min threshold)
-        stale_timestamp = (
-            datetime.now(timezone.utc) - timedelta(minutes=150)
-        ).isoformat()
+        stale_timestamp = (datetime.now(UTC) - timedelta(minutes=150)).isoformat()
 
         # Setup mock issue manager to return an issue with stale bot_busy label
         mock_issue_manager = MagicMock()
@@ -311,9 +309,7 @@ class TestExecuteDefineLabelsExitCodes:
         }
 
         # Create stale timestamp for warning
-        stale_timestamp = (
-            datetime.now(timezone.utc) - timedelta(minutes=150)
-        ).isoformat()
+        stale_timestamp = (datetime.now(UTC) - timedelta(minutes=150)).isoformat()
 
         # Setup mock issue manager with both error and warning issues
         mock_issue_manager = MagicMock()

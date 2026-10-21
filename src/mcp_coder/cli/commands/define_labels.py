@@ -7,7 +7,7 @@ workflow status labels to a GitHub repository.
 import argparse
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -134,7 +134,7 @@ def calculate_elapsed_minutes(timestamp_str: str) -> int:
     timestamp = datetime.fromisoformat(timestamp_str)
 
     # Get current UTC time
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Calculate elapsed minutes
     elapsed_seconds = (now - timestamp).total_seconds()

@@ -65,7 +65,7 @@ class _FixedDatetime(datetime):
     """
 
     @classmethod
-    def now(cls, tz: Any = None) -> "_FixedDatetime":
+    def now(cls, tz: Any = None) -> _FixedDatetime:
         return cls(2026, 1, 1, 12, 0, 0)
 
 

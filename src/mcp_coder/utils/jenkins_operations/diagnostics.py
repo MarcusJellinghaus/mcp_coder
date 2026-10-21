@@ -29,7 +29,6 @@ Security:
 import html as html_lib
 import re
 from dataclasses import dataclass
-from typing import Optional
 from urllib.parse import quote
 
 from requests import RequestException, Session
@@ -70,9 +69,9 @@ class ProbeResult:
             status is None, or None when there is nothing to report.
     """
 
-    status: Optional[int]
+    status: int | None
     url: str
-    error_text: Optional[str]
+    error_text: str | None
 
 
 def job_url_path(job_path: str) -> str:
@@ -94,7 +93,7 @@ def job_url_path(job_path: str) -> str:
     return "/job/" + "/job/".join(quote(part, safe="") for part in parts)
 
 
-def extract_jenkins_error(body: str) -> Optional[str]:
+def extract_jenkins_error(body: str) -> str | None:
     """Reduce a Jenkins error page to its single error sentence.
 
     Deliberately tolerant: Jenkins error pages are not well-formed, and in the
@@ -171,7 +170,7 @@ def _probe_outcome(result: ProbeResult) -> str:
 
 
 def diagnose_403(
-    session: Session, base_url: str, original_error: Optional[str] = None
+    session: Session, base_url: str, original_error: str | None = None
 ) -> str:
     """Diagnose a 403 by probing the endpoints every REST call depends on.
 
@@ -279,8 +278,8 @@ def diagnose_404(session: Session, base_url: str, job_path: str) -> str:
     # Skip the leaf - it already 404'd - and walk ancestors deepest-first, so
     # the probe of each segment is the one from the previous iteration (None on
     # the first, where the segment is the leaf and its own 404 is the premise).
-    unreached: Optional[tuple[str, ProbeResult]] = None
-    child: Optional[ProbeResult] = None
+    unreached: tuple[str, ProbeResult] | None = None
+    child: ProbeResult | None = None
     for depth in range(len(parts) - 1, 0, -1):
         ancestor = "/".join(parts[:depth])
         result = probe(session, base_url, job_url_path(ancestor) + "/api/json")

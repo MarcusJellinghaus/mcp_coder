@@ -8,7 +8,6 @@ duplicate clicks and detect branch changes between periodic ticks.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.services.branch_info import (
     BranchInfo,
@@ -34,7 +33,7 @@ class BranchInfoService:
         self._pr_in_flight = False
         self._quick_tick_busy: bool = False
         self._full_tick_busy: bool = False
-        self._last_branch: Optional[str] = None
+        self._last_branch: str | None = None
         self._pr_fetch_generation: int = 0
 
     @property
@@ -78,7 +77,7 @@ class BranchInfoService:
         """Return the cheap branch-only ``BranchInfo`` snapshot."""
         return get_branch_only(self._project_dir)
 
-    def fetch_pr(self, issue_number: int) -> Optional[int]:
+    def fetch_pr(self, issue_number: int) -> int | None:
         """Resolve the PR number linked to ``issue_number`` via the data layer.
 
         Returns:
@@ -150,7 +149,7 @@ class BranchInfoService:
         """Clear the full-tick in-flight flag."""
         self._full_tick_busy = False
 
-    def branch_changed(self, branch_name: Optional[str]) -> bool:
+    def branch_changed(self, branch_name: str | None) -> bool:
         """Return True if ``branch_name`` differs from the last seen value."""
         changed = branch_name != self._last_branch
         self._last_branch = branch_name

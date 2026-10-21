@@ -9,7 +9,6 @@ import logging
 import shutil
 import time
 from pathlib import Path
-from typing import Optional, Tuple
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
@@ -209,7 +208,7 @@ def generate_pr_summary(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Generate PR title and body using LLM and git diff.
 
     Args:
@@ -332,7 +331,7 @@ def cleanup_repository(project_dir: Path) -> bool:
 
 def create_pull_request(
     project_dir: Path, title: str, body: str
-) -> Tuple[Optional[PullRequestData], Optional[str]]:
+) -> tuple[PullRequestData | None, str | None]:
     """Create GitHub pull request using PullRequestManager.
 
     Args:
@@ -384,7 +383,7 @@ def create_pull_request(
         return None, f"Error creating pull request: {e}"
 
 
-def validate_branch_issue_linkage(project_dir: Path) -> Optional[int]:
+def validate_branch_issue_linkage(project_dir: Path) -> int | None:
     """Validate current branch is linked to an issue.
 
     "Linked" means the branch is a linked branch of the issue, or the head
@@ -494,7 +493,7 @@ def run_create_pr_workflow(
     # (the link transfers to the PR). If we query linkedBranches after PR creation,
     # it returns empty. The cached issue number is used both for the PR body's closing
     # reference and for label updates after PR creation succeeds.
-    cached_issue_number: Optional[int] = validate_branch_issue_linkage(project_dir)
+    cached_issue_number: int | None = validate_branch_issue_linkage(project_dir)
     if cached_issue_number:
         logger.log(OUTPUT, "Branch linked to issue #%s", cached_issue_number)
     else:

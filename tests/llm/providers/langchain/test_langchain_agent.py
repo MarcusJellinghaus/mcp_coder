@@ -3,9 +3,10 @@
 import builtins
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable
+from typing import Any
 from unittest.mock import patch
 
 import pytest

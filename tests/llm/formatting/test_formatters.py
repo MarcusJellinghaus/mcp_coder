@@ -3,7 +3,7 @@
 import argparse
 import io
 import json
-from typing import Iterator, List
+from collections.abc import Iterator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -13,7 +13,7 @@ from mcp_coder.llm.formatting.formatters import print_stream_event
 from mcp_coder.llm.types import StreamEvent
 
 
-def _make_stream_events(events: List[StreamEvent]) -> Iterator[StreamEvent]:
+def _make_stream_events(events: list[StreamEvent]) -> Iterator[StreamEvent]:
     """Return an iterator over the given stream events."""
     return iter(events)
 
@@ -184,7 +184,7 @@ class TestStreamFormatComparison:
     ) -> None:
         """Test that text and ndjson formats produce different output for same events."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
-        events: List[StreamEvent] = [
+        events: list[StreamEvent] = [
             {"type": "text_delta", "text": "Test response."},
             {
                 "type": "tool_use_start",
@@ -239,7 +239,7 @@ class TestStreamFormatComparison:
         """Test that json-raw only outputs raw_line events while ndjson normalizes."""
         mock_prepare_env.return_value = {"MCP_CODER_PROJECT_DIR": "/test"}
         raw_line = '{"type":"assistant","message":{}}'
-        events: List[StreamEvent] = [
+        events: list[StreamEvent] = [
             {"type": "text_delta", "text": "Hello"},
             {"type": "raw_line", "line": raw_line},
             {"type": "done", "usage": {}},
