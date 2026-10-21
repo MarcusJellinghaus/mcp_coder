@@ -32,6 +32,7 @@ from ._phases import (
     phase_bootstrap_pip_uv,
     phase_install_main,
     phase_overrides,
+    phase_post_install_checks,
     phase_report_versions,
     phase_venv,
 )
@@ -94,4 +95,5 @@ def install(config: InstallConfig) -> None:
         )
 
     phase_report_versions(config, bin_dir, uv_bin, py_v)
+    phase_post_install_checks(config, bin_dir)
     print(f"\nOK  mcp-coder install complete: {config.target}")

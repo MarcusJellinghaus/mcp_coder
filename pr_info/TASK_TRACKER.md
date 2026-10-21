@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: `phase_post_install_checks` + wiring in `install()` + tests
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: `tests/install/test_install_post_checks.py` + `_resolve_check_executable`, `phase_post_install_checks`, wiring in `install()`
-- [ ] Quality checks: pylint, pytest, mypy (plus lint-imports, tach) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `tests/install/test_install_post_checks.py` + `_resolve_check_executable`, `phase_post_install_checks`, wiring in `install()`
+- [x] Quality checks: pylint, pytest, mypy (plus lint-imports, tach) — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Declare this repo's post-install checks in `pyproject.toml`
 See [step_5.md](./steps/step_5.md)
