@@ -14,6 +14,7 @@ from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailable
 from mcp_coder.mcp_workspace_git import get_current_branch_name
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
+from mcp_coder.workflow_steps.commit import check_formatter_config
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     handle_workflow_failure,
@@ -76,6 +77,19 @@ def run_fix_ci_workflow(
     """
 
     def body() -> int:
+        # Formatter pre-flight: an unresolvable formatter would only surface
+        # after an LLM fix attempt, at the formatting call in check_and_fix_ci.
+        formatter_err = check_formatter_config(project_dir, warn_legacy_key=True)
+        if formatter_err:
+            return _fail(
+                project_dir,
+                "General",
+                "Formatter configuration",
+                formatter_err,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+            )
+
         branch = get_current_branch_name(project_dir)
         if branch is None:
             logger.error("Could not determine current branch")

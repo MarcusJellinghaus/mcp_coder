@@ -145,6 +145,35 @@ def test_unexpected_exception_netted_by_run_guarded() -> None:
     assert failure.category == "ci_fix_failed"
 
 
+def test_formatter_config_error_fails_before_ci_fix() -> None:
+    """Unresolvable formatter → ``Formatter configuration`` failure; no CI fix."""
+    with (
+        patch(
+            f"{MODULE}.check_formatter_config",
+            return_value="No formatter declared: X",
+        ) as mock_check_formatter,
+        patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+        patch(f"{MODULE}.check_and_fix_ci") as mock_check,
+        patch(f"{MODULE}.handle_workflow_failure") as mock_handle,
+    ):
+        result = run_fix_ci_workflow(
+            PROJECT_DIR,
+            "claude",
+            update_issue_labels=True,
+            post_issue_comments=True,
+        )
+
+    assert result == 1
+    mock_check_formatter.assert_called_once_with(PROJECT_DIR, warn_legacy_key=True)
+    mock_check.assert_not_called()
+    mock_handle.assert_called_once()
+    failure = mock_handle.call_args[0][0]
+    comment = mock_handle.call_args[0][1]
+    assert failure.stage == "Formatter configuration"
+    assert failure.message == "No formatter declared: X"
+    assert "**Category:** General" in comment
+
+
 def test_format_code_false_skips_formatter(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
