@@ -55,7 +55,7 @@ The following files in this repository serve as references/templates for other p
 | `.claude/skills/` | G | Yes | Mostly | Repo-specific paths/commands inside individual SKILL.md files |
 | `.claude/agents/commit-pusher.md` | G | No | Yes | — |
 | `.claude/agents/issue-updater.md` | G | No | Yes | — |
-| `.claude/agents/issue-approver.md` | G | No | Yes | Requires `approve-command.yml` and the status labels |
+| `.claude/agents/issue-approver.md` | G | No | Yes | Requires `mcp-coder` on PATH and the status labels; `approve-command.yml` only for cross-repo approval |
 | `.claude/knowledge_base/planning_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/refactoring_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/software_engineering_principles.md` | G | No | Yes | — |
