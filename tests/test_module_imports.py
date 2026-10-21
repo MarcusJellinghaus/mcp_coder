@@ -10,7 +10,7 @@ import json
 import os
 import sys
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -104,26 +104,72 @@ def test_missing_optional_package(
     assert missing_optional_package(build_exc()) == expected
 
 
-def test_walk_records_system_exit_module(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    pkg_dir = tmp_path / "_walker_probe_pkg"
-    pkg_dir.mkdir()
-    (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
-    (pkg_dir / "exits.py").write_text("raise SystemExit(3)\n", encoding="utf-8")
-    (pkg_dir / "ok.py").write_text("VALUE = 1\n", encoding="utf-8")
-    monkeypatch.syspath_prepend(str(tmp_path))
-    try:
-        report = walk("_walker_probe_pkg")
+PROBE_PKG = "_walker_probe_pkg"
 
-        assert [(f["module"], f["type"]) for f in report["failures"]] == [
-            ("_walker_probe_pkg.exits", "SystemExit")
-        ]
-        assert "_walker_probe_pkg.ok" in sys.modules
-    finally:
-        for name in list(sys.modules):
-            if name.startswith("_walker_probe_pkg"):
-                sys.modules.pop(name)
+
+@pytest.fixture
+def probe_pkg(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[[dict[str, str]], None]]:
+    """Build a throwaway package on sys.path from {relative path: source}."""
+
+    def build(files: dict[str, str]) -> None:
+        for rel, source in {"__init__.py": "", **files}.items():
+            path = tmp_path / PROBE_PKG / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(source, encoding="utf-8")
+
+    monkeypatch.syspath_prepend(str(tmp_path))
+    yield build
+    for name in list(sys.modules):
+        if name.startswith(PROBE_PKG):
+            sys.modules.pop(name)
+
+
+def test_walk_records_system_exit_module(
+    probe_pkg: Callable[[dict[str, str]], None],
+) -> None:
+    probe_pkg({"exits.py": "raise SystemExit(3)\n", "ok.py": "VALUE = 1\n"})
+
+    report = walk(PROBE_PKG)
+
+    assert [(f["module"], f["type"]) for f in report["failures"]] == [
+        (f"{PROBE_PKG}.exits", "SystemExit")
+    ]
+    assert f"{PROBE_PKG}.ok" in sys.modules
+
+
+def test_walk_reports_failing_subpackage_once_without_walking_it(
+    probe_pkg: Callable[[dict[str, str]], None],
+) -> None:
+    probe_pkg(
+        {
+            "broken/__init__.py": "from json import removed_name\n",
+            "broken/child.py": "VALUE = 1\n",
+        }
+    )
+
+    report = walk(PROBE_PKG)
+
+    assert [(f["module"], f["type"]) for f in report["failures"]] == [
+        (f"{PROBE_PKG}.broken", "ImportError")
+    ]
+    assert "removed_name" in report["failures"][0]["message"]
+    assert f"{PROBE_PKG}.broken.child" not in sys.modules
+    assert not report["skips"]
+
+
+def test_walk_records_missing_optional_extra_as_skip(
+    probe_pkg: Callable[[dict[str, str]], None],
+) -> None:
+    probe_pkg({"needs_extra.py": "import nonexistent_pkg_xyz\n"})
+
+    report = walk(PROBE_PKG)
+
+    assert not report["failures"]
+    assert [(s["module"], s["missing"]) for s in report["skips"]] == [
+        (f"{PROBE_PKG}.needs_extra", "nonexistent_pkg_xyz")
+    ]
 
 
 def _normalised(paths: list[str]) -> list[str]:
@@ -141,7 +187,8 @@ def test_all_mcp_coder_modules_import(tmp_path: Path) -> None:
 
     assert not result.timed_out and result.return_code == 0, (
         f"Import walker failed (return code {result.return_code}, "
-        f"timed out: {result.timed_out}):\n{result.stderr[-4000:]}"
+        f"timed out: {result.timed_out}, "
+        f"execution error: {result.execution_error}):\n{result.stderr[-4000:]}"
     )
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert _normalised(report["package_path"]) == _normalised(list(mcp_coder.__path__))
