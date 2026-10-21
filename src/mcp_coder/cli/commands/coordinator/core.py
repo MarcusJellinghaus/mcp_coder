@@ -7,7 +7,7 @@ This module contains:
 """
 
 import logging
-from typing import List, Optional
+from typing import List
 
 from ....config.label_config import load_labels_config
 from ....mcp_workspace_github import (

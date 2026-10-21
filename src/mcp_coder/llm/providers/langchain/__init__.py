@@ -25,7 +25,6 @@ from mcp_coder.llm.types import LLM_RESPONSE_VERSION, LLMResponseDict, StreamEve
 from ._config_diagnostics import dialed_url
 from ._errors_404 import _format_404_hint
 from ._errors_404 import _is_404_error as _is_404_error  # re-exported for tests
-from ._exceptions import LLMMCPLaunchError
 from ._messages import assemble_messages, serialize_messages
 from ._preflight import _ollama_preflight
 

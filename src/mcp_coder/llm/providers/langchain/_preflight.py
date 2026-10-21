@@ -25,7 +25,9 @@ def _ollama_preflight(config: dict[str, str | None]) -> None:
     if config.get("backend") != "ollama":
         return
     try:
-        import ollama  # noqa: F401  # pylint: disable=import-outside-toplevel,unused-import,import-error
+        import ollama  # pylint: disable=import-outside-toplevel,import-error
+
+        del ollama
     except ImportError as exc:
         raise ImportError(
             "ollama is required for the Ollama backend.\n"

@@ -234,8 +234,9 @@ def _proxy_configured() -> bool:
 def _truststore_available() -> bool:
     """Return ``True`` if the *truststore* package can be imported."""
     try:
-        import truststore  # pylint: disable=import-outside-toplevel  # noqa: F401
+        import truststore  # pylint: disable=import-outside-toplevel
 
+        del truststore
         return True
     except ImportError:
         return False

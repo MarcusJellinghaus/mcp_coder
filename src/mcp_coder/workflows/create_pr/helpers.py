@@ -7,7 +7,7 @@ from core.py to keep module size manageable.
 import logging
 import re
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Tuple
 
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,

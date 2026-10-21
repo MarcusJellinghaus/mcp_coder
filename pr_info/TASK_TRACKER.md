@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Enable ruff `F` and clean `src` — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: add `"F"` to ruff `select`, update `pyproject.toml` comments, delete 4 dead `src` imports, rewrite 5 optional-dependency checks as `import x` + `del x`
-- [ ] Quality checks: pylint, pytest (unit + `git_integration`), mypy, ruff, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `"F"` to ruff `select`, update `pyproject.toml` comments, delete 4 dead `src` imports, rewrite 5 optional-dependency checks as `import x` + `del x`
+- [x] Quality checks: pylint, pytest (unit + `git_integration`), mypy, ruff, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
