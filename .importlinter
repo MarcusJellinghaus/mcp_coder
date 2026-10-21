@@ -473,11 +473,6 @@ modules =
     tests.icoder
     tests.prompts
     tests.install
-# Allowed: Importing shared fixtures from tests.utils.conftest
-# TODO: Refactor to use pytest's conftest discovery instead of explicit imports
-ignore_imports =
-    tests.workflows.test_create_pr_integration -> tests.utils.conftest
-    tests.cli.commands.test_define_labels -> tests.utils.conftest
 
 # -----------------------------------------------------------------------------
 # Contract: CLI Tests Focus (commented - has violations)

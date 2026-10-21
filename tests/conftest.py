@@ -21,6 +21,39 @@ def labels_config_path() -> Path | Traversable:
     return get_labels_config_path()
 
 
+@pytest.fixture
+def git_repo(tmp_path: Path) -> tuple[git.Repo, Path]:
+    """Create clean, empty git repository for testing.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture
+
+    Returns:
+        tuple[Repo, Path]: Git repository object and path to project directory
+    """
+    project_dir = tmp_path / "test_project"
+    project_dir.mkdir()
+
+    # Initialize git repository
+    repo = git.Repo.init(project_dir)
+
+    # Configure git user (required for commits)
+    setup_git_config(repo)
+
+    return repo, project_dir
+
+
+def setup_git_config(repo: git.Repo) -> None:
+    """Configure git user for repository.
+
+    Args:
+        repo: Git repository object to configure
+    """
+    with repo.config_writer() as config:
+        config.set_value("user", "name", "Test User")
+        config.set_value("user", "email", "test@example.com")
+
+
 try:
     from typing import TypedDict
 except ImportError:

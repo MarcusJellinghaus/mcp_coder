@@ -20,9 +20,6 @@ from mcp_coder.mcp_workspace_git import (
     is_working_directory_clean,
 )
 
-# Import git fixtures from utils
-from tests.utils.conftest import git_repo
-
 
 class TestCreatePRWorkflowIntegration:
     """Integration tests for the complete PR creation workflow."""

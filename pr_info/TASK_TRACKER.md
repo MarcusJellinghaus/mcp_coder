@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Move `git_repo` fixture to root conftest — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: move `git_repo` + `setup_git_config` to `tests/conftest.py`, `git_repo_with_files` builds on `git_repo`, delete the two `tests.utils.conftest` imports and their `.importlinter` ignores
-- [ ] Quality checks: pylint, pytest (unit + `git_integration`), mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `git_repo` + `setup_git_config` to `tests/conftest.py`, `git_repo_with_files` builds on `git_repo`, delete the two `tests.utils.conftest` imports and their `.importlinter` ignores
+- [x] Quality checks: pylint, pytest (unit + `git_integration`), mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Remove unused imports in tests — [step_2.md](./steps/step_2.md)
 
