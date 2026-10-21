@@ -35,7 +35,12 @@ from mcp_coder.mcp_workspace_git import (
     get_latest_commit_sha,
     is_working_directory_clean,
 )
-from mcp_coder.workflow_steps.commit import commit_changes, push_changes, run_formatters
+from mcp_coder.workflow_steps.commit import (
+    check_formatter_config,
+    commit_changes,
+    push_changes,
+    run_formatters,
+)
 from mcp_coder.workflow_utils.failure_handling import (
     llm_failure_reason,
     run_guarded,
@@ -108,6 +113,20 @@ def run_review_workflow(
 
     def body() -> int:
         nonlocal supervisor_sid, pending_ci_note, last_verdict
+
+        # Formatter pre-flight (both lanes): an unresolvable formatter would
+        # only surface after an LLM round, at the formatting call below.
+        formatter_err = check_formatter_config(project_dir, warn_legacy_key=True)
+        if formatter_err:
+            return _fail(
+                config,
+                project_dir,
+                "general",
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+                details=formatter_err,
+                elapsed=time.time() - start_time,
+            )
 
         # Gate 1 (implementation lane only): refuse to start when the tracker's
         # ## Tasks section still has unchecked items — the human is pointed at

@@ -40,3 +40,27 @@ def test_format_code_false_skips_formatter_in_tasks_round(
     assert result == 0
     env.commit_changes.assert_called_once()
     wrapper.assert_not_called()
+
+
+def test_formatter_config_error_fails_before_any_llm_call(
+    env: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unresolvable formatter → ``general`` failure; the reviewer never runs."""
+    calls: list[tuple[Path, bool]] = []
+
+    def _check(project_dir: Path, warn_legacy_key: bool = False) -> str:
+        calls.append((project_dir, warn_legacy_key))
+        return "No formatter declared: X"
+
+    monkeypatch.setattr(core, "check_formatter_config", _check)
+    fail = MagicMock(return_value=1)
+    monkeypatch.setattr(core, "_fail", fail)
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    assert calls == [(tmp_path, True)]
+    fail.assert_called_once()
+    assert fail.call_args.args[2] == "general"
+    assert "No formatter declared: X" in fail.call_args.kwargs["details"]
+    env.prompt_llm.assert_not_called()
