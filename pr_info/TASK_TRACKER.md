@@ -21,6 +21,49 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Config reader `get_post_install_checks` + tests
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `TestGetPostInstallChecks` tests + `get_post_install_checks` in `utils/pyproject_config.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `InstallConfig.post_install_checks` read strictly in `from_args` + tests
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: `TestPostInstallChecksResolution` tests + new `InstallConfig` field read in `from_args`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `validate_target_repo` validates `post_install_checks` + tests
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: warning tests in `test_validate_target_repo.py` + strict read in `validate_target_repo`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `phase_post_install_checks` + wiring in `install()` + tests
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: `tests/install/test_install_post_checks.py` + `_resolve_check_executable`, `phase_post_install_checks`, wiring in `install()`
+- [ ] Quality checks: pylint, pytest, mypy (plus lint-imports, tach) — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Declare this repo's post-install checks in `pyproject.toml`
+See [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation: add `post_install_checks` to `[tool.mcp-coder.install]`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Documentation
+See [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation: update `config.md`, `cli-reference.md`, `repository-setup/README.md`, `repository-setup/python.md`, `architecture.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against the base branch
+- [ ] PR summary prepared
