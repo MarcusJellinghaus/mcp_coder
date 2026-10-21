@@ -52,3 +52,17 @@ _preflight(p):
   the fix loop.
 - `format_code = false` → no formatting: covered by step 2's `run_formatters` gate; add one test
   asserting the rebase fix loop calls `run_formatters` (not the wrapper).
+- Issue item 9, remaining entry points: one test each that the entry point formats only through
+  the real `run_formatters`, so `format_code = false` means no formatter call. Setup in each:
+  `tmp_path` project with `pyproject.toml` containing `[tool.mcp-coder]\nformat_code = false`,
+  patch the wrapper `mcp_coder.workflow_steps.commit.run_format_code`, leave `run_formatters`
+  unpatched; assert the wrapper is not called.
+  - Review (`tests/workflows/review/`): restore the real `run_formatters` over the review conftest
+    mock (`monkeypatch.setattr(core, "run_formatters", commit.run_formatters)`) and drive a round
+    that reaches the formatting call (`review/core.py:468`).
+  - fix-ci (`tests/workflows/fix_ci/test_core.py`) and `check_branch_status --fix`
+    (`tests/cli/commands/test_check_branch_status_auto_fixes.py`): both format via
+    `check_and_fix_ci` → `workflow_steps.ci.run_formatters`; drive `check_and_fix_ci` far enough
+    to reach that call (mock CI status / LLM as the existing `tests/workflow_steps/test_ci_check_and_fix.py`
+    tests do), without patching `mcp_coder.workflow_steps.ci.run_formatters`.
+  - Put each test in the listed file (steps 4–6 extend the same files with pre-flight tests).

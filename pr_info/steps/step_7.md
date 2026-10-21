@@ -39,8 +39,10 @@ docstring "Exit 1 when…" gains "when the project's formatter configuration is 
 - Stop reading `config.format_code` (keep `check_type_hints` row from `get_implement_config`).
 - `[ERR]` uses `symbols["failure"]`; OK uses `symbols["success"]`.
 - `tests/cli/commands/conftest.py`: add autouse fixture patching
-  `mcp_coder.cli.commands.verify._print_project_section` with `return_value=True`
-  (same pattern as `_mock_verify_git`), so `execute_verify` tests stay hermetic.
+  `mcp_coder.cli.commands.verify._print_project_section` with a `side_effect` that prints the
+  PROJECT header (`print(_pad("PROJECT"))`) and returns `True` (same pattern as `_mock_verify_git`),
+  so `execute_verify` tests stay hermetic and section-order tests that search the output for
+  `"PROJECT"` (e.g. `tests/cli/commands/test_verify_sections_orchestration.py:423`) keep passing.
   Tests calling `_print_project_section` directly import it from `verify_sections` and are unaffected.
 
 ## ALGORITHM
