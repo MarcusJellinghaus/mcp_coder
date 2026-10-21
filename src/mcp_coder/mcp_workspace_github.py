@@ -55,6 +55,7 @@ from mcp_workspace.github_operations.issues import (
     get_all_cached_issues,
     update_issue_labels_in_cache,
 )
+from mcp_workspace.github_operations.issues.linked_branches_mixin import ClosingPRRef
 
 __all__: List[str] = [
     # Base manager
@@ -82,6 +83,7 @@ __all__: List[str] = [
     # Issues
     "IssueManager",
     "IssueBranchManager",
+    "ClosingPRRef",
     "IssueEventType",
     "IssueData",
     "CommentData",

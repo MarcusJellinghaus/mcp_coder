@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Shared helper `is_branch_linked_to_issue` + `ClosingPRRef` shim re-export
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `ClosingPRRef` shim re-export, `workflow_utils/branch_linkage.py`, `tests/workflow_utils/test_branch_linkage.py`, architecture doc update
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `ClosingPRRef` shim re-export, `workflow_utils/branch_linkage.py`, `tests/workflow_utils/test_branch_linkage.py`, architecture doc update
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `update_workflow_label()` uses `is_branch_linked_to_issue`
 See [step_2.md](./steps/step_2.md)

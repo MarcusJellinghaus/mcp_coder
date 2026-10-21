@@ -346,7 +346,7 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 
 - **`workflows/`** (top) - Thin orchestrators. Each owns its labels, config, and `FailureCategory`, and sequences steps.
 - **`workflow_steps/`** (middle) - Workflow-agnostic composed steps (commit/push, rebase, CI check-and-fix, prerequisite checks) shared across `implement` and the review workflows. Sits **above** `checks` so a step may compose a `check` (e.g. CI summary).
-- **`workflow_utils/`** + **`checks/`** (primitives) - Single-purpose capabilities (`task_tracker`, `commit_operations`, `base_branch`, `label_transitions`, `failure_handling`) and branch/CI assessments. `workflow_utils` stays a pure primitive layer with only downward imports.
+- **`workflow_utils/`** + **`checks/`** (primitives) - Single-purpose capabilities (`task_tracker`, `commit_operations`, `base_branch`, `label_transitions`, `branch_linkage`, `failure_handling`) and branch/CI assessments. `workflow_utils` stays a pure primitive layer with only downward imports.
 
 ---
 
