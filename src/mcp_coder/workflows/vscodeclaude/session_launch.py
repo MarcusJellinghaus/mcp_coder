@@ -402,13 +402,6 @@ def process_eligible_issues(
     )
     issue_manager = IssueManager(repo_url=repo_url)
     branch_manager = IssueBranchManager(repo_url=repo_url)
-    ci_manager = CIResultsManager(repo_url=repo_url)
-
-    label_lookups = build_label_lookups(
-        load_labels_config(get_labels_config_path(None))
-    )
-    review_label_name = label_lookups["id_to_name"]["pr_review_comments"]
-    created_label_name = label_lookups["id_to_name"]["pr_created"]
 
     # Get all cached issues and filter for vscodeclaude eligibility
     if all_cached_issues is None:
@@ -425,31 +418,7 @@ def process_eligible_issues(
         all_cached_issues, github_username
     )
 
-    repo_owner, repo_name_str = repo_full_name.split("/", 1)
-    for issue in eligible_issues:
-        if get_issue_status(issue) == "status-10:pr-created":
-            _ = (
-                checks._check_merge_conflict(
-                    issue, branch_manager, issue_manager, repo_owner, repo_name_str
-                )
-                or checks._check_ci(
-                    issue,
-                    ci_manager,
-                    branch_manager,
-                    issue_manager,
-                    repo_owner,
-                    repo_name_str,
-                )
-                or checks._check_review_comments(
-                    issue,
-                    branch_manager,
-                    issue_manager,
-                    repo_owner,
-                    repo_name_str,
-                    review_label_name,
-                    created_label_name,
-                )
-            )
+    checks.check_pr_health(repo_name, repo_config, all_cached_issues)
 
     # Filter to statuses that are eligible for sessions (config-driven)
     actionable_issues: list[IssueData] = [

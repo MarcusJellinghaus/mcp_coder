@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -23,6 +24,14 @@ from mcp_coder.workflows.vscodeclaude.types import (
     SessionAssessment,
     Transition,
 )
+
+
+@pytest.fixture(autouse=True)
+def _no_pr_health(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep process_eligible_issues' interim PR-health call off the GitHub API."""
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.checks.check_pr_health", MagicMock()
+    )
 
 
 def _make_assessment(

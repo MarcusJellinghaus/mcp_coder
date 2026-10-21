@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: `check_pr_health` with a shared branch/PR lookup
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: tests first, then `checks.py` helpers + `check_pr_health`, export in `__init__.py`, interim call from `process_eligible_issues`, interim `check_pr_health` patch in remaining session-launch tests
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first, then `checks.py` helpers + `check_pr_health`, export in `__init__.py`, interim call from `process_eligible_issues`, interim `check_pr_health` patch in remaining session-launch tests
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Call `check_pr_health` from the CLI Step 4 loop, outside the capacity gate
 See [step_3.md](./steps/step_3.md)

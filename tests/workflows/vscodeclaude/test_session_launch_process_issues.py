@@ -12,6 +12,14 @@ from mcp_coder.workflows.vscodeclaude.session_launch import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _no_pr_health(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep process_eligible_issues' interim PR-health call off the GitHub API."""
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.checks.check_pr_health", MagicMock()
+    )
+
+
 class TestProcessEligibleIssuesBranchRequirement:
     """Tests for branch requirement enforcement in process_eligible_issues()."""
 

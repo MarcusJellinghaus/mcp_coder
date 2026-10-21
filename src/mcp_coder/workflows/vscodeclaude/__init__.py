@@ -258,6 +258,9 @@ from .audit import (
     get_audit_file_path,
 )
 
+# PR-health checks
+from .checks import check_pr_health
+
 # Cleanup
 from .cleanup import (
     cleanup_stale_sessions,
@@ -452,6 +455,8 @@ __all__ = [
     "validate_target_repo",
     # Session restart
     "restart_closed_sessions",
+    # PR-health checks
+    "check_pr_health",
     # Helpers
     "TO_BE_DELETED_FILENAME",
     "add_to_be_deleted",
