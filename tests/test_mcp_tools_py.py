@@ -12,7 +12,76 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.mcp_tools_py import PylintResult, run_pylint_check, run_pytest_check
+from mcp_coder.mcp_tools_py import (
+    FormatterResult,
+    PylintResult,
+    run_format_code,
+    run_pylint_check,
+    run_pytest_check,
+)
+
+
+class TestRunFormatCode:
+    """Unit tests for the run_format_code wrapper."""
+
+    def test_delegates_with_resolved_targets_and_no_steps(self, tmp_path: Path) -> None:
+        """Wrapper passes project root, resolved dirs and steps=None through."""
+        expected = {
+            "ruff_imports": FormatterResult(output="", success=True, files_changed=[])
+        }
+        with (
+            patch(
+                "mcp_tools_py.utils.project_config.resolve_target_directories",
+                return_value=["src", "tests"],
+            ) as mock_resolve,
+            patch(
+                "mcp_coder.mcp_tools_py._run_format_code", return_value=expected
+            ) as mock_run,
+        ):
+            result = run_format_code(str(tmp_path))
+
+        assert result is expected
+        mock_resolve.assert_called_once_with(str(tmp_path), None)
+        mock_run.assert_called_once_with(
+            sys.executable, tmp_path, ["src", "tests"], steps=None
+        )
+
+    def test_value_error_propagates(self, tmp_path: Path) -> None:
+        """A formatter resolution error from the library propagates."""
+        with (
+            patch(
+                "mcp_tools_py.utils.project_config.resolve_target_directories",
+                return_value=["src"],
+            ),
+            patch(
+                "mcp_coder.mcp_tools_py._run_format_code",
+                side_effect=ValueError("No formatter declared"),
+            ),
+        ):
+            with pytest.raises(ValueError, match="No formatter declared"):
+                run_format_code(tmp_path)
+
+    def test_raises_runtime_error_when_resolution_fails(self, tmp_path: Path) -> None:
+        """A str return from resolve_target_directories raises RuntimeError."""
+        with (
+            patch(
+                "mcp_tools_py.utils.project_config.resolve_target_directories",
+                return_value="No pyproject.toml found",
+            ),
+            patch("mcp_coder.mcp_tools_py._run_format_code") as mock_run,
+        ):
+            with pytest.raises(RuntimeError, match="No pyproject.toml found"):
+                run_format_code(tmp_path)
+
+        mock_run.assert_not_called()
+
+    def test_resolve_steps_reexported(self) -> None:
+        """resolve_steps is importable from the wrapper module."""
+        from mcp_tools_py.formatter.runner import resolve_steps as upstream
+
+        from mcp_coder.mcp_tools_py import resolve_steps
+
+        assert resolve_steps is upstream
 
 
 class TestRunPytestCheck:

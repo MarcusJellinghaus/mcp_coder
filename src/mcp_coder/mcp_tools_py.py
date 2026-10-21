@@ -16,12 +16,15 @@ from mcp_tools_py.code_checker_pytest import (
     check_code_with_pytest as _check_code_with_pytest,
 )
 from mcp_tools_py.formatter.models import FormatterResult
+from mcp_tools_py.formatter.runner import resolve_steps
+from mcp_tools_py.formatter.runner import run_format_code as _run_format_code
 
 __all__ = [
     "FormatterResult",
     "MypyResult",
     "PylintResult",
     "has_mypy_errors",
+    "resolve_steps",
     "run_format_code",
     "run_mypy_check",
     "run_pylint_check",
@@ -32,19 +35,18 @@ __all__ = [
 def run_format_code(
     project_dir: Union[str, Path],
 ) -> dict[str, FormatterResult]:
-    """Run code formatters (isort, black) on the project.
+    """Run the project's configured formatter.
 
     Args:
         project_dir: Path to the project directory.
 
     Returns:
-        Dict mapping formatter step name to FormatterResult.
+        Dict mapping formatter step name to FormatterResult, in execution order.
 
     Raises:
         RuntimeError: If target directory resolution fails.
-    """
-    from mcp_tools_py.formatter.black_runner import run_black
-    from mcp_tools_py.formatter.isort_runner import run_isort
+        ValueError: If no formatter can be resolved (from resolve_steps).
+    """  # noqa: DOC502 - ValueError propagated from resolve_steps.
     from mcp_tools_py.utils.project_config import resolve_target_directories
 
     project_root = Path(str(project_dir))
@@ -52,13 +54,7 @@ def run_format_code(
     if isinstance(target_dirs, str):
         raise RuntimeError(target_dirs)
 
-    results: dict[str, FormatterResult] = {}
-    for step_name, runner in [("isort", run_isort), ("black", run_black)]:
-        result = runner(sys.executable, target_dirs, str(project_root))
-        results[step_name] = result
-        if not result.success:
-            break
-    return results
+    return _run_format_code(sys.executable, project_root, target_dirs, steps=None)
 
 
 def run_pytest_check(project_dir: Union[str, Path]) -> dict[str, Any]:
