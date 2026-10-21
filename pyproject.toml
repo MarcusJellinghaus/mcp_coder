@@ -181,6 +181,10 @@ markers = [
 addopts = ["--strict-markers", "--tb=short", "-n", "auto", "-p", "no:tach"]
 asyncio_mode = "auto"
 
+[tool.mcp-tools-py]
+# Formatter for run_format_code and mcp-coder workflows: isort + black
+formatter = "black"
+
 [tool.black]
 line-length = 88
 target-version = ["py311"]
