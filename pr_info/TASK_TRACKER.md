@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Call `check_pr_health` from the CLI Step 4 loop, outside the capacity gate
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: tests first (`test_vscodeclaude_pr_health.py`, CLI autouse fixture), move call to `commands_vscodeclaude.py`, remove interim call/imports from `session_launch.py` and related test patches
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests first (`test_vscodeclaude_pr_health.py`, CLI autouse fixture), move call to `commands_vscodeclaude.py`, remove interim call/imports from `session_launch.py` and related test patches
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Remove the session-limit caveat from the docs
 See [step_4.md](./steps/step_4.md)

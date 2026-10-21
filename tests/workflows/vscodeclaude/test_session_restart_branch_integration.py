@@ -26,14 +26,6 @@ from mcp_coder.workflows.vscodeclaude.types import (
 )
 
 
-@pytest.fixture(autouse=True)
-def _no_pr_health(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keep process_eligible_issues' interim PR-health call off the GitHub API."""
-    monkeypatch.setattr(
-        "mcp_coder.workflows.vscodeclaude.checks.check_pr_health", MagicMock()
-    )
-
-
 def _make_assessment(
     folder: str,
     *,
@@ -250,12 +242,6 @@ class TestBranchHandlingIntegration:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
             lambda **kwargs: mock_branch_manager,
-        )
-        mock_ci_manager = MagicMock()
-        mock_ci_manager.get_latest_ci_status.return_value = {"run": {}, "jobs": []}
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager",
-            lambda **kwargs: mock_ci_manager,
         )
 
         # Mock issue at status-04

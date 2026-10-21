@@ -6,13 +6,7 @@ import shutil
 from pathlib import Path
 from typing import cast
 
-from ...config.label_config import (
-    build_label_lookups,
-    get_labels_config_path,
-    load_labels_config,
-)
 from ...mcp_workspace_github import (
-    CIResultsManager,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -27,7 +21,6 @@ from ...utils.subprocess_runner import (
     launch_process,
 )
 from ...utils.user_config import get_cache_refresh_minutes
-from . import checks
 from .config import (
     get_github_username,
     get_repo_full_name,
@@ -417,8 +410,6 @@ def process_eligible_issues(
     eligible_issues = _filter_eligible_vscodeclaude_issues(
         all_cached_issues, github_username
     )
-
-    checks.check_pr_health(repo_name, repo_config, all_cached_issues)
 
     # Filter to statuses that are eligible for sessions (config-driven)
     actionable_issues: list[IssueData] = [
