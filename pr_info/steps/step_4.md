@@ -10,9 +10,8 @@
 ## WHERE
 
 - `src/mcp_coder/workflows/review/core.py`
-- `tests/workflows/review/` — add the test to the file that already tests Gate 1
-  (`check_open_tasks_gate`), or a new `test_core_formatter_preflight.py` if that file is near
-  750 lines (`tests/workflows/review/test_core_after_steps.py` is at 736).
+- `tests/workflows/review/test_core_formatter_preflight.py` (created in step 3) — add the
+  pre-flight test there (`tests/workflows/review/test_core_after_steps.py` is at 736/750).
 
 ## WHAT
 

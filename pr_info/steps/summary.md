@@ -68,7 +68,7 @@
 | `tests/test_pyproject_config.py` | Drop `implement["format_code"]` assertion |
 | `tests/workflow_steps/test_commit.py` | Gate / error / helper tests; revise generic-exception test |
 | `tests/workflows/rebase/test_workflow.py`, `test_guards.py` | Patch `run_formatters`; `_preflight` formatter check |
-| `tests/workflows/review/` (new test in an existing or new file) | Pre-flight test |
+| `tests/workflows/review/test_core_formatter_preflight.py` (**new**, step 3) | `format_code = false` test (step 3); pre-flight test (step 4) |
 | `tests/workflows/fix_ci/test_core.py` | Pre-flight test |
 | `tests/cli/commands/test_check_branch_status_auto_fixes.py` | Pre-flight test |
 | `tests/cli/commands/test_verify_project_section.py` (**new**) | Verify row + exit tests |

@@ -57,7 +57,8 @@ _preflight(p):
   `tmp_path` project with `pyproject.toml` containing `[tool.mcp-coder]\nformat_code = false`,
   patch the wrapper `mcp_coder.workflow_steps.commit.run_format_code`, leave `run_formatters`
   unpatched; assert the wrapper is not called.
-  - Review (`tests/workflows/review/`): restore the real `run_formatters` over the review conftest
+  - Review (**new** `tests/workflows/review/test_core_formatter_preflight.py` — not
+    `test_core_after_steps.py`, which is at 736/750): restore the real `run_formatters` over the review conftest
     mock (`monkeypatch.setattr(core, "run_formatters", commit.run_formatters)`) and drive a round
     that reaches the formatting call (`review/core.py:468`).
   - fix-ci (`tests/workflows/fix_ci/test_core.py`) and `check_branch_status --fix`
