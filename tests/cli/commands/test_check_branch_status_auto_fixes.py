@@ -1,5 +1,6 @@
 """Tests for check_branch_status auto-fixes functionality."""
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -128,6 +129,44 @@ class TestRunAutoFixes:
         result = _run_auto_fixes(project_dir, failed_ci_report, "claude", None)
 
         assert result is False
+
+    @patch("mcp_coder.cli.commands.check_branch_status.check_and_fix_ci")
+    @patch("mcp_coder.cli.commands.check_branch_status.check_formatter_config")
+    def test_run_auto_fixes_formatter_config_error(
+        self,
+        mock_check_formatter: Mock,
+        mock_check_ci: Mock,
+        failed_ci_report: BranchStatusReport,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Unresolvable formatter → False, error logged, no CI fix."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        project_dir = Path("/test/project")
+        mock_check_formatter.return_value = "No formatter declared: X"
+
+        with caplog.at_level(logging.ERROR):
+            result = _run_auto_fixes(project_dir, failed_ci_report, "claude", None)
+
+        assert result is False
+        mock_check_formatter.assert_called_once_with(project_dir, warn_legacy_key=True)
+        assert any(
+            r.levelno == logging.ERROR and r.getMessage() == "No formatter declared: X"
+            for r in caplog.records
+        )
+        mock_check_ci.assert_not_called()
+
+    @patch("mcp_coder.cli.commands.check_branch_status.check_formatter_config")
+    def test_run_auto_fixes_ci_not_failed_skips_formatter_check(
+        self, mock_check_formatter: Mock, sample_report: BranchStatusReport
+    ) -> None:
+        """CI not failed → formatter config is not checked."""
+        from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+        result = _run_auto_fixes(Path("/test/project"), sample_report, "claude", None)
+
+        assert result is True
+        mock_check_formatter.assert_not_called()
 
 
 class TestFixRetryLogic:
