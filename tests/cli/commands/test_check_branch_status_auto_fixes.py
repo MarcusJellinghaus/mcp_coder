@@ -1,12 +1,14 @@
 """Tests for check_branch_status auto-fixes functionality."""
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
 from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
+from mcp_coder.workflow_steps import commit
+from tests.ci_fix_drive import patch_ci_fix_externals
 
 
 @pytest.fixture
@@ -374,3 +376,29 @@ class TestFixRetryLogic:
         )
 
         assert result is False  # Timeout counts as failure
+
+
+def test_auto_fix_format_code_false_skips_formatter(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_ci_report: BranchStatusReport,
+) -> None:
+    """``format_code = false`` → ``--fix`` commits without calling the formatter."""
+    from mcp_coder.cli.commands.check_branch_status import _run_auto_fixes
+
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
+    )
+    commit_changes = patch_ci_fix_externals(monkeypatch)
+    wrapper = MagicMock(return_value={})
+    monkeypatch.setattr(commit, "run_format_code", wrapper)
+
+    with patch(
+        "mcp_coder.cli.commands.check_branch_status.get_current_branch_name",
+        return_value="feature/test-branch",
+    ):
+        result = _run_auto_fixes(tmp_path, failed_ci_report, "claude", None)
+
+    assert result is True
+    commit_changes.assert_called_once()
+    wrapper.assert_not_called()

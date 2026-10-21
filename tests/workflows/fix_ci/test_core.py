@@ -1,11 +1,15 @@
 """Tests for the fix_ci workflow (Jenkins-side CI auto-fix loop)."""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
+from mcp_coder.workflow_steps import commit
 from mcp_coder.workflows.fix_ci import run_fix_ci_workflow
+from tests.ci_fix_drive import patch_ci_fix_externals
 
 MODULE = "mcp_coder.workflows.fix_ci.core"
 PROJECT_DIR = Path("/fake/project")
@@ -139,3 +143,22 @@ def test_unexpected_exception_netted_by_run_guarded() -> None:
     mock_handle.assert_called_once()
     failure = mock_handle.call_args[0][0]
     assert failure.category == "ci_fix_failed"
+
+
+def test_format_code_false_skips_formatter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``format_code = false`` → the CI fix commits without calling the formatter."""
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.mcp-coder]\nformat_code = false\n", encoding="utf-8"
+    )
+    commit_changes = patch_ci_fix_externals(monkeypatch)
+    wrapper = MagicMock(return_value={})
+    monkeypatch.setattr(commit, "run_format_code", wrapper)
+
+    with patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME):
+        result = run_fix_ci_workflow(tmp_path, "claude")
+
+    assert result == 0
+    commit_changes.assert_called_once()
+    wrapper.assert_not_called()
