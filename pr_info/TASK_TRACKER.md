@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Config reader `get_post_install_checks` + tests
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `TestGetPostInstallChecks` tests + `get_post_install_checks` in `utils/pyproject_config.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestGetPostInstallChecks` tests + `get_post_install_checks` in `utils/pyproject_config.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `InstallConfig.post_install_checks` read strictly in `from_args` + tests
 See [step_2.md](./steps/step_2.md)
