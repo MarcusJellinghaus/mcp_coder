@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Relocate the existing PR-health tests (pure move)
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: move PR-health tests into `test_checks.py` / `test_checks_review_comments.py`, trim `test_session_launch_process_issues.py`, delete `test_session_launch_review_comments.py`, update `.large-files-allowlist`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move PR-health tests into `test_checks.py` / `test_checks_review_comments.py`, trim `test_session_launch_process_issues.py`, delete `test_session_launch_review_comments.py`, update `.large-files-allowlist`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `check_pr_health` with a shared branch/PR lookup
 See [step_2.md](./steps/step_2.md)

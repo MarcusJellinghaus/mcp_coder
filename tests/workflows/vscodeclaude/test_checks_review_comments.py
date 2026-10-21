@@ -1,4 +1,4 @@
-"""Tests for review-comment detection helpers in session_launch.py."""
+"""Tests for review-comment detection in checks.py."""
 
 from typing import Any
 from unittest.mock import MagicMock
@@ -13,7 +13,7 @@ from mcp_coder.workflows.vscodeclaude.checks import (
 )
 from mcp_coder.workflows.vscodeclaude.session_launch import process_eligible_issues
 
-from .test_session_launch_process_issues import (
+from .test_checks import (
     MOCK_CI_LABELS_CONFIG,
     TestProcessEligibleIssuesMergeConflictDetection,
 )
