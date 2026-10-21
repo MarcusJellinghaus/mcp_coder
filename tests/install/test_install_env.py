@@ -78,6 +78,30 @@ class TestStrictTomlRead:
         assert "pyproject.toml" in str(exc_info.value)
 
 
+class TestPostInstallChecksResolution:
+    """The post-install checks are read strictly from the pyproject.toml."""
+
+    def test_declared_checks_are_used(self, tmp_path: Path) -> None:
+        _write_pyproject(
+            tmp_path,
+            '\n[tool.mcp-coder.install]\npost_install_checks = [["a", "--version"]]\n',
+        )
+        config = InstallConfig.from_args(_namespace(target=tmp_path))
+        assert config.post_install_checks == (("a", "--version"),)
+
+    def test_missing_key_means_no_checks(self, tmp_path: Path) -> None:
+        _write_pyproject(tmp_path, '\n[tool.mcp-coder.install]\nextras = "dev"\n')
+        config = InstallConfig.from_args(_namespace(target=tmp_path))
+        assert config.post_install_checks == ()
+
+    def test_malformed_checks_raise(self, tmp_path: Path) -> None:
+        _write_pyproject(
+            tmp_path, "\n[tool.mcp-coder.install]\npost_install_checks = [[]]\n"
+        )
+        with pytest.raises(ValueError, match="post_install_checks"):
+            InstallConfig.from_args(_namespace(target=tmp_path))
+
+
 class TestLocalPathResolution:
     """--local-path defaulting and the --source local requirement."""
 

@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..utils.pyproject_config import get_install_extras
+from ..utils.pyproject_config import get_install_extras, get_post_install_checks
 
 MCP_CODER_REPO = "https://github.com/MarcusJellinghaus/mcp_coder.git"
 
@@ -68,6 +68,7 @@ class InstallConfig:
     clean: bool
     python: str
     check: bool
+    post_install_checks: tuple[tuple[str, ...], ...]
 
     @classmethod
     def from_args(cls, args: argparse.Namespace) -> "InstallConfig":
@@ -82,8 +83,9 @@ class InstallConfig:
         Raises:
             ValueError: If ``--source local`` was passed without
                 ``--local-path``, if ``--use-sync`` was combined with a
-                target that differs from ``--local-path``, or if the target
-                project's pyproject.toml exists but cannot be parsed.
+                target that differs from ``--local-path``, if the target
+                project's pyproject.toml exists but cannot be parsed, or if
+                its ``post_install_checks`` value is malformed.
         """
         if args.source == "local" and args.local_path is None:
             raise ValueError("--source local requires --local-path")
@@ -107,6 +109,7 @@ class InstallConfig:
         # but must not skip the read, so a malformed pyproject.toml aborts
         # here rather than being swallowed by the lax override reader later.
         declared = get_install_extras(local_path, strict=True)
+        post_install_checks = get_post_install_checks(local_path, strict=True)
         if args.extras is not None:
             extras = str(args.extras)
         elif declared is not None:
@@ -127,6 +130,7 @@ class InstallConfig:
             clean=args.clean,
             python=args.python,
             check=args.check,
+            post_install_checks=post_install_checks,
         )
 
 
