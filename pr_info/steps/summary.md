@@ -76,8 +76,9 @@ and 2× `find_pull_request_by_head` per poll, because every check does its own l
 ## Steps
 
 1. Relocate the existing PR-health tests into `test_checks.py` / `test_checks_review_comments.py` (pure move, no source change).
-2. Implement `check_pr_health` with the shared lookup, move the call site out of the capacity gate, and rewrite / add the tests (TDD).
-3. Remove the session-limit caveat from the docs.
+2. Implement `check_pr_health` with the shared lookup and the new check signatures; `process_eligible_issues` calls it in place of its check loop for now; rewrite / add the `test_checks*` tests (TDD).
+3. Move the `check_pr_health` call into the Step 4 loop of `execute_coordinator_vscodeclaude` (outside the capacity gate), remove the leftover `CIResultsManager` / label-config imports and their test patches, add the CLI autouse fixture and `test_vscodeclaude_pr_health.py` (TDD).
+4. Remove the session-limit caveat from the docs.
 
 ## Out of scope
 

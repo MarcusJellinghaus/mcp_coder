@@ -1,29 +1,25 @@
-# Step 2 — `check_pr_health` with a shared lookup, outside the capacity gate
+# Step 2 — `check_pr_health` with a shared lookup (still called from `process_eligible_issues`)
 
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md`, then implement `pr_info/steps/step_2.md`.
 > Work test-first: rewrite / add the tests listed under "Tests" so they fail, then change
 > the source until they pass. Keep the "never raises" and "at most one action per issue
-> per poll" guarantees. Run pylint, pytest (fast unit tests, `-n auto`), mypy,
-> lint-imports and tach; all must pass. Format, then make exactly one commit.
+> per poll" guarantees. Do not touch the CLI call site yet — that is step 3. Run pylint,
+> pytest (fast unit tests, `-n auto`), mypy, lint-imports and tach; all must pass. Format,
+> then make exactly one commit.
 
 ## WHERE
 
 Source:
 - `src/mcp_coder/workflows/vscodeclaude/checks.py`
 - `src/mcp_coder/workflows/vscodeclaude/__init__.py`
-- `src/mcp_coder/workflows/vscodeclaude/session_launch.py`
-- `src/mcp_coder/cli/commands/coordinator/commands_vscodeclaude.py`
+- `src/mcp_coder/workflows/vscodeclaude/session_launch.py` (check loop → `checks.check_pr_health` call)
 
 Tests:
 - `tests/workflows/vscodeclaude/test_checks.py` (rewrite)
 - `tests/workflows/vscodeclaude/test_checks_review_comments.py` (rewrite)
 - `tests/workflows/vscodeclaude/test_checks_orchestration.py` (create only if `test_checks.py` > 750 lines)
-- `tests/workflows/vscodeclaude/test_session_launch_process_issues.py`, `test_session_launch.py`,
-  `test_session_restart_branch_integration.py` (remove `session_launch.CIResultsManager` patches)
-- `tests/cli/commands/coordinator/test_vscodeclaude_cli.py` (autouse fixture)
-- `tests/cli/commands/coordinator/test_vscodeclaude_pr_health.py` (create)
 
 ## WHAT — `checks.py`
 
@@ -140,17 +136,16 @@ for issue in pr_issues:
 ## HOW — integration
 
 - `workflows/vscodeclaude/__init__.py`: `from .checks import check_pr_health`, add `"check_pr_health"` to `__all__`.
-- `commands_vscodeclaude.py`: import `check_pr_health` from `....workflows.vscodeclaude`; in the Step 4
-  loop, right after `all_cached_issues = list(...)` and before `process_eligible_issues(...)`:
-  `check_pr_health(repo_name, validated_config, all_cached_issues)`. No capacity condition.
-- `session_launch.py` / `process_eligible_issues()`:
-  - delete `ci_manager`, the label lookups (`review_label_name`, `created_label_name`) and the
-    `for issue in eligible_issues: if ... "status-10:pr-created": ...` check loop (incl. the
-    `repo_owner, repo_name_str = ...` line before it — the launch loop re-splits it itself)
+- `session_launch.py` / `process_eligible_issues()` (interim; step 3 moves the call to the CLI):
+  - replace the `repo_owner, repo_name_str = ...` line and the
+    `for issue in eligible_issues: if ... "status-10:pr-created": ...` check loop with
+    `checks.check_pr_health(repo_name, repo_config, all_cached_issues)` — at the same place,
+    i.e. after the cache fallback, so `all_cached_issues` is never `None`
+  - delete the now-dead locals `ci_manager`, `label_lookups`, `review_label_name`,
+    `created_label_name` (pylint `unused-variable`)
+  - keep the module imports (`CIResultsManager`, `...config.label_config`, `from . import checks`):
+    existing tests still patch `session_launch.CIResultsManager`; step 3 removes imports and patches together
   - keep the capacity early return, `issue_manager`, `branch_manager`
-  - remove the imports `CIResultsManager`, `build_label_lookups`, `get_labels_config_path`,
-    `load_labels_config` (the whole `...config.label_config` import) and `from . import checks`
-  - docstring: no mention of PR-health checks
 
 ## DATA
 
@@ -161,6 +156,9 @@ for issue in pr_issues:
   `PR-health: test-repo #999 → status-71:merge-conflict`.
 
 ## Tests (write first)
+
+All tests in this step call `check_pr_health` or the `_check_*` / `_resolve_pr_target` helpers
+directly — none go through `process_eligible_issues`.
 
 Shared helpers at the top of `test_checks.py` (module-level, replacing the class methods):
 - `MOCK_MERGE_CONFLICT_LABELS_CONFIG`, `MOCK_CI_LABELS_CONFIG` (unchanged; they feed only
@@ -210,34 +208,15 @@ filter records by `levelno == OUTPUT` from `mcp_coder.utils.log_utils`):
 - `TestCheckReviewComments`: call `_check_review_comments(issue, {"number": 1}, pr_manager, issue_manager,
   "test-repo", REVIEW_LABEL, CREATED_LABEL)`; no branch-manager mocks, no `_build_pr_manager` patch
 - drop `test_no_branch_returns_false_never_calls_feedback` and `test_no_pr_found_returns_false`
-- move `TestProcessEligibleIssuesPriorityChaining` into `test_checks.py` orchestration (covered by
-  the chaining tests above) and remove `TestCheckCiReturnValue` (moved); drop the now-unused imports
+- delete `TestProcessEligibleIssuesPriorityChaining` (both tests). It is not rewritten: its two
+  cases are already covered by the `TestCheckPrHealth` chaining tests in `test_checks.py`
+  ("dirty PR → `get_latest_ci_status` and `get_pr_feedback` not called", "failed CI →
+  `get_pr_feedback` not called")
+- remove `TestCheckCiReturnValue` (moved to `TestCheckCi`); drop the now-unused imports
   (`process_eligible_issues`, `_check_ci`, `.test_checks`)
 
 Remove:
 - `test_pr_lookup_failure_does_not_raise_and_other_issues_still_processed`
-- every `monkeypatch.setattr("mcp_coder.workflows.vscodeclaude.session_launch.CIResultsManager", ...)`
-  (and its now-unused `mock_ci_manager`) in `test_session_launch.py`, `test_session_restart_branch_integration.py`,
-  `test_session_launch_process_issues.py`
-
-`test_vscodeclaude_cli.py`:
-```python
-@pytest.fixture(autouse=True)
-def _no_pr_health(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    mock = MagicMock()
-    monkeypatch.setattr(
-        "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.check_pr_health", mock
-    )
-    return mock
-```
-
-`test_vscodeclaude_pr_health.py` (new, same `@patch` style as `TestAtCapacityDiagnosticLog`):
-- two repos (`repo_a`, `repo_b`), `max_sessions=1`, `build_assessments` → one active stub
-  (`SimpleNamespace(verdict=SimpleNamespace(active=True))`), cache populated for both repos,
-  `process_eligible_issues` → `[]`
-- assert `check_pr_health` called twice, with `repo_name` `repo_a` and `repo_b`, each with that
-  repo's `{"repo_url": ...}` and cached-issue list
-- `--repo repo_b` → called once, for `repo_b` only
 
 If `test_checks.py` exceeds 750 lines, move `TestCheckPrHealth` and `TestPrHealthOutput` (plus the
 helpers they need, importing shared ones from `.test_checks`) into `test_checks_orchestration.py`.
@@ -245,4 +224,4 @@ Check with `mcp__mcp-workspace__check_file_size(max_lines=750)`.
 
 ## Commit
 
-`fix(vscodeclaude): run PR-health checks independently of the session limit (#1238)`
+`refactor(vscodeclaude): add check_pr_health with a shared branch/PR lookup (#1238)`
