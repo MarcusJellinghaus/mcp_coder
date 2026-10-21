@@ -80,9 +80,9 @@ See [step_8.md](./steps/step_8.md)
 ### Step 9: Text and docs
 See [step_9.md](./steps/step_9.md)
 
-- [ ] Implementation (text + docs updates)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (text + docs updates)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

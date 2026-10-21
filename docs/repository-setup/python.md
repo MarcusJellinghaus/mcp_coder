@@ -16,8 +16,10 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 
 | Section | Read by | Purpose |
 |---|---|---|
-| `[tool.black]` | `mcp__mcp-tools-py__run_format_code`, `tools/black.bat`, `pyproject_config.py` | Black formatter config |
-| `[tool.isort]` | `mcp__mcp-tools-py__run_format_code`, `tools/iSort.bat`, `pyproject_config.py` | isort config |
+| `[tool.mcp-tools-py] formatter` | mcp-tools-py (`run_format_code` MCP tool and mcp-coder's formatting) | Selects the formatter: `"black"` (isort + black) or `"ruff"` (ruff imports + ruff format). Optional while table detection is unambiguous |
+| `[tool.black]` | `mcp__mcp-tools-py__run_format_code`, `tools/black.bat` | Black formatter config; selects black when `formatter` is unset and `[tool.ruff.format]` is absent |
+| `[tool.isort]` | `mcp__mcp-tools-py__run_format_code`, `tools/iSort.bat` | isort config (used with the black formatter) |
+| `[tool.mcp-coder] format_code` | mcp-coder (`run_formatters`, `verify`) | Bool, default `true`. Set `false` to opt out of formatting in `implement`, `rebase`, `review`, `fix-ci` and `check_branch_status --fix` |
 | `[tool.pytest.ini_options]` | `mcp__mcp-tools-py__run_pytest_check`, pytest CLI | Pytest config (markers, options) |
 | `[tool.mypy]` | `mcp__mcp-tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
 | `[tool.pylint.main]` / `[tool.pylint.messages_control]` | `mcp__mcp-tools-py__run_pylint_check`, pylint CLI | Pylint config |
@@ -25,7 +27,9 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 | `[tool.mcp-coder.install-from-github]` | mcp-coder install process (`pyproject_config.py`) | GitHub-based dependency packages (`packages`, `packages-no-deps`) |
 | `[tool.mcp-coder.prompts]` | `prompt_loader.py`, `prompt` command, `icoder` | System/project prompt paths and Claude injection mode |
 
-**mcp-coder-specific behavior:** [`src/mcp_coder/utils/pyproject_config.py`](../../src/mcp_coder/utils/pyproject_config.py) reads `[tool.black]` and `[tool.isort]` and warns if their `line-length` settings disagree. It also reads `[tool.mcp-coder.install-from-github]` to find packages mcp-coder should install from GitHub source.
+**mcp-coder-specific behavior:** [`src/mcp_coder/utils/pyproject_config.py`](../../src/mcp_coder/utils/pyproject_config.py) reads `[tool.mcp-coder] format_code` and `[tool.mcp-coder.install-from-github]` (packages mcp-coder should install from GitHub source).
+
+**Formatting requires a declared formatter.** mcp-coder formats through mcp-tools-py's resolution, the same one the `run_format_code` MCP tool uses: `[tool.mcp-tools-py] formatter`, else `[tool.ruff.format]` vs `[tool.black]`. A `pyproject.toml` that declares a formatter is required — with none, or with both tables and no `formatter` key, every formatting entry point fails before any LLM call. Set `[tool.mcp-coder] format_code = false` to skip formatting instead. `mcp-coder verify` shows the resolved steps. The old `[tool.mcp-coder.implement] format_code` key is no longer read; `verify` flags it as `[ERR]`.
 
 ### Prompt Configuration
 
@@ -193,7 +197,7 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 
 ### Formatting Tools
 
-> **Note:** These shell scripts are being phased out in favor of the `mcp__mcp-tools-py__run_format_code` MCP tool, which runs both isort and black. Prefer the MCP tool for new workflows. Shell scripts are kept for human developers and CI pipelines.
+> **Note:** These shell scripts are being phased out in favor of the `mcp__mcp-tools-py__run_format_code` MCP tool, which runs the project's configured formatter. Prefer the MCP tool for new workflows. Shell scripts are kept for human developers and CI pipelines.
 
 | Script | Purpose | Category |
 |--------|---------|----------|

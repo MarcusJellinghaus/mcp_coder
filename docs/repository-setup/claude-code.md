@@ -100,7 +100,7 @@ Supporting files referenced by skills. Deployed automatically by `mcp-coder init
 
 **Model Context Protocol (MCP)** enables Claude Code to use specialized servers. mcp-coder ships with two MCP servers:
 
-- **`mcp-tools-py`** — Python code-quality tools (pylint, pytest, mypy, vulture, isort+black, etc.)
+- **`mcp-tools-py`** — Python code-quality tools (pylint, pytest, mypy, vulture, formatting, etc.)
 - **`mcp-workspace`** — Workspace file operations (read, write, edit, list) for the project plus optional reference projects
 
 ### Platform-Specific Configuration
