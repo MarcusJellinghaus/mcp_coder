@@ -29,6 +29,9 @@ This is mechanical cleanup. There is no new module, API or `__all__` design.
      Do not use `find_spec` or `importlib.import_module`.
    - `tests`: `pytest.importorskip("mlflow")` replaces the `try/except ImportError → skip`
      wrappers. A `hasattr` loop replaces the import-everything-in-a-`try` block.
+   - `tests`: obsolete test-first guards around first-party imports
+     (`try: import ... / except ImportError: X_MODULE_AVAILABLE = False` plus `skipif`)
+     are deleted. The import becomes plain, or goes away if unused.
 3. **Import smoke tests assert on what they import.** The import stays and is now "used".
 4. **Lint policy.** ruff `F` owns unused-import detection. pylint `W0611` stays disabled,
    with an updated comment that explains why: pylint flags the `X as X` re-export
@@ -73,6 +76,12 @@ Step 2 (hand edits):
 - `tests/integration/test_mlflow_integration.py`
 - `tests/workflows/vscodeclaude/test_launch_vscode_env_vars.py`
 - `tests/workflows/vscodeclaude/test_session_restart_branch_integration.py`
+- `tests/cli/commands/test_check_branch_status.py`
+- `tests/cli/commands/test_check_branch_status_auto_fixes.py`
+- `tests/cli/commands/test_check_branch_status_ci_waiting.py`
+- `tests/cli/commands/test_check_branch_status_cli_integration.py`
+- `tests/cli/commands/test_check_branch_status_pr_waiting.py`
+- any further test file with the same first-party guard pattern (found by the A4 sweep)
 
 Step 2 (`ruff --fix` sweep): about 60 further test files under `tests/`, with import lines
 removed only.

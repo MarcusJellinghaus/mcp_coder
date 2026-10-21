@@ -63,6 +63,42 @@
   `from pathlib import Path` / `from unittest.mock import MagicMock` at lines 40-41. The
   module-level `MagicMock` (line 9) is then unused, and B removes it.
 
+**A4 — Obsolete test-first import guards (ruff's fix does not touch these).**
+
+These five files guard the import with a test-first block, written before the module
+existed:
+
+```python
+try:
+    from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status
+
+    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = True
+except ImportError:
+    CHECK_BRANCH_STATUS_MODULE_AVAILABLE = False
+```
+
+- `tests/cli/commands/test_check_branch_status.py`
+- `tests/cli/commands/test_check_branch_status_auto_fixes.py`
+- `tests/cli/commands/test_check_branch_status_ci_waiting.py`
+- `tests/cli/commands/test_check_branch_status_cli_integration.py`
+- `tests/cli/commands/test_check_branch_status_pr_waiting.py`
+
+In each file:
+- Delete the `# Test-first approach ...` comment, the `try/except` block and the
+  `CHECK_BRANCH_STATUS_MODULE_AVAILABLE` flag.
+- Delete every `@pytest.mark.skipif(not CHECK_BRANCH_STATUS_MODULE_AVAILABLE, ...)`
+  decorator (class- and function-level).
+- If any test in the file calls `execute_check_branch_status` through the module-level name
+  (not through a function-local import), keep a plain top-level
+  `from mcp_coder.cli.commands.check_branch_status import execute_check_branch_status`.
+  Otherwise drop the import entirely.
+- If `pytest` becomes unused after the `skipif` removal, B removes it.
+
+Then sweep the rest of `tests/` for the same pattern:
+`search_files(glob="tests/**/*.py", pattern="_MODULE_AVAILABLE|except ImportError")`.
+Apply the same treatment to any other guard around a first-party `mcp_coder` import. Leave
+guards around optional third-party dependencies alone unless A2 already covers them.
+
 ### B. Auto-fix sweep
 
 `run_ruff_fix(select=["F401"], target_directories=["tests"])`
@@ -74,7 +110,7 @@ used-form statement (for example `assert module`), not a `noqa`.
 ## ALGORITHM
 
 ```
-apply A1, A2, A3 by hand
+apply A1, A2, A3, A4 by hand
 run_ruff_fix(select=["F401"], target_directories=["tests"])
 git diff -> inspect every removed import
 run_ruff_check(select=["F401","F811"], target_directories=["tests"]) -> must be 0
@@ -84,7 +120,8 @@ run format, pylint, mypy, pytest (unit + git_integration)
 ## DATA
 
 No runtime data changes. Each touched test keeps the same pass/skip behaviour. The mlflow
-tests skip via `importorskip` instead of `pytest.skip`.
+tests skip via `importorskip` instead of `pytest.skip`. The `check_branch_status` tests
+lose their `skipif`: a broken import now fails collection instead of skipping silently.
 
 ## Postcondition
 
