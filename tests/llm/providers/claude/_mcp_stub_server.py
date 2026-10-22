@@ -10,9 +10,11 @@ controls them:
   proves a genuine MCP tool call happened — not a hallucination.
 - ``MCP_STUB_STARTUP_DELAY_SECONDS``: seconds to sleep *before* the server
   starts serving. The sleep runs before ``mcp.run()`` connects stdio, so the
-  server's ``initialize`` is delayed and the Claude CLI reports it ``pending``
-  at the init event (past the ~5 s ``alwaysLoad`` cap). With a large enough
-  delay (or one exceeding ``MCP_TIMEOUT``) the server never connects in time.
+  server's ``initialize`` is delayed. The Claude CLI reports it ``pending`` at
+  the init event when its pre-turn wait for MCP servers (bounded by
+  ``MCP_TIMEOUT``, overridable via ``CLAUDE_CODE_MCP_STARTUP_WAIT_MS``) ends
+  before the delay does. A delay exceeding ``MCP_TIMEOUT`` means the server
+  never connects in time.
 
 This module is intentionally tiny and dependency-light: it relies only on the
 ``mcp`` SDK (FastMCP) already used by the project's own MCP servers. It is run

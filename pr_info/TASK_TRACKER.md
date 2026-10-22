@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Stub server docstring — drop "~5 s `alwaysLoad` cap" wording — [step_2.md](./steps/step_2.md)
-- [ ] Implementation: update `MCP_STUB_STARTUP_DELAY_SECONDS` bullet in `_mcp_stub_server.py` module docstring
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `MCP_STUB_STARTUP_DELAY_SECONDS` bullet in `_mcp_stub_server.py` module docstring
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `docs/environments/environments.md` — update `MCP_TIMEOUT` row — [step_3.md](./steps/step_3.md)
 - [ ] Implementation: confirm `session_setup.py` sets `MCP_TIMEOUT`, then replace the row (pre-turn wait, `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` override, setter `session_setup.py`)
