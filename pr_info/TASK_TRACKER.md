@@ -65,9 +65,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 8: Review `_route_to_human` → structured "Handed Off" comments + rebase table + docs — [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation: tests + `_REBASE_HANDOFF` table, `_route_to_human` new kwargs / banner / builder, four call sites in `review/core.py`, `steps.py` warning log + comment, `development-process.md` escalation sentence
-- [ ] Quality checks: pylint, pytest, mypy, check_file_size (`review/core.py` < 750 lines) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `_REBASE_HANDOFF` table, `_route_to_human` new kwargs / banner / builder, four call sites in `review/core.py`, `steps.py` warning log + comment, `development-process.md` escalation sentence
+- [x] Quality checks: pylint, pytest, mypy, check_file_size (`review/core.py` < 750 lines) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

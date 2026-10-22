@@ -8,6 +8,7 @@ helpers alongside them.
 """
 
 import logging
+import time
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import (
@@ -21,7 +22,10 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import push_changes
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.failure_handling import (
+    SHORT_SHA_LENGTH,
+    CommentField,
     WorkflowFailure,
     build_failure_comment,
     handle_workflow_failure,
@@ -32,10 +36,6 @@ from .config import ReviewConfig
 from .verdict import Verdict
 
 logger = logging.getLogger(__name__)
-
-# ``commit_staged_files`` reports the first 7 characters of the SHA; the
-# pathspec-scoped commit below matches that so both routes return the same shape.
-_SHORT_SHA_LENGTH = 7
 
 # reason -> (Category display, Error sentence used when `details` is None)
 _FAIL_REASONS: dict[str, tuple[str, str]] = {
@@ -50,6 +50,42 @@ _FAIL_REASONS: dict[str, tuple[str, str]] = {
     "ci_unknown": ("CI not proven green", "CI could not be proven green"),
     "commit-failed": ("Commit failed", "Committing the review fixes failed"),
     "push-failed": ("Push failed", "Pushing the review fixes failed"),
+}
+
+# reason -> (Category, Reason, Next step)
+_REBASE_HANDOFF: dict[str, tuple[str, str, str]] = {
+    "dirty_tree": (
+        "Uncommitted changes",
+        "Rebase not attempted: the working tree has staged or modified tracked "
+        "files",
+        "Commit or discard the listed files, then re-run the review",
+    ),
+    "no_base": (
+        "Base branch not detected",
+        "Rebase not attempted: no base branch could be detected",
+        "Add a `### Base Branch` section to the issue, then re-run",
+    ),
+    "base_missing": (
+        "Base branch missing on origin",
+        "Rebase not attempted: the base branch does not exist on origin",
+        "Push or restore the base branch, or fix `### Base Branch`, then re-run",
+    ),
+    "conflict": (
+        "Rebase conflict",
+        "Rebase onto the base branch stopped on a conflict",
+        "`/rebase`, then re-run the review",
+    ),
+    "rebase_failed": (
+        "Rebase failed",
+        "Rebase onto the base branch failed and was not classified as a conflict",
+        "`/rebase` (may be a conflict that only appears while replaying "
+        "commits); check the job log",
+    ),
+    "push_failed": (
+        "Push failed after rebase",
+        "Rebase succeeded, but the force-with-lease push failed",
+        "Fetch, check for foreign commits, then `git push --force-with-lease`",
+    ),
 }
 
 
@@ -255,7 +291,7 @@ def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResu
     sha = get_latest_commit_sha(project_dir)
     return {
         "success": True,
-        "commit_hash": sha[:_SHORT_SHA_LENGTH] if sha else None,
+        "commit_hash": sha[:SHORT_SHA_LENGTH] if sha else None,
         "error": None,
         "error_category": None,
     }
@@ -398,16 +434,25 @@ def _route_to_human(
     issue_number: int | None,
     update_issue_labels: bool,
     post_issue_comments: bool,
-    comment_body: str,
     log_path: Path | None,
+    round_number: int,
+    start_time: float,
+    category: str | None = None,
+    reason: str | None = None,
+    rebase: RebaseOutcome | None = None,
 ) -> int:
     """Hand a converged-but-unresolved run off to a human; return ``0``.
 
     A needs-human terminal path (escalate verdict, unresolved rebase, or the
-    rounds cap): flush the last round's log to the committed review log, post a
-    single human-readable issue comment (gated), then transition to the
+    rounds cap): flush the last round's log to the committed review log, log a
+    ``REVIEW HANDED OFF`` warning banner, post a structured
+    ``## ❌ <Lane> Handed Off`` comment (gated), then transition to the
     ``escalate_label_id`` recovery label. Unlike :func:`_fail`, this is **not**
     an error — it returns ``0`` and never touches a failure label.
+
+    A rebase hand-off passes only ``rebase``; its reason selects Category,
+    Reason and Next step from ``_REBASE_HANDOFF``, and the outcome adds the
+    Base line and the files involved.
 
     The flush is scoped to ``log_path``. The unresolved-rebase handoff is
     reached *because* the working tree was dirty, so committing the whole tree
@@ -420,20 +465,73 @@ def _route_to_human(
         issue_number: Issue to comment on, or ``None`` to skip the comment.
         update_issue_labels: Whether to apply the escalate label transition.
         post_issue_comments: Whether to post the handoff comment.
-        comment_body: Human-readable explanation of why the run handed off.
         log_path: The round log to land, or ``None`` when no round wrote one
             (nothing is committed then). Required, so a new handoff site cannot
             fall back to committing the whole tree by omission.
+        round_number: Round the run handed off in, shown in Stage.
+        start_time: ``time.time()`` at run start, for the Elapsed field.
+        category: Category field for non-rebase hand-offs.
+        reason: Reason field for non-rebase hand-offs.
+        rebase: Outcome of the failed rebase gate; overrides ``category`` /
+            ``reason`` when its reason is in ``_REBASE_HANDOFF``.
 
     Returns:
         Always ``0``.
     """
     if log_path is not None:
         _flush_round_log(project_dir, only=log_path)
+    next_step: str | None = None
+    if rebase is not None and rebase.reason in _REBASE_HANDOFF:
+        category, reason, next_step = _REBASE_HANDOFF[rebase.reason]
+    fields: list[CommentField] = [
+        ("Category", category),
+        ("Stage", f"{config.display_name}, round {round_number}"),
+        ("Reason", reason),
+        ("Base", _base_value(rebase)),
+        ("Next step", next_step),
+    ]
+    if rebase is not None and rebase.files:
+        files_label = (
+            "Likely conflicting files"
+            if rebase.reason == "conflict"
+            else "Uncommitted files"
+        )
+        fields.append((files_label, ", ".join(f"`{f}`" for f in rebase.files)))
+    logger.warning("=" * 60)
+    logger.warning("REVIEW HANDED OFF")
+    logger.warning("Lane: %s", config.display_name)
+    logger.warning("Reason: %s", reason)
+    logger.warning("Round: %d", round_number)
+    logger.warning("Target label: %s", config.escalate_label_id)
+    logger.warning("=" * 60)
+    comment_body = build_failure_comment(
+        project_dir,
+        title=config.display_name,
+        kind="Handed Off",
+        fields=fields,
+        elapsed=time.time() - start_time,
+    )
     if post_issue_comments and issue_number is not None:
         try:
-            IssueManager(project_dir).add_comment(issue_number, f"❌ {comment_body}")
+            IssueManager(project_dir).add_comment(issue_number, comment_body)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("Failed to post handoff comment: %s", exc)
     _set_label(config, project_dir, config.escalate_label_id, update_issue_labels)
     return 0
+
+
+def _base_value(rebase: RebaseOutcome | None) -> str | None:
+    """Render the Base field of a rebase hand-off.
+
+    Args:
+        rebase: Outcome of the failed rebase gate, if any.
+
+    Returns:
+        ``origin/<base> @ <sha>`` when the SHA is known, ``origin/<base>``
+        when only the branch is known, ``None`` without a base branch.
+    """
+    if rebase is None or not rebase.base_branch:
+        return None
+    if rebase.base_sha:
+        return f"origin/{rebase.base_branch} @ {rebase.base_sha}"
+    return f"origin/{rebase.base_branch}"

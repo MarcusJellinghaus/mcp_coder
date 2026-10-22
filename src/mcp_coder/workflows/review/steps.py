@@ -108,12 +108,11 @@ def _after_steps(
     # --- rebase gate (mandated: never success on an unresolved rebase) ---
     outcome = _attempt_rebase_and_push(project_dir)
     if not outcome.ok:
-        # NotYetImplemented (#1066): a conflict-resolving automatic
-        # ``mcp-coder git-tool rebase`` attempt slots in HERE once #1066 ships
-        # (before the needs-human fallback). Until then a needs-rebase /
-        # unresolvable-conflict outcome simply routes to needs-human
-        # (``07:code-review``) and is never a success.
-        logger.info("Rebase could not complete cleanly; routing to needs-human")
+        # An LLM conflict-resolving rebase attempt before this fallback is
+        # #1266's follow-up; until then every non-ok outcome hands off.
+        logger.warning(
+            "Rebase gate did not pass (%s); routing to needs-human", outcome.reason
+        )
         return "rebase", outcome
 
     # --- CI gate ---

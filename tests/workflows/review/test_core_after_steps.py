@@ -19,7 +19,6 @@ The shared ``env`` fixture and the ``_status``/``_resp``/``_reviewer``/``_run``/
 live in ``test_core_gates``.
 """
 
-import inspect
 import logging
 import time
 from pathlib import Path
@@ -118,18 +117,15 @@ def test_dismiss_rebase_conflict_routes_to_needs_human(
     assert from_id == REVIEW_IMPLEMENTATION.busy_label_id
     assert to_id == REVIEW_IMPLEMENTATION.escalate_label_id  # never success
     assert to_id != REVIEW_IMPLEMENTATION.success_label_id
+    lines = env.issue_manager.return_value.add_comment.call_args.args[1].splitlines()
+    assert lines[0] == "## ❌ Implementation Review Handed Off"
+    assert "**Category:** Rebase conflict" in lines
+    assert "**Likely conflicting files:** `a.py`" in lines
 
     log = (tmp_path / "pr_info" / "implementation_review_log_1.md").read_text(
         encoding="utf-8"
     )
     assert "rebase" in log
-
-
-def test_rebase_slot_references_issue_1066(env: SimpleNamespace) -> None:
-    """The needs-human rebase slot carries the #1066 NotYetImplemented marker."""
-    source = inspect.getsource(steps._after_steps)
-    assert "#1066" in source
-    assert "NotYetImplemented" in source
 
 
 def test_dismiss_ci_red_fails_with_ci_label(
@@ -272,6 +268,9 @@ def test_tasks_rebase_conflict_routes_to_needs_human(
     env.handle_workflow_failure.assert_not_called()
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_IMPLEMENTATION.escalate_label_id
+    lines = env.issue_manager.return_value.add_comment.call_args.args[1].splitlines()
+    assert "**Category:** Rebase conflict" in lines
+    assert "**Stage:** Implementation Review, round 1" in lines
 
 
 # --- Step 5: broadened CI-gate except (scoped, control-flow preserved) ------
@@ -317,6 +316,8 @@ def test_broadened_ci_except_does_not_swallow_rebase(
     env.handle_workflow_failure.assert_not_called()
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_IMPLEMENTATION.escalate_label_id
+    lines = env.issue_manager.return_value.add_comment.call_args.args[1].splitlines()
+    assert "**Category:** Rebase conflict" in lines
 
 
 def test_broadened_ci_except_does_not_swallow_ci_carry_forward(
