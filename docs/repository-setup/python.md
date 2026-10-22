@@ -17,8 +17,8 @@ The following `pyproject.toml` sections are read by the Python MCP tools and/or 
 | Section | Read by | Purpose |
 |---|---|---|
 | `[tool.mcp-tools-py] formatter` | mcp-tools-py (`run_format_code` MCP tool and mcp-coder's formatting) | Selects the formatter: `"black"` (isort + black) or `"ruff"` (ruff imports + ruff format). Optional while table detection is unambiguous |
-| `[tool.black]` | `mcp__mcp-tools-py__run_format_code`, `tools/black.bat` | Black formatter config; selects black when `formatter` is unset and `[tool.ruff.format]` is absent |
-| `[tool.isort]` | `mcp__mcp-tools-py__run_format_code`, `tools/iSort.bat` | isort config (used with the black formatter) |
+| `[tool.black]` | `mcp__mcp-tools-py__run_format_code` | Black formatter config; selects black when `formatter` is unset and `[tool.ruff.format]` is absent |
+| `[tool.isort]` | `mcp__mcp-tools-py__run_format_code` | isort config (used with the black formatter) |
 | `[tool.mcp-coder] format_code` | mcp-coder (`run_formatters`, `verify`) | Bool, default `true`. Set `false` to opt out of formatting in `implement`, `rebase`, `review`, `fix-ci` and `check_branch_status --fix` |
 | `[tool.pytest.ini_options]` | `mcp__mcp-tools-py__run_pytest_check`, pytest CLI | Pytest config (markers, options) |
 | `[tool.mypy]` | `mcp__mcp-tools-py__run_mypy_check`, mypy CLI | Mypy strict-mode config |
@@ -198,33 +198,13 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 
 ### Formatting Tools
 
-> **Note:** These shell scripts are being phased out in favor of the `mcp__mcp-tools-py__run_format_code` MCP tool, which runs the project's configured formatter. Prefer the MCP tool for new workflows. Shell scripts are kept for human developers and CI pipelines.
-
-| Script | Purpose | Category |
-|--------|---------|----------|
-| `format_all.sh/bat` | Run black + isort on src/tests | **Mandatory** before commits |
-| `black.bat` | Run black formatter only | Optional |
-| `iSort.bat` | Run isort only | Optional |
-| `ruff_check.sh/bat` | Run ruff lint on src/tests/tools | Optional |
-
-**format_all.sh:**
-
-```bash
-#!/bin/bash
-set -e
-echo "Running isort..."
-isort --profile=black --float-to-top src tests
-echo "Running black..."
-black src tests
-echo "Formatting complete!"
-```
-
-For the `[tool.black]` and `[tool.isort]` config items these tools read, see [Key Sections](#key-sections).
+Format via `mcp__mcp-tools-py__run_format_code` (formatter chosen by `[tool.mcp-tools-py] formatter`); the CI formatter jobs are the backstop and also cover `tools/`.
 
 ### Quality Check Tools
 
 | Script | Purpose | Category |
 |--------|---------|----------|
+| `ruff_check.sh/bat` | Run ruff lint on src/tests/tools | Optional (CI runs it) |
 | `lint_imports.sh/bat` | Run import-linter | Optional (CI runs it) |
 | `tach_check.sh/bat` | Run tach architecture check | Optional (CI runs it) |
 | `pycycle_check.sh/bat` | Check circular dependencies | Optional (CI runs it) |

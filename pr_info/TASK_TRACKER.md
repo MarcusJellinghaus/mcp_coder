@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Format `tools/` in CI, drop local formatter scripts — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: extend CI black/isort jobs to `tools`; delete `tools/format_all.bat`, `tools/format_all.sh`, `tools/black.bat`, `tools/iSort.bat`; update `python.md`, `README.md`, `development-process.md`; no remaining references outside `pr_info/`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: extend CI black/isort jobs to `tools`; delete `tools/format_all.bat`, `tools/format_all.sh`, `tools/black.bat`, `tools/iSort.bat`; update `python.md`, `README.md`, `development-process.md`; no remaining references outside `pr_info/`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
