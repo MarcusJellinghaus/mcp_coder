@@ -46,7 +46,7 @@ in each file above. No functions change.
 ```
 for file in WHERE:
     replace old literal with new literal
-search repo for "code-review-ci-undeterminable" -> expect 0 matches
+search repo (excluding pr_info/) for "code-review-ci-undeterminable" -> expect 0 matches
 ```
 
 Precondition: each file contains the old literal. If one does not, write one line
@@ -59,6 +59,7 @@ The `labels.json` entry keeps its shape; only `"name"` changes to the new 44-cha
 ## Checks
 
 - `mcp__mcp-workspace__search_files(pattern="code-review-ci-undeterminable")` → 0 matches
-  (the `display_name` uses spaces and upper case, so it does not match).
+  outside `pr_info/` (the plan files quote the old name themselves; ignore those hits).
+  The `display_name` uses spaces and upper case, so it does not match.
 - pylint, pytest (fast unit set, `-n auto`), mypy — all pass.
 - Commit: `fix(labels): shorten status-17f-ci-unknown name to fit GitHub limit`
