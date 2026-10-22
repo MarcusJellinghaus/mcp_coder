@@ -138,8 +138,9 @@ Example (conflict):
 - `test_core.py` / `test_core_after_steps.py`: escalate → Category
   `Escalated by supervisor` + Reason = escalate reason; rounds cap → `Round limit
   reached`, `5 rounds without converging`, Stage `…, round 5`; dismiss / mid-loop
-  rebase pass the outcome through (Category `Rebase conflict` for the conftest
-  conflict outcome).
+  rebase pass the outcome through — assert Category `Rebase conflict` in the
+  `test_core_after_steps.py` tests whose mocks return the conflict outcome
+  (`:105`, `:252`, `:298`; the `conftest.py` mock returns `"ok"`).
 - Rewrite `test_rebase_slot_references_issue_1066` (`test_core_after_steps.py:125-129`)
   as a behaviour test: a non-ok outcome makes `_after_steps` return
   `("rebase", outcome)` and logs a warning naming `outcome.reason` — no
