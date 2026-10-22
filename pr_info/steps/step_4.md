@@ -29,8 +29,11 @@
      annotate the actual return type.
    - **`D`**: add short one-line docstrings for `D101`/`D102`/`D103`. Make docstrings that contain backslashes raw
      (`r"""`) for `D301`. Capitalise for `D403`, punctuate for `D415`, and add a blank line for `D205`.
-   - **`SIM108`/`SIM102`**: use a ternary or merge the nested `if`s. **`B007`**: rename the loop variable to `_name`.
-4. `run_format_code(target_directories=["tools"])`.
+   - **`SIM108`/`SIM102`**: use a ternary or merge the nested `if`s. **`B007`**: prefix the unused loop variable's
+     existing name with `_` (`_<original>`).
+4. `run_format_code(target_directories=[<files changed in this step>])` — only the files this step touched, not all of
+   `tools/`. Any file that would be formatted for the first time here must already be covered by step 1's formatting
+   commit; the lint-fix commit must carry no unrelated formatting changes.
 5. `run_ruff_check(target_directories=["src", "tests", "tools"])` → 0 findings.
 
 If the results differ greatly from the expected counts (for example, a new rule family appears with many hits), still fix
@@ -42,7 +45,7 @@ them unless that would need a behaviour change. If a behaviour change is unavoid
 ```
 ruff fix tools                      # UP + safe D/SIM
 manual: check=False, noqa S314, ANN hooks, main()->int, D, SIM, B007
-format tools
+format files changed in this step only
 ruff check src tests tools -> 0
 run unit tests (tests/tools)
 ```

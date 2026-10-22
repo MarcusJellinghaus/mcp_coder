@@ -29,7 +29,7 @@ ruff check tools --select F   # expect 11
 ruff fix tools --select F
 manual: bare yield; leftover F401
 ruff check tools --select F   # expect 0
-run_format_code(target_directories=["tools"])  # keep black-clean
+run_format_code(target_directories=[<files changed in this step>])  # only touched files; no unrelated formatting
 ```
 
 ## DATA
