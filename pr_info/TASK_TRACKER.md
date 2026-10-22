@@ -21,6 +21,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Pass `branch_name` to both review `prompt_llm` calls
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: tests (`BRANCH` constant, fixture patches in `test_reviewer.py` and `conftest.py`, 2 new tests) + `reviewer.py` import and `branch_name` passed in `_run_reviewer` and `_get_verdict`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against the base branch
+- [ ] PR summary prepared
