@@ -21,6 +21,25 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move checkout-issue-branch tests into their own file — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: create `tests/cli/commands/test_gh_tool_checkout.py` with moved fixtures/classes, remove them from `test_gh_tool.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Resolve via PR fallback, pre-create checks, exit code 3 — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: tests in `test_gh_tool_checkout.py` + `execute_checkout_issue_branch()` flow and `_find_precreate_candidates()` in `gh_tool.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Document resolution order and exit codes 0–3 — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: epilog test + `gh_parsers.py` epilog, `docs/cli-reference.md`, `implement_direct/SKILL.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `main`, address findings
+- [ ] PR summary prepared
