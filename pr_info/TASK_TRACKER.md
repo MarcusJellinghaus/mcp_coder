@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Enable ruff `PLE2502` (covers bandit `B613`) — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add `"PLE2502"` with comment to `[tool.ruff.lint] select` in `pyproject.toml`; ruff check on `src tests tools` reports 0 hits
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `"PLE2502"` with comment to `[tool.ruff.lint] select` in `pyproject.toml`; ruff check on `src tests tools` reports 0 hits
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Format `tools/` in CI, drop local formatter scripts — [step_2.md](./steps/step_2.md)
 
