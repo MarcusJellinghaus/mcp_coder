@@ -247,10 +247,7 @@ class TestClaudeMcpColdStartIntegration:
         # --- v1: stub was pending at init --------------------------------
         stub_status = _mcp_server_status(init_msg, "stub")
         if stub_status == "connected":
-            pytest.skip(
-                f"stub {stub_status!r} at init; CLI ignored "
-                "CLAUDE_CODE_MCP_STARTUP_WAIT_MS, pending-at-init not reachable"
-            )
+            pytest.skip(f"stub {stub_status!r} at init; pending-at-init not reached")
         assert (
             stub_status == "pending"
         ), f"expected stub 'pending' at init, got {stub_status!r}"
