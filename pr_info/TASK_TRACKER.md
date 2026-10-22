@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Ruff config — select `PLW1510`, add `tools/` ignores
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `pyproject.toml` — add `PLW1510` to `select`; per-file ignores `tools/**` DOC201 and `tools/safe_delete_folder.py` S607
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `chore(ruff): select PLW1510, add tools/ ignores`
+- [x] Implementation: `pyproject.toml` — add `PLW1510` to `select`; per-file ignores `tools/**` DOC201 and `tools/safe_delete_folder.py` S607
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `chore(ruff): select PLW1510, add tools/ ignores`
 
 ### Step 3: Fix `F` findings (dead code) in `tools/`
 See [step_3.md](./steps/step_3.md)

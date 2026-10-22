@@ -348,6 +348,8 @@ select = [
     "F",
     "C4", "B",
     "S",
+    # PLW1510 only: the PL prefix would re-enable pylint's disabled R category (PLR09xx).
+    "PLW1510",
     "UP",
 ]
 ignore = [
@@ -367,6 +369,11 @@ ignore = [
 "src/mcp_coder/utils/user_config.py" = ["DOC502"]
 "src/mcp_coder/llm/providers/claude/claude_code_cli.py" = ["DOC502"]
 "src/mcp_coder/workflow_steps/ci.py" = ["DOC502"]
+# tools/: low-priority helper scripts that may move to an MCP server or be deleted;
+# Returns sections are not required there.
+"tools/**" = ["DOC201"]
+# safe_delete_folder.py calls handle.exe / cmd by name on purpose (resolved via PATH).
+"tools/safe_delete_folder.py" = ["S607"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
