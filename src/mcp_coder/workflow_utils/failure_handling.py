@@ -6,10 +6,11 @@ create-pr workflows: failure logging, label transitions, and comment posting.
 
 import contextlib
 import logging
+import os
 import signal
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,12 +20,34 @@ from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailable
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
+    get_latest_commit_sha,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 logger = logging.getLogger(__name__)
+
+SHORT_SHA_LENGTH = 7
+
+CommentField = tuple[str, str | None]
+
+FIELD_ORDER: tuple[str, ...] = (
+    "Category",
+    "Stage",
+    "Error",
+    "Reason",
+    "Branch",
+    "Base",
+    "PR",
+    "Likely conflicting files",
+    "Uncommitted files",
+    "Progress",
+    "Verdict",
+    "Next step",
+    "Elapsed",
+    "Build",
+)
 
 
 @dataclass(frozen=True)
@@ -124,6 +147,80 @@ def format_elapsed_time(seconds: float) -> str:
     if minutes > 0:
         return f"{minutes}m {secs}s"
     return f"{secs}s"
+
+
+def _branch_head(project_dir: Path) -> tuple[str | None, str | None]:
+    """Return (branch name, short HEAD sha). Never raises.
+
+    Returns:
+        ``(None, None)`` when the branch lookup fails or yields no branch;
+        ``(branch, None)`` when only the SHA lookup fails; otherwise
+        ``(branch, sha)`` with the SHA truncated to ``SHORT_SHA_LENGTH``.
+    """
+    try:
+        branch = get_current_branch_name(project_dir)
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None, None
+    if not branch:
+        return None, None
+    try:
+        sha = get_latest_commit_sha(project_dir)
+    except Exception:  # pylint: disable=broad-exception-caught
+        return branch, None
+    if not sha:
+        return branch, None
+    return branch, sha[:SHORT_SHA_LENGTH]
+
+
+def _order_key(field: CommentField) -> float:
+    """Sort key placing ``field`` by ``FIELD_ORDER``; unknown labels before Next step."""
+    label = field[0]
+    if label in FIELD_ORDER:
+        return FIELD_ORDER.index(label)
+    return FIELD_ORDER.index("Next step") - 0.5
+
+
+def build_failure_comment(
+    project_dir: Path,
+    *,
+    title: str,
+    kind: str,
+    fields: Sequence[CommentField] = (),
+    elapsed: float | None = None,
+    extra_section: str | None = None,
+) -> str:
+    """Build the shared structured failure / hand-off / crash issue comment.
+
+    Renders ``## ❌ <title> <kind>``, then the non-``None`` fields sorted by
+    ``FIELD_ORDER`` (unknown labels just before ``Next step``), then an
+    optional extra section after one blank line. ``Branch``, ``Elapsed`` and
+    ``Build`` (from ``BUILD_URL``) are added here.
+
+    Args:
+        project_dir: Path to the project git repository.
+        title: Workflow title, e.g. ``"Implementation"``.
+        kind: ``"Failed"``, ``"Handed Off"`` or ``"Crashed"``.
+        fields: Caller fields as ``(label, value)``; ``None`` values are skipped.
+        elapsed: Optional elapsed seconds.
+        extra_section: Optional free-form section appended at the end.
+
+    Returns:
+        The comment body.
+    """
+    branch, sha = _branch_head(project_dir)
+    branch_value = None if not branch else (f"{branch} @ {sha}" if sha else branch)
+    all_fields: list[CommentField] = [
+        *fields,
+        ("Branch", branch_value),
+        ("Elapsed", format_elapsed_time(elapsed) if elapsed is not None else None),
+        ("Build", os.environ.get("BUILD_URL") or None),
+    ]
+    kept = sorted((f for f in all_fields if f[1] is not None), key=_order_key)
+    lines = [f"## ❌ {title} {kind}"]
+    lines.extend(f"**{label}:** {value}" for label, value in kept)
+    if extra_section:
+        lines.extend(["", extra_section])
+    return "\n".join(lines)
 
 
 def handle_workflow_failure(

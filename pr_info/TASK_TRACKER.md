@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Shared failure comment builder `build_failure_comment` + `_branch_head` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests in `tests/workflow_utils/test_failure_comment.py` + builder, `FIELD_ORDER`, `CommentField`, `SHORT_SHA_LENGTH`, `_branch_head` in `failure_handling.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `tests/workflow_utils/test_failure_comment.py` + builder, `FIELD_ORDER`, `CommentField`, `SHORT_SHA_LENGTH`, `_branch_head` in `failure_handling.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `run_guarded(workflow_title=…)`, all crash nets on the builder, implement migration, `ReviewConfig.display_name` — [step_2.md](./steps/step_2.md)
 
