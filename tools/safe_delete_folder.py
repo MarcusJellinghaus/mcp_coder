@@ -559,9 +559,9 @@ def _delete_folder(
             if sys.version_info >= (3, 12):
                 shutil.rmtree(path, onexc=_rmtree_remove_readonly)
             else:
-                shutil.rmtree(
+                shutil.rmtree(  # pylint: disable=deprecated-argument
                     path, onerror=_rmtree_remove_readonly
-                )  # pylint: disable=deprecated-argument
+                )
 
             if not path.exists():
                 return True, "Deleted directly", moved_files, killed_procs
