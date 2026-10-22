@@ -34,9 +34,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: `docs/environments/environments.md` — update `MCP_TIMEOUT` row — [step_3.md](./steps/step_3.md)
-- [ ] Implementation: confirm `session_setup.py` sets `MCP_TIMEOUT`, then replace the row (pre-turn wait, `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` override, setter `session_setup.py`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: confirm `session_setup.py` sets `MCP_TIMEOUT`, then replace the row (pre-turn wait, `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` override, setter `session_setup.py`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: review full branch diff against `main`, address findings
