@@ -5,10 +5,17 @@ This module provides the gh-tool command group for GitHub-related operations.
 
 import argparse
 import logging
+import re
+from pathlib import Path
 
-from mcp_coder.mcp_workspace_git import checkout_branch, fetch_remote
+from mcp_coder.mcp_workspace_git import (
+    checkout_branch,
+    fetch_remote,
+    get_repository_identifier,
+)
 
 from ...mcp_workspace_github import IssueBranchManager, IssueManager
+from ...utils.subprocess_runner import execute_command
 from ...workflow_utils.base_branch import detect_base_branch
 from ...workflows.utils import resolve_project_dir
 
@@ -62,18 +69,68 @@ def execute_get_base_branch(args: argparse.Namespace) -> int:
         return 2
 
 
+def _find_precreate_candidates(
+    branch_manager: IssueBranchManager, project_dir: Path, issue_number: int
+) -> dict[str, str] | None:
+    """Collect existing branches for the issue before creating one.
+
+    Sources, in order: linked branches, head branches of open closing PRs,
+    and remote branches matching ``(^|/)N[-_]``.
+
+    Returns:
+        Ordered mapping of branch name -> source label (first source wins),
+        or None if the linkage lookup or ``git ls-remote`` failed.
+    """
+    lookup = branch_manager.get_linked_branch_and_closing_prs_or_none(issue_number)
+    if lookup is None:
+        logger.error(
+            "Could not look up linked branches and closing PRs for issue #%s",
+            issue_number,
+        )
+        return None
+    linked, closing_prs = lookup
+
+    ls_result = execute_command(
+        ["git", "ls-remote", "--heads", "origin"], cwd=str(project_dir)
+    )
+    if ls_result.return_code != 0:
+        logger.error("git ls-remote failed: %s", ls_result.stderr)
+        return None
+
+    pattern = re.compile(rf"(^|/){issue_number}[-_]")
+    candidates: dict[str, str] = {}
+    for branch in linked:
+        candidates.setdefault(branch, f"linked branch {branch}")
+    for pr in closing_prs:
+        candidates.setdefault(
+            pr.head_ref_name, f"closing PR #{pr.number} -> {pr.head_ref_name}"
+        )
+    for line in ls_result.stdout.splitlines():
+        name = line.split("\t")[-1].removeprefix("refs/heads/")
+        if pattern.search(name):
+            candidates.setdefault(name, f"remote branch {name}")
+    return candidates
+
+
 def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
     """Execute checkout-issue-branch command.
 
-    Fetches issue data, finds or creates a linked branch, and checks it out locally.
+    Resolution order:
+    1. Library fallback: linked branch, open PR referencing the issue,
+       closed PR whose branch still exists, branch-name pattern
+    2. Pre-create checks (only if 1 finds nothing): linked branches, open
+       closing PRs, remote branches matching the issue number
+    3. Create a new linked branch (only if 2 finds no candidate)
 
     Args:
         args: Parsed arguments with issue_number and project_dir option
 
     Returns:
-        0: Success, branch checked out
-        1: Could not find or create branch
-        2: Error (not a git repo, API failure, git checkout failure)
+        0: Branch checked out (found, single pre-create candidate, or created)
+        1: Issue not found, or branch creation failed
+        2: Error (invalid project dir, no repo identifier, lookup or
+           ls-remote failure, API failure, git checkout failure)
+        3: Ambiguous: pre-create checks found two or more candidates
     """
     try:
         logger.info("Starting checkout-issue-branch")
@@ -93,24 +150,52 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
             logger.error("Could not find issue #%s", issue_number)
             return 1
 
-        # Find or create linked branch
-        branch_manager = IssueBranchManager(project_dir)
-        branches = branch_manager.get_linked_branches(issue_number)
+        repo_id = get_repository_identifier(project_dir)
+        if repo_id is None:
+            logger.error("Could not determine repository identifier")
+            return 2
 
-        if branches:
-            branch_name = branches[0]
+        # Find existing branch (linked, PR head, or name pattern)
+        branch_manager = IssueBranchManager(
+            project_dir=project_dir, repo_url=repo_id.https_url
+        )
+        found = branch_manager.get_branch_with_pr_fallback(
+            issue_number, repo_id.owner, repo_id.repo_name
+        )
+
+        if found is not None:
+            branch_name = found
         else:
-            result = branch_manager.create_remote_branch_for_issue(
-                issue_number, base_branch=issue_data.get("base_branch")
+            # Pre-create checks: fallback returns None for nothing, ambiguous, or error
+            candidates = _find_precreate_candidates(
+                branch_manager, project_dir, issue_number
             )
-            if not result["success"]:
+            if candidates is None:
+                return 2
+            if len(candidates) > 1:
                 logger.error(
-                    "Could not create branch for issue #%s: %s",
+                    "Ambiguous branches for issue #%s: %s",
                     issue_number,
-                    result["error"],
+                    "; ".join(candidates.values()),
                 )
-                return 1
-            branch_name = result["branch_name"]
+                return 3
+            if candidates:
+                branch_name, label = next(iter(candidates.items()))
+                logger.info(
+                    "Using existing branch for issue #%s: %s", issue_number, label
+                )
+            else:
+                result = branch_manager.create_remote_branch_for_issue(
+                    issue_number, base_branch=issue_data.get("base_branch")
+                )
+                if not result["success"]:
+                    logger.error(
+                        "Could not create branch for issue #%s: %s",
+                        issue_number,
+                        result["error"],
+                    )
+                    return 1
+                branch_name = result["branch_name"]
 
         # Checkout the branch
         if not checkout_branch(branch_name, project_dir):

@@ -956,9 +956,9 @@ mcp-coder gh-tool checkout-issue-branch ISSUE_NUMBER [OPTIONS]
 **Options:**
 - `--project-dir PATH` - Project directory path (default: current directory)
 
-**Description:** Checkout the branch linked to the given GitHub issue, creating it if it does not yet exist. Used by the automated workflows to land on the correct branch for an issue before running.
+**Description:** Checkout the branch for the given GitHub issue. Resolution order: linked branch, open PR referencing the issue, closed PR whose branch still exists, then branch-name pattern (`N-...` / `.../N_...`); otherwise it collects linked branches, open closing-PR heads and matching remote branches and checks out the single candidate; only when none exist is a new linked branch created. An existing PR's head branch is checked out rather than a duplicate branch created. Used by the automated workflows to land on the correct branch for an issue before running.
 
-**Exit codes:** `0` = success (branch checked out); `1` = could not find or create branch; `2` = error (not a git repo, API failure).
+**Exit codes:** `0` = branch checked out (found, single candidate, or created); `1` = issue not found, or branch creation failed; `2` = error (invalid project dir, no repo identifier, lookup or ls-remote failed, API error, git checkout failed); `3` = ambiguous: two or more candidate branches found (listed in log).
 
 **Examples:**
 ```bash
