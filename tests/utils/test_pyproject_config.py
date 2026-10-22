@@ -1,5 +1,6 @@
 """Tests for pyproject_config utility functions."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from mcp_coder.utils.pyproject_config import (
     get_github_install_config,
     get_implement_config,
     get_install_extras,
+    get_post_install_checks,
     get_prompts_config,
     has_legacy_format_code_key,
 )
@@ -353,6 +355,100 @@ class TestGetInstallExtras:
             "[tool.mcp-coder.install]\nextras = true\n", encoding="utf-8"
         )
         assert get_install_extras(tmp_path) is None
+
+
+_MALFORMED_POST_INSTALL_CHECKS = [
+    pytest.param("'mcp-coder --version'", "'mcp-coder --version'", id="string"),
+    pytest.param(
+        "['mcp-coder', '--version']",
+        "['mcp-coder', '--version']",
+        id="list_of_strings",
+    ),
+    pytest.param("[[]]", "[[]]", id="empty_inner_list"),
+    pytest.param("[['mcp-coder', 1]]", "[['mcp-coder', 1]]", id="non_string_element"),
+]
+
+
+class TestGetPostInstallChecks:
+    """Tests for get_post_install_checks."""
+
+    def test_returns_declared_checks_in_order(self, tmp_path: Path) -> None:
+        """A valid list of argv lists becomes a tuple of tuples, order kept."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder.install]\n"
+            "post_install_checks = [\n"
+            "    ['mcp-coder', '--version'],\n"
+            "    ['mcp-workspace', '--help'],\n"
+            "]\n",
+            encoding="utf-8",
+        )
+        assert get_post_install_checks(tmp_path) == (
+            ("mcp-coder", "--version"),
+            ("mcp-workspace", "--help"),
+        )
+
+    def test_returns_empty_when_key_missing(self, tmp_path: Path) -> None:
+        """Section present without the key returns ()."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder.install]\n", encoding="utf-8"
+        )
+        assert get_post_install_checks(tmp_path) == ()
+
+    def test_returns_empty_when_section_missing(self, tmp_path: Path) -> None:
+        """Missing [tool.mcp-coder.install] returns ()."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[project]\nname = 'test'\n", encoding="utf-8"
+        )
+        assert get_post_install_checks(tmp_path) == ()
+
+    def test_returns_empty_when_file_missing(self, tmp_path: Path) -> None:
+        """No pyproject.toml returns ()."""
+        assert get_post_install_checks(tmp_path) == ()
+
+    def test_returns_empty_for_empty_list(self, tmp_path: Path) -> None:
+        """An explicit empty list declares no checks."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.mcp-coder.install]\npost_install_checks = []\n", encoding="utf-8"
+        )
+        assert get_post_install_checks(tmp_path, strict=True) == ()
+
+    @pytest.mark.parametrize(
+        ("toml_value", "repr_fragment"), _MALFORMED_POST_INSTALL_CHECKS
+    )
+    def test_raises_for_malformed_value_strict(
+        self, tmp_path: Path, toml_value: str, repr_fragment: str
+    ) -> None:
+        """Strict mode names the file, the key and the offending value."""
+        (tmp_path / "pyproject.toml").write_text(
+            f"[tool.mcp-coder.install]\npost_install_checks = {toml_value}\n",
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError) as exc_info:
+            get_post_install_checks(tmp_path, strict=True)
+        message = str(exc_info.value)
+        assert str(tmp_path / "pyproject.toml") in message
+        assert "post_install_checks" in message
+        assert repr_fragment in message
+
+    @pytest.mark.parametrize(
+        ("toml_value", "repr_fragment"), _MALFORMED_POST_INSTALL_CHECKS
+    )
+    def test_returns_empty_and_warns_for_malformed_value_lax(
+        self,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        toml_value: str,
+        repr_fragment: str,
+    ) -> None:
+        """Lax callers get () and a warning naming the key."""
+        (tmp_path / "pyproject.toml").write_text(
+            f"[tool.mcp-coder.install]\npost_install_checks = {toml_value}\n",
+            encoding="utf-8",
+        )
+        with caplog.at_level(logging.WARNING):
+            assert get_post_install_checks(tmp_path) == ()
+        assert "post_install_checks" in caplog.text
+        assert repr_fragment in caplog.text
 
 
 class TestMalformedTomlRegression:

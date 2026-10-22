@@ -1,11 +1,14 @@
-"""The five phases of an install run, in the order ``install()`` calls them."""
+"""The six phases of an install run, in the order ``install()`` calls them."""
 
 from __future__ import annotations
 
+import os
 import shutil
+import sys
 from pathlib import Path
 
 from ..utils.pyproject_config import get_github_install_config
+from ..utils.subprocess_runner import CommandOptions, execute_subprocess
 from ._env import (
     MCP_CODER_REPO,
     REPORT_BINARIES,
@@ -15,6 +18,10 @@ from ._env import (
     rmtree_with_retry,
     run,
 )
+
+# Generous on purpose: a check is a smoke test, but a cold first start of a
+# freshly-installed CLI (AV scan, .pyc compilation) can take a while.
+POST_INSTALL_CHECK_TIMEOUT_SECONDS = 300
 
 
 def phase_venv(config: InstallConfig, venv: Path) -> None:
@@ -229,3 +236,93 @@ def phase_report_versions(
             print(f"  (not installed: {name})")
     for pkg in REPORT_PACKAGES:
         run([uv_bin, "pip", "show", "--python", str(py_v), pkg], check=False)
+
+
+def _resolve_check_executable(
+    name: str, bin_dir: Path, local_path: Path
+) -> Path | None:
+    """Resolve argv[0] of a post-install check; None means not found.
+
+    A name containing a path separator is a path: used as-is when absolute,
+    joined to ``local_path`` when relative. A bare name is looked up in the
+    venv ``bin_dir`` first, then in each absolute ``PATH`` entry in order.
+    The current directory is never searched -- ``shutil.which`` is avoided
+    because on Windows it adds the cwd to the search path.
+
+    Args:
+        name: The declared argv[0].
+        bin_dir: The venv's executable directory.
+        local_path: The target project directory.
+
+    Returns:
+        The resolved executable file, or None when nothing matches.
+    """
+    if os.sep in name or (os.altsep and os.altsep in name):
+        path = Path(name) if Path(name).is_absolute() else local_path / name
+        return path if path.is_file() else None
+    candidate = name if name.lower().endswith(".exe") else exe(name)
+    # Relative PATH entries (e.g. ".") are skipped: they would search the cwd.
+    path_dirs = [
+        Path(entry)
+        for entry in os.environ.get("PATH", "").split(os.pathsep)
+        if Path(entry).is_absolute()
+    ]
+    for directory in [bin_dir, *path_dirs]:
+        if (directory / candidate).is_file():
+            return directory / candidate
+    return None
+
+
+def phase_post_install_checks(config: InstallConfig, bin_dir: Path) -> None:
+    """Phase 7: run [tool.mcp-coder.install] post_install_checks; exit 1 on any failure.
+
+    Every declared check runs, even after one fails, so a single summary
+    names all of them. An executable that cannot be resolved is reported as
+    not found without spawning anything. In ``--check`` mode the declared
+    argv is echoed unresolved and nothing runs.
+
+    Args:
+        config: Resolved install configuration.
+        bin_dir: The venv's executable directory.
+    """
+    if not config.post_install_checks:
+        return
+    print("\n--- post-install checks")
+    if config.check:
+        for argv in config.post_install_checks:
+            run(list(argv), dry=True, cwd=config.local_path)
+        return
+
+    failures: list[tuple[tuple[str, ...], str]] = []
+    path_env = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+    for argv in config.post_install_checks:
+        resolved = _resolve_check_executable(argv[0], bin_dir, config.local_path)
+        if resolved is None:
+            failures.append((argv, "not found"))
+            continue
+        cmd = [str(resolved), *argv[1:]]
+        run(cmd, dry=True, cwd=config.local_path)
+        result = execute_subprocess(
+            cmd,
+            CommandOptions(
+                cwd=str(config.local_path),
+                timeout_seconds=POST_INSTALL_CHECK_TIMEOUT_SECONDS,
+                capture_output=False,
+                env={"PATH": path_env},
+            ),
+        )
+        if result.timed_out:
+            failures.append(
+                (argv, f"timed out after {POST_INSTALL_CHECK_TIMEOUT_SECONDS} s")
+            )
+        elif result.execution_error:
+            failures.append((argv, result.execution_error))
+        elif result.return_code:
+            failures.append((argv, f"exit code {result.return_code}"))
+
+    if failures:
+        total = len(config.post_install_checks)
+        print(f"\nERROR: {len(failures)} of {total} post-install checks failed:")
+        for argv, reason in failures:
+            print(f"  {' '.join(argv)}: {reason}")
+        sys.exit(1)

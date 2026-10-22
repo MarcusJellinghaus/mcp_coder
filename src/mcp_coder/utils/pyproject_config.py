@@ -251,3 +251,50 @@ def get_install_extras(project_dir: Path, *, strict: bool = False) -> str | None
         "Ignoring non-string [tool.mcp-coder.install] extras in %s: %r", path, extras
     )
     return None
+
+
+def get_post_install_checks(
+    project_dir: Path, *, strict: bool = False
+) -> tuple[tuple[str, ...], ...]:
+    """Read [tool.mcp-coder.install] post_install_checks from pyproject.toml.
+
+    Args:
+        project_dir: Path to directory containing pyproject.toml.
+        strict: Propagate the ValueError _load_pyproject raises for a
+            malformed pyproject.toml, and reject a malformed
+            post_install_checks value, instead of returning ().
+
+    Returns:
+        The declared checks as a tuple of argv tuples, in declaration order.
+        () when the file, section or key is absent, the value is [], or the
+        value is malformed and strict is False.
+
+    Raises:
+        ValueError: If strict is True and post_install_checks is not a list
+            of non-empty lists of strings. The message names the file and
+            the value.
+    """
+    data = _load_pyproject(project_dir, strict=strict)
+    section = data.get("tool", {}).get("mcp-coder", {}).get("install", {})
+    value: Any = section.get("post_install_checks")
+    if value is None:
+        return ()
+    valid = isinstance(value, list) and all(
+        isinstance(check, list) and check and all(isinstance(a, str) for a in check)
+        for check in value
+    )
+    if valid:
+        return tuple(tuple(check) for check in value)
+    path = project_dir / "pyproject.toml"
+    if strict:
+        raise ValueError(
+            f"Invalid [tool.mcp-coder.install] post_install_checks in {path}\n"
+            'Expected a list of argv lists such as [["mcp-coder", "--version"]], '
+            f"got {type(value).__name__}: {value!r}"
+        )
+    logger.warning(
+        "Ignoring invalid [tool.mcp-coder.install] post_install_checks in %s: %r",
+        path,
+        value,
+    )
+    return ()

@@ -20,7 +20,7 @@ MCP Coder uses two separate configuration files for different purposes:
 | File | Scope | Module | Contents |
 |------|-------|--------|----------|
 | `config.toml` | Per-user | `utils/user_config.py` | API tokens, Jenkins credentials, coordinator settings, LLM provider |
-| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), prompt configuration (`[tool.mcp-coder.prompts]`) |
+| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`) |
 
 The formatter itself is selected by `[tool.mcp-tools-py] formatter` (or `[tool.ruff.format]` / `[tool.black]` detection), read by mcp-tools-py, not mcp-coder — see [Python Setup](../repository-setup/python.md#key-sections).
 
@@ -892,9 +892,14 @@ types = [
 
 [tool.mcp-coder.install]
 extras = "types"  # or e.g. "dev" if dev already includes types
+post_install_checks = [
+    ["mcp-coder", "--version"],
+]
 ```
 
 Without `types` named there, `mcp-coder install` will not install type stubs and mypy will degrade gracefully (no error) rather than fail.
+
+`post_install_checks` is optional: after provisioning, `mcp-coder install` runs each argv in the project directory, looking up a bare name in the venv's bin directory first, then on `PATH`. Any failing check fails the install; when the key is absent, nothing runs.
 
 ## Troubleshooting
 

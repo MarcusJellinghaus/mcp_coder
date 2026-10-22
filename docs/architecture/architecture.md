@@ -257,8 +257,8 @@ Provisions a target environment: `<target>/.venv` plus mcp-coder from git, PyPI 
 
 - `__init__.py` - `install(config)` sequences the phases; re-exports `InstallConfig` and the module constants
 - `_env.py` - `InstallConfig` (resolved from the parsed CLI namespace) and the subprocess / venv / filesystem helpers, including the module constants `_phases` consumes
-- `_phases.py` - the five phases: venv, pip+uv bootstrap, main install, GitHub overrides, version report
-- Tests: `tests/install/test_install_env.py`, `tests/install/test_install_phases.py`, `tests/install/test_install_integration.py`
+- `_phases.py` - the six phases: venv, pip+uv bootstrap, main install, GitHub overrides, version report, post-install checks
+- Tests: `tests/install/test_install_env.py`, `tests/install/test_install_phases.py`, `tests/install/test_install_post_checks.py`, `tests/install/test_install_integration.py`
 - Boundary: tach layer `domain` with `depends_on = [utils]`, and one import-linter `subprocess` exemption — raw `subprocess.run` with inherited stdio is deliberate, since the shared helpers either capture output and time out or mangle `uv`'s progress display
 
 ### iCoder Interactive TUI (`src/mcp_coder/icoder/`)
