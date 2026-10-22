@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a CI step summary from a Cobertura coverage.xml.
+r"""Render a CI step summary from a Cobertura coverage.xml.
 
 Standalone script, stdlib only. Parses the coverage.xml produced by
 ``coverage xml`` (Cobertura format), rolls up line counts by top-level
@@ -8,7 +8,7 @@ the build based on a coverage number -- this is reporting only.
 
 Usage:
     python tools/ci_coverage_summary.py --coverage-xml coverage.xml
-    python tools/ci_coverage_summary.py --coverage-xml coverage.xml \\
+    python tools/ci_coverage_summary.py --coverage-xml coverage.xml \
         --diff-report diff-coverage.md --output summary.md
 """
 
@@ -18,7 +18,6 @@ import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
 MARKER_TRAP_CAVEAT = (
     "_Markers excluded in CI (`claude_cli_integration`, `claude_api_integration`, "
@@ -38,6 +37,7 @@ class PackageRollup:
 
     @property
     def rate(self) -> float:
+        """Covered fraction of this package's lines."""
         return self.lines_covered / self.lines_valid if self.lines_valid else 0.0
 
 
@@ -47,10 +47,11 @@ class CoverageSummary:
 
     lines_valid: int
     lines_covered: int
-    packages: List[PackageRollup]
+    packages: list[PackageRollup]
 
     @property
     def rate(self) -> float:
+        """Covered fraction of all lines."""
         return self.lines_covered / self.lines_valid if self.lines_valid else 0.0
 
 
@@ -70,7 +71,7 @@ def top_level_package_name(full_name: str) -> str:
 
 def parse_coverage_xml(xml_path: Path) -> CoverageSummary:
     """Parse a Cobertura coverage.xml, summing line hits per top-level bucket."""
-    root = ET.parse(xml_path).getroot()
+    root = ET.parse(xml_path).getroot()  # noqa: S314 - CI's own coverage.xml (trusted)
     buckets: dict[str, PackageRollup] = {}
     total_valid = 0
     total_covered = 0
@@ -93,7 +94,7 @@ def parse_coverage_xml(xml_path: Path) -> CoverageSummary:
     )
 
 
-def render_step_summary(summary: CoverageSummary, diff_report: Optional[str]) -> str:
+def render_step_summary(summary: CoverageSummary, diff_report: str | None) -> str:
     """Render the step-summary Markdown for one coverage run."""
     lines = [
         f"## Coverage: {summary.rate:.0%}",
@@ -126,7 +127,7 @@ def render_step_summary(summary: CoverageSummary, diff_report: Optional[str]) ->
     return "\n".join(lines) + "\n"
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """CLI entry point: parse coverage.xml and append the summary to --output."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coverage-xml", required=True, type=Path)

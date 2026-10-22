@@ -81,7 +81,7 @@ def parse_tracking_uri_simple(config_path: Path) -> str:
         Tracking URI or default
     """
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             in_mlflow_section = False
             for line in f:
                 line = line.strip()

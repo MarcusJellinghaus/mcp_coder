@@ -17,7 +17,7 @@ import sqlite3
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
@@ -44,9 +44,9 @@ def format_timestamp(timestamp_ms: int) -> str:
 def get_all_runs(
     conn: sqlite3.Connection,
     limit: int = 50,
-    branch: Optional[str] = None,
-    working_dir: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    branch: str | None = None,
+    working_dir: str | None = None,
+) -> list[dict[str, Any]]:
     """Get runs with optional filters."""
     cursor = conn.cursor()
     query = """
@@ -70,9 +70,12 @@ def get_all_runs(
         params = {r[0]: r[1] for r in pcursor.fetchall()}
 
         # Apply filters
-        if branch and params.get("branch_name", "") != branch:
-            if branch not in params.get("branch_name", ""):
-                continue
+        if (
+            branch
+            and params.get("branch_name", "") != branch
+            and branch not in params.get("branch_name", "")
+        ):
+            continue
         if (
             working_dir
             and working_dir.lower() not in params.get("working_directory", "").lower()
@@ -95,7 +98,7 @@ def get_all_runs(
     return runs
 
 
-def get_artifact_base(artifact_uri: str) -> Optional[Path]:
+def get_artifact_base(artifact_uri: str) -> Path | None:
     """Parse artifact URI to local path."""
     artifact_path_str = urllib.parse.urlparse(artifact_uri).path
     if artifact_path_str.startswith("/") and ":" in artifact_path_str:
@@ -104,7 +107,7 @@ def get_artifact_base(artifact_uri: str) -> Optional[Path]:
     return p if p.exists() else None
 
 
-def load_step_conversations(artifact_uri: str) -> List[Dict[str, Any]]:
+def load_step_conversations(artifact_uri: str) -> list[dict[str, Any]]:
     """Load all step conversation files from a run's artifacts."""
     base = get_artifact_base(artifact_uri)
     if not base:
@@ -118,7 +121,7 @@ def load_step_conversations(artifact_uri: str) -> List[Dict[str, Any]]:
     # Try step_N pattern first
     for step_file in sorted(conv_dir.glob("step_*_conversation.json")):
         try:
-            with open(step_file, "r", encoding="utf-8") as f:
+            with open(step_file, encoding="utf-8") as f:
                 data = json.load(f)
             # Also load the prompt file
             step_num = step_file.name.split("_")[1]
@@ -137,7 +140,7 @@ def load_step_conversations(artifact_uri: str) -> List[Dict[str, Any]]:
         legacy = conv_dir / "conversation.json"
         if legacy.exists():
             try:
-                with open(legacy, "r", encoding="utf-8") as f:
+                with open(legacy, encoding="utf-8") as f:
                     data = json.load(f)
                 steps.append(
                     {
@@ -152,15 +155,14 @@ def load_step_conversations(artifact_uri: str) -> List[Dict[str, Any]]:
     return steps
 
 
-def extract_searchable_text(step: Dict[str, Any], field: str) -> List[Dict[str, str]]:
+def extract_searchable_text(step: dict[str, Any], field: str) -> list[dict[str, str]]:
     """Extract searchable text blocks from a step conversation."""
     results = []
     conv = step.get("conversation", {})
     prompt = step.get("prompt", "")
 
-    if field in ("all", "prompt"):
-        if prompt:
-            results.append({"field": "prompt", "text": prompt})
+    if field in ("all", "prompt") and prompt:
+        results.append({"field": "prompt", "text": prompt})
 
     resp = conv.get("response_data", {})
 
@@ -208,11 +210,11 @@ def extract_searchable_text(step: Dict[str, Any], field: str) -> List[Dict[str, 
 
 
 def search_runs(
-    runs: List[Dict[str, Any]],
+    runs: list[dict[str, Any]],
     query: str,
     field: str = "all",
     case_sensitive: bool = False,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Search across all runs for matching text."""
     matches = []
     flags = 0 if case_sensitive else re.IGNORECASE

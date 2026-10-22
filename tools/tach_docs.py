@@ -13,7 +13,13 @@ from pathlib import Path
 
 def run_command(cmd: list[str]) -> str:
     """Run a command and return stdout."""
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path(__file__).parent.parent)
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).parent.parent,
+        check=False,
+    )
     return result.stdout
 
 
@@ -38,7 +44,7 @@ def get_dependency_report(module_path: str) -> str:
 
 def generate_graph_html(mermaid_content: str) -> str:
     """Generate the dependency graph HTML."""
-    return f'''<!DOCTYPE html>
+    return """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -46,74 +52,74 @@ def generate_graph_html(mermaid_content: str) -> str:
     <title>MCP Coder - Dependency Graph</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <style>
-        body {{
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 20px;
             background: #1a1a2e;
             color: #eee;
-        }}
-        h1 {{
+        }
+        h1 {
             text-align: center;
             color: #00d9ff;
             margin-bottom: 10px;
-        }}
-        .subtitle {{
+        }
+        .subtitle {
             text-align: center;
             color: #888;
             margin-bottom: 30px;
-        }}
-        .legend {{
+        }
+        .legend {
             display: flex;
             justify-content: center;
             gap: 20px;
             margin-bottom: 20px;
             flex-wrap: wrap;
-        }}
-        .legend-item {{
+        }
+        .legend-item {
             display: flex;
             align-items: center;
             gap: 8px;
             padding: 8px 16px;
             background: #252540;
             border-radius: 8px;
-        }}
-        .legend-color {{
+        }
+        .legend-color {
             width: 16px;
             height: 16px;
             border-radius: 4px;
-        }}
-        .mermaid {{
+        }
+        .mermaid {
             display: flex;
             justify-content: center;
             background: #16213e;
             border-radius: 12px;
             padding: 30px;
             overflow: auto;
-        }}
-        .info {{
+        }
+        .info {
             max-width: 800px;
             margin: 30px auto;
             padding: 20px;
             background: #252540;
             border-radius: 12px;
-        }}
-        .info h2 {{
+        }
+        .info h2 {
             color: #00d9ff;
             margin-top: 0;
-        }}
-        .info ul {{
+        }
+        .info ul {
             line-height: 1.8;
-        }}
-        code {{
+        }
+        code {
             background: #1a1a2e;
             padding: 2px 6px;
             border-radius: 4px;
             color: #00d9ff;
-        }}
-        a {{
+        }
+        a {
             color: #00d9ff;
-        }}
+        }
     </style>
 </head>
 <body>
@@ -243,19 +249,19 @@ graph TD
     </div>
 
     <script>
-        mermaid.initialize({{ 
+        mermaid.initialize({ 
             startOnLoad: true,
             theme: 'dark',
-            flowchart: {{
+            flowchart: {
                 useMaxWidth: true,
                 htmlLabels: true,
                 curve: 'basis'
-            }}
-        }});
+            }
+        });
     </script>
 </body>
 </html>
-'''
+"""
 
 
 def generate_report_html(reports: dict[str, str]) -> str:
@@ -263,14 +269,14 @@ def generate_report_html(reports: dict[str, str]) -> str:
     report_sections = []
     for module, report in reports.items():
         escaped_report = report.replace("<", "&lt;").replace(">", "&gt;")
-        report_sections.append(f'''
+        report_sections.append(f"""
         <div class="module-report">
             <h2>{module}</h2>
             <pre>{escaped_report}</pre>
         </div>
-        ''')
-    
-    return f'''<!DOCTYPE html>
+        """)
+
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -345,14 +351,14 @@ def generate_report_html(reports: dict[str, str]) -> str:
     <div class="toc">
         <h2>Modules</h2>
         <ul>
-            {''.join(f'<li><a href="#{m.replace(".", "-")}">{m}</a></li>' for m in reports.keys())}
+            {''.join(f'<li><a href="#{m.replace(".", "-")}">{m}</a></li>' for m in reports)}
         </ul>
     </div>
     
     {''.join(f'<div class="module-report" id="{m.replace(".", "-")}"><h2>{m}</h2><pre>{r.replace("<", "&lt;").replace(">", "&gt;")}</pre></div>' for m, r in reports.items())}
 </body>
 </html>
-'''
+"""
 
 
 def _write_lf(path: Path, text: str) -> None:
@@ -360,43 +366,43 @@ def _write_lf(path: Path, text: str) -> None:
     path.write_text(text.replace("\r\n", "\n"), encoding="utf-8", newline="\n")
 
 
-def main():
+def main() -> int:
     """Generate architecture documentation."""
     print("Generating architecture documentation...")
-    
+
     # Ensure output directory exists
     output_dir = Path(__file__).parent.parent / "docs" / "architecture"
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Generate dependency graph
     print("  - Generating dependency graph...")
     graph_html = generate_graph_html(get_mermaid_diagram())
     graph_path = output_dir / "dependency_graph.html"
     _write_lf(graph_path, graph_html)
     print(f"    Created: {graph_path}")
-    
+
     # Generate detailed reports for each module
     print("  - Generating dependency reports...")
     modules = [
         "src/mcp_coder/cli",
-        "src/mcp_coder/workflows", 
+        "src/mcp_coder/workflows",
         "src/mcp_coder/workflow_utils",
         "src/mcp_coder/llm",
         "src/mcp_coder/utils",
         "src/mcp_coder/config",
     ]
-    
+
     reports = {}
     for module in modules:
         module_name = module.replace("src/", "").replace("/", ".")
         print(f"    - {module_name}")
         reports[module_name] = get_dependency_report(module)
-    
+
     report_html = generate_report_html(reports)
     report_path = output_dir / "dependency_report.html"
     _write_lf(report_path, report_html)
     print(f"    Created: {report_path}")
-    
+
     print("\nDone! Open docs/architecture/dependency_graph.html to view.")
     return 0
 

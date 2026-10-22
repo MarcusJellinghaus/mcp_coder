@@ -20,12 +20,11 @@ Examples:
 
 import argparse
 import json
-import os
 import sqlite3
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
@@ -55,7 +54,7 @@ def format_timestamp(timestamp_ms: int) -> str:
     return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def get_experiments(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
+def get_experiments(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """Get all active experiments."""
     cursor = conn.cursor()
     cursor.execute("""
@@ -80,8 +79,8 @@ def get_experiments(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
 
 
 def get_latest_runs(
-    conn: sqlite3.Connection, limit: int = 5, experiment_name: Optional[str] = None
-) -> List[Dict[str, Any]]:
+    conn: sqlite3.Connection, limit: int = 5, experiment_name: str | None = None
+) -> list[dict[str, Any]]:
     """Get latest runs with their details."""
     cursor = conn.cursor()
 
@@ -101,7 +100,7 @@ def get_latest_runs(
         WHERE r.lifecycle_stage = 'active'
     """
 
-    params: List[Any] = []
+    params: list[Any] = []
     if experiment_name:
         query += " AND e.name = ?"
         params.append(experiment_name)
@@ -132,7 +131,7 @@ def get_latest_runs(
     return runs
 
 
-def get_run_params(conn: sqlite3.Connection, run_id: str) -> Dict[str, str]:
+def get_run_params(conn: sqlite3.Connection, run_id: str) -> dict[str, str]:
     """Get parameters for a run."""
     cursor = conn.cursor()
     cursor.execute(
@@ -141,7 +140,7 @@ def get_run_params(conn: sqlite3.Connection, run_id: str) -> Dict[str, str]:
     return {row[0]: row[1] for row in cursor.fetchall()}
 
 
-def get_run_metrics(conn: sqlite3.Connection, run_id: str) -> Dict[str, float]:
+def get_run_metrics(conn: sqlite3.Connection, run_id: str) -> dict[str, float]:
     """Get metrics for a run."""
     cursor = conn.cursor()
     cursor.execute(
@@ -150,7 +149,7 @@ def get_run_metrics(conn: sqlite3.Connection, run_id: str) -> Dict[str, float]:
     return {row[0]: float(row[1]) for row in cursor.fetchall()}
 
 
-def get_conversation_data(artifact_uri: str) -> Optional[Dict[str, Any]]:
+def get_conversation_data(artifact_uri: str) -> dict[str, Any] | None:
     """Get conversation data from artifacts.
 
     Args:
@@ -173,14 +172,14 @@ def get_conversation_data(artifact_uri: str) -> Optional[Dict[str, Any]]:
         if not conversation_file.exists():
             return None
 
-        with open(conversation_file, "r", encoding="utf-8") as f:
+        with open(conversation_file, encoding="utf-8") as f:
             return json.load(f)
 
     except Exception:
         return None
 
 
-def analyze_conversation(conversation_data: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_conversation(conversation_data: dict[str, Any]) -> dict[str, Any]:
     """Analyze conversation data and extract key information.
 
     Args:
@@ -206,7 +205,7 @@ def analyze_conversation(conversation_data: Dict[str, Any]) -> Dict[str, Any]:
 
     if messages:
         # Count messages by role
-        counts: Dict[str, int] = {}
+        counts: dict[str, int] = {}
         for msg in messages:
             role = msg.get("role", "unknown")
             counts[role] = counts.get(role, 0) + 1
@@ -217,7 +216,7 @@ def analyze_conversation(conversation_data: Dict[str, Any]) -> Dict[str, Any]:
     return analysis
 
 
-def print_experiments(experiments: List[Dict[str, Any]]) -> None:
+def print_experiments(experiments: list[dict[str, Any]]) -> None:
     """Print experiments in a formatted table."""
     print("\n" + "=" * 80)
     print("EXPERIMENTS")
@@ -243,7 +242,7 @@ def safe_print(text: str) -> None:
         print(text.encode("ascii", "replace").decode("ascii"))
 
 
-def print_runs(runs: List[Dict[str, Any]], show_conversation: bool = True) -> None:
+def print_runs(runs: list[dict[str, Any]], show_conversation: bool = True) -> None:
     """Print runs in a formatted table.
 
     Args:
@@ -269,7 +268,7 @@ def print_runs(runs: List[Dict[str, Any]], show_conversation: bool = True) -> No
             if conversation_data:
                 analysis = analyze_conversation(conversation_data)
 
-                print(f"\n    Conversation:")
+                print("\n    Conversation:")
 
                 # Show prompt (first message)
                 prompt = analysis["prompt"]
@@ -289,7 +288,7 @@ def print_runs(runs: List[Dict[str, Any]], show_conversation: bool = True) -> No
                     for role, count in sorted(analysis["message_counts"].items()):
                         print(f"        - {role}: {count}")
             else:
-                print(f"\n    Conversation: [No artifact data available]")
+                print("\n    Conversation: [No artifact data available]")
 
         if run["params"]:
             print(f"\n    Parameters ({len(run['params'])}):")
@@ -332,10 +331,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Get database path
-    if args.db_path:
-        db_path = Path(args.db_path)
-    else:
-        db_path = get_mlflow_db_path()
+    db_path = Path(args.db_path) if args.db_path else get_mlflow_db_path()
 
     if not db_path.exists():
         print(f"Error: MLflow database not found at {db_path}")

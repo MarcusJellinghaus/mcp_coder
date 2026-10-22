@@ -18,7 +18,7 @@ import sqlite3
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp_coder.utils.user_app_data import get_user_app_data_dir
 
@@ -42,7 +42,7 @@ def format_timestamp(timestamp_ms: int) -> str:
     return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def get_run_info(conn: sqlite3.Connection, run_id: str) -> Optional[Dict[str, Any]]:
+def get_run_info(conn: sqlite3.Connection, run_id: str) -> dict[str, Any] | None:
     """Get run metadata from database."""
     cursor = conn.cursor()
     # Support partial run IDs
@@ -83,7 +83,7 @@ def get_run_info(conn: sqlite3.Connection, run_id: str) -> Optional[Dict[str, An
     }
 
 
-def get_artifact_base(artifact_uri: str) -> Optional[Path]:
+def get_artifact_base(artifact_uri: str) -> Path | None:
     """Parse artifact URI to local path."""
     artifact_path_str = urllib.parse.urlparse(artifact_uri).path
     if artifact_path_str.startswith("/") and ":" in artifact_path_str:
@@ -92,7 +92,7 @@ def get_artifact_base(artifact_uri: str) -> Optional[Path]:
     return p if p.exists() else None
 
 
-def load_step(base: Path, step_num: int) -> Optional[Dict[str, Any]]:
+def load_step(base: Path, step_num: int) -> dict[str, Any] | None:
     """Load a single step's data."""
     conv_dir = base / "conversation_data"
     conv_file = conv_dir / f"step_{step_num}_conversation.json"
@@ -102,9 +102,9 @@ def load_step(base: Path, step_num: int) -> Optional[Dict[str, Any]]:
     if not conv_file.exists():
         return None
 
-    result: Dict[str, Any] = {"step": step_num}
+    result: dict[str, Any] = {"step": step_num}
     try:
-        with open(conv_file, "r", encoding="utf-8") as f:
+        with open(conv_file, encoding="utf-8") as f:
             result["conversation"] = json.load(f)
     except json.JSONDecodeError:
         return None
@@ -112,13 +112,13 @@ def load_step(base: Path, step_num: int) -> Optional[Dict[str, Any]]:
     if prompt_file.exists():
         result["prompt"] = prompt_file.read_text(encoding="utf-8")
     if params_file.exists():
-        with open(params_file, "r", encoding="utf-8") as f:
+        with open(params_file, encoding="utf-8") as f:
             result["params"] = json.load(f)
 
     return result
 
 
-def list_steps(base: Path) -> List[int]:
+def list_steps(base: Path) -> list[int]:
     """List available step numbers."""
     conv_dir = base / "conversation_data"
     if not conv_dir.exists():
@@ -141,8 +141,8 @@ def safe_print(text: str) -> None:
 
 
 def print_tool_trace(
-    step_data: Dict[str, Any],
-    filter_text: Optional[str] = None,
+    step_data: dict[str, Any],
+    filter_text: str | None = None,
     show_content: bool = False,
     content_limit: int = 500,
 ) -> None:

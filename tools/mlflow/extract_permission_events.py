@@ -32,7 +32,7 @@ Usage:
 
 import argparse
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 # Sibling scripts in this (non-package) dir; resolved at runtime via sys.path[0].
 from _permission_common import write_outputs  # type: ignore[import-not-found]
@@ -68,7 +68,9 @@ def main() -> None:
     # headless
     parser.add_argument("--limit", type=int, help="[headless] Max runs to scan")
     parser.add_argument(
-        "--db-path", type=str, help="[headless] Path to MLflow SQLite DB (auto-detected)"
+        "--db-path",
+        type=str,
+        help="[headless] Path to MLflow SQLite DB (auto-detected)",
     )
     # interactive
     parser.add_argument(
@@ -84,7 +86,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    events: List[Dict[str, Any]]
+    events: list[dict[str, Any]]
     if args.source == "interactive":
         events = collect_interactive(args)
         write_outputs(events, Path(args.output))

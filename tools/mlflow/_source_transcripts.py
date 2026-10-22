@@ -13,7 +13,7 @@ import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 from _permission_common import (  # type: ignore[import-not-found]
     analyze_followup,
@@ -27,10 +27,10 @@ REJECTION_MARKER = "doesn't want to proceed with this tool use"
 
 
 def sanitize_project_dir(path: Path) -> str:
-    """Turn a working directory into Claude Code's transcript-folder name.
+    r"""Turn a working directory into Claude Code's transcript-folder name.
 
     Claude replaces every non-alphanumeric char with '-', e.g.
-    ``C:\\Users\\Marcus\\...\\mcp_coder`` -> ``C--Users-Marcus-...-mcp-coder``.
+    ``C:\Users\Marcus\...\mcp_coder`` -> ``C--Users-Marcus-...-mcp-coder``.
     """
     return re.sub(r"[^A-Za-z0-9]", "-", str(path))
 
@@ -40,15 +40,15 @@ def default_transcript_dir(project_dir: Path) -> Path:
     return Path.home() / ".claude" / "projects" / sanitize_project_dir(project_dir)
 
 
-def load_allowlist(project_dir: Path) -> Dict[str, Any]:
+def load_allowlist(project_dir: Path) -> dict[str, Any]:
     """Parse .claude/settings*.json permissions.allow into mcp + bash rules.
 
     Returns ``{"mcp": set[str], "bash_prefixes": list[str], "bash_exact": set[str]}``.
     Bash entries look like ``Bash(git rebase:*)`` (prefix) or ``Bash(exact cmd)``.
     """
-    mcp: Set[str] = set()
-    bash_prefixes: List[str] = []
-    bash_exact: Set[str] = set()
+    mcp: set[str] = set()
+    bash_prefixes: list[str] = []
+    bash_exact: set[str] = set()
     for name in ("settings.json", "settings.local.json"):
         path = project_dir / ".claude" / name
         if not path.exists():
@@ -71,7 +71,7 @@ def load_allowlist(project_dir: Path) -> Dict[str, Any]:
     return {"mcp": mcp, "bash_prefixes": bash_prefixes, "bash_exact": bash_exact}
 
 
-def bash_matches(command: str, allow: Dict[str, Any]) -> bool:
+def bash_matches(command: str, allow: dict[str, Any]) -> bool:
     """Approximate Claude's Bash allow-matching (prefix / exact) on a command.
 
     Note: checks the whole command string; it does not split on ``&&``/``|`` the
@@ -84,8 +84,8 @@ def bash_matches(command: str, allow: Dict[str, Any]) -> bool:
 
 
 def was_allowlisted(
-    tool_name: str, tool_input: Dict[str, Any], allow: Dict[str, Any]
-) -> Optional[bool]:
+    tool_name: str, tool_input: dict[str, Any], allow: dict[str, Any]
+) -> bool | None:
     """Whether a call was pre-authorised. None when it can't be determined."""
     if tool_name.startswith("mcp__"):
         return tool_name in allow["mcp"]
@@ -94,8 +94,8 @@ def was_allowlisted(
     return None
 
 
-def classify_outcome(result: Optional[Dict[str, Any]]) -> str:
-    """executed / denied_by_user / interrupted / error / no_result."""
+def classify_outcome(result: dict[str, Any] | None) -> str:
+    """Executed / denied_by_user / interrupted / error / no_result."""
     if result is None:
         return "no_result"
     if REJECTION_MARKER in result.get("text", ""):
@@ -107,9 +107,9 @@ def classify_outcome(result: Optional[Dict[str, Any]]) -> str:
     return "executed"
 
 
-def load_jsonl(path: Path) -> List[Dict[str, Any]]:
+def load_jsonl(path: Path) -> list[dict[str, Any]]:
     """Read a transcript file into a list of JSON objects (skips bad lines)."""
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -126,13 +126,13 @@ def load_jsonl(path: Path) -> List[Dict[str, Any]]:
 
 
 def index_transcript(
-    lines: List[Dict[str, Any]]
-) -> Tuple[
-    List[Tuple[str, str, Dict[str, Any], Dict[str, Any]]], Dict[str, Dict[str, Any]]
+    lines: list[dict[str, Any]],
+) -> tuple[
+    list[tuple[str, str, dict[str, Any], dict[str, Any]]], dict[str, dict[str, Any]]
 ]:
     """Return ordered tool-use calls (id, name, input, envelope) and a result map."""
-    calls: List[Tuple[str, str, Dict[str, Any], Dict[str, Any]]] = []
-    results: Dict[str, Dict[str, Any]] = {}
+    calls: list[tuple[str, str, dict[str, Any], dict[str, Any]]] = []
+    results: dict[str, dict[str, Any]] = {}
     for line in lines:
         ltype = line.get("type")
         msg = line.get("message", {})
@@ -163,13 +163,11 @@ def index_transcript(
     return calls, results
 
 
-def extract_session_events(
-    path: Path, allow: Dict[str, Any]
-) -> List[Dict[str, Any]]:
+def extract_session_events(path: Path, allow: dict[str, Any]) -> list[dict[str, Any]]:
     """Build one event per tool-use call in an interactive transcript file."""
     calls, results = index_transcript(load_jsonl(path))
     calls3 = [(c[0], c[1], c[2]) for c in calls]
-    events: List[Dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
     for call_id, name, inp, env in calls:
         if not name:
             continue
@@ -177,7 +175,7 @@ def extract_session_events(
         followup = analyze_followup(call_id, name, inp, calls3, results)
         ts = env.get("timestamp", "")
         try:
-            dt: Optional[datetime] = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            dt: datetime | None = datetime.fromisoformat(ts.replace("Z", "+00:00"))
         except ValueError:
             dt = None
         events.append(
@@ -212,7 +210,7 @@ def extract_session_events(
     return events
 
 
-def collect_interactive(args: argparse.Namespace) -> List[Dict[str, Any]]:
+def collect_interactive(args: argparse.Namespace) -> list[dict[str, Any]]:
     """Scan interactive transcripts and return tool-use events."""
     project_dir = Path(args.project_dir).resolve()
     tdir = (
@@ -231,13 +229,13 @@ def collect_interactive(args: argparse.Namespace) -> List[Dict[str, Any]]:
     )
     files = sorted(tdir.glob("*.jsonl"))
     print(f"Scanning {len(files)} sessions...")
-    events: List[Dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
     for path in files:
         events.extend(extract_session_events(path, allow))
     return events
 
 
-def print_summary_interactive(events: List[Dict[str, Any]]) -> None:
+def print_summary_interactive(events: list[dict[str, Any]]) -> None:
     """Interactive summary: outcomes, bash usage, rejections, approval candidates."""
     if not events:
         print("\nNo interactive tool events found.")
@@ -247,7 +245,7 @@ def print_summary_interactive(events: List[Dict[str, Any]]) -> None:
     denied = [e for e in events if e["outcome"] == "denied_by_user"]
     executed = [e for e in events if e["outcome"] == "executed"]
 
-    def _label(e: Dict[str, Any]) -> str:
+    def _label(e: dict[str, Any]) -> str:
         if e["tool_name"] == "Bash":
             return f"Bash:{e['bash_verb'] or '?'}"
         return str(e["tool_name"])

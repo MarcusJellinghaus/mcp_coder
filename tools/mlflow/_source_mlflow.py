@@ -14,7 +14,7 @@ import urllib.parse
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from _permission_common import (  # type: ignore[import-not-found]
     analyze_followup,
@@ -42,7 +42,7 @@ def get_mlflow_db_path() -> Path:
     return Path.home() / "mlflow_data" / "mlflow.db"
 
 
-def get_artifact_base(artifact_uri: str) -> Optional[Path]:
+def get_artifact_base(artifact_uri: str) -> Path | None:
     """Parse artifact URI to local path."""
     artifact_path_str = urllib.parse.urlparse(artifact_uri).path
     if artifact_path_str.startswith("/") and ":" in artifact_path_str:
@@ -51,7 +51,7 @@ def get_artifact_base(artifact_uri: str) -> Optional[Path]:
     return p if p.exists() else None
 
 
-def get_runs(conn: sqlite3.Connection, limit: Optional[int]) -> List[Dict[str, Any]]:
+def get_runs(conn: sqlite3.Connection, limit: int | None) -> list[dict[str, Any]]:
     """Get active runs (newest first), with DB params attached."""
     cursor = conn.cursor()
     query = """
@@ -84,12 +84,12 @@ def get_runs(conn: sqlite3.Connection, limit: Optional[int]) -> List[Dict[str, A
     return runs
 
 
-def index_step(msgs: List[Dict[str, Any]]) -> Dict[str, Any]:
+def index_step(msgs: list[dict[str, Any]]) -> dict[str, Any]:
     """Pull init/result metadata and build ordered tool-call + result maps."""
-    init: Dict[str, Any] = {}
-    result: Dict[str, Any] = {}
-    calls: List[Tuple[str, str, Dict[str, Any]]] = []  # (id, name, input) in order
-    results: Dict[str, Dict[str, Any]] = {}  # id -> {is_error, text}
+    init: dict[str, Any] = {}
+    result: dict[str, Any] = {}
+    calls: list[tuple[str, str, dict[str, Any]]] = []  # (id, name, input) in order
+    results: dict[str, dict[str, Any]] = {}  # id -> {is_error, text}
 
     for m in msgs:
         mtype = m.get("type")
@@ -117,7 +117,7 @@ def index_step(msgs: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {"init": init, "result": result, "calls": calls, "results": results}
 
 
-def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
+def extract_run_events(run: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract all permission-denial events from one headless run's steps."""
     base = get_artifact_base(run["artifact_uri"])
     if not base:
@@ -133,7 +133,7 @@ def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
     hour = start_dt.hour if start_dt else None
     start_iso = start_dt.isoformat() if start_dt else ""
 
-    events: List[Dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
     for conv_file in sorted(conv_dir.glob("step_*_conversation.json")):
         try:
             step = int(conv_file.name.split("_")[1])
@@ -169,7 +169,7 @@ def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
             except OSError:
                 pass
 
-        denial_counts: Dict[str, int] = {}
+        denial_counts: dict[str, int] = {}
         for d in denials:
             key = (
                 d.get("tool_name", "")
@@ -247,7 +247,7 @@ def extract_run_events(run: Dict[str, Any]) -> List[Dict[str, Any]]:
     return events
 
 
-def collect_headless(args: argparse.Namespace) -> List[Dict[str, Any]]:
+def collect_headless(args: argparse.Namespace) -> list[dict[str, Any]]:
     """Scan the MLflow DB + artifacts and return denial events."""
     db_path = Path(args.db_path) if args.db_path else get_mlflow_db_path()
     if not db_path.exists():
@@ -258,7 +258,7 @@ def collect_headless(args: argparse.Namespace) -> List[Dict[str, Any]]:
     try:
         runs = get_runs(conn, args.limit)
         print(f"Scanning {len(runs)} runs...")
-        events: List[Dict[str, Any]] = []
+        events: list[dict[str, Any]] = []
         for i, run in enumerate(runs, 1):
             events.extend(extract_run_events(run))
             if i % 200 == 0:
@@ -268,7 +268,7 @@ def collect_headless(args: argparse.Namespace) -> List[Dict[str, Any]]:
     return events
 
 
-def print_summary_headless(events: List[Dict[str, Any]]) -> None:
+def print_summary_headless(events: list[dict[str, Any]]) -> None:
     """Aggregate stats over headless denial events."""
     if not events:
         print("\nNo permission events found.")

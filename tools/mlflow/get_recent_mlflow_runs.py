@@ -50,7 +50,7 @@ def get_db_path() -> Path:
         return Path.home() / "mlflow_data" / "mlflow.db"
 
 
-def main():
+def main() -> int:
     """Query and display MLflow data."""
     db_path = get_db_path()
 
@@ -60,7 +60,7 @@ def main():
     print(f"\nDatabase location: {db_path}")
 
     if not db_path.exists():
-        print(f"\n[ERROR] Database file does not exist!")
+        print("\n[ERROR] Database file does not exist!")
         print(f"   Expected at: {db_path}")
         print("\nPossible reasons:")
         print("  1. MLflow hasn't logged any runs yet")
@@ -124,7 +124,7 @@ def main():
                 status,
                 start_time,
                 end_time,
-                artifact_uri,
+                _artifact_uri,
             ) in runs:
                 from datetime import datetime
 
@@ -156,7 +156,7 @@ def main():
 
                 metrics = cursor.fetchall()
                 if metrics:
-                    print(f"  Metrics:")
+                    print("  Metrics:")
                     for key, value in metrics:
                         print(f"    - {key}: {value}")
 
@@ -173,7 +173,7 @@ def main():
 
                 params = cursor.fetchall()
                 if params:
-                    print(f"  Parameters:")
+                    print("  Parameters:")
                     for key, value in params[:5]:  # Show first 5
                         print(f"    - {key}: {value}")
                     if len(params) > 5:

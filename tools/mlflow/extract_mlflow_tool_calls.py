@@ -208,6 +208,7 @@ def extract_run(conn: sqlite3.Connection, run_id_prefix: str, output_dir: Path) 
 
 
 def main() -> None:
+    """Parse arguments and extract tool call/result pairs."""
     parser = argparse.ArgumentParser(
         description="Extract tool call/result pairs from MLflow artifacts",
         formatter_class=argparse.RawDescriptionHelpFormatter,
