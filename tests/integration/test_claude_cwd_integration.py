@@ -87,6 +87,7 @@ class TestSubprocessCwdParameter:
             verbosity="just-text",
             session_id=None,
             mcp_config=None,
+            settings=None,
         )
 
         result = execute_prompt(args)
