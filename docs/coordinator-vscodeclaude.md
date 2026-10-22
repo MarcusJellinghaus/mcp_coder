@@ -111,7 +111,7 @@ Issues must also:
 
 1. **Merge conflict** → `status-71:merge-conflict` (Jenkins runs `fix-conflict`)
 2. **Failing CI** → `status-81:failing-ci` (Jenkins runs `fix-ci`)
-3. **New review feedback** (unresolved thread, changes-requested review, or new conversation comment) → `status-91:pr-review-comments`
+3. **New review feedback** (unresolved thread, or a changes-requested review / PR comment newer than the last triage; comments whose first line contains ❌ are ignored) → `status-91:pr-review-comments`
 
 `status-91` and the escalation labels `status-73`, `74`, `83` and `84` open an interactive session: `/pr_comment_triage` for `91`, `/check_branch_status` for the others. See [PR-health](processes-prompts/development-process.md#10-pr-health-status-10) for the full label flow.
 
