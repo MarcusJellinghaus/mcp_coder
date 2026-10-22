@@ -9,7 +9,6 @@ import os
 import time
 from functools import partial
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import LLMTimeoutError
@@ -62,7 +61,7 @@ logger = logging.getLogger(__name__)
 def run_implement_workflow(
     project_dir: Path,
     provider: str,
-    mcp_config: Optional[str] = None,
+    mcp_config: str | None = None,
     settings_file: str | None = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,

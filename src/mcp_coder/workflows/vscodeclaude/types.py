@@ -2,7 +2,7 @@
 
 import json
 from dataclasses import asdict, dataclass, fields
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -23,7 +23,7 @@ class VSCodeClaudeSession(TypedDict):
     last_active_rule: str | None
 
 
-class LivenessRule(str, Enum):
+class LivenessRule(StrEnum):
     """Which detection rule decided a session's liveness verdict."""
 
     TITLE = "title"
@@ -33,7 +33,7 @@ class LivenessRule(str, Enum):
     NO_MATCH = "no_match"
 
 
-class SessionAction(str, Enum):
+class SessionAction(StrEnum):
     """The next action decided for a session."""
 
     KEEP_ACTIVE = "keep_active"

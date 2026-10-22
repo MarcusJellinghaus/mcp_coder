@@ -89,6 +89,7 @@ def _make_pr(number: int = 1, mergeable_state: str = "clean") -> PullRequestData
         "body": "",
         "state": "open",
         "head_branch": f"{number}-fix",
+        "head_sha": None,
         "base_branch": "main",
         "url": f"https://github.com/owner/repo/pull/{number}",
         "created_at": None,

@@ -1,8 +1,8 @@
 """Tests for implement workflow task processing."""
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
@@ -1060,7 +1060,7 @@ class TestProcessSingleTaskBlocked:
 
     @classmethod
     def _llm_writes_marker(
-        cls, project_dir: Path, text: str, raises: Optional[Exception] = None
+        cls, project_dir: Path, text: str, raises: Exception | None = None
     ) -> Callable[..., dict[str, object]]:
         """Build a prompt_llm side effect that drops the marker mid-call.
 

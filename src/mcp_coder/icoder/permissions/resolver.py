@@ -18,7 +18,7 @@ the fall-through and ``base="none"`` sandbox paths consult ``config.degraded``.
 
 from __future__ import annotations
 
-from typing import Mapping
+from collections.abc import Mapping
 
 from mcp_coder.icoder.permissions.matcher import matches, specificity
 from mcp_coder.icoder.permissions.model import (

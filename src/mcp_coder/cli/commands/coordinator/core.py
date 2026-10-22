@@ -7,7 +7,6 @@ This module contains:
 """
 
 import logging
-from typing import List
 
 from ....config.label_config import load_labels_config
 from ....mcp_workspace_github import (
@@ -175,7 +174,7 @@ def get_jenkins_credentials() -> tuple[str, str, str]:
     return (server_url, username, api_token)
 
 
-def _filter_eligible_issues(issues: List[IssueData]) -> List[IssueData]:
+def _filter_eligible_issues(issues: list[IssueData]) -> list[IssueData]:
     """Filter issues for eligibility (same logic as get_eligible_issues).
 
     Args:
@@ -320,7 +319,7 @@ def get_cached_eligible_issues(
     issue_manager: IssueManager,
     force_refresh: bool = False,
     cache_refresh_minutes: int = 1440,
-) -> List[IssueData]:
+) -> list[IssueData]:
     """Get eligible issues using cache for performance and duplicate protection.
 
     Thin wrapper that:

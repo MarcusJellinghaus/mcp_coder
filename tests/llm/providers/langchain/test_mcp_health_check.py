@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -166,7 +165,7 @@ class TestVerifyMcpServers:
         }
 
         mock_session = AsyncMock()
-        mock_session.list_tools.side_effect = asyncio.TimeoutError()
+        mock_session.list_tools.side_effect = TimeoutError()
 
         mock_client = MagicMock()
         mock_client.session.return_value.__aenter__ = AsyncMock(

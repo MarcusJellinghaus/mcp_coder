@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 def replay_log(
-    app: "ICoderApp",
+    app: ICoderApp,
     path: Path,
     event_log: EventLog | None = None,
 ) -> None:

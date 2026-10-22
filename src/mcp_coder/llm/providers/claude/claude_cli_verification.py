@@ -1,7 +1,7 @@
 """Claude CLI verification functionality."""
 
 import logging
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from .claude_executable_finder import (
     setup_claude_path,
@@ -11,7 +11,7 @@ from .claude_executable_finder import (
 logger = logging.getLogger(__name__)
 
 
-def _verify_claude_before_use() -> Tuple[bool, Optional[str], Optional[str]]:
+def _verify_claude_before_use() -> tuple[bool, str | None, str | None]:
     """Verify Claude installation before attempting to use it.
 
     Returns:

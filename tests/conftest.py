@@ -5,9 +5,10 @@ import logging
 import os
 import shutil
 import tempfile
+from collections.abc import Generator
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Any, Generator, Type, TypeVar, cast
+from typing import Any, TypeVar, cast
 from unittest.mock import patch
 
 import git
@@ -383,7 +384,7 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
 T = TypeVar("T")
 
 
-def create_github_manager(manager_class: Type[T], github_setup: GitHubTestSetup) -> T:
+def create_github_manager(manager_class: type[T], github_setup: GitHubTestSetup) -> T:
     """Create a GitHub manager instance using real configuration.
 
     This helper function provides a consistent way to instantiate GitHub managers

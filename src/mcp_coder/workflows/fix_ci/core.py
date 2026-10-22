@@ -7,7 +7,6 @@ CLI verb.
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
@@ -65,7 +64,7 @@ def _fail(
 def run_fix_ci_workflow(
     project_dir: Path,
     provider: str,
-    mcp_config: Optional[str] = None,
+    mcp_config: str | None = None,
     settings_file: str | None = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,

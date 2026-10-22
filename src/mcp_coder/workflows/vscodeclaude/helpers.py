@@ -8,7 +8,7 @@ Contains utility functions for:
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ...mcp_workspace_github import IssueData
@@ -87,7 +87,7 @@ def build_session(
         "status": status,
         "vscode_pid": vscode_pid,
         "vscode_pid_create_time": None,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(UTC).isoformat(),
         "is_intervention": is_intervention,
         "last_active": None,
         "last_active_rule": None,

@@ -161,11 +161,19 @@ def _summarize_messages(messages: list[Any]) -> tuple[str, dict[str, Any]]:
     """
     from langchain_core.messages import AIMessage, ToolMessage
 
-    # Extract final text from the last AIMessage
+    # Extract final text from the last AIMessage. Some backends (Anthropic)
+    # return content as a list of blocks; join its text blocks, as the stream does.
     final_text = ""
     for msg in reversed(messages):
         if isinstance(msg, AIMessage):
-            final_text = msg.content if isinstance(msg.content, str) else ""
+            if isinstance(msg.content, str):
+                final_text = msg.content
+            else:
+                final_text = "".join(
+                    str(block.get("text", ""))
+                    for block in msg.content
+                    if isinstance(block, dict) and block.get("type") == "text"
+                )
             break
 
     agent_steps = 0

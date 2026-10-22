@@ -15,7 +15,6 @@ Example:
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -48,9 +47,9 @@ class JobStatus:
     """
 
     status: str
-    build_number: Optional[int]
-    duration_ms: Optional[int]
-    url: Optional[str]
+    build_number: int | None
+    duration_ms: int | None
+    url: str | None
 
     def __str__(self) -> str:
         """Return human-readable job status.

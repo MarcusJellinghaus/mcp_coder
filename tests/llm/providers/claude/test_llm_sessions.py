@@ -8,7 +8,6 @@ These tests validate end-to-end functionality including:
 
 import json
 from pathlib import Path
-from typing import Dict, Optional
 from unittest.mock import patch
 
 import pytest
@@ -29,9 +28,9 @@ class MockClaudeCLI:
 
     def __init__(self) -> None:
         """Initialize mock with default response."""
-        self.response_dict: Optional[LLMResponseDict] = None
+        self.response_dict: LLMResponseDict | None = None
         self.response_text: str = "Mock response"
-        self.received_session_id: Optional[str] = None
+        self.received_session_id: str | None = None
         self.call_count: int = 0
         self.error_on_invalid_session: bool = False
 
@@ -50,15 +49,16 @@ class MockClaudeCLI:
     def __call__(
         self,
         question: str,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
         timeout: int = 30,
-        cwd: Optional[str] = None,
-        env_vars: Optional[Dict[str, str]] = None,
-        mcp_config: Optional[str] = None,
-        branch_name: Optional[str] = None,
-        logs_dir: Optional[str] = None,
-        append_system_prompt: Optional[str] = None,
-        system_prompt_replace: Optional[str] = None,
+        cwd: str | None = None,
+        env_vars: dict[str, str] | None = None,
+        mcp_config: str | None = None,
+        settings_file: str | None = None,
+        branch_name: str | None = None,
+        logs_dir: str | None = None,
+        append_system_prompt: str | None = None,
+        system_prompt_replace: str | None = None,
     ) -> LLMResponseDict:
         """Simulate CLI call."""
         self.call_count += 1

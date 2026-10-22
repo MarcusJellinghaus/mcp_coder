@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -155,9 +155,7 @@ def test_filename_with_microseconds_parsed(tmp_path: Path) -> None:
     )
     result = list_icoder_logs(tmp_path)
     assert len(result) == 1
-    assert result[0].timestamp == datetime(
-        2026, 5, 1, 10, 0, 0, 123456, tzinfo=timezone.utc
-    )
+    assert result[0].timestamp == datetime(2026, 5, 1, 10, 0, 0, 123456, tzinfo=UTC)
 
 
 def test_unparseable_filename_falls_back_to_mtime(tmp_path: Path) -> None:
@@ -170,14 +168,14 @@ def test_unparseable_filename_falls_back_to_mtime(tmp_path: Path) -> None:
     )
     result = list_icoder_logs(tmp_path)
     assert len(result) == 1
-    expected = datetime.fromtimestamp(log_path.stat().st_mtime, tz=timezone.utc)
+    expected = datetime.fromtimestamp(log_path.stat().st_mtime, tz=UTC)
     assert result[0].timestamp == expected
 
 
 def test_logsummary_is_frozen_and_hashable() -> None:
     summary = LogSummary(
         path=Path("/tmp/icoder_test.jsonl"),
-        timestamp=datetime(2026, 5, 1, 10, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 5, 1, 10, 0, 0, tzinfo=UTC),
         provider="claude",
         n_turns=3,
         first_prompt="hello",

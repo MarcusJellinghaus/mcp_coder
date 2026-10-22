@@ -7,8 +7,9 @@ Provides a context manager that wraps LLM calls with automatic MLflow logging:
 
 import json
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Generator
+from typing import Any
 
 from .mlflow_logger import get_mlflow_logger
 

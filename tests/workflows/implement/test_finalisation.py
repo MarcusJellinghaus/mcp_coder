@@ -1,7 +1,7 @@
 """Tests for implement workflow finalisation stage."""
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from mcp_coder.workflow_utils.task_tracker import TaskTrackerFileNotFoundError
@@ -10,7 +10,7 @@ from mcp_coder.workflows.implement.finalisation import run_finalisation
 
 
 # Reusable LLMResponseDict mock value
-def _make_llm_response(text: str = "LLM response text") -> Dict[str, Any]:
+def _make_llm_response(text: str = "LLM response text") -> dict[str, Any]:
     return {
         "text": text,
         "session_id": "test-session",
@@ -381,7 +381,7 @@ class TestFinalisationBlockedMarkerCleanup:
     def _write_marker_side_effect(project_dir: Path, text: str) -> Any:
         """Build a prompt_llm side effect that writes a blocked marker like a real agent."""
 
-        def _side_effect(*_args: Any, **_kwargs: Any) -> Dict[str, Any]:
+        def _side_effect(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
             marker = project_dir / BLOCKED_FILE
             marker.parent.mkdir(parents=True, exist_ok=True)
             marker.write_text("Cannot proceed - schema is ambiguous", encoding="utf-8")

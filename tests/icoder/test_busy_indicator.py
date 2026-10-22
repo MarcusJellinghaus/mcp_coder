@@ -63,7 +63,8 @@ async def test_show_busy_preserves_start_time() -> None:
     async with app.run_test():
         indicator = app.query_one(BusyIndicator)
         indicator.show_busy("A")
-        await asyncio.sleep(0.05)
+        # Long enough to show as >= 0.1 in the label's one-decimal format.
+        await asyncio.sleep(0.15)
         indicator.show_busy("B")
         label = indicator.label_text
         assert "B" in label

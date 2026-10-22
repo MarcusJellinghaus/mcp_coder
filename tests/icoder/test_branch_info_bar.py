@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -73,15 +73,14 @@ def _zone_texts(bar: BranchInfoBar) -> dict[str, str]:
 
 def test_format_cache_age_minutes_only() -> None:
     """format_cache_age uses minute granularity only."""
-    now = datetime(2026, 4, 30, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 4, 30, 12, 0, tzinfo=UTC)
     assert format_cache_age(None, now) == ""
     assert (
-        format_cache_age(datetime(2026, 4, 30, 11, 59, 30, tzinfo=timezone.utc), now)
+        format_cache_age(datetime(2026, 4, 30, 11, 59, 30, tzinfo=UTC), now)
         == "(<1m ago)"
     )
     assert (
-        format_cache_age(datetime(2026, 4, 30, 11, 58, tzinfo=timezone.utc), now)
-        == "(2m ago)"
+        format_cache_age(datetime(2026, 4, 30, 11, 58, tzinfo=UTC), now) == "(2m ago)"
     )
 
 
@@ -157,7 +156,7 @@ async def test_renders_full_state_with_status_pill(tmp_path: Path) -> None:
                 issue_number=123,
                 issue_title="Fix things",
                 status_label="status-04:plan-review",
-                cache_last_checked=datetime.now(tz=timezone.utc),
+                cache_last_checked=datetime.now(tz=UTC),
             ),
             pr_number=45,
             pr_enabled=True,

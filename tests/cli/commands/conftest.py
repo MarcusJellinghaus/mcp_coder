@@ -1,8 +1,9 @@
 """Shared test fixtures for CLI commands tests."""
 
 import argparse
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Dict, Generator
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -43,7 +44,7 @@ def _assert_value_at_column(line: str, expected_col: int) -> None:
 
 
 @pytest.fixture
-def mock_labels_config() -> Dict[str, Any]:
+def mock_labels_config() -> dict[str, Any]:
     """Fixture providing standard mock labels configuration.
 
     This fixture reduces duplication across coordinator tests by providing
@@ -224,7 +225,7 @@ def _mock_verify_github_security() -> Generator[MagicMock, None, None]:
 
 
 @contextmanager
-def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
+def _make_verify_mocks() -> Generator[dict[str, MagicMock], None, None]:
     """Patch the additional execute_verify mock surface for alignment smoke tests.
 
     Composes with the autouse ``_mock_verify_config`` and ``_mock_verify_github``
@@ -238,7 +239,7 @@ def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
     _verify = "mcp_coder.cli.commands.verify"
     _lc_verify = "mcp_coder.llm.providers.langchain.verification"
 
-    minimal_llm_response: Dict[str, Any] = {
+    minimal_llm_response: dict[str, Any] = {
         "version": "1.0",
         "timestamp": "2026-01-01T00:00:00",
         "text": "OK",
@@ -246,17 +247,17 @@ def _make_verify_mocks() -> Generator[Dict[str, MagicMock], None, None]:
         "provider": "claude",
         "raw_response": {},
     }
-    claude_ok: Dict[str, Any] = {
+    claude_ok: dict[str, Any] = {
         "cli_found": {"ok": True, "value": "YES"},
         "cli_works": {"ok": True, "value": "YES"},
         "api_integration": {"ok": True, "value": "OK", "error": None},
         "overall_ok": True,
     }
-    mlflow_not_installed: Dict[str, Any] = {
+    mlflow_not_installed: dict[str, Any] = {
         "installed": {"ok": False, "value": "not installed"},
         "overall_ok": True,
     }
-    mcp_servers_ok: Dict[str, Any] = {
+    mcp_servers_ok: dict[str, Any] = {
         "servers": {
             "mcp-tools-py": {
                 "ok": True,

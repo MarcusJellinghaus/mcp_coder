@@ -43,7 +43,7 @@ class TestStoreSession:
             assert file_path.endswith(".json")
 
             # Verify content
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
                 assert data["prompt"] == "Test prompt"
                 assert data["response_data"]["text"] == "Hello"
@@ -62,7 +62,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "Test prompt", tmp_path)
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["prompt"] == "Test prompt"
             assert data["response_data"] == response_data
@@ -122,7 +122,7 @@ class TestStoreSession:
                 response_data, "prompt", tmp_path, branch_name="342-improve-logging"
             )
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["branch_name"] == "342-improve-logging"
 
@@ -142,7 +142,7 @@ class TestStoreSession:
                 response_data, "prompt", tmp_path, step_name="step_1"
             )
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["step_name"] == "step_1"
 
@@ -160,7 +160,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["model"] == "claude-sonnet-4-new"
 
@@ -178,7 +178,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["model"] == "claude-fallback"
 
@@ -196,7 +196,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert "branch_name" not in data["metadata"]
 
@@ -214,7 +214,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert "step_name" not in data["metadata"]
 
@@ -234,7 +234,7 @@ class TestStoreSession:
                 response_data, "prompt", tmp_path, log_file_path="/tmp/x.jsonl"
             )
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["metadata"]["log_file_path"] == "/tmp/x.jsonl"
 
@@ -252,7 +252,7 @@ class TestStoreSession:
 
             file_path = store_session(response_data, "prompt", tmp_path)
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             assert "log_file_path" not in data["metadata"]
 

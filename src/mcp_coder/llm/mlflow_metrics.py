@@ -5,7 +5,7 @@ focusing on measurable, actionable data like duration, cost, and token usage.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,8 @@ class ConversationMetrics:
     """Calculates objective performance metrics for conversation analysis."""
 
     def extract_performance_metrics(
-        self, response_data: Dict[str, Any]
-    ) -> Dict[str, float]:
+        self, response_data: dict[str, Any]
+    ) -> dict[str, float]:
         """Extract performance-related metrics from response data.
 
         Args:
@@ -102,8 +102,8 @@ class ConversationMetrics:
         return metrics
 
     def get_error_metrics(
-        self, error: Optional[Exception], duration_ms: Optional[int]
-    ) -> Dict[str, float]:
+        self, error: Exception | None, duration_ms: int | None
+    ) -> dict[str, float]:
         """Extract error-related metrics.
 
         Args:
@@ -118,7 +118,7 @@ class ConversationMetrics:
             - time_to_error_ms, time_to_error_seconds
             - failure_speed (1.0=fast, 2.0=slow)
         """
-        metrics: Dict[str, float] = {}
+        metrics: dict[str, float] = {}
 
         try:
             if error is not None:
@@ -174,7 +174,7 @@ class ConversationMetrics:
 
 
 # Convenience functions for direct use
-def extract_performance_metrics(response_data: Dict[str, Any]) -> Dict[str, float]:
+def extract_performance_metrics(response_data: dict[str, Any]) -> dict[str, float]:
     """Extract performance metrics.
 
     Returns:
@@ -185,8 +185,8 @@ def extract_performance_metrics(response_data: Dict[str, Any]) -> Dict[str, floa
 
 
 def get_error_metrics(
-    error: Optional[Exception], duration_ms: Optional[int]
-) -> Dict[str, float]:
+    error: Exception | None, duration_ms: int | None
+) -> dict[str, float]:
     """Get error metrics.
 
     Returns:

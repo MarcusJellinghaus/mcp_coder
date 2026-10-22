@@ -8,7 +8,6 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +166,7 @@ def _find_implementation_section(content: str) -> str:
     return "\n".join(impl_lines)
 
 
-def _is_task_line(line: str) -> Tuple[bool, bool]:
+def _is_task_line(line: str) -> tuple[bool, bool]:
     """Detect if line is a task and whether it's complete.
 
     Args:

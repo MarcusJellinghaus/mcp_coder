@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,7 +30,7 @@ class TestPollForCiCompletionHeartbeat:
     ) -> None:
         """INFO heartbeat is logged every 8 iterations."""
         mock_ci_manager = MagicMock()
-        in_progress: Dict[str, Any] = {
+        in_progress: dict[str, Any] = {
             "run": {
                 "status": "in_progress",
                 "run_ids": [1],
@@ -38,7 +38,7 @@ class TestPollForCiCompletionHeartbeat:
             },
             "jobs": [],
         }
-        completed: Dict[str, Any] = {
+        completed: dict[str, Any] = {
             "run": {
                 "status": "completed",
                 "conclusion": "success",
@@ -66,7 +66,7 @@ class TestPollForCiCompletionHeartbeat:
     ) -> None:
         """No heartbeat logged when fewer than 8 iterations complete."""
         mock_ci_manager = MagicMock()
-        in_progress: Dict[str, Any] = {
+        in_progress: dict[str, Any] = {
             "run": {
                 "status": "in_progress",
                 "run_ids": [1],
@@ -74,7 +74,7 @@ class TestPollForCiCompletionHeartbeat:
             },
             "jobs": [],
         }
-        completed: Dict[str, Any] = {
+        completed: dict[str, Any] = {
             "run": {
                 "status": "completed",
                 "conclusion": "success",
@@ -100,7 +100,7 @@ class TestPollForCiCompletionHeartbeat:
     def test_elapsed_time_in_debug_logs(self, caplog: pytest.LogCaptureFixture) -> None:
         """Debug logs include elapsed time."""
         mock_ci_manager = MagicMock()
-        in_progress: Dict[str, Any] = {
+        in_progress: dict[str, Any] = {
             "run": {
                 "status": "in_progress",
                 "run_ids": [1],
@@ -108,7 +108,7 @@ class TestPollForCiCompletionHeartbeat:
             },
             "jobs": [],
         }
-        completed: Dict[str, Any] = {
+        completed: dict[str, Any] = {
             "run": {
                 "status": "completed",
                 "conclusion": "success",
@@ -135,8 +135,8 @@ class TestPollForCiCompletionHeartbeat:
     ) -> None:
         """'No CI run found yet' debug logs include elapsed time."""
         mock_ci_manager = MagicMock()
-        empty_status: Dict[str, Any] = {"run": {}, "jobs": []}
-        completed: Dict[str, Any] = {
+        empty_status: dict[str, Any] = {"run": {}, "jobs": []}
+        completed: dict[str, Any] = {
             "run": {
                 "status": "completed",
                 "conclusion": "success",
@@ -163,7 +163,7 @@ class TestPollForCiCompletionHeartbeat:
     ) -> None:
         """Two heartbeats logged at iterations 8 and 16."""
         mock_ci_manager = MagicMock()
-        in_progress: Dict[str, Any] = {
+        in_progress: dict[str, Any] = {
             "run": {
                 "status": "in_progress",
                 "run_ids": [1],
@@ -171,7 +171,7 @@ class TestPollForCiCompletionHeartbeat:
             },
             "jobs": [],
         }
-        completed: Dict[str, Any] = {
+        completed: dict[str, Any] = {
             "run": {
                 "status": "completed",
                 "conclusion": "success",
@@ -198,7 +198,7 @@ class TestPollForCiCompletionShaCorrelation:
     """``expected_sha`` pins the poll to the commit the caller just pushed."""
 
     @staticmethod
-    def _run(status: str, sha: str, conclusion: str | None = None) -> Dict[str, Any]:
+    def _run(status: str, sha: str, conclusion: str | None = None) -> dict[str, Any]:
         """Build one ``get_latest_ci_status`` payload."""
         return {
             "run": {
@@ -318,12 +318,12 @@ class TestPollForCiCompletionLookupFailed:
     """``lookup_failed`` runs get their own small, bounded retry budget."""
 
     @staticmethod
-    def _lookup_failed_run() -> Dict[str, Any]:
+    def _lookup_failed_run() -> dict[str, Any]:
         """A run dict carrying the swallowed-lookup-failure flag (mcp-workspace#318)."""
         return {"run": {"lookup_failed": True}, "jobs": []}
 
     @staticmethod
-    def _run(status: str, sha: str, conclusion: str | None = None) -> Dict[str, Any]:
+    def _run(status: str, sha: str, conclusion: str | None = None) -> dict[str, Any]:
         """Build one normal ``get_latest_ci_status`` payload."""
         return {
             "run": {
@@ -437,7 +437,7 @@ def _make_config() -> CIFixConfig:
     )
 
 
-def _make_failed_summary() -> Dict[str, Any]:
+def _make_failed_summary() -> dict[str, Any]:
     """Build a minimal failed-jobs summary for _run_ci_analysis."""
     return {
         "job_name": "build",

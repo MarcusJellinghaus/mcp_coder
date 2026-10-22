@@ -19,7 +19,7 @@ import json
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -86,7 +86,7 @@ def test_result_text_variants() -> None:
     assert extract.result_text(42) == "42"
 
 
-def _conversation() -> List[Dict[str, Any]]:
+def _conversation() -> list[dict[str, Any]]:
     return [
         {
             "type": "system",
@@ -308,7 +308,7 @@ def test_classify_outcome() -> None:
     assert extract.classify_outcome({"is_error": True, "text": "boom"}) == "error"
 
 
-def _transcript() -> List[Dict[str, Any]]:
+def _transcript() -> list[dict[str, Any]]:
     return [
         {"type": "queue-operation", "operation": "enqueue"},
         {

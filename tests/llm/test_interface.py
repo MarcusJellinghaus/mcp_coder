@@ -268,7 +268,7 @@ class TestPromptLLMRouting:
         self, mock_ask_langchain: MagicMock
     ) -> None:
         """asyncio.TimeoutError from langchain provider is re-raised as LLMTimeoutError."""
-        mock_ask_langchain.side_effect = asyncio.TimeoutError()
+        mock_ask_langchain.side_effect = TimeoutError()
 
         with pytest.raises(LLMTimeoutError):
             prompt_llm(
@@ -305,7 +305,7 @@ class TestLLMTimeoutErrorNormalization:
         self, mock_ask_langchain: MagicMock
     ) -> None:
         """asyncio.TimeoutError from langchain is normalized to LLMTimeoutError."""
-        mock_ask_langchain.side_effect = asyncio.TimeoutError()
+        mock_ask_langchain.side_effect = TimeoutError()
 
         with pytest.raises(LLMTimeoutError) as exc_info:
             prompt_llm(
@@ -728,7 +728,7 @@ class TestPromptLLM:
         self, mock_ask_langchain: MagicMock
     ) -> None:
         """asyncio.TimeoutError from langchain is re-raised as LLMTimeoutError."""
-        mock_ask_langchain.side_effect = asyncio.TimeoutError()
+        mock_ask_langchain.side_effect = TimeoutError()
 
         with pytest.raises(LLMTimeoutError):
             prompt_llm(

@@ -15,7 +15,7 @@ A single ``core``-level test confirms Gate 1 is wired at the top of ``body()``:
 a blocking gate returns ``1`` without entering the round loop.
 """
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -268,8 +268,8 @@ class TestCheckCiProvenGate:
     ) -> None:
         """An unlisted CIStatus -> ("ci_unknown", details) using the generic fallback."""
 
-        class _UnlistedCIStatus(str, Enum):
-            """Hashable stand-in for a future CIStatus member, like the real enum."""
+        class _UnlistedCIStatus(StrEnum):
+            """Hashable str enum standing in for a future CIStatus member."""
 
             WEIRD = "WEIRD"
 

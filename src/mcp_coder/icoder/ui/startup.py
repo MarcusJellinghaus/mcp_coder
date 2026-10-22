@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .app import ICoderApp
 
 
-def render_startup_banner(app: "ICoderApp") -> None:
+def render_startup_banner(app: ICoderApp) -> None:
     """Render the fresh-start runtime banner and startup permission notices.
 
     Extracted from ``ICoderApp.on_mount`` so the app shell stays thin. Applies

@@ -3,7 +3,6 @@
 import argparse
 import logging
 from pathlib import Path
-from typing import Optional, Tuple
 
 from mcp_coder.mcp_workspace_git import (
     commit_staged_files,
@@ -132,7 +131,7 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     return 0
 
 
-def validate_git_repository(project_dir: Path) -> Tuple[bool, Optional[str]]:
+def validate_git_repository(project_dir: Path) -> tuple[bool, str | None]:
     """Validate current directory is git repo with changes.
 
     Returns:

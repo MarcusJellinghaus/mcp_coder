@@ -7,7 +7,7 @@ label on GitHub issues through the workflow system.
 import argparse
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
@@ -27,7 +27,7 @@ from ...workflows.utils import resolve_project_dir
 logger = logging.getLogger(__name__)
 
 
-def format_status_labels(labels_config: Dict[str, Any]) -> str:
+def format_status_labels(labels_config: dict[str, Any]) -> str:
     """Format available status labels as an aligned table.
 
     Args:
@@ -67,8 +67,8 @@ def build_set_status_epilog() -> str:
 
 
 def validate_status_label(
-    label: str, labels_config: Dict[str, Any]
-) -> Tuple[bool, Optional[str]]:
+    label: str, labels_config: dict[str, Any]
+) -> tuple[bool, str | None]:
     """Check if label is a valid status label.
 
     Args:
@@ -113,7 +113,7 @@ def compute_new_labels(
 
 def _resolve_issue_number(
     args: argparse.Namespace, project_dir: Path
-) -> Tuple[Optional[int], Optional[str]]:
+) -> tuple[int | None, str | None]:
     """Resolve issue number from args or branch name.
 
     Args:
@@ -152,8 +152,8 @@ def _update_issue_labels(
     issue_number: int,
     status_label: str,
     status_labels: set[str],
-    from_status: Optional[str] = None,
-) -> Tuple[bool, Optional[str], bool]:
+    from_status: str | None = None,
+) -> tuple[bool, str | None, bool]:
     """Get issue, compute new labels, and apply them.
 
     Args:

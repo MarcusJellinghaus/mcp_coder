@@ -6,7 +6,7 @@ Tests the extracted function in mcp_coder.workflow_utils.label_transitions.
 
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -19,7 +19,7 @@ from mcp_coder.mcp_workspace_github import (
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 # Mock label configuration
-MOCK_LABELS_CONFIG: Dict[str, Any] = {
+MOCK_LABELS_CONFIG: dict[str, Any] = {
     "workflow_labels": [
         {
             "internal_id": "implementing",

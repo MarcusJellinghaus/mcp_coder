@@ -856,8 +856,12 @@ async def test_busy_indicator_resets_after_cancel(
     async with app.run_test() as pilot:
         await _submit_and_wait(app, pilot, text="hello")
         await pilot.press("escape")
-        await pilot.pause(delay=0.5)
         indicator = app.query_one(BusyIndicator)
+        # Poll: on a loaded machine the cancel can take longer than one pause.
+        for _ in range(50):
+            await pilot.pause(delay=0.1)
+            if "Ready" in indicator.label_text:
+                break
         assert "\u2713 Ready" in indicator.label_text
 
 

@@ -490,7 +490,7 @@ def execute_verify(args: argparse.Namespace) -> int:
     # would fail indirectly) is short-circuited.
     # inject_prompts=True is what makes prompt_llm load the prompts, so the request
     # carries the same merged system + project prompt a real run sends.
-    timestamp = datetime.datetime.now(datetime.timezone.utc)
+    timestamp = datetime.datetime.now(datetime.UTC)
     test_prompt_ok = True
     tools_exposed_ok: bool | None = None
     if mcp_config_ok is not False:

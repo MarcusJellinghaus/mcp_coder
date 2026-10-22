@@ -11,10 +11,11 @@ here, but not exercised.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Mapping, NamedTuple
+from typing import Literal, NamedTuple
 
 WILDCARD = "*"
 
@@ -69,7 +70,7 @@ class Rule:
     only on an origin rule.
     """
 
-    matcher: "Matcher | None"
+    matcher: Matcher | None
     policy: Policy
     layer: str  # "user" | "project" | "local" | "runtime"
     source_path: Path | None = None  # declared here, populated by I2.2

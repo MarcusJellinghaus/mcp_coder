@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 from unittest.mock import MagicMock
 
 # Add src directory to Python path to ensure jenkins_operations module can be imported
@@ -45,7 +45,7 @@ def _response(status: int, text: str = "") -> MagicMock:
 
 def _mock_jenkins(
     mock_jenkins_class: MagicMock,
-    responses: Union[dict[str, Union[MagicMock, Exception]], None] = None,
+    responses: dict[str, MagicMock | Exception] | None = None,
 ) -> MagicMock:
     """Configure the patched Jenkins class with a URL-keyed probe session.
 

@@ -16,9 +16,10 @@ directory. Tests that raise during tool loading never reach it.
 """
 
 import json
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

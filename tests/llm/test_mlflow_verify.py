@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -337,7 +337,7 @@ class TestVerifyMlflowTrackingData:
         )
         mock_query.return_value = TrackingStats(
             run_count=42,
-            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=timezone.utc),
+            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=UTC),
             test_prompt_logged=False,
         )
         result = verify_mlflow()
@@ -365,10 +365,10 @@ class TestVerifyMlflowTrackingData:
         )
         mock_query.return_value = TrackingStats(
             run_count=5,
-            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=timezone.utc),
+            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=UTC),
             test_prompt_logged=True,
         )
-        since = datetime(2026, 3, 20, 14, 0, tzinfo=timezone.utc)
+        since = datetime(2026, 3, 20, 14, 0, tzinfo=UTC)
         result = verify_mlflow(since=since)
         assert result["tracking_data"]["ok"] is True
         assert "test prompt logged" in result["tracking_data"]["value"]
@@ -394,10 +394,10 @@ class TestVerifyMlflowTrackingData:
         )
         mock_query.return_value = TrackingStats(
             run_count=3,
-            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=timezone.utc),
+            last_run_time=datetime(2026, 3, 20, 14, 30, tzinfo=UTC),
             test_prompt_logged=False,
         )
-        since = datetime(2026, 3, 20, 14, 0, tzinfo=timezone.utc)
+        since = datetime(2026, 3, 20, 14, 0, tzinfo=UTC)
         result = verify_mlflow(since=since)
         assert result["tracking_data"]["ok"] is False
         assert "test prompt NOT logged" in result["tracking_data"]["value"]

@@ -9,7 +9,6 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Optional
 
 from ...utils.user_app_data import get_user_app_data_dir
 
@@ -20,7 +19,7 @@ __all__ = [
 ]
 
 
-def _find_latest_langchain_session() -> Optional[str]:
+def _find_latest_langchain_session() -> str | None:
     """Find the most recent langchain session file by modification time.
 
     Searches ~/.mcp_coder/sessions/langchain/ for JSON files and returns
@@ -64,7 +63,7 @@ def _find_latest_langchain_session() -> Optional[str]:
 def find_latest_session(
     responses_dir: str = ".mcp-coder/responses",
     provider: str = "claude",
-) -> Optional[str]:
+) -> str | None:
     """Find the most recent session file.
 
     For claude provider: searches responses_dir for timestamp-named response files.
@@ -137,7 +136,7 @@ def find_latest_session(
         logger.debug("Selected latest response file: %s", latest_file)
         return latest_file
 
-    except (OSError, IOError) as e:
+    except OSError as e:
         logger.debug("Error accessing response directory %s: %s", responses_dir, e)
         return None
     except (

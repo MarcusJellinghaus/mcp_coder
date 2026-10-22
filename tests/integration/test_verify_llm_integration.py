@@ -1,7 +1,7 @@
 """End-to-end integration test: execute_verify() with real LLM and MLflow."""
 
 import argparse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,10 +24,23 @@ class TestVerifyEndToEndWithRealLLM:
         db_path = tmp_path / "verify_test.db"
         sqlite_uri = f"sqlite:///{db_path}"
 
+        mlflow_cfg = MLflowConfig(
+            enabled=True,
+            tracking_uri=sqlite_uri,
+            experiment_name="verify-integration-test",
+            artifact_location=str(tmp_path / "artifacts"),
+        )
+
+        # Patch where the name is used: both modules bind it at import time.
         with (
             patch(
-                "mcp_coder.utils.mlflow_config_loader.load_mlflow_config"
-            ) as mock_cfg,
+                "mcp_coder.llm.mlflow_logger.load_mlflow_config",
+                return_value=mlflow_cfg,
+            ),
+            patch(
+                "mcp_coder.llm.mlflow_verify.load_mlflow_config",
+                return_value=mlflow_cfg,
+            ),
             # execute_verify reads the real ~/.mcp_coder/config.toml; without
             # this the JENKINS sections would issue live probes against a
             # configured server and could fail the exit-code assertion below.
@@ -45,21 +58,16 @@ class TestVerifyEndToEndWithRealLLM:
                 },
             ),
         ):
-            mock_cfg.return_value = MLflowConfig(
-                enabled=True,
-                tracking_uri=sqlite_uri,
-                experiment_name="verify-integration-test",
-                artifact_location=str(tmp_path / "artifacts"),
-            )
             # Reset the global MLflow logger so it picks up the new config
             import mcp_coder.llm.mlflow_logger as _ml
 
             _ml._global_logger = None
 
-            before_ts = datetime.now(timezone.utc)
+            before_ts = datetime.now(UTC)
             args = argparse.Namespace(
                 check_models=False,
                 mcp_config=None,
+                settings=None,
                 llm_method=None,
                 project_dir=None,
             )

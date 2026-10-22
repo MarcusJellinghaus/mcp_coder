@@ -1,7 +1,7 @@
 """Tests for implement workflow task tracker preparation."""
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from mcp_coder.workflows.implement.task_tracker_prep import (
@@ -11,7 +11,7 @@ from mcp_coder.workflows.implement.task_tracker_prep import (
 
 
 # Reusable LLMResponseDict mock value
-def _make_llm_response(text: str = "LLM response text") -> Dict[str, Any]:
+def _make_llm_response(text: str = "LLM response text") -> dict[str, Any]:
     return {
         "text": text,
         "session_id": "test-session",

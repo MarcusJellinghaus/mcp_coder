@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -99,7 +98,7 @@ def format_args_full(args: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
-class ApprovalModal(ModalScreen[Optional[ApprovalDecision]]):
+class ApprovalModal(ModalScreen[ApprovalDecision | None]):
     """Modal for one pending approval. Dismisses with a decision, or ``None``.
 
     ``None`` means "cancel this turn": there is no cancel outcome on

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
@@ -137,7 +137,7 @@ def test_branch_with_issue_populates_from_cache() -> None:
     assert info.issue_number == 42
     assert info.issue_title == "Add bar"
     assert info.issue_status_label == "status-04:plan-review"
-    assert info.cache_last_checked == datetime(2026, 4, 30, 10, 0, tzinfo=timezone.utc)
+    assert info.cache_last_checked == datetime(2026, 4, 30, 10, 0, tzinfo=UTC)
 
 
 def test_gh_failure_keeps_branch_fields_returns_none_for_issue() -> None:

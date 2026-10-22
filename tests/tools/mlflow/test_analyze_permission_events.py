@@ -11,7 +11,7 @@ import importlib.util
 import json
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -34,8 +34,8 @@ def _load() -> ModuleType:
 analyze = _load()
 
 
-def _event(**overrides: Any) -> Dict[str, Any]:
-    base: Dict[str, Any] = {
+def _event(**overrides: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {
         "run_id": "run-1",
         "step": 1,
         "tool_name": "mcp__workspace__search_files",
@@ -168,7 +168,7 @@ def test_summarize_shape() -> None:
 
 
 def test_load_events_roundtrip(tmp_path: Path) -> None:
-    events: List[Dict[str, Any]] = [_event(), _event(run_id="run-2")]
+    events: list[dict[str, Any]] = [_event(), _event(run_id="run-2")]
     dataset = tmp_path / "permission_events.jsonl"
     dataset.write_text(
         "\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8"

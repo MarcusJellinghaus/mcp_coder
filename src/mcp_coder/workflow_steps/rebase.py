@@ -7,7 +7,6 @@ from ``implement/rebase.py`` so multiple workflows can share it.
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from mcp_coder.mcp_workspace_git import get_full_status, rebase_onto_branch
 from mcp_coder.workflow_steps.commit import push_changes
@@ -19,7 +18,7 @@ from mcp_coder.workflow_utils.base_branch import (
 logger = logging.getLogger(__name__)
 
 
-def _get_rebase_target_branch(project_dir: Path) -> Optional[str]:
+def _get_rebase_target_branch(project_dir: Path) -> str | None:
     """Determine the target branch for rebasing the current feature branch.
 
     Uses shared detect_base_branch() function for detection.

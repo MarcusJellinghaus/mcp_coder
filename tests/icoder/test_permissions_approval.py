@@ -35,7 +35,7 @@ async def _wait_until(predicate: Callable[[], bool], timeout: float = 2.0) -> No
 
 def _ask(
     engine: ApprovalEngine, tool_name: str = "mcp__srv__tool"
-) -> "asyncio.Task[ApprovalDecision]":
+) -> asyncio.Task[ApprovalDecision]:
     """Start one approval request as a task on the running loop.
 
     ``source`` carries the bare layer name, which is what the only producer

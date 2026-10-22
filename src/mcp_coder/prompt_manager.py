@@ -74,7 +74,7 @@ Error Handling Examples:
 
 import glob
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 from .prompt_parsing import (
     _extract_code_block_after_header,
@@ -187,7 +187,7 @@ def get_prompt(source: str, header: str) -> str:
 def get_prompt_with_substitutions(
     source: str,
     header: str,
-    substitutions: Dict[str, str],
+    substitutions: dict[str, str],
 ) -> str:
     """Get prompt from markdown source and substitute [placeholder] values.
 
@@ -224,7 +224,7 @@ def get_prompt_with_substitutions(
     return prompt
 
 
-def validate_prompt_markdown(source: str) -> Dict[str, Any]:
+def validate_prompt_markdown(source: str) -> dict[str, Any]:
     r"""Validate prompt markdown structure and return detailed results.
 
     This function checks that the markdown follows the expected format:
@@ -316,7 +316,7 @@ def validate_prompt_markdown(source: str) -> Dict[str, Any]:
     }
 
 
-def validate_prompt_directory(directory: str) -> Dict[str, Any]:
+def validate_prompt_directory(directory: str) -> dict[str, Any]:
     """Validate all markdown files in directory including cross-file duplicate detection.
 
     This function performs comprehensive validation across multiple files:
@@ -400,7 +400,7 @@ def validate_prompt_directory(directory: str) -> Dict[str, Any]:
     # Check for cross-file duplicates
     try:
         # Track which file each header came from
-        file_headers: Dict[str, List[str]] = {}
+        file_headers: dict[str, list[str]] = {}
 
         for file_path in sorted(md_files):  # Sort for consistent ordering
             file_content = _load_content(file_path)

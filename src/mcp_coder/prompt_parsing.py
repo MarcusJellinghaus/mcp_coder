@@ -5,10 +5,10 @@ code-block extraction after a header, and duplicate detection.
 """
 
 import re
-from typing import Any, Dict, List, Union
+from typing import Any
 
 
-def _extract_headers(content: str) -> List[Dict[str, Any]]:
+def _extract_headers(content: str) -> list[dict[str, Any]]:
     """Extract all headers from markdown content.
 
     This function finds all markdown headers (levels 1-5) and returns
@@ -47,8 +47,8 @@ def _extract_headers(content: str) -> List[Dict[str, Any]]:
 
 
 def _extract_code_block_after_header(
-    content: str, header: Dict[str, Any]
-) -> Union[str, None]:
+    content: str, header: dict[str, Any]
+) -> str | None:
     """Extract the first code block after a header.
 
     This function looks for the first ``` fenced code block that appears
@@ -93,7 +93,7 @@ def _extract_code_block_after_header(
     return "\n".join(code_lines)
 
 
-def _find_duplicates(items: List[str]) -> List[str]:
+def _find_duplicates(items: list[str]) -> list[str]:
     """Find duplicate items in a list.
 
     Args:

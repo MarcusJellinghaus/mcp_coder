@@ -6,8 +6,6 @@ is intentionally NOT re-exported — consumers reach PR feedback transitively vi
 collect_branch_status's report fields.
 """
 
-from typing import List
-
 from mcp_workspace.checks.branch_status import (
     BranchStatusReport,
     collect_branch_status,
@@ -16,7 +14,7 @@ from mcp_workspace.checks.branch_status import (
 )
 from mcp_workspace.checks.branch_status_rendering import GITHUB_TOKEN_HINT, CIStatus
 
-__all__: List[str] = [
+__all__: list[str] = [
     "BranchStatusReport",
     "collect_branch_status",
     "create_empty_report",

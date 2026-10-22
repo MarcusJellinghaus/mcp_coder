@@ -15,9 +15,10 @@ Two parallel line stores back this widget:
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from rich.console import ConsoleRenderable, RichCast
 from rich.text import Text

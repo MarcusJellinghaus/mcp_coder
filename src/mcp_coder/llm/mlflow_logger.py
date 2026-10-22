@@ -10,7 +10,7 @@ import os
 import tempfile
 from collections import OrderedDict
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..config import MLflowConfig
 from ..utils import load_mlflow_config
@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 # Global flag to track MLflow availability (cached after first check)
-_mlflow_available: Optional[bool] = None
+_mlflow_available: bool | None = None
 
 
 def is_mlflow_available() -> bool:
@@ -67,14 +67,14 @@ class MLflowLogger:
 
     _MAX_SESSION_MAP_SIZE: int = 100
 
-    def __init__(self, config: Optional[MLflowConfig] = None) -> None:
+    def __init__(self, config: MLflowConfig | None = None) -> None:
         """Initialize MLflow logger.
 
         Args:
             config: MLflow configuration. If None, loads from config.toml
         """
         self.config = config or load_mlflow_config()
-        self.active_run_id: Optional[str] = None
+        self.active_run_id: str | None = None
         self._mlflow_module: Any = None
         self._session_run_map: OrderedDict[str, str] = OrderedDict()
         self._run_step_count: dict[str, int] = {}
@@ -204,10 +204,10 @@ class MLflowLogger:
 
     def start_run(
         self,
-        session_id: Optional[str] = None,
-        run_name: Optional[str] = None,
-        tags: Optional[Dict[str, str]] = None,
-    ) -> Optional[str]:
+        session_id: str | None = None,
+        run_name: str | None = None,
+        tags: dict[str, str] | None = None,
+    ) -> str | None:
         """Start an MLflow run for conversation tracking.
 
         Args:
@@ -265,7 +265,7 @@ class MLflowLogger:
             logger.warning(f"Failed to start MLflow run: {e}")
             return None
 
-    def log_params(self, params: Dict[str, Any]) -> None:
+    def log_params(self, params: dict[str, Any]) -> None:
         """Log parameters to the current MLflow run.
 
         Args:
@@ -287,9 +287,7 @@ class MLflowLogger:
         ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log parameters to MLflow: {e}")
 
-    def log_metrics(
-        self, metrics: Dict[str, float], step: Optional[int] = None
-    ) -> None:
+    def log_metrics(self, metrics: dict[str, float], step: int | None = None) -> None:
         """Log metrics to the current MLflow run.
 
         Args:
@@ -365,8 +363,8 @@ class MLflowLogger:
         self,
         step: int,
         prompt: str,
-        response_data: Dict[str, Any],
-        metadata: Dict[str, Any],
+        response_data: dict[str, Any],
+        metadata: dict[str, Any],
     ) -> None:
         """Log step params and artifacts shared by conversation logging methods.
 
@@ -417,8 +415,8 @@ class MLflowLogger:
     def log_conversation(
         self,
         prompt: str,
-        response_data: Dict[str, Any],
-        metadata: Dict[str, Any],
+        response_data: dict[str, Any],
+        metadata: dict[str, Any],
     ) -> None:
         """Log a complete conversation to MLflow with step-aware metrics.
 
@@ -437,7 +435,7 @@ class MLflowLogger:
             self._log_step_params_and_artifacts(step, prompt, response_data, metadata)
 
             # Collect all numeric metrics
-            numeric_metrics: Dict[str, float] = {
+            numeric_metrics: dict[str, float] = {
                 "prompt_length": float(len(prompt)),
             }
             if "duration_ms" in response_data:
@@ -475,7 +473,7 @@ class MLflowLogger:
             logger.warning(f"Failed to log conversation to MLflow: {e}")
 
     def log_error_metrics(
-        self, error: Exception, duration_ms: Optional[int] = None
+        self, error: Exception, duration_ms: int | None = None
     ) -> None:
         """Log error-specific metrics to MLflow.
 
@@ -516,8 +514,8 @@ class MLflowLogger:
     def log_conversation_artifacts(
         self,
         prompt: str,
-        response_data: Dict[str, Any],
-        metadata: Dict[str, Any],
+        response_data: dict[str, Any],
+        metadata: dict[str, Any],
     ) -> None:
         """Log prompt params and artifacts for a conversation (no metrics).
 
@@ -533,9 +531,7 @@ class MLflowLogger:
         self._log_step_params_and_artifacts(step, prompt, response_data, metadata)
         self._advance_step()
 
-    def end_run(
-        self, status: str = "FINISHED", session_id: Optional[str] = None
-    ) -> None:
+    def end_run(self, status: str = "FINISHED", session_id: str | None = None) -> None:
         """End the current MLflow run.
 
         Args:
@@ -580,7 +576,7 @@ class MLflowLogger:
 
 
 # Singleton instance for global use
-_global_logger: Optional[MLflowLogger] = None
+_global_logger: MLflowLogger | None = None
 
 
 def get_mlflow_logger() -> MLflowLogger:

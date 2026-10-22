@@ -4,8 +4,6 @@ Centralises all GitHub operation imports into a single module.
 All symbols are re-exported from mcp_workspace.github_operations.
 """
 
-from typing import List
-
 # Sourced from mcp_workspace.config (not github_operations): GitHub token resolver
 # (env var → config file → None). Re-exported here so callers obey the CLAUDE.md rule
 # against importing mcp_workspace.* directly.
@@ -57,7 +55,7 @@ from mcp_workspace.github_operations.issues import (
 )
 from mcp_workspace.github_operations.issues.linked_branches_mixin import ClosingPRRef
 
-__all__: List[str] = [
+__all__: list[str] = [
     # Base manager
     "BaseGitHubManager",
     "get_authenticated_username",

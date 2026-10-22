@@ -4,7 +4,7 @@ Covers the reusable ``_assert_tool_interceptors_supported()`` helper and its
 invocation from ``_check_agent_dependencies()`` (issue I2.3, step 1).
 """
 
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,8 +21,8 @@ def _stub_without_interceptors(
     session: Any,
     tool: Any,
     *,
-    connection: Optional[Any] = None,
-    server_name: Optional[str] = None,
+    connection: Any | None = None,
+    server_name: str | None = None,
 ) -> Any:
     """Stand-in whose *real* signature omits ``tool_interceptors``."""
     return None
@@ -32,9 +32,9 @@ def _stub_with_interceptors(
     session: Any,
     tool: Any,
     *,
-    connection: Optional[Any] = None,
-    server_name: Optional[str] = None,
-    tool_interceptors: Optional[Any] = None,
+    connection: Any | None = None,
+    server_name: str | None = None,
+    tool_interceptors: Any | None = None,
 ) -> Any:
     """Stand-in whose *real* signature includes ``tool_interceptors``."""
     return None

@@ -7,7 +7,6 @@ from core.py to keep module size manageable.
 import logging
 import re
 from pathlib import Path
-from typing import Tuple
 
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
@@ -47,7 +46,7 @@ def ensure_closing_reference(body: str, issue_number: int) -> str:
     return f"{body}\n\nCloses #{issue_number}"
 
 
-def parse_pr_summary(llm_response: str) -> Tuple[str, str]:
+def parse_pr_summary(llm_response: str) -> tuple[str, str]:
     """Parse LLM response into PR title and body.
 
     Expected format:

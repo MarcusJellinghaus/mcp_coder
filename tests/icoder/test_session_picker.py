@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 import pytest
 from textual.app import App
@@ -20,8 +19,8 @@ from mcp_coder.icoder.ui.widgets.session_picker import (
 def _make_summary(
     *,
     path: Path = Path("/tmp/icoder_2026-05-01T10-00-00.jsonl"),
-    timestamp: datetime = datetime(2026, 5, 1, 10, 0, 0, tzinfo=timezone.utc),
-    provider: Optional[str] = "claude",
+    timestamp: datetime = datetime(2026, 5, 1, 10, 0, 0, tzinfo=UTC),
+    provider: str | None = "claude",
     n_turns: int = 3,
     first_prompt: str = "hello world",
 ) -> LogSummary:
@@ -39,7 +38,7 @@ def _make_summary(
 
 def test_format_picker_row_typical() -> None:
     summary = _make_summary(
-        timestamp=datetime(2026, 5, 1, 14, 30, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 5, 1, 14, 30, 0, tzinfo=UTC),
         provider="claude",
         n_turns=5,
         first_prompt="hello world",
@@ -74,11 +73,11 @@ class _PickerHostApp(App[None]):
     def __init__(self, summaries: list[LogSummary]) -> None:
         super().__init__()
         self._summaries = summaries
-        self.result: Optional[Path] = None
+        self.result: Path | None = None
         self.dismissed = False
 
     def on_mount(self) -> None:
-        def _on_dismiss(value: Optional[Path]) -> None:
+        def _on_dismiss(value: Path | None) -> None:
             self.result = value
             self.dismissed = True
 

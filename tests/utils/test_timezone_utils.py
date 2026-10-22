@@ -1,6 +1,6 @@
 """Unit tests for timezone utilities."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
@@ -21,25 +21,25 @@ class TestParseIsoTimestamp:
         result = parse_iso_timestamp(timestamp_str)
 
         # Should be converted to UTC
-        expected = datetime(2026, 1, 3, 22, 36, 14, 620992, timezone.utc)
+        expected = datetime(2026, 1, 3, 22, 36, 14, 620992, UTC)
         assert result == expected
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
     def test_parse_with_z_suffix(self) -> None:
         """Test parsing timestamp with Z suffix (UTC)."""
         timestamp_str = "2026-01-03T23:36:14.620992Z"
         result = parse_iso_timestamp(timestamp_str)
 
-        expected = datetime(2026, 1, 3, 23, 36, 14, 620992, timezone.utc)
+        expected = datetime(2026, 1, 3, 23, 36, 14, 620992, UTC)
         assert result == expected
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
     def test_parse_z_suffix_without_microseconds(self) -> None:
         """Test parsing Z suffix without microseconds."""
         timestamp_str = "2026-01-03T23:36:14Z"
         result = parse_iso_timestamp(timestamp_str)
 
-        expected = datetime(2026, 1, 3, 23, 36, 14, 0, timezone.utc)
+        expected = datetime(2026, 1, 3, 23, 36, 14, 0, UTC)
         assert result == expected
 
     def test_parse_naive_timestamp(self) -> None:
@@ -47,9 +47,9 @@ class TestParseIsoTimestamp:
         timestamp_str = "2026-01-03T23:36:14"
         result = parse_iso_timestamp(timestamp_str)
 
-        expected = datetime(2026, 1, 3, 23, 36, 14, 0, timezone.utc)
+        expected = datetime(2026, 1, 3, 23, 36, 14, 0, UTC)
         assert result == expected
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
     def test_parse_negative_offset(self) -> None:
         """Test parsing timestamp with negative timezone offset."""
@@ -57,7 +57,7 @@ class TestParseIsoTimestamp:
         result = parse_iso_timestamp(timestamp_str)
 
         # 23:36 EST = 04:36 UTC next day
-        expected = datetime(2026, 1, 4, 4, 36, 14, 0, timezone.utc)
+        expected = datetime(2026, 1, 4, 4, 36, 14, 0, UTC)
         assert result == expected
 
     def test_parse_empty_string(self) -> None:
@@ -82,13 +82,13 @@ class TestNowUtc:
     def test_returns_utc_timezone(self) -> None:
         """Test that now_utc returns UTC timezone."""
         result = now_utc()
-        assert result.tzinfo == timezone.utc
+        assert result.tzinfo == UTC
 
     def test_returns_current_time(self) -> None:
         """Test that now_utc returns approximately current time."""
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
         result = now_utc()
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
 
         # Should be between before and after (allowing for execution time)
         assert before <= result <= after
@@ -99,7 +99,7 @@ class TestFormatForCache:
 
     def test_format_utc_datetime(self) -> None:
         """Test formatting UTC datetime for cache."""
-        dt = datetime(2026, 1, 3, 23, 36, 14, 620992, timezone.utc)
+        dt = datetime(2026, 1, 3, 23, 36, 14, 620992, UTC)
         result = format_for_cache(dt)
 
         expected = "2026-01-03T23:36:14.620992+00:00"
@@ -126,7 +126,7 @@ class TestIsWithinDuration:
 
     def test_within_duration_true(self) -> None:
         """Test timestamp within duration returns True."""
-        reference = datetime.now(timezone.utc)
+        reference = datetime.now(UTC)
         timestamp = reference - timedelta(seconds=30)
 
         result = is_within_duration(timestamp, 60.0, reference)
@@ -134,7 +134,7 @@ class TestIsWithinDuration:
 
     def test_within_duration_false(self) -> None:
         """Test timestamp outside duration returns False."""
-        reference = datetime.now(timezone.utc)
+        reference = datetime.now(UTC)
         timestamp = reference - timedelta(seconds=90)
 
         result = is_within_duration(timestamp, 60.0, reference)
@@ -142,7 +142,7 @@ class TestIsWithinDuration:
 
     def test_within_duration_exact_boundary(self) -> None:
         """Test timestamp at exact boundary."""
-        reference = datetime.now(timezone.utc)
+        reference = datetime.now(UTC)
         timestamp = reference - timedelta(seconds=60)
 
         result = is_within_duration(timestamp, 60.0, reference)
@@ -150,7 +150,7 @@ class TestIsWithinDuration:
 
     def test_within_duration_future_timestamp(self) -> None:
         """Test future timestamp within duration."""
-        reference = datetime.now(timezone.utc)
+        reference = datetime.now(UTC)
         timestamp = reference + timedelta(seconds=30)
 
         result = is_within_duration(timestamp, 60.0, reference)
@@ -158,7 +158,7 @@ class TestIsWithinDuration:
 
     def test_within_duration_no_reference_time(self) -> None:
         """Test duration check against current time."""
-        timestamp = datetime.now(timezone.utc) - timedelta(seconds=30)
+        timestamp = datetime.now(UTC) - timedelta(seconds=30)
 
         result = is_within_duration(timestamp, 60.0)
         assert result is True
@@ -175,7 +175,7 @@ class TestEndToEndWorkflow:
         parsed = parse_iso_timestamp(original)
 
         # Verify UTC conversion happened
-        assert parsed == datetime(2026, 1, 3, 22, 36, 14, 620992, timezone.utc)
+        assert parsed == datetime(2026, 1, 3, 22, 36, 14, 620992, UTC)
 
         # Format for cache
         cache_format = format_for_cache(parsed)
@@ -201,8 +201,8 @@ class TestEndToEndWorkflow:
         # Verify the UTC times are correct
         # cache_time: 23:36 CET = 22:36 UTC
         # user_change: 00:00 CET = 23:00 UTC
-        assert cache_time == datetime(2026, 1, 3, 22, 36, 14, 620992, timezone.utc)
-        assert user_change == datetime(2026, 1, 3, 23, 0, 0, 0, timezone.utc)
+        assert cache_time == datetime(2026, 1, 3, 22, 36, 14, 620992, UTC)
+        assert user_change == datetime(2026, 1, 3, 23, 0, 0, 0, UTC)
 
         # Verify cache formatting works correctly
         cache_format = format_for_cache(cache_time)

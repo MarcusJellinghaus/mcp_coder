@@ -348,6 +348,7 @@ select = [
     "F",
     "C4", "B",
     "S",
+    "UP",
 ]
 ignore = [
     "D104",  # missing docstring in __init__.py (low value)

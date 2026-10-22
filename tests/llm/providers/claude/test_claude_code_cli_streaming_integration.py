@@ -66,7 +66,8 @@ class TestClaudeCodeCliStreamingIntegration:
 
     def test_prompt_llm_stream_claude_provider_yields_events(self) -> None:
         """prompt_llm_stream() forwards Claude CLI events end-to-end."""
-        with tempfile.TemporaryDirectory() as tmp_logs_dir:
+        # Claude's child processes can still hold the cwd open on Windows at exit.
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp_logs_dir:
             events = list(
                 prompt_llm_stream(
                     "Reply 'ok'.",

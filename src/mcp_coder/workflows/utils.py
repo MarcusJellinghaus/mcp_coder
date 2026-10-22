@@ -5,13 +5,12 @@ This module contains shared utility functions used across different workflow mod
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
 
-def resolve_project_dir(project_dir_arg: Optional[str]) -> Path:
+def resolve_project_dir(project_dir_arg: str | None) -> Path:
     """Convert project directory argument to absolute Path, with validation.
 
     Args:

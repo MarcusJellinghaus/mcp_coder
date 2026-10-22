@@ -79,7 +79,7 @@ class _RaisingAsyncIter:
     def __init__(self, exc: BaseException) -> None:
         self._exc = exc
 
-    def __aiter__(self) -> "_RaisingAsyncIter":
+    def __aiter__(self) -> _RaisingAsyncIter:
         return self
 
     async def __anext__(self) -> dict[str, object]:

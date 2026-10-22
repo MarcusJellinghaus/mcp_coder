@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Self
 
 
 def make_scripted_chat_model(next_message: Callable[[int], Any], llm_type: str) -> Any:
@@ -25,7 +25,7 @@ def make_scripted_chat_model(next_message: Callable[[int], Any], llm_type: str) 
     class _ScriptedChatModel(BaseChatModel):  # type: ignore[misc]
         invoke_count: int = 0
 
-        def bind_tools(self, tools: Any, **kw: Any) -> "_ScriptedChatModel":
+        def bind_tools(self, tools: Any, **kw: Any) -> Self:
             return self
 
         def _generate(

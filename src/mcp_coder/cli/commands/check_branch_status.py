@@ -8,7 +8,6 @@ import argparse
 import logging
 import time
 from pathlib import Path
-from typing import Optional, Tuple
 
 from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
@@ -61,7 +60,7 @@ def _wait_for_ci_completion(
     branch: str,
     timeout_seconds: int,
     llm_mode: bool,
-) -> Tuple[Optional[CIStatusData], bool]:
+) -> tuple[CIStatusData | None, bool]:
     """Wait for CI completion with timeout.
 
     Args:
@@ -90,7 +89,7 @@ def _wait_for_ci_completion(
             OUTPUT, "Waiting for CI completion (timeout: %ds)...", timeout_seconds
         )
 
-    ci_status: Optional[CIStatusData] = None
+    ci_status: CIStatusData | None = None
     for attempt in range(max_attempts):
         try:
             ci_status = ci_manager.get_latest_ci_status(branch)
@@ -193,9 +192,9 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         project_dir = resolve_claude_cwd(project_dir)
 
         # PR discovery phase (before CI waiting)
-        pr_number: Optional[int] = None
-        pr_url: Optional[str] = None
-        pr_found: Optional[bool] = None
+        pr_number: int | None = None
+        pr_url: str | None = None
+        pr_found: bool | None = None
 
         current_branch = get_current_branch_name(project_dir)
         if not current_branch:
@@ -371,7 +370,7 @@ def _run_auto_fixes(
     project_dir: Path,
     report: BranchStatusReport,
     provider: str,
-    mcp_config: Optional[str],
+    mcp_config: str | None,
     settings_file: str | None = None,
     fix_attempts: int = 1,
     ci_timeout: int = 180,

@@ -6,7 +6,6 @@ labels. Use --dry-run to trigger Jenkins integration tests instead.
 
 import argparse
 import logging
-from typing import Optional
 
 from ....mcp_workspace_github import (
     IssueBranchManager,
@@ -45,7 +44,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def format_job_output(job_path: str, queue_id: int, url: Optional[str]) -> str:
+def format_job_output(job_path: str, queue_id: int, url: str | None) -> str:
     """Format job trigger output message.
 
     Args:

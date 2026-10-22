@@ -6,7 +6,7 @@ formatter functionality.
 
 import sys
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 from mcp_tools_py.code_checker_mypy import MypyResult
 from mcp_tools_py.code_checker_mypy import run_mypy_check as _run_mypy_check
@@ -33,7 +33,7 @@ __all__ = [
 
 
 def run_format_code(
-    project_dir: Union[str, Path],
+    project_dir: str | Path,
 ) -> dict[str, FormatterResult]:
     """Run the project's configured formatter.
 
@@ -57,7 +57,7 @@ def run_format_code(
     return _run_format_code(sys.executable, project_root, target_dirs, steps=None)
 
 
-def run_pytest_check(project_dir: Union[str, Path]) -> dict[str, Any]:
+def run_pytest_check(project_dir: str | Path) -> dict[str, Any]:
     """Run pytest with project defaults (no marker filter, library timeouts).
 
     Args:
@@ -77,7 +77,7 @@ def run_pytest_check(project_dir: Union[str, Path]) -> dict[str, Any]:
     )
 
 
-def run_pylint_check(project_dir: Union[str, Path]) -> PylintResult:
+def run_pylint_check(project_dir: str | Path) -> PylintResult:
     """Run pylint on the project's resolved target directories.
 
     Args:
@@ -105,7 +105,7 @@ def run_pylint_check(project_dir: Union[str, Path]) -> PylintResult:
 
 
 def run_mypy_check(
-    project_dir: Union[str, Path],
+    project_dir: str | Path,
     target_directories: list[str] | None = None,
 ) -> MypyResult:
     """Run mypy type checking on the project.
@@ -128,7 +128,7 @@ def run_mypy_check(
     )
 
 
-def has_mypy_errors(project_dir: Union[str, Path]) -> bool:
+def has_mypy_errors(project_dir: str | Path) -> bool:
     """Quick check if project has mypy type errors.
 
     Args:

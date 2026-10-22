@@ -6,7 +6,7 @@ Split from test_set_status.py to keep file sizes under the 750-line limit.
 import argparse
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,7 +15,7 @@ from mcp_coder.cli.commands.set_status import execute_set_status
 
 
 @pytest.fixture
-def full_labels_config(labels_config_path: Path) -> Dict[str, Any]:
+def full_labels_config(labels_config_path: Path) -> dict[str, Any]:
     """Load labels configuration from actual config file.
 
     Args:
@@ -87,7 +87,7 @@ class TestFromStatusFlag:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -143,7 +143,7 @@ class TestFromStatusFlag:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -200,7 +200,7 @@ class TestFromStatusFlag:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -254,7 +254,7 @@ class TestFromStatusFlag:
         mock_load_config: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """--from-status value not in labels.json -> exit 1."""
@@ -292,7 +292,7 @@ class TestFromStatusFlag:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -349,7 +349,7 @@ class TestFromStatusFlag:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -388,7 +388,7 @@ class TestFromStatusFlag:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -463,7 +463,7 @@ class TestFromStatusFlag:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:

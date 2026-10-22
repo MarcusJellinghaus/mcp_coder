@@ -10,9 +10,10 @@ module globals. Both bindings must be replaced for a hermetic test, which is
 what ``_patch_probes`` does.
 """
 
+from collections.abc import Callable, Generator
 from contextlib import ExitStack, contextmanager
 from dataclasses import replace
-from typing import Any, Callable, Generator, Optional
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -43,7 +44,7 @@ _UNPATCHED = object()
 """Sentinel: leave ``get_jenkins_config`` in place so the real env path runs."""
 
 
-def _full_creds() -> dict[str, Optional[str]]:
+def _full_creds() -> dict[str, str | None]:
     """Return a complete, valid credential set."""
     return {
         "server_url": _BASE_URL,
@@ -88,7 +89,7 @@ def _patch_probes(
         yield mock
 
 
-def _result(status: Optional[int], error_text: Optional[str] = None) -> ProbeResult:
+def _result(status: int | None, error_text: str | None = None) -> ProbeResult:
     """Build a ProbeResult; the URL is filled in by ``_patch_probes``."""
     return ProbeResult(status=status, url="", error_text=error_text)
 
@@ -96,9 +97,9 @@ def _result(status: Optional[int], error_text: Optional[str] = None) -> ProbeRes
 @contextmanager
 def _patch_env(
     creds: Any = None,
-    config: Optional[dict[str, Any]] = None,
-    creds_error: Optional[Exception] = None,
-    config_error: Optional[Exception] = None,
+    config: dict[str, Any] | None = None,
+    creds_error: Exception | None = None,
+    config_error: Exception | None = None,
 ) -> Generator[dict[str, MagicMock], None, None]:
     """Patch the config sources and JenkinsClient used by ``verify_jenkins``.
 
@@ -149,7 +150,7 @@ class TestCredentialResolution:
 
     def test_unconfigured_returns_empty_and_builds_no_client(self) -> None:
         """No [jenkins] section -> both dicts empty, no client constructed."""
-        creds: dict[str, Optional[str]] = {
+        creds: dict[str, str | None] = {
             "server_url": None,
             "username": None,
             "api_token": None,
@@ -160,7 +161,7 @@ class TestCredentialResolution:
 
     def test_partial_config_returns_empty(self) -> None:
         """server_url alone is not enough to probe -> skipped."""
-        creds: dict[str, Optional[str]] = {
+        creds: dict[str, str | None] = {
             "server_url": _BASE_URL,
             "username": None,
             "api_token": None,
@@ -176,7 +177,7 @@ class TestCredentialResolution:
 
     def test_blank_credential_values_are_treated_as_unconfigured(self) -> None:
         """Whitespace-only fields are not configuration -> skipped, no client."""
-        creds: dict[str, Optional[str]] = {
+        creds: dict[str, str | None] = {
             "server_url": "   ",
             "username": "job_manager",
             "api_token": "secret-token",
@@ -675,7 +676,7 @@ class TestJenkinsExitCodeWiring:
         ],
     )
     def test_exit_code(
-        self, server_ok: bool, jobs_ok: Optional[bool], expected: int
+        self, server_ok: bool, jobs_ok: bool | None, expected: int
     ) -> None:
         """A failed row in either section propagates to the process exit code."""
         # jobs_ok None mirrors verify_jenkins(): no job rows when the server fails.

@@ -9,7 +9,7 @@ Tests cover:
 import argparse
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -45,7 +45,7 @@ VALID_STATUS_LABELS = [
 
 
 @pytest.fixture
-def full_labels_config(labels_config_path: Path) -> Dict[str, Any]:
+def full_labels_config(labels_config_path: Path) -> dict[str, Any]:
     """Load labels configuration from actual config file.
 
     Args:
@@ -105,7 +105,7 @@ class TestSetStatusHelpers:
     """Test helper functions."""
 
     def test_format_status_labels_output(
-        self, full_labels_config: Dict[str, Any]
+        self, full_labels_config: dict[str, Any]
     ) -> None:
         """Test format_status_labels contains header, all labels, and descriptions."""
         result = format_status_labels(full_labels_config)
@@ -165,12 +165,12 @@ class TestSetStatusHelpers:
 
     def test_format_status_labels_empty_workflow_labels(self) -> None:
         """Test format_status_labels returns fallback for empty workflow_labels."""
-        empty_config: Dict[str, Any] = {"workflow_labels": []}
+        empty_config: dict[str, Any] = {"workflow_labels": []}
         result = format_status_labels(empty_config)
         assert result == "No labels configured."
 
     def test_validate_status_label_valid(
-        self, full_labels_config: Dict[str, Any]
+        self, full_labels_config: dict[str, Any]
     ) -> None:
         """Test validation accepts valid status labels."""
         # Test each valid label
@@ -180,7 +180,7 @@ class TestSetStatusHelpers:
             assert error is None
 
     def test_validate_status_label_invalid(
-        self, full_labels_config: Dict[str, Any]
+        self, full_labels_config: dict[str, Any]
     ) -> None:
         """Test validation rejects invalid labels with descriptive error."""
         # Test invalid labels
@@ -205,7 +205,7 @@ class TestComputeNewLabels:
     """Test label computation logic."""
 
     def test_compute_replaces_status_label(
-        self, full_labels_config: Dict[str, Any]
+        self, full_labels_config: dict[str, Any]
     ) -> None:
         """Test that existing status-* labels are replaced."""
         current_labels = {"status-03:planning", "bug", "enhancement"}
@@ -224,7 +224,7 @@ class TestComputeNewLabels:
         assert "enhancement" in result
 
     def test_compute_preserves_non_status_labels(
-        self, full_labels_config: Dict[str, Any]
+        self, full_labels_config: dict[str, Any]
     ) -> None:
         """Test that non-status labels are preserved."""
         current_labels = {
@@ -250,7 +250,7 @@ class TestComputeNewLabels:
         assert "status-06:implementing" not in result
 
     def test_compute_with_no_existing_status(
-        self, full_labels_config: Dict[str, Any]
+        self, full_labels_config: dict[str, Any]
     ) -> None:
         """Test adding status when none exists."""
         current_labels = {"bug", "enhancement"}
@@ -284,7 +284,7 @@ class TestExecuteSetStatus:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test no-args prints available labels and returns 0."""
@@ -319,7 +319,7 @@ class TestExecuteSetStatus:
         mock_resolve_dir: MagicMock,
         mock_get_config_path: MagicMock,
         mock_load_config: MagicMock,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         capsys: pytest.CaptureFixture[str],
         tmp_path: Path,
     ) -> None:
@@ -357,7 +357,7 @@ class TestExecuteSetStatus:
         mock_resolve_dir: MagicMock,
         mock_get_config_path: MagicMock,
         mock_load_config: MagicMock,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Test no-args falls back to bundled config when project dir fails."""
@@ -398,7 +398,7 @@ class TestExecuteSetStatus:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -444,7 +444,7 @@ class TestExecuteSetStatus:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -486,7 +486,7 @@ class TestExecuteSetStatus:
         mock_load_config: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test invalid label name returns exit code 1."""
@@ -527,7 +527,7 @@ class TestExecuteSetStatus:
         mock_load_config: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test returns 1 when branch doesn't match pattern."""
@@ -566,7 +566,7 @@ class TestExecuteSetStatus:
         mock_load_config: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that set-status fails when working directory has uncommitted changes."""
@@ -605,7 +605,7 @@ class TestExecuteSetStatus:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -650,7 +650,7 @@ class TestExecuteSetStatus:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         mock_issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -695,7 +695,7 @@ class TestExecuteSetStatus:
         mock_issue_manager_class: MagicMock,
         mock_is_working_directory_clean: MagicMock,
         tmp_path: Path,
-        full_labels_config: Dict[str, Any],
+        full_labels_config: dict[str, Any],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test returns 1 on GitHub API error."""

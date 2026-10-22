@@ -4,7 +4,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -29,7 +29,7 @@ _NET_SIGNAL = "mcp_coder.workflow_utils.failure_handling.signal.signal"
 
 
 # Reusable LLMResponseDict mock value
-def _make_llm_response(text: str = "LLM response text") -> Dict[str, Any]:
+def _make_llm_response(text: str = "LLM response text") -> dict[str, Any]:
     return {
         "text": text,
         "session_id": "test-session",

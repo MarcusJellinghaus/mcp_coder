@@ -8,7 +8,6 @@ import importlib.util
 import logging
 from importlib.resources import files
 from pathlib import Path
-from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -146,8 +145,8 @@ def find_data_file(
 
 def find_package_data_files(
     package_name: str,
-    relative_paths: List[str],
-) -> List[Path]:
+    relative_paths: list[str],
+) -> list[Path]:
     """Find multiple data files for a package.
 
     Args:

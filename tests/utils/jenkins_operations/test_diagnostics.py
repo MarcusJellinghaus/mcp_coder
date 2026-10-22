@@ -5,7 +5,7 @@ is keyed by URL.
 """
 
 from pathlib import Path
-from typing import Any, Union, cast
+from typing import Any, cast
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -44,7 +44,7 @@ def _response(status: int, text: str = "") -> MagicMock:
     return response
 
 
-def _session(responses: dict[str, Union[MagicMock, Exception]]) -> Session:
+def _session(responses: dict[str, MagicMock | Exception]) -> Session:
     """Build a Session double whose get() is keyed by absolute URL."""
     session = Mock(spec=Session)
 

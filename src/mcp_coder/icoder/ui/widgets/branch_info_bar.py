@@ -12,7 +12,6 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from rich.text import Text
 from textual.app import ComposeResult
@@ -36,7 +35,7 @@ class BranchInfoView:
     """Snapshot consumed by ``BranchInfoBar.update_state``."""
 
     info: BranchInfo
-    pr_number: Optional[int]
+    pr_number: int | None
     pr_enabled: bool
     loading: frozenset[str] = field(default_factory=frozenset)
     failed: frozenset[str] = field(default_factory=frozenset)
@@ -54,7 +53,7 @@ def _color_to_rich_hex(color: Color) -> str:
     return f"#{color.r:02x}{color.g:02x}{color.b:02x}"
 
 
-def format_cache_age(last_checked: Optional[datetime], now: datetime) -> str:
+def format_cache_age(last_checked: datetime | None, now: datetime) -> str:
     """Render a cache-age stamp at minute granularity.
 
     Args:
@@ -124,7 +123,7 @@ class BranchInfoBar(Vertical):
             logger.debug("Failed to load label colors: %s", exc)
             self._label_colors = {}
 
-    def update_state(self, view: Optional[BranchInfoView]) -> None:
+    def update_state(self, view: BranchInfoView | None) -> None:
         """Refresh the four zones from a single immutable view object.
 
         Args:
