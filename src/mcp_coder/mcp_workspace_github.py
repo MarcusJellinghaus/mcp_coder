@@ -55,6 +55,12 @@ from mcp_workspace.github_operations.issues import (
 )
 from mcp_workspace.github_operations.issues.linked_branches_mixin import ClosingPRRef
 
+# PR submodule (TypedDicts)
+from mcp_workspace.github_operations.pr_types import (
+    ChangesRequestedData,
+    ConversationCommentData,
+)
+
 __all__: list[str] = [
     # Base manager
     "BaseGitHubManager",
@@ -76,6 +82,8 @@ __all__: list[str] = [
     # PR
     "PullRequestManager",
     "PullRequestData",
+    "ChangesRequestedData",
+    "ConversationCommentData",
     # Repository
     "RepoIdentifier",
     # Issues

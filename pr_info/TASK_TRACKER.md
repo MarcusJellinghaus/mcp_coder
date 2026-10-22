@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Count only outstanding feedback in `_check_review_comments()` — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: typed builders + new/converted tests, shim re-exports, `_check_review_comments()` watermark logic for reviews and non-❌ comments
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: typed builders + new/converted tests, shim re-exports, `_check_review_comments()` watermark logic for reviews and non-❌ comments
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Triage skill and docs — [step_3.md](./steps/step_3.md)
 
