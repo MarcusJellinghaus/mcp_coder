@@ -64,6 +64,15 @@ def _reviewer(text: str = _REPORT, session_id: str = "rev-1") -> dict[str, Any]:
     return _resp(text, session_id=session_id)
 
 
+@pytest.fixture(autouse=True)
+def _branch_head(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the shared comment builder's branch/HEAD lookup off real git."""
+    monkeypatch.setattr(
+        "mcp_coder.workflow_utils.failure_handling._branch_head",
+        lambda _project_dir: ("feat", "abc1234"),
+    )
+
+
 @pytest.fixture
 def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """Patch every external the core loop + after-steps touch; expose the mocks."""

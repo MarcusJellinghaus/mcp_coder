@@ -454,7 +454,7 @@ def test_empty_reports_retry_inline_then_fail_general(
     assert failure.category == REVIEW_PLAN.failure_labels["general"]
     # No round was consumed by the inner retry: the comment still reports round 1.
     comment = env.handle_workflow_failure.call_args.args[1]
-    assert "Round: 1" in comment
+    assert "**Stage:** Plan Review, round 1" in comment.splitlines()
 
 
 def test_empty_then_valid_report_recovers(env: SimpleNamespace, tmp_path: Path) -> None:
@@ -484,10 +484,6 @@ def test_body_escape_is_netted_by_guard(
     monkeypatch.setattr(
         "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure", net
     )
-    monkeypatch.setattr(
-        "mcp_coder.workflow_utils.failure_handling._branch_head",
-        lambda _project_dir: ("feat", "abc1234"),
-    )
     env.prompt_llm.side_effect = SystemExit(1)
 
     with pytest.raises(SystemExit):
@@ -515,9 +511,12 @@ def test_deliberate_fail_comment_carries_round_verdict_elapsed(
 
     assert result == 1
     comment = env.handle_workflow_failure.call_args.args[1]
-    assert "Round: 1" in comment
-    assert "Verdict: tasks" in comment
-    assert "Elapsed:" in comment
+    lines = comment.splitlines()
+    assert lines[0] == "## ❌ Plan Review Failed"
+    assert "**Category:** Commit failed" in lines
+    assert "**Stage:** Plan Review, round 1" in lines
+    assert "**Verdict:** tasks" in lines
+    assert any(line.startswith("**Elapsed:** ") for line in lines)
 
 
 # --- Step 3: PR-feedback threading (plan lane skips it) ---------------------

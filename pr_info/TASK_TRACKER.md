@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: Review `_fail` → structured "Failed" comment — [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation: tests (autouse `_branch_head` fixture in review `conftest.py`) + `_FAIL_REASONS` table, `_fail` uses the builder (`## ❌ <Lane> Failed`)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (autouse `_branch_head` fixture in review `conftest.py`) + `_FAIL_REASONS` table, `_fail` uses the builder (`## ❌ <Lane> Failed`)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Review `_route_to_human` → structured "Handed Off" comments + rebase table + docs — [step_8.md](./steps/step_8.md)
 

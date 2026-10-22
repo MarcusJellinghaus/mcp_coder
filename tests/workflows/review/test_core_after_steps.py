@@ -145,6 +145,11 @@ def test_dismiss_ci_red_fails_with_ci_label(
     env.handle_workflow_failure.assert_called_once()
     failure = env.handle_workflow_failure.call_args.args[0]
     assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["ci"]
+    lines = env.handle_workflow_failure.call_args.args[1].splitlines()
+    assert lines[0] == "## ❌ Implementation Review Failed"
+    assert "**Category:** CI failed" in lines
+    assert "**Error:** CI is still red after the review" in lines
+    assert "**Branch:** feat @ abc1234" in lines
 
 
 def test_dismiss_ci_timeout_maps_to_timeout_label(

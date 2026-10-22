@@ -23,7 +23,7 @@ from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
-    format_elapsed_time,
+    build_failure_comment,
     handle_workflow_failure,
 )
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
@@ -36,6 +36,21 @@ logger = logging.getLogger(__name__)
 # ``commit_staged_files`` reports the first 7 characters of the SHA; the
 # pathspec-scoped commit below matches that so both routes return the same shape.
 _SHORT_SHA_LENGTH = 7
+
+# reason -> (Category display, Error sentence used when `details` is None)
+_FAIL_REASONS: dict[str, tuple[str, str]] = {
+    "general": (
+        "General",
+        "The review stopped on an unrecoverable error; check the job log",
+    ),
+    "timeout": ("Llm Timeout", "An LLM call timed out"),
+    "mcp_unavailable": ("Mcp Unavailable", "The MCP servers were unavailable"),
+    "ci": ("CI failed", "CI is still red after the review"),
+    "tasks": ("Open tasks", "The task tracker still has unchecked tasks"),
+    "ci_unknown": ("CI not proven green", "CI could not be proven green"),
+    "commit-failed": ("Commit failed", "Committing the review fixes failed"),
+    "push-failed": ("Push failed", "Pushing the review fixes failed"),
+}
 
 
 def _set_label(
@@ -83,10 +98,11 @@ def _fail(
 ) -> int:
     """Route a terminal error through the shared failure handler; return ``1``.
 
-    The comment is enriched — when the values are supplied by the call site (all
-    of which are lexically inside the round loop, where these are live locals) —
-    with the current round number, the most recently parsed verdict decision,
-    and the elapsed wall-clock time.
+    Posts a structured ``## ❌ <Lane> Failed`` comment built by
+    :func:`build_failure_comment`: Category and the default Error sentence come
+    from ``_FAIL_REASONS`` (unknown reasons fall back to ``general``), Stage
+    names the lane plus the round when given, and Verdict / Elapsed are added
+    when supplied.
 
     Args:
         config: The review workflow config (provides busy + failure labels).
@@ -94,33 +110,41 @@ def _fail(
         reason: Failure reason key into ``config.failure_labels``.
         update_issue_labels: Whether to apply the failure label transition.
         post_issue_comments: Whether to post a failure comment on the issue.
-        round_number: Current review round, appended to the comment when given.
-        verdict: Most recent verdict, whose ``decision`` is appended when given.
-        elapsed: Elapsed seconds since the run started, appended when given.
-        details: Human-readable cause line, inserted directly beneath the
-            header (before Round/Verdict/Elapsed) when given.
+        round_number: Current review round, added to Stage when given.
+        verdict: Most recent verdict, whose ``decision`` is the Verdict field.
+        elapsed: Elapsed seconds since the run started, rendered when given.
+        details: Human-readable cause; replaces the reason's default Error
+            sentence when given.
 
     Returns:
         Always ``1``.
     """
-    category = config.failure_labels.get(reason, config.failure_labels["general"])
+    label = config.failure_labels.get(reason, config.failure_labels["general"])
     message = f"{config.name} review failed: {reason}"
     failure = WorkflowFailure(
-        category=category,
+        category=label,
         stage="Review",
         message=message,
         elapsed_time=elapsed,
     )
-    comment_lines = [f"❌ {message}"]
-    if details is not None:
-        comment_lines.append(details)
-    if round_number is not None:
-        comment_lines.append(f"Round: {round_number}")
-    if verdict is not None:
-        comment_lines.append(f"Verdict: {verdict.decision}")
-    if elapsed is not None:
-        comment_lines.append(f"Elapsed: {format_elapsed_time(elapsed)}")
-    comment_body = "\n".join(comment_lines)
+    category, sentence = _FAIL_REASONS.get(reason, _FAIL_REASONS["general"])
+    stage = (
+        f"{config.display_name}, round {round_number}"
+        if round_number is not None
+        else config.display_name
+    )
+    comment_body = build_failure_comment(
+        project_dir,
+        title=config.display_name,
+        kind="Failed",
+        fields=[
+            ("Category", category),
+            ("Stage", stage),
+            ("Error", details or sentence),
+            ("Verdict", verdict.decision if verdict else None),
+        ],
+        elapsed=elapsed,
+    )
     handle_workflow_failure(
         failure,
         comment_body,
