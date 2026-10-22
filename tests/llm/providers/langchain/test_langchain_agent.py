@@ -19,6 +19,7 @@ from mcp_coder.llm.providers.langchain._mcp_tools import (
 from mcp_coder.llm.providers.langchain.agent import (
     AGENT_MAX_STEPS,
     _check_agent_dependencies,
+    _summarize_messages,
 )
 
 
@@ -324,3 +325,25 @@ class TestAgentConstants:
 
     def test_max_steps_value(self) -> None:
         assert AGENT_MAX_STEPS == 50
+
+
+class TestSummarizeMessagesFinalText:
+    """Final text extraction from the last AIMessage."""
+
+    def test_string_content(self) -> None:
+        messages_mod = pytest.importorskip("langchain_core.messages")
+        final_text, _ = _summarize_messages([messages_mod.AIMessage(content="2")])
+        assert final_text == "2"
+
+    def test_text_block_list_content(self) -> None:
+        """Anthropic returns content as a list of blocks, not a string."""
+        messages_mod = pytest.importorskip("langchain_core.messages")
+        msg = messages_mod.AIMessage(
+            content=[
+                {"type": "text", "text": "Hello ", "index": 0},
+                {"type": "tool_use", "id": "t1", "name": "x", "input": {}},
+                {"type": "text", "text": "world", "index": 1},
+            ]
+        )
+        final_text, _ = _summarize_messages([msg])
+        assert final_text == "Hello world"
