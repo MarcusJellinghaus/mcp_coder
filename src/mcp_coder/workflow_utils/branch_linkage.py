@@ -5,7 +5,6 @@ and, once a PR exists, the head refs of open PRs that close the issue.
 """
 
 import logging
-from typing import Optional
 
 from mcp_coder.mcp_workspace_github import IssueBranchManager
 
@@ -18,7 +17,7 @@ def is_branch_linked_to_issue(
     branch_manager: IssueBranchManager,
     issue_number: int,
     branch_name: str,
-) -> Optional[bool]:
+) -> bool | None:
     """Check whether a branch is linked to an issue.
 
     Linked branches are checked first, then the head refs of open PRs that
