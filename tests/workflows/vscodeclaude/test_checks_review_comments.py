@@ -51,6 +51,7 @@ def _make_issue(number: int) -> IssueData:
         "created_at": None,
         "updated_at": None,
         "locked": False,
+        "author_association": None,
     }
 
 

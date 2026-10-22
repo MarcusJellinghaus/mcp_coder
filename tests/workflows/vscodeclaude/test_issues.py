@@ -61,6 +61,7 @@ class TestIssueSelection:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/1",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 2,
@@ -74,6 +75,7 @@ class TestIssueSelection:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/2",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 3,
@@ -87,6 +89,7 @@ class TestIssueSelection:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/3",
                 "locked": False,
+                "author_association": None,
             },
         ]
 
@@ -129,6 +132,7 @@ class TestIssueSelection:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/1",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 2,
@@ -142,6 +146,7 @@ class TestIssueSelection:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/2",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 3,
@@ -155,6 +160,7 @@ class TestIssueSelection:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/3",
                 "locked": False,
+                "author_association": None,
             },
         ]
 
@@ -201,6 +207,7 @@ class TestIssueSelection:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/1",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 2,
@@ -214,6 +221,7 @@ class TestIssueSelection:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/2",
                 "locked": False,
+                "author_association": None,
             },
         ]
 
@@ -260,6 +268,7 @@ class TestFilterEligibleVscodeclaudeIssues:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/1",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 2,
@@ -273,6 +282,7 @@ class TestFilterEligibleVscodeclaudeIssues:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/2",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 3,
@@ -286,6 +296,7 @@ class TestFilterEligibleVscodeclaudeIssues:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/3",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 4,
@@ -299,6 +310,7 @@ class TestFilterEligibleVscodeclaudeIssues:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/4",
                 "locked": False,
+                "author_association": None,
             },
         ]
 
@@ -342,6 +354,7 @@ class TestFilterEligibleVscodeclaudeIssues:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/1",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 2,
@@ -355,6 +368,7 @@ class TestFilterEligibleVscodeclaudeIssues:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/2",
                 "locked": False,
+                "author_association": None,
             },
         ]
 
@@ -402,6 +416,7 @@ class TestGetCachedEligibleVscodeclaudeIssues:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/1",
                 "locked": False,
+                "author_association": None,
             },
         ]
 
@@ -474,6 +489,7 @@ class TestGetCachedEligibleVscodeclaudeIssues:
                 "updated_at": None,
                 "url": "https://github.com/owner/repo/issues/99",
                 "locked": False,
+                "author_association": None,
             },
         ]
         mock_issue_manager = Mock()
@@ -765,6 +781,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/1",
             "locked": False,
+            "author_association": None,
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
@@ -836,6 +853,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/1",
             "locked": False,
+            "author_association": None,
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
@@ -905,6 +923,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/2",
             "locked": False,
+            "author_association": None,
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
@@ -972,6 +991,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/3",
             "locked": False,
+            "author_association": None,
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
@@ -1040,6 +1060,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/4",
             "locked": False,
+            "author_association": None,
         }
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
@@ -1112,6 +1133,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
                     "updated_at": None,
                     "url": "https://github.com/owner/good/issues/5",
                     "locked": False,
+                    "author_association": None,
                 }
             ]
 

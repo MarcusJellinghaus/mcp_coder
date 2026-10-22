@@ -81,6 +81,7 @@ def mock_issue_manager() -> MagicMock:
         "updated_at": "2024-01-01T00:00:00Z",
         "url": "https://github.com/test/repo/issues/123",
         "locked": False,
+        "author_association": None,
     }
 
     # Configure mock to return success for set_labels
@@ -96,6 +97,7 @@ def mock_issue_manager() -> MagicMock:
         "updated_at": "2024-01-01T00:00:00Z",
         "url": "https://github.com/test/repo/issues/123",
         "locked": False,
+        "author_association": None,
     }
 
     return mock
@@ -721,6 +723,7 @@ class TestExecuteSetStatus:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
         mock_issue_manager_class.return_value = mock_issue_manager
 

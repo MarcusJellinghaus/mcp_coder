@@ -131,6 +131,7 @@ class TestSessionRestart:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
 
         repo_config = {
@@ -194,6 +195,7 @@ class TestSessionRestart:
             "updated_at": None,
             "url": "...",
             "locked": False,
+            "author_association": None,
         }
         repo_config = {"repo_url": "https://github.com/owner/repo.git"}
         vscodeclaude_config: VSCodeClaudeConfig = {
@@ -262,6 +264,7 @@ class TestSessionRestart:
             "updated_at": None,
             "url": "...",
             "locked": False,
+            "author_association": None,
         }
         repo_config = {"repo_url": "https://github.com/owner/repo.git"}
         vscodeclaude_config: VSCodeClaudeConfig = {
@@ -453,6 +456,7 @@ class TestSessionRestart:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
@@ -583,6 +587,7 @@ class TestSessionRestart:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
@@ -654,6 +659,7 @@ class TestSessionRestart:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
@@ -712,6 +718,7 @@ class TestSessionRestart:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
@@ -769,6 +776,7 @@ class TestSessionRestart:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {456: cached_issue}
@@ -826,6 +834,7 @@ class TestSessionRestart:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {789: cached_issue}
@@ -898,6 +907,7 @@ class TestSessionRestart:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {101: cached_issue}
@@ -979,6 +989,7 @@ class TestSessionRestart:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {202: cached_issue}

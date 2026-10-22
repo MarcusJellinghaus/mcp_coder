@@ -79,6 +79,7 @@ def _make_pr_issue(number: int, labels: list[str] | None = None) -> IssueData:
         "created_at": None,
         "updated_at": None,
         "locked": False,
+        "author_association": None,
     }
 
 

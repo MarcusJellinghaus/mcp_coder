@@ -49,6 +49,7 @@ def _issue(
         "updated_at": "2026-04-30T09:00:00Z",
         "url": f"https://github.com/owner/repo/issues/{number}",
         "locked": False,
+        "author_association": None,
     }
 
 

@@ -32,6 +32,7 @@ class TestProcessEligibleIssuesBranchRequirement:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
@@ -103,6 +104,7 @@ class TestProcessEligibleIssuesBranchRequirement:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
@@ -178,6 +180,7 @@ class TestProcessEligibleIssuesBranchRequirement:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
@@ -248,6 +251,7 @@ class TestProcessEligibleIssuesBranchRequirement:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
@@ -318,6 +322,7 @@ class TestProcessEligibleIssuesBranchRequirement:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
@@ -398,6 +403,7 @@ class TestProcessEligibleIssuesPrefetchedIssues:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
