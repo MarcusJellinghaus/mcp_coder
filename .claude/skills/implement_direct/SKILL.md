@@ -35,6 +35,8 @@ If no issue number is provided:
    ```bash
    mcp-coder gh-tool checkout-issue-branch <issue_number>
    ```
+   If it exits with code 3 (ambiguous), stop: show the candidate branches from its log
+   output and ask the user which branch to use. Do not continue until they answer.
 
 3. **Understand context**
    - Read relevant source files referenced in the issue

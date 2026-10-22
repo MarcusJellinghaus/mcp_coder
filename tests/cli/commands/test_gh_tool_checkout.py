@@ -549,3 +549,4 @@ class TestGhToolCheckoutIssueBranchIntegration:
         assert "0" in epilog, "Epilog should document exit code 0"
         assert "1" in epilog, "Epilog should document exit code 1"
         assert "2" in epilog, "Epilog should document exit code 2"
+        assert "3  Ambiguous" in epilog, "Epilog should document exit code 3"

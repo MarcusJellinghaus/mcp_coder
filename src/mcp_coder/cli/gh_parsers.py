@@ -128,10 +128,19 @@ Config resolution:
         "checkout-issue-branch",
         help=COMMAND_DESCRIPTIONS["gh-tool checkout-issue-branch"],
         formatter_class=WideHelpFormatter,
-        epilog="""Exit codes:
-  0  Success - branch checked out
-  1  Could not find or create branch
-  2  Error (not a git repo, API failure)""",
+        epilog="""Resolution order:
+  1. Linked branch, open PR referencing the issue, closed PR whose
+     branch still exists, branch-name pattern (N-... / .../N_...)
+  2. Otherwise: linked branches, open closing-PR heads and matching
+     remote branches; exactly one is checked out
+  3. Otherwise: a new linked branch is created
+
+Exit codes:
+  0  Branch checked out (found, single candidate, or created)
+  1  Issue not found, or branch creation failed
+  2  Error (invalid project dir, no repo identifier, lookup or
+     ls-remote failed, API error, git checkout failed)
+  3  Ambiguous: two or more candidate branches found (listed in log)""",
     )
     checkout_branch_parser.add_argument(
         "issue_number", type=int, help="GitHub issue number"
