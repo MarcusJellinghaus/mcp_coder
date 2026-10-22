@@ -33,6 +33,7 @@ class TestGuardNet:
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/123",
             locked=False,
+            author_association=None,
         )
 
     def test_system_exit_netted_to_planning_failed(

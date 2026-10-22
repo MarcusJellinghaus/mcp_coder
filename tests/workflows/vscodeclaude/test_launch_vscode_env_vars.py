@@ -167,6 +167,7 @@ class TestMCPEnvironmentVariablesBugFix:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         repo_config = {"repo_url": "https://github.com/owner/test-repo"}

@@ -430,6 +430,7 @@ class TestGetEligibleIssues:
                 updated_at=None,
                 url="https://github.com/user/repo/issues/1",
                 locked=False,
+                author_association=None,
             ),
             # Issue with no bot_pickup label - should be excluded
             IssueData(
@@ -444,6 +445,7 @@ class TestGetEligibleIssues:
                 updated_at=None,
                 url="https://github.com/user/repo/issues/2",
                 locked=False,
+                author_association=None,
             ),
             # Another valid issue with bot_pickup label - should be included
             IssueData(
@@ -458,6 +460,7 @@ class TestGetEligibleIssues:
                 updated_at=None,
                 url="https://github.com/user/repo/issues/4",
                 locked=False,
+                author_association=None,
             ),
         ]
 
@@ -506,6 +509,7 @@ class TestDispatchWorkflow:
             updated_at=None,
             url="https://github.com/user/repo/issues/123",
             locked=False,
+            author_association=None,
         )
 
         # Setup - Repo configuration
@@ -572,6 +576,7 @@ class TestDispatchWorkflow:
             updated_at=None,
             url="https://github.com/user/repo/issues/123",
             locked=False,
+            author_association=None,
         )
 
         repo_config = {
@@ -623,6 +628,7 @@ class TestDispatchWorkflow:
             "updated_at": "2025-12-31T09:00:00Z",
             "url": "https://github.com/test/repo/issues/156",
             "locked": False,
+            "author_association": None,
         }
 
         # Setup - Repo configuration
@@ -698,6 +704,7 @@ class TestDispatchWorkflow:
             "updated_at": "2025-12-31T09:00:00Z",
             "url": "https://github.com/test/repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
 
         # Setup - Repo configuration
@@ -789,6 +796,7 @@ class TestDispatchWorkflowSilentFallthroughGuard:
             "updated_at": "2026-01-01T00:00:00Z",
             "url": "https://github.com/test/repo/issues/777",
             "locked": False,
+            "author_association": None,
         }
 
     @pytest.mark.parametrize("executor_os", ["windows", "linux"])
@@ -923,6 +931,7 @@ class TestCacheFileOperations:
                     "user": "testuser",
                     "created_at": "2025-12-31T08:00:00Z",
                     "locked": False,
+                    "author_association": None,
                 }
             },
         }
@@ -971,6 +980,7 @@ class TestCacheFileOperations:
                     "updated_at": "2025-12-31T09:00:00Z",
                     "url": "https://github.com/test/repo/issues/123",
                     "locked": False,
+                    "author_association": None,
                 }
             },
         }
@@ -1007,6 +1017,7 @@ class TestStalenessLogging:
                 "user": "testuser",
                 "created_at": "2025-12-31T08:00:00Z",
                 "locked": False,
+                "author_association": None,
                 "title": "Test",
                 "body": "Test",
                 "url": "http://test.com",
@@ -1022,6 +1033,7 @@ class TestStalenessLogging:
                 "user": "testuser",
                 "created_at": "2025-12-31T08:00:00Z",
                 "locked": False,
+                "author_association": None,
                 "title": "Test",
                 "body": "Test",
                 "url": "http://test.com",
@@ -1050,6 +1062,7 @@ class TestStalenessLogging:
                 "user": "testuser",
                 "created_at": "2025-12-31T08:00:00Z",
                 "locked": False,
+                "author_association": None,
                 "title": "Test",
                 "body": "Test",
                 "url": "http://test.com",
@@ -1065,6 +1078,7 @@ class TestStalenessLogging:
                 "user": "testuser",
                 "created_at": "2025-12-31T08:00:00Z",
                 "locked": False,
+                "author_association": None,
                 "title": "Test",
                 "body": "Test",
                 "url": "http://test.com",
@@ -1106,6 +1120,7 @@ class TestGetCachedEligibleIssues:
             "user": "testuser",
             "created_at": "2025-12-31T08:00:00Z",
             "locked": False,
+            "author_association": None,
         }
 
     @pytest.fixture
@@ -1254,6 +1269,7 @@ class TestBuildEligibleIssuesPrefetched:
             "updated_at": None,
             "url": f"https://github.com/owner/repo/issues/{number}",
             "locked": False,
+            "author_association": None,
         }
 
     def test_prefetched_cache_skips_redundant_lookup(

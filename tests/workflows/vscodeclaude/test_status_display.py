@@ -99,6 +99,7 @@ class TestStatusDisplay:
                 "updated_at": None,
                 "url": "...",
                 "locked": False,
+                "author_association": None,
             }
         }
 
@@ -133,6 +134,7 @@ class TestStatusDisplay:
                 "updated_at": None,
                 "url": "...",
                 "locked": False,
+                "author_association": None,
             }
         }
 
@@ -167,6 +169,7 @@ class TestStatusDisplay:
                 "updated_at": None,
                 "url": "...",
                 "locked": False,
+                "author_association": None,
             }
         }
 
@@ -231,6 +234,7 @@ class TestStatusDisplay:
                 "updated_at": None,
                 "url": "...",
                 "locked": False,
+                "author_association": None,
             }
         }
 
@@ -265,6 +269,7 @@ class TestStatusDisplay:
                 "updated_at": None,
                 "url": "...",
                 "locked": False,
+                "author_association": None,
             }
         }
 
@@ -433,6 +438,7 @@ class TestStatusDisplay:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/456",
             "locked": False,
+            "author_association": None,
         }
 
         eligible_issues: list[tuple[str, IssueData]] = [("myrepo", issue)]
@@ -467,6 +473,7 @@ class TestStatusDisplay:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/435",
             "locked": False,
+            "author_association": None,
         }
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", issue)]

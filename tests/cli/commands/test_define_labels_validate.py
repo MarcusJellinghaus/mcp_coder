@@ -67,6 +67,7 @@ class TestValidateIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             }
         ]
 
@@ -101,6 +102,7 @@ class TestValidateIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             }
         ]
 
@@ -145,6 +147,7 @@ class TestValidateIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 2,
@@ -158,6 +161,7 @@ class TestValidateIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
         ]
 
@@ -198,6 +202,7 @@ class TestValidateIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             }
         ]
 
@@ -252,6 +257,7 @@ class TestValidateIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             }
         ]
 

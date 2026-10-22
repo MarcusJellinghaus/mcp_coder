@@ -254,6 +254,7 @@ class TestExecuteCoordinatorRun:
                 updated_at=None,
                 url="https://github.com/user/mcp_coder/issues/124",
                 locked=False,
+                author_association=None,
             ),
             IssueData(
                 number=123,
@@ -267,6 +268,7 @@ class TestExecuteCoordinatorRun:
                 updated_at=None,
                 url="https://github.com/user/mcp_coder/issues/123",
                 locked=False,
+                author_association=None,
             ),
         ]
 
@@ -345,6 +347,7 @@ class TestExecuteCoordinatorRun:
                 updated_at=None,
                 url="https://github.com/user/mcp_coder/issues/123",
                 locked=False,
+                author_association=None,
             ),
         ]
 

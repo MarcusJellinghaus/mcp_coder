@@ -184,6 +184,7 @@ class TestBranchHandlingIntegration:
             "url": "https://github.com/owner/repo/issues/100",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {100: cached_issue}
@@ -255,6 +256,7 @@ class TestBranchHandlingIntegration:
                 "url": "",
                 "body": "",
                 "locked": False,
+                "author_association": None,
             }
         ]
 
@@ -355,6 +357,7 @@ class TestBranchHandlingIntegration:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {300: cached_issue}
@@ -498,6 +501,7 @@ class TestBranchHandlingIntegration:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {500: cached_issue}

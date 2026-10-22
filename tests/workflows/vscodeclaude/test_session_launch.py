@@ -242,6 +242,7 @@ class TestSkipGithubInstallThreading:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         # Mock all workspace functions
@@ -328,6 +329,7 @@ class TestSkipGithubInstallThreading:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         mock_issue_manager = MagicMock()
@@ -460,6 +462,7 @@ class TestSetupCommandsResolution:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
     @pytest.mark.parametrize(

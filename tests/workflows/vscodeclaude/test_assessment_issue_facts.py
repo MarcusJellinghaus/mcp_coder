@@ -44,6 +44,7 @@ def _make_issue(
         "updated_at": None,
         "url": "",
         "locked": False,
+        "author_association": None,
     }
     return issue
 
