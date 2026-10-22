@@ -26,9 +26,9 @@ import argparse
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
-Event = Dict[str, Any]
+Event = dict[str, Any]
 
 # Fallback for datasets without a per-event ``mcp_servers`` list: current tool
 # names are ``mcp__mcp-<server>__<tool>``; older sessions called
@@ -36,11 +36,11 @@ Event = Dict[str, Any]
 _CURRENT_PREFIX = "mcp__mcp-"
 
 
-def load_events(path: Path) -> List[Event]:
+def load_events(path: Path) -> list[Event]:
     """Load events from a permission_events.jsonl file (or a dir containing it)."""
     if path.is_dir():
         path = path / "permission_events.jsonl"
-    events: List[Event] = []
+    events: list[Event] = []
     with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -49,7 +49,7 @@ def load_events(path: Path) -> List[Event]:
     return events
 
 
-def denial_events(events: List[Event]) -> List[Event]:
+def denial_events(events: list[Event]) -> list[Event]:
     """Filter to actual denials.
 
     Headless events are denials by construction (the extractor harvests
@@ -63,7 +63,7 @@ def denial_events(events: List[Event]) -> List[Event]:
     ]
 
 
-def _connected_servers(event: Event) -> Set[str]:
+def _connected_servers(event: Event) -> set[str]:
     """The run's connected MCP server names (empty if the dataset lacks them)."""
     return {
         s.strip() for s in str(event.get("mcp_servers") or "").split(",") if s.strip()
@@ -110,18 +110,18 @@ def gap_class(event: Event) -> str:
     return "not_connected"
 
 
-def cluster_by(events: List[Event], key: str) -> "Counter[str]":
+def cluster_by(events: list[Event], key: str) -> "Counter[str]":
     """Count events grouped by an arbitrary field (missing values -> '(none)')."""
     return Counter(str(e.get(key) or "(none)") for e in events)
 
 
-def waste_stats(events: List[Event], loop_threshold: int = 3) -> Dict[str, Any]:
+def waste_stats(events: list[Event], loop_threshold: int = 3) -> dict[str, Any]:
     """Aggregate retry loops and the step cost/turns spent on them."""
     retried_same = sum(1 for e in events if e.get("followup_action") == "retried_same")
     in_loop = [e for e in events if (e.get("retry_count") or 1) >= loop_threshold]
     max_retry = max((e.get("retry_count") or 1 for e in events), default=0)
     # Sum step cost once per (run, step) so a step with N denials isn't counted N times.
-    seen_steps: set[Tuple[Any, Any]] = set()
+    seen_steps: set[tuple[Any, Any]] = set()
     loop_cost = 0.0
     loop_turns = 0
     for e in in_loop:
@@ -141,7 +141,7 @@ def waste_stats(events: List[Event], loop_threshold: int = 3) -> Dict[str, Any]:
     }
 
 
-def summarize(events: List[Event]) -> Dict[str, Any]:
+def summarize(events: list[Event]) -> dict[str, Any]:
     """Build a structured summary of the event set."""
     runs = {e.get("run_id") for e in events}
     return {
@@ -160,9 +160,7 @@ def summarize(events: List[Event]) -> Dict[str, Any]:
     }
 
 
-def _print_counter(
-    title: str, counter: "Counter[str]", top: Optional[int] = None
-) -> None:
+def _print_counter(title: str, counter: "Counter[str]", top: int | None = None) -> None:
     print(f"\n{title}:")
     items = counter.most_common(top) if top else counter.most_common()
     for name, count in items:
@@ -170,7 +168,7 @@ def _print_counter(
 
 
 def print_report(
-    summary: Dict[str, Any], extra_group: Optional[Tuple[str, "Counter[str]"]] = None
+    summary: dict[str, Any], extra_group: tuple[str, "Counter[str]"] | None = None
 ) -> None:
     """Print a human-readable report from a summary dict.
 

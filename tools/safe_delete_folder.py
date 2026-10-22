@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Safe folder deletion utility for Windows.
+"""Safe folder deletion utility for Windows.
 
 Two modes of operation:
 
@@ -79,7 +78,7 @@ class DiagnosticResult:
 
 
 def _get_sysinternals_dir() -> Path:
-    """Get %LOCALAPPDATA%\\Sysinternals\\ directory."""
+    r"""Get %LOCALAPPDATA%\Sysinternals\ directory."""
     local_app_data = os.environ.get("LOCALAPPDATA", "")
     if local_app_data:
         return Path(local_app_data) / "Sysinternals"
@@ -236,19 +235,19 @@ _WINDOWS_RESERVED_NAMES: set[str] = {
 
 
 def _is_windows_reserved_name(path: Path) -> bool:
-    """Check if a path's filename is a Windows reserved device name.
+    r"""Check if a path's filename is a Windows reserved device name.
 
     Reserved names (NUL, CON, PRN, AUX, COM1-9, LPT1-9) cannot be
-    accessed through normal Win32 APIs. They require the \\\\?\\ prefix.
+    accessed through normal Win32 APIs. They require the \\?\ prefix.
     """
     # Check stem (name without extension) since e.g. "nul.txt" is also reserved
     return path.stem.upper() in _WINDOWS_RESERVED_NAMES
 
 
 def _delete_reserved_name(path: Path) -> tuple[bool, str]:
-    """Delete a file/folder with a Windows reserved device name.
+    r"""Delete a file/folder with a Windows reserved device name.
 
-    Uses the \\\\?\\ extended-length path prefix to bypass Win32 name
+    Uses the \\?\ extended-length path prefix to bypass Win32 name
     validation, allowing operations on reserved names like NUL, CON, etc.
 
     Falls back to `rd /s /q` for directories if the direct approach fails.
@@ -258,10 +257,7 @@ def _delete_reserved_name(path: Path) -> tuple[bool, str]:
 
     # Build \\?\C:\...\nul style path
     resolved = str(path.resolve())
-    if not resolved.startswith("\\\\?\\"):
-        unc_path = f"\\\\?\\{resolved}"
-    else:
-        unc_path = resolved
+    unc_path = f"\\\\?\\{resolved}" if not resolved.startswith("\\\\?\\") else resolved
 
     try:
         if path.is_dir():

@@ -50,7 +50,7 @@ def get_db_path() -> Path:
         return Path.home() / "mlflow_data" / "mlflow.db"
 
 
-def main():
+def main() -> int:
     """Query and display MLflow data."""
     db_path = get_db_path()
 
@@ -124,7 +124,7 @@ def main():
                 status,
                 start_time,
                 end_time,
-                artifact_uri,
+                _artifact_uri,
             ) in runs:
                 from datetime import datetime
 

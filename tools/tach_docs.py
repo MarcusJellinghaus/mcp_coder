@@ -14,7 +14,11 @@ from pathlib import Path
 def run_command(cmd: list[str]) -> str:
     """Run a command and return stdout."""
     result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=Path(__file__).parent.parent
+        cmd,
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).parent.parent,
+        check=False,
     )
     return result.stdout
 
@@ -347,7 +351,7 @@ def generate_report_html(reports: dict[str, str]) -> str:
     <div class="toc">
         <h2>Modules</h2>
         <ul>
-            {''.join(f'<li><a href="#{m.replace(".", "-")}">{m}</a></li>' for m in reports.keys())}
+            {''.join(f'<li><a href="#{m.replace(".", "-")}">{m}</a></li>' for m in reports)}
         </ul>
     </div>
     
@@ -362,7 +366,7 @@ def _write_lf(path: Path, text: str) -> None:
     path.write_text(text.replace("\r\n", "\n"), encoding="utf-8", newline="\n")
 
 
-def main():
+def main() -> int:
     """Generate architecture documentation."""
     print("Generating architecture documentation...")
 

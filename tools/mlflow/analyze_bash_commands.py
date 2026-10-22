@@ -21,10 +21,10 @@ import json
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # purpose -> (existing MCP tool covering it, or None if it's a gap)
-PURPOSE_MCP: Dict[str, Optional[str]] = {
+PURPOSE_MCP: dict[str, str | None] = {
     "git_read": "mcp-workspace git (read subcommands)",
     "git_write": None,
     "gh_issue_read": "github_issue_view / github_issue_list",
@@ -101,7 +101,7 @@ def effective_command(command: str) -> str:
     return c.strip()
 
 
-def _tokens(command: str) -> List[str]:
+def _tokens(command: str) -> list[str]:
     return command.split()
 
 
@@ -181,11 +181,11 @@ def classify_purpose(command: str) -> str:
     return "other"
 
 
-def load_bash_events(path: Path) -> List[Dict[str, Any]]:
+def load_bash_events(path: Path) -> list[dict[str, Any]]:
     """Load Bash events from a permission_events.jsonl (or dir containing it)."""
     if path.is_dir():
         path = path / "permission_events.jsonl"
-    events: List[Dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
     with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -197,7 +197,7 @@ def load_bash_events(path: Path) -> List[Dict[str, Any]]:
     return events
 
 
-def command_of(event: Dict[str, Any]) -> str:
+def command_of(event: dict[str, Any]) -> str:
     """Pull the raw command string out of an event's tool_input."""
     ti = event.get("tool_input")
     if isinstance(ti, dict):
@@ -205,10 +205,10 @@ def command_of(event: Dict[str, Any]) -> str:
     return ""
 
 
-def summarize(events: List[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize(events: list[dict[str, Any]]) -> dict[str, Any]:
     """Count purposes and collect sample commands per purpose."""
-    by_purpose: "Counter[str]" = Counter()
-    samples: Dict[str, List[str]] = defaultdict(list)
+    by_purpose: Counter[str] = Counter()
+    samples: dict[str, list[str]] = defaultdict(list)
     for e in events:
         cmd = command_of(e)
         purpose = classify_purpose(cmd)
@@ -218,13 +218,13 @@ def summarize(events: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {"by_purpose": by_purpose, "samples": samples, "total": len(events)}
 
 
-def print_report(summary: Dict[str, Any], n_samples: int) -> None:
+def print_report(summary: dict[str, Any], n_samples: int) -> None:
     """Print the purpose breakdown split by MCP-tool coverage."""
-    by_purpose: "Counter[str]" = summary["by_purpose"]
-    samples: Dict[str, List[str]] = summary["samples"]
+    by_purpose: Counter[str] = summary["by_purpose"]
+    samples: dict[str, list[str]] = summary["samples"]
 
-    gaps: List[Tuple[str, int]] = []
-    dupes: List[Tuple[str, int]] = []
+    gaps: list[tuple[str, int]] = []
+    dupes: list[tuple[str, int]] = []
     for purpose, count in by_purpose.most_common():
         mcp = PURPOSE_MCP.get(purpose)
         (

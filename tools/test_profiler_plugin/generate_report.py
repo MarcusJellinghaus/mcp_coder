@@ -1,5 +1,4 @@
-"""
-Generate human-readable text reports from profiling data.
+"""Generate human-readable text reports from profiling data.
 
 This script:
 1. Reads durations.json to find slow tests (>threshold)
@@ -12,7 +11,6 @@ import json
 import pstats
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 # Configuration
 PROF_OUTPUT_DIR = Path("docs/tests/performance_data/prof")
@@ -22,9 +20,9 @@ TOP_N_FUNCTIONS = 50  # Number of functions to show in detailed reports
 
 
 def sanitize_test_name(nodeid: str) -> str:
-    """
-    Convert pytest node ID to a safe filename.
-    Must match the sanitization in test_profiler_plugin.py
+    """Convert pytest node ID to a safe filename.
+
+    Must match the sanitization in test_profiler_plugin.py.
     """
     safe_name = nodeid.replace("::", "__").replace("/", "_").replace("\\", "_")
     safe_name = safe_name.replace(".py", "")
@@ -34,8 +32,7 @@ def sanitize_test_name(nodeid: str) -> str:
 def generate_profile_report(
     prof_file: Path, output_file: Path, nodeid: str, duration: float
 ) -> None:
-    """
-    Generate a detailed, LLM-friendly text report from a .prof file.
+    """Generate a detailed, LLM-friendly text report from a .prof file.
 
     Args:
         prof_file: Path to the .prof file
@@ -114,10 +111,9 @@ def generate_profile_report(
 
 
 def create_summary_report(
-    durations_data: Dict, slow_tests: List[Tuple[str, float]]
+    durations_data: dict, slow_tests: list[tuple[str, float]]
 ) -> None:
-    """
-    Create a summary report of all profiling results.
+    """Create a summary report of all profiling results.
 
     Args:
         durations_data: The full durations data from JSON
@@ -175,7 +171,7 @@ def create_summary_report(
         f.write("\n")
 
 
-def main():
+def main() -> int:
     """Main report generation logic."""
     print("Reading test durations...")
 
@@ -186,7 +182,7 @@ def main():
         return 1
 
     # Load durations data
-    with open(DURATIONS_FILE, "r") as f:
+    with open(DURATIONS_FILE) as f:
         durations_data = json.load(f)
 
     threshold = durations_data.get("threshold_seconds", 1.0)

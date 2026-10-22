@@ -1,5 +1,4 @@
-"""
-Pytest plugin for profiling individual tests.
+"""Pytest plugin for profiling individual tests.
 
 This plugin hooks into pytest's test execution to profile each test individually
 using Python's cProfile. It saves .prof files for all tests and tracks their durations.
@@ -8,8 +7,8 @@ using Python's cProfile. It saves .prof files for all tests and tracks their dur
 import cProfile
 import json
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import Dict
 
 import pytest
 
@@ -21,14 +20,13 @@ PROF_OUTPUT_DIR = Path("docs/tests/performance_data/prof")
 class TestProfiler:
     """Manages profiling of individual tests."""
 
-    def __init__(self):
-        self.durations: Dict[str, float] = {}
+    def __init__(self) -> None:
+        self.durations: dict[str, float] = {}
         self.test_count = 0
         self.total_tests = 0
 
     def sanitize_test_name(self, nodeid: str) -> str:
-        """
-        Convert pytest node ID to a safe filename.
+        """Convert pytest node ID to a safe filename.
 
         Example: tests/test_file.py::TestClass::test_method
         Becomes: tests_test_file__TestClass__test_method
@@ -49,7 +47,7 @@ class TestProfiler:
 _profiler = TestProfiler()
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Called after command line options have been parsed."""
     # Ensure output directory exists
     PROF_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -59,16 +57,20 @@ def pytest_configure(config):
     pass
 
 
-def pytest_collection_modifyitems(session, config, items):
+def pytest_collection_modifyitems(
+    session: pytest.Session, config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Called after test collection is complete."""
     _profiler.total_tests = len(items)
     print(f"\nCollected {_profiler.total_tests} tests for profiling")
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
-def pytest_runtest_protocol(item, nextitem):
-    """
-    Hook that wraps the entire test execution (setup, call, teardown).
+def pytest_runtest_protocol(
+    item: pytest.Item, nextitem: pytest.Item | None
+) -> Generator[None, None, None]:
+    """Hook that wraps the entire test execution (setup, call, teardown).
+
     We profile the entire test execution here.
     """
     _profiler.test_count += 1
@@ -101,9 +103,10 @@ def pytest_runtest_protocol(item, nextitem):
     print(f"Profiling {progress}: {nodeid} ... {duration:.2f}s [OK]{slow_marker}")
 
 
-def pytest_sessionfinish(session, exitstatus):
+def pytest_sessionfinish(
+    session: pytest.Session, exitstatus: int | pytest.ExitCode
+) -> None:
     """Called after whole test run finished, right before returning exit status."""
-
     # Save durations to JSON
     durations_path = PROF_OUTPUT_DIR / "durations.json"
 

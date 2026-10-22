@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Fix the remaining ruff findings in `tools/`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: ruff autofix on `tools/`; manual fixes (`check=False`, `noqa: S314`, ANN hooks, `main() -> int`, D, SIM, B007); format touched files only; `ruff check src tests tools` → 0
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `chore(tools): fix remaining ruff findings`
+- [x] Implementation: ruff autofix on `tools/`; manual fixes (`check=False`, `noqa: S314`, ANN hooks, `main() -> int`, D, SIM, B007); format touched files only; `ruff check src tests tools` → 0
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `chore(tools): fix remaining ruff findings`
 
 ### Step 5: CI — lint `tools/`, rename job to `ruff`; scripts and docs
 See [step_5.md](./steps/step_5.md)

@@ -10,7 +10,7 @@ stay thin and never drift apart.
 import csv
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, cast
 
 
 def mcp_server(tool_name: str) -> str:
@@ -64,7 +64,7 @@ def tool_category(tool_name: str) -> str:
     return "other"
 
 
-def bash_verb(tool_name: str, tool_input: Dict[str, Any]) -> str:
+def bash_verb(tool_name: str, tool_input: dict[str, Any]) -> str:
     """First token of a Bash command, for grouping (e.g. git / gh / python)."""
     if tool_name != "Bash":
         return ""
@@ -90,10 +90,10 @@ def result_text(content: Any) -> str:
 def analyze_followup(
     target_id: str,
     target_name: str,
-    target_input: Dict[str, Any],
-    calls: List[Tuple[str, str, Dict[str, Any]]],
-    results: Dict[str, Dict[str, Any]],
-) -> Dict[str, Any]:
+    target_input: dict[str, Any],
+    calls: list[tuple[str, str, dict[str, Any]]],
+    results: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
     """Determine what the model did after the target call (retry / switch / recover)."""
     order = [c[0] for c in calls]
     followup_action = "none (last call in step)"
@@ -123,10 +123,10 @@ def analyze_followup(
     }
 
 
-def load_json(path: Path) -> Optional[Dict[str, Any]]:
+def load_json(path: Path) -> dict[str, Any] | None:
     """Load a JSON file, returning None on any error."""
     try:
-        return cast(Dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
+        return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError, ValueError):
         return None
 
@@ -176,7 +176,7 @@ CSV_COLUMNS = [
 ]
 
 
-def write_outputs(events: List[Dict[str, Any]], output_dir: Path) -> None:
+def write_outputs(events: list[dict[str, Any]], output_dir: Path) -> None:
     """Write JSONL (full) and CSV (flat) datasets."""
     output_dir.mkdir(parents=True, exist_ok=True)
 
