@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Fix `F` findings (dead code) in `tools/`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: ruff fix `F` on `tools/`; bare `yield` for F841; remove leftover F401 by hand; format touched files only
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `fix(tools): remove dead code flagged by ruff F`
+- [x] Implementation: ruff fix `F` on `tools/`; bare `yield` for F841; remove leftover F401 by hand; format touched files only
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `fix(tools): remove dead code flagged by ruff F`
 
 ### Step 4: Fix the remaining ruff findings in `tools/`
 See [step_4.md](./steps/step_4.md)

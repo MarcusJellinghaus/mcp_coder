@@ -20,7 +20,6 @@ Examples:
 
 import argparse
 import json
-import os
 import sqlite3
 import urllib.parse
 from datetime import datetime
@@ -269,7 +268,7 @@ def print_runs(runs: List[Dict[str, Any]], show_conversation: bool = True) -> No
             if conversation_data:
                 analysis = analyze_conversation(conversation_data)
 
-                print(f"\n    Conversation:")
+                print("\n    Conversation:")
 
                 # Show prompt (first message)
                 prompt = analysis["prompt"]
@@ -289,7 +288,7 @@ def print_runs(runs: List[Dict[str, Any]], show_conversation: bool = True) -> No
                     for role, count in sorted(analysis["message_counts"].items()):
                         print(f"        - {role}: {count}")
             else:
-                print(f"\n    Conversation: [No artifact data available]")
+                print("\n    Conversation: [No artifact data available]")
 
         if run["params"]:
             print(f"\n    Parameters ({len(run['params'])}):")

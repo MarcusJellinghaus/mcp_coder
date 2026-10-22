@@ -7,10 +7,9 @@ using Python's cProfile. It saves .prof files for all tests and tracks their dur
 
 import cProfile
 import json
-import os
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Dict
 
 import pytest
 
@@ -84,7 +83,7 @@ def pytest_runtest_protocol(item, nextitem):
     profiler.enable()
 
     # Run the test (setup, call, teardown)
-    outcome = yield
+    yield
 
     # Stop profiling
     profiler.disable()

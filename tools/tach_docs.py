@@ -40,7 +40,7 @@ def get_dependency_report(module_path: str) -> str:
 
 def generate_graph_html(mermaid_content: str) -> str:
     """Generate the dependency graph HTML."""
-    return f"""<!DOCTYPE html>
+    return """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -48,74 +48,74 @@ def generate_graph_html(mermaid_content: str) -> str:
     <title>MCP Coder - Dependency Graph</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <style>
-        body {{
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 20px;
             background: #1a1a2e;
             color: #eee;
-        }}
-        h1 {{
+        }
+        h1 {
             text-align: center;
             color: #00d9ff;
             margin-bottom: 10px;
-        }}
-        .subtitle {{
+        }
+        .subtitle {
             text-align: center;
             color: #888;
             margin-bottom: 30px;
-        }}
-        .legend {{
+        }
+        .legend {
             display: flex;
             justify-content: center;
             gap: 20px;
             margin-bottom: 20px;
             flex-wrap: wrap;
-        }}
-        .legend-item {{
+        }
+        .legend-item {
             display: flex;
             align-items: center;
             gap: 8px;
             padding: 8px 16px;
             background: #252540;
             border-radius: 8px;
-        }}
-        .legend-color {{
+        }
+        .legend-color {
             width: 16px;
             height: 16px;
             border-radius: 4px;
-        }}
-        .mermaid {{
+        }
+        .mermaid {
             display: flex;
             justify-content: center;
             background: #16213e;
             border-radius: 12px;
             padding: 30px;
             overflow: auto;
-        }}
-        .info {{
+        }
+        .info {
             max-width: 800px;
             margin: 30px auto;
             padding: 20px;
             background: #252540;
             border-radius: 12px;
-        }}
-        .info h2 {{
+        }
+        .info h2 {
             color: #00d9ff;
             margin-top: 0;
-        }}
-        .info ul {{
+        }
+        .info ul {
             line-height: 1.8;
-        }}
-        code {{
+        }
+        code {
             background: #1a1a2e;
             padding: 2px 6px;
             border-radius: 4px;
             color: #00d9ff;
-        }}
-        a {{
+        }
+        a {
             color: #00d9ff;
-        }}
+        }
     </style>
 </head>
 <body>
@@ -245,15 +245,15 @@ graph TD
     </div>
 
     <script>
-        mermaid.initialize({{ 
+        mermaid.initialize({ 
             startOnLoad: true,
             theme: 'dark',
-            flowchart: {{
+            flowchart: {
                 useMaxWidth: true,
                 htmlLabels: true,
                 curve: 'basis'
-            }}
-        }});
+            }
+        });
     </script>
 </body>
 </html>

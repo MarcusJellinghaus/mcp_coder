@@ -860,7 +860,7 @@ def _retry_pending(
             print("=" * 50)
 
         if not folder_path.exists():
-            print(f"  [OK] Already gone, removing stale entry")
+            print("  [OK] Already gone, removing stale entry")
             remaining.discard(folder_name)
             continue
 
