@@ -4,6 +4,7 @@ Migrated from tests/utils/github_operations/test_issue_manager_label_update.py.
 Tests the extracted function in mcp_coder.workflow_utils.label_transitions.
 """
 
+import logging
 from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import Mock, patch
@@ -11,6 +12,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from mcp_coder.mcp_workspace_github import (
+    ClosingPRRef,
     IssueBranchManager,
     IssueManager,
 )
@@ -98,7 +100,9 @@ class TestLabelTransitions:
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
-                IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=(["123-feature"], []),
             ),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
@@ -163,8 +167,8 @@ class TestLabelTransitions:
             ),
             patch.object(
                 IssueBranchManager,
-                "get_linked_branches",
-                return_value=[],
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=([], []),
             ),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
@@ -176,6 +180,56 @@ class TestLabelTransitions:
 
             assert result is False
             assert "WARNING" in caplog.text or "not linked" in caplog.text.lower()
+
+    @pytest.mark.parametrize(
+        ("lookup_return", "expected"),
+        [
+            (([], [ClosingPRRef(42, "123-feature")]), True),
+            (([], [ClosingPRRef(42, "other-branch")]), False),
+            (None, False),
+        ],
+        ids=["closing_pr_matches", "closing_pr_other_branch", "lookup_failed"],
+    )
+    def test_update_workflow_label_linkage_via_closing_prs(
+        self,
+        mock_github: Mock,
+        _mock_git_repo: Any,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        lookup_return: Any,
+        expected: bool,
+    ) -> None:
+        """Tests linkage via closing-PR head refs once linked branches are gone."""
+        with (
+            patch.object(IssueManager, "_get_repository", return_value=mock_github),
+            patch(
+                "mcp_coder.workflow_utils.label_transitions.load_labels_config",
+                return_value=MOCK_LABELS_CONFIG,
+            ),
+            patch.object(
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=lookup_return,
+            ),
+            patch(
+                "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
+                return_value="123-feature",
+            ),
+            patch.object(
+                IssueManager, "transition_issue_label", return_value=True
+            ) as mock_transition,
+        ):
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
+            result = update_workflow_label(manager, "implementing", "code_review")
+
+            assert result is expected
+            if expected:
+                mock_transition.assert_called_once()
+                assert mock_transition.call_args[0][0] == 123
+            else:
+                mock_transition.assert_not_called()
+            if lookup_return is None:
+                assert any(r.levelno == logging.ERROR for r in caplog.records)
 
     def test_update_workflow_label_already_correct_state(
         self,
@@ -192,7 +246,9 @@ class TestLabelTransitions:
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
-                IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=(["123-feature"], []),
             ),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
@@ -224,7 +280,9 @@ class TestLabelTransitions:
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
-                IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=(["123-feature"], []),
             ),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
@@ -257,7 +315,9 @@ class TestLabelTransitions:
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
-                IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=(["123-feature"], []),
             ),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
@@ -287,7 +347,9 @@ class TestLabelTransitions:
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
-                IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=(["123-feature"], []),
             ),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
@@ -320,7 +382,9 @@ class TestLabelTransitions:
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
-                IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=(["123-feature"], []),
             ),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
@@ -356,7 +420,9 @@ class TestLabelTransitions:
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
-                IssueBranchManager, "get_linked_branches", return_value=["123-feature"]
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=(["123-feature"], []),
             ),
             patch(
                 "mcp_coder.workflow_utils.label_transitions.get_current_branch_name",
@@ -394,8 +460,10 @@ class TestLabelTransitions:
                 return_value=MOCK_LABELS_CONFIG,
             ),
             patch.object(
-                IssueBranchManager, "get_linked_branches", return_value=[]
-            ) as mock_get_linked,
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=([], []),
+            ) as mock_lookup,
             patch.object(
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
@@ -406,7 +474,7 @@ class TestLabelTransitions:
             )
 
             assert result is True
-            mock_get_linked.assert_not_called()
+            mock_lookup.assert_not_called()
 
             mock_transition.assert_called_once()
             call_args = mock_transition.call_args
@@ -480,7 +548,11 @@ class TestLabelTransitions:
                 "mcp_coder.workflow_utils.label_transitions.load_labels_config",
                 return_value=MOCK_LABELS_CONFIG,
             ),
-            patch.object(IssueBranchManager, "get_linked_branches", return_value=[]),
+            patch.object(
+                IssueBranchManager,
+                "get_linked_branch_and_closing_prs_or_none",
+                return_value=([], []),
+            ) as mock_lookup,
             patch.object(
                 IssueManager, "transition_issue_label", return_value=True
             ) as mock_transition,
@@ -491,6 +563,7 @@ class TestLabelTransitions:
             )
 
             assert result is True
+            mock_lookup.assert_not_called()
 
             mock_transition.assert_called_once()
             call_args = mock_transition.call_args
