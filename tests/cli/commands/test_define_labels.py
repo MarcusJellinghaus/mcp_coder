@@ -149,7 +149,7 @@ class TestWorkflowLabelsFromConfig:
             "status-17f-timeout:code-review-llm-timeout",
             "status-17f-mcp:code-review-mcp-unavailable",
             "status-17f-tasks:code-review-open-tasks",
-            "status-17f-ci-unknown:code-review-ci-undeterminable",
+            "status-17f-ci-unknown:code-review-ci-unknown",
         ]
 
         actual_names = [label["name"] for label in labels_config["workflow_labels"]]

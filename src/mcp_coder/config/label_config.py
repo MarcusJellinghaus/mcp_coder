@@ -82,6 +82,8 @@ def validate_labels_config(labels_config: dict[str, Any]) -> None:
     1. Exactly one label has "default": true
     2. Each "promotable": true label has a next label in workflow_labels list
     3. No promotable label's next target has "failure": true
+    4. Each label name is at most 50 characters (GitHub limit)
+    5. Each label description is at most 100 characters (GitHub limit)
 
     Raises:
         ValueError: If any label config constraint is violated.
@@ -109,6 +111,21 @@ def validate_labels_config(labels_config: dict[str, Any]) -> None:
                     f"Label '{label['internal_id']}' is promotable but its "
                     f"next label '{next_label['internal_id']}' has failure: true"
                 )
+
+    # Check GitHub length limits
+    for label in labels:
+        name_len = len(label["name"])
+        if name_len > 50:
+            raise ValueError(
+                f"Label '{label['internal_id']}' name is {name_len} characters "
+                f"(GitHub limit: 50)"
+            )
+        desc_len = len(label.get("description", ""))
+        if desc_len > 100:
+            raise ValueError(
+                f"Label '{label['internal_id']}' description is {desc_len} "
+                f"characters (GitHub limit: 100)"
+            )
 
 
 # The TOML boilerplate below duplicates utils.pyproject_config._load_pyproject on
