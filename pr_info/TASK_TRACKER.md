@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Rename the `status-17f-ci-unknown` label
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: rename label `name` in `labels.json`, update expected names in tests and docs
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Enforce GitHub label length limits in `validate_labels_config()`
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: add name/description length tests, then length checks in `validate_labels_config()`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against the base branch
+- [ ] PR summary prepared
