@@ -23,4 +23,6 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 <!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
 
+- [x] [Step 1](./steps/step_1.md): enable `UP`, apply safe + UP042 fixes, format, verify
+
 ## Pull Request
