@@ -173,7 +173,16 @@ def _branch_head(project_dir: Path) -> tuple[str | None, str | None]:
 
 
 def _order_key(field: CommentField) -> float:
-    """Sort key placing ``field`` by ``FIELD_ORDER``; unknown labels before Next step."""
+    """Sort key placing ``field`` by ``FIELD_ORDER``; unknown labels before Next step.
+
+    Args:
+        field: ``(label, value)`` comment field.
+
+    Returns:
+        The label's index in ``FIELD_ORDER`` when known; otherwise
+        ``FIELD_ORDER.index("Next step") - 0.5`` so unknown fields sort
+        just before "Next step".
+    """
     label = field[0]
     if label in FIELD_ORDER:
         return FIELD_ORDER.index(label)
