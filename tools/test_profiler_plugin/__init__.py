@@ -30,7 +30,7 @@ class TestProfiler:
     def sanitize_test_name(self, nodeid: str) -> str:
         """
         Convert pytest node ID to a safe filename.
-        
+
         Example: tests/test_file.py::TestClass::test_method
         Becomes: tests_test_file__TestClass__test_method
         """
@@ -54,7 +54,7 @@ def pytest_configure(config):
     """Called after command line options have been parsed."""
     # Ensure output directory exists
     PROF_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     # Get total number of tests (if available)
     # This will be updated in pytest_collection_modifyitems
     pass
@@ -75,27 +75,27 @@ def pytest_runtest_protocol(item, nextitem):
     _profiler.test_count += 1
     nodeid = item.nodeid
     prof_path = _profiler.get_prof_path(nodeid)
-    
+
     # Create profiler
     profiler = cProfile.Profile()
-    
+
     # Start profiling and timing
     start_time = time.time()
     profiler.enable()
-    
+
     # Run the test (setup, call, teardown)
     outcome = yield
-    
+
     # Stop profiling
     profiler.disable()
     duration = time.time() - start_time
-    
+
     # Save profile data
     profiler.dump_stats(str(prof_path))
-    
+
     # Store duration
     _profiler.durations[nodeid] = duration
-    
+
     # Print progress
     slow_marker = " SLOW" if duration >= DURATION_THRESHOLD_SECONDS else ""
     progress = f"[{_profiler.test_count}/{_profiler.total_tests}]"
@@ -104,26 +104,28 @@ def pytest_runtest_protocol(item, nextitem):
 
 def pytest_sessionfinish(session, exitstatus):
     """Called after whole test run finished, right before returning exit status."""
-    
+
     # Save durations to JSON
     durations_path = PROF_OUTPUT_DIR / "durations.json"
-    
+
     # Sort by duration (slowest first)
-    sorted_durations = dict(sorted(
-        _profiler.durations.items(),
-        key=lambda x: x[1],
-        reverse=True
-    ))
-    
+    sorted_durations = dict(
+        sorted(_profiler.durations.items(), key=lambda x: x[1], reverse=True)
+    )
+
     durations_data = {
         "total_tests": _profiler.total_tests,
         "threshold_seconds": DURATION_THRESHOLD_SECONDS,
-        "slow_tests_count": sum(1 for d in _profiler.durations.values() if d >= DURATION_THRESHOLD_SECONDS),
-        "durations": sorted_durations
+        "slow_tests_count": sum(
+            1 for d in _profiler.durations.values() if d >= DURATION_THRESHOLD_SECONDS
+        ),
+        "durations": sorted_durations,
     }
-    
-    with open(durations_path, 'w') as f:
+
+    with open(durations_path, "w") as f:
         json.dump(durations_data, f, indent=2)
-    
+
     print(f"\n[OK] Saved {len(_profiler.durations)} test durations to {durations_path}")
-    print(f"[OK] Found {durations_data['slow_tests_count']} slow tests (>{DURATION_THRESHOLD_SECONDS}s)")
+    print(
+        f"[OK] Found {durations_data['slow_tests_count']} slow tests (>{DURATION_THRESHOLD_SECONDS}s)"
+    )

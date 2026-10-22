@@ -1,4 +1,5 @@
 """Minimal TUI for manual terminal verification (issue #780)."""
+
 from textual.app import App, ComposeResult
 from textual.widgets import RichLog
 

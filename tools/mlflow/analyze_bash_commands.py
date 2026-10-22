@@ -47,14 +47,43 @@ PURPOSE_MCP: Dict[str, Optional[str]] = {
 }
 
 _GIT_WRITE = {
-    "commit", "add", "push", "rebase", "checkout", "reset", "stash", "merge",
-    "pull", "cherry-pick", "revert", "restore", "switch", "clean", "mv", "rm",
-    "tag", "init", "remote",
+    "commit",
+    "add",
+    "push",
+    "rebase",
+    "checkout",
+    "reset",
+    "stash",
+    "merge",
+    "pull",
+    "cherry-pick",
+    "revert",
+    "restore",
+    "switch",
+    "clean",
+    "mv",
+    "rm",
+    "tag",
+    "init",
+    "remote",
 }
 _GIT_READ = {
-    "status", "diff", "log", "show", "branch", "rev-parse", "ls-files",
-    "ls-tree", "describe", "blame", "fetch", "merge-base", "cat-file",
-    "shortlog", "rev-list", "config",
+    "status",
+    "diff",
+    "log",
+    "show",
+    "branch",
+    "rev-parse",
+    "ls-files",
+    "ls-tree",
+    "describe",
+    "blame",
+    "fetch",
+    "merge-base",
+    "cat-file",
+    "shortlog",
+    "rev-list",
+    "config",
 }
 _ISSUE_WRITE = {"create", "edit", "comment", "close", "reopen", "delete", "lock"}
 _PR_WRITE = {"create", "edit", "comment", "close", "merge", "review", "ready"}
@@ -110,7 +139,18 @@ def classify_purpose(command: str) -> str:
         return "file_write"
     if verb in ("echo", "printf") and (">" in eff or ">>" in eff):
         return "file_write"
-    if verb in ("tee", "cp", "copy", "mv", "move", "rm", "del", "mkdir", "touch", "rmdir"):
+    if verb in (
+        "tee",
+        "cp",
+        "copy",
+        "mv",
+        "move",
+        "rm",
+        "del",
+        "mkdir",
+        "touch",
+        "rmdir",
+    ):
         return "file_write"
     if verb in ("sed", "awk", "perl", "sort", "uniq", "wc", "jq", "cut", "tr", "xargs"):
         return "text_proc"
@@ -118,7 +158,17 @@ def classify_purpose(command: str) -> str:
         return "nav_env"
     if verb in ("pytest",) or (verb.endswith("python") and "pytest" in eff):
         return "run_tests"
-    if verb in ("mypy", "ruff", "pylint", "black", "isort", "tach", "vulture", "bandit", "flake8"):
+    if verb in (
+        "mypy",
+        "ruff",
+        "pylint",
+        "black",
+        "isort",
+        "tach",
+        "vulture",
+        "bandit",
+        "flake8",
+    ):
         return "run_checks"
     if "python" in verb or verb in ("py", "python3"):
         return "run_python"
@@ -177,9 +227,9 @@ def print_report(summary: Dict[str, Any], n_samples: int) -> None:
     dupes: List[Tuple[str, int]] = []
     for purpose, count in by_purpose.most_common():
         mcp = PURPOSE_MCP.get(purpose)
-        (dupes if mcp and mcp not in ("n/a (shell navigation / env only)",) else gaps).append(
-            (purpose, count)
-        )
+        (
+            dupes if mcp and mcp not in ("n/a (shell navigation / env only)",) else gaps
+        ).append((purpose, count))
 
     print("=" * 64)
     print(f"BASH BY PURPOSE: {summary['total']} commands")

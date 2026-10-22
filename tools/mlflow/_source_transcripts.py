@@ -126,7 +126,7 @@ def load_jsonl(path: Path) -> List[Dict[str, Any]]:
 
 
 def index_transcript(
-    lines: List[Dict[str, Any]]
+    lines: List[Dict[str, Any]],
 ) -> Tuple[
     List[Tuple[str, str, Dict[str, Any], Dict[str, Any]]], Dict[str, Dict[str, Any]]
 ]:
@@ -163,9 +163,7 @@ def index_transcript(
     return calls, results
 
 
-def extract_session_events(
-    path: Path, allow: Dict[str, Any]
-) -> List[Dict[str, Any]]:
+def extract_session_events(path: Path, allow: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Build one event per tool-use call in an interactive transcript file."""
     calls, results = index_transcript(load_jsonl(path))
     calls3 = [(c[0], c[1], c[2]) for c in calls]

@@ -52,9 +52,8 @@ from typing import TYPE_CHECKING
 # Protected Processes - NEVER kill these, just report as blocking
 # =============================================================================
 PROTECTED_PROCESSES: set[str] = {
-    "explorer.exe",      # Windows Explorer - killing causes desktop issues
+    "explorer.exe",  # Windows Explorer - killing causes desktop issues
 }
-
 
 
 if TYPE_CHECKING:
@@ -227,7 +226,10 @@ def _kill_detected_lockers(locking_processes: list[str]) -> list[str]:
 # Windows reserved device names that cannot be used as file/folder names
 # via standard Win32 API calls. The \\?\ prefix bypasses this restriction.
 _WINDOWS_RESERVED_NAMES: set[str] = {
-    "CON", "PRN", "AUX", "NUL",
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
     *(f"COM{i}" for i in range(1, 10)),
     *(f"LPT{i}" for i in range(1, 10)),
 }
@@ -266,7 +268,10 @@ def _delete_reserved_name(path: Path) -> tuple[bool, str]:
             # Use rd /s /q with the \\?\ path for directories
             result = subprocess.run(
                 ["cmd", "/c", "rd", "/s", "/q", unc_path],
-                capture_output=True, text=True, timeout=30, check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
             )
             if result.returncode == 0 or not path.exists():
                 return True, f"Deleted reserved-name directory via rd: {path.name}"
@@ -275,7 +280,10 @@ def _delete_reserved_name(path: Path) -> tuple[bool, str]:
             # Use del with the \\?\ path for files
             result = subprocess.run(
                 ["cmd", "/c", "del", "/f", "/q", unc_path],
-                capture_output=True, text=True, timeout=30, check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
             )
             if result.returncode == 0 or not path.exists():
                 return True, f"Deleted reserved-name file via del: {path.name}"
@@ -555,7 +563,9 @@ def _delete_folder(
             if sys.version_info >= (3, 12):
                 shutil.rmtree(path, onexc=_rmtree_remove_readonly)
             else:
-                shutil.rmtree(path, onerror=_rmtree_remove_readonly)  # pylint: disable=deprecated-argument
+                shutil.rmtree(
+                    path, onerror=_rmtree_remove_readonly
+                )  # pylint: disable=deprecated-argument
 
             if not path.exists():
                 return True, "Deleted directly", moved_files, killed_procs
@@ -593,7 +603,12 @@ def _delete_folder(
                 moved_files.append(locked_path.name)
                 # Check if this move removed the entire target folder
                 if not path.exists():
-                    return True, "Folder removed (moved to staging)", moved_files, killed_procs
+                    return (
+                        True,
+                        "Folder removed (moved to staging)",
+                        moved_files,
+                        killed_procs,
+                    )
                 continue  # Retry delete
 
             # Step 2: Move failed - escalate to kill (if allowed)
@@ -624,7 +639,12 @@ def _delete_folder(
                 moved_files.append(locked_path.name)
                 # Check if this move removed the entire target folder
                 if not path.exists():
-                    return True, "Folder removed (moved to staging)", moved_files, killed_procs
+                    return (
+                        True,
+                        "Folder removed (moved to staging)",
+                        moved_files,
+                        killed_procs,
+                    )
                 continue  # Retry delete
 
             # Can't handle this file
@@ -643,9 +663,7 @@ def _delete_folder(
             # [WinError 1] "Incorrect function" typically means a reserved
             # device name (NUL, CON, etc.) — scan and remove them, then retry
             if sys.platform == "win32":
-                reserved_deleted = _delete_reserved_names_recursive(
-                    path, quiet=quiet
-                )
+                reserved_deleted = _delete_reserved_names_recursive(path, quiet=quiet)
                 if reserved_deleted:
                     log(
                         f"Deleted {len(reserved_deleted)} reserved-name"
@@ -825,7 +843,9 @@ def _retry_pending(
         return 0
 
     if not quiet:
-        print(f"Found {len(entries)} pending deletion(s) in {workspace_base / _TO_BE_DELETED_FILENAME}")
+        print(
+            f"Found {len(entries)} pending deletion(s) in {workspace_base / _TO_BE_DELETED_FILENAME}"
+        )
 
     exit_code = 0
     remaining = set(entries)
@@ -862,7 +882,9 @@ def _retry_pending(
         )
 
         if not quiet:
-            _print_deletion_summary(folder_path, success, message, moved_files, killed_procs)
+            _print_deletion_summary(
+                folder_path, success, message, moved_files, killed_procs
+            )
 
         if success:
             remaining.discard(folder_name)
@@ -887,7 +909,9 @@ def _retry_pending(
                 if deleted > 0 or still_locked > 0:
                     print(f"  Cleaned: {deleted} item(s)")
                     if still_locked > 0:
-                        print(f"  Still locked: {still_locked} item(s) (will retry next run)")
+                        print(
+                            f"  Still locked: {still_locked} item(s) (will retry next run)"
+                        )
                 else:
                     print("  Staging directory is empty")
 
@@ -945,7 +969,9 @@ Note: --kill-lockers (-k) is STRONGLY RECOMMENDED when using --delete.
 
     # --retry-pending mode: read .to_be_deleted and process each entry
     if args.retry_pending:
-        return _retry_pending(args.retry_pending, quiet=args.quiet, no_cleanup=args.no_cleanup)
+        return _retry_pending(
+            args.retry_pending, quiet=args.quiet, no_cleanup=args.no_cleanup
+        )
 
     exit_code = 0
     any_deletions = False
@@ -1004,7 +1030,9 @@ Note: --kill-lockers (-k) is STRONGLY RECOMMENDED when using --delete.
                 if deleted > 0 or remaining > 0:
                     print(f"  Cleaned: {deleted} item(s)")
                     if remaining > 0:
-                        print(f"  Still locked: {remaining} item(s) (will retry next run)")
+                        print(
+                            f"  Still locked: {remaining} item(s) (will retry next run)"
+                        )
                 else:
                     print("  Staging directory is empty")
 

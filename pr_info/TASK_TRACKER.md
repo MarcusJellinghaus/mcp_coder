@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Format `tools/` files before lint fixes
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: run formatter on `tools/`, keep only the 8 expected files (or files with ruff findings)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `style(tools): format files touched by ruff fixes`
+- [x] Implementation: run formatter on `tools/`, keep only the 8 expected files (or files with ruff findings)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `style(tools): format files touched by ruff fixes`
 
 ### Step 2: Ruff config — select `PLW1510`, add `tools/` ignores
 See [step_2.md](./steps/step_2.md)

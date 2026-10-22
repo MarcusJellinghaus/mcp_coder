@@ -68,7 +68,9 @@ def main() -> None:
     # headless
     parser.add_argument("--limit", type=int, help="[headless] Max runs to scan")
     parser.add_argument(
-        "--db-path", type=str, help="[headless] Path to MLflow SQLite DB (auto-detected)"
+        "--db-path",
+        type=str,
+        help="[headless] Path to MLflow SQLite DB (auto-detected)",
     )
     # interactive
     parser.add_argument(
