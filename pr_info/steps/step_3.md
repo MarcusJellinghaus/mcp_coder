@@ -18,7 +18,9 @@
 
 ## WHAT
 
-Test: add `assert "3" in epilog, "Epilog should document exit code 3"`.
+Test: add `assert "3  Ambiguous" in epilog, "Epilog should document exit code 3"`.
+A bare `"3" in epilog` would already pass on the "3. Otherwise" resolution-order line,
+so the assertion targets the exit-code entry itself.
 
 Epilog text:
 
