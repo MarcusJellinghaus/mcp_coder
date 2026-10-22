@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Move checkout-issue-branch tests into their own file — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: create `tests/cli/commands/test_gh_tool_checkout.py` with moved fixtures/classes, remove them from `test_gh_tool.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `tests/cli/commands/test_gh_tool_checkout.py` with moved fixtures/classes, remove them from `test_gh_tool.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Resolve via PR fallback, pre-create checks, exit code 3 — [step_2.md](./steps/step_2.md)
 
