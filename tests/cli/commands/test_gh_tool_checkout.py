@@ -4,6 +4,7 @@ import argparse
 import logging
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -19,6 +20,7 @@ from mcp_coder.cli.commands.gh_tool import execute_checkout_issue_branch
 def mock_resolve_project_dir() -> Generator[MagicMock, None, None]:
     """Mock resolve_project_dir utility function."""
     with patch("mcp_coder.cli.commands.gh_tool.resolve_project_dir") as mock:
+        mock.return_value = Path("/test/project")
         yield mock
 
 
@@ -26,6 +28,11 @@ def mock_resolve_project_dir() -> Generator[MagicMock, None, None]:
 def mock_issue_manager() -> Generator[MagicMock, None, None]:
     """Mock IssueManager for checkout-issue-branch tests."""
     with patch("mcp_coder.cli.commands.gh_tool.IssueManager") as mock:
+        mock.return_value.get_issue.return_value = {
+            "number": 123,
+            "title": "Test issue",
+            "base_branch": "main",
+        }
         yield mock
 
 
@@ -33,6 +40,26 @@ def mock_issue_manager() -> Generator[MagicMock, None, None]:
 def mock_branch_manager() -> Generator[MagicMock, None, None]:
     """Mock IssueBranchManager for checkout-issue-branch tests."""
     with patch("mcp_coder.cli.commands.gh_tool.IssueBranchManager") as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_repo_identifier() -> Generator[MagicMock, None, None]:
+    """Mock get_repository_identifier returning a valid repo id."""
+    with patch("mcp_coder.cli.commands.gh_tool.get_repository_identifier") as mock:
+        mock.return_value = MagicMock(
+            owner="owner",
+            repo_name="repo",
+            https_url="https://github.com/owner/repo",
+        )
+        yield mock
+
+
+@pytest.fixture
+def mock_execute_command() -> Generator[MagicMock, None, None]:
+    """Mock execute_command for git ls-remote (success, no branches)."""
+    with patch("mcp_coder.cli.commands.gh_tool.execute_command") as mock:
+        mock.return_value = MagicMock(return_code=0, stdout="", stderr="")
         yield mock
 
 
@@ -52,34 +79,49 @@ def mock_checkout_branch() -> Generator[MagicMock, None, None]:
         yield mock
 
 
+@pytest.fixture
+def checkout_mocks(
+    mock_resolve_project_dir: MagicMock,
+    mock_issue_manager: MagicMock,
+    mock_branch_manager: MagicMock,
+    mock_repo_identifier: MagicMock,
+    mock_execute_command: MagicMock,
+    mock_fetch_remote: MagicMock,
+    mock_checkout_branch: MagicMock,
+) -> dict[str, MagicMock]:
+    """All checkout-issue-branch mocks, keyed by short name."""
+    return {
+        "resolve": mock_resolve_project_dir,
+        "issue": mock_issue_manager,
+        "branch": mock_branch_manager,
+        "repo_id": mock_repo_identifier,
+        "exec": mock_execute_command,
+        "fetch": mock_fetch_remote,
+        "checkout": mock_checkout_branch,
+    }
+
+
+def _ls_remote_stdout(*branches: str) -> str:
+    """Build ``git ls-remote --heads`` output for the given branch names."""
+    return "".join(f"abc123\trefs/heads/{b}\n" for b in branches)
+
+
 # ============================================================================
 # Test Classes for checkout-issue-branch Exit Codes
 # ============================================================================
 
 
 class TestCheckoutIssueBranchExitCodes:
-    """Tests for checkout-issue-branch exit codes (0, 1, 2)."""
+    """Tests for checkout-issue-branch exit codes (0, 1, 2, 3)."""
 
     def test_checkout_existing_branch_success(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_branch_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
-        mock_checkout_branch: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Linked branch exists, checkout succeeds -> exit 0, branch name on stdout."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.return_value = {
-            "number": 123,
-            "title": "Test issue",
-            "base_branch": "main",
-        }
-        mock_branch_manager.return_value.get_linked_branches.return_value = [
-            "123-test-issue"
-        ]
+        """Fallback finds a branch, checkout succeeds -> exit 0, branch name on stdout."""
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = "123-test-issue"
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
         result = execute_checkout_issue_branch(args)
@@ -87,26 +129,27 @@ class TestCheckoutIssueBranchExitCodes:
         assert result == 0
         captured = capsys.readouterr()
         assert captured.out.strip() == "123-test-issue"
+        mgr.get_branch_with_pr_fallback.assert_called_once_with(123, "owner", "repo")
+        checkout_mocks["branch"].assert_called_once_with(
+            project_dir=Path("/test/project"),
+            repo_url="https://github.com/owner/repo",
+        )
 
     def test_checkout_creates_new_branch_success(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_branch_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
-        mock_checkout_branch: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """No linked branches, creation succeeds, checkout succeeds -> exit 0."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.return_value = {
+        """No branch found, no candidates, creation succeeds -> exit 0."""
+        checkout_mocks["issue"].return_value.get_issue.return_value = {
             "number": 456,
             "title": "New feature",
             "base_branch": "develop",
         }
-        mock_branch_manager.return_value.get_linked_branches.return_value = []
-        mock_branch_manager.return_value.create_remote_branch_for_issue.return_value = {
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = None
+        mgr.get_linked_branch_and_closing_prs_or_none.return_value = ([], [])
+        mgr.create_remote_branch_for_issue.return_value = {
             "success": True,
             "branch_name": "456-new-feature",
             "error": None,
@@ -119,25 +162,25 @@ class TestCheckoutIssueBranchExitCodes:
         assert result == 0
         captured = capsys.readouterr()
         assert captured.out.strip() == "456-new-feature"
+        checkout_mocks["exec"].assert_called_once_with(
+            ["git", "ls-remote", "--heads", "origin"], cwd=str(Path("/test/project"))
+        )
 
     def test_checkout_branch_creation_fails(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_branch_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """No linked branches, creation fails -> exit 1."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.return_value = {
+        """No branch found, creation fails -> exit 1."""
+        checkout_mocks["issue"].return_value.get_issue.return_value = {
             "number": 789,
             "title": "Some issue",
             "base_branch": "main",
         }
-        mock_branch_manager.return_value.get_linked_branches.return_value = []
-        mock_branch_manager.return_value.create_remote_branch_for_issue.return_value = {
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = None
+        mgr.get_linked_branch_and_closing_prs_or_none.return_value = ([], [])
+        mgr.create_remote_branch_for_issue.return_value = {
             "success": False,
             "branch_name": "",
             "error": "API failure",
@@ -153,25 +196,13 @@ class TestCheckoutIssueBranchExitCodes:
 
     def test_checkout_git_checkout_fails(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_branch_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
-        mock_checkout_branch: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Branch found but git checkout fails -> exit 2."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.return_value = {
-            "number": 123,
-            "title": "Test issue",
-            "base_branch": "main",
-        }
-        mock_branch_manager.return_value.get_linked_branches.return_value = [
-            "123-test-issue"
-        ]
-        mock_checkout_branch.return_value = False
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = "123-test-issue"
+        checkout_mocks["checkout"].return_value = False
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
         with caplog.at_level(logging.DEBUG):
@@ -182,15 +213,11 @@ class TestCheckoutIssueBranchExitCodes:
 
     def test_checkout_issue_not_found(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """get_issue returns empty issue (number=0) -> exit 1."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.return_value = {
+        checkout_mocks["issue"].return_value.get_issue.return_value = {
             "number": 0,
             "title": "",
             "base_branch": None,
@@ -220,15 +247,11 @@ class TestCheckoutIssueBranchExitCodes:
 
     def test_checkout_unexpected_error(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Unexpected exception -> exit 2."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.side_effect = RuntimeError(
+        checkout_mocks["issue"].return_value.get_issue.side_effect = RuntimeError(
             "Unexpected"
         )
 
@@ -239,6 +262,37 @@ class TestCheckoutIssueBranchExitCodes:
         assert result == 2
         assert "Unexpected" in caplog.text
 
+    @pytest.mark.parametrize(
+        "case",
+        ["no_repo_id", "lookup_none", "ls_remote_fails", "fallback_raises"],
+    )
+    def test_checkout_error_exit_2(
+        self,
+        checkout_mocks: dict[str, MagicMock],
+        case: str,
+    ) -> None:
+        """Repo id, lookup, ls-remote or fallback failure -> exit 2, no create."""
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = None
+        mgr.get_linked_branch_and_closing_prs_or_none.return_value = ([], [])
+        if case == "no_repo_id":
+            checkout_mocks["repo_id"].return_value = None
+        elif case == "lookup_none":
+            mgr.get_linked_branch_and_closing_prs_or_none.return_value = None
+        elif case == "ls_remote_fails":
+            checkout_mocks["exec"].return_value = MagicMock(
+                return_code=1, stdout="", stderr="fatal: no remote"
+            )
+        else:
+            mgr.get_branch_with_pr_fallback.side_effect = ValueError("API error")
+
+        args = argparse.Namespace(issue_number=123, project_dir=None)
+        result = execute_checkout_issue_branch(args)
+
+        assert result == 2
+        mgr.create_remote_branch_for_issue.assert_not_called()
+        checkout_mocks["checkout"].assert_not_called()
+
 
 # ============================================================================
 # Test Classes for checkout-issue-branch Behavior
@@ -248,53 +302,163 @@ class TestCheckoutIssueBranchExitCodes:
 class TestCheckoutIssueBranchBehavior:
     """Tests for checkout-issue-branch behavioral correctness."""
 
-    def test_checkout_uses_first_linked_branch(
+    def test_checkout_pr_head_via_fallback(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_branch_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
-        mock_checkout_branch: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """When multiple branches linked, uses first."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.return_value = {
-            "number": 123,
-            "title": "Test",
-            "base_branch": "main",
-        }
-        mock_branch_manager.return_value.get_linked_branches.return_value = [
-            "123-first-branch",
-            "123-second-branch",
-        ]
+        """PR open, linkedBranches empty: fallback returns PR head, nothing created."""
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_linked_branches.return_value = []
+        mgr.get_branch_with_pr_fallback.return_value = "123-pr-head"
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
         result = execute_checkout_issue_branch(args)
 
         assert result == 0
-        captured = capsys.readouterr()
-        assert captured.out.strip() == "123-first-branch"
+        assert capsys.readouterr().out.strip() == "123-pr-head"
+        checkout_mocks["checkout"].assert_called_once_with(
+            "123-pr-head", Path("/test/project")
+        )
+        mgr.create_remote_branch_for_issue.assert_not_called()
+        mgr.get_linked_branch_and_closing_prs_or_none.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("lookup", "remote", "expected_branch", "expected_label"),
+        [
+            pytest.param(
+                (["123-linked"], []),
+                [],
+                "123-linked",
+                "linked branch 123-linked",
+                id="one_linked",
+            ),
+            pytest.param(
+                ([], [MagicMock(number=42, head_ref_name="123-b")]),
+                [],
+                "123-b",
+                "closing PR #42 -> 123-b",
+                id="one_closing_pr",
+            ),
+            pytest.param(
+                ([], []),
+                ["main", "123-remote"],
+                "123-remote",
+                "remote branch 123-remote",
+                id="one_remote",
+            ),
+            pytest.param(
+                ([], [MagicMock(number=42, head_ref_name="123-b")]),
+                ["123-b"],
+                "123-b",
+                "closing PR #42 -> 123-b",
+                id="closing_pr_and_remote_dedupe",
+            ),
+            pytest.param(
+                ([], []),
+                ["feature/123_x", "1234-x"],
+                "feature/123_x",
+                "remote branch feature/123_x",
+                id="remote_prefix_match_ignores_1234",
+            ),
+        ],
+    )
+    def test_checkout_single_precreate_candidate(
+        self,
+        checkout_mocks: dict[str, MagicMock],
+        caplog: pytest.LogCaptureFixture,
+        capsys: pytest.CaptureFixture[str],
+        lookup: tuple[list[str], list[Any]],
+        remote: list[str],
+        expected_branch: str,
+        expected_label: str,
+    ) -> None:
+        """Exactly one pre-create candidate -> checked out, logged, nothing created."""
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = None
+        mgr.get_linked_branch_and_closing_prs_or_none.return_value = lookup
+        checkout_mocks["exec"].return_value = MagicMock(
+            return_code=0, stdout=_ls_remote_stdout(*remote), stderr=""
+        )
+
+        args = argparse.Namespace(issue_number=123, project_dir=None)
+        with caplog.at_level(logging.INFO):
+            result = execute_checkout_issue_branch(args)
+
+        assert result == 0
+        assert capsys.readouterr().out.strip() == expected_branch
+        checkout_mocks["checkout"].assert_called_once_with(
+            expected_branch, Path("/test/project")
+        )
+        mgr.create_remote_branch_for_issue.assert_not_called()
+        assert expected_label in caplog.text
+
+    @pytest.mark.parametrize(
+        ("lookup", "remote", "expected_labels"),
+        [
+            pytest.param(
+                (["123-first-branch", "123-second-branch"], []),
+                [],
+                [
+                    "linked branch 123-first-branch",
+                    "linked branch 123-second-branch",
+                ],
+                id="two_linked",
+            ),
+            pytest.param(
+                (["123-linked"], [MagicMock(number=42, head_ref_name="123-b")]),
+                [],
+                ["linked branch 123-linked", "closing PR #42 -> 123-b"],
+                id="linked_and_closing_pr",
+            ),
+            pytest.param(
+                ([], []),
+                ["123-a", "123-b"],
+                ["remote branch 123-a", "remote branch 123-b"],
+                id="two_remote",
+            ),
+        ],
+    )
+    def test_checkout_ambiguous_candidates_exit_3(
+        self,
+        checkout_mocks: dict[str, MagicMock],
+        caplog: pytest.LogCaptureFixture,
+        lookup: tuple[list[str], list[Any]],
+        remote: list[str],
+        expected_labels: list[str],
+    ) -> None:
+        """Two or more pre-create candidates -> exit 3, all logged, nothing created."""
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = None
+        mgr.get_linked_branch_and_closing_prs_or_none.return_value = lookup
+        checkout_mocks["exec"].return_value = MagicMock(
+            return_code=0, stdout=_ls_remote_stdout(*remote), stderr=""
+        )
+
+        args = argparse.Namespace(issue_number=123, project_dir=None)
+        with caplog.at_level(logging.DEBUG):
+            result = execute_checkout_issue_branch(args)
+
+        assert result == 3
+        for label in expected_labels:
+            assert label in caplog.text
+        mgr.create_remote_branch_for_issue.assert_not_called()
+        checkout_mocks["checkout"].assert_not_called()
 
     def test_checkout_passes_base_branch_to_create(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_branch_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
-        mock_checkout_branch: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
     ) -> None:
         """Verifies base_branch from issue data is passed to create_remote_branch_for_issue."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.return_value = {
+        checkout_mocks["issue"].return_value.get_issue.return_value = {
             "number": 100,
             "title": "Feature",
             "base_branch": "develop",
         }
-        mock_branch_manager.return_value.get_linked_branches.return_value = []
-        mock_branch_manager.return_value.create_remote_branch_for_issue.return_value = {
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = None
+        mgr.get_linked_branch_and_closing_prs_or_none.return_value = ([], [])
+        mgr.create_remote_branch_for_issue.return_value = {
             "success": True,
             "branch_name": "100-feature",
             "error": None,
@@ -304,32 +468,22 @@ class TestCheckoutIssueBranchBehavior:
         args = argparse.Namespace(issue_number=100, project_dir=None)
         execute_checkout_issue_branch(args)
 
-        mock_branch_manager.return_value.create_remote_branch_for_issue.assert_called_once_with(
+        mgr.create_remote_branch_for_issue.assert_called_once_with(
             100, base_branch="develop"
         )
 
     def test_checkout_git_fetch_called_before_operations(
         self,
-        mock_resolve_project_dir: MagicMock,
-        mock_issue_manager: MagicMock,
-        mock_branch_manager: MagicMock,
-        mock_fetch_remote: MagicMock,
-        mock_checkout_branch: MagicMock,
+        checkout_mocks: dict[str, MagicMock],
     ) -> None:
         """Verifies git fetch is called."""
-        project_dir = Path("/test/project")
-        mock_resolve_project_dir.return_value = project_dir
-        mock_issue_manager.return_value.get_issue.return_value = {
-            "number": 123,
-            "title": "Test",
-            "base_branch": "main",
-        }
-        mock_branch_manager.return_value.get_linked_branches.return_value = ["123-test"]
+        mgr = checkout_mocks["branch"].return_value
+        mgr.get_branch_with_pr_fallback.return_value = "123-test"
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
         execute_checkout_issue_branch(args)
 
-        mock_fetch_remote.assert_called_once_with(project_dir)
+        checkout_mocks["fetch"].assert_called_once_with(Path("/test/project"))
 
 
 # ============================================================================

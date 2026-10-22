@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Resolve via PR fallback, pre-create checks, exit code 3 — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: tests in `test_gh_tool_checkout.py` + `execute_checkout_issue_branch()` flow and `_find_precreate_candidates()` in `gh_tool.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_gh_tool_checkout.py` + `execute_checkout_issue_branch()` flow and `_find_precreate_candidates()` in `gh_tool.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Document resolution order and exit codes 0–3 — [step_3.md](./steps/step_3.md)
 
