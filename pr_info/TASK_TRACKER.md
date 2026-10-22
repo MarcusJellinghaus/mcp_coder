@@ -21,6 +21,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Enable ruff `PLE2502` (covers bandit `B613`) — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: add `"PLE2502"` with comment to `[tool.ruff.lint] select` in `pyproject.toml`; ruff check on `src tests tools` reports 0 hits
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Format `tools/` in CI, drop local formatter scripts — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: extend CI black/isort jobs to `tools`; delete `tools/format_all.bat`, `tools/format_all.sh`, `tools/black.bat`, `tools/iSort.bat`; update `python.md`, `README.md`, `development-process.md`; no remaining references outside `pr_info/`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes on the branch
+- [ ] PR summary prepared
