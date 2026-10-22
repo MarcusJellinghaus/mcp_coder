@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Shared ❌ helper `is_marked()` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `TestIsMarked` tests + `is_marked()` in `helpers.py`, used by `_find_marked_comment`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestIsMarked` tests + `is_marked()` in `helpers.py`, used by `_find_marked_comment`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Count only outstanding feedback in `_check_review_comments()` — [step_2.md](./steps/step_2.md)
 

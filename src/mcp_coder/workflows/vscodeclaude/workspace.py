@@ -23,7 +23,7 @@ from ...utils.subprocess_runner import (
 )
 from ...utils.text_io import write_lf_text
 from .config import get_vscodeclaude_config, sanitize_folder_name
-from .helpers import load_to_be_deleted
+from .helpers import is_marked, load_to_be_deleted
 from .templates import STATUS_FILE_NAME
 from .types import DEFAULT_PROMPT_TIMEOUT, SessionSpec, write_session_spec
 
@@ -639,8 +639,7 @@ def _find_marked_comment(
 ) -> str | None:
     """Return the body of the most recent ❌-marked comment, or None."""
     for comment in reversed(comments[-window:]):
-        first_line = comment["body"].splitlines()[0] if comment["body"] else ""
-        if marker in first_line:
+        if is_marked(comment["body"], marker):
             return comment["body"]
     return None
 

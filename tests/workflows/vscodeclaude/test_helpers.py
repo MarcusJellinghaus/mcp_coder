@@ -11,6 +11,7 @@ from mcp_coder.workflows.vscodeclaude.helpers import (
     get_issue_status,
     get_repo_short_name_from_full,
     get_stage_display_name,
+    is_marked,
     truncate_title,
 )
 
@@ -175,3 +176,22 @@ class TestDisplayHelpers:
         assert result.endswith("...")
         # Should have 47 'A's followed by '...'
         assert result == "A" * 47 + "..."
+
+
+class TestIsMarked:
+    """Test the first-line ❌ marker rule."""
+
+    @pytest.mark.parametrize(
+        ("body", "expected"),
+        [
+            ("", False),
+            ("## ❌ Implementation Failed\ndetails", True),
+            ("❌ handoff", True),
+            ("Implementation Failed\n❌ details", False),
+            ("\n## ❌ Implementation Failed", False),
+            ("plain comment", False),
+        ],
+    )
+    def test_is_marked(self, body: str, expected: bool) -> None:
+        """Marker counts only when it appears on the first line."""
+        assert is_marked(body) is expected
