@@ -7,21 +7,366 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.utils.subprocess_runner import CommandResult
 from mcp_coder.workflow_steps.rebase import (
+    RebaseOutcome,
     _attempt_rebase_and_push,
+    _base_sha,
+    _classify_failed_rebase,
     _get_rebase_target_branch,
 )
 from mcp_coder.workflows.implement.core import run_implement_workflow
+
+_MODULE = "mcp_coder.workflow_steps.rebase"
+_FULL_SHA = "abc1234def5678abc1234def5678abc1234def56"
+_TREE_OID = "0123456789abcdef0123456789abcdef01234567"
+
+
+def _result(
+    return_code: int = 0, stdout: str = "", execution_error: str | None = None
+) -> CommandResult:
+    """Build a CommandResult for the mocked ``execute_command``."""
+    return CommandResult(
+        return_code=return_code,
+        stdout=stdout,
+        stderr="",
+        timed_out=False,
+        execution_error=execution_error,
+    )
 
 
 @pytest.fixture(autouse=True)
 def mock_check_base_on_origin() -> Iterator[MagicMock]:
     """Treat every base branch as present on origin unless a test overrides it."""
     with patch(
-        "mcp_coder.workflow_steps.rebase.check_base_branch_on_origin",
+        f"{_MODULE}.check_base_branch_on_origin",
         return_value=None,
     ) as mock_check:
         yield mock_check
+
+
+@pytest.fixture(autouse=True)
+def mock_execute_command() -> Iterator[MagicMock]:
+    """Keep the rev-parse / merge-tree probes off real git; rev-parse fails."""
+    with patch(
+        f"{_MODULE}.execute_command", return_value=_result(return_code=1)
+    ) as mock_exec:
+        yield mock_exec
+
+
+class TestRebaseOutcome:
+    """Tests for the RebaseOutcome dataclass."""
+
+    @pytest.mark.parametrize(
+        "reason",
+        [
+            "dirty_tree",
+            "no_base",
+            "base_missing",
+            "conflict",
+            "rebase_failed",
+            "push_failed",
+        ],
+    )
+    def test_ok_false_for_every_failure_reason(self, reason: str) -> None:
+        """Test .ok is False for every non-"ok" reason."""
+        assert RebaseOutcome(reason).ok is False  # type: ignore[arg-type]
+
+    def test_ok_true_only_for_ok(self) -> None:
+        """Test .ok is True for the "ok" reason."""
+        assert RebaseOutcome("ok", "main", "abc1234").ok is True
+
+
+class TestBaseSha:
+    """Tests for _base_sha."""
+
+    def test_truncates_to_seven_chars(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test the SHA of origin/<base> is truncated to 7 chars."""
+        mock_execute_command.return_value = _result(stdout=f"{_FULL_SHA}\n")
+
+        assert _base_sha(tmp_path, "main") == "abc1234"
+        args = mock_execute_command.call_args
+        assert args[0][0] == [
+            "git",
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            "origin/main",
+        ]
+        assert args[1]["cwd"] == str(tmp_path)
+
+    def test_none_when_rev_parse_fails(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test a non-zero rev-parse yields None."""
+        mock_execute_command.return_value = _result(return_code=1)
+
+        assert _base_sha(tmp_path, "main") is None
+
+    def test_none_when_stdout_empty(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test an exit-0 rev-parse with no output yields None."""
+        mock_execute_command.return_value = _result(stdout="  \n")
+
+        assert _base_sha(tmp_path, "main") is None
+
+    def test_none_when_execute_raises(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test an exception from execute_command yields None."""
+        mock_execute_command.side_effect = OSError("no git")
+
+        assert _base_sha(tmp_path, "main") is None
+
+
+class TestClassifyFailedRebase:
+    """Tests for _classify_failed_rebase."""
+
+    def test_conflict_with_files(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test exit 1 + tree OID + files classifies as a conflict."""
+        mock_execute_command.return_value = _result(
+            return_code=1, stdout=f"{_TREE_OID}\nsrc/a.py\nsrc/b.py\n"
+        )
+
+        assert _classify_failed_rebase(tmp_path, "main") == (
+            "conflict",
+            ("src/a.py", "src/b.py"),
+        )
+        assert mock_execute_command.call_args[0][0] == [
+            "git",
+            "merge-tree",
+            "--write-tree",
+            "--name-only",
+            "--no-messages",
+            "origin/main",
+            "HEAD",
+        ]
+
+    def test_execution_error_is_rebase_failed(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test exit 1 + empty stdout + execution_error is a generic failure."""
+        mock_execute_command.return_value = _result(
+            return_code=1, execution_error="git not found"
+        )
+
+        assert _classify_failed_rebase(tmp_path, "main") == ("rebase_failed", ())
+
+    def test_non_oid_first_line_is_rebase_failed(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test exit 1 with a non-OID first line (old git usage) is generic."""
+        mock_execute_command.return_value = _result(
+            return_code=1, stdout="usage: git merge-tree ...\n"
+        )
+
+        assert _classify_failed_rebase(tmp_path, "main") == ("rebase_failed", ())
+
+    def test_exit_zero_is_rebase_failed(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test a clean merge-tree (exit 0) means the failure was not a conflict."""
+        mock_execute_command.return_value = _result(stdout=f"{_TREE_OID}\n")
+
+        assert _classify_failed_rebase(tmp_path, "main") == ("rebase_failed", ())
+
+    def test_execute_raising_is_rebase_failed(
+        self, mock_execute_command: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test an exception from execute_command is a generic failure."""
+        mock_execute_command.side_effect = RuntimeError("boom")
+
+        assert _classify_failed_rebase(tmp_path, "main") == ("rebase_failed", ())
+
+
+@patch(f"{_MODULE}.push_changes")
+@patch(f"{_MODULE}.rebase_onto_branch")
+@patch(f"{_MODULE}.detect_base_branch")
+@patch(f"{_MODULE}.get_full_status")
+class TestAttemptRebaseOutcomes:
+    """One test per RebaseOutcome reason from _attempt_rebase_and_push."""
+
+    _CLEAN: dict[str, list[str]] = {"staged": [], "modified": [], "untracked": []}
+
+    def test_ok(
+        self,
+        mock_status: MagicMock,
+        mock_detect: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        mock_execute_command: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test a clean rebase + push returns ok with base and short SHA."""
+        mock_status.return_value = self._CLEAN
+        mock_detect.return_value = "main"
+        mock_rebase.return_value = True
+        mock_push.return_value = True
+        mock_execute_command.return_value = _result(stdout=_FULL_SHA)
+
+        outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome == RebaseOutcome("ok", "main", "abc1234")
+        assert outcome.ok
+
+    def test_dirty_tree(
+        self,
+        mock_status: MagicMock,
+        mock_detect: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test files = staged + modified (untracked excluded); warning names them."""
+        mock_status.return_value = {
+            "staged": ["src/b.py"],
+            "modified": ["src/a.py", "src/b.py"],
+            "untracked": ["notes.txt"],
+        }
+
+        with caplog.at_level(logging.WARNING):
+            outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome == RebaseOutcome("dirty_tree", files=("src/a.py", "src/b.py"))
+        mock_detect.assert_not_called()
+        mock_rebase.assert_not_called()
+        mock_push.assert_not_called()
+        warnings = [
+            r.getMessage() for r in caplog.records if r.levelno == logging.WARNING
+        ]
+        assert any("src/a.py, src/b.py" in m for m in warnings)
+        assert not any("notes.txt" in m for m in warnings)
+
+    def test_no_base(
+        self,
+        mock_status: MagicMock,
+        mock_detect: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test no detected base branch returns no_base."""
+        mock_status.return_value = self._CLEAN
+        mock_detect.return_value = None
+
+        outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome == RebaseOutcome("no_base")
+        mock_rebase.assert_not_called()
+
+    def test_base_missing(
+        self,
+        mock_status: MagicMock,
+        mock_detect: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        mock_check_base_on_origin: MagicMock,
+        mock_execute_command: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test a base missing on origin returns base_missing with no SHA."""
+        mock_status.return_value = self._CLEAN
+        mock_detect.return_value = "epic/x"
+        mock_check_base_on_origin.return_value = "missing"
+
+        outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome == RebaseOutcome("base_missing", "epic/x")
+        assert outcome.base_sha is None
+        mock_execute_command.assert_not_called()
+
+    def test_conflict(
+        self,
+        mock_status: MagicMock,
+        mock_detect: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        mock_execute_command: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test a failed rebase classified by merge-tree as a conflict."""
+        mock_status.return_value = self._CLEAN
+        mock_detect.return_value = "main"
+        mock_rebase.return_value = False
+        mock_execute_command.side_effect = [
+            _result(stdout=_FULL_SHA),
+            _result(return_code=1, stdout=f"{_TREE_OID}\na.py\n"),
+        ]
+
+        outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome == RebaseOutcome("conflict", "main", "abc1234", ("a.py",))
+        mock_push.assert_not_called()
+
+    def test_rebase_failed(
+        self,
+        mock_status: MagicMock,
+        mock_detect: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        mock_execute_command: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test a failed rebase merge-tree cannot explain is rebase_failed."""
+        mock_status.return_value = self._CLEAN
+        mock_detect.return_value = "main"
+        mock_rebase.return_value = False
+        mock_execute_command.side_effect = [
+            _result(stdout=_FULL_SHA),
+            _result(stdout=f"{_TREE_OID}\n"),
+        ]
+
+        outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome == RebaseOutcome("rebase_failed", "main", "abc1234")
+        mock_push.assert_not_called()
+
+    def test_push_failed(
+        self,
+        mock_status: MagicMock,
+        mock_detect: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        mock_execute_command: MagicMock,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Test a successful rebase whose push fails returns push_failed."""
+        mock_status.return_value = self._CLEAN
+        mock_detect.return_value = "main"
+        mock_rebase.return_value = True
+        mock_push.return_value = False
+        mock_execute_command.return_value = _result(stdout=_FULL_SHA)
+
+        with caplog.at_level(logging.WARNING):
+            outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome == RebaseOutcome("push_failed", "main", "abc1234")
+        assert any(r.levelno == logging.WARNING for r in caplog.records)
+
+    def test_base_sha_none_when_rev_parse_fails(
+        self,
+        mock_status: MagicMock,
+        mock_detect: MagicMock,
+        mock_rebase: MagicMock,
+        mock_push: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test base_sha is None when rev-parse fails (fixture default)."""
+        mock_status.return_value = self._CLEAN
+        mock_detect.return_value = "main"
+        mock_rebase.return_value = True
+        mock_push.return_value = True
+
+        outcome = _attempt_rebase_and_push(tmp_path)
+
+        assert outcome == RebaseOutcome("ok", "main", None)
 
 
 class TestGetRebaseTargetBranch:
@@ -84,7 +429,7 @@ class TestDirtyWorkingTreeGuard:
         with caplog.at_level(logging.WARNING):
             result = _attempt_rebase_and_push(tmp_path)
 
-        assert result is False
+        assert result == RebaseOutcome("dirty_tree", files=("src/foo.py",))
         mock_get_target.assert_not_called()
         mock_rebase.assert_not_called()
         mock_push.assert_not_called()
@@ -113,7 +458,8 @@ class TestDirtyWorkingTreeGuard:
         with caplog.at_level(logging.WARNING):
             result = _attempt_rebase_and_push(tmp_path)
 
-        assert result is False
+        assert result.reason == "dirty_tree"
+        assert result.files == ("uv.lock",)
         mock_rebase.assert_not_called()
         mock_push.assert_not_called()
         assert any(r.levelno == logging.WARNING for r in caplog.records)
@@ -142,7 +488,7 @@ class TestDirtyWorkingTreeGuard:
 
         result = _attempt_rebase_and_push(tmp_path)
 
-        assert result is True
+        assert result.ok
         mock_rebase.assert_called_once_with(tmp_path, "main")
 
     @patch("mcp_coder.workflow_steps.rebase.push_changes")
@@ -165,7 +511,7 @@ class TestDirtyWorkingTreeGuard:
 
         result = _attempt_rebase_and_push(tmp_path)
 
-        assert result is True
+        assert result.ok
         mock_rebase.assert_called_once_with(tmp_path, "main")
 
 
@@ -196,7 +542,7 @@ class TestMissingBaseGuard:
         with caplog.at_level(logging.WARNING):
             result = _attempt_rebase_and_push(tmp_path)
 
-        assert result is False
+        assert result == RebaseOutcome("base_missing", "epic/x")
         mock_check_base_on_origin.assert_called_once_with(tmp_path, "epic/x")
         mock_rebase.assert_not_called()
         mock_push.assert_not_called()

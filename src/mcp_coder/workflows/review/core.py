@@ -302,7 +302,7 @@ def run_review_workflow(
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
 
             if verdict.decision == "dismiss":
-                reason = _after_steps(
+                reason, _ = _after_steps(
                     config,
                     project_dir,
                     provider,
@@ -542,7 +542,7 @@ def run_review_workflow(
                     elapsed=time.time() - start_time,
                 )
 
-            reason = _after_steps(
+            reason, _ = _after_steps(
                 config,
                 project_dir,
                 provider,

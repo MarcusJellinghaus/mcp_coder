@@ -243,7 +243,7 @@ def _unstage_path(only: Path, project_dir: Path) -> None:
     A failed ``only=`` commit would otherwise leave the round log *staged*,
     which is strictly more blocking than the state the flush found: on a run's
     first flush the log is untracked, and ``git rebase`` tolerates untracked
-    files, while ``_has_uncommitted_tracked_changes`` refuses on a staged
+    files, while ``_uncommitted_tracked_files`` refuses on a staged
     entry. So a failed flush would turn a rebase that would have succeeded into
     a needs-human handoff.
 

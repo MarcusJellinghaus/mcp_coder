@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: `RebaseOutcome` + merge-tree classification; callers compile against it — [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: tests + `RebaseOutcome`, `_uncommitted_tracked_files`, `_base_sha`, `_classify_failed_rebase` in `rebase.py`; `_after_steps` returns `(reason, outcome)`; update fix_conflict / review callers and mocks
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `RebaseOutcome`, `_uncommitted_tracked_files`, `_base_sha`, `_classify_failed_rebase` in `rebase.py`; `_after_steps` returns `(reason, outcome)`; update fix_conflict / review callers and mocks
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Review `_fail` → structured "Failed" comment — [step_7.md](./steps/step_7.md)
 

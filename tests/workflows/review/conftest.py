@@ -21,6 +21,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_coder.checks.branch_status import CIStatus
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.review import core, gates, handoff, reviewer, steps
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION
 
@@ -140,7 +141,9 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     # After-steps externals: default to a clean rebase + green CI + a base branch.
     mocks.detect_base_branch = MagicMock(return_value="main")
     monkeypatch.setattr(steps, "detect_base_branch", mocks.detect_base_branch)
-    mocks.attempt_rebase_and_push = MagicMock(return_value=True)
+    mocks.attempt_rebase_and_push = MagicMock(
+        return_value=RebaseOutcome("ok", "main", "abc1234")
+    )
     monkeypatch.setattr(
         steps, "_attempt_rebase_and_push", mocks.attempt_rebase_and_push
     )

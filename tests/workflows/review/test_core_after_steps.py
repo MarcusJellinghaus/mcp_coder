@@ -31,6 +31,7 @@ from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflow_steps import ci
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.review import core, steps
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION, REVIEW_PLAN
 from tests.workflows.review.conftest import (
@@ -102,7 +103,9 @@ def test_dismiss_rebase_conflict_routes_to_needs_human(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
     """dismiss + unresolved rebase -> needs-human (07:code-review), never success."""
-    env.attempt_rebase_and_push.return_value = False
+    env.attempt_rebase_and_push.return_value = RebaseOutcome(
+        "conflict", "main", "abc1234", ("a.py",)
+    )
     env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
 
     result = _run(tmp_path)
@@ -249,7 +252,9 @@ def test_tasks_rebase_conflict_routes_to_needs_human(
     env: SimpleNamespace, tmp_path: Path
 ) -> None:
     """A mid-loop unresolved rebase also routes to needs-human, never success."""
-    env.attempt_rebase_and_push.return_value = False
+    env.attempt_rebase_and_push.return_value = RebaseOutcome(
+        "conflict", "main", "abc1234", ("a.py",)
+    )
     env.prompt_llm.side_effect = [
         _reviewer(),  # round 1 fresh reviewer
         _resp(_TASKS),  # round 1 supervisor -> tasks
@@ -295,7 +300,9 @@ def test_broadened_ci_except_does_not_swallow_rebase(
     broadened ``except`` around ``check_and_fix_ci`` must not swallow it, and CI
     is never even reached.
     """
-    env.attempt_rebase_and_push.return_value = False
+    env.attempt_rebase_and_push.return_value = RebaseOutcome(
+        "conflict", "main", "abc1234", ("a.py",)
+    )
     env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
 
     result = _run(tmp_path)
@@ -620,11 +627,11 @@ def test_tasks_round_flushes_log_before_next_round_rebase(
     """
     at_rebase: list[tuple[int, int]] = []
 
-    def _rebase(_project_dir: Path) -> bool:
+    def _rebase(_project_dir: Path) -> RebaseOutcome:
         at_rebase.append(
             (env.commit_staged_files.call_count, env.flush_push.call_count)
         )
-        return True
+        return RebaseOutcome("ok", "main", "abc1234")
 
     env.attempt_rebase_and_push.side_effect = _rebase
     env.prompt_llm.side_effect = [

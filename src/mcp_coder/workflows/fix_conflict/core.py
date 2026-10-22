@@ -57,8 +57,8 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
             logger.error("Could not determine current branch")
             return 1
 
-        rebased = _attempt_rebase_and_push(project_dir)
-        logger.info("Rebase attempt result: %s", rebased)
+        outcome = _attempt_rebase_and_push(project_dir)
+        logger.info("Rebase attempt result: %s", outcome.reason)
 
         state = _poll_mergeable_state(project_dir, branch)
         # "dirty" is GitHub's only verdict for a real unresolved merge conflict.
