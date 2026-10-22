@@ -52,9 +52,6 @@ from mcp_coder.workflows.create_pr.helpers import (
     ensure_closing_reference as ensure_closing_reference,
 )
 from mcp_coder.workflows.create_pr.helpers import (
-    format_failure_comment as _format_failure_comment_impl,
-)
-from mcp_coder.workflows.create_pr.helpers import (
     handle_create_pr_failure as _handle_create_pr_failure_impl,
 )
 from mcp_coder.workflows.create_pr.helpers import parse_pr_summary as parse_pr_summary
@@ -424,10 +421,9 @@ def validate_branch_issue_linkage(project_dir: Path) -> int | None:
         return None
 
 
-# Backward-compatible aliases for functions moved to helpers module.
-# Tests patch these names at "mcp_coder.workflows.create_pr.core.*",
-# so keeping them in this module's namespace is required.
-_format_failure_comment = _format_failure_comment_impl
+# Backward-compatible alias for a function moved to the helpers module.
+# Tests patch this name at "mcp_coder.workflows.create_pr.core.*",
+# so keeping it in this module's namespace is required.
 _handle_create_pr_failure = _handle_create_pr_failure_impl
 
 

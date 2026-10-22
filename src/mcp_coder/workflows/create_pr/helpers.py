@@ -10,7 +10,7 @@ from pathlib import Path
 
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
-    format_elapsed_time,
+    build_failure_comment,
     handle_workflow_failure,
 )
 
@@ -115,33 +115,6 @@ def parse_pr_summary(llm_response: str) -> tuple[str, str]:
     return title, body
 
 
-def format_failure_comment(
-    stage: str,
-    message: str,
-    elapsed_time: float | None = None,
-    pr_url: str | None = None,
-    pr_number: int | None = None,
-    is_cleanup_failure: bool = False,
-) -> str:
-    """Format a GitHub comment for a create-pr workflow failure.
-
-    Returns:
-        Formatted GitHub comment string.
-    """
-    lines = [
-        "## ❌ PR Creation Failed",
-        f"**Stage:** {stage}",
-        f"**Error:** {message}",
-    ]
-    if elapsed_time is not None:
-        lines.append(f"**Elapsed:** {format_elapsed_time(elapsed_time)}")
-    if pr_url and pr_number:
-        lines.append(f"**PR:** [{pr_number}]({pr_url})")
-    if is_cleanup_failure:
-        lines.append("\n> **Note:** pr_info/ directory may still exist on the branch")
-    return "\n".join(lines)
-
-
 def handle_create_pr_failure(
     stage: str,
     message: str,
@@ -161,13 +134,19 @@ def handle_create_pr_failure(
     defaults to the general ``pr_creating_failed``, while the summary-generation
     catch passes the classified ``pr_creating_timeout`` / ``pr_creating_mcp``.
     """
-    comment = format_failure_comment(
-        stage=stage,
-        message=message,
-        elapsed_time=elapsed_time,
-        pr_url=pr_url,
-        pr_number=pr_number,
-        is_cleanup_failure=is_cleanup_failure,
+    pr = f"[#{pr_number}]({pr_url})" if pr_url and pr_number else None
+    note = (
+        "> **Note:** pr_info/ directory may still exist on the branch"
+        if is_cleanup_failure
+        else None
+    )
+    comment = build_failure_comment(
+        project_dir,
+        title="PR Creation",
+        kind="Failed",
+        fields=[("Stage", stage), ("Error", message), ("PR", pr)],
+        elapsed=elapsed_time,
+        extra_section=note,
     )
     failure = WorkflowFailure(
         category=category,

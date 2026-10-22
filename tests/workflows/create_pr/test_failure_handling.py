@@ -5,54 +5,99 @@ from unittest.mock import MagicMock, patch
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflows.create_pr.core import (
-    _format_failure_comment,
-    run_create_pr_workflow,
+from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
+from mcp_coder.workflows.create_pr.helpers import handle_create_pr_failure
+
+_PR_URL = "https://github.com/test/repo/pull/42"
+_CLEANUP_NOTE = "pr_info/ directory may still exist on the branch"
+
+
+@patch(
+    "mcp_coder.workflow_utils.failure_handling._branch_head",
+    return_value=("feat", "abc1234"),
 )
+@patch("mcp_coder.workflows.create_pr.helpers.handle_workflow_failure")
+class TestHandleCreatePrFailureComment:
+    """Tests for the comment built by handle_create_pr_failure."""
 
+    @staticmethod
+    def _comment(mock_handle: MagicMock) -> str:
+        mock_handle.assert_called_once()
+        comment: str = mock_handle.call_args.kwargs["comment_body"]
+        return comment
 
-class TestFormatFailureComment:
-    """Tests for _format_failure_comment."""
-
-    def test_basic_failure_comment(self) -> None:
-        """Test basic comment with stage and message only."""
-        comment = _format_failure_comment(
+    def test_basic_failure_comment(
+        self, mock_handle: MagicMock, _mock_branch_head: MagicMock
+    ) -> None:
+        """Heading, Stage, Error and Branch; no Elapsed / PR / note."""
+        handle_create_pr_failure(
             stage="prerequisites",
             message="Working directory not clean",
+            project_dir=Path("/test"),
+            update_issue_labels=False,
         )
-        assert "## ❌ PR Creation Failed" in comment
+        comment = self._comment(mock_handle)
+        assert comment.splitlines()[0] == "## ❌ PR Creation Failed"
         assert "**Stage:** prerequisites" in comment
         assert "**Error:** Working directory not clean" in comment
+        assert "**Branch:** feat @ abc1234" in comment
         assert "**Elapsed:**" not in comment
         assert "**PR:**" not in comment
+        assert _CLEANUP_NOTE not in comment
 
-    def test_comment_with_elapsed_time(self) -> None:
-        """Test comment includes elapsed time when provided."""
-        comment = _format_failure_comment(
+    def test_comment_with_elapsed_time(
+        self, mock_handle: MagicMock, _mock_branch_head: MagicMock
+    ) -> None:
+        """Elapsed is rendered when provided."""
+        handle_create_pr_failure(
             stage="push",
             message="Push failed",
+            project_dir=Path("/test"),
+            update_issue_labels=False,
             elapsed_time=125.0,
         )
-        assert "**Elapsed:** 2m 5s" in comment
+        assert "**Elapsed:** 2m 5s" in self._comment(mock_handle)
 
-    def test_comment_with_pr_link(self) -> None:
-        """Test comment includes PR link when provided."""
-        comment = _format_failure_comment(
+    def test_comment_with_pr_link(
+        self, mock_handle: MagicMock, _mock_branch_head: MagicMock
+    ) -> None:
+        """PR field is rendered when both URL and number are given."""
+        handle_create_pr_failure(
             stage="cleanup",
             message="Cleanup failed",
-            pr_url="https://github.com/test/repo/pull/42",
+            project_dir=Path("/test"),
+            update_issue_labels=False,
+            pr_url=_PR_URL,
             pr_number=42,
         )
-        assert "**PR:** [42](https://github.com/test/repo/pull/42)" in comment
+        assert f"**PR:** [#42]({_PR_URL})" in self._comment(mock_handle)
 
-    def test_cleanup_failure_notes_pr_info_exists(self) -> None:
-        """Test cleanup failure adds note about pr_info directory."""
-        comment = _format_failure_comment(
+    def test_pr_field_absent_without_number(
+        self, mock_handle: MagicMock, _mock_branch_head: MagicMock
+    ) -> None:
+        """PR field is omitted when only the URL is given."""
+        handle_create_pr_failure(
             stage="cleanup",
             message="Cleanup failed",
+            project_dir=Path("/test"),
+            update_issue_labels=False,
+            pr_url=_PR_URL,
+        )
+        assert "**PR:**" not in self._comment(mock_handle)
+
+    def test_cleanup_failure_notes_pr_info_exists(
+        self, mock_handle: MagicMock, _mock_branch_head: MagicMock
+    ) -> None:
+        """Cleanup failure appends the pr_info note after a blank line."""
+        handle_create_pr_failure(
+            stage="cleanup",
+            message="Cleanup failed",
+            project_dir=Path("/test"),
+            update_issue_labels=False,
             is_cleanup_failure=True,
         )
-        assert "pr_info/ directory may still exist on the branch" in comment
+        comment = self._comment(mock_handle)
+        assert comment.endswith(f"\n\n> **Note:** {_CLEANUP_NOTE}")
 
 
 class TestCreatePrFailureHandling:
