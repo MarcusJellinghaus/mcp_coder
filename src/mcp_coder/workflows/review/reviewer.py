@@ -15,6 +15,7 @@ from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.types import LLMResponseDict
 from mcp_coder.prompt_manager import get_prompt
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 
 from .config import ReviewConfig
@@ -130,6 +131,7 @@ def _run_reviewer(
         The reviewer's :class:`LLMResponseDict`.
     """
     env_vars = prepare_llm_environment(project_dir)
+    branch_name = get_branch_name_for_logging(project_dir)
 
     if tasks is None:
         prompt = get_prompt(str(PROMPTS_FILE_PATH), config.reviewer_prompt_header)
@@ -161,6 +163,7 @@ def _run_reviewer(
         project_dir=str(project_dir),
         mcp_config=mcp_config,
         settings_file=settings_file,
+        branch_name=branch_name,
     )
 
 
@@ -211,6 +214,7 @@ def _get_verdict(
         resumable supervisor session to repair or continue.
     """
     env_vars = prepare_llm_environment(project_dir)
+    branch_name = get_branch_name_for_logging(project_dir)
 
     header = get_prompt(str(PROMPTS_FILE_PATH), config.supervisor_prompt_header)
     header = header.replace("{round_number}", str(round_number))
@@ -231,6 +235,7 @@ def _get_verdict(
             project_dir=str(project_dir),
             mcp_config=mcp_config,
             settings_file=settings_file,
+            branch_name=branch_name,
         )
         new_sid = response["session_id"]
         if new_sid is None:

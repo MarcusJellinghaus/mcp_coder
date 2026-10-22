@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Pass `branch_name` to both review `prompt_llm` calls
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests (`BRANCH` constant, fixture patches in `test_reviewer.py` and `conftest.py`, 2 new tests) + `reviewer.py` import and `branch_name` passed in `_run_reviewer` and `_get_verdict`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`BRANCH` constant, fixture patches in `test_reviewer.py` and `conftest.py`, 2 new tests) + `reviewer.py` import and `branch_name` passed in `_run_reviewer` and `_get_verdict`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
