@@ -12,9 +12,11 @@ Produce exactly one commit.
 ### `.claude/skills/pr_comment_triage/SKILL.md`
 
 - After the intro paragraph, one or two sentences on the trigger: `status-91` fires on
-  unresolved threads, changes-requested reviews submitted after the last return to `status-10`,
-  and new PR comments; a comment whose first line contains ❌ (mcp-coder's automated notes)
-  is ignored; a review already triaged does not re-trigger.
+  unresolved threads (live state), and on changes-requested reviews and PR comments — all of
+  them if the PR has never been through `status-91`, otherwise only those newer than the last
+  return to `status-10` (reviews by `submitted_at`, comments by `created_at`). A comment whose
+  first line contains ❌ (mcp-coder's automated notes) is ignored; a review already triaged
+  does not re-trigger.
 - Replace "When done" with:
   - CI green, no rebase needed, every item fixed, replied to or declined. A changes-requested
     review that has been replied to or fixed does not block — it stays listed by
