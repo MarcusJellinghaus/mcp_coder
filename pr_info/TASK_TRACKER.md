@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Enforce GitHub label length limits in `validate_labels_config()`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: add name/description length tests, then length checks in `validate_labels_config()`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add name/description length tests, then length checks in `validate_labels_config()`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

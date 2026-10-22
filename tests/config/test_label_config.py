@@ -495,6 +495,37 @@ class TestValidateLabelsConfig:
         with pytest.raises(ValueError, match="exactly one.*default"):
             validate_labels_config(config)
 
+    @pytest.mark.parametrize(("field", "length"), [("name", 51), ("description", 101)])
+    def test_field_too_long_raises(self, field: str, length: int) -> None:
+        """Name or description over the GitHub limit raises ValueError."""
+        label = {
+            "internal_id": "long_label",
+            "name": "a",
+            "color": "000000",
+            "description": "a",
+            "category": "human_action",
+            "default": True,
+        }
+        label[field] = "x" * length
+        config = {"workflow_labels": [label]}
+        with pytest.raises(ValueError, match=rf"long_label.*{field}.*{length}"):
+            validate_labels_config(config)
+
+    @pytest.mark.parametrize(("field", "length"), [("name", 50), ("description", 100)])
+    def test_field_at_limit_passes(self, field: str, length: int) -> None:
+        """Name or description exactly at the GitHub limit passes."""
+        label = {
+            "internal_id": "long_label",
+            "name": "a",
+            "color": "000000",
+            "description": "a",
+            "category": "human_action",
+            "default": True,
+        }
+        label[field] = "x" * length
+        config = {"workflow_labels": [label]}
+        validate_labels_config(config)  # Should not raise
+
 
 class TestConfigDiscovery:
     """Tests for get_labels_config_path() config discovery."""
