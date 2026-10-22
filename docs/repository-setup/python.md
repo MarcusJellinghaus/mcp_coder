@@ -205,7 +205,7 @@ Convenience scripts for local development. Create a `tools/` directory with thes
 | `format_all.sh/bat` | Run black + isort on src/tests | **Mandatory** before commits |
 | `black.bat` | Run black formatter only | Optional |
 | `iSort.bat` | Run isort only | Optional |
-| `ruff_check.sh/bat` | Run ruff (docstring checks) | Optional |
+| `ruff_check.sh/bat` | Run ruff lint on src/tests/tools | Optional |
 
 **format_all.sh:**
 

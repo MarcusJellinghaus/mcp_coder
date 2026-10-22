@@ -52,9 +52,9 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: CI — lint `tools/`, rename job to `ruff`; scripts and docs
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: `ci.yml` matrix entry → `ruff` with `src tests tools`; `tools/ruff_check.sh/.bat`; `docs/repository-setup/python.md`; no `ruff-docstrings` left
-- [ ] Quality checks: ruff, pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `ci(ruff): lint tools/, rename job to ruff`
+- [x] Implementation: `ci.yml` matrix entry → `ruff` with `src tests tools`; `tools/ruff_check.sh/.bat`; `docs/repository-setup/python.md`; no `ruff-docstrings` left
+- [x] Quality checks: ruff, pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `ci(ruff): lint tools/, rename job to ruff`
 
 ## Pull Request
 
