@@ -25,7 +25,7 @@ from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
-    format_elapsed_time,
+    build_failure_comment,
     format_mcp_unavailable_message,
     get_diff_stat,
     handle_workflow_failure,
@@ -62,29 +62,6 @@ FAILURE_LABELS: dict[str, str] = {
 PROMPT_3_TIMEOUT = 600  # 10 minutes of silence
 
 
-def _format_failure_comment(
-    failure: WorkflowFailure,
-    diff_stat: str,
-) -> str:
-    """Format GitHub comment for planning failure.
-
-    Returns:
-        Formatted GitHub comment string describing the planning failure.
-    """
-    lines = [
-        "## ❌ Planning Failed",
-        f"**Stage:** {failure.stage}",
-        f"**Error:** {failure.message}",
-    ]
-    if failure.elapsed_time is not None:
-        lines.append(f"**Elapsed:** {format_elapsed_time(failure.elapsed_time)}")
-    if diff_stat:
-        lines.append("")
-        lines.append("### Uncommitted Changes")
-        lines.append(f"```\n{diff_stat}\n```")
-    return "\n".join(lines)
-
-
 def _handle_workflow_failure(
     failure: WorkflowFailure,
     project_dir: Path,
@@ -98,7 +75,15 @@ def _handle_workflow_failure(
     is the resolved label ID), so no conversion is needed.
     """
     diff_stat = get_diff_stat(project_dir)
-    comment_body = _format_failure_comment(failure, diff_stat)
+    extra = f"### Uncommitted Changes\n```\n{diff_stat}\n```" if diff_stat else None
+    comment_body = build_failure_comment(
+        project_dir,
+        title="Planning",
+        kind="Failed",
+        fields=[("Stage", failure.stage), ("Error", failure.message)],
+        elapsed=failure.elapsed_time,
+        extra_section=extra,
+    )
     handle_workflow_failure(
         failure=failure,
         comment_body=comment_body,

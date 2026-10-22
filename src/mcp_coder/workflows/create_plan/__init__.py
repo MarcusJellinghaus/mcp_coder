@@ -6,7 +6,6 @@ and output validation.
 """
 
 from .core import (
-    _format_failure_comment,
     _handle_workflow_failure,
     _load_prompt_or_exit,
     format_initial_prompt,
@@ -33,6 +32,5 @@ __all__ = [
     "check_pr_info_not_exists",
     "create_pr_info_structure",
     "_load_prompt_or_exit",
-    "_format_failure_comment",
     "_handle_workflow_failure",
 ]

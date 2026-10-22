@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: create_plan deliberate failure on the builder — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: tests + delete `_format_failure_comment`, `_handle_workflow_failure` calls `build_failure_comment` (`## ❌ Planning Failed`), update `create_plan/__init__.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + delete `_format_failure_comment`, `_handle_workflow_failure` calls `build_failure_comment` (`## ❌ Planning Failed`), update `create_plan/__init__.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: create_pr deliberate failure on the builder — [step_4.md](./steps/step_4.md)
 

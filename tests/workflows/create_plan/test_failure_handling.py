@@ -8,35 +8,47 @@ import pytest
 from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflow_utils.failure_handling import WorkflowFailure
 from mcp_coder.workflows.create_plan import (
-    _format_failure_comment,
     _handle_workflow_failure,
     run_create_plan_workflow,
 )
 from mcp_coder.workflows.create_plan.prerequisites import BaseBranchMissingError
 
-# Common patch prefix
+# Common patch prefixes
 _CORE = "mcp_coder.workflows.create_plan.core"
+_FH = "mcp_coder.workflow_utils.failure_handling"
 
 
-class TestFormatFailureComment:
-    """Tests for _format_failure_comment."""
+def _comment_body(failure: WorkflowFailure, tmp_path: Path, diff_stat: str) -> str:
+    """Run _handle_workflow_failure and return the comment_body it built."""
+    with (
+        patch(f"{_CORE}.get_diff_stat", return_value=diff_stat),
+        patch(f"{_FH}._branch_head", return_value=("feature-branch", "abc1234")),
+        patch(f"{_CORE}.handle_workflow_failure") as mock_shared,
+    ):
+        _handle_workflow_failure(failure, tmp_path, True, True, issue_number=42)
+    body: str = mock_shared.call_args.kwargs["comment_body"]
+    return body
 
-    def test_general_failure_comment(self) -> None:
-        """Test general failure comment (no Category / prompt_stage lines)."""
+
+class TestFailureComment:
+    """Tests for the comment body _handle_workflow_failure builds."""
+
+    def test_general_failure_comment(self, tmp_path: Path) -> None:
+        """Test heading, Stage, Error and Branch lines (no Category line)."""
         failure = WorkflowFailure(
             category="planning_failed",
             stage="Output validation",
             message="Required output files not found",
             elapsed_time=2.0,
         )
-        comment = _format_failure_comment(failure, "")
-        assert "## ❌ Planning Failed" in comment
+        comment = _comment_body(failure, tmp_path, "")
+        assert comment.startswith("## ❌ Planning Failed\n")
         assert "**Stage:** Output validation" in comment
         assert "**Error:** Required output files not found" in comment
+        assert "**Branch:** feature-branch @ abc1234" in comment
         assert "Category" not in comment
-        assert "Prompt stage" not in comment
 
-    def test_elapsed_time_formatting(self) -> None:
+    def test_elapsed_time_formatting(self, tmp_path: Path) -> None:
         """Test elapsed time is formatted correctly."""
         failure = WorkflowFailure(
             category="planning_failed",
@@ -44,38 +56,38 @@ class TestFormatFailureComment:
             message="test",
             elapsed_time=605.0,
         )
-        comment = _format_failure_comment(failure, "")
+        comment = _comment_body(failure, tmp_path, "")
         assert "**Elapsed:** 10m 5s" in comment
 
-    def test_no_elapsed_time_when_none(self) -> None:
+    def test_no_elapsed_time_when_none(self, tmp_path: Path) -> None:
         """Test no elapsed line when elapsed_time is None."""
         failure = WorkflowFailure(
             category="planning_failed",
             stage="test",
             message="test",
         )
-        comment = _format_failure_comment(failure, "")
+        comment = _comment_body(failure, tmp_path, "")
         assert "Elapsed" not in comment
 
-    def test_uncommitted_changes_section(self) -> None:
+    def test_uncommitted_changes_section(self, tmp_path: Path) -> None:
         """Test uncommitted changes section with diff stat."""
         failure = WorkflowFailure(
             category="planning_failed",
             stage="test",
             message="test",
         )
-        comment = _format_failure_comment(failure, " file1.py | 5 ++--\n")
-        assert "### Uncommitted Changes" in comment
+        comment = _comment_body(failure, tmp_path, " file1.py | 5 ++--\n")
+        assert "\n\n### Uncommitted Changes\n```\n" in comment
         assert "file1.py" in comment
 
-    def test_no_uncommitted_changes_section_when_empty(self) -> None:
+    def test_no_uncommitted_changes_section_when_empty(self, tmp_path: Path) -> None:
         """Test no uncommitted changes section when diff_stat is empty."""
         failure = WorkflowFailure(
             category="planning_failed",
             stage="test",
             message="test",
         )
-        comment = _format_failure_comment(failure, "")
+        comment = _comment_body(failure, tmp_path, "")
         assert "Uncommitted Changes" not in comment
 
 
