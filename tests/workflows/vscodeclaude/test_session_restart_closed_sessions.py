@@ -156,6 +156,7 @@ class TestRestartClosedSessionsBranchHandling:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
@@ -237,6 +238,7 @@ class TestRestartClosedSessionsBranchHandling:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {456: cached_issue}
@@ -320,6 +322,7 @@ class TestRestartClosedSessionsBranchHandling:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {789: cached_issue}
@@ -448,6 +451,7 @@ class TestRestartClosedSessionsBranchHandling:
             "url": "https://github.com/owner/repo/issues/123",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
@@ -512,6 +516,7 @@ class TestRestartClosedSessionsBranchHandling:
             "url": "",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {999: cached_issue}
@@ -564,6 +569,7 @@ class TestRestartClosedSessionsBranchHandling:
             "url": "https://github.com/owner/repo/issues/123",
             "body": "",
             "locked": False,
+            "author_association": None,
         }
 
         # Track execute_subprocess calls

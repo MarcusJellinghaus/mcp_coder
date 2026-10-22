@@ -31,6 +31,7 @@ class TestCheckStatusLabels:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
         workflow_label_names = {
             "status-01:created",
@@ -57,6 +58,7 @@ class TestCheckStatusLabels:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
         workflow_label_names = {
             "status-01:created",
@@ -83,6 +85,7 @@ class TestCheckStatusLabels:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
         workflow_label_names = {
             "status-01:created",
@@ -115,6 +118,7 @@ class TestCheckStatusLabels:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
         workflow_label_names = {
             "status-01:created",
@@ -146,6 +150,7 @@ class TestInitializeIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 2,
@@ -159,6 +164,7 @@ class TestInitializeIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
         ]
         workflow_label_names = {"status-01:created", "status-02:awaiting-planning"}
@@ -198,6 +204,7 @@ class TestInitializeIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 2,
@@ -211,6 +218,7 @@ class TestInitializeIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
         ]
         workflow_label_names = {"status-01:created", "status-02:awaiting-planning"}
@@ -247,6 +255,7 @@ class TestInitializeIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
         ]
         workflow_label_names = {"status-01:created"}
@@ -281,6 +290,7 @@ class TestInitializeIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 20,
@@ -294,6 +304,7 @@ class TestInitializeIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 30,
@@ -307,6 +318,7 @@ class TestInitializeIssues:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
         ]
         workflow_label_names = {"status-01:created", "status-02:awaiting-planning"}

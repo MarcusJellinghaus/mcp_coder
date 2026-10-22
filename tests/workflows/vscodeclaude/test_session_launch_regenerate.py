@@ -44,6 +44,7 @@ class TestRegenerateSessionFiles:
             "updated_at": None,
             "url": "https://github.com/owner/repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
 
     @pytest.fixture

@@ -152,6 +152,7 @@ class TestDetectBaseBranchFromIssueData:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
             "base_branch": "feature/v2",
         }
 

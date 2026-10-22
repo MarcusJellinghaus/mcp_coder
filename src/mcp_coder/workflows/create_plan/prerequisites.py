@@ -61,6 +61,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
         updated_at=None,
         url="",
         locked=False,
+        author_association=None,
     )
 
     # Fetch and validate GitHub issue

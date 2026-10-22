@@ -70,6 +70,7 @@ class TestCheckStaleBotProcess:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
 
         # Create event timestamp 10 minutes ago (under 120 min threshold)
@@ -107,6 +108,7 @@ class TestCheckStaleBotProcess:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
 
         # Create event timestamp 150 minutes ago (over 120 min threshold)
@@ -144,6 +146,7 @@ class TestCheckStaleBotProcess:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
 
         mock_issue_manager = MagicMock()
@@ -170,6 +173,7 @@ class TestCheckStaleBotProcess:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
 
         mock_issue_manager = MagicMock()

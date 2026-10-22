@@ -88,6 +88,7 @@ class TestScenarioACrossModule:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
         cached_issues_by_repo: dict[str, dict[int, IssueData]] = {
             "owner/repo": {188: closed_issue}

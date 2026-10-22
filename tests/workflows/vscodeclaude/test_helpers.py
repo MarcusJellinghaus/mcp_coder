@@ -96,6 +96,7 @@ class TestIssueStatus:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
         assert get_issue_status(issue) == "status-07:code-review"
 
@@ -113,6 +114,7 @@ class TestIssueStatus:
             "updated_at": None,
             "url": "",
             "locked": False,
+            "author_association": None,
         }
         assert get_issue_status(issue) == ""
 
