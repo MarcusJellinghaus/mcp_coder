@@ -51,8 +51,8 @@ base commit, the files involved and the next step.
    - `_route_to_human` builds its own comment *after* the round-log flush,
      `## ❌ <Lane> Handed Off`, logs a `REVIEW HANDED OFF` warning banner, and
      drops its old `"❌ "` prefix. Rebase sites pass only `rebase=outcome`; a
-     `reason -> (category, next_step)` table in `handoff.py` drives Category and
-     Next step. Rounds-cap / escalate sites pass `category=` / `reason=`.
+     `reason -> (category, reason_text, next_step)` table in `handoff.py` drives
+     Category, Reason and Next step. Rounds-cap / escalate sites pass `category=` / `reason=`.
    - Review net → `## ❌ <Lane> Crashed`.
 
 ### Canonical field order (`FIELD_ORDER`)

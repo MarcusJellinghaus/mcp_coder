@@ -26,7 +26,11 @@ FIELD_ORDER: tuple[str, ...] = (
 )
 
 def _branch_head(project_dir: Path) -> tuple[str | None, str | None]:
-    """Return (branch name, 7-char HEAD sha); (None, None) on any error. Never raises."""
+    """Return (branch name, 7-char HEAD sha). Never raises.
+
+    (None, None) when the branch lookup fails or yields no branch;
+    (branch, None) when only the SHA lookup fails.
+    """
 
 def build_failure_comment(
     project_dir: Path,
@@ -43,8 +47,10 @@ def build_failure_comment(
 
 - `_branch_head` uses the already-imported `get_current_branch_name` and
   `get_latest_commit_sha` (add to the existing `mcp_coder.mcp_workspace_git`
-  import), wrapped in `try/except Exception` (pylint `broad-exception-caught`
-  disable comment, as elsewhere in the file).
+  import), each behind its own `try/except Exception` (pylint
+  `broad-exception-caught` disable comment, as elsewhere in the file):
+  branch guard fails / no branch → `(None, None)`; SHA guard fails or returns
+  nothing → `(branch, None)`; else `(branch, sha[:SHORT_SHA_LENGTH])`.
 - `build_failure_comment` reads `os.environ.get("BUILD_URL")` itself
   (`import os`).
 - `format_elapsed_time` (existing) formats `elapsed`.
@@ -69,7 +75,8 @@ Next step; stable sort keeps caller order among them).
 ## DATA
 
 - Returns the comment string. First line always contains `❌`.
-- `_branch_head` → `("feat-x", "abc1234")`, `("feat-x", None)` or `(None, None)`.
+- `_branch_head` → `("feat-x", "abc1234")`; `("feat-x", None)` when only the
+  SHA lookup fails; `(None, None)` when the branch lookup fails.
 
 ## Tests (`tests/workflow_utils/test_failure_comment.py`)
 
@@ -83,4 +90,4 @@ itself patch `get_current_branch_name` / `get_latest_commit_sha` in that module.
 5. Branch line: `("feat", "abc1234")` → `**Branch:** feat @ abc1234`; `("feat", None)` → `**Branch:** feat`; `(None, None)` → no Branch line.
 6. `BUILD_URL` set → `**Build:** <url>` last field; cleared (`patch.dict(os.environ, {}, clear=True)`) → no Build line.
 7. `extra_section` is appended after one blank line.
-8. `_branch_head` returns `(None, None)` when `get_current_branch_name` raises; truncates sha to 7 chars.
+8. `_branch_head` returns `(None, None)` when `get_current_branch_name` raises; `("feat", None)` when `get_latest_commit_sha` raises; truncates sha to 7 chars.

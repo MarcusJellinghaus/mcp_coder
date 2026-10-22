@@ -21,21 +21,27 @@
 ## WHAT
 
 ```python
-# reason -> (Category, Next step)
-_REBASE_HANDOFF: dict[str, tuple[str, str]] = {
+# reason -> (Category, Reason, Next step)
+_REBASE_HANDOFF: dict[str, tuple[str, str, str]] = {
     "dirty_tree": ("Uncommitted changes",
+                   "Rebase not attempted: the working tree has staged or modified tracked files",
                    "Commit or discard the listed files, then re-run the review"),
     "no_base": ("Base branch not detected",
+                "Rebase not attempted: no base branch could be detected",
                 "Add a `### Base Branch` section to the issue, then re-run"),
     "base_missing": ("Base branch missing on origin",
+                     "Rebase not attempted: the base branch does not exist on origin",
                      "Push or restore the base branch, or fix `### Base Branch`, then re-run"),
-    "conflict": ("Rebase conflict", "`/rebase`, then re-run the review"),
+    "conflict": ("Rebase conflict",
+                 "Rebase onto the base branch stopped on a conflict",
+                 "`/rebase`, then re-run the review"),
     "rebase_failed": ("Rebase failed",
+                      "Rebase onto the base branch failed and was not classified as a conflict",
                       "`/rebase` (may be a conflict that only appears while replaying commits); check the job log"),
     "push_failed": ("Push failed after rebase",
+                    "Rebase succeeded, but the force-with-lease push failed",
                     "Fetch, check for foreign commits, then `git push --force-with-lease`"),
 }
-_REBASE_REASON = "Branch could not be rebased cleanly onto its base"
 
 def _route_to_human(
     config: ReviewConfig,
@@ -56,7 +62,9 @@ def _route_to_human(
 ## HOW
 
 - `handoff.py` imports `RebaseOutcome` from `mcp_coder.workflow_steps.rebase`,
-  `build_failure_comment` from `failure_handling`, and `time`.
+  `build_failure_comment` and `SHORT_SHA_LENGTH` from `failure_handling`, and
+  `time`. Delete the local `_SHORT_SHA_LENGTH = 7` (and its comment) and use
+  `SHORT_SHA_LENGTH` in `_commit_only_path`.
 - Remove the `f"❌ {comment_body}"` prefixing — the builder owns `❌`.
 - Order inside `_route_to_human`: flush → banner → build comment → post (gated) →
   escalate label. Never a failure label; always returns `0`.
@@ -82,7 +90,7 @@ def _route_to_human(
 ```
 if log_path is not None: _flush_round_log(project_dir, only=log_path)
 if rebase is not None and rebase.reason in _REBASE_HANDOFF:
-    category, next_step = _REBASE_HANDOFF[rebase.reason]; reason = _REBASE_REASON
+    category, reason, next_step = _REBASE_HANDOFF[rebase.reason]
 fields = [("Category", category), ("Stage", f"{config.display_name}, round {round_number}"),
           ("Reason", reason), ("Base", _base_value(rebase)),
           ("Likely conflicting files" if rebase.reason == "conflict" else "Uncommitted files", files),
@@ -103,7 +111,7 @@ Example (conflict):
 ## ❌ Implementation Review Handed Off
 **Category:** Rebase conflict
 **Stage:** Implementation Review, round 2
-**Reason:** Branch could not be rebased cleanly onto its base
+**Reason:** Rebase onto the base branch stopped on a conflict
 **Branch:** 1268-feat @ abc1234
 **Base:** origin/main @ def5678
 **Likely conflicting files:** `src/a.py`, `src/b.py`
@@ -119,8 +127,10 @@ Example (conflict):
   `## ❌ <Lane> Handed Off` (no `❌ ##`), flush happens before the comment
   (call order via a shared `MagicMock` parent or `side_effect` list), and the
   warning banner (`caplog`, `REVIEW HANDED OFF`).
-- Parametrised over every `_REBASE_HANDOFF` reason: Category and Next step
-  match the table; `/rebase` never appears for `dirty_tree` / `push_failed`;
+- Parametrised over every `_REBASE_HANDOFF` reason: Category, Reason and Next
+  step match the table (assert the exact `**Reason:**` line per reason);
+  `push_failed`'s Reason says the rebase succeeded; `dirty_tree` / `no_base` /
+  `base_missing` Reasons say the rebase was not attempted; `/rebase` never appears for `dirty_tree` / `push_failed`;
   Base line present with sha for `conflict` / `rebase_failed` / `push_failed`,
   `origin/<base>` without sha for `base_missing`, absent for `dirty_tree` /
   `no_base`; `Likely conflicting files` only for `conflict`, `Uncommitted files`

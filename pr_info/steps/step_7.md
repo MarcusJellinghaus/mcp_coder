@@ -60,7 +60,13 @@ Elapsed / Build. Pre-loop sites (`round_number=None`) render Stage without round
 
 ## Tests
 
-- Patch `_branch_head` in the review `env` fixture (`tests/workflows/review/conftest.py`) so every review test gets a fixed Branch line.
+- Add an **autouse** fixture to `tests/workflows/review/conftest.py` that patches
+  `mcp_coder.workflow_utils.failure_handling._branch_head` → `("feat", "abc1234")`.
+  Autouse (not inside `env`) so it covers every review test that renders a
+  comment through the builder: `test_core.py` (step 2 net assertion, step 8
+  escalate / rounds-cap assertions), `test_core_after_steps.py`,
+  `test_core_gates.py`, and `test_handoff_route.py` (its `routed` fixture and
+  the `_capture_fail_comment` helper, which uses neither fixture).
 - Heading `## ❌ Implementation Review Failed` / `## ❌ Plan Review Failed`.
 - `details` given → Error is `details` (Gate 2 test `test_core_gates.py:74`, formatter pre-flight, Gate 1); not given → the reason sentence.
 - Stage includes `round N` inside the loop; pre-loop `_fail` → Stage is just the lane name.
