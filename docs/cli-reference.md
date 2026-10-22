@@ -777,10 +777,12 @@ mcp-coder check branch-status [OPTIONS]
 | Code | Meaning | Description |
 |------|---------|-------------|
 | 0 | Success | CI passed or still pending, or graceful scenarios (no CI configured, no wait requested) |
-| 1 | Failure | CI failed, `--wait-for-pr` expired without a PR appearing, or fix operations failed; or (with `--fail-on-reviews`) PR reviews block merge |
-| 2 | Technical Error or Undeterminable | Invalid arguments, Git errors, API errors, unexpected exceptions, missing GitHub token (CI unavailable); or (with `--fail-on-reviews`) PR review state is undeterminable |
+| 1 | Failure | CI failed, `--wait-for-pr` expired without a PR appearing, or fix operations failed; the issue's linked branch is missing, ambiguous, or is not the current branch; or (with `--fail-on-reviews`) PR reviews block merge |
+| 2 | Technical Error or Undeterminable | Invalid arguments, Git errors, API errors, unexpected exceptions, missing GitHub token (CI unavailable); the linked-branch lookup could not be completed; or (with `--fail-on-reviews`) PR review state is undeterminable |
 
-> **Known limitation:** `--fail-on-reviews` is not evaluated when `--fix` resolves CI — the `--fix` success path returns before the review gate.
+> **Note:** the linked-branch causes are **not** gated on `--fail-on-reviews` — they apply whenever the branch name yields an issue number, so a default run can exit non-zero on a stale linked branch. GitHub's linked-branches list (the Development panel's "Create a branch" link) always wins. Only when it is empty are open PRs that close the issue (`Closes #N`) considered: one whose head is the current branch counts as `LINKED_VIA_PR`, which does not block (exit 0); if closing PRs exist but none matches, the state is `MISMATCH` (exit 1); with no closing PR either, it is `NOT_LINKED` (exit 1).
+
+> **Known limitation:** neither `--fail-on-reviews` nor the linked-branch check is evaluated when `--fix` resolves CI — the `--fix` success path returns before the exit-code gate.
 
 #### Behavior
 

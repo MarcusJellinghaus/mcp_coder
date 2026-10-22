@@ -72,13 +72,14 @@
       "mcp__obsidian-wiki__obsidian_remove_tags",
       "mcp__obsidian-wiki__obsidian_rename_tag",
       "mcp__obsidian-wiki__obsidian_search_vault",
-      "mcp__mcp-tools-py__run_tach_check"
+      "mcp__mcp-tools-py__run_tach_check",
+      "mcp__mcp-tools-py__search_library_files"
     ]
   },
-  "autoMemoryEnabled": false,
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "mcp-tools-py",
     "mcp-workspace"
-  ]
+  ],
+  "autoMemoryEnabled": false
 }

@@ -12,7 +12,12 @@ from mcp_workspace.checks.branch_status import (
     create_empty_report,
     get_failed_jobs_summary,
 )
-from mcp_workspace.checks.branch_status_rendering import GITHUB_TOKEN_HINT, CIStatus
+from mcp_workspace.checks.branch_status_rendering import (
+    GITHUB_TOKEN_HINT,
+    CIStatus,
+    LinkedBranchStatus,
+    linked_branch_blocks,
+)
 
 __all__: list[str] = [
     "BranchStatusReport",
@@ -21,4 +26,6 @@ __all__: list[str] = [
     "get_failed_jobs_summary",
     "CIStatus",
     "GITHUB_TOKEN_HINT",
+    "LinkedBranchStatus",
+    "linked_branch_blocks",
 ]

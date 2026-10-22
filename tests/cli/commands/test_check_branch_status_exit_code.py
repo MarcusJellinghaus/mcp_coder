@@ -12,7 +12,11 @@ from unittest.mock import patch
 import pytest
 from mcp_workspace.workflows.task_tracker import TaskTrackerStatus
 
-from mcp_coder.checks.branch_status import BranchStatusReport, CIStatus
+from mcp_coder.checks.branch_status import (
+    BranchStatusReport,
+    CIStatus,
+    LinkedBranchStatus,
+)
 from mcp_coder.cli.commands.check_branch_status import (
     _exit_code,
     execute_check_branch_status,
@@ -24,6 +28,7 @@ def _report(
     *,
     undeterminable: bool = False,
     blocks_merge: bool = False,
+    linked_branch_status: LinkedBranchStatus = LinkedBranchStatus.NOT_CHECKED,
 ) -> BranchStatusReport:
     """Build a minimal report with the fields _exit_code reads."""
     return BranchStatusReport(
@@ -40,6 +45,7 @@ def _report(
         recommendations=[],
         pr_feedback_undeterminable=undeterminable,
         pr_feedback_blocks_merge=blocks_merge,
+        linked_branch_status=linked_branch_status,
     )
 
 
@@ -105,6 +111,52 @@ class TestExitCodeContract:
         assert _exit_code(_report(ci_status), flag) == expected
 
 
+class TestLinkedBranchExitCode:
+    """The linked-branch state feeds the ladder, ungated by --fail-on-reviews."""
+
+    @pytest.mark.parametrize(
+        ("linked_branch_status", "expected"),
+        [
+            (LinkedBranchStatus.OK, 0),
+            (LinkedBranchStatus.NOT_CHECKED, 0),
+            (LinkedBranchStatus.LINKED_VIA_PR, 0),
+            (LinkedBranchStatus.MISMATCH, 1),
+            (LinkedBranchStatus.AMBIGUOUS, 1),
+            (LinkedBranchStatus.NOT_LINKED, 1),
+            (LinkedBranchStatus.UNKNOWN, 2),
+        ],
+    )
+    @pytest.mark.parametrize("flag", [False, True])
+    def test_linked_branch_mapping_is_ungated(
+        self, linked_branch_status: LinkedBranchStatus, expected: int, flag: bool
+    ) -> None:
+        """Every state maps the same way with the review gate on and off.
+
+        UNKNOWN is 2 rather than 1 even though linked_branch_blocks(UNKNOWN) is
+        True: the tier-2 term is evaluated first. Reordering the two new terms
+        in _exit_code turns this row red.
+        """
+        report = _report(CIStatus.PASSED, linked_branch_status=linked_branch_status)
+        assert _exit_code(report, flag) == expected
+
+    def test_blocking_linked_branch_does_not_preempt_undeterminable_reviews(
+        self,
+    ) -> None:
+        """MISMATCH + undeterminable reviews + gate on -> 2, not 1.
+
+        linked_branch_blocks(MISMATCH) is True, but that is a tier-1 cause; the
+        gated review term is tier 2 and is owed precedence. Moving the
+        linked_branch_blocks term above it in _exit_code turns this red.
+        """
+        report = _report(
+            CIStatus.PASSED,
+            undeterminable=True,
+            linked_branch_status=LinkedBranchStatus.MISMATCH,
+        )
+        assert _exit_code(report, True) == 2
+        assert _exit_code(report, False) == 1
+
+
 def _args(*, fail_on_reviews: bool) -> argparse.Namespace:
     """Minimal args namespace for the plain (no wait, no fix) CLI path."""
     return argparse.Namespace(
@@ -122,7 +174,8 @@ def _args(*, fail_on_reviews: bool) -> argparse.Namespace:
 
 
 class TestFailOnReviewsEndToEnd:
-    """The review gate reaches the process exit code via the real entry point."""
+    """The review gate and the linked-branch state reach the process exit code
+    via the real entry point."""
 
     def _run(self, report: BranchStatusReport, *, fail_on_reviews: bool) -> int:
         """Drive the real entry point with only collect_branch_status faked."""
@@ -147,6 +200,12 @@ class TestFailOnReviewsEndToEnd:
     def test_undeterminable_reviews_exit_2_when_gated(self) -> None:
         report = _report(CIStatus.PASSED, undeterminable=True)
         assert self._run(report, fail_on_reviews=True) == 2
+
+    def test_linked_branch_mismatch_exit_1_ungated(self) -> None:
+        report = _report(
+            CIStatus.PASSED, linked_branch_status=LinkedBranchStatus.MISMATCH
+        )
+        assert self._run(report, fail_on_reviews=False) == 1
 
 
 class TestFailOnReviewsParser:
