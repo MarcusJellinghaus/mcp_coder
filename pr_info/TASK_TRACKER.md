@@ -21,6 +21,42 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Format `tools/` files before lint fixes
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: run formatter on `tools/`, keep only the 8 expected files (or files with ruff findings)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `style(tools): format files touched by ruff fixes`
+
+### Step 2: Ruff config — select `PLW1510`, add `tools/` ignores
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: `pyproject.toml` — add `PLW1510` to `select`; per-file ignores `tools/**` DOC201 and `tools/safe_delete_folder.py` S607
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `chore(ruff): select PLW1510, add tools/ ignores`
+
+### Step 3: Fix `F` findings (dead code) in `tools/`
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: ruff fix `F` on `tools/`; bare `yield` for F841; remove leftover F401 by hand; format touched files only
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `fix(tools): remove dead code flagged by ruff F`
+
+### Step 4: Fix the remaining ruff findings in `tools/`
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: ruff autofix on `tools/`; manual fixes (`check=False`, `noqa: S314`, ANN hooks, `main() -> int`, D, SIM, B007); format touched files only; `ruff check src tests tools` → 0
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `chore(tools): fix remaining ruff findings`
+
+### Step 5: CI — lint `tools/`, rename job to `ruff`; scripts and docs
+See [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation: `ci.yml` matrix entry → `ruff` with `src tests tools`; `tools/ruff_check.sh/.bat`; `docs/repository-setup/python.md`; no `ruff-docstrings` left
+- [ ] Quality checks: ruff, pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `ci(ruff): lint tools/, rename job to ruff`
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `main`
+- [ ] PR summary prepared (include: "After merge: if `ruff-docstrings` is a required status check on `main`, update branch protection to require `ruff` instead.")
