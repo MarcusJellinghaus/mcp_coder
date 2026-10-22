@@ -100,6 +100,7 @@ def _make_pr(number: int = 1, mergeable_state: str = "clean") -> PullRequestData
         "merged": False,
         "draft": False,
         "assignees": [],
+        "author_association": None,
     }
 
 

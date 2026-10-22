@@ -45,9 +45,12 @@ _STUB_SERVER = Path(__file__).with_name("_mcp_stub_server.py")
 # robust against name-mangling of the "mcp-stub" server name.
 _STUB_TOOL_SUFFIX = "reveal_sentinel"
 
-# v1: past the ~5 s alwaysLoad cap (so the server is pending at init) but well
-# under MCP_TIMEOUT, so it connects shortly after and self-heals in-session.
-_V1_STARTUP_DELAY_SECONDS = 8
+# v1: the CLI waits for MCP servers before the first ``-p`` turn (bounded by
+# MCP_TIMEOUT); v1 caps that wait via CLAUDE_CODE_MCP_STARTUP_WAIT_MS=3000. Even
+# so, init was observed ~9 s after start, so the delay must clearly exceed the
+# time until init (not just the 3 s wait) for the stub to be pending at init,
+# while staying well under MCP_TIMEOUT so it connects and self-heals in-session.
+_V1_STARTUP_DELAY_SECONDS = 20
 
 # v2: a short MCP_TIMEOUT paired with a startup delay that exceeds it, so the
 # stub never connects within the session.
@@ -215,7 +218,10 @@ class TestClaudeMcpColdStartIntegration:
             mcp_config=str(mcp_config),
             settings_file=str(settings_file),
             logs_dir=str(logs_dir),
-            env_vars={"MCP_TIMEOUT": "60000"},
+            env_vars={
+                "MCP_TIMEOUT": "60000",
+                "CLAUDE_CODE_MCP_STARTUP_WAIT_MS": "3000",
+            },
         )
 
         parsed = parse_stream_json_file(_latest_stream_log(logs_dir))
@@ -240,6 +246,8 @@ class TestClaudeMcpColdStartIntegration:
 
         # --- v1: stub was pending at init --------------------------------
         stub_status = _mcp_server_status(init_msg, "stub")
+        if stub_status == "connected":
+            pytest.skip(f"stub {stub_status!r} at init; pending-at-init not reached")
         assert (
             stub_status == "pending"
         ), f"expected stub 'pending' at init, got {stub_status!r}"

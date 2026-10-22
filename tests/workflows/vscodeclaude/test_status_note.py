@@ -12,7 +12,13 @@ from mcp_coder.workflows.vscodeclaude.workspace import (
 
 def _comment(body: str) -> CommentData:
     return CommentData(
-        id=1, body=body, user=None, created_at=None, updated_at=None, url=""
+        id=1,
+        body=body,
+        user=None,
+        created_at=None,
+        updated_at=None,
+        url="",
+        author_association=None,
     )
 
 
