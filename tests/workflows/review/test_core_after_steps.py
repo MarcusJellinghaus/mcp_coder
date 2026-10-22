@@ -19,6 +19,7 @@ The shared ``env`` fixture and the ``_status``/``_resp``/``_reviewer``/``_run``/
 live in ``test_core_gates``.
 """
 
+import inspect
 import logging
 import time
 from pathlib import Path
@@ -126,6 +127,14 @@ def test_dismiss_rebase_conflict_routes_to_needs_human(
         encoding="utf-8"
     )
     assert "rebase" in log
+
+
+def test_rebase_slot_references_issue_1266(env: SimpleNamespace) -> None:
+    """The needs-human rebase slot points at the #1266 follow-up, not #1066."""
+    source = inspect.getsource(steps._after_steps)
+    assert "#1266" in source
+    assert "#1066" not in source
+    assert "NotYetImplemented" not in source
 
 
 def test_dismiss_ci_red_fails_with_ci_label(
