@@ -21,6 +21,25 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Shared ❌ helper `is_marked()` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `TestIsMarked` tests + `is_marked()` in `helpers.py`, used by `_find_marked_comment`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Count only outstanding feedback in `_check_review_comments()` — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: typed builders + new/converted tests, shim re-exports, `_check_review_comments()` watermark logic for reviews and non-❌ comments
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Triage skill and docs — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: update `SKILL.md`, `development-process.md`, `coordinator-vscodeclaude.md`, `label-setup.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `summary.md`, address findings
+- [ ] PR summary prepared
