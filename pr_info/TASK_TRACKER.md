@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Rename the `status-17f-ci-unknown` label
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: rename label `name` in `labels.json`, update expected names in tests and docs
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: rename label `name` in `labels.json`, update expected names in tests and docs
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Enforce GitHub label length limits in `validate_labels_config()`
 See [step_2.md](./steps/step_2.md)

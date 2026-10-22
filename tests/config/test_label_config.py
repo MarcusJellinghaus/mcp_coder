@@ -245,7 +245,7 @@ REVIEW_LABELS = [
     ),
     (
         "code_review_ci_unknown",
-        "status-17f-ci-unknown:code-review-ci-undeterminable",
+        "status-17f-ci-unknown:code-review-ci-unknown",
         "human_action",
     ),
 ]

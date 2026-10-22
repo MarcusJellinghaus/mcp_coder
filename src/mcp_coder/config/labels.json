@@ -575,7 +575,7 @@
     },
     {
       "internal_id": "code_review_ci_unknown",
-      "name": "status-17f-ci-unknown:code-review-ci-undeterminable",
+      "name": "status-17f-ci-unknown:code-review-ci-unknown",
       "color": "d93f0b",
       "description": "Could not prove CI ran green during automated code review",
       "category": "human_action",
