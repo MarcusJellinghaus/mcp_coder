@@ -20,6 +20,8 @@ class ReviewConfig:
 
     Attributes:
         name: Workflow verb, ``"review-implementation"`` or ``"review-plan"``.
+        display_name: Human-readable lane title used in issue comment
+            headings, ``"Implementation Review"`` or ``"Plan Review"``.
         log_stem: Stem for the per-run log file
             (``pr_info/{log_stem}_review_log_{n}.md``).
         session_dir_name: Directory name for persisted LLM sessions.
@@ -52,6 +54,7 @@ class ReviewConfig:
     """
 
     name: str
+    display_name: str
     log_stem: str
     session_dir_name: str
     reviewer_prompt_header: str
@@ -70,6 +73,7 @@ class ReviewConfig:
 
 REVIEW_IMPLEMENTATION = ReviewConfig(
     name="review-implementation",
+    display_name="Implementation Review",
     log_stem="implementation",
     session_dir_name="review_implementation_sessions",
     reviewer_prompt_header="Review Implementation Reviewer",
@@ -96,6 +100,7 @@ REVIEW_IMPLEMENTATION = ReviewConfig(
 
 REVIEW_PLAN = ReviewConfig(
     name="review-plan",
+    display_name="Plan Review",
     log_stem="plan",
     session_dir_name="review_plan_sessions",
     reviewer_prompt_header="Review Plan Reviewer",

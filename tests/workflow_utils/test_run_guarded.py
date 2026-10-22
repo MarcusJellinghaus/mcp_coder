@@ -1,14 +1,29 @@
 """Tests for the shared ``run_guarded`` safety-net runner."""
 
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.workflow_utils.failure_handling import GuardOutcome, run_guarded
+from mcp_coder.workflow_utils.failure_handling import (
+    CommentField,
+    GuardOutcome,
+    run_guarded,
+)
 
 PROJECT_DIR = Path("/fake/project")
+
+
+@pytest.fixture(autouse=True)
+def _stub_branch_head() -> Iterator[None]:
+    """Keep the comment builder away from real git."""
+    with patch(
+        "mcp_coder.workflow_utils.failure_handling._branch_head",
+        return_value=("feat", "abc1234"),
+    ):
+        yield
 
 
 def _run(body: object, **overrides: object) -> int:
@@ -17,7 +32,7 @@ def _run(body: object, **overrides: object) -> int:
         "project_dir": PROJECT_DIR,
         "from_label_id": "busy",
         "general_category": "general_failed",
-        "comment_header": "**Workflow failed unexpectedly.**",
+        "workflow_title": "Test Workflow",
     }
     kwargs.update(overrides)
     return run_guarded(body, **kwargs)  # type: ignore[arg-type]
@@ -58,7 +73,11 @@ class TestRunGuardedException:
         failure = mock_handle.call_args.args[0]
         comment = mock_handle.call_args.args[1]
         assert failure.category == "general_failed"
-        assert "**Workflow failed unexpectedly.**" in comment
+        assert comment.startswith("## ❌ Test Workflow Crashed\n")
+        assert "**Stage:** Unexpected exit" in comment
+        assert "**Error:** Workflow exited without reaching a terminal state" in comment
+        assert "**Branch:** feat @ abc1234" in comment
+        assert "**Elapsed:** " in comment
 
     @patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure")
     def test_mcp_unavailable_names_servers(self, mock_handle: MagicMock) -> None:
@@ -121,8 +140,10 @@ class TestRunGuardedBuildComment:
     def test_build_comment_reflects_live_mutation(self, mock_handle: MagicMock) -> None:
         holder = {"progress": "0/3"}
 
-        def build_comment(outcome: GuardOutcome) -> str:
-            return f"Progress: {holder['progress']} | stage={outcome.stage}"
+        def build_comment(
+            outcome: GuardOutcome,
+        ) -> tuple[list[CommentField], str | None]:
+            return [("Progress", f"{holder['progress']} | stage={outcome.stage}")], None
 
         def body() -> int:
             holder["progress"] = "2/3"
@@ -132,4 +153,38 @@ class TestRunGuardedBuildComment:
 
         assert result == 1
         comment = mock_handle.call_args.args[1]
-        assert "Progress: 2/3" in comment
+        assert "**Progress:** 2/3 | stage=Unexpected exit" in comment
+
+    @patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure")
+    def test_build_comment_fields_and_section_included(
+        self, mock_handle: MagicMock
+    ) -> None:
+        def build_comment(
+            _outcome: GuardOutcome,
+        ) -> tuple[list[CommentField], str | None]:
+            return [("Category", "General")], "### Extra\nsection body"
+
+        def body() -> int:
+            raise ValueError("boom")
+
+        _run(body, build_comment=build_comment)
+
+        comment = mock_handle.call_args.args[1]
+        assert "**Category:** General" in comment
+        assert "**Stage:** Unexpected exit" in comment
+        assert comment.endswith("\n\n### Extra\nsection body")
+
+    @patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure")
+    def test_build_comment_cannot_change_heading(self, mock_handle: MagicMock) -> None:
+        def build_comment(
+            _outcome: GuardOutcome,
+        ) -> tuple[list[CommentField], str | None]:
+            return [], "## Implementation Failed"
+
+        def body() -> int:
+            raise ValueError("boom")
+
+        _run(body, build_comment=build_comment)
+
+        comment = mock_handle.call_args.args[1]
+        assert comment.splitlines()[0] == "## ❌ Test Workflow Crashed"

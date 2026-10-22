@@ -131,6 +131,10 @@ def test_unexpected_exception_netted_by_run_guarded() -> None:
         patch(
             "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
         ) as mock_handle,
+        patch(
+            "mcp_coder.workflow_utils.failure_handling._branch_head",
+            return_value=("feat", "abc1234"),
+        ),
     ):
         result = run_fix_ci_workflow(
             PROJECT_DIR,
@@ -143,6 +147,8 @@ def test_unexpected_exception_netted_by_run_guarded() -> None:
     mock_handle.assert_called_once()
     failure = mock_handle.call_args[0][0]
     assert failure.category == "ci_fix_failed"
+    comment = mock_handle.call_args[0][1]
+    assert comment.splitlines()[0] == "## ❌ CI Fix Crashed"
 
 
 def test_formatter_config_error_fails_before_ci_fix() -> None:

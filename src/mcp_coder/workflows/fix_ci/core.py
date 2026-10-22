@@ -131,7 +131,7 @@ def run_fix_ci_workflow(
         project_dir=project_dir,
         from_label_id="fixing_ci",
         general_category="ci_fix_failed",
-        comment_header="## ❌ CI Fix Crashed",
+        workflow_title="CI Fix",
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
     )

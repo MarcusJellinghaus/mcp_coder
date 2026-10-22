@@ -271,6 +271,10 @@ class TestCreatePrFailureHandling:
         assert "pr_url" not in call_kwargs
         assert "pr_number" not in call_kwargs
 
+    @patch(
+        "mcp_coder.workflow_utils.failure_handling._branch_head",
+        return_value=("feat", "abc1234"),
+    )
     @patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure")
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -279,6 +283,7 @@ class TestCreatePrFailureHandling:
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
         mock_workflow_failure: MagicMock,
+        _mock_branch_head: MagicMock,
     ) -> None:
         """An unexpected escape is netted by run_guarded, not the seam.
 
@@ -298,6 +303,8 @@ class TestCreatePrFailureHandling:
         mock_workflow_failure.assert_called_once()
         failure = mock_workflow_failure.call_args.args[0]
         assert failure.category == "pr_creating_failed"
+        comment = mock_workflow_failure.call_args.args[1]
+        assert comment.splitlines()[0] == "## ❌ PR Creation Crashed"
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")

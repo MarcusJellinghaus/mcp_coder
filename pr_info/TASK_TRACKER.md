@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: `run_guarded(workflow_title=…)`, all crash nets on the builder, implement migration, `ReviewConfig.display_name` — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: tests + `run_guarded` `workflow_title` / tuple `build_comment`, implement `_comment_parts` / `_fail` (drop `build_url`), titles in all six nets, `display_name` on `ReviewConfig`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `run_guarded` `workflow_title` / tuple `build_comment`, implement `_comment_parts` / `_fail` (drop `build_url`), titles in all six nets, `display_name` on `ReviewConfig`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: create_plan deliberate failure on the builder — [step_3.md](./steps/step_3.md)
 

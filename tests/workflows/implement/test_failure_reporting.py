@@ -1,5 +1,6 @@
 """Tests for implement workflow failure reporting helpers."""
 
+import os
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -9,11 +10,43 @@ from mcp_coder.workflows.implement.failure_reporting import (
     CATEGORY_DISPLAY,
     FAILURE_LABELS,
     Progress,
+    _comment_parts,
     _fail,
     append_detail,
-    format_failure_comment,
 )
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
+
+PROJECT = Path("/project")
+
+
+def _fail_comment(
+    reason: str = "general",
+    *,
+    stage: str = "Test",
+    message: str = "err",
+    progress: Progress | None = None,
+    diff_stat: str = "",
+) -> str:
+    """Run _fail with handle_workflow_failure mocked and return the comment."""
+    with (
+        patch(
+            "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+            return_value=diff_stat,
+        ),
+        patch(
+            "mcp_coder.workflows.implement.failure_reporting.handle_workflow_failure"
+        ) as mock_handle,
+    ):
+        _fail(
+            PROJECT,
+            reason,
+            stage=stage,
+            message=message,
+            progress=progress or Progress(),
+            start_time=time.time(),
+        )
+    comment: str = mock_handle.call_args[1]["comment_body"]
+    return comment
 
 
 class TestFailureLabels:
@@ -56,175 +89,108 @@ class TestAppendDetail:
         assert "why" in result
 
 
-class TestFormatFailureComment:
-    """Tests for format_failure_comment."""
+class TestCommentParts:
+    """Tests for _comment_parts (Category / Progress fields + diff section)."""
 
-    def test_basic_failure_comment(self) -> None:
-        """Formats basic failure comment with category, stage, error."""
-        result = format_failure_comment(
-            "general",
-            "test stage",
-            "something failed",
-            completed=0,
-            total=0,
-            elapsed=None,
-            build_url=None,
-            diff_stat="",
+    @patch(
+        "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+        return_value="",
+    )
+    def test_general_no_progress_no_diff(self, _mock_diff: MagicMock) -> None:
+        """Category General, Progress None when total is 0, empty diff placeholder."""
+        fields, section = _comment_parts("general", Progress(), PROJECT)
+
+        assert fields == [("Category", "General"), ("Progress", None)]
+        assert section == "### Uncommitted Changes\n```\nNo uncommitted changes\n```"
+
+    @patch(
+        "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+        return_value="file.py | 3 +++",
+    )
+    def test_progress_and_diff(self, _mock_diff: MagicMock) -> None:
+        """Progress rendered when total > 0; diff stat goes into the section."""
+        fields, section = _comment_parts(
+            "timeout", Progress(completed=2, total=5), PROJECT
         )
 
-        assert "## ❌ Implementation Failed" in result
-        assert "General" in result
-        assert "test stage" in result
-        assert "something failed" in result
-        assert "No uncommitted changes" in result
+        assert ("Category", "Llm Timeout") in fields
+        assert ("Progress", "2/5 tasks completed") in fields
+        assert "file.py | 3 +++" in section
+
+    @patch(
+        "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+        return_value="",
+    )
+    def test_unknown_reason_falls_back_to_general(self, _mock_diff: MagicMock) -> None:
+        """An unmapped reason renders the 'general' display."""
+        fields, _section = _comment_parts("nope", Progress(), PROJECT)
+
+        assert fields[0] == ("Category", "General")
+
+
+class TestFailComment:
+    """Tests for the comment _fail renders through the shared builder."""
+
+    def test_basic_failure_comment(self) -> None:
+        """Heading, category, stage, error, branch and diff placeholder."""
+        result = _fail_comment(stage="test stage", message="something failed")
+
+        assert result.splitlines()[0] == "## ❌ Implementation Failed"
+        assert "**Category:** General" in result
+        assert "**Stage:** test stage" in result
+        assert "**Error:** something failed" in result
+        assert "**Branch:** feat @ abc1234" in result
+        assert "**Elapsed:** " in result
+        assert result.endswith(
+            "\n\n### Uncommitted Changes\n```\nNo uncommitted changes\n```"
+        )
 
     def test_timeout_renders_llm_timeout_category(self) -> None:
         """Reason 'timeout' renders 'Llm Timeout' (not 'Timeout')."""
-        result = format_failure_comment(
-            "timeout",
-            "Task implementation",
-            "timed out",
-            completed=0,
-            total=0,
-            elapsed=None,
-            build_url=None,
-            diff_stat="",
-        )
-
-        assert "**Category:** Llm Timeout" in result
+        assert "**Category:** Llm Timeout" in _fail_comment("timeout")
 
     def test_blocked_renders_blocked_category(self) -> None:
         """Reason 'blocked' renders 'Blocked' with the agent's text as Error."""
-        result = format_failure_comment(
-            "blocked",
-            "Task implementation",
-            "pytest times out at 300s",
-            completed=0,
-            total=0,
-            elapsed=None,
-            build_url=None,
-            diff_stat="",
-        )
+        result = _fail_comment("blocked", message="pytest times out at 300s")
 
         assert "**Category:** Blocked" in result
         assert "**Error:** pytest times out at 300s" in result
 
     def test_no_progress_renders_its_own_category(self) -> None:
         """Reason 'no_progress_after_retries' does not fall back to 'General'."""
-        result = format_failure_comment(
-            "no_progress_after_retries",
-            "Task implementation",
-            "nothing got ticked",
-            completed=0,
-            total=0,
-            elapsed=None,
-            build_url=None,
-            diff_stat="",
-        )
+        result = _fail_comment("no_progress_after_retries")
 
         assert "**Category:** No Progress After Retries" in result
 
     def test_includes_progress_when_set(self) -> None:
         """Includes progress info when total > 0."""
-        result = format_failure_comment(
+        result = _fail_comment(
             "timeout",
-            "Task implementation",
-            "timed out",
-            completed=2,
-            total=5,
-            elapsed=None,
-            build_url=None,
+            progress=Progress(completed=2, total=5),
             diff_stat="file.py | 3 +++",
         )
 
-        assert "2/5" in result
-        assert "file.py" in result
+        assert "**Progress:** 2/5 tasks completed" in result
+        assert "file.py | 3 +++" in result
 
     def test_no_progress_when_zero_total(self) -> None:
         """No progress line when total is 0."""
-        result = format_failure_comment(
-            "general",
-            "test",
-            "failed",
-            completed=0,
-            total=0,
-            elapsed=None,
-            build_url=None,
-            diff_stat="",
-        )
-
-        assert "Progress" not in result
-
-    def test_includes_elapsed_time_when_set(self) -> None:
-        """Includes elapsed time line when elapsed is set."""
-        comment = format_failure_comment(
-            "general",
-            "Test",
-            "err",
-            completed=0,
-            total=0,
-            elapsed=754.0,
-            build_url=None,
-            diff_stat="",
-        )
-        assert "**Elapsed:** 12m 34s" in comment
+        assert "Progress" not in _fail_comment()
 
     def test_includes_build_url_when_set(self) -> None:
-        """Includes build URL line when build_url is set."""
-        comment = format_failure_comment(
-            "general",
-            "Test",
-            "err",
-            completed=0,
-            total=0,
-            elapsed=None,
-            build_url="https://jenkins.example.com/job/123/console",
-            diff_stat="",
-        )
-        assert "**Build:** https://jenkins.example.com/job/123/console" in comment
+        """Includes build URL line when BUILD_URL is set."""
+        url = "https://jenkins.example.com/job/123/console"
+        with patch.dict(os.environ, {"BUILD_URL": url}):
+            comment = _fail_comment()
 
-    def test_excludes_elapsed_time_when_none(self) -> None:
-        """Excludes elapsed time line when elapsed is None."""
-        comment = format_failure_comment(
-            "general",
-            "Test",
-            "err",
-            completed=0,
-            total=0,
-            elapsed=None,
-            build_url=None,
-            diff_stat="",
-        )
-        assert "Elapsed" not in comment
+        assert f"**Build:** {url}" in comment
 
-    def test_excludes_build_url_when_none(self) -> None:
-        """Excludes build URL line when build_url is None."""
-        comment = format_failure_comment(
-            "general",
-            "Test",
-            "err",
-            completed=0,
-            total=0,
-            elapsed=None,
-            build_url=None,
-            diff_stat="",
-        )
-        assert "Build" not in comment
+    def test_excludes_build_url_when_unset(self) -> None:
+        """Excludes build URL line when BUILD_URL is not set."""
+        with patch.dict(os.environ, {}, clear=True):
+            comment = _fail_comment()
 
-    def test_includes_both_elapsed_and_build_url(self) -> None:
-        """Includes both elapsed time and build URL when both are set."""
-        comment = format_failure_comment(
-            "general",
-            "Test",
-            "err",
-            completed=0,
-            total=0,
-            elapsed=3661.0,
-            build_url="https://jenkins.example.com/job/1/console",
-            diff_stat="some diff",
-        )
-        assert "**Elapsed:** 1h 1m 1s" in comment
-        assert "**Build:** https://jenkins.example.com/job/1/console" in comment
+        assert "**Build:**" not in comment
 
 
 class TestFail:
@@ -247,7 +213,6 @@ class TestFail:
             message="failed",
             progress=Progress(),
             start_time=time.time(),
-            build_url=None,
         )
 
         assert result == 1
@@ -269,7 +234,6 @@ class TestFail:
             message="failed",
             progress=Progress(),
             start_time=time.time(),
-            build_url=None,
             update_issue_labels=True,
         )
 
@@ -296,7 +260,6 @@ class TestFail:
             message="timed out",
             progress=Progress(),
             start_time=time.time(),
-            build_url=None,
             update_issue_labels=True,
         )
 
@@ -320,7 +283,6 @@ class TestFail:
             message="CI failed",
             progress=Progress(),
             start_time=time.time(),
-            build_url=None,
             update_issue_labels=True,
         )
 
@@ -344,7 +306,6 @@ class TestFail:
             message="timed out",
             progress=Progress(completed=2, total=5),
             start_time=time.time(),
-            build_url=None,
             update_issue_labels=True,
         )
 
@@ -371,7 +332,6 @@ class TestFail:
             message="failed",
             progress=Progress(),
             start_time=time.time(),
-            build_url=None,
             update_issue_labels=False,
         )
 

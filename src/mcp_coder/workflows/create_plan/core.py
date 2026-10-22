@@ -732,7 +732,7 @@ def run_create_plan_workflow(
         project_dir=project_dir,
         from_label_id="planning",
         general_category=FAILURE_LABELS["general"],
-        comment_header="## ❌ Planning Failed",
+        workflow_title="Planning",
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
         issue_number=issue_number,

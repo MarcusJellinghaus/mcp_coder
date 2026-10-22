@@ -663,7 +663,7 @@ def run_review_workflow(
         project_dir=project_dir,
         from_label_id=config.busy_label_id,
         general_category=config.failure_labels["general"],
-        comment_header=f"❌ {config.name} review terminated unexpectedly",
+        workflow_title=config.display_name,
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
         issue_number=issue_number,

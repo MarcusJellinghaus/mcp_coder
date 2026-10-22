@@ -484,6 +484,10 @@ def test_body_escape_is_netted_by_guard(
     monkeypatch.setattr(
         "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure", net
     )
+    monkeypatch.setattr(
+        "mcp_coder.workflow_utils.failure_handling._branch_head",
+        lambda _project_dir: ("feat", "abc1234"),
+    )
     env.prompt_llm.side_effect = SystemExit(1)
 
     with pytest.raises(SystemExit):
@@ -493,7 +497,7 @@ def test_body_escape_is_netted_by_guard(
     failure = net.call_args.args[0]
     assert failure.category == REVIEW_PLAN.failure_labels["general"]
     comment = net.call_args.args[1]
-    assert "review terminated unexpectedly" in comment
+    assert comment.splitlines()[0] == "## ❌ Plan Review Crashed"
 
 
 def test_deliberate_fail_comment_carries_round_verdict_elapsed(

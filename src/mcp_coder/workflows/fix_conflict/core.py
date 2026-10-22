@@ -84,7 +84,7 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
         project_dir=project_dir,
         from_label_id="fixing_merge_conflict",
         general_category="merge_conflict_failed",
-        comment_header="## ❌ Fix Conflict Crashed",
+        workflow_title="Fix Conflict",
         update_issue_labels=True,
         post_issue_comments=True,
     )

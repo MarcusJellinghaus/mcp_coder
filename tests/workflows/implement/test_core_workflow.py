@@ -499,10 +499,19 @@ class TestWorkflowSafetyNet:
         mock_handle: MagicMock,
     ) -> None:
         """Unexpected exception allows safety net to fire for GitHub reporting."""
-        result = run_implement_workflow(Path("/fake"), "claude")
+        with patch(
+            "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+            return_value="",
+        ):
+            result = run_implement_workflow(Path("/fake"), "claude")
 
         assert result == 1
         mock_handle.assert_called_once()
+        comment = mock_handle.call_args[0][1]
+        assert comment.splitlines()[0] == "## ❌ Implementation Crashed"
+        assert "**Category:** General" in comment
+        assert "**Build:** https://jenkins.example.com/job/1/console" in comment
+        assert "### Uncommitted Changes" in comment
 
 
 class TestSigtermHandler:

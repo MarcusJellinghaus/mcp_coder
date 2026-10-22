@@ -16,6 +16,7 @@ class TestReviewImplementation:
 
     def test_identity_and_naming(self) -> None:
         assert REVIEW_IMPLEMENTATION.name == "review-implementation"
+        assert REVIEW_IMPLEMENTATION.display_name == "Implementation Review"
         assert REVIEW_IMPLEMENTATION.log_stem == "implementation"
         assert (
             REVIEW_IMPLEMENTATION.session_dir_name == "review_implementation_sessions"
@@ -71,6 +72,7 @@ class TestReviewPlan:
 
     def test_identity_and_naming(self) -> None:
         assert REVIEW_PLAN.name == "review-plan"
+        assert REVIEW_PLAN.display_name == "Plan Review"
         assert REVIEW_PLAN.log_stem == "plan"
         assert REVIEW_PLAN.session_dir_name == "review_plan_sessions"
 

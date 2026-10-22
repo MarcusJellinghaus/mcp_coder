@@ -327,8 +327,10 @@ def run_guarded(
     project_dir: Path,
     from_label_id: str,
     general_category: str,
-    comment_header: str,
-    build_comment: Callable[[GuardOutcome], str] | None = None,
+    workflow_title: str,
+    build_comment: (
+        Callable[[GuardOutcome], tuple[list[CommentField], str | None]] | None
+    ) = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
     issue_number: int | None = None,
@@ -348,9 +350,10 @@ def run_guarded(
         project_dir: Path to the project git repository.
         from_label_id: Current workflow (busy) label ID to transition from.
         general_category: General failure label applied on any netted escape.
-        comment_header: Header for the generic net comment (used when
-            ``build_comment`` is not supplied).
-        build_comment: Optional closure building the net comment from the
+        workflow_title: Workflow title; the net comment heading is always
+            ``## ❌ <workflow_title> Crashed``.
+        build_comment: Optional closure returning ``(extra_fields,
+            extra_section)`` for the net comment from the
             :class:`GuardOutcome`; read at net time so it reflects live locals.
         update_issue_labels: Whether to attempt a label transition.
         post_issue_comments: Whether to post a failure comment.
@@ -388,15 +391,15 @@ def run_guarded(
             stage=stage,
             message=message,
         )
-        if build_comment is not None:
-            comment = build_comment(outcome)
-        else:
-            comment = (
-                f"{comment_header}\n"
-                f"**Stage:** {stage}\n"
-                f"**Error:** {message}\n"
-                f"**Elapsed:** {format_elapsed_time(outcome.elapsed_time)}"
-            )
+        extra_fields, extra = build_comment(outcome) if build_comment else ([], None)
+        comment = build_failure_comment(
+            project_dir,
+            title=workflow_title,
+            kind="Crashed",
+            fields=[("Stage", stage), ("Error", message), *extra_fields],
+            elapsed=outcome.elapsed_time,
+            extra_section=extra,
+        )
         handle_workflow_failure(
             WorkflowFailure(
                 category=general_category,
