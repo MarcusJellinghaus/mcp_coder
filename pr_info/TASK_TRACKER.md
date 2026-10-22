@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: fix_ci deliberate failure on the builder — [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: tests + fix_ci `_fail` calls the builder (`## ❌ CI Fix Failed`, Category / Stage / Error)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + fix_ci `_fail` calls the builder (`## ❌ CI Fix Failed`, Category / Stage / Error)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: `RebaseOutcome` + merge-tree classification; callers compile against it — [step_6.md](./steps/step_6.md)
 
