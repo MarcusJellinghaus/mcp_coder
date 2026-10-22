@@ -18,3 +18,11 @@ Spot-checking the plan's code assumptions (imports, net body, call sites) before
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_8.md (around line 141), fix the test instruction for the Category `Rebase conflict` assertion. It names the conftest conflict outcome, but the `tests/workflows/review/conftest.py` mock returns `RebaseOutcome("ok", ...)` (step_6.md:107). Point the dismiss and mid-loop pass-through assertions at the conflict-outcome mocks in `tests/workflows/review/test_core_after_steps.py` (around lines 105, 252 and 298).'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 3 — 2026-10-22
+**Findings**:
+Checking a few code facts (handle_workflow_failure, review/core.py size, _route_to_human) before writing the report.`pr_info/steps/step_8.md:10` — medium — CI enforces a 750-line limit (`.github/workflows/ci.yml:105`) and `tests/workflows/review/test_core_after_steps.py` is not on `.large-files-allowlist`. That file is already 736 lines. Steps 6 and 8 change tests there: step 8 adds Category assertions at `:105`, `:252` and `:298` and rewrites `:125-129`. Step 8 runs `check_file_size` only to keep `review/core.py` under 750, not this test file. Put the new rebase hand-off tests in `test_handoff_route.py`, or make the 750-line limit an exit criterion for this test file too.
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
