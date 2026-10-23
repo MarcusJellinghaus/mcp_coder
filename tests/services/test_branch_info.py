@@ -4,17 +4,18 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.services.branch_info import (
     BranchInfo,
     get_branch_info,
     get_branch_only,
     get_pr_for_issue,
 )
+from tests.github_factories import make_issue_data
 
 PROJECT_DIR = Path("/fake/project")
 
@@ -34,23 +35,15 @@ def _fake_repo_id(
     return repo_id
 
 
-def _issue(
-    labels: list[str], title: str = "Some title", number: int = 42
-) -> dict[str, Any]:
-    return {
-        "number": number,
-        "state": "open",
-        "labels": labels,
-        "title": title,
-        "body": "",
-        "assignees": [],
-        "user": "u",
-        "created_at": "2026-04-30T08:00:00Z",
-        "updated_at": "2026-04-30T09:00:00Z",
-        "url": f"https://github.com/owner/repo/issues/{number}",
-        "locked": False,
-        "author_association": None,
-    }
+def _issue(labels: list[str], title: str = "Some title", number: int = 42) -> IssueData:
+    return make_issue_data(
+        number=number,
+        labels=labels,
+        title=title,
+        user="u",
+        created_at="2026-04-30T08:00:00Z",
+        updated_at="2026-04-30T09:00:00Z",
+    )
 
 
 # ---------------------------------------------------------------------------
