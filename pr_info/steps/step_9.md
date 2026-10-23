@@ -12,7 +12,7 @@
 
 ## WHAT
 - `test_branch_info.py::_issue(labels, title="Some title", number=42)`:
-  return type `dict[str, Any]` → `IssueData`; body becomes
+  return type `dict[str, Any]` → `IssueData` (add `from mcp_coder.mcp_workspace_github import IssueData`); body becomes
   ```python
   return make_issue_data(
       number=number, labels=labels, title=title, user="u",
