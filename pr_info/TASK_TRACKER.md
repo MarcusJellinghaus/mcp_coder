@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Replace DEP002 list with `optional_dependencies_dev_groups`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add `optional_dependencies_dev_groups` to `[tool.deptry]`, remove the `DEP002` ignore list, update `docs/repository-setup/python.md`, verify with `deptry src`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `optional_dependencies_dev_groups` to `[tool.deptry]`, remove the `DEP002` ignore list, update `docs/repository-setup/python.md`, verify with `deptry src`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -376,6 +376,11 @@ convention = "google"
 # src only: running it over tests/ yields DEP004 noise and no signal.
 [tool.deptry]
 known_first_party = ["mcp_coder"]
+# Extras holding dev-only packages: deptry exempts them from DEP002 and reports
+# DEP004 if src/ imports them. deptry does not expand mcp-coder[...] self-
+# references, so each such extra is named explicitly. langchain-* and mlflow
+# are left out on purpose: src/ imports them.
+optional_dependencies_dev_groups = ["dev", "types", "typecheck", "test", "tui"]
 
 [tool.deptry.package_module_name_map]
 # pywin32 carries a sys_platform marker, so it is absent on the Linux CI runner
@@ -384,22 +389,6 @@ known_first_party = ["mcp_coder"]
 pywin32 = ["win32gui", "win32process"]
 
 [tool.deptry.per_rule_ignores]
-# DEP002: declared but never imported — tools invoked as executables, plus type
-# stubs read only by mypy. Grouped by where they actually come from.
-DEP002 = [
-    # Mandatory dependencies of mcp-tools-py, so they arrive in every install
-    # whether or not mcp_coder declares them. Re-declared here to pin a floor.
-    "mypy", "ruff", "tach", "vulture", "import-linter",
-    "pytest-asyncio", "pytest-xdist",
-    # In mcp-tools-py's dev extra only, so they do not propagate — mcp_coder
-    # must declare these itself.
-    "pycycle", "pydeps",
-    # mcp_coder only; no sibling provides them.
-    "deptry", "pytest-textual-snapshot", "textual-dev",
-    "pytest-cov", "diff-cover",
-    "types-requests", "types-tabulate", "types-jsonschema",
-    "types-PyYAML",
-]
 # DEP003: optional provider SDKs, imported behind try/except ImportError and
 # supplied by the langchain-* extras. Each is a hard requirement of the
 # langchain-* wrapper that gates it, so it cannot be absent when reached.

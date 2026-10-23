@@ -160,7 +160,8 @@ deptry src
 
 ### Dependency Declaration Hygiene
 
-> **Customize (`[tool.deptry]` in `pyproject.toml`):** Per-rule ignores and the
+> **Customize (`[tool.deptry]` in `pyproject.toml`):** The dev-only extras
+> (`optional_dependencies_dev_groups`), per-rule ignores and the
 > package-to-module name map.
 
 **Tool: deptry**
