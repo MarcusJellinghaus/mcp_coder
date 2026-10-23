@@ -26,6 +26,13 @@ Call `/check_branch_status` first — it reports unresolved review threads
 (with `comment_id`/`thread_id`), changes-requested reviews, and new PR
 comments.
 
+`status-91` fires on unresolved threads (live state), and on changes-requested
+reviews and PR comments — all of them if the PR has never been through
+`status-91`, otherwise only those newer than the last return to `status-10`
+(reviews by `submitted_at`, comments by `created_at`). A comment whose first
+line contains ❌ (mcp-coder's automated notes) is ignored; a review already
+triaged does not re-trigger.
+
 ## For each item
 
 - **Fix**: change code, run quality checks
@@ -47,6 +54,12 @@ comments.
 
 ## When done
 
-CI green, no rebase needed, no unresolved new items:
+- CI green, no rebase needed, every item fixed, replied to or declined. A
+  changes-requested review that has been replied to or fixed does not block —
+  it stays listed by `/check_branch_status` until the reviewer re-reviews.
+- Re-run `/check_branch_status` right before `set-status` and handle anything
+  new.
+- Post all replies before setting the status (the relabel sets the
+  watermark):
 
-    mcp-coder gh-tool set-status status-10:pr-created
+      mcp-coder gh-tool set-status status-10:pr-created

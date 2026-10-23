@@ -30,6 +30,7 @@ class TestDisplayStatusTableBranchIndicators:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
@@ -63,6 +64,7 @@ class TestDisplayStatusTableBranchIndicators:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
@@ -96,6 +98,7 @@ class TestDisplayStatusTableBranchIndicators:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
@@ -142,6 +145,7 @@ class TestDisplayStatusTableBranchIndicators:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
@@ -174,6 +178,7 @@ class TestDisplayStatusTableBranchIndicators:
             "created_at": None,
             "updated_at": None,
             "locked": False,
+            "author_association": None,
         }
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]

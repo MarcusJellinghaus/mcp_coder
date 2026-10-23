@@ -301,7 +301,7 @@ After a PR is created (`status-10:pr-created`), the coordinator checks it on eve
 | `status-82:fixing-ci` | CI auto-fix loop in progress (auto/in-progress) |
 | `status-83:ci-fix-failed` | The CI-fix job crashed (crash watchdog) — needs a human |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, or LLM timeout / MCP unavailable — needs a human |
-| `status-91:pr-review-comments` | New review comments, unresolved threads or a changes-requested review — human triage via `/pr_comment_triage` |
+| `status-91:pr-review-comments` | Outstanding review feedback (unresolved thread, untriaged changes-requested review, new PR comment; ❌-first-line comments ignored) — human triage via `/pr_comment_triage` |
 
 Successful automated fixes return the issue to `status-10:pr-created`. Like the other bot labels, `71`/`81` wait unprocessed if Jenkins is not configured for the repo.
 

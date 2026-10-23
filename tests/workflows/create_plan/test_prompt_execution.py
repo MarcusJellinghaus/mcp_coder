@@ -82,6 +82,7 @@ class TestFormatInitialPrompt:
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/123",
             locked=False,
+            author_association=None,
         )
 
         result = format_initial_prompt(prompt_template, issue_data)
@@ -109,6 +110,7 @@ class TestFormatInitialPrompt:
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/456",
             locked=False,
+            author_association=None,
         )
 
         result = format_initial_prompt(prompt_template, issue_data)
@@ -130,6 +132,7 @@ class TestFormatInitialPrompt:
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/789",
             locked=False,
+            author_association=None,
         )
 
         result = format_initial_prompt(prompt_template, issue_data)
@@ -153,6 +156,7 @@ def _make_issue_data() -> IssueData:
         updated_at="2024-01-02T00:00:00",
         url="https://github.com/test/repo/issues/123",
         locked=False,
+        author_association=None,
     )
 
 

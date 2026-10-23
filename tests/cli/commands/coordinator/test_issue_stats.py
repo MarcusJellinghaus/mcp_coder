@@ -53,6 +53,7 @@ def sample_issue() -> IssueData:
         updated_at="2024-01-01T00:00:00",
         url="https://github.com/owner/repo/issues/123",
         locked=False,
+        author_association=None,
     )
 
 
@@ -72,6 +73,7 @@ def sample_issues() -> list[IssueData]:
             updated_at="2024-01-01T00:00:00",
             url="https://github.com/owner/repo/issues/1",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=2,
@@ -85,6 +87,7 @@ def sample_issues() -> list[IssueData]:
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/owner/repo/issues/2",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=3,
@@ -98,6 +101,7 @@ def sample_issues() -> list[IssueData]:
             updated_at="2024-01-03T00:00:00",
             url="https://github.com/owner/repo/issues/3",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=4,
@@ -111,6 +115,7 @@ def sample_issues() -> list[IssueData]:
             updated_at="2024-01-04T00:00:00",
             url="https://github.com/owner/repo/issues/4",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=5,
@@ -124,6 +129,7 @@ def sample_issues() -> list[IssueData]:
             updated_at="2024-01-05T00:00:00",
             url="https://github.com/owner/repo/issues/5",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=6,
@@ -137,6 +143,7 @@ def sample_issues() -> list[IssueData]:
             updated_at="2024-01-06T00:00:00",
             url="https://github.com/owner/repo/issues/6",
             locked=False,
+            author_association=None,
         ),
     ]
 
@@ -180,6 +187,7 @@ def test_validate_issue_labels_no_status() -> None:
         updated_at="2024-01-01T00:00:00",
         url="https://github.com/owner/repo/issues/1",
         locked=False,
+        author_association=None,
     )
     valid_labels = {"status-01:created", "status-02:awaiting-planning"}
     is_valid, error_type = validate_issue_labels(issue, valid_labels)
@@ -201,6 +209,7 @@ def test_validate_issue_labels_multiple_status() -> None:
         updated_at="2024-01-01T00:00:00",
         url="https://github.com/owner/repo/issues/1",
         locked=False,
+        author_association=None,
     )
     valid_labels = {"status-01:created", "status-02:awaiting-planning"}
     is_valid, error_type = validate_issue_labels(issue, valid_labels)
@@ -242,6 +251,7 @@ def test_filter_ignored_issues_labels_with_spaces() -> None:
             updated_at="2024-01-01T00:00:00",
             url="https://github.com/owner/repo/issues/1",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=2,
@@ -255,6 +265,7 @@ def test_filter_ignored_issues_labels_with_spaces() -> None:
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/owner/repo/issues/2",
             locked=False,
+            author_association=None,
         ),
     ]
     filtered = filter_ignored_issues(issues, ["on hold"])
@@ -339,6 +350,7 @@ def test_group_issues_by_category_zero_counts_included(
             updated_at="2024-01-01T00:00:00",
             url="https://github.com/owner/repo/issues/1",
             locked=False,
+            author_association=None,
         )
     ]
 
@@ -382,6 +394,7 @@ def test_format_issue_line_long_title() -> None:
         updated_at="2024-01-01T00:00:00",
         url="https://github.com/owner/repo/issues/456",
         locked=False,
+        author_association=None,
     )
     repo_url = "https://github.com/owner/repo"
     line = format_issue_line(issue, repo_url, max_title_length=80)
@@ -563,6 +576,7 @@ def test_ignore_labels_integration_with_filtering() -> None:
             updated_at="2024-01-01T00:00:00",
             url="https://github.com/owner/repo/issues/1",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=2,
@@ -576,6 +590,7 @@ def test_ignore_labels_integration_with_filtering() -> None:
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/owner/repo/issues/2",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=3,
@@ -589,6 +604,7 @@ def test_ignore_labels_integration_with_filtering() -> None:
             updated_at="2024-01-03T00:00:00",
             url="https://github.com/owner/repo/issues/3",
             locked=False,
+            author_association=None,
         ),
     ]
 
@@ -624,6 +640,7 @@ def test_ignore_labels_with_labels_containing_special_characters() -> None:
             updated_at="2024-01-01T00:00:00",
             url="https://github.com/owner/repo/issues/1",
             locked=False,
+            author_association=None,
         ),
         IssueData(
             number=2,
@@ -637,6 +654,7 @@ def test_ignore_labels_with_labels_containing_special_characters() -> None:
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/owner/repo/issues/2",
             locked=False,
+            author_association=None,
         ),
     ]
 

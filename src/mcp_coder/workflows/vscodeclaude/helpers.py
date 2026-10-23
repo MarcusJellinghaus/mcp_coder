@@ -24,6 +24,7 @@ __all__ = [
     "get_issue_status",
     "get_repo_short_name_from_full",
     "get_stage_display_name",
+    "is_marked",
     "load_to_be_deleted",
     "remove_from_to_be_deleted",
     "truncate_title",
@@ -121,6 +122,23 @@ def truncate_title(title: str, max_length: int = 50) -> str:
         return title
     # Subtract 3 for the ellipsis
     return title[: max_length - 3] + "..."
+
+
+def is_marked(body: str, marker: str = "❌") -> bool:
+    """Return True if the first line of ``body`` contains ``marker``.
+
+    mcp-coder's automated notes carry the marker on their first line.
+
+    Args:
+        body: Comment body text
+        marker: Marker string to look for
+
+    Returns:
+        True if the first line contains the marker
+    """
+    if not body:
+        return False
+    return marker in body.splitlines()[0]
 
 
 def load_to_be_deleted(workspace_base: str) -> set[str]:

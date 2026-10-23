@@ -21,7 +21,7 @@ from ...mcp_workspace_github import (
 from ...utils.log_utils import OUTPUT
 from ...workflow_utils.label_transitions import update_workflow_label
 from .config import get_github_username, get_repo_full_name
-from .helpers import get_issue_status
+from .helpers import get_issue_status, is_marked
 from .issues import _filter_eligible_vscodeclaude_issues
 
 logger = logging.getLogger(__name__)
@@ -201,31 +201,45 @@ def _check_review_comments(
     review_label_name: str,
     created_label_name: str,
 ) -> bool:
-    """Escalate a status-10 PR to status-91 on new review feedback.
+    """Escalate a status-10 PR to status-91 on outstanding review feedback.
+
+    Unresolved threads always count. Changes-requested reviews and
+    conversation comments count only if newer than the last status-91 →
+    status-10 relabel; comments whose first line carries ❌ (automated
+    mcp-coder notes) never count.
 
     Never raises: any failure is logged and swallowed so one bad issue
     can't block the rest of the batch this poll.
 
     Returns:
-        True iff new review feedback was detected (label update attempted).
+        True iff outstanding review feedback was detected (label update
+        attempted).
     """
     try:
         feedback = pr_manager.get_pr_feedback(pr["number"])
-        if feedback["unresolved_threads"] or feedback["changes_requested"]:
+        if feedback["unresolved_threads"]:
             triggered = True
         else:
-            events = issue_manager.get_issue_events(
-                issue["number"], IssueEventType.LABELED
-            )
-            watermark = _review_comments_watermark(
-                events, review_label_name, created_label_name
-            )
-            triggered = any(
-                comment["created_at"] is None
-                or watermark is None
-                or comment["created_at"] > watermark
+            comments = [
+                comment
                 for comment in feedback["conversation_comments"]
-            )
+                if not is_marked(comment["body"])
+            ]
+            timestamps = [
+                review["submitted_at"] for review in feedback["changes_requested"]
+            ] + [comment["created_at"] for comment in comments]
+            if not timestamps:
+                triggered = False
+            else:
+                events = issue_manager.get_issue_events(
+                    issue["number"], IssueEventType.LABELED
+                )
+                watermark = _review_comments_watermark(
+                    events, review_label_name, created_label_name
+                )
+                triggered = watermark is None or any(
+                    ts is None or ts > watermark for ts in timestamps
+                )
         if triggered:
             _escalate(
                 issue,
