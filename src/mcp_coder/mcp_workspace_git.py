@@ -37,10 +37,7 @@ from mcp_workspace.git_operations.compact_diffs import get_compact_diff
 from mcp_workspace.git_operations.core import CommitResult
 
 # Diffs
-from mcp_workspace.git_operations.diffs import (
-    get_branch_diff,
-    get_git_diff_for_commit,
-)
+from mcp_workspace.git_operations.diffs import get_branch_diff, get_git_diff_for_commit
 
 # Parent branch detection
 from mcp_workspace.git_operations.parent_branch_detection import (
@@ -65,10 +62,7 @@ from mcp_workspace.git_operations.repository_status import (
 )
 
 # Staging
-from mcp_workspace.git_operations.staging import (
-    stage_all_changes,
-    stage_specific_files,
-)
+from mcp_workspace.git_operations.staging import stage_all_changes, stage_specific_files
 
 # Verification
 from mcp_workspace.git_operations.verification import verify_git

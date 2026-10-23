@@ -57,9 +57,9 @@ class TestFindDataFile:
 
         # Check that mcp_coder is configured with prompts/*.md
         mcp_coder_config = package_data.get("mcp_coder", [])
-        assert "prompts/*.md" in mcp_coder_config, (
-            f"prompts/*.md not found in pyproject.toml package-data. Found: {mcp_coder_config}"
-        )
+        assert (
+            "prompts/*.md" in mcp_coder_config
+        ), f"prompts/*.md not found in pyproject.toml package-data. Found: {mcp_coder_config}"
 
         # Verify the actual files exist in the expected location
         project_root = Path(__file__).parent.parent.parent
@@ -108,9 +108,9 @@ class TestFindDataFile:
         assert len(debug_records) > 0, "Expected DEBUG level log messages"
 
         # Verify the search started message was logged
-        assert any("SEARCH STARTED" in record.message for record in debug_records), (
-            "Expected 'SEARCH STARTED' log message"
-        )
+        assert any(
+            "SEARCH STARTED" in record.message for record in debug_records
+        ), "Expected 'SEARCH STARTED' log message"
 
         # Verify the success message was logged (contains the file path)
         assert any(

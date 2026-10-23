@@ -150,7 +150,9 @@ def _load_content(source: str) -> str:
                     with open(file_path, encoding="utf-8") as f:
                         content = f.read()
                         combined_content.append(content)
-                except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
                     raise FileNotFoundError(
                         f"Error reading file {file_path}: {str(e)}"
                     ) from e
@@ -170,7 +172,9 @@ def _load_content(source: str) -> str:
                         with open(file_path, encoding="utf-8") as f:
                             content = f.read()
                             combined_content.append(content)
-                    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
+                    except (
+                        Exception
+                    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
                         raise FileNotFoundError(
                             f"Error reading file {file_path}: {str(e)}"
                         ) from e
@@ -184,7 +188,9 @@ def _load_content(source: str) -> str:
                     return f.read()
             except FileNotFoundError as exc:
                 raise FileNotFoundError(f"File '{source}' not found") from exc
-            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
                 raise FileNotFoundError(
                     f"Error reading file '{source}': {str(e)}"
                 ) from e

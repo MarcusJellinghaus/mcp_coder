@@ -130,9 +130,9 @@ class TestModuleIntegration:
         ]
 
         for func_name in git_functions:
-            assert func_name not in utils_all, (
-                f"{func_name} should not be in utils.__all__ (use mcp_workspace_git)"
-            )
+            assert (
+                func_name not in utils_all
+            ), f"{func_name} should not be in utils.__all__ (use mcp_workspace_git)"
 
         # Check main module has __all__ defined
         assert hasattr(main_module, "__all__")
@@ -149,9 +149,9 @@ class TestModuleIntegration:
 
         for func_name in public_api_functions:
             assert func_name in main_all, f"{func_name} not in main.__all__"
-            assert hasattr(main_module, func_name), (
-                f"{func_name} not available in main module"
-            )
+            assert hasattr(
+                main_module, func_name
+            ), f"{func_name} not available in main module"
 
     def test_no_circular_imports(self) -> None:
         """Test that there are no circular import issues."""

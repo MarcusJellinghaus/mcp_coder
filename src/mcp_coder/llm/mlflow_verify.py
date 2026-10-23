@@ -84,7 +84,9 @@ def _probe_mlflow_connection(
                 "value": f'"{experiment_name}" (not found)',
             }
         return conn, exp
-    except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
         conn = {"ok": False, "value": f"unreachable: {e}"}
         exp = {"ok": False, "value": f'"{experiment_name}" (could not check)'}
         return conn, exp

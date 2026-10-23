@@ -10,10 +10,7 @@ from pathlib import Path
 
 from mcp_coder.mcp_tools_py import resolve_steps, run_format_code
 from mcp_coder.mcp_workspace_git import commit_all_changes, git_push
-from mcp_coder.utils.pyproject_config import (
-    get_format_code,
-    has_legacy_format_code_key,
-)
+from mcp_coder.utils.pyproject_config import get_format_code, has_legacy_format_code_key
 from mcp_coder.workflow_utils.commit_operations import (
     generate_commit_message_with_llm,
     parse_llm_commit_response,
@@ -87,7 +84,9 @@ def run_formatters(project_dir: Path) -> bool:
     except ValueError as e:
         # resolve_steps inside the wrapper: a config error, not a step failure.
         raise FormatterConfigError(str(e)) from e
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error running formatters: {e}")
         return False
 
@@ -170,7 +169,9 @@ def commit_changes(
         )
         return True
 
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error committing changes: {e}")
         if commit_message:
             logger.error(f"Commit message was: {commit_message}")
@@ -205,6 +206,8 @@ def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
             logger.info("Changes pushed successfully to remote")
         return True
 
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error pushing changes: {e}")
         return False

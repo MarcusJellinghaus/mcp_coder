@@ -38,11 +38,7 @@ from mcp_coder.workflow_utils.base_branch import (
     check_base_branch_on_origin,
     detect_base_branch_with_source,
 )
-from mcp_coder.workflows.rebase_checks import (
-    CheckRunError,
-    FailureKey,
-    _run_all_checks,
-)
+from mcp_coder.workflows.rebase_checks import CheckRunError, FailureKey, _run_all_checks
 
 logger = logging.getLogger(__name__)
 

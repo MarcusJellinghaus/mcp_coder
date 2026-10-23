@@ -195,9 +195,8 @@ def write_github_actions(
     workflows_dir = project_dir / ".github" / "workflows"
 
     files_to_write = {
-        workflows_dir / "label-new-issues.yml": generate_label_new_issues_yml(
-            default_label
-        ),
+        workflows_dir
+        / "label-new-issues.yml": generate_label_new_issues_yml(default_label),
         workflows_dir / "approve-command.yml": generate_approve_command_yml(promotions),
     }
 

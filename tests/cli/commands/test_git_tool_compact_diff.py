@@ -426,9 +426,9 @@ class TestCompactDiffUncommittedChanges:
 
     def test_apply_exclude_patterns_to_uncommitted_diff_helper(self) -> None:
         """Test the helper function that filters uncommitted diff by exclude patterns."""
-        from mcp_coder.cli.commands.git_tool import (  # pylint: disable=no-name-in-module
+        from mcp_coder.cli.commands.git_tool import (
             _apply_exclude_patterns_to_uncommitted_diff,
-        )
+        )  # pylint: disable=no-name-in-module
 
         uncommitted_diff = (
             "=== STAGED CHANGES ===\n"

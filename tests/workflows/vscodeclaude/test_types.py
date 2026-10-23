@@ -313,16 +313,16 @@ class TestLabelsJsonVscodeclaudeMetadata:
         for label in human_action_labels:
             assert "vscodeclaude" in label, f"Missing vscodeclaude in {label['name']}"
             vscodeclaude = label["vscodeclaude"]
-            assert base_fields.issubset(set(vscodeclaude.keys())), (
-                f"Missing base fields in {label['name']}"
-            )
+            assert base_fields.issubset(
+                set(vscodeclaude.keys())
+            ), f"Missing base fields in {label['name']}"
             if "commands" in vscodeclaude:
-                assert isinstance(vscodeclaude["commands"], list), (
-                    f"commands must be a list in {label['name']}"
-                )
-                assert all(isinstance(cmd, str) for cmd in vscodeclaude["commands"]), (
-                    f"All commands must be strings in {label['name']}"
-                )
+                assert isinstance(
+                    vscodeclaude["commands"], list
+                ), f"commands must be a list in {label['name']}"
+                assert all(
+                    isinstance(cmd, str) for cmd in vscodeclaude["commands"]
+                ), f"All commands must be strings in {label['name']}"
 
     def test_pr_created_has_no_commands(self) -> None:
         """status-10:pr-created should have no commands key."""

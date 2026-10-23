@@ -409,13 +409,13 @@ async def test_backslash_enter_newline(
         await pilot.press("enter")
         await pilot.pause()
         if expect_submit:
-            assert len(messages) == 1, (
-                f"Expected submit but got {len(messages)} messages"
-            )
+            assert (
+                len(messages) == 1
+            ), f"Expected submit but got {len(messages)} messages"
             assert messages[0].text == expected_text
             assert input_area.text == ""
         else:
-            assert len(messages) == 0, (
-                f"Expected no submit but got {len(messages)} messages"
-            )
+            assert (
+                len(messages) == 0
+            ), f"Expected no submit but got {len(messages)} messages"
             assert input_area.text == expected_text

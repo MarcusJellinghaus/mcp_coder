@@ -4,10 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS
-from mcp_coder.workflow_steps.prerequisites import (
-    check_git_clean,
-    is_branch_not_base,
-)
+from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
 
 
 class TestCheckGitClean:

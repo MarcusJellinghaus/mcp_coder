@@ -442,9 +442,9 @@ def test_close_while_pending_detaches_before_the_join() -> None:
 
     assert bridge.detach_count == 1
     assert parked.thread is not None
-    assert parked.thread.is_alive() is False, (
-        "agent thread still parked after join(5) — detach did not cancel the future"
-    )
+    assert (
+        parked.thread.is_alive() is False
+    ), "agent thread still parked after join(5) — detach did not cancel the future"
 
 
 # --- 6. CancelledError inside _run ---

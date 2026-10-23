@@ -12,11 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from mcp_coder.icoder.core import event_log as event_log_module
-from mcp_coder.icoder.core.event_log import (
-    EventLog,
-    emit_session_start,
-    iter_events,
-)
+from mcp_coder.icoder.core.event_log import EventLog, emit_session_start, iter_events
 
 
 def test_emit_records_event(tmp_path: Path) -> None:

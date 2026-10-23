@@ -454,18 +454,13 @@ async def test_gateway_denies_never_call_through_real_convert() -> None:
     pytest.importorskip("langchain_mcp_adapters")
     pytest.importorskip("mcp")
 
-    from langchain_mcp_adapters.tools import (  # pylint: disable=import-error
+    from langchain_mcp_adapters.tools import (
         convert_mcp_tool_to_langchain_tool,
-    )
+    )  # pylint: disable=import-error
     from mcp.types import CallToolResult  # pylint: disable=import-error
     from mcp.types import Tool as MCPTool  # pylint: disable=import-error
 
-    from mcp_coder.icoder.permissions import (
-        Matcher,
-        PermissionConfig,
-        Policy,
-        Rule,
-    )
+    from mcp_coder.icoder.permissions import Matcher, PermissionConfig, Policy, Rule
     from mcp_coder.icoder.permissions.gateway import LangchainEnforcementGateway
     from mcp_coder.llm.providers.langchain.mcp_manager import MCPManager
 
@@ -607,18 +602,13 @@ async def test_denied_call_keeps_history_paired_and_agent_continues() -> None:
         HumanMessage,
         ToolMessage,
     )
-    from langchain_mcp_adapters.tools import (  # pylint: disable=import-error
+    from langchain_mcp_adapters.tools import (
         convert_mcp_tool_to_langchain_tool,
-    )
+    )  # pylint: disable=import-error
     from langgraph.prebuilt import create_react_agent  # pylint: disable=import-error
     from mcp.types import Tool as MCPTool  # pylint: disable=import-error
 
-    from mcp_coder.icoder.permissions import (
-        Matcher,
-        PermissionConfig,
-        Policy,
-        Rule,
-    )
+    from mcp_coder.icoder.permissions import Matcher, PermissionConfig, Policy, Rule
     from mcp_coder.icoder.permissions.gateway import (
         _DENY_NEVER,
         LangchainEnforcementGateway,

@@ -371,9 +371,9 @@ class TestGitToolCommandIntegration:
         assert git_tool_subparsers, "git-tool should have subparsers"
 
         git_tool_subcommands = git_tool_subparsers[0]
-        assert "compact-diff" in git_tool_subcommands.choices, (
-            "compact-diff should be a subcommand of git-tool"
-        )
+        assert (
+            "compact-diff" in git_tool_subcommands.choices
+        ), "compact-diff should be a subcommand of git-tool"
 
     def test_exclude_flag_is_repeatable(self) -> None:
         """Test that --exclude can be specified multiple times (action=append)."""

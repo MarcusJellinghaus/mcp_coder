@@ -52,16 +52,8 @@ from uuid import uuid4
 import pytest
 
 from mcp_coder.icoder.permissions.approval import ApprovalDecision, ApprovalEngine
-from mcp_coder.icoder.permissions.gateway import (
-    _DENY_USER,
-    LangchainEnforcementGateway,
-)
-from mcp_coder.icoder.permissions.model import (
-    Matcher,
-    PermissionConfig,
-    Policy,
-    Rule,
-)
+from mcp_coder.icoder.permissions.gateway import _DENY_USER, LangchainEnforcementGateway
+from mcp_coder.icoder.permissions.model import Matcher, PermissionConfig, Policy, Rule
 from mcp_coder.llm.types import StreamEvent
 from tests.langchain_doubles import make_scripted_chat_model
 from tests.llm.providers.langchain.approval_harness import (
@@ -477,9 +469,9 @@ def test_allow_runs_the_gated_call_and_the_turn_completes(
     live = _run_gated_turn(_allow, monkeypatch)
 
     assert live.errors == [], f"the turn raised: {live.errors!r}"
-    assert live.escaped == [], (
-        f"an exception escaped the agent thread: {live.escaped!r}"
-    )
+    assert (
+        live.escaped == []
+    ), f"an exception escaped the agent thread: {live.escaped!r}"
     assert live.of_type("error") == []
     assert live.log.ran == [TOOL_NAME], "the approved call never reached the handler"
     assert live.model.invoke_count == 2, "the agent did not continue past the approval"
@@ -544,9 +536,9 @@ def test_ungated_call_runs_while_a_gated_one_is_pending(
     observed: list[list[str]] = []
 
     def _check_then_allow(live: _Live) -> None:
-        assert wait_for(lambda: _UNGATED in live.log.ran, _EVENT_TIMEOUT), (
-            "the ungated call was blocked behind the pending approval"
-        )
+        assert wait_for(
+            lambda: _UNGATED in live.log.ran, _EVENT_TIMEOUT
+        ), "the ungated call was blocked behind the pending approval"
         observed.append(list(live.log.ran))
         _allow(live)
 
@@ -582,17 +574,17 @@ def test_cancel_while_pending_unwinds_the_turn_without_replanning(
 
     assert live.model.invoke_count == 1, "the turn re-planned instead of unwinding"
     assert live.log.ran == [], "the cancelled call reached the handler anyway"
-    assert live.escaped == [], (
-        f"an exception escaped the agent thread: {live.escaped!r}"
-    )
+    assert (
+        live.escaped == []
+    ), f"an exception escaped the agent thread: {live.escaped!r}"
     assert live.errors == [], f"the cancel surfaced as an error: {live.errors!r}"
     assert live.of_type("error") == []
 
     agent_thread = live.log.agent_thread
     assert agent_thread is not None, "the tool coroutine never ran"
-    assert agent_thread.is_alive() is False, (
-        "agent thread still parked after join(5) — the cancel did not unwind it"
-    )
+    assert (
+        agent_thread.is_alive() is False
+    ), "agent thread still parked after join(5) — the cancel did not unwind it"
 
 
 # --- 5. the generic backstop still works with nothing pending ------------------
@@ -661,9 +653,9 @@ def test_generator_close_still_stops_a_turn_with_no_approval_pending(
 
     agent_thread = log.agent_thread
     assert agent_thread is not None, "the tool coroutine never ran"
-    assert agent_thread.is_alive() is False, (
-        "agent thread still alive after join(5) — the backstop did not stop the turn"
-    )
+    assert (
+        agent_thread.is_alive() is False
+    ), "agent thread still alive after join(5) — the backstop did not stop the turn"
 
 
 # --- 6. ordering ---------------------------------------------------------------

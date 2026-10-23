@@ -106,7 +106,9 @@ def _resolve_pr_target(
         branch = branch_manager.get_branch_with_pr_fallback(
             issue["number"], repo_owner, repo_gh_name
         )
-    except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning(
             "Failed to resolve branch for issue #%d: %s", issue["number"], exc
         )
@@ -115,7 +117,9 @@ def _resolve_pr_target(
         return None, None
     try:
         prs = pr_manager.find_pull_request_by_head(branch)
-    except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning("Failed to look up PR for issue #%d: %s", issue["number"], exc)
         return branch, None
     return branch, (prs[0] if prs else None)
@@ -143,7 +147,9 @@ def _check_merge_conflict(
             )
             return True
         return False
-    except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning(
             "Failed to check merge conflict for issue #%d: %s",
             issue["number"],
@@ -175,7 +181,9 @@ def _check_ci(
             _escalate(issue, issue_manager, "failing_ci", target_label_name, repo_name)
             return True
         return False
-    except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning(
             "Failed to check CI status for issue #%d: %s",
             issue["number"],
@@ -242,7 +250,9 @@ def _check_review_comments(
             )
             return True
         return False
-    except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning(
             "Failed to check review comments for issue #%d: %s",
             issue["number"],
@@ -288,7 +298,9 @@ def check_pr_health(
         label_names = build_label_lookups(
             load_labels_config(get_labels_config_path(None))
         )["id_to_name"]
-    except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning("PR-health: skipping repo %s: %s", repo_name, exc)
         return
 

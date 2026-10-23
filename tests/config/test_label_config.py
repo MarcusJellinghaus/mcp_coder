@@ -27,9 +27,9 @@ def test_load_bundled_labels_config() -> None:
 
     required_keys = {"internal_id", "name", "color", "description", "category"}
     for label in config["workflow_labels"]:
-        assert required_keys.issubset(label.keys()), (
-            f"Label missing required keys: {required_keys - label.keys()}"
-        )
+        assert required_keys.issubset(
+            label.keys()
+        ), f"Label missing required keys: {required_keys - label.keys()}"
 
     assert isinstance(config["ignore_labels"], list)
 
@@ -106,59 +106,59 @@ def test_bundled_labels_schema_validation() -> None:
     for label in config["workflow_labels"]:
         # Required keys present
         missing = REQUIRED_LABEL_KEYS - label.keys()
-        assert not missing, (
-            f"Label {label.get('internal_id', '???')}: missing {missing}"
-        )
+        assert (
+            not missing
+        ), f"Label {label.get('internal_id', '???')}: missing {missing}"
 
         # No deprecated fields
         deprecated_found = DEPRECATED_FIELDS & label.keys()
-        assert not deprecated_found, (
-            f"Label {label['internal_id']}: has deprecated fields {deprecated_found}"
-        )
+        assert (
+            not deprecated_found
+        ), f"Label {label['internal_id']}: has deprecated fields {deprecated_found}"
 
         # Category is valid
-        assert label["category"] in VALID_CATEGORIES, (
-            f"Label {label['internal_id']}: invalid category '{label['category']}'"
-        )
+        assert (
+            label["category"] in VALID_CATEGORIES
+        ), f"Label {label['internal_id']}: invalid category '{label['category']}'"
 
         # Unique internal_id and name
-        assert label["internal_id"] not in seen_ids, (
-            f"Duplicate internal_id: {label['internal_id']}"
-        )
+        assert (
+            label["internal_id"] not in seen_ids
+        ), f"Duplicate internal_id: {label['internal_id']}"
         assert label["name"] not in seen_names, f"Duplicate name: {label['name']}"
         seen_ids.add(label["internal_id"])
         seen_names.add(label["name"])
 
         # Color is a valid 6-char hex string
-        assert len(label["color"]) == 6, (
-            f"Label {label['internal_id']}: color must be 6 hex chars"
-        )
+        assert (
+            len(label["color"]) == 6
+        ), f"Label {label['internal_id']}: color must be 6 hex chars"
         int(label["color"], 16)  # raises ValueError if not hex
 
         # vscodeclaude block validation
         if "vscodeclaude" in label:
             vsc = label["vscodeclaude"]
             vsc_missing = REQUIRED_VSCODECLAUDE_KEYS - vsc.keys()
-            assert not vsc_missing, (
-                f"Label {label['internal_id']}: vscodeclaude missing {vsc_missing}"
-            )
+            assert (
+                not vsc_missing
+            ), f"Label {label['internal_id']}: vscodeclaude missing {vsc_missing}"
             # commands, if present, must be a list of strings
             if "commands" in vsc:
-                assert isinstance(vsc["commands"], list), (
-                    f"Label {label['internal_id']}: commands must be a list"
-                )
-                assert all(isinstance(c, str) for c in vsc["commands"]), (
-                    f"Label {label['internal_id']}: all commands must be strings"
-                )
+                assert isinstance(
+                    vsc["commands"], list
+                ), f"Label {label['internal_id']}: commands must be a list"
+                assert all(
+                    isinstance(c, str) for c in vsc["commands"]
+                ), f"Label {label['internal_id']}: all commands must be strings"
 
         # stale_timeout_minutes, if present, must be a positive int
         if "stale_timeout_minutes" in label:
-            assert isinstance(label["stale_timeout_minutes"], int), (
-                f"Label {label['internal_id']}: stale_timeout_minutes must be int"
-            )
-            assert label["stale_timeout_minutes"] > 0, (
-                f"Label {label['internal_id']}: stale_timeout_minutes must be positive"
-            )
+            assert isinstance(
+                label["stale_timeout_minutes"], int
+            ), f"Label {label['internal_id']}: stale_timeout_minutes must be int"
+            assert (
+                label["stale_timeout_minutes"] > 0
+            ), f"Label {label['internal_id']}: stale_timeout_minutes must be positive"
 
 
 def test_pr_review_comments_label_definition() -> None:

@@ -13,10 +13,7 @@ from ...mcp_workspace_github import (
     get_all_cached_issues,
 )
 from ...utils.user_config import get_cache_refresh_minutes, load_config
-from .config import (
-    get_github_username,
-    get_vscodeclaude_config,
-)
+from .config import get_github_username, get_vscodeclaude_config
 from .helpers import get_issue_status
 
 logger = logging.getLogger(__name__)
@@ -401,7 +398,9 @@ def build_eligible_issues_with_branch_check(
                     if branch is None:
                         issues_without_branch.add((repo_full_name, issue["number"]))
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to process repo {repo_name}: {e}")
             continue
 

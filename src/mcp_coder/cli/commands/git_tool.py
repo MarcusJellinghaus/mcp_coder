@@ -170,7 +170,9 @@ def execute_compact_diff(args: argparse.Namespace) -> int:
         # resolve_project_dir raises ValueError for invalid directories
         logger.error("%s", e)
         return 2
-    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error("Error generating compact diff: %s", e)
         logger.debug("Exception details:", exc_info=True)
         return 2

@@ -236,21 +236,21 @@ class TestClaudeMcpColdStartIntegration:
         # is proven instead by the genuine post-connect ``tool_use`` below — the
         # stronger end-to-end signal.
         tool_names = _init_tool_names(init_msg)
-        assert "ToolSearch" in tool_names, (
-            f"ToolSearch missing from init tools: {tool_names}"
-        )
+        assert (
+            "ToolSearch" in tool_names
+        ), f"ToolSearch missing from init tools: {tool_names}"
         for builtin in _DISABLED_BUILTINS:
-            assert builtin not in tool_names, (
-                f"native built-in {builtin!r} should be disabled: {tool_names}"
-            )
+            assert (
+                builtin not in tool_names
+            ), f"native built-in {builtin!r} should be disabled: {tool_names}"
 
         # --- v1: stub was pending at init --------------------------------
         stub_status = _mcp_server_status(init_msg, "stub")
         if stub_status == "connected":
             pytest.skip(f"stub {stub_status!r} at init; pending-at-init not reached")
-        assert stub_status == "pending", (
-            f"expected stub 'pending' at init, got {stub_status!r}"
-        )
+        assert (
+            stub_status == "pending"
+        ), f"expected stub 'pending' at init, got {stub_status!r}"
 
         # --- v1: a REAL tool_use for the stub tool occurred --------------
         blocks = _iter_content_blocks(messages)
@@ -271,14 +271,14 @@ class TestClaudeMcpColdStartIntegration:
             for b in blocks
             if b.get("type") == "tool_result"
         )
-        assert sentinel in tool_results_text, (
-            "sentinel not found in any tool_result — no genuine tool output"
-        )
+        assert (
+            sentinel in tool_results_text
+        ), "sentinel not found in any tool_result — no genuine tool output"
 
         # --- v1: final text echoes the sentinel --------------------------
-        assert sentinel in parsed["text"], (
-            f"sentinel not in final text: {parsed['text']!r}"
-        )
+        assert (
+            sentinel in parsed["text"]
+        ), f"sentinel not in final text: {parsed['text']!r}"
 
     def test_v2_never_connects_fails_clean_no_hallucination(
         self, require_claude_cli: None, tmp_path: Path
@@ -317,12 +317,12 @@ class TestClaudeMcpColdStartIntegration:
         # The unguessable sentinel must never appear: no real tool output, and
         # (backstop) the model must not have fabricated it either.
         log_text = log_path.read_text(encoding="utf-8")
-        assert sentinel not in log_text, (
-            "sentinel leaked without a connected server — hallucinated tool result"
-        )
-        assert sentinel not in final_text, (
-            f"sentinel hallucinated into final text: {final_text!r}"
-        )
+        assert (
+            sentinel not in log_text
+        ), "sentinel leaked without a connected server — hallucinated tool result"
+        assert (
+            sentinel not in final_text
+        ), f"sentinel hallucinated into final text: {final_text!r}"
 
         # No genuine tool_result could exist (server never connected).
         blocks = _iter_content_blocks(parsed["messages"])

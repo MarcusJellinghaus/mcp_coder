@@ -435,7 +435,9 @@ def validate_prompt_directory(directory: str) -> dict[str, Any]:
                         f"Duplicate header '{dup_name}' found across files"
                     )
 
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific file/path exceptions
         all_errors.append(f"Error checking cross-file duplicates: {str(e)}")
 
     return {

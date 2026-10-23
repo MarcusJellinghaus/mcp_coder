@@ -56,9 +56,9 @@ class TestTemplateWatchdogLines:
             REVIEW_PLAN_COMMAND_WINDOWS,
             REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
         ):
-            assert "set RC=%ERRORLEVEL%" in template, (
-                f"Missing set RC=%ERRORLEVEL% in {template[:40]}"
-            )
+            assert (
+                "set RC=%ERRORLEVEL%" in template
+            ), f"Missing set RC=%ERRORLEVEL% in {template[:40]}"
 
     def test_linux_templates_echo_rc(self) -> None:
         """All 3 Linux templates echo RC after capturing it."""
@@ -80,9 +80,9 @@ class TestTemplateWatchdogLines:
             REVIEW_PLAN_COMMAND_WINDOWS,
             REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
         ):
-            assert "echo RC=%RC%" in template, (
-                f"Missing echo RC=%RC% in {template[:40]}"
-            )
+            assert (
+                "echo RC=%RC%" in template
+            ), f"Missing echo RC=%RC% in {template[:40]}"
 
     # -- Watchdog lines --
 
@@ -198,9 +198,9 @@ class TestTemplateWatchdogLines:
             # Find the watchdog line and check it doesn't have --issue
             for line in template.splitlines():
                 if "set-status" in line and "--from-status" in line:
-                    assert "--issue" not in line, (
-                        f"Unexpected --issue in watchdog line: {line}"
-                    )
+                    assert (
+                        "--issue" not in line
+                    ), f"Unexpected --issue in watchdog line: {line}"
 
     # -- Project dir in watchdog lines --
 
@@ -225,9 +225,9 @@ class TestTemplateWatchdogLines:
             for line in template.splitlines():
                 if "set-status" in line and "--from-status" in line:
                     found = True
-                    assert "--project-dir /workspace/repo" in line, (
-                        f"Missing --project-dir /workspace/repo in: {line}"
-                    )
+                    assert (
+                        "--project-dir /workspace/repo" in line
+                    ), f"Missing --project-dir /workspace/repo in: {line}"
             assert found, "No watchdog line found in Linux template"
 
         for template in windows_templates:
@@ -235,9 +235,9 @@ class TestTemplateWatchdogLines:
             for line in template.splitlines():
                 if "set-status" in line and "--from-status" in line:
                     found = True
-                    assert "--project-dir %WORKSPACE%\\repo" in line, (
-                        f"Missing --project-dir %WORKSPACE%\\repo in: {line}"
-                    )
+                    assert (
+                        "--project-dir %WORKSPACE%\\repo" in line
+                    ), f"Missing --project-dir %WORKSPACE%\\repo in: {line}"
             assert found, "No watchdog line found in Windows template"
 
     # -- Placeholder resolution --
@@ -303,9 +303,9 @@ class TestTemplateWatchdogLines:
         """Each template formats without KeyError using only its declared kwargs."""
         result = template.format(**kwargs)
         # After formatting, no unresolved Python format placeholders should remain.
-        assert not re.search(r"\{[a-zA-Z_][a-zA-Z0-9_]*\}", result), (
-            f"Unresolved placeholder in formatted template: {result!r}"
-        )
+        assert not re.search(
+            r"\{[a-zA-Z_][a-zA-Z0-9_]*\}", result
+        ), f"Unresolved placeholder in formatted template: {result!r}"
 
     # -- Recovery matrix comment --
 
@@ -411,9 +411,9 @@ class TestWorkflowTemplates:
             for tpl in (linux_tpl, windows_tpl):
                 # Must not raise KeyError for any entry.
                 result = tpl.format(log_level="info", issue_number=1, branch_name="x")
-                assert not re.search(r"\{[a-zA-Z_][a-zA-Z0-9_]*\}", result), (
-                    f"Unresolved placeholder for workflow {workflow!r}"
-                )
+                assert not re.search(
+                    r"\{[a-zA-Z_][a-zA-Z0-9_]*\}", result
+                ), f"Unresolved placeholder for workflow {workflow!r}"
 
 
 class TestReviewTemplateVerbs:

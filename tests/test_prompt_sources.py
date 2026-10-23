@@ -240,9 +240,9 @@ class TestPackageIntegration:
         header_names = [h["name"] for h in result["headers"]]
         expected_headers = ["Test Prompt AAA", "Test Prompt BBB", "Test Prompt CCC"]
         for expected in expected_headers:
-            assert expected in header_names, (
-                f"Expected header '{expected}' not found in {header_names}"
-            )
+            assert (
+                expected in header_names
+            ), f"Expected header '{expected}' not found in {header_names}"
 
     def test_real_prompt_directory_validation(self) -> None:
         """Test directory validation with real prompts directory (will include both files)."""

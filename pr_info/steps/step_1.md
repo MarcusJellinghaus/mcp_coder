@@ -28,8 +28,10 @@ lookup_failed = bool(ci_status.get("lookup_failed"))   # was: run_info.get("look
   lookup-failed mock, and assert the poll gives up after `CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS` (3) attempts, not
   `CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS` (8). Assert the `CI_API_ERROR` log line.
   (The test only becomes discriminating after step 2, but asserting 3 attempts is correct now.)
-- Add one test: a mock with `lookup_failed` only inside `run` (old shape) and nothing at the top level is **not**
-  treated as a lookup failure (an empty-ish run → normal "no run" handling).
+- Add one test: `{"run": {"lookup_failed": True}, "jobs": []}` (flag only inside `run`, old shape) is **not** a lookup
+  failure. That `run` dict is non-empty and has no `status`, so it takes the in-progress path: every poll returns it →
+  the poll runs all `CI_MAX_POLL_ATTEMPTS` (not 3) and ends with the post-loop exit (`CI_TIMEOUT: No completed run after polling`, returns `(None, True)`);
+  no `CI_API_ERROR` logged.
 
 ## DATA
 Return value unchanged: `(None, True)` on lookup-failure exhaustion.
