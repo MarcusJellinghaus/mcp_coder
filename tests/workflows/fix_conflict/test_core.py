@@ -14,11 +14,12 @@ _SHARED_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_fai
 _BRANCH_HEAD = "mcp_coder.workflow_utils.failure_handling._branch_head"
 PROJECT_DIR = Path("/fake/project")
 BRANCH_NAME = "123-fix-something"
+_OK_OUTCOME = RebaseOutcome("ok", "main", "abc1234")
 
 
 def _patch_all(
     mergeable_states: list[list[dict[str, Any]]],
-    outcome: RebaseOutcome = RebaseOutcome("ok", "main", "abc1234"),
+    outcome: RebaseOutcome = _OK_OUTCOME,
 ) -> tuple[tuple[Any, ...], MagicMock]:
     """Patch every external dependency used by run_fix_conflict_workflow.
 
