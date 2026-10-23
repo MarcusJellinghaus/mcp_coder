@@ -57,9 +57,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 8: Migrate remaining `tests/workflows/vscodeclaude` (14 files) ([step_8.md](./steps/step_8.md))
-- [ ] Implementation: inline literals and helpers/fixtures → `make_issue_data(...)`; retype receivers; no `locked` matches remain
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: inline literals and helpers/fixtures → `make_issue_data(...)`; retype receivers; no `locked` matches remain
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: Migrate misc (2 files) + acceptance checks ([step_9.md](./steps/step_9.md))
 - [ ] Implementation: `test_branch_info.py` and `test_base_branch.py` → `make_issue_data(...)`; acceptance searches clean, lint-imports passes

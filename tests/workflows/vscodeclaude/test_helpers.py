@@ -2,7 +2,6 @@
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.config import (
     get_repo_full_name,
     get_repo_short_name,
@@ -14,6 +13,7 @@ from mcp_coder.workflows.vscodeclaude.helpers import (
     is_marked,
     truncate_title,
 )
+from tests.github_factories import make_issue_data
 
 
 class TestRepoNameParsing:
@@ -85,38 +85,20 @@ class TestIssueStatus:
 
     def test_get_issue_status_with_status_label(self) -> None:
         """Extracts status label from issue."""
-        issue: IssueData = {
-            "number": 1,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["bug", "status-07:code-review", "priority-high"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            title="Test",
+            labels=["bug", "status-07:code-review", "priority-high"],
+            url="",
+        )
         assert get_issue_status(issue) == "status-07:code-review"
 
     def test_get_issue_status_no_status_label(self) -> None:
         """Returns empty string if no status label."""
-        issue: IssueData = {
-            "number": 1,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["bug", "priority-high"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            title="Test",
+            labels=["bug", "priority-high"],
+            url="",
+        )
         assert get_issue_status(issue) == ""
 
 

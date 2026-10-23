@@ -9,6 +9,7 @@ from mcp_coder.workflows.vscodeclaude.status import (
     is_session_stale,
 )
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from tests.github_factories import make_issue_data
 
 
 class TestCacheAwareFunctions:
@@ -17,20 +18,11 @@ class TestCacheAwareFunctions:
     def test_get_issue_current_status_uses_cache(self) -> None:
         """Verify cache lookup works without API call."""
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/123",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test issue",
+                labels=["status-07:code-review"],
+            )
         }
 
         status, is_open = get_issue_current_status(123, cached_issues=cached_issues)
@@ -65,20 +57,11 @@ class TestCacheAwareFunctions:
     def test_is_session_stale_uses_cache(self) -> None:
         """Verify is_session_stale uses cache when provided."""
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],  # Same as session
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/123",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test issue",
+                labels=["status-07:code-review"],  # Same as session
+            )
         }
 
         session: VSCodeClaudeSession = {
@@ -101,20 +84,11 @@ class TestCacheAwareFunctions:
     def test_is_session_stale_with_cache_detects_change(self) -> None:
         """Verify is_session_stale detects status change from cache."""
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-08:ready-pr"],  # Different from session
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/123",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test issue",
+                labels=["status-08:ready-pr"],  # Different from session
+            )
         }
 
         session: VSCodeClaudeSession = {
@@ -137,20 +111,12 @@ class TestCacheAwareFunctions:
     def test_is_issue_closed_uses_cache(self) -> None:
         """Verify is_issue_closed uses cache when provided."""
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test issue",
-                "body": "",
-                "state": "closed",  # Closed issue
-                "labels": ["status-07:code-review"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/123",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test issue",
+                state="closed",  # Closed issue
+                labels=["status-07:code-review"],
+            )
         }
 
         session: VSCodeClaudeSession = {
@@ -172,20 +138,12 @@ class TestCacheAwareFunctions:
     def test_is_issue_closed_with_cache_open_issue(self) -> None:
         """Verify is_issue_closed returns False for open issue from cache."""
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test issue",
-                "body": "",
-                "state": "open",  # Open issue
-                "labels": ["status-07:code-review"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/123",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test issue",
+                state="open",  # Open issue
+                labels=["status-07:code-review"],
+            )
         }
 
         session: VSCodeClaudeSession = {

@@ -12,6 +12,7 @@ from mcp_coder.workflows.vscodeclaude.status import (
 from mcp_coder.workflows.vscodeclaude.types import (
     VSCodeClaudeSession,
 )
+from tests.github_factories import make_issue_data
 
 
 class TestScenarioACrossModule:
@@ -76,20 +77,13 @@ class TestScenarioACrossModule:
             json.dumps({"sessions": [session], "last_updated": "2024-01-01T00:00:00Z"})
         )
 
-        closed_issue: IssueData = {
-            "number": 188,
-            "title": "Closed issue",
-            "body": "",
-            "state": "closed",
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        closed_issue = make_issue_data(
+            number=188,
+            title="Closed issue",
+            state="closed",
+            labels=["status-07:code-review"],
+            url="",
+        )
         cached_issues_by_repo: dict[str, dict[int, IssueData]] = {
             "owner/repo": {188: closed_issue}
         }

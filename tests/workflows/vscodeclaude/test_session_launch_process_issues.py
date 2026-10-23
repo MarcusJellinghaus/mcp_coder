@@ -10,6 +10,7 @@ from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.session_launch import (
     process_eligible_issues,
 )
+from tests.github_factories import make_issue_data
 
 
 class TestProcessEligibleIssuesBranchRequirement:
@@ -20,20 +21,12 @@ class TestProcessEligibleIssuesBranchRequirement:
     ) -> None:
         """status-01 without linked branch launches session on main."""
         # Setup mocks
-        mock_issue: IssueData = {
-            "number": 123,
-            "title": "Test Issue",
-            "labels": ["status-01:created"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/123",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-01:created"],
+            assignees=["testuser"],
+        )
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
@@ -92,20 +85,12 @@ class TestProcessEligibleIssuesBranchRequirement:
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """status-04 without linked branch skips issue and logs error."""
-        mock_issue: IssueData = {
-            "number": 456,
-            "title": "Plan Review Issue",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/456",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=456,
+            title="Plan Review Issue",
+            labels=["status-04:plan-review"],
+            assignees=["testuser"],
+        )
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
@@ -168,20 +153,12 @@ class TestProcessEligibleIssuesBranchRequirement:
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """status-07 without linked branch skips issue."""
-        mock_issue: IssueData = {
-            "number": 789,
-            "title": "Code Review Issue",
-            "labels": ["status-07:code-review"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/789",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=789,
+            title="Code Review Issue",
+            labels=["status-07:code-review"],
+            assignees=["testuser"],
+        )
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
@@ -239,20 +216,12 @@ class TestProcessEligibleIssuesBranchRequirement:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """status-04 with linked branch launches session normally."""
-        mock_issue: IssueData = {
-            "number": 456,
-            "title": "Plan Review Issue",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/456",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=456,
+            title="Plan Review Issue",
+            labels=["status-04:plan-review"],
+            assignees=["testuser"],
+        )
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
@@ -310,20 +279,12 @@ class TestProcessEligibleIssuesBranchRequirement:
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """status-04 with multiple linked branches skips issue and logs error."""
-        mock_issue: IssueData = {
-            "number": 456,
-            "title": "Plan Review Issue",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/456",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=456,
+            title="Plan Review Issue",
+            labels=["status-04:plan-review"],
+            assignees=["testuser"],
+        )
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
@@ -391,20 +352,12 @@ class TestProcessEligibleIssuesPrefetchedIssues:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """When all_cached_issues is passed, get_all_cached_issues is not called."""
-        mock_issue: IssueData = {
-            "number": 101,
-            "title": "Pre-fetched Issue",
-            "labels": ["status-01:created"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/101",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=101,
+            title="Pre-fetched Issue",
+            labels=["status-01:created"],
+            assignees=["testuser"],
+        )
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()

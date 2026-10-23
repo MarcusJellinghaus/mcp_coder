@@ -21,6 +21,7 @@ from mcp_coder.workflows.vscodeclaude.types import (
     Transition,
     VSCodeClaudeSession,
 )
+from tests.github_factories import make_issue_data
 
 
 def _make_assessment(
@@ -105,20 +106,16 @@ class TestClosedIssueIntegration:
         ]
 
         # Mock closed issue data
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug", "status-07:code-review"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug", "status-07:code-review"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
 
         assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
@@ -172,34 +169,28 @@ class TestClosedIssueIntegration:
         )
 
         # Mock issue data
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug", "status-07:code-review"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Closed Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
-        issue_100: IssueData = {
-            "number": 100,
-            "state": "open",
-            "labels": ["bug", "status-07:code-review"],
-            "assignees": ["testuser"],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Open Issue 100",
-            "body": "Body 100",
-            "url": "http://test.com/100",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug", "status-07:code-review"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            title="Closed Issue 414",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
+        issue_100 = make_issue_data(
+            number=100,
+            labels=["bug", "status-07:code-review"],
+            assignees=["testuser"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            title="Open Issue 100",
+            body="Body 100",
+            url="http://test.com/100",
+            updated_at="2025-12-31T08:00:00Z",
+        )
 
         # Call filter with both issues
         all_issues = [issue_414, issue_100]
@@ -245,20 +236,16 @@ class TestClosedIssueIntegration:
         ]
 
         # Mock closed issue
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug", "status-07:code-review"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug", "status-07:code-review"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
 
         cached_issues = {"owner/repo": {414: issue_414}}
         eligible_issues: list[tuple[str, IssueData]] = []
@@ -378,48 +365,36 @@ class TestClosedIssueIntegration:
         ]
 
         # Mock issue data
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
-        issue_408: IssueData = {
-            "number": 408,
-            "state": "closed",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 408",
-            "body": "Body 408",
-            "url": "http://test.com/408",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
-        issue_100: IssueData = {
-            "number": 100,
-            "state": "open",
-            "labels": ["bug", "status-01:created"],
-            "assignees": ["testuser"],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 100",
-            "body": "Body 100",
-            "url": "http://test.com/100",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
+        issue_408 = make_issue_data(
+            number=408,
+            state="closed",
+            labels=["bug"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 408",
+            url="http://test.com/408",
+            updated_at="2025-12-31T08:00:00Z",
+        )
+        issue_100 = make_issue_data(
+            number=100,
+            labels=["bug", "status-01:created"],
+            assignees=["testuser"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 100",
+            url="http://test.com/100",
+            updated_at="2025-12-31T08:00:00Z",
+        )
 
         cached_issues = {"owner/repo": {414: issue_414, 408: issue_408, 100: issue_100}}
 
@@ -504,20 +479,16 @@ class TestClosedIssueIntegration:
         ]
 
         # Mock closed issue
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug", "status-07:code-review"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug", "status-07:code-review"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
 
         cached_issues = {"owner/repo": {414: issue_414}}
 
