@@ -10,6 +10,7 @@ import pytest
 from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.session_launch import regenerate_session_files
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from tests.github_factories import make_issue_data
 
 
 @pytest.mark.skipif(
@@ -32,20 +33,12 @@ class TestRegenerateSessionFiles:
     @pytest.fixture
     def mock_issue(self) -> IssueData:
         """Create a mock issue."""
-        return {
-            "number": 123,
-            "title": "Test issue for regeneration",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": ["testuser"],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        return make_issue_data(
+            number=123,
+            title="Test issue for regeneration",
+            labels=["status-07:code-review"],
+            assignees=["testuser"],
+        )
 
     @pytest.fixture
     def mock_session(self, session_folder: Path) -> VSCodeClaudeSession:

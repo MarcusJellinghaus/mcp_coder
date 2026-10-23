@@ -9,6 +9,7 @@ from mcp_coder.workflows.vscodeclaude.status import (
     display_status_table,
     get_next_action,
 )
+from tests.github_factories import make_issue_data
 
 
 class TestDisplayStatusTableBranchIndicators:
@@ -18,20 +19,13 @@ class TestDisplayStatusTableBranchIndicators:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Eligible issue without linked branch shows '-> Needs branch'."""
-        mock_issue: IssueData = {
-            "number": 123,
-            "title": "Test Issue",
-            "body": "",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-04:plan-review"],
+            assignees=["testuser"],
+            url="",
+        )
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
         issues_without_branch: set[tuple[str, int]] = {("owner/repo", 123)}
@@ -52,20 +46,13 @@ class TestDisplayStatusTableBranchIndicators:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Eligible issue with linked branch shows '-> Create and start'."""
-        mock_issue: IssueData = {
-            "number": 456,
-            "title": "Test Issue",
-            "body": "",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=456,
+            title="Test Issue",
+            labels=["status-04:plan-review"],
+            assignees=["testuser"],
+            url="",
+        )
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
         issues_without_branch: set[tuple[str, int]] = set()  # Has branch
@@ -86,20 +73,13 @@ class TestDisplayStatusTableBranchIndicators:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Status-01 issue without branch still shows '-> Create and start'."""
-        mock_issue: IssueData = {
-            "number": 789,
-            "title": "Test Issue",
-            "body": "",
-            "labels": ["status-01:created"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=789,
+            title="Test Issue",
+            labels=["status-01:created"],
+            assignees=["testuser"],
+            url="",
+        )
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
         # Even if in issues_without_branch, status-01 doesn't require branch
@@ -133,20 +113,13 @@ class TestDisplayStatusTableBranchIndicators:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """None issues_without_branch uses default '-> Create and start'."""
-        mock_issue: IssueData = {
-            "number": 111,
-            "title": "Test Issue",
-            "body": "",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=111,
+            title="Test Issue",
+            labels=["status-04:plan-review"],
+            assignees=["testuser"],
+            url="",
+        )
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
 
@@ -166,20 +139,13 @@ class TestDisplayStatusTableBranchIndicators:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Status-07:code-review without branch shows '-> Needs branch'."""
-        mock_issue: IssueData = {
-            "number": 222,
-            "title": "Test Issue",
-            "body": "",
-            "labels": ["status-07:code-review"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=222,
+            title="Test Issue",
+            labels=["status-07:code-review"],
+            assignees=["testuser"],
+            url="",
+        )
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", mock_issue)]
         issues_without_branch: set[tuple[str, int]] = {("owner/repo", 222)}

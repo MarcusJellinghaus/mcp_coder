@@ -16,6 +16,7 @@ from mcp_coder.workflows.vscodeclaude.assessment import (
     _issue_facts as _produce_issue_facts,
 )
 from mcp_coder.workflows.vscodeclaude.assessment import assess_issue_state
+from tests.github_factories import make_issue_data
 from tests.workflows.vscodeclaude.conftest import make_session
 
 _STALE = "mcp_coder.workflows.vscodeclaude.assessment.is_session_stale"
@@ -32,21 +33,14 @@ def _make_issue(
     assignees: list[str] | None = None,
 ) -> IssueData:
     """Build a minimal IssueData for the IssueFacts producer tests."""
-    issue: IssueData = {
-        "number": number,
-        "title": "Test issue",
-        "body": "",
-        "state": state,
-        "labels": labels if labels is not None else [],
-        "assignees": assignees if assignees is not None else [],
-        "user": None,
-        "created_at": None,
-        "updated_at": None,
-        "url": "",
-        "locked": False,
-        "author_association": None,
-    }
-    return issue
+    return make_issue_data(
+        number=number,
+        title="Test issue",
+        state=state,
+        labels=labels if labels is not None else [],
+        assignees=assignees if assignees is not None else [],
+        url="",
+    )
 
 
 class TestIssueFacts:
