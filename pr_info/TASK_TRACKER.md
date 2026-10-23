@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Docs — describe the fix-conflict outcomes — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: update `docs/cli-reference.md`, `docs/processes-prompts/development-process.md`, `docs/getting-started/label-setup.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `docs/cli-reference.md`, `docs/processes-prompts/development-process.md`, `docs/getting-started/label-setup.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

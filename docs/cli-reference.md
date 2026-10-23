@@ -520,7 +520,12 @@ mcp-coder fix-conflict [OPTIONS]
 **Options:**
 - `--project-dir PATH` - Project directory path (default: current directory)
 
-**Description:** Jenkins-dispatched workflow for `status-71:merge-conflict` (see [PR-health](processes-prompts/development-process.md#10-pr-health-status-10)). Runs the mechanical rebase only — no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself: back to `status-10:pr-created` on success, or `status-74:pr-merge-conflict` if the PR is still blocked. If the state stays `unknown`, the issue stays at `status-72:fixing-merge-conflict` for the next coordinator poll. Crashes are caught by `run_guarded()`, which comments and sets `status-73:merge-conflict-failed`. Normally run by the coordinator, not by hand.
+**Description:** Jenkins-dispatched workflow for `status-71:merge-conflict` (see [PR-health](processes-prompts/development-process.md#10-pr-health-status-10)). Runs the mechanical rebase only — no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself:
+
+- settled and not `dirty`, or still `unknown` after a successful rebase → `status-10:pr-created`;
+- still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase/push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, base, conflicting/uncommitted files).
+
+Crashes are caught by `run_guarded()`, which comments and sets `status-73:merge-conflict-failed`. Normally run by the coordinator, not by hand.
 
 **Examples:**
 ```bash
