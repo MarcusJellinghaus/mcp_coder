@@ -51,6 +51,7 @@ def mock_issue_manager() -> MagicMock:
         "updated_at": "2024-01-01T00:00:00Z",
         "url": "https://github.com/test/repo/issues/123",
         "locked": False,
+        "author_association": None,
     }
 
     # Configure mock to return success for set_labels
@@ -66,6 +67,7 @@ def mock_issue_manager() -> MagicMock:
         "updated_at": "2024-01-01T00:00:00Z",
         "url": "https://github.com/test/repo/issues/123",
         "locked": False,
+        "author_association": None,
     }
 
     return mock
@@ -113,6 +115,7 @@ class TestFromStatusFlag:
             "updated_at": "2024-01-01T00:00:00Z",
             "url": "https://github.com/test/repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
 
         args = argparse.Namespace(
@@ -169,6 +172,7 @@ class TestFromStatusFlag:
             "updated_at": "2024-01-01T00:00:00Z",
             "url": "https://github.com/test/repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
 
         args = argparse.Namespace(
@@ -226,6 +230,7 @@ class TestFromStatusFlag:
             "updated_at": "2024-01-01T00:00:00Z",
             "url": "https://github.com/test/repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
 
         args = argparse.Namespace(
@@ -317,6 +322,7 @@ class TestFromStatusFlag:
             "updated_at": "2024-01-01T00:00:00Z",
             "url": "https://github.com/test/repo/issues/456",
             "locked": False,
+            "author_association": None,
         }
 
         args = argparse.Namespace(
@@ -414,6 +420,7 @@ class TestFromStatusFlag:
             "updated_at": "2024-01-01T00:00:00Z",
             "url": "https://github.com/test/repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
 
         args = argparse.Namespace(
@@ -489,6 +496,7 @@ class TestFromStatusFlag:
             "updated_at": "2024-01-01T00:00:00Z",
             "url": "https://github.com/test/repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
 
         args = argparse.Namespace(

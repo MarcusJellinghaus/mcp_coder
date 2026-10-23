@@ -84,6 +84,7 @@ class TestCoordinatorRunCacheIntegration:
                 "updated_at": "2025-12-31T09:00:00Z",
                 "url": "https://github.com/user/test_repo/issues/456",
                 "locked": False,
+                "author_association": None,
             }
         ]
 
@@ -239,6 +240,7 @@ class TestCoordinatorRunCacheIntegration:
                 "updated_at": "2025-12-31T09:00:00Z",
                 "url": "https://github.com/user/test_repo/issues/156",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 157,
@@ -252,6 +254,7 @@ class TestCoordinatorRunCacheIntegration:
                 "updated_at": "2025-12-31T09:00:00Z",
                 "url": "https://github.com/user/test_repo/issues/157",
                 "locked": False,
+                "author_association": None,
             },
         ]
 
@@ -343,6 +346,7 @@ class TestCacheUpdateIntegration:
             "updated_at": "2025-12-31T09:00:00Z",
             "url": "https://github.com/user/test_repo/issues/123",
             "locked": False,
+            "author_association": None,
         }
         mock_get_cached_issues.return_value = [test_issue]
 
@@ -433,6 +437,7 @@ class TestCacheUpdateIntegration:
             "updated_at": "2025-12-31T09:00:00Z",
             "url": "https://github.com/user/test_repo/issues/456",
             "locked": False,
+            "author_association": None,
         }
         mock_get_cached_issues.return_value = [test_issue]
 
@@ -527,6 +532,7 @@ class TestCacheUpdateIntegration:
                 "updated_at": "2025-12-31T09:00:00Z",
                 "url": "https://github.com/user/test_repo/issues/101",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 102,
@@ -540,6 +546,7 @@ class TestCacheUpdateIntegration:
                 "updated_at": "2025-12-31T09:00:00Z",
                 "url": "https://github.com/user/test_repo/issues/102",
                 "locked": False,
+                "author_association": None,
             },
             {
                 "number": 103,
@@ -553,6 +560,7 @@ class TestCacheUpdateIntegration:
                 "updated_at": "2025-12-31T09:00:00Z",
                 "url": "https://github.com/user/test_repo/issues/103",
                 "locked": False,
+                "author_association": None,
             },
         ]
         mock_get_cached_issues.return_value = test_issues

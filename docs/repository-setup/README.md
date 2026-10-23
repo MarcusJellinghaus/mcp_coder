@@ -75,7 +75,6 @@ The following files in this repository serve as references/templates for other p
 | `.importlinter` | P | No | No | Package names, contract definitions |
 | `tach.toml` | P | No | No | Module boundaries for your package |
 | `vulture_whitelist.py` | P | No | No | Project-specific false positives |
-| `tools/format_all.{sh,bat}` | P | No | Yes | — |
 | `tools/lint_imports.{sh,bat}`, `tach_check.*`, `pycycle_check.*`, `vulture_check.*` | P | No | Yes | — |
 | `tools/ruff_check.{sh,bat}` | P | No | Yes | — |
 | `icoder_local.bat` | I | — | — | mcp-coder repo only |

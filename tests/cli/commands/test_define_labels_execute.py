@@ -153,6 +153,7 @@ class TestExecuteDefineLabelsExitCodes:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             }
         ]
         mock_issue_manager_class.return_value = mock_issue_manager
@@ -226,6 +227,7 @@ class TestExecuteDefineLabelsExitCodes:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             }
         ]
         mock_issue_manager.get_issue_events.return_value = [
@@ -327,6 +329,7 @@ class TestExecuteDefineLabelsExitCodes:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
             # Stale issue (warning)
             {
@@ -341,6 +344,7 @@ class TestExecuteDefineLabelsExitCodes:
                 "updated_at": None,
                 "url": "",
                 "locked": False,
+                "author_association": None,
             },
         ]
         mock_issue_manager.get_issue_events.return_value = [
