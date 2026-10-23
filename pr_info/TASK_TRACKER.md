@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: Migrate `tests/cli/commands/coordinator` (4 files) ([step_5.md](./steps/step_5.md))
-- [ ] Implementation: inline literals and helpers/fixtures → `make_issue_data(...)`; retype receivers; no `locked` matches remain
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: inline literals and helpers/fixtures → `make_issue_data(...)`; retype receivers; no `locked` matches remain
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Migrate `tests/workflows/create_plan` (6 files) ([step_6.md](./steps/step_6.md))
 - [ ] Implementation: fixtures/literals → `make_issue_data(...)`, empty sentinels → `create_empty_issue_data()`; no `locked` matches remain
