@@ -62,9 +62,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 9: Migrate misc (2 files) + acceptance checks ([step_9.md](./steps/step_9.md))
-- [ ] Implementation: `test_branch_info.py` and `test_base_branch.py` → `make_issue_data(...)`; acceptance searches clean, lint-imports passes
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `test_branch_info.py` and `test_base_branch.py` → `make_issue_data(...)`; acceptance searches clean, lint-imports passes
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: review full branch diff against `main`, address findings
