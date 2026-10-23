@@ -24,6 +24,7 @@ from mcp_coder.workflows.vscodeclaude.types import (
     SessionAssessment,
     Transition,
 )
+from tests.github_factories import make_issue_data
 
 
 def _make_assessment(
@@ -172,20 +173,12 @@ class TestBranchHandlingIntegration:
         )
 
         # Issue now at status-04 with linked branch
-        cached_issue: IssueData = {
-            "number": 100,
-            "title": "Test Issue",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/100",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=100,
+            title="Test Issue",
+            labels=["status-04:plan-review"],
+            assignees=["testuser"],
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {100: cached_issue}
         }
@@ -244,20 +237,13 @@ class TestBranchHandlingIntegration:
 
         # Mock issue at status-04
         mock_issues: list[IssueData] = [
-            {
-                "number": 200,
-                "title": "Test",
-                "state": "open",
-                "labels": ["status-04:plan-review"],
-                "assignees": ["testuser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "body": "",
-                "locked": False,
-                "author_association": None,
-            }
+            make_issue_data(
+                number=200,
+                title="Test",
+                labels=["status-04:plan-review"],
+                assignees=["testuser"],
+                url="",
+            )
         ]
 
         monkeypatch.setattr(
@@ -345,20 +331,12 @@ class TestBranchHandlingIntegration:
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
 
-        cached_issue: IssueData = {
-            "number": 300,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=300,
+            title="Test",
+            labels=["status-04:plan-review"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {300: cached_issue}
         }
@@ -489,20 +467,12 @@ class TestBranchHandlingIntegration:
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
 
-        cached_issue: IssueData = {
-            "number": 500,
-            "title": "Intervention Test",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=500,
+            title="Intervention Test",
+            labels=["status-04:plan-review"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {500: cached_issue}
         }
