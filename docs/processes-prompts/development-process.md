@@ -1145,7 +1145,7 @@ Automated workflows can fail at several points. When a failure occurs, the issue
 | `status-17f-tasks:code-review-open-tasks` | `review-implementation` refused to start because `## Tasks` in `TASK_TRACKER.md` still has unchecked items | run `/implementation_finalise`, then `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-ci-unknown:code-review-ci-unknown` | The final dismiss gate could not prove CI green (status pending / not configured / unknown / unavailable) | run `/check_branch_status` (check the GitHub token / whether CI exists), then `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-73:merge-conflict-failed` | The `fix-conflict` job died without finishing | session opens with `/check_branch_status`; fix, then `mcp-coder gh-tool set-status status-10:pr-created` |
-| `status-74:pr-merge-conflict` | Rebase could not resolve the conflict | resolve manually (`/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-74:pr-merge-conflict` | fix-conflict could not get the PR mergeable (conflict, rebase failed, or no open PR) — see the issue comment | resolve manually (`/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-83:ci-fix-failed` | The `fix-ci` job crashed | session opens with `/check_branch_status`; fix, then `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-84:pr-ci-failed` | CI-fix attempts exhausted, LLM timeout or MCP unavailable (see the issue comment's Category line) | fix CI manually (`/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
 
@@ -1192,9 +1192,11 @@ While a PR sits at `status-10:pr-created`, the vscodeclaude coordinator checks i
 ```
 status-10:pr-created
   ├─ merge conflict   → status-71 ─▶ (Jenkins: fix-conflict) ─▶ status-72
-  │                        ├─ rebased cleanly  → status-10:pr-created
-  │                        ├─ still blocked    → status-74  (human)
-  │                        └─ job crashed      → status-73  (human)
+  │                        ├─ settled, not dirty            → status-10:pr-created
+  │                        ├─ unknown, rebase ok            → status-10:pr-created
+  │                        ├─ still conflicting (dirty)     → status-74  (human)
+  │                        ├─ no open PR / unknown + rebase failed → status-74  (human)
+  │                        └─ job crashed                   → status-73  (human)
   ├─ failing CI       → status-81 ─▶ (Jenkins: fix-ci) ─▶ status-82
   │                        ├─ CI green         → status-10:pr-created
   │                        ├─ fix exhausted / LLM timeout / MCP unavailable → status-84  (human)

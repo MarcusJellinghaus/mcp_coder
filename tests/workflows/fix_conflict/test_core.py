@@ -14,34 +14,127 @@ _SHARED_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_fai
 _BRANCH_HEAD = "mcp_coder.workflow_utils.failure_handling._branch_head"
 PROJECT_DIR = Path("/fake/project")
 BRANCH_NAME = "123-fix-something"
+_OK_OUTCOME = RebaseOutcome("ok", "main", "abc1234")
 
 
 def _patch_all(
     mergeable_states: list[list[dict[str, Any]]],
+    outcome: RebaseOutcome = _OK_OUTCOME,
 ) -> tuple[tuple[Any, ...], MagicMock]:
     """Patch every external dependency used by run_fix_conflict_workflow.
 
     ``mergeable_states`` is the sequence of ``find_pull_request_by_head``
     return values, one per poll attempt (repeats the last value once the
-    list is exhausted).
+    list is exhausted). ``outcome`` is the rebase attempt's return value.
     """
     pr_manager = MagicMock()
     pr_manager.find_pull_request_by_head.side_effect = mergeable_states
     return (
         patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
-        patch(
-            f"{MODULE}._attempt_rebase_and_push",
-            return_value=RebaseOutcome("ok", "main", "abc1234"),
-        ),
+        patch(f"{MODULE}._attempt_rebase_and_push", return_value=outcome),
         patch(f"{MODULE}.PullRequestManager", return_value=pr_manager),
         patch(f"{MODULE}.IssueManager"),
         patch(f"{MODULE}.update_workflow_label"),
         patch(f"{MODULE}.time.sleep"),
+        patch(f"{MODULE}.handle_workflow_failure"),
     ), pr_manager
 
 
-def test_dirty_on_first_poll_transitions_to_pr_merge_conflict() -> None:
-    patches, _ = _patch_all([[{"mergeable_state": "dirty"}]])
+@pytest.mark.parametrize(
+    ("states", "outcome", "verdict", "present", "absent", "expected_sleeps"),
+    [
+        pytest.param(
+            [[{"mergeable_state": "dirty"}]],
+            RebaseOutcome("conflict", "main", "abc1234", ("a.py", "b.py")),
+            "still conflicting",
+            [
+                "**Reason:** conflict",
+                "**Base:** main",
+                "**Likely conflicting files:** a.py, b.py",
+            ],
+            [],
+            0,
+            id="dirty",
+        ),
+        pytest.param(
+            [[]] * 6,
+            RebaseOutcome("ok", "main", "abc1234"),
+            "no open PR found for branch",
+            [],
+            ["**Reason:**"],
+            5,
+            id="no_pr",
+        ),
+        pytest.param(
+            [[{"mergeable_state": "unknown"}]] * 6,
+            RebaseOutcome("push_failed", "main", "abc1234"),
+            "mergeable state unknown, rebase did not complete",
+            ["**Reason:** push_failed"],
+            [],
+            5,
+            id="unknown_failed_rebase",
+        ),
+        pytest.param(
+            [[{"mergeable_state": "dirty"}]],
+            RebaseOutcome("dirty_tree", files=("uv.lock",)),
+            "still conflicting",
+            ["**Reason:** dirty_tree", "**Uncommitted files:** uv.lock"],
+            ["**Base:**", "**Likely conflicting files:**"],
+            0,
+            id="dirty_tree",
+        ),
+    ],
+)
+def test_unresolved_outcomes_go_to_pr_merge_conflict(
+    states: list[list[dict[str, Any]]],
+    outcome: RebaseOutcome,
+    verdict: str,
+    present: list[str],
+    absent: list[str],
+    expected_sleeps: int,
+) -> None:
+    patches, _ = _patch_all(states, outcome)
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4] as mock_update,
+        patches[5] as mock_sleep,
+        patches[6] as mock_fail,
+        patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
+    ):
+        result = run_fix_conflict_workflow(PROJECT_DIR)
+
+    assert result == 0
+    mock_fail.assert_called_once()
+    assert mock_fail.call_args[0][0].category == "pr_merge_conflict"
+    comment = mock_fail.call_args[0][1]
+    assert comment.splitlines()[0] == "## ❌ Fix Conflict Failed"
+    assert f"**Verdict:** {verdict}" in comment
+    for text in present:
+        assert text in comment
+    for text in absent:
+        assert text not in comment
+    kwargs = mock_fail.call_args.kwargs
+    assert kwargs["from_label_id"] == "fixing_merge_conflict"
+    assert kwargs["update_issue_labels"] is True
+    assert kwargs["post_issue_comments"] is True
+    mock_update.assert_not_called()
+    assert mock_sleep.call_count == expected_sleeps
+
+
+@pytest.mark.parametrize(
+    ("states", "expected_sleeps"),
+    [
+        pytest.param([[{"mergeable_state": "clean"}]], 0, id="clean"),
+        pytest.param([[{"mergeable_state": "unknown"}]] * 6, 5, id="unknown_ok"),
+    ],
+)
+def test_settled_or_self_healing_outcomes_go_to_pr_created(
+    states: list[list[dict[str, Any]]], expected_sleeps: int
+) -> None:
+    patches, _ = _patch_all(states)
     with (
         patches[0],
         patches[1],
@@ -49,25 +142,7 @@ def test_dirty_on_first_poll_transitions_to_pr_merge_conflict() -> None:
         patches[3] as mock_issue_cls,
         patches[4] as mock_update,
         patches[5] as mock_sleep,
-    ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
-
-    assert result == 0
-    mock_update.assert_called_once_with(
-        mock_issue_cls.return_value, "fixing_merge_conflict", "pr_merge_conflict"
-    )
-    mock_sleep.assert_not_called()
-
-
-def test_clean_transitions_to_pr_created() -> None:
-    patches, _ = _patch_all([[{"mergeable_state": "clean"}]])
-    with (
-        patches[0],
-        patches[1],
-        patches[2],
-        patches[3] as mock_issue_cls,
-        patches[4] as mock_update,
-        patches[5] as _,
+        patches[6] as mock_fail,
     ):
         result = run_fix_conflict_workflow(PROJECT_DIR)
 
@@ -75,39 +150,8 @@ def test_clean_transitions_to_pr_created() -> None:
     mock_update.assert_called_once_with(
         mock_issue_cls.return_value, "fixing_merge_conflict", "pr_created"
     )
-
-
-def test_unknown_for_all_attempts_leaves_label_untouched() -> None:
-    patches, _ = _patch_all([[{"mergeable_state": "unknown"}]] * 6)
-    with (
-        patches[0],
-        patches[1],
-        patches[2],
-        patches[3],
-        patches[4] as mock_update,
-        patches[5] as mock_sleep,
-    ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
-
-    assert result == 0
-    mock_update.assert_not_called()
-    assert mock_sleep.call_count == 5
-
-
-def test_no_open_pr_found_treated_as_unresolved() -> None:
-    patches, _ = _patch_all([[]] * 6)
-    with (
-        patches[0],
-        patches[1],
-        patches[2],
-        patches[3],
-        patches[4] as mock_update,
-        patches[5] as _,
-    ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
-
-    assert result == 0
-    mock_update.assert_not_called()
+    mock_fail.assert_not_called()
+    assert mock_sleep.call_count == expected_sleeps
 
 
 def test_no_current_branch_returns_1_without_rebase() -> None:
