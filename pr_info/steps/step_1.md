@@ -44,15 +44,18 @@
     "pr_merge_conflict"`; comment (`call_args[0][1]`) first line `"## ❌ Fix Conflict Failed"`
     and contains `"**Verdict:** <verdict>"` plus the expected substrings;
     kwargs `from_label_id="fixing_merge_conflict"`, `update_issue_labels=True`,
-    `post_issue_comments=True`; `update_workflow_label` not called.
+    `post_issue_comments=True`; `update_workflow_label` not called;
+    `mock_sleep.call_count == expected_sleeps` (keeps the existing poll-cadence checks:
+    `0` for a `dirty` first poll, `5` for no PR and for `unknown` on every attempt).
 - Replace `test_clean_transitions_to_pr_created` with parametrized
   `test_settled_or_self_healing_outcomes_go_to_pr_created`, cases:
   `[[{"mergeable_state": "clean"}]]` and `[[{"mergeable_state": "unknown"}]] * 6` (outcome ok).
   Assert result `0`, `update_workflow_label.assert_called_once_with(mock_issue_cls.return_value,
-  "fixing_merge_conflict", "pr_created")`, `handle_workflow_failure.assert_not_called()`.
+  "fixing_merge_conflict", "pr_created")`, `handle_workflow_failure.assert_not_called()`,
+  `mock_sleep.call_count == expected_sleeps` (`0` for `clean`, `5` for `unknown`).
 - Add one assertion that a `dirty_tree` outcome renders `Uncommitted files` and no `Base`
   (may be a 4th case of the `status-74` parametrization with state `dirty`, outcome
-  `RebaseOutcome("dirty_tree", files=("uv.lock",))`).
+  `RebaseOutcome("dirty_tree", files=("uv.lock",))`, `expected_sleeps=0`).
 - Keep `test_no_current_branch_returns_1_without_rebase`, the crash and SystemExit tests
   unchanged (they patch `_SHARED_HANDLER`, the `run_guarded` path).
 
