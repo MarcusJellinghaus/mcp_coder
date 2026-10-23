@@ -14,6 +14,8 @@ import pytest
 from mcp_coder.workflows.review import reviewer
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION
 
+BRANCH = "1270-test-branch"
+
 
 @pytest.fixture
 def mock_llm(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
@@ -21,6 +23,9 @@ def mock_llm(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     m = MagicMock(name="prompt_llm", return_value={"text": "ok", "session_id": "rev-1"})
     monkeypatch.setattr(reviewer, "prompt_llm", m)
     monkeypatch.setattr(reviewer, "prepare_llm_environment", MagicMock(return_value={}))
+    monkeypatch.setattr(
+        reviewer, "get_branch_name_for_logging", MagicMock(return_value=BRANCH)
+    )
     monkeypatch.setattr(
         reviewer,
         "get_prompt",
@@ -121,6 +126,20 @@ def test_task_resume_does_no_round_substitution(
     template.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "overrides",
+    [{}, {"session_id": "rev-1", "tasks": ["Fix foo.py:1"]}],
+    ids=["fresh", "task_resume"],
+)
+def test_reviewer_passes_branch_name(
+    mock_llm: MagicMock, overrides: dict[str, Any]
+) -> None:
+    """Both reviewer turn kinds tag the LLM call with the current branch."""
+    _call(**overrides)
+
+    assert mock_llm.call_args.kwargs["branch_name"] == BRANCH
+
+
 # --- Supervisor header substitution ----------------------------------------
 
 
@@ -141,6 +160,9 @@ def mock_supervisor_llm(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     )
     monkeypatch.setattr(reviewer, "prompt_llm", m)
     monkeypatch.setattr(reviewer, "prepare_llm_environment", MagicMock(return_value={}))
+    monkeypatch.setattr(
+        reviewer, "get_branch_name_for_logging", MagicMock(return_value=BRANCH)
+    )
     monkeypatch.setattr(
         reviewer,
         "get_prompt",
@@ -256,6 +278,30 @@ def test_unrecorded_later_turn_keeps_the_previous_session_id(
 
     assert verdict is not None
     assert sid == "sup-1"
+
+
+def test_verdict_repair_retry_passes_branch_name_on_every_call(
+    monkeypatch: pytest.MonkeyPatch, mock_supervisor_llm: MagicMock
+) -> None:
+    """The initial verdict turn and the repair retry both carry the branch name.
+
+    The branch is computed once, before the repair loop.
+    """
+    branch_mock = MagicMock(return_value=BRANCH)
+    monkeypatch.setattr(reviewer, "get_branch_name_for_logging", branch_mock)
+    mock_supervisor_llm.side_effect = [
+        {"text": "no verdict here", "session_id": "sup-1"},
+        {"text": '```json\n{"decision": "dismiss"}\n```', "session_id": "sup-1"},
+    ]
+
+    verdict, _ = _call_get_verdict()
+
+    assert verdict is not None
+    assert mock_supervisor_llm.call_count == 2
+    assert all(
+        c.kwargs["branch_name"] == BRANCH for c in mock_supervisor_llm.call_args_list
+    )
+    branch_mock.assert_called_once_with(Path("/p"))
 
 
 # --- PR-feedback note framing helpers --------------------------------------

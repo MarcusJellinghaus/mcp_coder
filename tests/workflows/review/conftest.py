@@ -72,6 +72,9 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(reviewer, "prompt_llm", mocks.prompt_llm)
 
     monkeypatch.setattr(reviewer, "prepare_llm_environment", MagicMock(return_value={}))
+    monkeypatch.setattr(
+        reviewer, "get_branch_name_for_logging", MagicMock(return_value="1072-review")
+    )
 
     mocks.run_formatters = MagicMock(return_value=True)
     monkeypatch.setattr(core, "run_formatters", mocks.run_formatters)
