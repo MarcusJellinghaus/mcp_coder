@@ -21,6 +21,14 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Replace DEP002 list with `optional_dependencies_dev_groups`
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: add `optional_dependencies_dev_groups` to `[tool.deptry]`, remove the `DEP002` ignore list, update `docs/repository-setup/python.md`, verify with `deptry src`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against the summary and step files
+- [ ] PR summary prepared
