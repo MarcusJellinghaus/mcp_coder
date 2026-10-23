@@ -163,8 +163,8 @@ class ICoderApp(StreamViewApp):
                     self.query_one(BusyIndicator).show_busy("Querying LLM...")
                     llm_input, skill_name = action.text, action.skill_name
                     self.run_worker(
-                        lambda llm_input=llm_input, skill_name=skill_name: self._stream_llm(
-                            llm_input, skill_name
+                        lambda llm_input=llm_input, skill_name=skill_name: (
+                            self._stream_llm(llm_input, skill_name)
                         ),
                         thread=True,
                     )

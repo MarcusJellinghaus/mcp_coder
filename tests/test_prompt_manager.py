@@ -245,12 +245,12 @@ code2 = "test2"
 
             result = validate_prompt_directory(temp_dir)
             # Debug the result
-            assert (
-                result["valid"] is False
-            ), f"Expected False but got {result['valid']}. Errors: {result['errors']}"
-            assert (
-                len(result["errors"]) > 0
-            ), f"Expected errors but got none. Result: {result}"
+            assert result["valid"] is False, (
+                f"Expected False but got {result['valid']}. Errors: {result['errors']}"
+            )
+            assert len(result["errors"]) > 0, (
+                f"Expected errors but got none. Result: {result}"
+            )
             assert any(
                 "appears in multiple files" in error.lower()
                 for error in result["errors"]

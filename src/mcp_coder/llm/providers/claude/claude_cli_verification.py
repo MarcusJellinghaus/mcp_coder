@@ -28,9 +28,7 @@ def _verify_claude_before_use() -> tuple[bool, str | None, str | None]:
             logger.warning(
                 "setup_claude_path() returned None - Claude not found in standard locations"
             )
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.warning("Error during PATH setup: %s", e)
         claude_path = None
 
@@ -72,9 +70,9 @@ def verify_claude() -> dict[str, Any]:
         "cli_found": {"ok": basic["found"], "value": "YES" if basic["found"] else "NO"},
     }
     if not basic["found"]:
-        result["cli_found"][
-            "install_hint"
-        ] = "https://docs.anthropic.com/en/docs/claude-code"
+        result["cli_found"]["install_hint"] = (
+            "https://docs.anthropic.com/en/docs/claude-code"
+        )
 
     if basic["path"]:
         result["cli_path"] = {"ok": True, "value": basic["path"]}
@@ -97,9 +95,7 @@ def verify_claude() -> dict[str, Any]:
             "value": "OK" if success else "FAILED",
             "error": error_msg if not success else None,
         }
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         result["api_integration"] = {
             "ok": False,
             "value": "FAILED",

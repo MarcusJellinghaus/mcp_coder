@@ -415,7 +415,7 @@ git push
 
 Add comprehensive CI checks to your GitHub Actions workflow.
 
-> **Note:** The example below uses Python tools (black, pytest, mypy, etc.). For Python-specific matrix details, see [python.md](python.md#ci-workflow-for-python).
+> **Note:** The example below uses Python tools (ruff, pytest, mypy, etc.). For Python-specific matrix details, see [python.md](python.md#ci-workflow-for-python).
 
 ### CI Workflow Example
 
@@ -437,8 +437,8 @@ jobs:
       fail-fast: false
       matrix:
         check:
-          - {name: "black", cmd: "black --check src tests"}
-          - {name: "isort", cmd: "isort --check --profile=black src tests"}
+          - {name: "ruff", cmd: "ruff version && ruff check src tests tools"}
+          - {name: "ruff-format", cmd: "ruff version && ruff format --check src tests tools"}
           - {name: "pylint", cmd: "pylint -E ./src ./tests"}
           - {name: "pytest", cmd: "pytest"}
           - {name: "mypy", cmd: "mypy --strict src tests"}

@@ -488,8 +488,7 @@ async def run_agent_stream(
                     final_messages = list(chain_output["messages"])
                 else:
                     logger.warning(
-                        "Terminal graph event carried no 'messages'; "
-                        "history not stored"
+                        "Terminal graph event carried no 'messages'; history not stored"
                     )
 
     except Exception as exc:

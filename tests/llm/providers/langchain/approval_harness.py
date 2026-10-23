@@ -22,9 +22,9 @@ developer's real home directory.
 function, and ``BaseChatModel`` is subclassed inside one too. Two CI jobs make
 the obvious module-scope version wrong:
 
-* ``isort --check --profile=black --float-to-top`` floats imports above
-  module-level statements, so a module-level ``importorskip`` would end up
-  *below* the langchain import it was meant to guard and would guard nothing;
+* ruff ``E402`` flags a module-level import placed below a statement, so a
+  module-level ``importorskip`` ahead of the langchain imports it guards would
+  put those imports in violation;
 * the mypy job installs only ``.[typecheck]``, so ``BaseChatModel`` resolves to
   ``Any`` and a module-scope subclass trips ``disallow_subclassing_any`` under
   ``--strict`` — hence the ``# type: ignore[misc]`` on the class line.

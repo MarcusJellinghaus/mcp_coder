@@ -30,17 +30,15 @@ def _expected_value_column(indent: int, *, label_width: int = _LABEL_WIDTH) -> i
 def _assert_value_at_column(line: str, expected_col: int) -> None:
     """Assert ``line`` has whitespace at ``expected_col - 1`` and a non-whitespace at ``expected_col``."""
     assert expected_col >= 1, f"expected_col must be >= 1; got {expected_col}"
-    assert expected_col < len(
-        line
-    ), f"line shorter than expected value column {expected_col}: {line!r}"
-    assert line[
-        expected_col - 1
-    ].isspace(), (
+    assert expected_col < len(line), (
+        f"line shorter than expected value column {expected_col}: {line!r}"
+    )
+    assert line[expected_col - 1].isspace(), (
         f"prefix overflowed past col {expected_col - 1} (expected space): {line!r}"
     )
-    assert not line[
-        expected_col
-    ].isspace(), f"value missing at col {expected_col} (expected non-space): {line!r}"
+    assert not line[expected_col].isspace(), (
+        f"value missing at col {expected_col} (expected non-space): {line!r}"
+    )
 
 
 @pytest.fixture

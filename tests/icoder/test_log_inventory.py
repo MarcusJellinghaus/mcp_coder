@@ -121,8 +121,7 @@ def test_log_without_session_start_or_input(tmp_path: Path) -> None:
 def test_corrupt_json_propagates(tmp_path: Path) -> None:
     log_path = tmp_path / "icoder_2026-05-01T10-00-00.jsonl"
     log_path.write_text(
-        '{"t": 0.0, "event": "session_start", "provider": "claude"}\n'
-        "not valid json\n",
+        '{"t": 0.0, "event": "session_start", "provider": "claude"}\nnot valid json\n',
         encoding="utf-8",
     )
     with pytest.raises(json.JSONDecodeError):

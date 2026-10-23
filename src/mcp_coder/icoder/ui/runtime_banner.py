@@ -144,8 +144,7 @@ def format_startup_permission_notices(
     lines: list[str] = []
     if degraded:
         lines.append(
-            "⚠ Permission config is degraded — all MCP tool calls are denied. "
-            "See logs."
+            "⚠ Permission config is degraded — all MCP tool calls are denied. See logs."
         )
     for name in sorted(broken_skills):
         lines.append(f"⚠ /{name.lower()} is disabled: {broken_skills[name]}")

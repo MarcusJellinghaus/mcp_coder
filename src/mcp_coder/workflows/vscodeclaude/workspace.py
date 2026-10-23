@@ -58,7 +58,7 @@ def get_mcp_coder_install_path() -> Path | None:
 
         # Look for indicators of the project root
         for i in range(5):  # Limit search depth
-            logger.debug(f"Checking path {i+1}/5: {current_path}")
+            logger.debug(f"Checking path {i + 1}/5: {current_path}")
             if (current_path / ".venv").exists() or (
                 current_path / "pyproject.toml"
             ).exists():
@@ -84,9 +84,7 @@ def get_mcp_coder_install_path() -> Path | None:
 
         logger.warning("Could not determine mcp-coder installation directory")
         return None
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error determining mcp-coder installation path: {e}")
         return None
 
@@ -265,9 +263,7 @@ def setup_git_repo(
                 "Corrupted git repository at %s, deleting and re-cloning",
                 folder_path,
             )
-            shutil.rmtree(
-                folder_path, onerror=_remove_readonly
-            )  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
+            shutil.rmtree(folder_path, onerror=_remove_readonly)  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
             folder_path.mkdir(parents=True, exist_ok=True)
             is_empty = True
             has_git = False
@@ -351,8 +347,7 @@ def validate_setup_commands(commands: list[str]) -> None:
         # Check if executable exists in PATH
         if shutil.which(executable) is None:
             raise FileNotFoundError(
-                f"Command '{executable}' not found in PATH. "
-                f"Full command: '{command}'"
+                f"Command '{executable}' not found in PATH. Full command: '{command}'"
             )
 
 

@@ -133,7 +133,6 @@ class TestFindClaudeExecutable:
                 return_value=mock_result,
             ),
         ):
-
             result = find_claude_executable(test_execution=True)
 
         assert result == "/usr/bin/claude"

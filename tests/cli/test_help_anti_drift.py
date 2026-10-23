@@ -93,9 +93,9 @@ def test_every_leaf_rendered_in_overview() -> None:
     leaves = collect_leaves(create_parser())
     for name in leaves:
         assert name in overview, f"Leaf missing from overview: {name}"
-        assert (
-            COMMAND_DESCRIPTIONS[name] in overview
-        ), f"Description missing from overview: {name}"
+        assert COMMAND_DESCRIPTIONS[name] in overview, (
+            f"Description missing from overview: {name}"
+        )
 
 
 def test_group_and_suppressed_not_listed() -> None:

@@ -201,8 +201,7 @@ def test_rebase_handoff_fields_follow_the_table(
         ("conflict", "Rebase onto the base branch stopped on a conflict"),
         (
             "rebase_failed",
-            "Rebase onto the base branch failed and was not classified as a "
-            "conflict",
+            "Rebase onto the base branch failed and was not classified as a conflict",
         ),
         ("push_failed", "Rebase succeeded, but the force-with-lease push failed"),
     ],

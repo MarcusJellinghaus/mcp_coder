@@ -54,7 +54,9 @@ class TestPrepareRestartBranch:
             "MockBranchManager",
             (),
             {
-                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: None,
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: (
+                    None
+                ),
             },
         )()
 
@@ -87,7 +89,9 @@ class TestPrepareRestartBranch:
             "MockBranchManager",
             (),
             {
-                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-branch",
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: (
+                    "feat-branch"
+                ),
             },
         )()
 
@@ -124,7 +128,9 @@ class TestPrepareRestartBranch:
             "MockBranchManager",
             (),
             {
-                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-123",
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: (
+                    "feat-123"
+                ),
             },
         )()
 
@@ -164,7 +170,9 @@ class TestPrepareRestartBranch:
             "MockBranchManager",
             (),
             {
-                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-branch",
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: (
+                    "feat-branch"
+                ),
             },
         )()
 
@@ -249,7 +257,9 @@ class TestPrepareRestartBranch:
             "MockBranchManager",
             (),
             {
-                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: None,
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: (
+                    None
+                ),
             },
         )()
 

@@ -18,8 +18,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "black>=26.5.1",
-    "isort>=9.0.1",
     "mcp-tools-py",
     "mcp-workspace",
     "mcp-coder-utils",
@@ -111,7 +109,7 @@ dev = [
     "pydeps>=3.0.0",
     "tach>=0.6.0",
     "vulture>=2.14",
-    "ruff>=0.9.0",
+    "ruff>=0.16.8",
     "deptry>=0.25.1",
     "diff-cover",
 ]
@@ -182,17 +180,8 @@ addopts = ["--strict-markers", "--tb=short", "-n", "auto", "-p", "no:tach"]
 asyncio_mode = "auto"
 
 [tool.mcp-tools-py]
-# Formatter for run_format_code and mcp-coder workflows: isort + black
-formatter = "black"
-
-[tool.black]
-line-length = 88
-target-version = ["py311"]
-
-[tool.isort]
-profile = "black"
-line_length = 88
-float_to_top = true
+# Formatter for run_format_code and mcp-coder workflows: ruff (import sorting + ruff format)
+formatter = "ruff"
 
 [tool.pylint.main]
 # Add project root to Python path so pylint can find workflows module
@@ -328,6 +317,8 @@ ignore_missing_imports = true
 target-version = "py311"
 line-length = 88
 
+[tool.ruff.format]
+
 [tool.ruff.lint]
 # Rule selection — see the per-group comments below
 # preview needed for DOC rules (pydoclint)
@@ -353,12 +344,13 @@ select = [
     # PLE2502 bidirectional-unicode: covers bandit B613 (trojansource), which has no S port.
     "PLE2502",
     "UP",
+    "I",
 ]
 ignore = [
     "D104",  # missing docstring in __init__.py (low value)
     "D107",  # missing docstring in __init__ method (redundant with class docstring)
     "ANN401",  # Any is correct at library/CLI boundaries; mypy strict covers the rest
-    "E501",  # line length is owned by the formatter (black); not re-checked here
+    "E501",  # line length is owned by the formatter (ruff format); not re-checked here
     "S404",  # importing subprocess is this tool's core function
     "S603",  # subprocess without shell=True is the SAFE form; argv is internally built
 ]
@@ -397,7 +389,7 @@ pywin32 = ["win32gui", "win32process"]
 DEP002 = [
     # Mandatory dependencies of mcp-tools-py, so they arrive in every install
     # whether or not mcp_coder declares them. Re-declared here to pin a floor.
-    "black", "isort", "mypy", "ruff", "tach", "vulture", "import-linter",
+    "mypy", "ruff", "tach", "vulture", "import-linter",
     "pytest-asyncio", "pytest-xdist",
     # In mcp-tools-py's dev extra only, so they do not propagate — mcp_coder
     # must declare these itself.

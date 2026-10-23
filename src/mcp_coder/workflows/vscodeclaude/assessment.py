@@ -487,9 +487,7 @@ def _fetch_issue_individually(
             additional_issues=[issue_number],
         )
         return {issue["number"]: issue for issue in fetched}
-    except (
-        Exception
-    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.debug(
             "Failed to fetch issue #%d individually; skipping eligibility checks",
             issue_number,

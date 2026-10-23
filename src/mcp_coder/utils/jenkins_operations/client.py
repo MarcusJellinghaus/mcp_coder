@@ -361,9 +361,7 @@ class JenkinsClient:
             else:
                 msg = f"Failed to start job '{job_path}': {str(e)}"
             raise JenkinsError(msg) from e
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             # Wrap all exceptions as JenkinsError with context
             raise JenkinsError(f"Failed to start job '{job_path}': {str(e)}") from e
 
@@ -456,9 +454,7 @@ class JenkinsClient:
                 job_path=build_lookup[0] if build_lookup else None,
                 build_number=build_lookup[1] if build_lookup else None,
             ) from None
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             # Wrap all exceptions as JenkinsError with context
             raise JenkinsError(
                 f"Failed to get status for queue_id {queue_id}: {str(e)}"

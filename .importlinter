@@ -323,35 +323,6 @@ ignore_imports =
     mcp_coder.utils.jenkins_operations.** -> requests
 
 # -----------------------------------------------------------------------------
-# Contract: Black Library Isolation
-# -----------------------------------------------------------------------------
-# Only mcp-tools-py should import black directly; guard against future
-# direct imports in mcp_coder.
-# -----------------------------------------------------------------------------
-[importlinter:contract:black_isolation]
-name = Black Library Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    black
-
-# -----------------------------------------------------------------------------
-# Contract: Isort Library Isolation
-# -----------------------------------------------------------------------------
-# Only mcp-tools-py should import isort directly; guard against future
-# direct imports in mcp_coder.
-# -----------------------------------------------------------------------------
-[importlinter:contract:isort_isolation]
-name = Isort Library Isolation
-type = forbidden
-source_modules =
-    mcp_coder
-forbidden_modules =
-    isort
-
-
-# -----------------------------------------------------------------------------
 # Contract: Textual Library Isolation
 # -----------------------------------------------------------------------------
 # The 'textual' library should only be used by icoder.ui.

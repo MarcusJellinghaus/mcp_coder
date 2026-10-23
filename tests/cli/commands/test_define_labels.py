@@ -65,9 +65,9 @@ class TestWorkflowLabelsFromConfig:
         labels_config = load_labels_config(labels_config_path)
 
         # Verify we have exactly 46 labels
-        assert (
-            len(labels_config["workflow_labels"]) == 46
-        ), "Config should contain exactly 46 workflow labels"
+        assert len(labels_config["workflow_labels"]) == 46, (
+            "Config should contain exactly 46 workflow labels"
+        )
 
         # Verify each label has correct structure
         for i, label in enumerate(labels_config["workflow_labels"], start=1):
@@ -82,21 +82,21 @@ class TestWorkflowLabelsFromConfig:
 
             # Verify name format
             assert isinstance(name, str), f"Label {i} name should be string"
-            assert name.startswith(
-                "status-"
-            ), f"Label {i} name should start with 'status-'"
+            assert name.startswith("status-"), (
+                f"Label {i} name should start with 'status-'"
+            )
 
             # Verify color format (6-char hex without '#')
             assert isinstance(color, str), f"Label {i} color should be string"
             assert len(color) == 6, f"Label {i} color should be 6 characters"
-            assert re.match(
-                r"^[0-9A-Fa-f]{6}$", color
-            ), f"Label {i} color should be valid hex code"
+            assert re.match(r"^[0-9A-Fa-f]{6}$", color), (
+                f"Label {i} color should be valid hex code"
+            )
 
             # Verify description
-            assert isinstance(
-                description, str
-            ), f"Label {i} description should be string"
+            assert isinstance(description, str), (
+                f"Label {i} description should be string"
+            )
             assert len(description) > 0, f"Label {i} description should not be empty"
 
     def test_workflow_labels_names_from_json(self, labels_config_path: Path) -> None:
@@ -153,9 +153,9 @@ class TestWorkflowLabelsFromConfig:
         ]
 
         actual_names = [label["name"] for label in labels_config["workflow_labels"]]
-        assert (
-            actual_names == expected_names
-        ), "Workflow label names should match expected sequence"
+        assert actual_names == expected_names, (
+            "Workflow label names should match expected sequence"
+        )
 
     def test_workflow_labels_unique_names_from_json(
         self, labels_config_path: Path
@@ -164,9 +164,9 @@ class TestWorkflowLabelsFromConfig:
         labels_config = load_labels_config(labels_config_path)
 
         names = [label["name"] for label in labels_config["workflow_labels"]]
-        assert len(names) == len(
-            set(names)
-        ), "All workflow label names should be unique"
+        assert len(names) == len(set(names)), (
+            "All workflow label names should be unique"
+        )
 
     def test_workflow_labels_valid_colors_from_json(
         self, labels_config_path: Path
@@ -176,9 +176,9 @@ class TestWorkflowLabelsFromConfig:
 
         for label in labels_config["workflow_labels"]:
             color = label["color"]
-            assert re.match(
-                r"^[0-9A-Fa-f]{6}$", color
-            ), f"Label '{label['name']}' color '{color}' should be valid 6-char hex"
+            assert re.match(r"^[0-9A-Fa-f]{6}$", color), (
+                f"Label '{label['name']}' color '{color}' should be valid 6-char hex"
+            )
 
 
 class TestWorkflowLabelsContent:
@@ -190,9 +190,9 @@ class TestWorkflowLabelsContent:
 
         for label in labels_config["workflow_labels"]:
             description = label["description"]
-            assert (
-                description.strip()
-            ), f"Label '{label['name']}' should have non-empty description"
+            assert description.strip(), (
+                f"Label '{label['name']}' should have non-empty description"
+            )
 
     def test_status_labels_cover_workflow_stages(
         self, labels_config_path: Path
@@ -210,9 +210,9 @@ class TestWorkflowLabelsContent:
         assert any("planning" in name for name in names), "Should have 'planning' stage"
 
         # Should have implementation stage
-        assert any(
-            "implementing" in name for name in names
-        ), "Should have 'implementing' stage"
+        assert any("implementing" in name for name in names), (
+            "Should have 'implementing' stage"
+        )
 
         # Should have review stage
         assert any("review" in name for name in names), "Should have 'review' stage"
@@ -229,12 +229,12 @@ class TestWorkflowLabelsContent:
             color = label["color"]
 
             # GitHub API requires 6-char hex WITHOUT '#' prefix
-            assert not color.startswith(
-                "#"
-            ), f"Label '{name}' color should not have '#' prefix"
-            assert (
-                len(color) == 6
-            ), f"Label '{name}' color should be exactly 6 characters"
+            assert not color.startswith("#"), (
+                f"Label '{name}' color should not have '#' prefix"
+            )
+            assert len(color) == 6, (
+                f"Label '{name}' color should be exactly 6 characters"
+            )
             assert color.isalnum(), f"Label '{name}' color should be alphanumeric"
 
 
@@ -251,9 +251,9 @@ class TestResolveProjectDir:
         # Change to project directory and test with None
         with patch("pathlib.Path.cwd", return_value=project_dir):
             result = resolve_project_dir(None)
-            assert (
-                result == project_dir.resolve()
-            ), "Should return current directory when arg is None"
+            assert result == project_dir.resolve(), (
+                "Should return current directory when arg is None"
+            )
 
     @pytest.mark.git_integration
     def test_resolve_project_dir_explicit_path(
@@ -264,9 +264,9 @@ class TestResolveProjectDir:
 
         # Test with explicit path string
         result = resolve_project_dir(str(project_dir))
-        assert (
-            result == project_dir.resolve()
-        ), "Should return resolved path from argument"
+        assert result == project_dir.resolve(), (
+            "Should return resolved path from argument"
+        )
 
     def test_resolve_project_dir_nonexistent_directory(self) -> None:
         """Test resolve_project_dir raises ValueError for nonexistent directory."""
@@ -307,9 +307,9 @@ class TestResolveProjectDir:
         # Instead, test that the function returns an absolute path
         result = resolve_project_dir(str(project_dir))
         assert result.is_absolute(), "Should return absolute path"
-        assert (
-            result == project_dir.resolve()
-        ), "Should resolve to correct absolute path"
+        assert result == project_dir.resolve(), (
+            "Should resolve to correct absolute path"
+        )
 
 
 class TestExecuteDefineLabels:

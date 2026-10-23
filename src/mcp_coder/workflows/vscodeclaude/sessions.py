@@ -297,9 +297,7 @@ def _get_vscode_window_titles(refresh: bool = False) -> list[tuple[int, str]]:
 
     try:
         win32gui.EnumWindows(enum_callback, None)
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.warning("Failed to enumerate windows: %s", e)
         return []
 

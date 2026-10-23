@@ -230,13 +230,7 @@ def test_matcher_in_another_list_is_moved_not_duplicated(
 ) -> None:
     target = _seed(
         tmp_path,
-        "{\n"
-        '  "ask": [\n'
-        f'    "{TOOL}",\n'
-        '    "mcp__a__x"\n'
-        "  ],\n"
-        '  "allow": []\n'
-        "}\n",
+        f'{{\n  "ask": [\n    "{TOOL}",\n    "mcp__a__x"\n  ],\n  "allow": []\n}}\n',
     )
 
     write_rule(target, TOOL, "allow")

@@ -101,9 +101,9 @@ class TestGitEncodingStress:
         test_content = "".join(test_content_chars)
 
         # Verify we have the expected length
-        assert (
-            len(test_content) > 10000
-        ), f"Test content should be > 10k chars, got {len(test_content)}"
+        assert len(test_content) > 10000, (
+            f"Test content should be > 10k chars, got {len(test_content)}"
+        )
 
         # Create initial commit
         initial_file = project_dir / "test_unicode.txt"
@@ -157,9 +157,9 @@ if __name__ == "__main__":
 
         # Verify the diff contains some of our Unicode content
         # Note: The exact representation in diff may vary, but it should contain the file name
-        assert (
-            "unicode_stress_test.py" in diff_result
-        ), "Diff should contain the Unicode test file"
+        assert "unicode_stress_test.py" in diff_result, (
+            "Diff should contain the Unicode test file"
+        )
 
         # Verify the diff doesn't crash on Unicode characters
         # The diff should be readable as UTF-8
@@ -213,9 +213,9 @@ if __name__ == "__main__":
         # Verify success
         assert isinstance(diff_result, str), "get_branch_diff should return a string"
         assert len(diff_result) > 0, "Diff should contain content"
-        assert (
-            "mixed_encoding_test.txt" in diff_result
-        ), "Diff should contain the test file"
+        assert "mixed_encoding_test.txt" in diff_result, (
+            "Diff should contain the test file"
+        )
 
     def test_git_diff_with_binary_and_text_mix(
         self, git_repo: tuple[Any, Path]
@@ -325,9 +325,9 @@ print("Testing Unicode: 🌍🚀💻⭐🎉")
 
         # Performance check - should complete within reasonable time
         # Even with 10k characters, it should complete within 30 seconds
-        assert (
-            diff_duration < 30
-        ), f"Git diff took too long: {diff_duration:.2f}s for {char_count} chars"
+        assert diff_duration < 30, (
+            f"Git diff took too long: {diff_duration:.2f}s for {char_count} chars"
+        )
 
         # Log performance for debugging
         print(f"Git diff with {char_count} Unicode chars took {diff_duration:.3f}s")
