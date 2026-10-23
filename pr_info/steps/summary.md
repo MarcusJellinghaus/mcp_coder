@@ -89,6 +89,8 @@ The refresh is best-effort and never changes a label. The LLM may answer `UNCHAN
 - `tests/workflows/fix_conflict/test_core.py`
 - `tests/workflows/create_pr/test_generation.py`
 - `tests/workflows/create_pr/test_workflow.py`
+- `tests/workflows/create_pr/test_failure_handling.py` (patch the new calls)
+- `tests/workflows/test_create_pr_integration.py` (`TestWorkflowMainFunction`: patch the new calls)
 - `tests/workflows/fix_ci/test_core.py` (fix-ci refresh)
 - `tests/cli/commands/test_define_labels_config.py`
 - `docs/processes-prompts/development-process.md` (§6, §10)

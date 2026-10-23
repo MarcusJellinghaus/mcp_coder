@@ -10,6 +10,8 @@
   750-line CI gate, `ci.yml:104`; step 11 adds the resume helpers to the same module)
 - `src/mcp_coder/workflows/create_pr/core.py` — imports and calls `_rebase_if_needed`
 - New `tests/workflows/create_pr/test_pre_creation.py` (helper unit tests), `tests/workflows/create_pr/test_workflow.py` (call order)
+- `tests/workflows/create_pr/test_failure_handling.py`, `tests/workflows/test_create_pr_integration.py`
+  (`TestWorkflowMainFunction`) — patch the new call
 
 ## WHAT
 ```python
@@ -20,13 +22,17 @@ Called inside `body()` right after the prerequisites check, before "Generate PR 
 
 ## ALGORITHM
 ```
-branch = get_current_branch_name(project_dir); base = detect_base_branch(project_dir, current_branch=branch)
-if base is None: logger.warning(...); return
-needed, reason = needs_rebase(project_dir, base)
-if not needed:
-    log warning if reason.startswith("error:") else info "up to date"; return
-outcome = _attempt_rebase_and_push(project_dir); logger.log(OUTPUT, "Rebase result: %s", outcome.reason)
+try:
+    branch = get_current_branch_name(project_dir); base = detect_base_branch(project_dir, current_branch=branch)
+    if base is None: logger.warning(...); return
+    needed, reason = needs_rebase(project_dir, base)
+    if not needed:
+        log warning if reason.startswith("error:") else info "up to date"; return
+    outcome = _attempt_rebase_and_push(project_dir); logger.log(OUTPUT, "Rebase result: %s", outcome.reason)
+except Exception as e:  # pylint: disable=broad-exception-caught
+    logger.warning("Rebase before PR failed (non-blocking): %s", e)
 ```
+An exception never reaches phase A's `run_guarded`, so it never sets `status-09f`.
 
 ## HOW
 - `pre_creation.py` imports: `needs_rebase`, `get_current_branch_name` from `mcp_coder.mcp_workspace_git` (shim already
@@ -45,10 +51,17 @@ outcome = _attempt_rebase_and_push(project_dir); logger.log(OUTPUT, "Rebase resu
 - `(False, "error: fetch failed")` → not called, warning logged, returns normally.
 - Base `None` → `needs_rebase` not called, warning logged.
 - Rebase outcome `conflict` → returns normally.
+- `needs_rebase` raises → returns normally, warning logged, `_attempt_rebase_and_push` not called.
 
 `test_workflow.py` — patch `mcp_coder.workflows.create_pr.core._rebase_if_needed`:
 - called once, before `generate_pr_summary` (shared `MagicMock` manager or call-order list).
 - Existing tests: patch `core._rebase_if_needed` where they would otherwise hit git.
+
+Also patch `mcp_coder.workflows.create_pr.core._rebase_if_needed` in every test that calls `run_create_pr_workflow`
+in `tests/workflows/create_pr/test_failure_handling.py` and in `TestWorkflowMainFunction`
+(`tests/workflows/test_create_pr_integration.py`), so no real git call runs. Patch per test (decorator or `with`),
+not with an autouse fixture in `tests/workflows/create_pr/conftest.py`: that would also replace the real function
+in `test_pre_creation.py`.
 
 ## DATA
 Returns `None`.

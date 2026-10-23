@@ -8,6 +8,8 @@
 ## WHERE
 - `src/mcp_coder/workflows/create_pr/core.py` — `run_create_pr_workflow`
 - `tests/workflows/create_pr/test_workflow.py`
+- `tests/workflows/create_pr/test_failure_handling.py`, `tests/workflows/test_create_pr_integration.py`
+  (`TestWorkflowMainFunction`) — patch the new call
 
 ## WHAT
 ```python
@@ -63,6 +65,11 @@ existing phase A patches.
   Patch `mcp_coder.workflow_utils.failure_handling.handle_workflow_failure` and assert `failure.category == "pr_created"`.
 - Linkage returns `None`, `_resolve_issue_from_pr` returns 9 → final label and phase B crash label both use issue 9.
 - Update `test_workflow_complete_success` and similar tests to patch `run_post_creation`.
+- Patch `mcp_coder.workflows.create_pr.core.run_post_creation` in every test that calls `run_create_pr_workflow` in
+  `tests/workflows/create_pr/test_failure_handling.py` and in `TestWorkflowMainFunction`
+  (`tests/workflows/test_create_pr_integration.py`), next to the step 7 `_rebase_if_needed` patch. No real
+  `PullRequestManager`, mergeable poll or CI poll may run. The success test there (~line 422) expects exit 0 with
+  `run_post_creation` returning `"pr_created"`.
 
 ## DATA
 Exit code `int`.

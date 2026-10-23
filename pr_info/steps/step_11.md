@@ -10,6 +10,8 @@
 - `src/mcp_coder/workflows/create_pr/core.py` — wiring only (keeps `core.py` under the 750-line CI gate)
 - `tests/workflows/create_pr/test_pre_creation.py` — helper unit tests
 - New `tests/workflows/create_pr/test_resume.py` — workflow-level resume tests
+- `tests/workflows/create_pr/test_workflow.py`, `tests/workflows/create_pr/test_failure_handling.py`,
+  `tests/workflows/test_create_pr_integration.py` (`TestWorkflowMainFunction`) — patch the new call
 
 ## WHAT
 ```python
@@ -85,6 +87,12 @@ return cleanup_commit_push(project_dir)
   and the final phase B label all use 5.
 - Crash in `_cleanup_commit_push` on the resume path → category `pr_creating_failed` with issue 5.
 - `_find_open_pr` returns None → normal phase A runs (existing tests cover the unchanged path).
+
+Existing workflow tests: patch `mcp_coder.workflows.create_pr.core._find_open_pr` (`return_value=None`) in every test
+that calls `run_create_pr_workflow` in `test_workflow.py`, `test_failure_handling.py` and `TestWorkflowMainFunction`
+(`tests/workflows/test_create_pr_integration.py`), next to the step 7/10 patches, so no real `PullRequestManager`
+call runs. Patch per test, not via an autouse fixture in `tests/workflows/create_pr/conftest.py` (it would also
+replace the real function in `test_pre_creation.py`).
 
 ## DATA
 See signatures.
