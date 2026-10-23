@@ -16,6 +16,7 @@ from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import check_formatter_config
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
+    build_failure_comment,
     handle_workflow_failure,
     llm_failure_reason,
     run_guarded,
@@ -44,11 +45,11 @@ def _fail(
     Returns:
         1, indicating failure.
     """
-    comment = (
-        "## ❌ CI Fix Failed\n"
-        f"**Category:** {category_display}\n"
-        f"**Stage:** {stage}\n"
-        f"**Error:** {message}"
+    comment = build_failure_comment(
+        project_dir,
+        title="CI Fix",
+        kind="Failed",
+        fields=[("Category", category_display), ("Stage", stage), ("Error", message)],
     )
     handle_workflow_failure(
         WorkflowFailure(category="pr_ci_failed", stage=stage, message=message),
@@ -131,7 +132,7 @@ def run_fix_ci_workflow(
         project_dir=project_dir,
         from_label_id="fixing_ci",
         general_category="ci_fix_failed",
-        comment_header="## ❌ CI Fix Crashed",
+        workflow_title="CI Fix",
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
     )

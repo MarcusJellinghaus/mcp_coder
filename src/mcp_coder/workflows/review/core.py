@@ -302,7 +302,7 @@ def run_review_workflow(
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
 
             if verdict.decision == "dismiss":
-                reason = _after_steps(
+                reason, rebase_outcome = _after_steps(
                     config,
                     project_dir,
                     provider,
@@ -331,10 +331,10 @@ def run_review_workflow(
                         issue_number=issue_number,
                         update_issue_labels=update_issue_labels,
                         post_issue_comments=post_issue_comments,
-                        comment_body=(
-                            "Branch could not be rebased cleanly — handing off."
-                        ),
                         log_path=log_path,
+                        round_number=round_number,
+                        start_time=start_time,
+                        rebase=rebase_outcome,
                     )
                 if reason:
                     # Terminal dismiss-gate failure (after-steps or Gate 2):
@@ -393,11 +393,11 @@ def run_review_workflow(
                     issue_number=issue_number,
                     update_issue_labels=update_issue_labels,
                     post_issue_comments=post_issue_comments,
-                    comment_body=(
-                        f"{config.name} review escalated to a human: "
-                        f"{verdict.escalate_reason}"
-                    ),
                     log_path=log_path,
+                    round_number=round_number,
+                    start_time=start_time,
+                    category="Escalated by supervisor",
+                    reason=verdict.escalate_reason,
                 )
 
             # decision == "tasks": resume the reviewer to apply the fixes.
@@ -542,7 +542,7 @@ def run_review_workflow(
                     elapsed=time.time() - start_time,
                 )
 
-            reason = _after_steps(
+            reason, rebase_outcome = _after_steps(
                 config,
                 project_dir,
                 provider,
@@ -567,8 +567,10 @@ def run_review_workflow(
                     issue_number=issue_number,
                     update_issue_labels=update_issue_labels,
                     post_issue_comments=post_issue_comments,
-                    comment_body=("Branch could not be rebased cleanly — handing off."),
                     log_path=log_path,
+                    round_number=round_number,
+                    start_time=start_time,
+                    rebase=rebase_outcome,
                 )
             if reason == "ci":
                 # Mid-loop red CI is a finding, not a terminal failure: carry it
@@ -650,12 +652,11 @@ def run_review_workflow(
             issue_number=issue_number,
             update_issue_labels=update_issue_labels,
             post_issue_comments=post_issue_comments,
-            comment_body=(
-                f"Automated {config.name} review reached the round limit "
-                f"({REVIEW_MAX_ROUNDS} rounds) without converging — handing off "
-                f"for human review."
-            ),
             log_path=pending_log,
+            round_number=REVIEW_MAX_ROUNDS,
+            start_time=start_time,
+            category="Round limit reached",
+            reason=f"{REVIEW_MAX_ROUNDS} rounds without converging",
         )
 
     return run_guarded(
@@ -663,7 +664,7 @@ def run_review_workflow(
         project_dir=project_dir,
         from_label_id=config.busy_label_id,
         general_category=config.failure_labels["general"],
-        comment_header=f"❌ {config.name} review terminated unexpectedly",
+        workflow_title=config.display_name,
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
         issue_number=issue_number,

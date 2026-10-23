@@ -70,8 +70,13 @@ def test_gate2_unprovable_ci_fails_ci_unknown(
     assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["ci_unknown"]
     # Not conflated with the determinably-red ci label.
     assert failure.category != REVIEW_IMPLEMENTATION.failure_labels["ci"]
-    # The details line names the observed status in the failure comment.
-    assert ci_status.value in env.handle_workflow_failure.call_args.args[1]
+    # The Error field carries the details naming the observed status.
+    lines = env.handle_workflow_failure.call_args.args[1].splitlines()
+    assert lines[0] == "## ❌ Implementation Review Failed"
+    assert "**Category:** CI not proven green" in lines
+    assert "**Stage:** Implementation Review, round 1" in lines
+    error = next(line for line in lines if line.startswith("**Error:** "))
+    assert ci_status.value in error
     # The last round's log was flushed to the committed log before _fail.
     env.commit_all_changes.assert_called()
 

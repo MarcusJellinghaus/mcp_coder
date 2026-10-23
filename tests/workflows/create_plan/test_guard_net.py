@@ -13,6 +13,7 @@ _CORE = "mcp_coder.workflows.create_plan.core"
 
 # Shared handler run_guarded invokes on a netted escape.
 _SHARED_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
+_BRANCH_HEAD = "mcp_coder.workflow_utils.failure_handling._branch_head"
 
 
 class TestGuardNet:
@@ -86,6 +87,7 @@ class TestGuardNet:
                 side_effect=RuntimeError("unexpected boom"),
             ),
             patch(_SHARED_HANDLER) as mock_shared,
+            patch(_BRANCH_HEAD, return_value=("feat", "abc1234")),
         ):
             result = run_create_plan_workflow(
                 123,
@@ -99,3 +101,5 @@ class TestGuardNet:
         mock_shared.assert_called_once()
         netted_failure = mock_shared.call_args[0][0]
         assert netted_failure.category == "planning_failed"
+        comment = mock_shared.call_args[0][1]
+        assert comment.splitlines()[0] == "## ❌ Planning Crashed"

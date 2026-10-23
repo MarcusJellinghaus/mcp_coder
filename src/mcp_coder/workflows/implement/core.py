@@ -5,7 +5,6 @@ prerequisites checking, task tracker preparation, and task processing loops.
 """
 
 import logging
-import os
 import time
 from functools import partial
 from pathlib import Path
@@ -26,8 +25,8 @@ from mcp_coder.workflow_steps.commit import (
 )
 from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
 from mcp_coder.workflow_utils.failure_handling import (
+    CommentField,
     GuardOutcome,
-    get_diff_stat,
     llm_failure_reason,
     run_guarded,
 )
@@ -41,9 +40,9 @@ from .constants import (
 )
 from .failure_reporting import (
     Progress,
+    _comment_parts,
     _fail,
     append_detail,
-    format_failure_comment,
 )
 from .finalisation import run_finalisation
 from .prerequisites import check_git_clean, check_main_branch, check_prerequisites
@@ -88,7 +87,6 @@ def run_implement_workflow(
     logger.info(f"Starting implement workflow for project: {project_dir}")
 
     start_time = time.time()
-    build_url = os.environ.get("BUILD_URL")
 
     # Step 1: Check git status and prerequisites (early returns, no safety net needed)
     if not check_git_clean(project_dir):
@@ -112,7 +110,6 @@ def run_implement_workflow(
         project_dir,
         progress=progress,
         start_time=start_time,
-        build_url=build_url,
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
     )
@@ -399,27 +396,19 @@ def run_implement_workflow(
 
         return 0
 
-    def build_comment(outcome: GuardOutcome) -> str:
-        # Net (SIGTERM / unexpected exit) comment: reuse the deliberate-path
-        # formatter with the general reason so the comment (including the live
-        # Progress line) stays byte-identical to the pre-refactor safety net.
-        return format_failure_comment(
-            "general",
-            outcome.stage,
-            outcome.message,
-            completed=progress.completed,
-            total=progress.total,
-            elapsed=outcome.elapsed_time,
-            build_url=build_url,
-            diff_stat=get_diff_stat(project_dir),
-        )
+    def build_comment(
+        _outcome: GuardOutcome,
+    ) -> tuple[list[CommentField], str | None]:
+        # Net (SIGTERM / unexpected exit) comment: same Category / live
+        # Progress / Uncommitted Changes parts as the deliberate path.
+        return _comment_parts("general", progress, project_dir)
 
     return run_guarded(
         body,
         project_dir=project_dir,
         from_label_id="implementing",
         general_category="implementing_failed",
-        comment_header="## Implementation Failed",
+        workflow_title="Implementation",
         build_comment=build_comment,
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,

@@ -6,10 +6,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.fix_conflict.core import run_fix_conflict_workflow
 
 MODULE = "mcp_coder.workflows.fix_conflict.core"
 _SHARED_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
+_BRANCH_HEAD = "mcp_coder.workflow_utils.failure_handling._branch_head"
 PROJECT_DIR = Path("/fake/project")
 BRANCH_NAME = "123-fix-something"
 
@@ -27,7 +29,10 @@ def _patch_all(
     pr_manager.find_pull_request_by_head.side_effect = mergeable_states
     return (
         patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
-        patch(f"{MODULE}._attempt_rebase_and_push", return_value=True),
+        patch(
+            f"{MODULE}._attempt_rebase_and_push",
+            return_value=RebaseOutcome("ok", "main", "abc1234"),
+        ),
         patch(f"{MODULE}.PullRequestManager", return_value=pr_manager),
         patch(f"{MODULE}.IssueManager"),
         patch(f"{MODULE}.update_workflow_label"),
@@ -108,7 +113,10 @@ def test_no_open_pr_found_treated_as_unresolved() -> None:
 def test_no_current_branch_returns_1_without_rebase() -> None:
     with (
         patch(f"{MODULE}.get_current_branch_name", return_value=None),
-        patch(f"{MODULE}._attempt_rebase_and_push") as mock_rebase,
+        patch(
+            f"{MODULE}._attempt_rebase_and_push",
+            return_value=RebaseOutcome("ok", "main", "abc1234"),
+        ) as mock_rebase,
     ):
         result = run_fix_conflict_workflow(PROJECT_DIR)
 
@@ -120,6 +128,7 @@ def test_unexpected_exception_is_caught_and_returns_1() -> None:
     with (
         patch(f"{MODULE}.get_current_branch_name", side_effect=RuntimeError("boom")),
         patch(_SHARED_HANDLER) as mock_shared,
+        patch(_BRANCH_HEAD, return_value=("feat", "abc1234")),
     ):
         result = run_fix_conflict_workflow(PROJECT_DIR)
 
@@ -127,6 +136,8 @@ def test_unexpected_exception_is_caught_and_returns_1() -> None:
     mock_shared.assert_called_once()
     netted_failure = mock_shared.call_args[0][0]
     assert netted_failure.category == "merge_conflict_failed"
+    comment = mock_shared.call_args[0][1]
+    assert comment.splitlines()[0] == "## ❌ Fix Conflict Crashed"
 
 
 def test_system_exit_is_netted_and_reraised() -> None:

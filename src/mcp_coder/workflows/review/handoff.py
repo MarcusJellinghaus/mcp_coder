@@ -8,6 +8,7 @@ helpers alongside them.
 """
 
 import logging
+import time
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import (
@@ -21,9 +22,12 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import push_changes
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.failure_handling import (
+    SHORT_SHA_LENGTH,
+    CommentField,
     WorkflowFailure,
-    format_elapsed_time,
+    build_failure_comment,
     handle_workflow_failure,
 )
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
@@ -33,9 +37,56 @@ from .verdict import Verdict
 
 logger = logging.getLogger(__name__)
 
-# ``commit_staged_files`` reports the first 7 characters of the SHA; the
-# pathspec-scoped commit below matches that so both routes return the same shape.
-_SHORT_SHA_LENGTH = 7
+# reason -> (Category display, Error sentence used when `details` is None)
+_FAIL_REASONS: dict[str, tuple[str, str]] = {
+    "general": (
+        "General",
+        "The review stopped on an unrecoverable error; check the job log",
+    ),
+    "timeout": ("Llm Timeout", "An LLM call timed out"),
+    "mcp_unavailable": ("Mcp Unavailable", "The MCP servers were unavailable"),
+    "ci": ("CI failed", "CI is still red after the review"),
+    "tasks": ("Open tasks", "The task tracker still has unchecked tasks"),
+    "ci_unknown": ("CI not proven green", "CI could not be proven green"),
+    "commit-failed": ("Commit failed", "Committing the review fixes failed"),
+    "push-failed": ("Push failed", "Pushing the review fixes failed"),
+}
+
+# reason -> (Category, Reason, Next step)
+_REBASE_HANDOFF: dict[str, tuple[str, str, str]] = {
+    "dirty_tree": (
+        "Uncommitted changes",
+        "Rebase not attempted: the working tree has staged or modified tracked "
+        "files",
+        "Commit or discard the listed files, then re-run the review",
+    ),
+    "no_base": (
+        "Base branch not detected",
+        "Rebase not attempted: no base branch could be detected",
+        "Add a `### Base Branch` section to the issue, then re-run",
+    ),
+    "base_missing": (
+        "Base branch missing on origin",
+        "Rebase not attempted: the base branch does not exist on origin",
+        "Push or restore the base branch, or fix `### Base Branch`, then re-run",
+    ),
+    "conflict": (
+        "Rebase conflict",
+        "Rebase onto the base branch stopped on a conflict",
+        "`/rebase`, then re-run the review",
+    ),
+    "rebase_failed": (
+        "Rebase failed",
+        "Rebase onto the base branch failed and was not classified as a conflict",
+        "`/rebase` (may be a conflict that only appears while replaying "
+        "commits); check the job log",
+    ),
+    "push_failed": (
+        "Push failed after rebase",
+        "Rebase succeeded, but the force-with-lease push failed",
+        "Fetch, check for foreign commits, then `git push --force-with-lease`",
+    ),
+}
 
 
 def _set_label(
@@ -83,10 +134,11 @@ def _fail(
 ) -> int:
     """Route a terminal error through the shared failure handler; return ``1``.
 
-    The comment is enriched — when the values are supplied by the call site (all
-    of which are lexically inside the round loop, where these are live locals) —
-    with the current round number, the most recently parsed verdict decision,
-    and the elapsed wall-clock time.
+    Posts a structured ``## ❌ <Lane> Failed`` comment built by
+    :func:`build_failure_comment`: Category and the default Error sentence come
+    from ``_FAIL_REASONS`` (unknown reasons fall back to ``general``), Stage
+    names the lane plus the round when given, and Verdict / Elapsed are added
+    when supplied.
 
     Args:
         config: The review workflow config (provides busy + failure labels).
@@ -94,33 +146,41 @@ def _fail(
         reason: Failure reason key into ``config.failure_labels``.
         update_issue_labels: Whether to apply the failure label transition.
         post_issue_comments: Whether to post a failure comment on the issue.
-        round_number: Current review round, appended to the comment when given.
-        verdict: Most recent verdict, whose ``decision`` is appended when given.
-        elapsed: Elapsed seconds since the run started, appended when given.
-        details: Human-readable cause line, inserted directly beneath the
-            header (before Round/Verdict/Elapsed) when given.
+        round_number: Current review round, added to Stage when given.
+        verdict: Most recent verdict, whose ``decision`` is the Verdict field.
+        elapsed: Elapsed seconds since the run started, rendered when given.
+        details: Human-readable cause; replaces the reason's default Error
+            sentence when given.
 
     Returns:
         Always ``1``.
     """
-    category = config.failure_labels.get(reason, config.failure_labels["general"])
+    label = config.failure_labels.get(reason, config.failure_labels["general"])
     message = f"{config.name} review failed: {reason}"
     failure = WorkflowFailure(
-        category=category,
+        category=label,
         stage="Review",
         message=message,
         elapsed_time=elapsed,
     )
-    comment_lines = [f"❌ {message}"]
-    if details is not None:
-        comment_lines.append(details)
-    if round_number is not None:
-        comment_lines.append(f"Round: {round_number}")
-    if verdict is not None:
-        comment_lines.append(f"Verdict: {verdict.decision}")
-    if elapsed is not None:
-        comment_lines.append(f"Elapsed: {format_elapsed_time(elapsed)}")
-    comment_body = "\n".join(comment_lines)
+    category, sentence = _FAIL_REASONS.get(reason, _FAIL_REASONS["general"])
+    stage = (
+        f"{config.display_name}, round {round_number}"
+        if round_number is not None
+        else config.display_name
+    )
+    comment_body = build_failure_comment(
+        project_dir,
+        title=config.display_name,
+        kind="Failed",
+        fields=[
+            ("Category", category),
+            ("Stage", stage),
+            ("Error", details or sentence),
+            ("Verdict", verdict.decision if verdict else None),
+        ],
+        elapsed=elapsed,
+    )
     handle_workflow_failure(
         failure,
         comment_body,
@@ -231,7 +291,7 @@ def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResu
     sha = get_latest_commit_sha(project_dir)
     return {
         "success": True,
-        "commit_hash": sha[:_SHORT_SHA_LENGTH] if sha else None,
+        "commit_hash": sha[:SHORT_SHA_LENGTH] if sha else None,
         "error": None,
         "error_category": None,
     }
@@ -243,7 +303,7 @@ def _unstage_path(only: Path, project_dir: Path) -> None:
     A failed ``only=`` commit would otherwise leave the round log *staged*,
     which is strictly more blocking than the state the flush found: on a run's
     first flush the log is untracked, and ``git rebase`` tolerates untracked
-    files, while ``_has_uncommitted_tracked_changes`` refuses on a staged
+    files, while ``_uncommitted_tracked_files`` refuses on a staged
     entry. So a failed flush would turn a rebase that would have succeeded into
     a needs-human handoff.
 
@@ -374,16 +434,25 @@ def _route_to_human(
     issue_number: int | None,
     update_issue_labels: bool,
     post_issue_comments: bool,
-    comment_body: str,
     log_path: Path | None,
+    round_number: int,
+    start_time: float,
+    category: str | None = None,
+    reason: str | None = None,
+    rebase: RebaseOutcome | None = None,
 ) -> int:
     """Hand a converged-but-unresolved run off to a human; return ``0``.
 
     A needs-human terminal path (escalate verdict, unresolved rebase, or the
-    rounds cap): flush the last round's log to the committed review log, post a
-    single human-readable issue comment (gated), then transition to the
+    rounds cap): flush the last round's log to the committed review log, log a
+    ``REVIEW HANDED OFF`` warning banner, post a structured
+    ``## ❌ <Lane> Handed Off`` comment (gated), then transition to the
     ``escalate_label_id`` recovery label. Unlike :func:`_fail`, this is **not**
     an error — it returns ``0`` and never touches a failure label.
+
+    A rebase hand-off passes only ``rebase``; its reason selects Category,
+    Reason and Next step from ``_REBASE_HANDOFF``, and the outcome adds the
+    Base line and the files involved.
 
     The flush is scoped to ``log_path``. The unresolved-rebase handoff is
     reached *because* the working tree was dirty, so committing the whole tree
@@ -396,20 +465,73 @@ def _route_to_human(
         issue_number: Issue to comment on, or ``None`` to skip the comment.
         update_issue_labels: Whether to apply the escalate label transition.
         post_issue_comments: Whether to post the handoff comment.
-        comment_body: Human-readable explanation of why the run handed off.
         log_path: The round log to land, or ``None`` when no round wrote one
             (nothing is committed then). Required, so a new handoff site cannot
             fall back to committing the whole tree by omission.
+        round_number: Round the run handed off in, shown in Stage.
+        start_time: ``time.time()`` at run start, for the Elapsed field.
+        category: Category field for non-rebase hand-offs.
+        reason: Reason field for non-rebase hand-offs.
+        rebase: Outcome of the failed rebase gate; overrides ``category`` /
+            ``reason`` when its reason is in ``_REBASE_HANDOFF``.
 
     Returns:
         Always ``0``.
     """
     if log_path is not None:
         _flush_round_log(project_dir, only=log_path)
+    next_step: str | None = None
+    if rebase is not None and rebase.reason in _REBASE_HANDOFF:
+        category, reason, next_step = _REBASE_HANDOFF[rebase.reason]
+    fields: list[CommentField] = [
+        ("Category", category),
+        ("Stage", f"{config.display_name}, round {round_number}"),
+        ("Reason", reason),
+        ("Base", _base_value(rebase)),
+        ("Next step", next_step),
+    ]
+    if rebase is not None and rebase.files:
+        files_label = (
+            "Likely conflicting files"
+            if rebase.reason == "conflict"
+            else "Uncommitted files"
+        )
+        fields.append((files_label, ", ".join(f"`{f}`" for f in rebase.files)))
+    logger.warning("=" * 60)
+    logger.warning("REVIEW HANDED OFF")
+    logger.warning("Lane: %s", config.display_name)
+    logger.warning("Reason: %s", reason)
+    logger.warning("Round: %d", round_number)
+    logger.warning("Target label: %s", config.escalate_label_id)
+    logger.warning("=" * 60)
+    comment_body = build_failure_comment(
+        project_dir,
+        title=config.display_name,
+        kind="Handed Off",
+        fields=fields,
+        elapsed=time.time() - start_time,
+    )
     if post_issue_comments and issue_number is not None:
         try:
-            IssueManager(project_dir).add_comment(issue_number, f"❌ {comment_body}")
+            IssueManager(project_dir).add_comment(issue_number, comment_body)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("Failed to post handoff comment: %s", exc)
     _set_label(config, project_dir, config.escalate_label_id, update_issue_labels)
     return 0
+
+
+def _base_value(rebase: RebaseOutcome | None) -> str | None:
+    """Render the Base field of a rebase hand-off.
+
+    Args:
+        rebase: Outcome of the failed rebase gate, if any.
+
+    Returns:
+        ``origin/<base> @ <sha>`` when the SHA is known, ``origin/<base>``
+        when only the branch is known, ``None`` without a base branch.
+    """
+    if rebase is None or not rebase.base_branch:
+        return None
+    if rebase.base_sha:
+        return f"origin/{rebase.base_branch} @ {rebase.base_sha}"
+    return f"origin/{rebase.base_branch}"

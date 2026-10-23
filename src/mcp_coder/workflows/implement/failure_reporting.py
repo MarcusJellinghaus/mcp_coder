@@ -1,9 +1,10 @@
 """Failure reporting helpers for the implement workflow.
 
-Formats GitHub failure comments and coordinates label updates / comment posting
-when the implement workflow fails. Failure *reasons* are plain strings mapped to
-stage-specific label IDs via :data:`FAILURE_LABELS`; the deliberate failure path
-is :func:`_fail`, while the net (SIGTERM / unexpected exit) path is handled by
+Builds GitHub failure comments via the shared builder and coordinates label
+updates / comment posting when the implement workflow fails. Failure *reasons*
+are plain strings mapped to stage-specific label IDs via :data:`FAILURE_LABELS`;
+the deliberate failure path is :func:`_fail`, while the net (SIGTERM /
+unexpected exit) path is handled by
 :func:`mcp_coder.workflow_utils.failure_handling.run_guarded`.
 """
 
@@ -12,8 +13,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mcp_coder.workflow_utils.failure_handling import (
+    CommentField,
     WorkflowFailure,
-    format_elapsed_time,
+    build_failure_comment,
     get_diff_stat,
     handle_workflow_failure,
 )
@@ -32,9 +34,8 @@ FAILURE_LABELS: dict[str, str] = {
     "ci_fix_exhausted": "ci_fix_needed",
 }
 
-# Maps a reason -> the exact human-readable Category text used in the failure
-# comment, so the rendered comment stays byte-identical to earlier releases.
-# Only `timeout` diverges from a naive title-cased reason: it must render
+# Maps a reason -> the human-readable Category text used in the failure
+# comment. Only `timeout` diverges from a naive title-cased reason: it must render
 # "Llm Timeout", NOT "Timeout".
 CATEGORY_DISPLAY: dict[str, str] = {
     "general": "General",
@@ -77,54 +78,32 @@ class Progress:
     total: int = 0
 
 
-def format_failure_comment(
-    reason: str,
-    stage: str,
-    message: str,
-    *,
-    completed: int,
-    total: int,
-    elapsed: float | None,
-    build_url: str | None,
-    diff_stat: str,
-) -> str:
-    """Format a GitHub comment for an implement workflow failure.
+def _comment_parts(
+    reason: str, progress: Progress, project_dir: Path
+) -> tuple[list[CommentField], str]:
+    """Category + Progress fields and the ### Uncommitted Changes section.
 
-    Reproduces the historical ``_format_failure_comment`` output byte-for-byte.
-    The Category line is rendered from :data:`CATEGORY_DISPLAY` (falling back to
-    the ``"general"`` display), not by title-casing ``reason`` — title-casing
-    ``"timeout"`` would yield ``"Timeout"`` whereas the comment must render
-    ``"Llm Timeout"``.
+    Shared by the deliberate :func:`_fail` path and the ``run_guarded`` net.
+    The Category is rendered from :data:`CATEGORY_DISPLAY` (falling back to the
+    ``"general"`` display), not by title-casing ``reason``.
 
     Args:
         reason: Failure reason string (key of :data:`FAILURE_LABELS`).
-        stage: Workflow stage where the failure occurred.
-        message: Human-readable error description.
-        completed: Tasks completed so far (progress line shown when total > 0).
-        total: Total tasks discovered (progress line shown when > 0).
-        elapsed: Optional elapsed time in seconds.
-        build_url: Optional CI build URL.
-        diff_stat: Git diff stat string for uncommitted changes.
+        progress: Mutable progress holder; Progress is omitted when total is 0.
+        project_dir: Path to the project git repository.
 
     Returns:
-        Formatted GitHub comment string.
+        ``(fields, section)`` for :func:`build_failure_comment`.
     """
-    lines = [
-        "## ❌ Implementation Failed",
-        f"**Category:** {CATEGORY_DISPLAY.get(reason, CATEGORY_DISPLAY['general'])}",
-        f"**Stage:** {stage}",
-        f"**Error:** {message}",
-    ]
-    if total > 0:
-        lines.append(f"**Progress:** {completed}/{total} tasks completed")
-    if elapsed is not None:
-        lines.append(f"**Elapsed:** {format_elapsed_time(elapsed)}")
-    if build_url:
-        lines.append(f"**Build:** {build_url}")
-    lines.append("")
-    lines.append("### Uncommitted Changes")
-    lines.append(f"```\n{diff_stat or 'No uncommitted changes'}\n```")
-    return "\n".join(lines)
+    category = CATEGORY_DISPLAY.get(reason, CATEGORY_DISPLAY["general"])
+    progress_value = (
+        f"{progress.completed}/{progress.total} tasks completed"
+        if progress.total > 0
+        else None
+    )
+    diff = get_diff_stat(project_dir)
+    section = f"### Uncommitted Changes\n```\n{diff or 'No uncommitted changes'}\n```"
+    return [("Category", category), ("Progress", progress_value)], section
 
 
 def _fail(
@@ -135,15 +114,14 @@ def _fail(
     message: str,
     progress: Progress,
     start_time: float,
-    build_url: str | None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
 ) -> int:
     """Handle a deliberate implement failure: build comment, set label, log.
 
     Maps ``reason`` to its stage-specific label via :data:`FAILURE_LABELS`,
-    formats the failure comment from the live progress/elapsed/build context,
-    and delegates to the shared :func:`handle_workflow_failure`.
+    builds the failure comment from the live progress/elapsed context, and
+    delegates to the shared :func:`handle_workflow_failure`.
 
     Args:
         project_dir: Path to the project git repository.
@@ -152,7 +130,6 @@ def _fail(
         message: Human-readable error description.
         progress: Mutable progress holder read for the comment.
         start_time: Workflow start timestamp; elapsed is derived from it.
-        build_url: Optional CI build URL.
         update_issue_labels: Whether to attempt a label transition.
         post_issue_comments: Whether to post a failure comment.
 
@@ -160,16 +137,14 @@ def _fail(
         Always ``1`` (a deliberate, terminal failure exit code).
     """
     elapsed = time.time() - start_time
-    diff_stat = get_diff_stat(project_dir)
-    comment_body = format_failure_comment(
-        reason,
-        stage,
-        message,
-        completed=progress.completed,
-        total=progress.total,
+    fields, extra = _comment_parts(reason, progress, project_dir)
+    comment_body = build_failure_comment(
+        project_dir,
+        title="Implementation",
+        kind="Failed",
+        fields=[("Stage", stage), ("Error", message), *fields],
         elapsed=elapsed,
-        build_url=build_url,
-        diff_stat=diff_stat,
+        extra_section=extra,
     )
     category = FAILURE_LABELS.get(reason, FAILURE_LABELS["general"])
     handle_workflow_failure(

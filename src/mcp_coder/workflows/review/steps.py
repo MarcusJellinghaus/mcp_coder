@@ -21,7 +21,7 @@ from mcp_coder.mcp_workspace_git import (
     get_latest_commit_sha,
 )
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
-from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
+from mcp_coder.workflow_steps.rebase import RebaseOutcome, _attempt_rebase_and_push
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
 
@@ -63,7 +63,7 @@ def _after_steps(
     mcp_config: str | None,
     settings_file: str | None,
     is_dismiss: bool,
-) -> str | None:
+) -> tuple[str | None, RebaseOutcome | None]:
     """Run the after-steps (rebase + CI) for the implementation lane.
 
     ``review-plan`` has ``run_after_steps=False`` so this is a no-op there. For
@@ -93,30 +93,32 @@ def _after_steps(
             interpretation of a red CI result.
 
     Returns:
-        A failure reason (``"rebase"`` / ``"ci"`` / ``"timeout"`` /
-        ``"mcp_unavailable"`` / ``"general"``) or ``None`` when the after-steps
-        are clean or there is nothing to do. The broadened ``except`` scoped to
-        the CI call categorizes a generic exception as ``"general"`` rather than
-        letting it escape — but it does **not** wrap the rebase gate, so the
-        ``"rebase"`` control-flow return is preserved.
+        ``(reason, outcome)``. ``reason`` is a failure reason (``"rebase"`` /
+        ``"ci"`` / ``"timeout"`` / ``"mcp_unavailable"`` / ``"general"``) or
+        ``None`` when the after-steps are clean or there is nothing to do.
+        ``outcome`` is the :class:`RebaseOutcome` of the rebase gate, or
+        ``None`` when the lane has no after-steps. The broadened ``except``
+        scoped to the CI call categorizes a generic exception as
+        ``"general"`` rather than letting it escape — but it does **not** wrap
+        the rebase gate, so the ``"rebase"`` control-flow return is preserved.
     """
     if not config.run_after_steps:
-        return None
+        return None, None
 
     # --- rebase gate (mandated: never success on an unresolved rebase) ---
-    if not _attempt_rebase_and_push(project_dir):
-        # NotYetImplemented (#1066): a conflict-resolving automatic
-        # ``mcp-coder git-tool rebase`` attempt slots in HERE once #1066 ships
-        # (before the needs-human fallback). Until then a needs-rebase /
-        # unresolvable-conflict outcome simply routes to needs-human
-        # (``07:code-review``) and is never a success.
-        logger.info("Rebase could not complete cleanly; routing to needs-human")
-        return "rebase"
+    outcome = _attempt_rebase_and_push(project_dir)
+    if not outcome.ok:
+        # An LLM conflict-resolving rebase attempt before this fallback is
+        # #1266's follow-up; until then every non-ok outcome hands off.
+        logger.warning(
+            "Rebase gate did not pass (%s); routing to needs-human", outcome.reason
+        )
+        return "rebase", outcome
 
     # --- CI gate ---
     branch = get_current_branch_name(project_dir)
     if not branch:
-        return None
+        return None, outcome
     # The rebase step just pushed local HEAD - including the round-log commit
     # the loop lands at its entry, which on a dismiss round is the only thing
     # pushed. Correlate the CI poll with that SHA: the newest run on the branch
@@ -135,9 +137,9 @@ def _after_steps(
             expected_sha=pushed_sha,
         )
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        return llm_failure_reason(exc) or "general"
+        return llm_failure_reason(exc) or "general", outcome
     if ci_ok:
-        return None
+        return None, outcome
     if not is_dismiss:
         logger.info("CI is red mid-loop; carrying it forward as a review finding")
-    return "ci"
+    return "ci", outcome

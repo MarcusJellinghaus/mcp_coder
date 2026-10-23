@@ -112,8 +112,11 @@ def test_escalate_sets_escalate_label_and_logs_reason(
     # the whole tree) and a comment is posted.
     env.commit_staged_files.assert_called()
     env.commit_all_changes.assert_not_called()
-    comment = env.issue_manager.return_value.add_comment.call_args.args[1]
-    assert "needs a human" in comment
+    lines = env.issue_manager.return_value.add_comment.call_args.args[1].splitlines()
+    assert lines[0] == "## ❌ Plan Review Handed Off"
+    assert "**Category:** Escalated by supervisor" in lines
+    assert "**Reason:** needs a human" in lines
+    assert "**Stage:** Plan Review, round 1" in lines
 
     log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
     assert "needs a human" in log
@@ -296,6 +299,11 @@ def test_rounds_cap_exhausted_hands_off(env: SimpleNamespace, tmp_path: Path) ->
     env.commit_all_changes.assert_not_called()
     # A handoff comment is posted on the issue.
     env.issue_manager.return_value.add_comment.assert_called_once()
+    lines = env.issue_manager.return_value.add_comment.call_args.args[1].splitlines()
+    assert lines[0] == "## ❌ Plan Review Handed Off"
+    assert "**Category:** Round limit reached" in lines
+    assert "**Reason:** 5 rounds without converging" in lines
+    assert "**Stage:** Plan Review, round 5" in lines
 
 
 def test_silent_no_op_is_logged_and_loops(env: SimpleNamespace, tmp_path: Path) -> None:
@@ -454,7 +462,7 @@ def test_empty_reports_retry_inline_then_fail_general(
     assert failure.category == REVIEW_PLAN.failure_labels["general"]
     # No round was consumed by the inner retry: the comment still reports round 1.
     comment = env.handle_workflow_failure.call_args.args[1]
-    assert "Round: 1" in comment
+    assert "**Stage:** Plan Review, round 1" in comment.splitlines()
 
 
 def test_empty_then_valid_report_recovers(env: SimpleNamespace, tmp_path: Path) -> None:
@@ -493,7 +501,7 @@ def test_body_escape_is_netted_by_guard(
     failure = net.call_args.args[0]
     assert failure.category == REVIEW_PLAN.failure_labels["general"]
     comment = net.call_args.args[1]
-    assert "review terminated unexpectedly" in comment
+    assert comment.splitlines()[0] == "## ❌ Plan Review Crashed"
 
 
 def test_deliberate_fail_comment_carries_round_verdict_elapsed(
@@ -511,9 +519,12 @@ def test_deliberate_fail_comment_carries_round_verdict_elapsed(
 
     assert result == 1
     comment = env.handle_workflow_failure.call_args.args[1]
-    assert "Round: 1" in comment
-    assert "Verdict: tasks" in comment
-    assert "Elapsed:" in comment
+    lines = comment.splitlines()
+    assert lines[0] == "## ❌ Plan Review Failed"
+    assert "**Category:** Commit failed" in lines
+    assert "**Stage:** Plan Review, round 1" in lines
+    assert "**Verdict:** tasks" in lines
+    assert any(line.startswith("**Elapsed:** ") for line in lines)
 
 
 # --- Step 3: PR-feedback threading (plan lane skips it) ---------------------

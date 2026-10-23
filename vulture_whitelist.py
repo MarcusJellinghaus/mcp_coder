@@ -233,6 +233,11 @@ _.mock_finalisation
 # linkage validation to "not linked" so tests opt in with their own @patch
 _._no_branch_issue_link
 
+# tests/workflows/implement/conftest.py and tests/workflow_utils/test_run_guarded.py
+# - Autouse fixture stubbing failure_handling._branch_head so the shared
+# failure-comment builder never calls real git
+_._stub_branch_head
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================
