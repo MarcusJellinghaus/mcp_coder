@@ -3,7 +3,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.mcp_workspace_github import IssueData, create_empty_issue_data
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 from mcp_coder.workflows.create_plan import (
     check_pr_info_not_exists,
@@ -228,6 +228,7 @@ class TestCheckPrerequisites:
         assert issue_data["updated_at"] is None
         assert issue_data["url"] == ""
         assert issue_data["locked"] is False
+        assert issue_data == create_empty_issue_data()
 
 
 class TestCheckPrInfoNotExists:

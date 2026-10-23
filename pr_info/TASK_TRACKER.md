@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: `prerequisites.py` uses `create_empty_issue_data()` ([step_3.md](./steps/step_3.md))
-- [ ] Implementation: sentinel assertion in `test_prerequisites.py` + replace `IssueData(...)` literal in `prerequisites.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: sentinel assertion in `test_prerequisites.py` + replace `IssueData(...)` literal in `prerequisites.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Migrate `tests/cli/commands` (6 files) ([step_4.md](./steps/step_4.md))
 - [ ] Implementation: replace issue literals with `make_issue_data(...)` / `create_empty_issue_data()`; no `locked` matches remain
