@@ -12,6 +12,7 @@ from mcp_coder.cli.commands.define_labels import (
     initialize_issues,
 )
 from mcp_coder.mcp_workspace_github import IssueData
+from tests.github_factories import make_issue_data
 
 
 class TestCheckStatusLabels:
@@ -19,20 +20,9 @@ class TestCheckStatusLabels:
 
     def test_no_status_labels_returns_zero(self) -> None:
         """Test that issues without status labels return count of 0."""
-        issue: IssueData = {
-            "number": 1,
-            "title": "Test issue",
-            "body": "",
-            "state": "open",
-            "labels": ["bug", "enhancement"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            title="Test issue", labels=["bug", "enhancement"], url=""
+        )
         workflow_label_names = {
             "status-01:created",
             "status-02:awaiting-planning",
@@ -46,20 +36,12 @@ class TestCheckStatusLabels:
 
     def test_single_status_label_returns_one(self) -> None:
         """Test that issues with one status label return count of 1."""
-        issue: IssueData = {
-            "number": 2,
-            "title": "Test issue with label",
-            "body": "",
-            "state": "open",
-            "labels": ["bug", "status-01:created", "enhancement"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=2,
+            title="Test issue with label",
+            labels=["bug", "status-01:created", "enhancement"],
+            url="",
+        )
         workflow_label_names = {
             "status-01:created",
             "status-02:awaiting-planning",
@@ -73,20 +55,12 @@ class TestCheckStatusLabels:
 
     def test_multiple_status_labels_returns_count(self) -> None:
         """Test that issues with multiple status labels return correct count."""
-        issue: IssueData = {
-            "number": 3,
-            "title": "Test issue with multiple labels",
-            "body": "",
-            "state": "open",
-            "labels": ["status-01:created", "status-02:awaiting-planning"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=3,
+            title="Test issue with multiple labels",
+            labels=["status-01:created", "status-02:awaiting-planning"],
+            url="",
+        )
         workflow_label_names = {
             "status-01:created",
             "status-02:awaiting-planning",
@@ -100,26 +74,18 @@ class TestCheckStatusLabels:
 
     def test_ignores_non_workflow_labels(self) -> None:
         """Test that non-workflow labels are ignored in the count."""
-        issue: IssueData = {
-            "number": 4,
-            "title": "Test issue with mixed labels",
-            "body": "",
-            "state": "open",
-            "labels": [
+        issue = make_issue_data(
+            number=4,
+            title="Test issue with mixed labels",
+            labels=[
                 "bug",
                 "status-01:created",
                 "enhancement",
                 "priority-high",
                 "documentation",
             ],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+            url="",
+        )
         workflow_label_names = {
             "status-01:created",
             "status-02:awaiting-planning",
@@ -138,34 +104,8 @@ class TestInitializeIssues:
     def test_initializes_issues_without_labels(self) -> None:
         """Test that issues without status labels are initialized."""
         issues: list[IssueData] = [
-            {
-                "number": 1,
-                "title": "Issue without labels",
-                "body": "",
-                "state": "open",
-                "labels": ["bug"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 2,
-                "title": "Another issue without labels",
-                "body": "",
-                "state": "open",
-                "labels": [],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(title="Issue without labels", labels=["bug"], url=""),
+            make_issue_data(number=2, title="Another issue without labels", url=""),
         ]
         workflow_label_names = {"status-01:created", "status-02:awaiting-planning"}
         created_label_name = "status-01:created"
@@ -192,34 +132,14 @@ class TestInitializeIssues:
     def test_skips_issues_with_labels(self) -> None:
         """Test that issues with status labels are skipped."""
         issues: list[IssueData] = [
-            {
-                "number": 1,
-                "title": "Issue with status label",
-                "body": "",
-                "state": "open",
-                "labels": ["status-02:awaiting-planning"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 2,
-                "title": "Issue without labels",
-                "body": "",
-                "state": "open",
-                "labels": ["bug"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                title="Issue with status label",
+                labels=["status-02:awaiting-planning"],
+                url="",
+            ),
+            make_issue_data(
+                number=2, title="Issue without labels", labels=["bug"], url=""
+            ),
         ]
         workflow_label_names = {"status-01:created", "status-02:awaiting-planning"}
         created_label_name = "status-01:created"
@@ -243,20 +163,7 @@ class TestInitializeIssues:
     def test_dry_run_does_not_call_api(self) -> None:
         """Test that dry-run mode does not call the API."""
         issues: list[IssueData] = [
-            {
-                "number": 1,
-                "title": "Issue without labels",
-                "body": "",
-                "state": "open",
-                "labels": [],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(title="Issue without labels", url=""),
         ]
         workflow_label_names = {"status-01:created"}
         created_label_name = "status-01:created"
@@ -278,48 +185,11 @@ class TestInitializeIssues:
     def test_returns_initialized_issue_numbers(self) -> None:
         """Test that the function returns the correct list of issue numbers."""
         issues: list[IssueData] = [
-            {
-                "number": 10,
-                "title": "Issue 10",
-                "body": "",
-                "state": "open",
-                "labels": [],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 20,
-                "title": "Issue 20",
-                "body": "",
-                "state": "open",
-                "labels": ["status-01:created"],  # Has label, skip
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 30,
-                "title": "Issue 30",
-                "body": "",
-                "state": "open",
-                "labels": ["bug"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(number=10, url=""),
+            make_issue_data(
+                number=20, labels=["status-01:created"], url=""
+            ),  # Has label, skip
+            make_issue_data(number=30, labels=["bug"], url=""),
         ]
         workflow_label_names = {"status-01:created", "status-02:awaiting-planning"}
         created_label_name = "status-01:created"

@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.set_status import execute_set_status
+from tests.github_factories import make_issue_data
 
 
 @pytest.fixture
@@ -39,36 +40,28 @@ def mock_issue_manager() -> MagicMock:
     mock = MagicMock()
 
     # Configure mock to return issue data
-    mock.get_issue.return_value = {
-        "number": 123,
-        "title": "Test Issue",
-        "body": "Test body",
-        "state": "open",
-        "labels": ["status-03:planning", "bug"],
-        "assignees": [],
-        "user": "testuser",
-        "created_at": "2024-01-01T00:00:00Z",
-        "updated_at": "2024-01-01T00:00:00Z",
-        "url": "https://github.com/test/repo/issues/123",
-        "locked": False,
-        "author_association": None,
-    }
+    mock.get_issue.return_value = make_issue_data(
+        number=123,
+        title="Test Issue",
+        body="Test body",
+        labels=["status-03:planning", "bug"],
+        user="testuser",
+        created_at="2024-01-01T00:00:00Z",
+        updated_at="2024-01-01T00:00:00Z",
+        url="https://github.com/test/repo/issues/123",
+    )
 
     # Configure mock to return success for set_labels
-    mock.set_labels.return_value = {
-        "number": 123,
-        "title": "Test Issue",
-        "body": "Test body",
-        "state": "open",
-        "labels": ["status-05:plan-ready", "bug"],
-        "assignees": [],
-        "user": "testuser",
-        "created_at": "2024-01-01T00:00:00Z",
-        "updated_at": "2024-01-01T00:00:00Z",
-        "url": "https://github.com/test/repo/issues/123",
-        "locked": False,
-        "author_association": None,
-    }
+    mock.set_labels.return_value = make_issue_data(
+        number=123,
+        title="Test Issue",
+        body="Test body",
+        labels=["status-05:plan-ready", "bug"],
+        user="testuser",
+        created_at="2024-01-01T00:00:00Z",
+        updated_at="2024-01-01T00:00:00Z",
+        url="https://github.com/test/repo/issues/123",
+    )
 
     return mock
 
@@ -103,20 +96,15 @@ class TestFromStatusFlag:
         mock_is_working_directory_clean.return_value = True
 
         # Issue currently has status-03:planning
-        mock_issue_manager.get_issue.return_value = {
-            "number": 123,
-            "title": "Test Issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-03:planning", "bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T00:00:00Z",
-            "url": "https://github.com/test/repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue_manager.get_issue.return_value = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-03:planning", "bug"],
+            user="testuser",
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            url="https://github.com/test/repo/issues/123",
+        )
 
         args = argparse.Namespace(
             status_label="status-05:plan-ready",
@@ -160,20 +148,15 @@ class TestFromStatusFlag:
         mock_is_working_directory_clean.return_value = True
 
         # Issue currently has status-07:code-review, NOT status-06:implementing
-        mock_issue_manager.get_issue.return_value = {
-            "number": 123,
-            "title": "Test Issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review", "bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T00:00:00Z",
-            "url": "https://github.com/test/repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue_manager.get_issue.return_value = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-07:code-review", "bug"],
+            user="testuser",
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            url="https://github.com/test/repo/issues/123",
+        )
 
         args = argparse.Namespace(
             status_label="status-06f:implementing-failed",
@@ -218,20 +201,15 @@ class TestFromStatusFlag:
         mock_is_working_directory_clean.return_value = True
 
         # Issue has no status labels
-        mock_issue_manager.get_issue.return_value = {
-            "number": 123,
-            "title": "Test Issue",
-            "body": "",
-            "state": "open",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T00:00:00Z",
-            "url": "https://github.com/test/repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue_manager.get_issue.return_value = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["bug"],
+            user="testuser",
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            url="https://github.com/test/repo/issues/123",
+        )
 
         args = argparse.Namespace(
             status_label="status-06f:implementing-failed",
@@ -310,20 +288,15 @@ class TestFromStatusFlag:
         mock_issue_manager_class.return_value = mock_issue_manager
 
         # Issue currently has matching label
-        mock_issue_manager.get_issue.return_value = {
-            "number": 456,
-            "title": "Test Issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-06:implementing"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T00:00:00Z",
-            "url": "https://github.com/test/repo/issues/456",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue_manager.get_issue.return_value = make_issue_data(
+            number=456,
+            title="Test Issue",
+            labels=["status-06:implementing"],
+            user="testuser",
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            url="https://github.com/test/repo/issues/456",
+        )
 
         args = argparse.Namespace(
             status_label="status-06f:implementing-failed",
@@ -408,20 +381,15 @@ class TestFromStatusFlag:
         mock_is_working_directory_clean.return_value = True
 
         # Mismatch: issue has status-07, but from_status expects status-06
-        mock_issue_manager.get_issue.return_value = {
-            "number": 123,
-            "title": "Test Issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T00:00:00Z",
-            "url": "https://github.com/test/repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue_manager.get_issue.return_value = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-07:code-review"],
+            user="testuser",
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            url="https://github.com/test/repo/issues/123",
+        )
 
         args = argparse.Namespace(
             status_label="status-06f:implementing-failed",
@@ -484,20 +452,15 @@ class TestFromStatusFlag:
         mock_is_working_directory_clean.return_value = False  # Dirty wd
 
         # Mismatch: issue already past in-progress
-        mock_issue_manager.get_issue.return_value = {
-            "number": 123,
-            "title": "Test Issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T00:00:00Z",
-            "url": "https://github.com/test/repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue_manager.get_issue.return_value = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-07:code-review"],
+            user="testuser",
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            url="https://github.com/test/repo/issues/123",
+        )
 
         args = argparse.Namespace(
             status_label="status-06f:implementing-failed",

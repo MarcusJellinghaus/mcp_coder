@@ -20,6 +20,8 @@ from mcp_coder.cli.commands.set_status import (
     format_status_labels,
     validate_status_label,
 )
+from mcp_coder.mcp_workspace_github import create_empty_issue_data
+from tests.github_factories import make_issue_data
 
 # Note: labels_config_path fixture is defined in tests/conftest.py
 
@@ -69,36 +71,28 @@ def mock_issue_manager() -> MagicMock:
     mock = MagicMock()
 
     # Configure mock to return issue data
-    mock.get_issue.return_value = {
-        "number": 123,
-        "title": "Test Issue",
-        "body": "Test body",
-        "state": "open",
-        "labels": ["status-03:planning", "bug"],
-        "assignees": [],
-        "user": "testuser",
-        "created_at": "2024-01-01T00:00:00Z",
-        "updated_at": "2024-01-01T00:00:00Z",
-        "url": "https://github.com/test/repo/issues/123",
-        "locked": False,
-        "author_association": None,
-    }
+    mock.get_issue.return_value = make_issue_data(
+        number=123,
+        title="Test Issue",
+        body="Test body",
+        labels=["status-03:planning", "bug"],
+        user="testuser",
+        created_at="2024-01-01T00:00:00Z",
+        updated_at="2024-01-01T00:00:00Z",
+        url="https://github.com/test/repo/issues/123",
+    )
 
     # Configure mock to return success for set_labels
-    mock.set_labels.return_value = {
-        "number": 123,
-        "title": "Test Issue",
-        "body": "Test body",
-        "state": "open",
-        "labels": ["status-05:plan-ready", "bug"],
-        "assignees": [],
-        "user": "testuser",
-        "created_at": "2024-01-01T00:00:00Z",
-        "updated_at": "2024-01-01T00:00:00Z",
-        "url": "https://github.com/test/repo/issues/123",
-        "locked": False,
-        "author_association": None,
-    }
+    mock.set_labels.return_value = make_issue_data(
+        number=123,
+        title="Test Issue",
+        body="Test body",
+        labels=["status-05:plan-ready", "bug"],
+        user="testuser",
+        created_at="2024-01-01T00:00:00Z",
+        updated_at="2024-01-01T00:00:00Z",
+        url="https://github.com/test/repo/issues/123",
+    )
 
     return mock
 
@@ -711,20 +705,7 @@ class TestExecuteSetStatus:
 
         # Configure mock to return error (number=0 indicates error)
         mock_issue_manager = MagicMock()
-        mock_issue_manager.get_issue.return_value = {
-            "number": 0,  # Error indicator
-            "title": "",
-            "body": "",
-            "state": "",
-            "labels": [],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue_manager.get_issue.return_value = create_empty_issue_data()
         mock_issue_manager_class.return_value = mock_issue_manager
 
         args = argparse.Namespace(
