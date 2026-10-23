@@ -101,14 +101,18 @@ Replace the isort bullet. Suggested:
 apply all edits above (no import-order hand edits)
 r = run_format_code(target_directories=["src","tests","tools"], check_only=True)
 tool_ver = ruff version printed in r;  latest = Bash `uvx ruff@latest version`
-if tool_ver < latest: write one line to pr_info/.blocked.txt and stop
+if tool_ver < latest:
+    upgrade ruff in the mcp-tools-py tool env to latest (Bash), re-check tool_ver
+    if the upgrade fails: write one line to pr_info/.blocked.txt and stop
 run_format_code(target_directories=["src","tests","tools"])   # ruff_imports → ruff_format
 run checks below; all must pass → format → commit
 ```
 
 Notes:
 - `uvx ruff@latest version` is a Bash call (no MCP tool reports the latest PyPI release).
-  Before running it, state the justification as CLAUDE.md requires.
+  Before running it, state the justification as CLAUDE.md requires. The same applies to
+  the ruff upgrade in the tool env. The upgrade keeps CI's first `ruff format --check`
+  (latest ruff from `.[dev]`) in agreement with the reformat.
 - Expected from `ruff_imports`: import-order fixes in `src/mcp_coder/mcp_workspace_github.py`
   and `tests/workflows/vscodeclaude/test_assessment_issue_facts.py`. Expected from
   `ruff_format`: ~109 reformatted files (64 src, 44 tests incl. `tests/README.md`,

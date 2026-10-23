@@ -36,8 +36,8 @@ Not applicable — documentation only.
 - Line 418 note: `(black, pytest, mypy, etc.)` → `(ruff, pytest, mypy, etc.)`.
 - Example matrix (lines 440–441): replace the `black` and `isort` rows with:
   ```yaml
-  - {name: "ruff", cmd: "ruff check src tests"}
-  - {name: "ruff-format", cmd: "ruff format --check src tests"}
+  - {name: "ruff", cmd: "ruff version && ruff check src tests tools"}
+  - {name: "ruff-format", cmd: "ruff version && ruff format --check src tests tools"}
   ```
 
 ### `docs/architecture/architecture.md` (line 408)
