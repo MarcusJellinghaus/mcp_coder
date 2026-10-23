@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 7: Migrate `tests/workflows/vscodeclaude/test_session_restart*` (4 files) ([step_7.md](./steps/step_7.md))
-- [ ] Implementation: issue literals → `make_issue_data(...)`; retype receivers; no `locked` matches remain
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: issue literals → `make_issue_data(...)`; retype receivers; no `locked` matches remain
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Migrate remaining `tests/workflows/vscodeclaude` (14 files) ([step_8.md](./steps/step_8.md))
 - [ ] Implementation: inline literals and helpers/fixtures → `make_issue_data(...)`; retype receivers; no `locked` matches remain

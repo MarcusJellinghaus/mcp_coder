@@ -22,6 +22,7 @@ from mcp_coder.workflows.vscodeclaude.types import (
     Transition,
     VSCodeClaudeSession,
 )
+from tests.github_factories import make_issue_data
 
 
 def _make_assessment(
@@ -118,62 +119,44 @@ class TestBuildCachedIssuesByRepo:
         ]
 
         # Mock issue data
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
-        issue_408: IssueData = {
-            "number": 408,
-            "state": "closed",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 408",
-            "body": "Body 408",
-            "url": "http://test.com/408",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
-        issue_100: IssueData = {
-            "number": 100,
-            "state": "open",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 100",
-            "body": "Body 100",
-            "url": "http://test.com/100",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
-        issue_123: IssueData = {
-            "number": 123,
-            "state": "open",
-            "labels": ["enhancement"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 123",
-            "body": "Body 123",
-            "url": "http://test.com/123",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
+        issue_408 = make_issue_data(
+            number=408,
+            state="closed",
+            labels=["bug"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 408",
+            url="http://test.com/408",
+            updated_at="2025-12-31T08:00:00Z",
+        )
+        issue_100 = make_issue_data(
+            number=100,
+            labels=["bug"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 100",
+            url="http://test.com/100",
+            updated_at="2025-12-31T08:00:00Z",
+        )
+        issue_123 = make_issue_data(
+            number=123,
+            labels=["enhancement"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 123",
+            url="http://test.com/123",
+            updated_at="2025-12-31T08:00:00Z",
+        )
 
         with (
             patch(
@@ -319,34 +302,25 @@ class TestRestartClosedSessions:
         ]
 
         # Mock issue data
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
-        issue_100: IssueData = {
-            "number": 100,
-            "state": "open",
-            "labels": ["bug", "status-01:created"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 100",
-            "body": "Body 100",
-            "url": "http://test.com/100",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
+        issue_100 = make_issue_data(
+            number=100,
+            labels=["bug", "status-01:created"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 100",
+            url="http://test.com/100",
+            updated_at="2025-12-31T08:00:00Z",
+        )
 
         assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 
@@ -408,20 +382,16 @@ class TestRestartClosedSessions:
         ]
 
         # Provided cache
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
         provided_cache = {"owner/repo": {414: issue_414}}
 
         assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
@@ -489,20 +459,16 @@ class TestRestartClosedSessions:
         ]
 
         # Mock closed issue
-        issue_414: IssueData = {
-            "number": 414,
-            "state": "closed",
-            "labels": ["bug"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-            "title": "Issue 414",
-            "body": "Body 414",
-            "url": "http://test.com/414",
-            "updated_at": "2025-12-31T08:00:00Z",
-        }
+        issue_414 = make_issue_data(
+            number=414,
+            state="closed",
+            labels=["bug"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            body="Body 414",
+            url="http://test.com/414",
+            updated_at="2025-12-31T08:00:00Z",
+        )
 
         assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
 

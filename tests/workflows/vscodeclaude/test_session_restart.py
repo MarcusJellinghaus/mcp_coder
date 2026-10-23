@@ -29,6 +29,7 @@ from mcp_coder.workflows.vscodeclaude.types import (
     Transition,
     VSCodeClaudeConfig,
 )
+from tests.github_factories import make_issue_data
 
 
 def _make_assessment(
@@ -119,20 +120,12 @@ class TestSessionRestart:
             lambda s: None,
         )
 
-        issue: IssueData = {
-            "number": 123,
-            "title": "Test issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": ["testuser"],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=123,
+            title="Test issue",
+            labels=["status-07:code-review"],
+            assignees=["testuser"],
+        )
 
         repo_config = {
             "repo_url": "https://github.com/owner/repo.git",
@@ -183,20 +176,12 @@ class TestSessionRestart:
             failing_git,
         )
 
-        issue: IssueData = {
-            "number": 123,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "...",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=123,
+            title="Test",
+            labels=["status-07:code-review"],
+            url="...",
+        )
         repo_config = {"repo_url": "https://github.com/owner/repo.git"}
         vscodeclaude_config: VSCodeClaudeConfig = {
             "workspace_base": str(tmp_path),
@@ -252,20 +237,12 @@ class TestSessionRestart:
             failing_setup,
         )
 
-        issue: IssueData = {
-            "number": 123,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "...",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=123,
+            title="Test",
+            labels=["status-07:code-review"],
+            url="...",
+        )
         repo_config = {"repo_url": "https://github.com/owner/repo.git"}
         vscodeclaude_config: VSCodeClaudeConfig = {
             "workspace_base": str(tmp_path),
@@ -444,20 +421,12 @@ class TestSessionRestart:
         sessions_file.write_text(json.dumps(store))
 
         # Provide cached issues to avoid API calls
-        cached_issue: IssueData = {
-            "number": 123,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=123,
+            title="Test",
+            labels=["status-07:code-review"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
         }
@@ -575,20 +544,12 @@ class TestSessionRestart:
         sessions_file.write_text(json.dumps(store))
 
         # Cached issue with blocked label
-        cached_issue: IssueData = {
-            "number": 123,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-01:created", "blocked"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=123,
+            title="Test",
+            labels=["status-01:created", "blocked"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
         }
@@ -647,20 +608,12 @@ class TestSessionRestart:
         sessions_file.write_text(json.dumps(store))
 
         # GitHub has new status
-        cached_issue: IssueData = {
-            "number": 123,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-04:plan-review"],  # Changed status
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=123,
+            title="Test",
+            labels=["status-04:plan-review"],  # Changed status
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
         }
@@ -706,20 +659,13 @@ class TestSessionRestart:
         sessions_file.write_text(json.dumps(store))
 
         # Cached issue is CLOSED
-        cached_issue: IssueData = {
-            "number": 123,
-            "title": "Test",
-            "state": "closed",  # <-- Issue is closed
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=123,
+            title="Test",
+            state="closed",  # <-- Issue is closed
+            labels=["status-07:code-review"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
         }
@@ -764,20 +710,12 @@ class TestSessionRestart:
         sessions_file.write_text(json.dumps(store))
 
         # Issue is now at bot stage (status-08:ready-pr) - NOT eligible
-        cached_issue: IssueData = {
-            "number": 456,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-08:ready-pr"],  # <-- Bot stage, not eligible
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=456,
+            title="Test",
+            labels=["status-08:ready-pr"],  # <-- Bot stage, not eligible
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {456: cached_issue}
         }
@@ -822,20 +760,12 @@ class TestSessionRestart:
         sessions_file.write_text(json.dumps(store))
 
         # Issue is now at pr-created - NOT eligible (no session needed)
-        cached_issue: IssueData = {
-            "number": 789,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-10:pr-created"],  # <-- PR created, not eligible
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=789,
+            title="Test",
+            labels=["status-10:pr-created"],  # <-- PR created, not eligible
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {789: cached_issue}
         }
@@ -895,20 +825,12 @@ class TestSessionRestart:
         sessions_file.write_text(json.dumps(store))
 
         # Issue is at eligible status (04), open
-        cached_issue: IssueData = {
-            "number": 101,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-04:plan-review"],  # <-- Eligible status
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=101,
+            title="Test",
+            labels=["status-04:plan-review"],  # <-- Eligible status
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {101: cached_issue}
         }
@@ -977,20 +899,12 @@ class TestSessionRestart:
         sessions_file.write_text(json.dumps(store))
 
         # Issue has moved to 07 (code-review) - ALSO eligible
-        cached_issue: IssueData = {
-            "number": 202,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-07:code-review"],  # <-- New eligible status
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=202,
+            title="Test",
+            labels=["status-07:code-review"],  # <-- New eligible status
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {202: cached_issue}
         }
