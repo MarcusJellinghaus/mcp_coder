@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Switch formatter to ruff, update CI / import-linter / comments, reformat
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: config, CI, import-linter, gitignore and comment edits; run `run_format_code` over `src`, `tests`, `tools`
+- [ ] Quality checks: pylint, pytest, mypy (plus format check, ruff check, lint-imports) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Update docs to the ruff toolchain
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: update the five documentation files to describe the ruff toolchain
+- [ ] Quality checks: pylint, pytest, mypy (plus format check, `isort|black` search) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `main`
+- [ ] PR summary prepared
