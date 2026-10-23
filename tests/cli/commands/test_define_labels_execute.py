@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from mcp_coder.cli.commands.define_labels import execute_define_labels
+from tests.github_factories import make_issue_data
 
 
 def _make_namespace(**kwargs: object) -> argparse.Namespace:
@@ -141,20 +142,12 @@ class TestExecuteDefineLabelsExitCodes:
         # Setup mock issue manager to return an issue with multiple labels (error)
         mock_issue_manager = MagicMock()
         mock_issue_manager.list_issues.return_value = [
-            {
-                "number": 45,
-                "title": "Issue with multiple labels",
-                "body": "",
-                "state": "open",
-                "labels": ["status-01:created", "status-03:planning"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            }
+            make_issue_data(
+                number=45,
+                title="Issue with multiple labels",
+                labels=["status-01:created", "status-03:planning"],
+                url="",
+            )
         ]
         mock_issue_manager_class.return_value = mock_issue_manager
 
@@ -215,20 +208,12 @@ class TestExecuteDefineLabelsExitCodes:
         # Setup mock issue manager to return an issue with stale bot_busy label
         mock_issue_manager = MagicMock()
         mock_issue_manager.list_issues.return_value = [
-            {
-                "number": 78,
-                "title": "Stale implementing issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-06:implementing"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            }
+            make_issue_data(
+                number=78,
+                title="Stale implementing issue",
+                labels=["status-06:implementing"],
+                url="",
+            )
         ]
         mock_issue_manager.get_issue_events.return_value = [
             {
@@ -317,35 +302,19 @@ class TestExecuteDefineLabelsExitCodes:
         mock_issue_manager = MagicMock()
         mock_issue_manager.list_issues.return_value = [
             # Issue with multiple labels (error)
-            {
-                "number": 45,
-                "title": "Issue with multiple labels",
-                "body": "",
-                "state": "open",
-                "labels": ["status-01:created", "status-03:planning"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                number=45,
+                title="Issue with multiple labels",
+                labels=["status-01:created", "status-03:planning"],
+                url="",
+            ),
             # Stale issue (warning)
-            {
-                "number": 78,
-                "title": "Stale implementing issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-06:implementing"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                number=78,
+                title="Stale implementing issue",
+                labels=["status-06:implementing"],
+                url="",
+            ),
         ]
         mock_issue_manager.get_issue_events.return_value = [
             {
