@@ -20,6 +20,7 @@
   i.e. every value that differs from the factory default.
 - `test_prompt_execution.py::_make_issue_data() -> IssueData`: same treatment.
 - Empty sentinels (`test_failure_handling.py` `empty_issue` ~line 186,
+  `test_main.py` `empty_issue_data` ~line 131,
   `test_prerequisites.py` `empty_issue_data` ~line 55) → `create_empty_issue_data()`
   from `mcp_coder.mcp_workspace_github`.
 - All other literals → `make_issue_data(...)`.
