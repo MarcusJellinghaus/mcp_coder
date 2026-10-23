@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Shim — re-export `create_empty_issue_data` ([step_1.md](./steps/step_1.md))
-- [ ] Implementation: smoke tests (`__all__` count 32, importability test) + re-export in `mcp_workspace_github.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: smoke tests (`__all__` count 32, importability test) + re-export in `mcp_workspace_github.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Test factory `make_issue_data` ([step_2.md](./steps/step_2.md))
 - [ ] Implementation: `tests/test_github_factories.py` (2 tests) + `tests/github_factories.py`
