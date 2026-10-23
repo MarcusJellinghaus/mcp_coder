@@ -45,6 +45,7 @@ from mcp_coder.mcp_workspace_github import (
     save_cache_file,
 )
 from mcp_coder.utils.user_config import get_cache_refresh_minutes
+from tests.github_factories import make_issue_data
 
 
 class TestLoadRepoConfig:
@@ -418,49 +419,21 @@ class TestGetEligibleIssues:
         # Mock issue list with mixed labels
         mock_issue_manager.list_issues.return_value = [
             # Issue with valid bot_pickup label - should be included
-            IssueData(
-                number=1,
-                title="Issue 1",
-                body="",
-                state="open",
+            make_issue_data(
                 labels=["status-02:awaiting-planning", "enhancement"],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
                 url="https://github.com/user/repo/issues/1",
-                locked=False,
-                author_association=None,
             ),
             # Issue with no bot_pickup label - should be excluded
-            IssueData(
+            make_issue_data(
                 number=2,
-                title="Issue 2",
-                body="",
-                state="open",
                 labels=["status-01:created", "bug"],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
                 url="https://github.com/user/repo/issues/2",
-                locked=False,
-                author_association=None,
             ),
             # Another valid issue with bot_pickup label - should be included
-            IssueData(
+            make_issue_data(
                 number=4,
-                title="Issue 4",
-                body="",
-                state="open",
                 labels=["status-08:ready-pr"],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
                 url="https://github.com/user/repo/issues/4",
-                locked=False,
-                author_association=None,
             ),
         ]
 
@@ -497,19 +470,12 @@ class TestDispatchWorkflow:
         mock_branch_mgr = MagicMock()
 
         # Setup - Mock issue with status-02:awaiting-planning label
-        issue = IssueData(
+        issue = make_issue_data(
             number=123,
             title="Add feature X",
             body="Description of feature",
-            state="open",
             labels=["status-02:awaiting-planning", "enhancement"],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
             url="https://github.com/user/repo/issues/123",
-            locked=False,
-            author_association=None,
         )
 
         # Setup - Repo configuration
@@ -564,19 +530,12 @@ class TestDispatchWorkflow:
         mock_issue_mgr = MagicMock()
         mock_branch_mgr = MagicMock()
 
-        issue = IssueData(
+        issue = make_issue_data(
             number=123,
             title="Add feature X",
             body="Description of feature",
-            state="open",
             labels=["status-02:awaiting-planning", "enhancement"],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
             url="https://github.com/user/repo/issues/123",
-            locked=False,
-            author_association=None,
         )
 
         repo_config = {
@@ -616,20 +575,16 @@ class TestDispatchWorkflow:
     ) -> None:
         """Test that dispatch_workflow logs error and returns early when no branch found."""
         # Setup - Mock issue with status-08:ready-pr label (requires branch)
-        issue: IssueData = {
-            "number": 156,
-            "title": "Create PR for feature",
-            "body": "Feature ready for PR",
-            "state": "open",
-            "labels": ["status-08:ready-pr"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "updated_at": "2025-12-31T09:00:00Z",
-            "url": "https://github.com/test/repo/issues/156",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=156,
+            title="Create PR for feature",
+            body="Feature ready for PR",
+            labels=["status-08:ready-pr"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            updated_at="2025-12-31T09:00:00Z",
+            url="https://github.com/test/repo/issues/156",
+        )
 
         # Setup - Repo configuration
         repo_config = {
@@ -692,20 +647,16 @@ class TestDispatchWorkflow:
     ) -> None:
         """Test that existing functionality works unchanged when branch exists."""
         # Setup - Mock issue with status-05:plan-ready label (requires branch)
-        issue: IssueData = {
-            "number": 123,
-            "title": "Implement feature",
-            "body": "Plan is ready for implementation",
-            "state": "open",
-            "labels": ["status-05:plan-ready"],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "updated_at": "2025-12-31T09:00:00Z",
-            "url": "https://github.com/test/repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=123,
+            title="Implement feature",
+            body="Plan is ready for implementation",
+            labels=["status-05:plan-ready"],
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            updated_at="2025-12-31T09:00:00Z",
+            url="https://github.com/test/repo/issues/123",
+        )
 
         # Setup - Repo configuration
         repo_config = {
@@ -784,20 +735,15 @@ class TestDispatchWorkflowSilentFallthroughGuard:
         Returns:
             IssueData with the pickup label applied.
         """
-        return {
-            "number": 777,
-            "title": "Guard issue",
-            "body": "",
-            "state": "open",
-            "labels": [pickup_label],
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2026-01-01T00:00:00Z",
-            "updated_at": "2026-01-01T00:00:00Z",
-            "url": "https://github.com/test/repo/issues/777",
-            "locked": False,
-            "author_association": None,
-        }
+        return make_issue_data(
+            number=777,
+            title="Guard issue",
+            labels=[pickup_label],
+            user="testuser",
+            created_at="2026-01-01T00:00:00Z",
+            updated_at="2026-01-01T00:00:00Z",
+            url="https://github.com/test/repo/issues/777",
+        )
 
     @pytest.mark.parametrize("executor_os", ["windows", "linux"])
     @pytest.mark.parametrize(
@@ -919,20 +865,16 @@ class TestCacheFileOperations:
         sample_cache_data = {
             "last_checked": "2025-12-31T10:30:00Z",
             "issues": {
-                "123": {
-                    "number": 123,
-                    "state": "open",
-                    "labels": ["status-02:awaiting-planning"],
-                    "updated_at": "2025-12-31T09:00:00Z",
-                    "url": "https://github.com/test/repo/issues/123",
-                    "title": "Test issue",
-                    "body": "Test issue body",
-                    "assignees": [],
-                    "user": "testuser",
-                    "created_at": "2025-12-31T08:00:00Z",
-                    "locked": False,
-                    "author_association": None,
-                }
+                "123": make_issue_data(
+                    number=123,
+                    labels=["status-02:awaiting-planning"],
+                    updated_at="2025-12-31T09:00:00Z",
+                    url="https://github.com/test/repo/issues/123",
+                    title="Test issue",
+                    body="Test issue body",
+                    user="testuser",
+                    created_at="2025-12-31T08:00:00Z",
+                )
             },
         }
 
@@ -968,20 +910,16 @@ class TestCacheFileOperations:
         sample_cache_data: CacheData = {
             "last_checked": "2025-12-31T10:30:00Z",
             "issues": {
-                "123": {
-                    "number": 123,
-                    "state": "open",
-                    "labels": ["bug"],
-                    "title": "Test issue",
-                    "body": "Test issue body",
-                    "assignees": [],
-                    "user": "testuser",
-                    "created_at": "2025-12-31T08:00:00Z",
-                    "updated_at": "2025-12-31T09:00:00Z",
-                    "url": "https://github.com/test/repo/issues/123",
-                    "locked": False,
-                    "author_association": None,
-                }
+                "123": make_issue_data(
+                    number=123,
+                    labels=["bug"],
+                    title="Test issue",
+                    body="Test issue body",
+                    user="testuser",
+                    created_at="2025-12-31T08:00:00Z",
+                    updated_at="2025-12-31T09:00:00Z",
+                    url="https://github.com/test/repo/issues/123",
+                )
             },
         }
 
@@ -1009,36 +947,29 @@ class TestStalenessLogging:
         )
 
         cached_issues: dict[str, IssueData] = {
-            "123": {
-                "number": 123,
-                "state": "open",
-                "labels": ["bug"],
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "locked": False,
-                "author_association": None,
-                "title": "Test",
-                "body": "Test",
-                "url": "http://test.com",
-                "updated_at": "2025-12-31T08:00:00Z",
-            }
+            "123": make_issue_data(
+                number=123,
+                labels=["bug"],
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                title="Test",
+                body="Test",
+                url="http://test.com",
+                updated_at="2025-12-31T08:00:00Z",
+            )
         }
         fresh_issues: dict[str, IssueData] = {
-            "123": {
-                "number": 123,
-                "state": "closed",
-                "labels": ["bug"],
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "locked": False,
-                "author_association": None,
-                "title": "Test",
-                "body": "Test",
-                "url": "http://test.com",
-                "updated_at": "2025-12-31T08:00:00Z",
-            }
+            "123": make_issue_data(
+                number=123,
+                state="closed",
+                labels=["bug"],
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                title="Test",
+                body="Test",
+                url="http://test.com",
+                updated_at="2025-12-31T08:00:00Z",
+            )
         }
 
         log_stale_cache_entries(cached_issues, fresh_issues)
@@ -1054,36 +985,28 @@ class TestStalenessLogging:
         )
 
         cached_issues: dict[str, IssueData] = {
-            "123": {
-                "number": 123,
-                "state": "open",
-                "labels": ["status-02:awaiting-planning"],
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "locked": False,
-                "author_association": None,
-                "title": "Test",
-                "body": "Test",
-                "url": "http://test.com",
-                "updated_at": "2025-12-31T08:00:00Z",
-            }
+            "123": make_issue_data(
+                number=123,
+                labels=["status-02:awaiting-planning"],
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                title="Test",
+                body="Test",
+                url="http://test.com",
+                updated_at="2025-12-31T08:00:00Z",
+            )
         }
         fresh_issues: dict[str, IssueData] = {
-            "123": {
-                "number": 123,
-                "state": "open",
-                "labels": ["status-03:planning"],
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "locked": False,
-                "author_association": None,
-                "title": "Test",
-                "body": "Test",
-                "url": "http://test.com",
-                "updated_at": "2025-12-31T08:00:00Z",
-            }
+            "123": make_issue_data(
+                number=123,
+                labels=["status-03:planning"],
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                title="Test",
+                body="Test",
+                url="http://test.com",
+                updated_at="2025-12-31T08:00:00Z",
+            )
         }
 
         log_stale_cache_entries(cached_issues, fresh_issues)
@@ -1108,20 +1031,16 @@ class TestGetCachedEligibleIssues:
     @pytest.fixture
     def sample_issue(self) -> IssueData:
         """Sample issue data for testing."""
-        return {
-            "number": 123,
-            "state": "open",
-            "labels": ["status-02:awaiting-planning"],
-            "updated_at": "2025-12-31T09:00:00Z",
-            "url": "https://github.com/test/repo/issues/123",
-            "title": "Test issue",
-            "body": "Test issue body",
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "locked": False,
-            "author_association": None,
-        }
+        return make_issue_data(
+            number=123,
+            labels=["status-02:awaiting-planning"],
+            updated_at="2025-12-31T09:00:00Z",
+            url="https://github.com/test/repo/issues/123",
+            title="Test issue",
+            body="Test issue body",
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+        )
 
     @pytest.fixture
     def mock_issue_manager(self) -> Mock:
@@ -1256,21 +1175,10 @@ class TestBuildEligibleIssuesPrefetched:
     must use pre-fetched cached_issues_by_repo when provided and NOT re-call
     get_cached_eligible_vscodeclaude_issues / get_all_cached_issues."""
 
-    def _make_issue(self, number: int, assignee: str) -> dict[str, object]:
-        return {
-            "number": number,
-            "title": f"Issue {number}",
-            "body": "",
-            "state": "open",
-            "labels": ["status-01:created"],
-            "assignees": [assignee],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": f"https://github.com/owner/repo/issues/{number}",
-            "locked": False,
-            "author_association": None,
-        }
+    def _make_issue(self, number: int, assignee: str) -> IssueData:
+        return make_issue_data(
+            number=number, labels=["status-01:created"], assignees=[assignee]
+        )
 
     def test_prefetched_cache_skips_redundant_lookup(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1322,13 +1230,13 @@ class TestBuildEligibleIssuesPrefetched:
 
         # Pre-fetched issues (mimicking _build_cached_issues_by_repo output)
         issue = self._make_issue(1, "testuser")
-        cached_issues_by_repo: dict[str, dict[int, dict[str, object]]] = {
+        cached_issues_by_repo: dict[str, dict[int, IssueData]] = {
             "owner/repo": {1: issue},
         }
 
         eligible, without_branch = build_eligible_issues_with_branch_check(
             ["test-repo"],
-            cached_issues_by_repo=cached_issues_by_repo,  # type: ignore[arg-type]
+            cached_issues_by_repo=cached_issues_by_repo,
         )
 
         assert len(eligible) == 1

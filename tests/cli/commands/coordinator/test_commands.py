@@ -18,9 +18,9 @@ from mcp_coder.cli.commands.coordinator import (
     execute_coordinator_test,
     format_job_output,
 )
-from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.utils.jenkins_operations.client import JenkinsError
 from mcp_coder.utils.jenkins_operations.models import JobStatus
+from tests.github_factories import make_issue_data
 
 COMMANDS_LOGGER = "mcp_coder.cli.commands.coordinator.commands"
 
@@ -242,33 +242,19 @@ class TestExecuteCoordinatorRun:
 
         # Setup - Mock 2 eligible issues from cache
         mock_get_cached_issues.return_value = [
-            IssueData(
+            make_issue_data(
                 number=124,
                 title="Create PR for feature",
                 body="Ready for PR",
-                state="open",
                 labels=["status-08:ready-pr"],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
                 url="https://github.com/user/mcp_coder/issues/124",
-                locked=False,
-                author_association=None,
             ),
-            IssueData(
+            make_issue_data(
                 number=123,
                 title="Implement feature",
                 body="Plan ready",
-                state="open",
                 labels=["status-05:plan-ready"],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
                 url="https://github.com/user/mcp_coder/issues/123",
-                locked=False,
-                author_association=None,
             ),
         ]
 
@@ -335,19 +321,12 @@ class TestExecuteCoordinatorRun:
             "jenkins_token_123",
         )
         mock_get_cached_issues.return_value = [
-            IssueData(
+            make_issue_data(
                 number=123,
                 title="Implement feature",
                 body="Plan ready",
-                state="open",
                 labels=["status-05:plan-ready"],
-                assignees=[],
-                user=None,
-                created_at=None,
-                updated_at=None,
                 url="https://github.com/user/mcp_coder/issues/123",
-                locked=False,
-                author_association=None,
             ),
         ]
 

@@ -14,6 +14,7 @@ from mcp_coder.cli.commands.coordinator import (
     execute_coordinator_run,
 )
 from mcp_coder.mcp_workspace_github import RepoIdentifier
+from tests.github_factories import make_issue_data
 
 
 class TestCoordinatorRunCacheIntegration:
@@ -72,20 +73,16 @@ class TestCoordinatorRunCacheIntegration:
 
         # Setup - Mock eligible issues from cache (force refresh scenario)
         mock_get_cached_issues.return_value = [
-            {
-                "number": 456,
-                "state": "open",
-                "labels": ["status-02:awaiting-planning"],
-                "title": "Force refresh test",
-                "body": "Test",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/456",
-                "locked": False,
-                "author_association": None,
-            }
+            make_issue_data(
+                number=456,
+                labels=["status-02:awaiting-planning"],
+                title="Force refresh test",
+                body="Test",
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                updated_at="2025-12-31T09:00:00Z",
+                url="https://github.com/user/test_repo/issues/456",
+            )
         ]
 
         # Execute
@@ -228,34 +225,26 @@ class TestCoordinatorRunCacheIntegration:
 
         # Setup - Multiple eligible issues
         mock_get_cached_issues.return_value = [
-            {
-                "number": 156,
-                "state": "open",
-                "labels": ["status-08:ready-pr"],
-                "title": "First issue - will fail",
-                "body": "This will cause dispatch to fail",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/156",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 157,
-                "state": "open",
-                "labels": ["status-05:plan-ready"],
-                "title": "Second issue - would succeed",
-                "body": "This should not be processed due to fail-fast",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/157",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                number=156,
+                labels=["status-08:ready-pr"],
+                title="First issue - will fail",
+                body="This will cause dispatch to fail",
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                updated_at="2025-12-31T09:00:00Z",
+                url="https://github.com/user/test_repo/issues/156",
+            ),
+            make_issue_data(
+                number=157,
+                labels=["status-05:plan-ready"],
+                title="Second issue - would succeed",
+                body="This should not be processed due to fail-fast",
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                updated_at="2025-12-31T09:00:00Z",
+                url="https://github.com/user/test_repo/issues/157",
+            ),
         ]
 
         # Setup - First dispatch fails with ValueError (missing branch)
@@ -334,20 +323,16 @@ class TestCacheUpdateIntegration:
         mock_branch_mgr_class.return_value = mock_branch_mgr
 
         # Setup - Mock issue with status-02:awaiting-planning
-        test_issue = {
-            "number": 123,
-            "state": "open",
-            "labels": ["status-02:awaiting-planning", "enhancement"],
-            "title": "Test issue",
-            "body": "Test",
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "updated_at": "2025-12-31T09:00:00Z",
-            "url": "https://github.com/user/test_repo/issues/123",
-            "locked": False,
-            "author_association": None,
-        }
+        test_issue = make_issue_data(
+            number=123,
+            labels=["status-02:awaiting-planning", "enhancement"],
+            title="Test issue",
+            body="Test",
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            updated_at="2025-12-31T09:00:00Z",
+            url="https://github.com/user/test_repo/issues/123",
+        )
         mock_get_cached_issues.return_value = [test_issue]
 
         # Setup - dispatch_workflow succeeds (no exception)
@@ -425,20 +410,16 @@ class TestCacheUpdateIntegration:
         mock_branch_mgr_class.return_value = mock_branch_mgr
 
         # Setup - Mock issue
-        test_issue = {
-            "number": 456,
-            "state": "open",
-            "labels": ["status-05:plan-ready"],
-            "title": "Test issue",
-            "body": "Test",
-            "assignees": [],
-            "user": "testuser",
-            "created_at": "2025-12-31T08:00:00Z",
-            "updated_at": "2025-12-31T09:00:00Z",
-            "url": "https://github.com/user/test_repo/issues/456",
-            "locked": False,
-            "author_association": None,
-        }
+        test_issue = make_issue_data(
+            number=456,
+            labels=["status-05:plan-ready"],
+            title="Test issue",
+            body="Test",
+            user="testuser",
+            created_at="2025-12-31T08:00:00Z",
+            updated_at="2025-12-31T09:00:00Z",
+            url="https://github.com/user/test_repo/issues/456",
+        )
         mock_get_cached_issues.return_value = [test_issue]
 
         # Setup - dispatch_workflow succeeds, but cache update fails
@@ -520,48 +501,36 @@ class TestCacheUpdateIntegration:
 
         # Setup - Multiple issues with different priority labels (sorted by priority)
         test_issues = [
-            {
-                "number": 101,
-                "state": "open",
-                "labels": ["status-08:ready-pr"],  # Highest priority
-                "title": "PR ready issue",
-                "body": "Test",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/101",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 102,
-                "state": "open",
-                "labels": ["status-05:plan-ready"],  # Medium priority
-                "title": "Plan ready issue",
-                "body": "Test",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/102",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 103,
-                "state": "open",
-                "labels": ["status-02:awaiting-planning"],  # Lower priority
-                "title": "Planning needed issue",
-                "body": "Test",
-                "assignees": [],
-                "user": "testuser",
-                "created_at": "2025-12-31T08:00:00Z",
-                "updated_at": "2025-12-31T09:00:00Z",
-                "url": "https://github.com/user/test_repo/issues/103",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                number=101,
+                labels=["status-08:ready-pr"],  # Highest priority
+                title="PR ready issue",
+                body="Test",
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                updated_at="2025-12-31T09:00:00Z",
+                url="https://github.com/user/test_repo/issues/101",
+            ),
+            make_issue_data(
+                number=102,
+                labels=["status-05:plan-ready"],  # Medium priority
+                title="Plan ready issue",
+                body="Test",
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                updated_at="2025-12-31T09:00:00Z",
+                url="https://github.com/user/test_repo/issues/102",
+            ),
+            make_issue_data(
+                number=103,
+                labels=["status-02:awaiting-planning"],  # Lower priority
+                title="Planning needed issue",
+                body="Test",
+                user="testuser",
+                created_at="2025-12-31T08:00:00Z",
+                updated_at="2025-12-31T09:00:00Z",
+                url="https://github.com/user/test_repo/issues/103",
+            ),
         ]
         mock_get_cached_issues.return_value = test_issues
 
