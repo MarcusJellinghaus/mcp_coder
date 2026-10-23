@@ -8,3 +8,11 @@ pr_info/steps/step_9.md:15 — low — When `_issue` is retyped to return `Issue
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_8.md:24, change the `_make_pr_issue` snippet so it keeps the current default from tests/workflows/vscodeclaude/test_checks.py:73. Use `labels=labels if labels is not None else ["status-10:pr-created"]`, with `title="PR Created Issue"` and `assignees=["testuser"]` as the non-default fields. Remove or reword the \'(keep existing None handling)\' note so it agrees with the snippet.', 'In pr_info/steps/step_9.md near line 15, add an instruction to put `from mcp_coder.mcp_workspace_github import IssueData` in tests/services/test_branch_info.py when `_issue` is retyped to return `IssueData`.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-10-23
+**Findings**:
+Plan and issue read; now checking the plan's file list and named tests against the code.`pr_info/steps/step_6.md:22` — medium — The sentinel list names only `test_failure_handling.py` (~186) and `test_prerequisites.py` (~55). It leaves out the third "not found" sentinel at `tests/workflows/create_plan/test_main.py:131` (`empty_issue_data = IssueData(number=0, title="", state="", url="", ...)`). Line 25 then sends "all other literals" to `make_issue_data(...)`, which contradicts issue item 4 for that site. Add `test_main.py` `empty_issue_data` (~line 131) to the list of sites that use `create_empty_issue_data()`.
+**Decisions**:
+Verdict(decision='tasks', tasks=["In pr_info/steps/step_6.md:22, add the `empty_issue_data` sentinel in tests/workflows/create_plan/test_main.py (around line 131) to the list of sites that use `create_empty_issue_data()`. That way the 'all other literals -> make_issue_data(...)' rule on line 25 no longer covers it, which matches issue item 4."], escalate_reason=None)
+**Changes**:
+applied
