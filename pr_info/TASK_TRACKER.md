@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Test factory `make_issue_data` ([step_2.md](./steps/step_2.md))
-- [ ] Implementation: `tests/test_github_factories.py` (2 tests) + `tests/github_factories.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `tests/test_github_factories.py` (2 tests) + `tests/github_factories.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: `prerequisites.py` uses `create_empty_issue_data()` ([step_3.md](./steps/step_3.md))
 - [ ] Implementation: sentinel assertion in `test_prerequisites.py` + replace `IssueData(...)` literal in `prerequisites.py`
