@@ -50,6 +50,7 @@ from mcp_workspace.github_operations.issues import (
 )
 from mcp_workspace.github_operations.issues import _save_cache_file as save_cache_file
 from mcp_workspace.github_operations.issues import (
+    create_empty_issue_data,
     get_all_cached_issues,
     update_issue_labels_in_cache,
 )
@@ -95,6 +96,7 @@ __all__: list[str] = [
     "CommentData",
     "CacheData",
     "EventData",
+    "create_empty_issue_data",
     "get_all_cached_issues",
     "update_issue_labels_in_cache",
     # Cache helpers (public re-exports drop the underscore)
