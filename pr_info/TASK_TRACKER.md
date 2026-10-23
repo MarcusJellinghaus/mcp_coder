@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Switch formatter to ruff, update CI / import-linter / comments, reformat
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: config, CI, import-linter, gitignore and comment edits; run `run_format_code` over `src`, `tests`, `tools`
-- [ ] Quality checks: pylint, pytest, mypy (plus format check, ruff check, lint-imports) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: config, CI, import-linter, gitignore and comment edits; run `run_format_code` over `src`, `tests`, `tools`
+- [x] Quality checks: pylint, pytest, mypy (plus format check, ruff check, lint-imports) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Update docs to the ruff toolchain
 See [step_2.md](./steps/step_2.md)

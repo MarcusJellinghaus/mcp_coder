@@ -61,9 +61,7 @@ def execute_get_base_branch(args: argparse.Namespace) -> int:
         # resolve_project_dir raises ValueError for invalid directories
         logger.error("%s", e)
         return 2
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error("Error detecting base branch: %s", e)
         logger.debug("Exception details:", exc_info=True)
         return 2
@@ -209,9 +207,7 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
         # resolve_project_dir raises ValueError for invalid directories
         logger.error("%s", e)
         return 2
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error("Error during checkout-issue-branch: %s", e)
         logger.debug("Exception details:", exc_info=True)
         return 2

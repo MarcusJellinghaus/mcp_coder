@@ -421,7 +421,7 @@ def dispatch_workflow(
 
         if not resolved_branch:
             logger.error(
-                f"No branch found for issue #{issue['number']} \"{issue['title']}\"\n"
+                f'No branch found for issue #{issue["number"]} "{issue["title"]}"\n'
                 f"  Checked: linkedBranches, draft/open PRs\n"
                 f"  Issue URL: {issue['url']}\n"
                 f"  Requirement: Issue must have linked branch or draft/open PR"

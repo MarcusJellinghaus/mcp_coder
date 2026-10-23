@@ -367,9 +367,7 @@ class TestCompactDiffUncommittedChanges:
             "mcp_coder.cli.commands.git_tool.get_git_diff_for_commit"
         ) as mock_uncommitted:
             mock_uncommitted.return_value = (
-                "=== STAGED CHANGES ===\n"
-                "diff --git debug.log debug.log\n"
-                "+log content"
+                "=== STAGED CHANGES ===\ndiff --git debug.log debug.log\n+log content"
             )
 
             args = argparse.Namespace(

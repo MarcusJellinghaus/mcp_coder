@@ -8,7 +8,7 @@ Import Organization:
     Layer 2: Operations that depend on Layer 1 utilities
 
 Note: Import order is critical to prevent circular imports.
-      isort is disabled for this file - do not reorder imports.
+      import sorting is disabled for this file - do not reorder imports.
 """
 
 # isort: skip_file

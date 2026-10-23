@@ -91,9 +91,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
             error_msg = f"Failed to stage changes in repository at {project_dir}. Check if you have write permissions and the repository is in a valid state."
             logger.error(error_msg)
             return False, "", error_msg
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         error_msg = f"Error staging changes: {str(e)}. Ensure the git repository is accessible and not corrupted."
         logger.error("Git staging operation failed: %s", e, exc_info=True)
         return False, "", error_msg
@@ -113,9 +111,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
             return False, "", error_msg
 
         logger.debug("Git diff retrieved successfully, %d characters", len(git_diff))
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         error_msg = f"Error retrieving git diff: {str(e)}. Check if git is properly installed and the repository is accessible."
         logger.error("Git diff operation failed: %s", e, exc_info=True)
         return False, "", error_msg
@@ -138,9 +134,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
         error_msg = f"Commit prompt template not found: {str(e)}. The prompts.md file may be missing or corrupted."
         logger.error("Prompt file not found: %s", e, exc_info=True)
         return False, "", error_msg
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         error_msg = f"Failed to load commit prompt template: {str(e)}. Check if the prompts.md file is readable and properly formatted."
         logger.error("Prompt loading failed: %s", e, exc_info=True)
         return False, "", error_msg
@@ -183,9 +177,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
         error_msg = str(e)
         logger.error("Claude API error: %s", error_msg)
         return False, "", error_msg
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         error_msg = f"LLM communication failed: {str(e)}. Check your internet connection and API credentials. If the error persists, the AI service may be temporarily unavailable."
         logger.error("LLM request failed: %s", e, exc_info=True)
         return False, "", error_msg
@@ -222,9 +214,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
         logger.debug("Successfully generated commit message: %s", first_line)
         return True, commit_message, None
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         error_msg = f"Error parsing LLM response: {str(e)}. The AI response may be in an unexpected format."
         logger.error("Response parsing failed: %s", e, exc_info=True)
         return False, "", error_msg

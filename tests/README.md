@@ -61,21 +61,26 @@ tests/
 def test_validation():
     pass
 
-@pytest.mark.git_integration  
+
+@pytest.mark.git_integration
 def test_git_workflow(git_repo):
     pass
+
 
 @pytest.mark.claude_cli_integration
 def test_claude_cli():
     pass
 
+
 @pytest.mark.claude_api_integration
 def test_claude_api():
     pass
 
+
 @pytest.mark.formatter_integration
 def test_formatter():
     pass
+
 
 @pytest.mark.github_integration
 def test_github_operations(issue_manager):

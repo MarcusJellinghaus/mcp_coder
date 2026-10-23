@@ -489,8 +489,7 @@ def run_rebase_workflow(
     if baseline:
         logger.log(
             OUTPUT,
-            "%d pre-existing failure(s) in baseline — "
-            "these will not block the rebase",
+            "%d pre-existing failure(s) in baseline — these will not block the rebase",
             len(baseline),
         )
 
@@ -521,8 +520,7 @@ def run_rebase_workflow(
                     # Resolved commit became empty (all changes already on base).
                     logger.log(
                         OUTPUT,
-                        "Skipping commit made redundant by rebase "
-                        "(already on base)...",
+                        "Skipping commit made redundant by rebase (already on base)...",
                     )
                     result = _run_git(project_dir, "rebase", "--skip")
                     continue

@@ -188,9 +188,12 @@ def execute_verify(args: argparse.Namespace) -> int:
     ):
         if is_prompt_configured_but_missing(configured, project_dir):
             prompts_ok = False
-            marker, value = symbols["failure"], (
-                f"{configured} — configured but not found; "
-                "shipped default used instead"
+            marker, value = (
+                symbols["failure"],
+                (
+                    f"{configured} — configured but not found; "
+                    "shipped default used instead"
+                ),
             )
         else:
             source_label = _prompt_source(configured, "shipped default")

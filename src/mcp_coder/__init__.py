@@ -14,12 +14,11 @@ Example:
 
 # isort: skip_file
 #
-# This module's import order is load-bearing and must NOT be auto-sorted. isort
-# is configured with `float_to_top`, which hoists every import to the top of the
-# file and would move the dependency guard below the heavy imports — defeating
-# it. `skip_file` freezes the order here; the imports below are kept sorted by
-# hand. (black still runs; pylint's import-position checks are convention-class
-# and disabled project-wide.)
+# This module's import order is load-bearing and must NOT be auto-sorted: the
+# dependency guard below has to run before the heavy imports. ruff's import
+# sorter (`I`) honours `skip_file`, so the order here is frozen and the imports
+# below are kept sorted by hand. The try/except already separates the guard
+# from the import block; the directive is a defensive guarantee on top.
 
 # Fail cleanly (not with a cryptic traceback) when a mandatory dependency is
 # missing — e.g. a `pip install --no-deps` install. This guard MUST run before
@@ -72,9 +71,7 @@ try:
     from importlib.metadata import version
 
     __version__ = version("mcp-coder")
-except (
-    Exception
-):  # pylint: disable=broad-exception-caught  # optional import fallback — broad catch intentional
+except Exception:  # pylint: disable=broad-exception-caught  # optional import fallback — broad catch intentional
     # Fallback for development/editable installs without proper metadata
     __version__ = "0.0.0.dev0+unknown"
 

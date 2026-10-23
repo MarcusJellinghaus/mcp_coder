@@ -87,9 +87,7 @@ def run_formatters(project_dir: Path) -> bool:
     except ValueError as e:
         # resolve_steps inside the wrapper: a config error, not a step failure.
         raise FormatterConfigError(str(e)) from e
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error running formatters: {e}")
         return False
 
@@ -172,9 +170,7 @@ def commit_changes(
         )
         return True
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error committing changes: {e}")
         if commit_message:
             logger.error(f"Commit message was: {commit_message}")
@@ -209,8 +205,6 @@ def push_changes(project_dir: Path, force_with_lease: bool = False) -> bool:
             logger.info("Changes pushed successfully to remote")
         return True
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error pushing changes: {e}")
         return False

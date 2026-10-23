@@ -35,8 +35,7 @@ def _format_launch_error(server_name: str, command: object, exc: BaseException) 
     """
     cmd_str = command if isinstance(command, str) and command else "<unknown>"
     return (
-        f"MCP server {server_name!r} failed to launch: "
-        f"{cmd_str} ({type(exc).__name__})"
+        f"MCP server {server_name!r} failed to launch: {cmd_str} ({type(exc).__name__})"
     )
 
 

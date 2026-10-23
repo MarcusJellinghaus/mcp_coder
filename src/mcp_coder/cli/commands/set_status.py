@@ -58,9 +58,7 @@ def build_set_status_epilog() -> str:
         config_path = get_labels_config_path(None)
         labels_config = load_labels_config(config_path)
         return format_status_labels(labels_config)
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         # Log at debug level to aid troubleshooting (Decision #9)
         logger.debug(f"Failed to build set-status epilog: {e}")
         return "Run in a project directory to see available status labels."
@@ -318,8 +316,6 @@ def execute_set_status(args: argparse.Namespace) -> int:
         logger.error("%s", e)
         return 1
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
         return 1

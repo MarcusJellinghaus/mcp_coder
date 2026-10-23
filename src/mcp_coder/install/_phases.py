@@ -177,8 +177,7 @@ def phase_overrides(
             else f"no [tool.mcp-coder.install-from-github] in {pyproject}"
         )
         print(
-            f"--- skipping GitHub overrides ({reason}); "
-            "sibling packages come from PyPI"
+            f"--- skipping GitHub overrides ({reason}); sibling packages come from PyPI"
         )
     if overrides.packages:
         cmd = [uv_bin, "pip", "install", "--python", str(py_v)]

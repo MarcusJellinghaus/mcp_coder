@@ -91,9 +91,9 @@ def test_duplicate_handling(label: str, inputs: list[str], expected_count: int) 
     count = 0
     while h.up("") is not None:
         count += 1
-    assert (
-        count == expected_count
-    ), f"Case '{label}': expected {expected_count}, got {count}"
+    assert count == expected_count, (
+        f"Case '{label}': expected {expected_count}, got {count}"
+    )
 
 
 @pytest.mark.parametrize("blank_input", ["  ", "\t", "\n", ""])

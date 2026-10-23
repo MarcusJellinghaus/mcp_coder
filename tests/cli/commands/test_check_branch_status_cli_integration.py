@@ -193,9 +193,9 @@ class TestCheckBranchStatusCommandIntegration:
 
         subparser = subparsers_actions[0]
         # Check if 'check' is in the choices
-        assert (
-            "check" in subparser.choices
-        ), "check command should be implemented in main.py"
+        assert "check" in subparser.choices, (
+            "check command should be implemented in main.py"
+        )
 
         # Verify the check parser has branch-status subcommand
         check_parser = subparser.choices["check"]
@@ -209,9 +209,9 @@ class TestCheckBranchStatusCommandIntegration:
         assert check_subparsers, "No subparsers found in check parser"
 
         branch_status_subparser = check_subparsers[0]
-        assert (
-            "branch-status" in branch_status_subparser.choices
-        ), "branch-status subcommand should be implemented under check"
+        assert "branch-status" in branch_status_subparser.choices, (
+            "branch-status subcommand should be implemented under check"
+        )
 
         # Parse test arguments to verify structure
         branch_status_parser = branch_status_subparser.choices["branch-status"]

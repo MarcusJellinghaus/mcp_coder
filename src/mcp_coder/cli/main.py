@@ -1,7 +1,4 @@
-"""Main CLI entry point for MCP Coder.
-
-isort:skip_file
-"""
+"""Main CLI entry point for MCP Coder."""
 
 # ruff: noqa: E402 — faulthandler.enable() must run before the heavy
 # imports below it; see the comment at its call site.
@@ -389,9 +386,7 @@ def main() -> int:
         logger.log(OUTPUT, "Operation cancelled by user.")
         return 1
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error in CLI: {e}", exc_info=True)
         return 2
 

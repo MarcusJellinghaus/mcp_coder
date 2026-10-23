@@ -81,8 +81,7 @@ class CommandRegistry:
         return Response(
             actions=(
                 OutputText(
-                    text=f"Unknown command: {name}. "
-                    "Type /help for available commands."
+                    text=f"Unknown command: {name}. Type /help for available commands."
                 ),
             )
         )

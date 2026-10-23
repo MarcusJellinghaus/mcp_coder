@@ -119,8 +119,7 @@ def validate_target_repo(folder_path: Path) -> None:
     else:
         if declared_extras is None:
             logger.warning(
-                "%s declares no [tool.mcp-coder.install] extras; "
-                "falling back to 'dev'",
+                "%s declares no [tool.mcp-coder.install] extras; falling back to 'dev'",
                 pyproject,
             )
         if not github_config.packages and not github_config.packages_no_deps:
@@ -322,18 +321,12 @@ def prepare_and_launch_session(
 
         return session
 
-    except (
-        Exception
-    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # Cleanup working folder on failure
         if folder_path.exists():
             try:
-                shutil.rmtree(
-                    folder_path, onerror=_remove_readonly
-                )  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
-            except (
-                Exception
-            ) as cleanup_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                shutil.rmtree(folder_path, onerror=_remove_readonly)  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
+            except Exception as cleanup_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.warning(
                     "Failed to cleanup folder %s: %s",
                     folder_path,
@@ -473,9 +466,7 @@ def process_eligible_issues(
             )
             started_sessions.append(session)
 
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(
                 "Failed to start session for issue #%d: %s",
                 issue["number"],

@@ -70,8 +70,7 @@ def ensure_dependencies() -> None:
         file=sys.stderr,
     )
     print(
-        "This looks like a --no-deps install. Reinstall with:  "
-        "pip install mcp-coder",
+        "This looks like a --no-deps install. Reinstall with:  pip install mcp-coder",
         file=sys.stderr,
     )
     raise SystemExit(1)

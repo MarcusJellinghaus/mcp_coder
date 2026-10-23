@@ -428,8 +428,7 @@ class TestEnvironmentSection:
     def test_installed_package_row_pinned_exact_string(self) -> None:
         """Derive expected post-migration string from constants and pin it."""
         expected = (
-            f"  {'mcp-coder'.ljust(_LABEL_WIDTH)} "
-            f"{''.ljust(_MARKER_SLOT_WIDTH)} 1.2.3"
+            f"  {'mcp-coder'.ljust(_LABEL_WIDTH)} {''.ljust(_MARKER_SLOT_WIDTH)} 1.2.3"
         )
         assert _format_row("mcp-coder", "", "1.2.3", indent=2) == expected
 

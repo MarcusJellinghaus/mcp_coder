@@ -125,9 +125,9 @@ def test_help_text_command_column_alignment() -> None:
     for line in command_lines:
         assert len(line) > expected_col, f"Line too short: {line!r}"
         desc_char = line[expected_col]
-        assert (
-            desc_char != " "
-        ), f"Description not aligned at column {expected_col}: {line!r}"
+        assert desc_char != " ", (
+            f"Description not aligned at column {expected_col}: {line!r}"
+        )
 
 
 def test_help_text_has_usage_line() -> None:

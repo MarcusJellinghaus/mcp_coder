@@ -214,10 +214,7 @@ class TestCheckPrerequisitesTaskTracker:
         task_tracker = pr_info_dir / "TASK_TRACKER.md"
         # Valid tracker with required sections
         task_tracker.write_text(
-            "# Task Status Tracker\n\n"
-            "## Tasks\n\n"
-            "- [ ] Test task\n\n"
-            "## Pull Request\n"
+            "# Task Status Tracker\n\n## Tasks\n\n- [ ] Test task\n\n## Pull Request\n"
         )
 
         # Call check_prerequisites() with INFO level logging captured
@@ -292,7 +289,6 @@ class TestIntegration:
                 return_value=[MagicMock()],
             ),
         ):
-
             # Mock filesystem checks for check_prerequisites
             with patch.object(Path, "exists", return_value=True):
                 # This would be the typical usage pattern
@@ -315,7 +311,6 @@ class TestIntegration:
                 return_value={"staged": [], "modified": [], "untracked": []},
             ),
         ):
-
             # Git clean fails, so workflow would stop here
             assert check_git_clean(project_dir) is False
 
@@ -337,7 +332,6 @@ class TestIntegration:
                 return_value="main",
             ),
         ):
-
             # Git clean passes, but main branch check fails
             assert check_git_clean(project_dir) is True
             assert check_main_branch(project_dir) is False

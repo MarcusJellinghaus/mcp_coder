@@ -46,7 +46,7 @@ _CI_UNKNOWN_MESSAGES: dict[CIStatus, str] = {
         "rate limits."
     ),
     CIStatus.UNAVAILABLE: (
-        "CI status is unavailable — check the GitHub token and its " "permissions."
+        "CI status is unavailable — check the GitHub token and its permissions."
     ),
     CIStatus.NOT_CONFIGURED: (
         "No CI runs were found, or status could not be collected — re-run "

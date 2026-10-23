@@ -431,8 +431,7 @@ def _format_tools_exposed_section(
     elif not tools:
         marker, ok, value = symbols["failure"], False, "0 tools exposed"
         hint = (
-            "-> server connected but exposed 0 tools; "
-            "check 'alwaysLoad' in .mcp.json"
+            "-> server connected but exposed 0 tools; check 'alwaysLoad' in .mcp.json"
         )
     else:
         marker, ok, value = (

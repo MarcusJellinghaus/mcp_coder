@@ -76,9 +76,9 @@ class TestCreatePRWorkflowIntegration:
         assert is_clean, "Working directory not clean"
         assert current_branch is not None, "Could not get current branch name"
         assert base_branch is not None, f"Could not detect base branch: {base_branch}"
-        assert (
-            current_branch != base_branch
-        ), f"Current branch '{current_branch}' equals base branch '{base_branch}'"
+        assert current_branch != base_branch, (
+            f"Current branch '{current_branch}' equals base branch '{base_branch}'"
+        )
         assert len(incomplete_tasks) == 0, f"Found incomplete tasks: {incomplete_tasks}"
 
         # Should pass prerequisites now

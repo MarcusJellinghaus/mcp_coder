@@ -326,7 +326,7 @@ def _remove_item(text: str, span: Span) -> str:
     elif code[before - 1 : before] == ",":
         comma_before = before - 1
     elif code[before - 1 : before] != "[" or code[after : after + 1] != "]":
-        raise PersistError(f"no comma adjacent to {text[span.start:span.end]}")
+        raise PersistError(f"no comma adjacent to {text[span.start : span.end]}")
     out = text[:start] + text[end:]
     line_start = out.rfind("\n", 0, start) + 1
     line_end = out.find("\n", start)

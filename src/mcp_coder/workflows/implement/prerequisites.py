@@ -52,9 +52,7 @@ def check_main_branch(project_dir: Path) -> bool:
     try:
         current_branch = get_current_branch_name(project_dir)
         main_branch = get_default_branch_name(project_dir)
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking current branch: {e}")
         return False
 
@@ -132,9 +130,7 @@ def has_implementation_tasks(project_dir: Path) -> bool:
 
         # Return True if there are any tasks at all (complete or incomplete)
         return len(all_tasks) > 0
-    except (
-        Exception
-    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # If any exception occurs (file not found, section not found, etc.),
         # it means there are no proper implementation tasks
         return False

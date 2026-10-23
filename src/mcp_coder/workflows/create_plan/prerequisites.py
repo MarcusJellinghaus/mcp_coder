@@ -76,9 +76,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
 
         logger.info(f"✓ Issue #{issue_data['number']} exists: '{issue_data['title']}'")
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"✗ Error fetching issue #{issue_number}: {e}")
         return (False, empty_issue_data)
 
@@ -149,9 +147,7 @@ def manage_branch(
 
     except BaseBranchMissingError:
         raise
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error("Error managing branch: %s", e)
         return None
 
@@ -202,9 +198,7 @@ def create_pr_info_structure(project_dir: Path) -> bool:
         logger.info("Created pr_info/ directory structure successfully")
         return True
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Failed to create pr_info/ directory structure: {e}")
         return False
 
@@ -286,7 +280,5 @@ def update_success_label(project_dir: Path, issue_number: int) -> None:
         else:
             logger.warning("✗ Failed to update issue label (non-blocking)")
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error updating issue label (non-blocking): {e}")

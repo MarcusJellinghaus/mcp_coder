@@ -121,8 +121,6 @@ def _execute_review(args: argparse.Namespace, config: ReviewConfig) -> int:
         logger.log(OUTPUT, "Operation cancelled by user.")
         return 1
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error in {config.name} command: {e}", exc_info=True)
         return 1

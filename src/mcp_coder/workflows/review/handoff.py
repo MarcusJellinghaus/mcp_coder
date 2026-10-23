@@ -56,8 +56,7 @@ _FAIL_REASONS: dict[str, tuple[str, str]] = {
 _REBASE_HANDOFF: dict[str, tuple[str, str, str]] = {
     "dirty_tree": (
         "Uncommitted changes",
-        "Rebase not attempted: the working tree has staged or modified tracked "
-        "files",
+        "Rebase not attempted: the working tree has staged or modified tracked files",
         "Commit or discard the listed files, then re-run the review",
     ),
     "no_base": (

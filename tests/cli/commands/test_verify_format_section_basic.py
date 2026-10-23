@@ -111,9 +111,9 @@ class TestBranchProtectionNesting:
         for child_label in ("CI checks required", "Force push", "Branch deletion"):
             child_lines = [line for line in lines if child_label in line]
             assert len(child_lines) == 1, f"Expected 1 line for {child_label}"
-            assert child_lines[0].startswith(
-                "    "
-            ), f"{child_label} should be at 4-space indent"
+            assert child_lines[0].startswith("    "), (
+                f"{child_label} should be at 4-space indent"
+            )
 
     def test_children_suppressed_when_parent_fails(self) -> None:
         """404: Only parent line appears when branch_protection ok=False."""
@@ -224,9 +224,9 @@ class TestBranchProtectionNesting:
         ]
         for line in content_lines:
             assert line.startswith("  "), f"Expected 2-space indent: {line!r}"
-            assert not line.startswith(
-                "    "
-            ), f"Non-GitHub entry should not be at 4-space indent: {line!r}"
+            assert not line.startswith("    "), (
+                f"Non-GitHub entry should not be at 4-space indent: {line!r}"
+            )
 
 
 class TestGitHubLabelMappings:
@@ -527,9 +527,9 @@ class TestPermissionProbes:
             result = self._all_ok_result()
             output = _format_section("GITHUB", result, self._symbols())
             for label in _PERM_LABELS:
-                assert (
-                    _format_row(label, "[OK]", "granted", indent=4) in output
-                ), f"Missing OK row for {label}"
+                assert _format_row(label, "[OK]", "granted", indent=4) in output, (
+                    f"Missing OK row for {label}"
+                )
         elif scenario == "one-missing":
             result = self._all_ok_result()
             result["perm_workflows_read"] = {
@@ -543,9 +543,9 @@ class TestPermissionProbes:
             for label in _PERM_LABELS:
                 if label == "Actions: Read":
                     continue
-                assert (
-                    _format_row(label, "[OK]", "granted", indent=4) in output
-                ), f"Missing OK row for {label}"
+                assert _format_row(label, "[OK]", "granted", indent=4) in output, (
+                    f"Missing OK row for {label}"
+                )
         else:
             assert scenario == "repo-inaccessible"
             err = "repository not accessible"

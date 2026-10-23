@@ -229,7 +229,9 @@ class TestBranchHandlingIntegration:
             "MockBranchManager",
             (),
             {
-                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: None,
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: (
+                    None
+                ),
             },
         )()
 
@@ -321,7 +323,9 @@ class TestBranchHandlingIntegration:
                 "MockBranchManager",
                 (),
                 {
-                    "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-branch",
+                    "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: (
+                        "feat-branch"
+                    ),
                 },
             )(),
         )
@@ -391,7 +395,9 @@ class TestBranchHandlingIntegration:
             "MockBranchManager",
             (),
             {
-                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: "feat-branch",
+                "get_branch_with_pr_fallback": lambda self, issue_number, repo_owner, repo_name: (
+                    "feat-branch"
+                ),
             },
         )()
 
