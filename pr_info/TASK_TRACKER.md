@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: fix-conflict sets the final label on every handled outcome — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: extend `_patch_all`, parametrized status-74/status-10 tests, `_fail` helper and verdict branching in `core.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: extend `_patch_all`, parametrized status-74/status-10 tests, `_fail` helper and verdict branching in `core.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Docs — describe the fix-conflict outcomes — [step_2.md](./steps/step_2.md)
 
