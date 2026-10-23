@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Update docs to the ruff toolchain
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: update the five documentation files to describe the ruff toolchain
-- [ ] Quality checks: pylint, pytest, mypy (plus format check, `isort|black` search) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update the five documentation files to describe the ruff toolchain
+- [x] Quality checks: pylint, pytest, mypy (plus format check, `isort|black` search) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

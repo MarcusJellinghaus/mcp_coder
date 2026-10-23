@@ -13,7 +13,7 @@ pytest -m "not git_integration and not claude_cli_integration and not claude_api
 pytest -m git_integration            # File system operations
 pytest -m claude_cli_integration     # Claude CLI tests (requires CLI installed)
 pytest -m claude_api_integration     # Claude API tests (requires auth)
-pytest -m formatter_integration      # Code formatter tests (black, isort)
+pytest -m formatter_integration      # Code formatter tests (ruff)
 pytest -m github_integration         # GitHub API (requires config)
 
 # Run specific subdirectories
@@ -51,7 +51,7 @@ tests/
 | `git_integration` | File system + git ops | < 60s | Git |
 | `claude_cli_integration` | Claude CLI calls | Variable | CLI installed |
 | `claude_api_integration` | Claude API calls | Variable | Auth setup |
-| `formatter_integration` | Code formatting | < 30s | black, isort |
+| `formatter_integration` | Code formatting | < 30s | ruff |
 | `github_integration` | GitHub API operations | < 30s | GitHub config |
 
 ## Marking Tests

@@ -405,7 +405,7 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 ## 8. Cross-cutting Concepts
 
 ### CI Pipeline
-- **Matrix-based execution**: Each check (black, isort, pylint, tests, mypy) runs as independent job with individual pass/fail status
+- **Matrix-based execution**: Each check (ruff, ruff-format, pylint, tests, mypy) runs as independent job with individual pass/fail status
 - **Parallel execution**: All checks run simultaneously with `fail-fast: false`
 
 ### Testing Strategy & Markers

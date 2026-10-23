@@ -74,7 +74,7 @@ All checks run automatically on pull requests (see `.github/workflows/ci.yml`).
 
 **Architecture (6)**: Layered architecture, domain independence, formatter independence, external services independence, git local isolation, jenkins isolation
 
-**Third-party (7)**: github, git, jenkins, mcp_tools_py, requests, black, isort
+**Third-party (5)**: github, git, jenkins, mcp_tools_py, requests
 
 **Tests (2)**: No test imports in source, test module independence
 
