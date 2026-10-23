@@ -3,13 +3,14 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from mcp_coder.mcp_workspace_github import IssueData, create_empty_issue_data
+from mcp_coder.mcp_workspace_github import create_empty_issue_data
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 from mcp_coder.workflows.create_plan import (
     check_pr_info_not_exists,
     check_prerequisites,
     create_pr_info_structure,
 )
+from tests.github_factories import make_issue_data
 
 
 class TestCheckPrerequisites:
@@ -18,19 +19,16 @@ class TestCheckPrerequisites:
     def test_check_prerequisites_success(self, tmp_path: Path) -> None:
         """Test check_prerequisites with valid issue."""
         # Create mock issue data
-        mock_issue_data = IssueData(
+        mock_issue_data = make_issue_data(
             number=123,
             title="Test Issue",
             body="Test issue body",
-            state="open",
             labels=["bug"],
             assignees=["testuser"],
             user="author",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/123",
-            locked=False,
-            author_association=None,
         )
 
         # Mock IssueManager
@@ -52,20 +50,7 @@ class TestCheckPrerequisites:
     def test_check_prerequisites_issue_not_found(self, tmp_path: Path) -> None:
         """Test check_prerequisites when issue is not found."""
         # Create empty issue data (number == 0 indicates not found)
-        empty_issue_data = IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-            author_association=None,
-        )
+        empty_issue_data = create_empty_issue_data()
 
         # Mock IssueManager to return empty issue data
         with patch(
@@ -100,19 +85,15 @@ class TestCheckPrerequisites:
     def test_check_prerequisites_logs_issue_details(self, tmp_path: Path) -> None:
         """Test check_prerequisites logs issue details on success."""
         # Create mock issue data with specific details
-        mock_issue_data = IssueData(
+        mock_issue_data = make_issue_data(
             number=456,
             title="Feature Request: Add logging",
             body="We need better logging",
-            state="open",
             labels=["enhancement"],
-            assignees=[],
             user="testuser",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/456",
-            locked=False,
-            author_association=None,
         )
 
         # Mock IssueManager
@@ -165,19 +146,16 @@ class TestCheckPrerequisites:
     ) -> None:
         """Test check_prerequisites returns complete IssueData with all fields."""
         # Create complete mock issue data with all fields populated
-        mock_issue_data = IssueData(
+        mock_issue_data = make_issue_data(
             number=789,
             title="Complete Issue Data Test",
             body="This is a complete test issue with all fields",
-            state="open",
             labels=["bug", "high-priority", "needs-review"],
             assignees=["user1", "user2"],
             user="issue_creator",
             created_at="2024-01-01T12:00:00",
             updated_at="2024-01-15T14:30:00",
             url="https://github.com/test/repo/issues/789",
-            locked=False,
-            author_association=None,
         )
 
         # Mock IssueManager

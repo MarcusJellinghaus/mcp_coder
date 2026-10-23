@@ -5,9 +5,10 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.mcp_workspace_github import IssueData, create_empty_issue_data
 from mcp_coder.workflow_utils.failure_handling import WorkflowFailure
 from mcp_coder.workflows.create_plan import run_create_plan_workflow
+from tests.github_factories import make_issue_data
 
 # Common patch prefix
 _CORE = "mcp_coder.workflows.create_plan.core"
@@ -19,19 +20,16 @@ class TestMain:
     @pytest.fixture
     def mock_issue_data(self) -> IssueData:
         """Create mock issue data for testing."""
-        return IssueData(
+        return make_issue_data(
             number=123,
             title="Test Issue",
             body="Test issue body",
-            state="open",
             labels=["enhancement"],
             assignees=["testuser"],
             user="author",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/123",
-            locked=False,
-            author_association=None,
         )
 
     def _run_workflow_with_patches(  # noqa: PLR0913
@@ -128,20 +126,7 @@ class TestMain:
         """Test main function when prerequisites validation fails."""
         (tmp_path / ".git").mkdir()
 
-        empty_issue_data = IssueData(
-            number=0,
-            title="",
-            body="",
-            state="",
-            labels=[],
-            assignees=[],
-            user=None,
-            created_at=None,
-            updated_at=None,
-            url="",
-            locked=False,
-            author_association=None,
-        )
+        empty_issue_data = create_empty_issue_data()
 
         with (
             patch(f"{_CORE}.is_working_directory_clean", return_value=True),
