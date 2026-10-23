@@ -21,7 +21,7 @@ Inline literals → `make_issue_data(...)` per the shared rules. Helpers become 
 | Helper | New body |
 |---|---|
 | `test_assessment_issue_facts.py::_make_issue(*, ...)` | `return make_issue_data(<params + non-defaults>)` |
-| `test_checks.py::_make_pr_issue(number, labels=None) -> IssueData` | `return make_issue_data(number=number, labels=labels or [], <non-defaults>)` (keep existing `None` handling) |
+| `test_checks.py::_make_pr_issue(number, labels=None) -> IssueData` | `return make_issue_data(number=number, title="PR Created Issue", labels=labels if labels is not None else ["status-10:pr-created"], assignees=["testuser"])` |
 | `test_checks_review_comments.py::_make_issue(number) -> IssueData` | `return make_issue_data(number=number, <non-defaults>)` |
 | `test_session_launch.py::_make_issue() -> IssueData` | `return make_issue_data(<non-defaults>)` |
 | `test_session_launch_regenerate.py` `mock_issue` fixture | `return make_issue_data(<non-defaults>)` |
