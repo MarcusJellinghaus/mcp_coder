@@ -6,7 +6,7 @@ See [summary.md](summary.md). One commit.
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_1.md`. Implement Step 1 exactly
 > as specified: edit the config, CI, import-linter, gitignore and the four comment/docstring
-> locations, check the ruff version precondition, then run `run_format_code` with
+> locations, then run `run_format_code` with
 > `target_directories=["src", "tests", "tools"]` and run all listed checks. Make no hand
 > edits to import order and no other code changes. Do not touch docs (that is Step 2).
 > Commit everything as one commit.
@@ -99,20 +99,15 @@ Replace the isort bullet. Suggested:
 
 ```
 apply all edits above (no import-order hand edits)
-r = run_format_code(target_directories=["src","tests","tools"], check_only=True)
-tool_ver = ruff version printed in r;  latest = Bash `uvx ruff@latest version`
-if tool_ver < latest:
-    upgrade ruff in the mcp-tools-py tool env to latest (Bash), re-check tool_ver
-    if the upgrade fails: write one line to pr_info/.blocked.txt and stop
 run_format_code(target_directories=["src","tests","tools"])   # ruff_imports → ruff_format
 run checks below; all must pass → format → commit
 ```
 
 Notes:
-- `uvx ruff@latest version` is a Bash call (no MCP tool reports the latest PyPI release).
-  Before running it, state the justification as CLAUDE.md requires. The same applies to
-  the ruff upgrade in the tool env. The upgrade keeps CI's first `ruff format --check`
-  (latest ruff from `.[dev]`) in agreement with the reformat.
+- No ruff version check. The reformat uses the ruff bundled with mcp-tools-py; CI's
+  `ruff-format` row (latest ruff from `.[dev]`, prints `ruff version`) is the
+  version-drift guard. If it fails after the reformat, upgrade ruff in mcp-tools-py and
+  re-run `run_format_code`.
 - Expected from `ruff_imports`: import-order fixes in `src/mcp_coder/mcp_workspace_github.py`
   and `tests/workflows/vscodeclaude/test_assessment_issue_facts.py`. Expected from
   `ruff_format`: ~109 reformatted files (64 src, 44 tests incl. `tests/README.md`,
@@ -131,10 +126,13 @@ No new functions, signatures or data structures. `run_format_code` resolves to t
 - `run_pylint_check`
 - `run_mypy_check`
 - `run_pytest_check` with the fast unit-test marker filter from CLAUDE.md and `-n auto`
-- `.venv\Scripts\python -m mcp_coder verify` — the Formatter row shows `ruff_imports → ruff_format`
-  (other rows may report environment-specific issues; only the Formatter row matters here)
 
 deptry runs in CI on the PR (`DEP002`/`DEP003`).
+
+Manual, after the PR is up (Marcus — not part of the implementation step):
+`.venv\Scripts\python -m mcp_coder verify` — the Formatter row shows `ruff_imports → ruff_format`
+(other rows may report environment-specific issues; only the Formatter row matters here).
+The `run_format_code(check_only=True)` check above already exercises formatter resolution.
 
 ## Commit
 
