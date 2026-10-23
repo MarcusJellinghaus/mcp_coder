@@ -49,7 +49,11 @@ return None
 - Keep the "Step 3/5", "Step 4/5" OUTPUT log lines inside `_cleanup_commit_push`.
 - Keep all patched names (`cleanup_repository`, `git_push`, `commit_all_changes`, `is_working_directory_clean`) imported
   in `core.py` so existing test patches still apply.
-- Check `core.py` stays under the file-size limit (`check_file_size`); phase B goes to a new module in step 9.
+- Both helpers stay in `core.py`: the existing tests patch `cleanup_repository`, `git_push`, `commit_all_changes`,
+  `is_working_directory_clean` at `core.*`. The CI file-size gate is 750 lines (`ci.yml:104`) and `core.py` is ~705
+  today, so everything else new goes elsewhere: `_rebase_if_needed` (step 7) and `_find_open_pr` / `_resume_cleanup`
+  (step 11) in `create_pr/pre_creation.py`, phase B logic in `create_pr/post_creation.py` (step 9).
+  Run `check_file_size(max_lines=750)` after this step and after steps 10 and 11.
 
 ## Tests (write first)
 - `_cleanup_commit_push`: success → `None`; cleanup False → `("cleanup", ...)`; commit error → `("cleanup", ...)`;

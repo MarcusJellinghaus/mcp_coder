@@ -25,10 +25,7 @@ from mcp_coder.cli.commands.verify_sections import (
 )
 from mcp_coder.cli.main import main
 from mcp_coder.utils.pyproject_config import PromptsConfig
-from tests.cli.commands.conftest import (
-    _assert_value_at_column,
-    _expected_value_column,
-)
+from tests.cli.commands.conftest import _assert_value_at_column, _expected_value_column
 
 
 class TestVerifyCommandIntegration:

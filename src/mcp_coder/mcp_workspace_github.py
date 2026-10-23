@@ -27,9 +27,7 @@ from mcp_workspace.github_operations import (
 )
 
 # CI results submodule (TypedDicts + helpers)
-from mcp_workspace.github_operations.ci_results_manager import (
-    JobData,
-)
+from mcp_workspace.github_operations.ci_results_manager import JobData
 
 # Issues subpackage
 from mcp_workspace.github_operations.issues import (
@@ -40,8 +38,6 @@ from mcp_workspace.github_operations.issues import (
     IssueData,
     IssueEventType,
     IssueManager,
-    get_all_cached_issues,
-    update_issue_labels_in_cache,
 )
 from mcp_workspace.github_operations.issues import (
     _get_cache_file_path as get_cache_file_path,
@@ -51,6 +47,10 @@ from mcp_workspace.github_operations.issues import (
     _log_stale_cache_entries as log_stale_cache_entries,
 )
 from mcp_workspace.github_operations.issues import _save_cache_file as save_cache_file
+from mcp_workspace.github_operations.issues import (
+    get_all_cached_issues,
+    update_issue_labels_in_cache,
+)
 from mcp_workspace.github_operations.issues.linked_branches_mixin import ClosingPRRef
 
 # PR submodule (TypedDicts)

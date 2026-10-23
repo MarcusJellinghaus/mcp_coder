@@ -11,10 +11,7 @@ import frontmatter
 
 from mcp_coder.icoder.core.command_registry import CommandRegistry
 from mcp_coder.icoder.core.types import Command, Response, SendToLLM
-from mcp_coder.icoder.permissions.skill_tools import (
-    SkillToolsBlock,
-    parse_tools_block,
-)
+from mcp_coder.icoder.permissions.skill_tools import SkillToolsBlock, parse_tools_block
 
 logger = logging.getLogger(__name__)
 

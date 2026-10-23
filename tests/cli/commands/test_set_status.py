@@ -118,9 +118,9 @@ class TestSetStatusHelpers:
         # Verify all label names and descriptions are present
         for label in full_labels_config["workflow_labels"]:
             assert label["name"] in result, f"Label '{label['name']}' missing"
-            assert label["description"] in result, (
-                f"Description for '{label['name']}' missing"
-            )
+            assert (
+                label["description"] in result
+            ), f"Description for '{label['name']}' missing"
 
         # Verify alignment: all description starts should be at the same column
         lines = result.split("\n")

@@ -322,9 +322,7 @@ class TestReadProblemDescription:
 
     def test_empty_file_uses_fallback(self, tmp_path: Path) -> None:
         """Empty temp file should return fallback response."""
-        from mcp_coder.workflow_steps.ci import (
-            _read_problem_description,
-        )
+        from mcp_coder.workflow_steps.ci import _read_problem_description
 
         temp_file = tmp_path / ".ci_problem_description.md"
         temp_file.write_text("")  # Empty file
@@ -336,9 +334,7 @@ class TestReadProblemDescription:
 
     def test_whitespace_only_file_uses_fallback(self, tmp_path: Path) -> None:
         """File with only whitespace should return fallback response."""
-        from mcp_coder.workflow_steps.ci import (
-            _read_problem_description,
-        )
+        from mcp_coder.workflow_steps.ci import _read_problem_description
 
         temp_file = tmp_path / ".ci_problem_description.md"
         temp_file.write_text("   \n\t\n  ")  # Whitespace only
@@ -350,9 +346,7 @@ class TestReadProblemDescription:
 
     def test_file_with_content_returns_content(self, tmp_path: Path) -> None:
         """File with content should return that content."""
-        from mcp_coder.workflow_steps.ci import (
-            _read_problem_description,
-        )
+        from mcp_coder.workflow_steps.ci import _read_problem_description
 
         temp_file = tmp_path / ".ci_problem_description.md"
         temp_file.write_text("Problem: test failed")
@@ -364,9 +358,7 @@ class TestReadProblemDescription:
 
     def test_missing_file_uses_fallback(self, tmp_path: Path) -> None:
         """Missing temp file should return fallback response."""
-        from mcp_coder.workflow_steps.ci import (
-            _read_problem_description,
-        )
+        from mcp_coder.workflow_steps.ci import _read_problem_description
 
         temp_file = tmp_path / ".ci_problem_description.md"
         # Don't create the file

@@ -6,8 +6,10 @@
 > Format the code and make exactly one commit for this step.
 
 ## WHERE
-- `src/mcp_coder/workflows/create_pr/core.py`
-- `tests/workflows/create_pr/test_workflow.py` (or `test_workflow_helpers.py` for the helper's unit tests)
+- New `src/mcp_coder/workflows/create_pr/pre_creation.py` — `_rebase_if_needed` (keeps `core.py` under the
+  750-line CI gate, `ci.yml:104`; step 11 adds the resume helpers to the same module)
+- `src/mcp_coder/workflows/create_pr/core.py` — imports and calls `_rebase_if_needed`
+- New `tests/workflows/create_pr/test_pre_creation.py` (helper unit tests), `tests/workflows/create_pr/test_workflow.py` (call order)
 
 ## WHAT
 ```python
@@ -27,21 +29,26 @@ outcome = _attempt_rebase_and_push(project_dir); logger.log(OUTPUT, "Rebase resu
 ```
 
 ## HOW
-- Imports: `needs_rebase` from `mcp_coder.mcp_workspace_git` (shim already exports it);
-  `_attempt_rebase_and_push` from `mcp_coder.workflow_steps.rebase`.
+- `pre_creation.py` imports: `needs_rebase`, `get_current_branch_name` from `mcp_coder.mcp_workspace_git` (shim already
+  exports them); `_attempt_rebase_and_push` from `mcp_coder.workflow_steps.rebase`; `detect_base_branch` from
+  `mcp_coder.workflow_utils.base_branch`. It must not import `create_pr.core` (no cycle).
+- `core.py`: `from mcp_coder.workflows.create_pr.pre_creation import _rebase_if_needed`.
 - Mirrors the `needs_rebase` error handling in `workflows/rebase.py:466`, but an error is logged and skipped, not a failure.
 - A failed rebase (`conflict`, `push_failed`, ...) is logged only; phase B handles a resulting `dirty` PR.
 - Adjust the "Step N/5" log labels if you add a numbered log line; keep it simple.
 
 ## Tests (write first)
-Patch `needs_rebase` and `_attempt_rebase_and_push` at `mcp_coder.workflows.create_pr.core.*`.
-- `(True, "...")` → `_attempt_rebase_and_push` called once, before `generate_pr_summary` (use a shared `MagicMock`
-  manager or call-order list).
+`test_pre_creation.py` — patch `needs_rebase`, `_attempt_rebase_and_push`, `get_current_branch_name`,
+`detect_base_branch` at `mcp_coder.workflows.create_pr.pre_creation.*`:
+- `(True, "...")` → `_attempt_rebase_and_push` called once.
 - `(False, "up to date")` → not called.
-- `(False, "error: fetch failed")` → not called, warning logged, workflow continues (exit 0).
-- Rebase outcome `conflict` → workflow continues.
-- Existing `test_workflow.py` tests: patch `_rebase_if_needed` (or `needs_rebase` returning `(False, "")`) where they
-  would otherwise hit git.
+- `(False, "error: fetch failed")` → not called, warning logged, returns normally.
+- Base `None` → `needs_rebase` not called, warning logged.
+- Rebase outcome `conflict` → returns normally.
+
+`test_workflow.py` — patch `mcp_coder.workflows.create_pr.core._rebase_if_needed`:
+- called once, before `generate_pr_summary` (shared `MagicMock` manager or call-order list).
+- Existing tests: patch `core._rebase_if_needed` where they would otherwise hit git.
 
 ## DATA
 Returns `None`.

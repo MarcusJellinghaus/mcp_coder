@@ -107,7 +107,9 @@ def _load_prompt_or_exit(header: str) -> str:
         logger.error(f"Critical error: Cannot load prompt '{header}': {e}")
         logger.error(f"Expected prompt file: {PROMPTS_FILE_PATH}")
         sys.exit(1)
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Unexpected error loading prompt '{header}': {e}")
         sys.exit(1)
 
@@ -259,10 +261,14 @@ def run_planning_prompts(
             )
             logger.info(f"Prompt 1 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_1['text'])} chars")
-        except Exception as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except (
+            Exception
+        ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 1 conversation: {storage_error}")
 
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 1: {e}")
         return (False, _prompt_failure(1, e))
 
@@ -328,10 +334,14 @@ def run_planning_prompts(
             )
             logger.info(f"Prompt 2 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_2['text'])} chars")
-        except Exception as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except (
+            Exception
+        ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 2 conversation: {storage_error}")
 
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 2: {e}")
         return (False, _prompt_failure(2, e))
 
@@ -375,10 +385,14 @@ def run_planning_prompts(
             )
             logger.info(f"Prompt 3 conversation logged to file: {stored_path}")
             logger.debug(f"  Response length: {len(response_3['text'])} chars")
-        except Exception as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except (
+            Exception
+        ) as storage_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to store prompt 3 conversation: {storage_error}")
 
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error executing prompt 3: {e}")
         return (False, _prompt_failure(3, e))
 

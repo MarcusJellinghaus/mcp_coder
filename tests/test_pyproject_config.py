@@ -38,9 +38,9 @@ def test_pyproject_typecheck_extra_exists() -> None:
 
     typecheck = config["project"]["optional-dependencies"]["typecheck"]
 
-    assert any(entry.startswith("mypy>=1.13") for entry in typecheck), (
-        f"typecheck extra must declare mypy>=1.13.0, got: {typecheck}"
-    )
-    assert "mcp-coder[types]" in typecheck, (
-        f"typecheck extra must reference [types] stubs group, got: {typecheck}"
-    )
+    assert any(
+        entry.startswith("mypy>=1.13") for entry in typecheck
+    ), f"typecheck extra must declare mypy>=1.13.0, got: {typecheck}"
+    assert (
+        "mcp-coder[types]" in typecheck
+    ), f"typecheck extra must reference [types] stubs group, got: {typecheck}"

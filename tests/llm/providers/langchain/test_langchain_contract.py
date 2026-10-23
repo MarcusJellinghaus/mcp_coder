@@ -241,9 +241,7 @@ class TestAzureContract:
         ``openai.AzureOpenAI`` falls back to these two. The construction
         assertion keeps the table from drifting from that fallback chain.
         """
-        from mcp_coder.llm.providers.langchain.openai_backend import (
-            create_openai_model,
-        )
+        from mcp_coder.llm.providers.langchain.openai_backend import create_openai_model
 
         monkeypatch.setenv(env_var, "azure-secret")
         base_url = "https://res.openai.azure.com/"
@@ -323,9 +321,7 @@ class TestGeminiApiKeySources:
         self, env_var: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Both SDK variables satisfy the rule and build a model."""
-        from mcp_coder.llm.providers.langchain.gemini_backend import (
-            create_gemini_model,
-        )
+        from mcp_coder.llm.providers.langchain.gemini_backend import create_gemini_model
 
         monkeypatch.setenv(env_var, "g-secret")
         assert validate(_config(backend="gemini", model="gemini-2.0-flash")) == []

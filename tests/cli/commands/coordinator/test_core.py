@@ -852,9 +852,9 @@ class TestDispatchWorkflowSilentFallthroughGuard:
         mock_jenkins.start_job.assert_called_once()
         params = mock_jenkins.start_job.call_args[0][1]
         command = params["COMMAND"]
-        assert f"mcp-coder --log-level INFO {workflow} " in command, (
-            f"COMMAND for {workflow!r} ({executor_os}) missing its verb"
-        )
+        assert (
+            f"mcp-coder --log-level INFO {workflow} " in command
+        ), f"COMMAND for {workflow!r} ({executor_os}) missing its verb"
         assert params["LABEL"] == f"test_repo - #777 - {workflow}"
 
 
@@ -1246,9 +1246,9 @@ class TestCommandTemplates:
             ("CREATE_PR_COMMAND_WINDOWS", CREATE_PR_COMMAND_WINDOWS),
         ]
         for name, template in templates:
-            assert "--update-labels" not in template, (
-                f"{name} still contains --update-labels"
-            )
+            assert (
+                "--update-labels" not in template
+            ), f"{name} still contains --update-labels"
 
 
 class TestBuildEligibleIssuesPrefetched:

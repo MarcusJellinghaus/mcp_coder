@@ -41,10 +41,7 @@ from mcp_coder.workflow_steps.commit import (
     push_changes,
     run_formatters,
 )
-from mcp_coder.workflow_utils.failure_handling import (
-    llm_failure_reason,
-    run_guarded,
-)
+from mcp_coder.workflow_utils.failure_handling import llm_failure_reason, run_guarded
 
 from . import reviewer
 from .config import ReviewConfig

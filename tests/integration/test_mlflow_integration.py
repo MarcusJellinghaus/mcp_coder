@@ -352,12 +352,12 @@ class TestMLflowWithRealInstallation:
         artifact_path = Path(artifact_path_str) / "conversation_data"
 
         # Verify conversation_data directory exists
-        assert artifact_path.exists(), (
-            f"Artifact directory not found at {artifact_path}"
-        )
-        assert artifact_path.is_dir(), (
-            f"Artifact path is not a directory: {artifact_path}"
-        )
+        assert (
+            artifact_path.exists()
+        ), f"Artifact directory not found at {artifact_path}"
+        assert (
+            artifact_path.is_dir()
+        ), f"Artifact path is not a directory: {artifact_path}"
 
         # Verify step_0_prompt.txt exists and contains prompt
         prompt_file = artifact_path / "step_0_prompt.txt"
@@ -367,34 +367,34 @@ class TestMLflowWithRealInstallation:
 
         # Verify step_0_conversation.json exists and contains conversation data
         conversation_file = artifact_path / "step_0_conversation.json"
-        assert conversation_file.exists(), (
-            f"step_0_conversation.json not found at {conversation_file}"
-        )
+        assert (
+            conversation_file.exists()
+        ), f"step_0_conversation.json not found at {conversation_file}"
         conversation_json = json.loads(conversation_file.read_text(encoding="utf-8"))
 
         # Verify conversation JSON structure and content
-        assert "prompt" in conversation_json, (
-            "prompt field missing in conversation.json"
-        )
-        assert conversation_json["prompt"] == prompt, (
-            "Prompt mismatch in conversation.json"
-        )
+        assert (
+            "prompt" in conversation_json
+        ), "prompt field missing in conversation.json"
+        assert (
+            conversation_json["prompt"] == prompt
+        ), "Prompt mismatch in conversation.json"
 
         assert "response_data" in conversation_json, "response_data field missing"
-        assert conversation_json["response_data"]["text"] == response_data["text"], (
-            "Response text mismatch"
-        )
-        assert conversation_json["response_data"]["provider"] == "claude", (
-            "Provider mismatch"
-        )
+        assert (
+            conversation_json["response_data"]["text"] == response_data["text"]
+        ), "Response text mismatch"
+        assert (
+            conversation_json["response_data"]["provider"] == "claude"
+        ), "Provider mismatch"
 
         assert "metadata" in conversation_json, "metadata field missing"
-        assert conversation_json["metadata"]["model"] == "claude-3-sonnet", (
-            "Model mismatch in metadata"
-        )
-        assert conversation_json["metadata"]["branch_name"] == "test-branch", (
-            "Branch name mismatch"
-        )
+        assert (
+            conversation_json["metadata"]["model"] == "claude-3-sonnet"
+        ), "Model mismatch in metadata"
+        assert (
+            conversation_json["metadata"]["branch_name"] == "test-branch"
+        ), "Branch name mismatch"
 
         # Properly cleanup MLflow to release file locks (critical on Windows)
         with contextlib.suppress(Exception):

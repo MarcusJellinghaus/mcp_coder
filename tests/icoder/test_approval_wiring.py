@@ -27,17 +27,9 @@ import pytest
 
 from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
-from mcp_coder.icoder.permissions import (
-    Matcher,
-    PermissionConfig,
-    Policy,
-    Rule,
-)
+from mcp_coder.icoder.permissions import Matcher, PermissionConfig, Policy, Rule
 from mcp_coder.icoder.permissions.approval import ApprovalDecision, ApprovalEngine
-from mcp_coder.icoder.permissions.gateway import (
-    _DENY_ASK,
-    LangchainEnforcementGateway,
-)
+from mcp_coder.icoder.permissions.gateway import _DENY_ASK, LangchainEnforcementGateway
 from mcp_coder.icoder.services.llm_service import FakeLLMService, RealLLMService
 from mcp_coder.llm.types import StreamEvent
 from tests.icoder.conftest import make_icoder_args, patch_icoder_deps

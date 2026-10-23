@@ -12,10 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.icoder.permissions.skill_tools import (
-    SkillToolsBlock,
-    parse_tools_block,
-)
+from mcp_coder.icoder.permissions.skill_tools import SkillToolsBlock, parse_tools_block
 from mcp_coder.icoder.skills import load_skills
 
 # --- Absent vs present-but-null (the fail-open boundary) ---

@@ -65,8 +65,11 @@ The refresh is best-effort and never changes a label. The LLM may answer `UNCHAN
 ## Files
 
 ### Created
+- `src/mcp_coder/workflows/create_pr/pre_creation.py` — `_rebase_if_needed`, `_find_open_pr`, `_resume_cleanup`
+  (keeps `create_pr/core.py`, ~705 lines today, under the 750-line CI file-size gate).
 - `src/mcp_coder/workflows/create_pr/post_creation.py` — phase B logic.
 - `src/mcp_coder/workflow_steps/pr_description.py` — PR text helpers + refresh.
+- `tests/workflows/create_pr/test_pre_creation.py`
 - `tests/workflows/create_pr/test_post_creation.py`
 - `tests/workflows/create_pr/test_resume.py`
 - `tests/workflow_steps/test_pr_description.py`

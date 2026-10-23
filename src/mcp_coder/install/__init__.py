@@ -21,13 +21,7 @@ never blocks on user input.
 
 from __future__ import annotations
 
-from ._env import (
-    InstallConfig,
-    ensure_system_uv,
-    exe,
-    run,
-    venv_bin,
-)
+from ._env import InstallConfig, ensure_system_uv, exe, run, venv_bin
 from ._phases import (
     phase_bootstrap_pip_uv,
     phase_install_main,

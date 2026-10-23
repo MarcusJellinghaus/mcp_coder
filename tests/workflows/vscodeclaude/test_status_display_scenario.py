@@ -6,12 +6,8 @@ from pathlib import Path
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
-from mcp_coder.workflows.vscodeclaude.status import (
-    display_status_table,
-)
-from mcp_coder.workflows.vscodeclaude.types import (
-    VSCodeClaudeSession,
-)
+from mcp_coder.workflows.vscodeclaude.status import display_status_table
+from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 
 
 class TestScenarioACrossModule:

@@ -27,9 +27,9 @@ class TestStaleTimeoutConfiguration:
         assert len(bot_busy_labels) > 0, "Should have at least one bot_busy label"
 
         for label in bot_busy_labels:
-            assert "stale_timeout_minutes" in label, (
-                f"bot_busy label '{label['name']}' should have stale_timeout_minutes field"
-            )
+            assert (
+                "stale_timeout_minutes" in label
+            ), f"bot_busy label '{label['name']}' should have stale_timeout_minutes field"
 
     def test_stale_timeout_values_are_positive_integers(
         self, labels_config_path: Path
@@ -45,12 +45,12 @@ class TestStaleTimeoutConfiguration:
 
         for label in bot_busy_labels:
             timeout = label.get("stale_timeout_minutes")
-            assert isinstance(timeout, int), (
-                f"stale_timeout_minutes for '{label['name']}' should be an integer"
-            )
-            assert timeout > 0, (
-                f"stale_timeout_minutes for '{label['name']}' should be positive"
-            )
+            assert isinstance(
+                timeout, int
+            ), f"stale_timeout_minutes for '{label['name']}' should be an integer"
+            assert (
+                timeout > 0
+            ), f"stale_timeout_minutes for '{label['name']}' should be positive"
 
     def test_expected_timeout_values(self, labels_config_path: Path) -> None:
         """Test specific timeout values match requirements."""
@@ -69,9 +69,9 @@ class TestStaleTimeoutConfiguration:
         }
 
         for internal_id, expected_timeout in expected_timeouts.items():
-            assert internal_id in labels_by_id, (
-                f"Label with internal_id '{internal_id}' should exist"
-            )
+            assert (
+                internal_id in labels_by_id
+            ), f"Label with internal_id '{internal_id}' should exist"
             label = labels_by_id[internal_id]
             actual_timeout = label.get("stale_timeout_minutes")
             assert actual_timeout == expected_timeout, (

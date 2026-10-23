@@ -12,10 +12,7 @@ from typing import Any
 import pytest
 
 from mcp_coder.workflows.vscodeclaude import session_setup
-from mcp_coder.workflows.vscodeclaude.types import (
-    SessionSpec,
-    write_session_spec,
-)
+from mcp_coder.workflows.vscodeclaude.types import SessionSpec, write_session_spec
 
 _MCP_VARS = (
     "MCP_CODER_VENV_PATH",

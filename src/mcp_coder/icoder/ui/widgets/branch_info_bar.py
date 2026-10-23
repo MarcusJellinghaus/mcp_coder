@@ -21,10 +21,7 @@ from textual.css.query import NoMatches
 from textual.message import Message
 from textual.widgets import Button, Static
 
-from mcp_coder.config.label_config import (
-    get_labels_config_path,
-    load_labels_config,
-)
+from mcp_coder.config.label_config import get_labels_config_path, load_labels_config
 from mcp_coder.services.branch_info import BranchInfo
 
 logger = logging.getLogger(__name__)

@@ -8,10 +8,7 @@ import pytest
 
 from mcp_coder.icoder.core.command_registry import CommandRegistry
 from mcp_coder.icoder.core.commands.help import register_help
-from mcp_coder.icoder.core.commands.info import (
-    _redact_env_vars,
-    register_info,
-)
+from mcp_coder.icoder.core.commands.info import _redact_env_vars, register_info
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.core.types import OutputText, Response
 from mcp_coder.icoder.env_setup import RuntimeInfo

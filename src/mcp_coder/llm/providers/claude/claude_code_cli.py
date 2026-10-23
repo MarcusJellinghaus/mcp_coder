@@ -7,10 +7,7 @@ import time
 from datetime import datetime
 from typing import Any, TypedDict
 
-from ....utils.subprocess_runner import (
-    CalledProcessError,
-    TimeoutExpired,
-)
+from ....utils.subprocess_runner import CalledProcessError, TimeoutExpired
 from ...logging_utils import log_llm_error, log_llm_request, log_llm_response
 from ...types import (
     LLM_RESPONSE_VERSION,
@@ -403,9 +400,9 @@ def ask_claude_code_cli(
     # Lazy (function-local) import to avoid the claude_code_cli <->
     # claude_code_cli_streaming circular import: the streaming module imports
     # helpers from this module at load time.
-    from .claude_code_cli_streaming import (  # pylint: disable=cyclic-import
+    from .claude_code_cli_streaming import (
         ask_claude_code_cli_stream,
-    )
+    )  # pylint: disable=cyclic-import
 
     # The real argv is built inside ask_claude_code_cli_stream and is not
     # exposed here; log a stable placeholder. The stream file path (captured

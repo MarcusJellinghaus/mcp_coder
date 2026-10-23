@@ -143,7 +143,9 @@ def _build_cached_issues_by_repo(
             }
             cached_issues_by_repo[repo_full_name] = issues_by_number
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
             logger.warning(f"Failed to build cache for {repo_name}: {e}")
             if repo_full_name:
                 failed_repos.add(repo_full_name)
@@ -355,7 +357,9 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         logger.error("%s", e)
         return 1
 
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
         # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise

@@ -5,10 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.utils import (
-    resolve_claude_settings_path,
-    resolve_mcp_config_path,
-)
+from mcp_coder.cli.utils import resolve_claude_settings_path, resolve_mcp_config_path
 from mcp_coder.utils.user_config import _CONFIG_SCHEMA
 
 

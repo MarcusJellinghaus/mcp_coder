@@ -129,9 +129,7 @@ class TestInitCommand:
         """Test that created config is valid TOML with expected sections."""
         from pathlib import Path
 
-        from mcp_coder.utils.user_config import (
-            create_default_config,
-        )
+        from mcp_coder.utils.user_config import create_default_config
 
         config_path = Path(str(tmp_path)) / ".mcp_coder" / "config.toml"
         monkeypatch.setattr(

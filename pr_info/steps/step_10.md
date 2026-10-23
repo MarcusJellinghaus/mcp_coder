@@ -46,6 +46,10 @@ log completion; return 0
   usually resolves after creation via open closing PRs; `None` only when the branch lacks the issue prefix, the PR has
   no closing reference, or the lookup fails — the closing-references fallback covers the first case.
 - Phase B always runs, also with `update_issue_labels=False`.
+- Keep `phase_b` a thin closure (branch lookup, `run_post_creation`, label/log); all decision logic stays in
+  `post_creation.py`. Removing the old label block should leave `core.py` roughly flat; confirm with
+  `check_file_size(max_lines=750)` — if it is over, move code into `create_pr/pre_creation.py` / `post_creation.py`,
+  never into an allowlist entry.
 
 ## Tests (write first)
 Patch `run_post_creation`, `update_workflow_label`, `IssueManager` at `mcp_coder.workflows.create_pr.core.*`, plus the

@@ -429,9 +429,9 @@ class TestImplementCommandError:
 
         subparser = subparsers_actions[0]
         # Check if 'implement' is in the choices
-        assert "implement" in subparser.choices, (
-            "implement command should be implemented in main.py"
-        )
+        assert (
+            "implement" in subparser.choices
+        ), "implement command should be implemented in main.py"
 
         # Verify the implement parser has the expected arguments
         implement_parser = subparser.choices["implement"]

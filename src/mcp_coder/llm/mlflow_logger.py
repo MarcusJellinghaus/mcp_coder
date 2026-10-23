@@ -83,7 +83,9 @@ class MLflowLogger:
         if self.config.enabled and is_mlflow_available():
             try:
                 self._initialize_mlflow()
-            except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
                 logger.warning(f"Failed to initialize MLflow: {e}")
                 self.config.enabled = False  # Disable to prevent further attempts
 
@@ -165,12 +167,16 @@ class MLflowLogger:
                     logger.debug(
                         f"MLflow experiment set to: {self.config.experiment_name}"
                     )
-            except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+            except (
+                Exception
+            ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
                 logger.warning(
                     f"Failed to set MLflow experiment '{self.config.experiment_name}': {e}"
                 )
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.error(f"Failed to initialize MLflow: {e}")
             raise
 
@@ -253,7 +259,9 @@ class MLflowLogger:
             logger.debug(f"Started MLflow run: {self.active_run_id}")
             return self.active_run_id
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to start MLflow run: {e}")
             return None
 
@@ -274,7 +282,9 @@ class MLflowLogger:
             mlflow.log_params(str_params)
             logger.debug(f"Logged {len(str_params)} parameters to MLflow")
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log parameters to MLflow: {e}")
 
     def log_metrics(self, metrics: dict[str, float], step: int | None = None) -> None:
@@ -306,7 +316,9 @@ class MLflowLogger:
                         mlflow.log_metric(key, value, step=step)
                 logger.debug(f"Logged {len(numeric_metrics)} metrics to MLflow")
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log metrics to MLflow: {e}")
 
     def log_artifact(self, content: str, filename: str) -> None:
@@ -342,7 +354,9 @@ class MLflowLogger:
                 except OSError:
                     pass
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log artifact '{filename}' to MLflow: {e}")
 
     def _log_step_params_and_artifacts(
@@ -445,13 +459,17 @@ class MLflowLogger:
                         response_data
                     )
                     numeric_metrics.update(perf_metrics)
-                except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
                     logger.debug(f"Failed to calculate performance metrics: {e}")
 
             self.log_metrics(numeric_metrics, step=step)
             self._advance_step()
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log conversation to MLflow: {e}")
 
     def log_error_metrics(
@@ -480,13 +498,17 @@ class MLflowLogger:
                         error, duration_ms
                     )
                     error_metrics.update(advanced_error_metrics)
-                except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+                except (
+                    Exception
+                ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
                     logger.debug(f"Failed to calculate advanced error metrics: {e}")
 
             self.log_metrics(error_metrics, step=self.current_step())
             self._advance_step()
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to log error metrics to MLflow: {e}")
 
     def log_conversation_artifacts(
@@ -538,7 +560,9 @@ class MLflowLogger:
             logger.debug(f"Ended MLflow run: {self.active_run_id}")
             self.active_run_id = None
 
-        except Exception as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
+        except (
+            Exception
+        ) as e:  # pylint: disable=broad-exception-caught  # mlflow graceful-degradation — optional dependency
             logger.warning(f"Failed to end MLflow run: {e}")
             self.active_run_id = None  # Clear anyway to prevent stuck state
 

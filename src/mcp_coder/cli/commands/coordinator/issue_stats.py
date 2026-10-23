@@ -13,10 +13,7 @@ from typing import Any
 
 from mcp_coder.mcp_workspace_git import get_repository_identifier
 
-from ....config.label_config import (
-    get_labels_config_path,
-    load_labels_config,
-)
+from ....config.label_config import get_labels_config_path, load_labels_config
 from ....mcp_workspace_github import IssueData, IssueManager
 from ....workflows.utils import resolve_project_dir
 
@@ -346,6 +343,8 @@ def execute_coordinator_issue_stats(args: argparse.Namespace) -> int:
         logger.error("%s", e)
         return 1
 
-    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except (
+        Exception
+    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error: {e}", exc_info=True)
         return 1

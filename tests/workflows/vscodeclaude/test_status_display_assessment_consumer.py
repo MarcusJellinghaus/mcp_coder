@@ -6,13 +6,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.workflows.vscodeclaude.status import (
-    display_status_table,
-)
-from mcp_coder.workflows.vscodeclaude.types import (
-    SessionAction,
-    VSCodeClaudeSession,
-)
+from mcp_coder.workflows.vscodeclaude.status import display_status_table
+from mcp_coder.workflows.vscodeclaude.types import SessionAction, VSCodeClaudeSession
 from tests.workflows.vscodeclaude.conftest import _build_assessment
 
 

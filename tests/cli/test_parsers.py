@@ -220,12 +220,12 @@ class TestBooleanOptionalFlags:
             ["create-pr"],
         ):
             args = self._parse(*cmd_args)
-            assert hasattr(args, "update_issue_labels"), (
-                f"{cmd_args[0]} missing update_issue_labels"
-            )
-            assert hasattr(args, "post_issue_comments"), (
-                f"{cmd_args[0]} missing post_issue_comments"
-            )
+            assert hasattr(
+                args, "update_issue_labels"
+            ), f"{cmd_args[0]} missing update_issue_labels"
+            assert hasattr(
+                args, "post_issue_comments"
+            ), f"{cmd_args[0]} missing post_issue_comments"
             assert args.update_issue_labels is None
             assert args.post_issue_comments is None
 

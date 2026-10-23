@@ -12,11 +12,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mcp_coder import (
-    deserialize_llm_response,
-    prompt_llm,
-    serialize_llm_response,
-)
+from mcp_coder import deserialize_llm_response, prompt_llm, serialize_llm_response
 from mcp_coder.llm.types import LLMResponseDict
 
 # The Claude CLI is mocked throughout, so any project directory will do.
