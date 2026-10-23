@@ -13,6 +13,7 @@ from mcp_coder.mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
+    create_empty_issue_data,
 )
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.utils.text_io import write_lf_text
@@ -49,20 +50,7 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
     logger.info("Checking prerequisites for plan creation...")
 
     # Create empty IssueData for failure cases
-    empty_issue_data = IssueData(
-        number=0,
-        title="",
-        body="",
-        state="",
-        labels=[],
-        assignees=[],
-        user=None,
-        created_at=None,
-        updated_at=None,
-        url="",
-        locked=False,
-        author_association=None,
-    )
+    empty_issue_data = create_empty_issue_data()
 
     # Fetch and validate GitHub issue
     try:
