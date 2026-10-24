@@ -225,7 +225,7 @@ def generate_pr_summary(
     # Get branch diff
     logger.info("Getting branch diff...")
     diff_content = get_branch_diff(
-        project_dir, base_branch=base_branch, exclude_paths=["pr_info/steps/"]
+        project_dir, base_branch=base_branch, exclude_paths=["pr_info/"]
     )
 
     if not diff_content or not diff_content.strip():
