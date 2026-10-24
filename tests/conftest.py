@@ -318,7 +318,9 @@ def github_test_setup(tmp_path: Path) -> Generator[GitHubTestSetup, None, None]:
     repo_source = (
         "env"
         if os.getenv("GITHUB_TEST_REPO_URL")
-        else "config" if test_repo_url else "none"
+        else "config"
+        if test_repo_url
+        else "none"
     )
     print(f"\nGitHub Integration: token={token_source}, repo={repo_source}")
 

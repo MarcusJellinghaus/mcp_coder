@@ -134,9 +134,9 @@ def _is_node_cancelled(exc: BaseException) -> bool:
         including when langgraph is absent or too old to define it.
     """
     try:
-        from langgraph.errors import (
+        from langgraph.errors import (  # pylint: disable=import-outside-toplevel
             NodeCancelledError,
-        )  # pylint: disable=import-outside-toplevel
+        )
     except ImportError:
         return False
     return isinstance(exc, NodeCancelledError)

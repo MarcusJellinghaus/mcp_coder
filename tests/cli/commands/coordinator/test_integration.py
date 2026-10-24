@@ -10,7 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.coordinator import execute_coordinator_run
+from mcp_coder.cli.commands.coordinator import (
+    execute_coordinator_run,
+)
 from mcp_coder.mcp_workspace_github import RepoIdentifier
 from tests.github_factories import make_issue_data
 

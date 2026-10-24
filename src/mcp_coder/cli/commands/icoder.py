@@ -13,12 +13,12 @@ from ...icoder.permissions.approval import ApprovalEngine
 from ...icoder.permissions.gateway import LangchainEnforcementGateway
 from ...icoder.permissions.skill_frame import build_frame
 from ...icoder.ui.widgets.session_picker import run_startup_picker
-from ...llm.providers.langchain._mcp_tools import (
+from ...llm.providers.langchain._mcp_tools import (  # noqa: PLC2701
     _load_mcp_server_config,
-)  # noqa: PLC2701
-from ...llm.providers.langchain.agent import (
+)
+from ...llm.providers.langchain.agent import (  # noqa: PLC2701
     _assert_tool_interceptors_supported,
-)  # noqa: PLC2701
+)
 from ...llm.providers.langchain.mcp_manager import MCPManager
 from ...utils.log_utils import OUTPUT
 from ...utils.tui_preparation import TuiChecker, TuiPreflightAbort
@@ -272,8 +272,6 @@ def execute_icoder(args: argparse.Namespace) -> int:
         logger.log(OUTPUT, "Operation cancelled by user.")
         return 1
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         logger.error(f"Unexpected error in icoder command: {e}", exc_info=True)
         return 1

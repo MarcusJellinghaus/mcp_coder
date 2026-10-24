@@ -252,13 +252,21 @@ from .assessment import (
 )
 
 # Audit trail
-from .audit import append_run, assessment_to_record, get_audit_file_path
+from .audit import (
+    append_run,
+    assessment_to_record,
+    get_audit_file_path,
+)
 
 # PR-health checks
 from .checks import check_pr_health
 
 # Cleanup
-from .cleanup import cleanup_stale_sessions, delete_session_folder, get_stale_sessions
+from .cleanup import (
+    cleanup_stale_sessions,
+    delete_session_folder,
+    get_stale_sessions,
+)
 
 # Configuration
 from .config import (
@@ -269,7 +277,11 @@ from .config import (
 )
 
 # Detection (Windows / IO boundary)
-from .detection import DetectionSnapshot, capture_detection_snapshot, gather_signals
+from .detection import (
+    DetectionSnapshot,
+    capture_detection_snapshot,
+    gather_signals,
+)
 
 # Helpers (re-exported for backward compatibility)
 from .helpers import (

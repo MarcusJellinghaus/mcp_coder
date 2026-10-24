@@ -9,9 +9,20 @@ git status to gate a destructive delete.
 import logging
 from pathlib import Path
 
-from ...utils.folder_deletion import DeletionFailureReason, safe_delete_folder
-from .helpers import add_to_be_deleted, load_to_be_deleted, remove_from_to_be_deleted
-from .sessions import load_sessions, remove_session, warn_orphan_folders
+from ...utils.folder_deletion import (
+    DeletionFailureReason,
+    safe_delete_folder,
+)
+from .helpers import (
+    add_to_be_deleted,
+    load_to_be_deleted,
+    remove_from_to_be_deleted,
+)
+from .sessions import (
+    load_sessions,
+    remove_session,
+    warn_orphan_folders,
+)
 from .types import SessionAction, SessionAssessment, VSCodeClaudeSession
 from .workspace import get_workspace_file_path
 

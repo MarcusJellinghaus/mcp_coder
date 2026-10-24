@@ -5,8 +5,12 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.workflows.vscodeclaude.status import display_status_table
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.status import (
+    display_status_table,
+)
+from mcp_coder.workflows.vscodeclaude.types import (
+    VSCodeClaudeSession,
+)
 
 
 class TestZombieSessionDisplay:

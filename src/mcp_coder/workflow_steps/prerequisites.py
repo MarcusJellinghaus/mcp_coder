@@ -44,9 +44,7 @@ def check_git_clean(project_dir: Path) -> bool:
                 for category, files in status.items():
                     if files:
                         logger.error(f"{category.capitalize()} files: {files}")
-            except (
-                Exception
-            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.debug(f"Could not get detailed status: {e}")
             return False
 

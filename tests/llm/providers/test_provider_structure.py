@@ -10,7 +10,9 @@ def test_providers_package_structure() -> None:
     assert mcp_coder.llm.providers.claude
 
     # Verify claude provider modules importable
-    from mcp_coder.llm.providers.claude import claude_code_cli
+    from mcp_coder.llm.providers.claude import (
+        claude_code_cli,
+    )
 
     assert hasattr(claude_code_cli, "ask_claude_code_cli")
 

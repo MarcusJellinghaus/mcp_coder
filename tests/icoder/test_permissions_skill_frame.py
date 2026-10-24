@@ -17,7 +17,11 @@ from mcp_coder.icoder.permissions.model import (
     PermissionFrame,
     ScenarioBlock,
 )
-from mcp_coder.icoder.permissions.skill_frame import as_base, build_frame, two_empties
+from mcp_coder.icoder.permissions.skill_frame import (
+    as_base,
+    build_frame,
+    two_empties,
+)
 from mcp_coder.icoder.permissions.skill_tools import SkillToolsBlock, parse_tools_block
 
 # --- Models A / B / C (valid rich blocks) ---

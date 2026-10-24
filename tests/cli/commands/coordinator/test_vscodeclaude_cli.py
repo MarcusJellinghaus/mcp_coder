@@ -27,7 +27,9 @@ class TestTemplates:
     def test_workspace_file_is_valid_json_template(self) -> None:
         """Workspace template produces valid JSON when formatted."""
 
-        from mcp_coder.workflows.vscodeclaude.templates import WORKSPACE_FILE_TEMPLATE
+        from mcp_coder.workflows.vscodeclaude.templates import (
+            WORKSPACE_FILE_TEMPLATE,
+        )
 
         formatted = WORKSPACE_FILE_TEMPLATE.format(
             folder_path="./test",
@@ -46,7 +48,9 @@ class TestTemplates:
 
     def test_tasks_json_is_valid_json_template(self) -> None:
         """Tasks template produces valid JSON when formatted."""
-        from mcp_coder.workflows.vscodeclaude.templates import TASKS_JSON_TEMPLATE
+        from mcp_coder.workflows.vscodeclaude.templates import (
+            TASKS_JSON_TEMPLATE,
+        )
 
         formatted = TASKS_JSON_TEMPLATE.format(script_path="test.bat")
         parsed = json.loads(formatted)
@@ -60,7 +64,9 @@ class TestTemplates:
 
     def test_status_file_template_has_placeholders(self) -> None:
         """Status file template has required placeholders."""
-        from mcp_coder.workflows.vscodeclaude.templates import STATUS_FILE_TEMPLATE
+        from mcp_coder.workflows.vscodeclaude.templates import (
+            STATUS_FILE_TEMPLATE,
+        )
 
         assert "{issue_number}" in STATUS_FILE_TEMPLATE
         assert "{title}" in STATUS_FILE_TEMPLATE
@@ -74,7 +80,9 @@ class TestTemplates:
 
     def test_status_file_template_formatting(self) -> None:
         """Status file template formats correctly."""
-        from mcp_coder.workflows.vscodeclaude.templates import STATUS_FILE_TEMPLATE
+        from mcp_coder.workflows.vscodeclaude.templates import (
+            STATUS_FILE_TEMPLATE,
+        )
 
         formatted = STATUS_FILE_TEMPLATE.format(
             issue_number=123,
@@ -94,13 +102,17 @@ class TestTemplates:
 
     def test_intervention_line_content(self) -> None:
         """Intervention line has correct content."""
-        from mcp_coder.workflows.vscodeclaude.templates import INTERVENTION_LINE
+        from mcp_coder.workflows.vscodeclaude.templates import (
+            INTERVENTION_LINE,
+        )
 
         assert "INTERVENTION" in INTERVENTION_LINE
 
     def test_banner_template_has_placeholders(self) -> None:
         """Banner template has required placeholders."""
-        from mcp_coder.workflows.vscodeclaude.templates import BANNER_TEMPLATE
+        from mcp_coder.workflows.vscodeclaude.templates import (
+            BANNER_TEMPLATE,
+        )
 
         assert "{emoji}" in BANNER_TEMPLATE
         assert "{issue_number}" in BANNER_TEMPLATE
@@ -111,7 +123,9 @@ class TestTemplates:
 
     def test_banner_template_formatting(self) -> None:
         """Banner template formats correctly."""
-        from mcp_coder.workflows.vscodeclaude.templates import BANNER_TEMPLATE
+        from mcp_coder.workflows.vscodeclaude.templates import (
+            BANNER_TEMPLATE,
+        )
 
         formatted = BANNER_TEMPLATE.format(
             emoji="\U0001f504",
@@ -133,7 +147,9 @@ class TestTemplates:
 
     def test_gitignore_entry_has_session_files(self) -> None:
         """Gitignore entry includes all generated files."""
-        from mcp_coder.workflows.vscodeclaude.templates import GITIGNORE_ENTRY
+        from mcp_coder.workflows.vscodeclaude.templates import (
+            GITIGNORE_ENTRY,
+        )
 
         assert ".vscodeclaude_status.txt" in GITIGNORE_ENTRY
         assert ".vscodeclaude_analysis.json" in GITIGNORE_ENTRY

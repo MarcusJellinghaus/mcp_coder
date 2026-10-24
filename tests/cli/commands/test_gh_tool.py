@@ -208,9 +208,9 @@ class TestGhToolCommandIntegration:
         assert gh_tool_subparsers, "gh-tool should have subparsers"
 
         gh_tool_subcommands = gh_tool_subparsers[0]
-        assert (
-            "get-base-branch" in gh_tool_subcommands.choices
-        ), "get-base-branch should be a subcommand of gh-tool"
+        assert "get-base-branch" in gh_tool_subcommands.choices, (
+            "get-base-branch should be a subcommand of gh-tool"
+        )
 
     def test_gh_tool_get_base_branch_help_shows_exit_codes(self) -> None:
         """Test that get-base-branch --help shows exit codes in epilog."""

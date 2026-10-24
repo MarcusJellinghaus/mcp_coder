@@ -33,8 +33,17 @@ from mcp_coder.workflow_utils.failure_handling import (
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
-from .constants import MAX_NO_CHANGE_RETRIES, PR_INFO_DIR, RUN_MYPY_AFTER_EACH_TASK
-from .failure_reporting import Progress, _comment_parts, _fail, append_detail
+from .constants import (
+    MAX_NO_CHANGE_RETRIES,
+    PR_INFO_DIR,
+    RUN_MYPY_AFTER_EACH_TASK,
+)
+from .failure_reporting import (
+    Progress,
+    _comment_parts,
+    _fail,
+    append_detail,
+)
 from .finalisation import run_finalisation
 from .prerequisites import check_git_clean, check_main_branch, check_prerequisites
 from .task_processing import (

@@ -4,7 +4,11 @@ This package contains the implementation workflow components for automated
 code development and refactoring tasks.
 """
 
-from mcp_coder.workflow_steps.commit import commit_changes, push_changes, run_formatters
+from mcp_coder.workflow_steps.commit import (
+    commit_changes,
+    push_changes,
+    run_formatters,
+)
 
 from .core import run_implement_workflow
 from .prerequisites import (
@@ -13,7 +17,10 @@ from .prerequisites import (
     check_prerequisites,
     has_implementation_tasks,
 )
-from .task_processing import check_and_fix_mypy, process_single_task
+from .task_processing import (
+    check_and_fix_mypy,
+    process_single_task,
+)
 from .task_tracker_prep import log_progress_summary, prepare_task_tracker
 
 __all__ = [

@@ -29,7 +29,11 @@ from mcp_coder.mcp_workspace_github import (
 )
 from mcp_coder.prompt_manager import get_prompt_with_substitutions
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.workflow_steps.commit import commit_changes, push_changes, run_formatters
+from mcp_coder.workflow_steps.commit import (
+    commit_changes,
+    push_changes,
+    run_formatters,
+)
 
 from .constants import (
     CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
@@ -577,9 +581,7 @@ def _read_problem_description(temp_file: Path, fallback_response: str) -> str:
                 logger.debug(f"Problem description:\n{content}")
                 return content
             logger.debug("Temp file was empty, using fallback")
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(f"Failed to read problem description file: {e}")
 
     logger.debug("Using analysis response as problem description")

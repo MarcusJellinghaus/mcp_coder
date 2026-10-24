@@ -31,13 +31,20 @@ from .config import (
     get_repo_short_name,
     load_repo_vscodeclaude_config,
 )
-from .helpers import build_session, get_issue_status, get_repo_short_name_from_full
+from .helpers import (
+    build_session,
+    get_issue_status,
+    get_repo_short_name_from_full,
+)
 from .issues import (
     _filter_eligible_vscodeclaude_issues,
     is_status_eligible_for_session,
     status_requires_linked_branch,
 )
-from .sessions import add_session, get_session_for_issue
+from .sessions import (
+    add_session,
+    get_session_for_issue,
+)
 from .types import (
     DEFAULT_PROMPT_TIMEOUT,
     RepoVSCodeClaudeConfig,
@@ -314,18 +321,12 @@ def prepare_and_launch_session(
 
         return session
 
-    except (
-        Exception
-    ):  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         # Cleanup working folder on failure
         if folder_path.exists():
             try:
-                shutil.rmtree(
-                    folder_path, onerror=_remove_readonly
-                )  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
-            except (
-                Exception
-            ) as cleanup_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                shutil.rmtree(folder_path, onerror=_remove_readonly)  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
+            except Exception as cleanup_error:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.warning(
                     "Failed to cleanup folder %s: %s",
                     folder_path,
@@ -465,9 +466,7 @@ def process_eligible_issues(
             )
             started_sessions.append(session)
 
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(
                 "Failed to start session for issue #%d: %s",
                 issue["number"],

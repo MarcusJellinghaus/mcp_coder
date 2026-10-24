@@ -41,7 +41,11 @@ from mcp_coder.icoder.permissions.model import Rule
 from mcp_coder.icoder.permissions.skill_frame import SkillFrame
 from mcp_coder.icoder.services.llm_service import LLMService
 from mcp_coder.llm.storage import store_session
-from mcp_coder.llm.types import TRANSIENT_EVENT_TYPES, ResponseAssembler, StreamEvent
+from mcp_coder.llm.types import (
+    TRANSIENT_EVENT_TYPES,
+    ResponseAssembler,
+    StreamEvent,
+)
 
 if TYPE_CHECKING:
     # Typing-only on purpose, matching ``services/llm_service.py`` and

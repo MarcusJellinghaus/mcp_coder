@@ -87,9 +87,7 @@ def delete_pr_info_directory(project_dir: Path) -> bool:
     except PermissionError as e:
         logger.error(f"Permission error deleting {pr_info_dir}: {e}")
         return False
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error deleting {pr_info_dir}: {e}")
         return False
 
@@ -130,9 +128,7 @@ def clean_profiler_output(project_dir: Path) -> bool:
     except PermissionError as e:
         logger.error(f"Permission error cleaning {prof_dir}: {e}")
         return False
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error cleaning {prof_dir}: {e}")
         return False
 
@@ -176,9 +172,7 @@ def check_prerequisites(project_dir: Path) -> bool:
     except TaskTrackerFileNotFoundError:
         logger.info("TASK_TRACKER.md not found - skipping task completeness check")
         # Continue with other prerequisites - task tracker is optional
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking incomplete tasks: {e}")
         return False
 
@@ -187,9 +181,7 @@ def check_prerequisites(project_dir: Path) -> bool:
     try:
         current_branch = get_current_branch_name(project_dir)
         base_branch = detect_base_branch(project_dir, current_branch=current_branch)
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking branch status: {e}")
         return False
 
@@ -249,9 +241,7 @@ def generate_pr_summary(
             f"Critical error: Cannot load prompt 'PR Summary Generation' from {PROMPTS_FILE_PATH}: {e}"
         )
         raise
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Unexpected error loading prompt 'PR Summary Generation': {e}")
         raise
 
@@ -285,9 +275,7 @@ def generate_pr_summary(
         logger.info("PR summary generated successfully")
         return title, body
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Critical error: LLM API failed: {e}")
         logger.error("Cannot generate PR summary without working LLM connection.")
         logger.error("Please fix LLM configuration before creating PR.")
@@ -374,9 +362,7 @@ def create_pull_request(
 
         return pr_result, None
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error creating pull request: {e}")
         return None, f"Error creating pull request: {e}"
 
@@ -415,9 +401,7 @@ def validate_branch_issue_linkage(project_dir: Path) -> int | None:
             return issue_number
         return None
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error validating branch-issue linkage: {e}")
         return None
 
@@ -445,9 +429,7 @@ def _add_pr_assignee_best_effort(project_dir: Path, pr_number: int) -> None:
         username = get_authenticated_username()
         PullRequestManager(project_dir).add_assignees(pr_number, username)
         logger.log(OUTPUT, "Assigned PR #%s to %s", pr_number, username)
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # best-effort; never fail the workflow
+    except Exception as e:  # pylint: disable=broad-exception-caught  # best-effort; never fail the workflow
         logger.warning("assignee-add failed (non-blocking): %s", e)
 
 
@@ -703,9 +685,7 @@ def run_create_pr_workflow(
                     else:
                         logger.warning("✗ Failed to update issue label (non-blocking)")
 
-                except (
-                    Exception
-                ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                     logger.error(f"Error updating issue label (non-blocking): {e}")
 
         if update_issue_labels and cached_issue_number is None:

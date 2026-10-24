@@ -7,7 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.verify import _run_mcp_edit_smoke_test, execute_verify
+from mcp_coder.cli.commands.verify import (
+    _run_mcp_edit_smoke_test,
+    execute_verify,
+)
 
 _LC_VERIFY = "mcp_coder.llm.providers.langchain.verification"
 _VERIFY = "mcp_coder.cli.commands.verify"

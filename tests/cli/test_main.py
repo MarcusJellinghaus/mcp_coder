@@ -7,7 +7,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mcp_coder.cli.main import _resolve_log_level, create_parser, main
+from mcp_coder.cli.main import (
+    _resolve_log_level,
+    create_parser,
+    main,
+)
 from mcp_coder.utils.subprocess_runner import execute_subprocess
 
 

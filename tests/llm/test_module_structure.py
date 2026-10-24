@@ -19,7 +19,11 @@ def test_llm_package_structure() -> None:
 
 def test_public_api_exports() -> None:
     """Verify public API exports work."""
-    from mcp_coder.llm import LLMResponseDict, prompt_llm, serialize_llm_response
+    from mcp_coder.llm import (
+        LLMResponseDict,
+        prompt_llm,
+        serialize_llm_response,
+    )
 
     assert LLMResponseDict is not None
     assert callable(prompt_llm)
