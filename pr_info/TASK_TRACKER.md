@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: `docs/cli-reference.md` — trust qualifiers
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: qualify `rebase --base-branch`, the `rebase` description and `gh-tool get-base-branch` priority 1
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: qualify `rebase --base-branch`, the `rebase` description and `gh-tool get-base-branch` priority 1
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: User-facing strings and `_resolve_base_branch` docstring
 See [step_3.md](./steps/step_3.md)
