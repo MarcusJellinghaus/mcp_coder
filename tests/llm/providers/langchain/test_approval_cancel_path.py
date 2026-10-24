@@ -191,9 +191,9 @@ def _run_cancel_probe() -> _ProbeResult:
     tool = make_blocking_tool(gate)
 
     def _cancel_when_parked() -> None:
-        assert wait_for(
-            lambda: gate.fired, timeout=_GATE_TIMEOUT
-        ), "the tool never reached its await"
+        assert wait_for(lambda: gate.fired, timeout=_GATE_TIMEOUT), (
+            "the tool never reached its await"
+        )
         loop = gate.loop
         future = gate.future
         assert loop is not None and future is not None
@@ -272,18 +272,18 @@ def test_cancelled_error_escapes_the_agent_stream() -> None:
     """
     result = _run_cancel_probe()
 
-    assert (
-        result.caught == []
-    ), f"_run's `except Exception` should see nothing, saw {result.caught!r}"
-    assert (
-        len(result.escaped) == 1
-    ), f"expected exactly one escaping exception, got {result.escaped!r}"
-    assert isinstance(
-        result.escaped[0], asyncio.CancelledError
-    ), f"expected CancelledError to escape, got {result.escaped[0]!r}"
-    assert (
-        result.model.invoke_count == 1
-    ), f"the turn re-planned: model invoked {result.model.invoke_count} times"
+    assert result.caught == [], (
+        f"_run's `except Exception` should see nothing, saw {result.caught!r}"
+    )
+    assert len(result.escaped) == 1, (
+        f"expected exactly one escaping exception, got {result.escaped!r}"
+    )
+    assert isinstance(result.escaped[0], asyncio.CancelledError), (
+        f"expected CancelledError to escape, got {result.escaped[0]!r}"
+    )
+    assert result.model.invoke_count == 1, (
+        f"the turn re-planned: model invoked {result.model.invoke_count} times"
+    )
 
 
 def test_cancel_leaves_no_error_and_kills_the_thread() -> None:
@@ -304,9 +304,9 @@ def test_cancel_leaves_no_error_and_kills_the_thread() -> None:
     error_events = [e for e in result.events if e.get("type") == "error"]
     assert error_events == [], f"cancel surfaced an error event: {error_events!r}"
     assert result.caught == [], f"cancel recorded an exception: {result.caught!r}"
-    assert (
-        result.thread.is_alive() is False
-    ), "agent thread still alive after join(5) — the cancel did not unwind it"
+    assert result.thread.is_alive() is False, (
+        "agent thread still alive after join(5) — the cancel did not unwind it"
+    )
 
 
 def test_a_precancelled_request_unwinds_the_turn_the_same_way() -> None:
@@ -335,15 +335,15 @@ def test_a_precancelled_request_unwinds_the_turn_the_same_way() -> None:
     error_events = [e for e in result.events if e.get("type") == "error"]
     assert error_events == [], f"the raise surfaced an error event: {error_events!r}"
     assert result.caught == [], f"the raise was recorded as an error: {result.caught!r}"
-    assert (
-        len(result.escaped) == 1
-    ), f"expected exactly one escaping exception, got {result.escaped!r}"
-    assert isinstance(
-        result.escaped[0], asyncio.CancelledError
-    ), f"langgraph converted the unwind into {result.escaped[0]!r}"
-    assert (
-        result.model.invoke_count == 1
-    ), f"the turn re-planned: model invoked {result.model.invoke_count} times"
-    assert (
-        result.thread.is_alive() is False
-    ), "agent thread still alive after join(5) — the raise did not unwind it"
+    assert len(result.escaped) == 1, (
+        f"expected exactly one escaping exception, got {result.escaped!r}"
+    )
+    assert isinstance(result.escaped[0], asyncio.CancelledError), (
+        f"langgraph converted the unwind into {result.escaped[0]!r}"
+    )
+    assert result.model.invoke_count == 1, (
+        f"the turn re-planned: model invoked {result.model.invoke_count} times"
+    )
+    assert result.thread.is_alive() is False, (
+        "agent thread still alive after join(5) — the raise did not unwind it"
+    )

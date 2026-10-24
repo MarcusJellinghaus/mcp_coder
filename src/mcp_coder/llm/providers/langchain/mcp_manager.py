@@ -12,9 +12,9 @@ import threading
 from dataclasses import dataclass
 from typing import Any, cast
 
-from mcp_coder.llm.providers.langchain._mcp_tools import (
+from mcp_coder.llm.providers.langchain._mcp_tools import (  # noqa: PLC2701
     _convert_server_tools,
-)  # noqa: PLC2701
+)
 
 logger = logging.getLogger(__name__)
 

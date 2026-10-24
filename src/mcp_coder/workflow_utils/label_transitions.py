@@ -144,8 +144,6 @@ def update_workflow_label(
             )
         return success
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # non-blocking by design
+    except Exception as e:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.error(f"Unexpected error updating workflow label: {e}")
         return False

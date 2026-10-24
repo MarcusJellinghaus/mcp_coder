@@ -185,9 +185,9 @@ def prompt_llm(
 
     with mlflow_conversation(question, provider, session_id, metadata) as mlflow_ctx:
         if provider == "langchain":
-            from .providers.langchain import (
+            from .providers.langchain import (  # lazy import  # noqa: PLC0415
                 ask_langchain,
-            )  # lazy import  # noqa: PLC0415
+            )
 
             try:
                 response = ask_langchain(
@@ -376,7 +376,9 @@ def prompt_llm_stream(
         )
 
     if provider == "langchain":
-        from .providers.langchain import ask_langchain_stream  # noqa: PLC0415
+        from .providers.langchain import (  # noqa: PLC0415
+            ask_langchain_stream,
+        )
 
         yield from ask_langchain_stream(
             question,
@@ -390,7 +392,9 @@ def prompt_llm_stream(
             approval_bridge=approval_bridge,
         )
     elif provider == "copilot":
-        from .providers.copilot import ask_copilot_cli_stream  # noqa: PLC0415
+        from .providers.copilot import (  # noqa: PLC0415
+            ask_copilot_cli_stream,
+        )
 
         # Derive logs_dir from env_vars (same as Claude)
         logs_dir = None
@@ -412,9 +416,9 @@ def prompt_llm_stream(
             system_prompt=copilot_system_prompt,
         )
     else:
-        from .providers.claude.claude_code_cli_streaming import (
+        from .providers.claude.claude_code_cli_streaming import (  # noqa: PLC0415
             ask_claude_code_cli_stream,
-        )  # noqa: PLC0415
+        )
 
         # Derive logs_dir from env_vars to store logs in mcp-coder's project dir
         logs_dir = None

@@ -26,7 +26,10 @@ from .issues import (
     is_status_eligible_for_session,
     status_requires_linked_branch,
 )
-from .session_launch import launch_vscode, regenerate_session_files
+from .session_launch import (
+    launch_vscode,
+    regenerate_session_files,
+)
 from .sessions import (
     load_sessions,
     remove_session,
@@ -407,9 +410,7 @@ def restart_closed_sessions(
             # Regenerate all session files with fresh data
             regenerate_session_files(session, issue)
 
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.warning(
                 "Failed to regenerate files for issue #%d: %s",
                 issue_number,
@@ -451,9 +452,7 @@ def restart_closed_sessions(
             )
             restarted.append(updated_session)
 
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             logger.error(
                 "Failed to restart session for issue #%d: %s",
                 session["issue_number"],

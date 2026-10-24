@@ -226,9 +226,7 @@ def execute_prompt(
         logger.info("Prompt command completed successfully")
         return 0
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
+    except Exception as e:  # pylint: disable=broad-exception-caught  # top-level CLI error boundary
         # Handle API errors
         logger.error("Prompt command failed: %s", str(e))
         return 1

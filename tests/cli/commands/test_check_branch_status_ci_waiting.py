@@ -19,7 +19,9 @@ class TestCIWaitingLogic:
         self, mock_sleep: Mock
     ) -> None:
         """With timeout=0, should return immediately without polling."""
-        from mcp_coder.cli.commands.check_branch_status import _wait_for_ci_completion
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
 
         mock_manager = Mock()
 
@@ -33,7 +35,9 @@ class TestCIWaitingLogic:
     @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
     def test_wait_for_ci_polls_until_completion(self, mock_sleep: Mock) -> None:
         """Should poll every 15 seconds until CI completes."""
-        from mcp_coder.cli.commands.check_branch_status import _wait_for_ci_completion
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
 
         mock_manager = Mock()
         # First call: in progress, Second call: completed
@@ -56,7 +60,9 @@ class TestCIWaitingLogic:
     @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
     def test_wait_for_ci_respects_timeout(self, mock_sleep: Mock) -> None:
         """Should respect timeout and return after max attempts."""
-        from mcp_coder.cli.commands.check_branch_status import _wait_for_ci_completion
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
 
         mock_manager = Mock()
         # Always return in_progress (never completes)
@@ -76,7 +82,9 @@ class TestCIWaitingLogic:
         self, mock_sleep: Mock, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Should log progress messages in human mode."""
-        from mcp_coder.cli.commands.check_branch_status import _wait_for_ci_completion
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
 
         mock_manager = Mock()
         mock_manager.get_latest_ci_status.side_effect = [
@@ -97,7 +105,9 @@ class TestCIWaitingLogic:
         self, mock_sleep: Mock, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Should not log OUTPUT messages in LLM mode."""
-        from mcp_coder.cli.commands.check_branch_status import _wait_for_ci_completion
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
         from mcp_coder.utils.log_utils import OUTPUT
 
         mock_manager = Mock()
@@ -115,7 +125,9 @@ class TestCIWaitingLogic:
     @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
     def test_wait_for_ci_early_exit_on_completion(self, mock_sleep: Mock) -> None:
         """Should exit immediately when CI completes."""
-        from mcp_coder.cli.commands.check_branch_status import _wait_for_ci_completion
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
 
         mock_manager = Mock()
         # CI already completed on first check
@@ -133,7 +145,9 @@ class TestCIWaitingLogic:
     @patch("mcp_coder.cli.commands.check_branch_status.time.sleep")
     def test_wait_for_ci_handles_api_errors_gracefully(self, mock_sleep: Mock) -> None:
         """Should handle API errors gracefully by raising RuntimeError."""
-        from mcp_coder.cli.commands.check_branch_status import _wait_for_ci_completion
+        from mcp_coder.cli.commands.check_branch_status import (
+            _wait_for_ci_completion,
+        )
 
         mock_manager = Mock()
         mock_manager.get_latest_ci_status.side_effect = Exception("API Error")

@@ -46,7 +46,9 @@ from mcp_coder.icoder.permissions.model import (
     Source,
 )
 from mcp_coder.icoder.permissions.resolver import resolve
-from mcp_coder.llm.providers.langchain.permission_bridge import build_deny_tool_message
+from mcp_coder.llm.providers.langchain.permission_bridge import (
+    build_deny_tool_message,
+)
 
 _DENY_NEVER = "This tool is disabled by permission policy."
 # Fail-closed fallback: an ``ask`` reached the seam with no engine able to prompt.

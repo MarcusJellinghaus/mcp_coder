@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import dataclasses
 
-from mcp_coder.icoder.core.autocomplete_state import compute_next_state
+from mcp_coder.icoder.core.autocomplete_state import (
+    compute_next_state,
+)
 from mcp_coder.icoder.core.command_registry import create_default_registry
 
 

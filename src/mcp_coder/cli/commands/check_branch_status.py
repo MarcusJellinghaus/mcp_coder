@@ -95,9 +95,7 @@ def _wait_for_ci_completion(
     for attempt in range(max_attempts):
         try:
             ci_status = ci_manager.get_latest_ci_status(branch)
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
             logger.error("CI API error during polling: %s", e)
             raise RuntimeError(f"API error during CI polling: {e}") from e
 
@@ -294,9 +292,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
                 if not ci_success and ci_status:
                     logger.debug("CI failed after waiting")
 
-            except (
-                Exception
-            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
                 logger.error(f"CI wait failed: {e}")
                 return 2  # Technical error
 
@@ -370,9 +366,7 @@ def execute_check_branch_status(args: argparse.Namespace) -> int:
         # No fixes attempted — the pure exit-code contract decides (2 -> 1 -> 0).
         return _exit_code(report, fail_on_reviews)
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
         logger.error(
             "Unexpected error in check_branch_status command: %s", e, exc_info=True
         )
@@ -455,9 +449,7 @@ def _run_auto_fixes(
 
         try:
             ci_manager = CIResultsManager(project_dir)
-        except (
-            Exception
-        ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
             logger.error(f"Failed to create CI manager: {e}")
             return False
 
@@ -483,9 +475,7 @@ def _run_auto_fixes(
             try:
                 old_status = ci_manager.get_latest_ci_status(current_branch)
                 old_run_ids = set(old_status.get("run", {}).get("run_ids", []))
-            except (
-                Exception
-            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
                 logger.warning(f"Could not get old CI run: {e}")
 
             # Poll for new run (max 30 seconds)
@@ -499,9 +489,7 @@ def _run_auto_fixes(
                         logger.info(f"New CI run detected: {new_run_ids}")
                         new_run_detected = True
                         break
-                except (
-                    Exception
-                ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
+                except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
                     logger.warning(f"Error checking for new CI run: {e}")
                     continue
 
@@ -530,8 +518,6 @@ def _run_auto_fixes(
         # Should never reach here
         return False
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow to specific GitHub/CI exceptions
         logger.error(f"Exception during CI fix: {e}")
         return False

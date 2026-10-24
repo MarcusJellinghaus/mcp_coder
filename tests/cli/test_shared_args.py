@@ -33,9 +33,7 @@ def _get_subparser(
         subactions = [
             action
             for action in current._actions  # pylint: disable=protected-access
-            if isinstance(
-                action, argparse._SubParsersAction
-            )  # pylint: disable=protected-access
+            if isinstance(action, argparse._SubParsersAction)  # pylint: disable=protected-access
         ]
         assert subactions, f"No subparsers on parser while resolving {name!r}"
         choices = subactions[0].choices

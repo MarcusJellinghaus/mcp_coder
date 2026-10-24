@@ -178,9 +178,7 @@ def _detect_from_pr(project_dir: Path, current_branch: str) -> str | None:
         logger.debug(f"No open PR found for branch '{current_branch}'")
         return None
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.debug(f"PR detection failed: {e}")
         return None
 
@@ -235,9 +233,7 @@ def _detect_from_issue(
         logger.debug(f"Issue #{issue_number} has no base_branch specified")
         return None
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.debug(f"Issue detection failed: {e}")
         return None
 
@@ -260,8 +256,6 @@ def _detect_default_branch(project_dir: Path) -> str | None:
         logger.debug("Could not determine default branch")
         return None
 
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.debug(f"Default branch detection failed: {e}")
         return None

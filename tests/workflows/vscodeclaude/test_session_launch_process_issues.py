@@ -7,7 +7,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
-from mcp_coder.workflows.vscodeclaude.session_launch import process_eligible_issues
+from mcp_coder.workflows.vscodeclaude.session_launch import (
+    process_eligible_issues,
+)
 
 
 class TestProcessEligibleIssuesBranchRequirement:

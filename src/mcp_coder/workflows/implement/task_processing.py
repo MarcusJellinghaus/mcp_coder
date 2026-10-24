@@ -17,9 +17,16 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.workflow_steps.commit import commit_changes, push_changes, run_formatters
+from mcp_coder.workflow_steps.commit import (
+    commit_changes,
+    push_changes,
+    run_formatters,
+)
 from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
-from mcp_coder.workflow_utils.task_tracker import TaskTrackerError, get_incomplete_tasks
+from mcp_coder.workflow_utils.task_tracker import (
+    TaskTrackerError,
+    get_incomplete_tasks,
+)
 
 from .constants import (
     BLOCKED_FILE,
@@ -192,9 +199,7 @@ def check_and_fix_mypy(
                 )
                 # Replace placeholder with actual mypy output
                 mypy_prompt = mypy_prompt_template.replace("[mypy_output]", mypy_result)
-            except (
-                Exception
-            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.error(f"Error loading mypy fix prompt: {e}")
                 return False
 
@@ -228,9 +233,7 @@ def check_and_fix_mypy(
                         step_name=f"step_{step_num}_mypy_{mypy_attempt_counter}",
                         branch_name=branch_name,
                     )
-                except (
-                    Exception
-                ) as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                except Exception as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                     logger.warning("Failed to store implement session: %s", store_err)
 
                 logger.info(
@@ -243,9 +246,7 @@ def check_and_fix_mypy(
                 # live caller — the final-mypy call in core.py — can categorize
                 # them into llm_timeout / mcp_unavailable.
                 raise
-            except (
-                Exception
-            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.error(
                     f"Error getting mypy fixes from LLM on attempt {mypy_attempt_counter}: {e}"
                 )
@@ -259,9 +260,7 @@ def check_and_fix_mypy(
                     logger.info("Mypy check passed after fixes")
                     return True
 
-            except (
-                Exception
-            ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.error(
                     f"Error re-running mypy check on attempt {mypy_attempt_counter}: {e}"
                 )
@@ -275,9 +274,7 @@ def check_and_fix_mypy(
         # Let the two typed LLM failures propagate to the caller for
         # categorization rather than collapsing them to a False result.
         raise
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error during mypy check and fix: {e}")
         return False
 
@@ -410,9 +407,7 @@ def process_single_task(
         prompt_template = get_prompt(
             str(PROMPTS_FILE_PATH), "Implementation Prompt Template using task tracker"
         )
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error loading prompt template: {e}")
         return TaskOutcome(False, "error")
 
@@ -465,9 +460,7 @@ Please implement this task step by step."""
                     step_name=f"step_{step_num}",
                     branch_name=branch_name,
                 )
-            except (
-                Exception
-            ) as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            except Exception as store_err:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
                 logger.warning("Failed to store implement session: %s", store_err)
 
     except (LLMTimeoutError, McpServersUnavailableError) as e:
@@ -477,9 +470,7 @@ Please implement this task step by step."""
         # llm_failure_reason are non-None for these exception types.
         llm_error = llm_failure_reason(e) or "error"
         logger.error("LLM call failed (%s) for task: %s", llm_error, next_task)
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error calling LLM: {e}")
         llm_error = "error"
     finally:
@@ -512,9 +503,7 @@ Please implement this task step by step."""
             )
             logger.info("Skipping commit/push for this task")
             return TaskOutcome(False, "no_changes")
-    except (
-        Exception
-    ) as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"Error checking file changes: {e}")
         return TaskOutcome(False, "error")
 

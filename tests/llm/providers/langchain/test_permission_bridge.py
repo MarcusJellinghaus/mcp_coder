@@ -8,7 +8,9 @@ denies, so the deny message stays paired with that call in the agent's history.
 
 from __future__ import annotations
 
-from mcp_coder.llm.providers.langchain.permission_bridge import build_deny_tool_message
+from mcp_coder.llm.providers.langchain.permission_bridge import (
+    build_deny_tool_message,
+)
 
 
 def test_build_deny_tool_message_shape() -> None:

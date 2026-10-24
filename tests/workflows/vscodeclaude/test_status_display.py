@@ -15,7 +15,9 @@ from mcp_coder.workflows.vscodeclaude.status import (
     is_issue_closed,
     is_session_stale,
 )
-from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
+from mcp_coder.workflows.vscodeclaude.types import (
+    VSCodeClaudeSession,
+)
 
 
 class TestStatusDisplay:

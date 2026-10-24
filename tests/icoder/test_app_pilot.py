@@ -2287,9 +2287,7 @@ class _ApprovalPendingLLMService:
             # so it catches at the thread top instead. Same observable result,
             # which is what the pilot tests below assert: a silent thread exit
             # and no stray traceback over a live Textual screen.
-            with contextlib.suppress(
-                BaseException
-            ):  # pylint: disable=broad-exception-caught
+            with contextlib.suppress(BaseException):  # pylint: disable=broad-exception-caught
                 asyncio.run(_ask())
 
         self._engine.attach(q.put)
@@ -2365,9 +2363,9 @@ async def test_quit_with_approval_pending_exits_and_unwinds_worker(
                 if service.dispatched.is_set():
                     break
                 await pilot.pause(delay=0.05)
-            assert (
-                service.dispatched.is_set()
-            ), "the approval_request never reached the UI"
+            assert service.dispatched.is_set(), (
+                "the approval_request never reached the UI"
+            )
             assert engine.pending() == 1, "nothing pending: R9 is not being exercised"
             app.exit()
             await pilot.pause()
@@ -2383,9 +2381,9 @@ async def test_quit_with_approval_pending_exits_and_unwinds_worker(
     assert worker_done.wait(timeout=10.0), "the _stream_llm worker body never returned"
     assert worker_error == [], f"the worker tail hit a torn-down app: {worker_error!r}"
     assert service.agent_thread is not None
-    assert (
-        service.agent_thread.is_alive() is False
-    ), "the parked approval future was never cancelled"
+    assert service.agent_thread.is_alive() is False, (
+        "the parked approval future was never cancelled"
+    )
 
 
 async def test_shutdown_guard_drops_every_ui_call_from_worker_tail(

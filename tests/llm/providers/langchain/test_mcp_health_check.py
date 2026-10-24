@@ -151,8 +151,9 @@ class TestVerifyMcpServers:
         assert result["servers"]["good"]["tools"] == 3
         assert result["servers"]["bad"]["ok"] is False
         assert result["servers"]["bad"]["error"] == "FileNotFoundError"
-        assert "binary not found at nonexistent (server bad)" in (
-            result["servers"]["bad"]["value"]
+        assert (
+            "binary not found at nonexistent (server bad)"
+            in (result["servers"]["bad"]["value"])
         )
 
     @patch(
