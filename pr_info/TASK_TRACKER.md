@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: `.claude/skills/issue_update/SKILL.md` — ref-name rule
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: replace the Base Branch single-line sentence with the ref-name rule and fallback behaviour
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: replace the Base Branch single-line sentence with the ref-name rule and fallback behaviour
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
