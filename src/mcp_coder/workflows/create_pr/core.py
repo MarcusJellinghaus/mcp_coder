@@ -577,7 +577,11 @@ def run_create_pr_workflow(
         cached_issue_number = _resolve_issue_from_pr(project_dir, existing_pr["number"])
 
     def fail(stage: str, message: str, category: str = "pr_creating_failed") -> int:
-        """Report a deliberate phase A failure; returns the exit code 1."""
+        """Report a deliberate phase A failure.
+
+        Returns:
+            Exit code 1.
+        """
         _handle_create_pr_failure(
             stage=stage,
             message=message,
