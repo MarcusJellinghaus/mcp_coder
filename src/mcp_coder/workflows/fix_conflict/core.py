@@ -7,12 +7,15 @@ accordingly. Runs inside the Jenkins job's own checkout, dispatched from
 """
 
 import logging
-import time
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import get_current_branch_name
-from mcp_coder.mcp_workspace_github import IssueManager, PullRequestManager
-from mcp_coder.workflow_steps.rebase import RebaseOutcome, _attempt_rebase_and_push
+from mcp_coder.mcp_workspace_github import IssueManager
+from mcp_coder.workflow_steps.rebase import (
+    RebaseOutcome,
+    _attempt_rebase_and_push,
+    _poll_mergeable_state,
+)
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     build_failure_comment,
@@ -22,28 +25,6 @@ from mcp_coder.workflow_utils.failure_handling import (
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 logger = logging.getLogger(__name__)
-
-_POLL_ATTEMPTS = 6
-_POLL_INTERVAL_SECONDS = 5
-
-
-def _poll_mergeable_state(project_dir: Path, branch_name: str) -> str | None:
-    """Poll ``find_pull_request_by_head`` for a settled mergeable_state.
-
-    Returns:
-        The last observed mergeable_state (may be "unknown" or None if the
-        PR disappeared) after the loop ends.
-    """
-    state: str | None = None
-    for attempt in range(_POLL_ATTEMPTS):
-        prs = PullRequestManager(project_dir).find_pull_request_by_head(branch_name)
-        state = prs[0]["mergeable_state"] if prs else None
-        # "unknown" is GitHub's not-yet-computed placeholder - keep polling.
-        if state not in (None, "unknown"):
-            return state
-        if attempt < _POLL_ATTEMPTS - 1:
-            time.sleep(_POLL_INTERVAL_SECONDS)
-    return state
 
 
 def _fail(project_dir: Path, verdict: str, outcome: RebaseOutcome) -> None:

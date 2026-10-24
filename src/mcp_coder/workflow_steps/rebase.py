@@ -7,11 +7,13 @@ from ``implement/rebase.py`` so multiple workflows can share it.
 
 import logging
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from mcp_coder.mcp_workspace_git import get_full_status, rebase_onto_branch
+from mcp_coder.mcp_workspace_github import PullRequestManager
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.base_branch import (
@@ -34,6 +36,9 @@ RebaseReason = Literal[
 
 # First line of `git merge-tree --write-tree` output: a SHA-1 or SHA-256 tree OID.
 _TREE_OID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
+_POLL_ATTEMPTS = 6
+_POLL_INTERVAL_SECONDS = 5
 
 
 @dataclass(frozen=True)
@@ -207,3 +212,22 @@ def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
         )
         return RebaseOutcome("push_failed", target, sha)
     return RebaseOutcome("ok", target, sha)
+
+
+def _poll_mergeable_state(project_dir: Path, branch_name: str) -> str | None:
+    """Poll ``find_pull_request_by_head`` for a settled mergeable_state.
+
+    Returns:
+        The last observed mergeable_state (may be "unknown" or None if the
+        PR disappeared) after the loop ends.
+    """
+    state: str | None = None
+    for attempt in range(_POLL_ATTEMPTS):
+        prs = PullRequestManager(project_dir).find_pull_request_by_head(branch_name)
+        state = prs[0]["mergeable_state"] if prs else None
+        # "unknown" is GitHub's not-yet-computed placeholder - keep polling.
+        if state not in (None, "unknown"):
+            return state
+        if attempt < _POLL_ATTEMPTS - 1:
+            time.sleep(_POLL_INTERVAL_SECONDS)
+    return state
