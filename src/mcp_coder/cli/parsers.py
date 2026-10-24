@@ -265,7 +265,8 @@ def add_rebase_parser(subparsers: Any) -> None:
         metavar="BRANCH",
         help="Base branch to rebase onto (default: auto-detect; needed only when "
         "the detected base is not main/master and not named in the issue's "
-        "### Base Branch)",
+        "### Base Branch; only honoured when the issue body is trusted — see "
+        "docs/repository-setup/github.md)",
     )
 
 

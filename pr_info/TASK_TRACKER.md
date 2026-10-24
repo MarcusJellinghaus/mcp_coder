@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: User-facing strings and `_resolve_base_branch` docstring
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: trust assertion in `tests/workflows/rebase/test_guards.py` (fails first); qualifier in `rebase.py` error + docstring, `parsers.py` help, `create_pr/core.py` tip, `review/handoff.py` `no_base`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: trust assertion in `tests/workflows/rebase/test_guards.py` (fails first); qualifier in `rebase.py` error + docstring, `parsers.py` help, `create_pr/core.py` tip, `review/handoff.py` `no_base`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `.claude/skills/issue_update/SKILL.md` — ref-name rule
 See [step_4.md](./steps/step_4.md)

@@ -340,7 +340,8 @@ def create_pull_request(
     if base_branch is None:
         logger.error(
             "Could not detect base branch for PR creation.\n"
-            "Tip: Add '### Base Branch' section to your GitHub issue."
+            "Tip: Add '### Base Branch' section to your GitHub issue (only honoured "
+            "when the issue body is trusted — see docs/repository-setup/github.md)."
         )
         return None, "Could not detect base branch for PR creation"
 
