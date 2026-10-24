@@ -1,7 +1,10 @@
 """Tests for create-pr workflow failure handling paths."""
 
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
@@ -102,6 +105,16 @@ class TestHandleCreatePrFailureComment:
 
 class TestCreatePrFailureHandling:
     """Tests for failure handling in run_create_pr_workflow."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_post_creation(self) -> Iterator[MagicMock]:
+        """Phase B never polls GitHub; these failures all end in phase A."""
+        with patch(
+            "mcp_coder.workflows.create_pr.core.run_post_creation",
+            return_value="pr_created",
+        ) as mock:
+            yield mock
+        mock.assert_not_called()
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")

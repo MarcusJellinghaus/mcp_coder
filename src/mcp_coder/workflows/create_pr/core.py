@@ -24,6 +24,7 @@ from mcp_coder.mcp_workspace_git import (
 )
 from mcp_coder.mcp_workspace_github import (
     IssueBranchManager,
+    IssueManager,
     PullRequestData,
     PullRequestManager,
     get_authenticated_username,
@@ -55,6 +56,7 @@ from mcp_coder.workflows.create_pr.helpers import (
     handle_create_pr_failure as _handle_create_pr_failure_impl,
 )
 from mcp_coder.workflows.create_pr.helpers import parse_pr_summary as parse_pr_summary
+from mcp_coder.workflows.create_pr.post_creation import run_post_creation
 from mcp_coder.workflows.create_pr.pre_creation import _rebase_if_needed
 
 # Note: PROMPTS_FILE_PATH imported from constants
@@ -533,33 +535,38 @@ def run_create_pr_workflow(
         post_issue_comments: If True, post comments on the issue on failure
 
     Returns:
-        int: Exit code (0 for success, 1 for failure)
+        int: Exit code. 0 once the PR exists and every phase B outcome was
+        handled (final label pr_created / pr_merge_conflict / failing_ci,
+        i.e. 10 / 74 / 81); 1 when phase A fails or either phase crashes.
 
     Note:
-        The orchestrator body is wrapped in :func:`run_guarded`, which nets
-        SIGTERM / unexpected exits into the general ``pr_creating_failed``
-        label. Deliberate failure sites still call
-        :func:`_handle_create_pr_failure` and ``return 1``; the
-        summary-generation catch classifies the LLM failure into
+        The workflow runs as two phases, each wrapped in :func:`run_guarded`.
+        Phase A (prerequisites → PR creation) nets SIGTERM / unexpected exits
+        into the general ``pr_creating_failed`` label. Deliberate failure
+        sites still call :func:`_handle_create_pr_failure` and ``return 1``;
+        the summary-generation catch classifies the LLM failure into
         ``pr_creating_timeout`` / ``pr_creating_mcp`` / ``pr_creating_failed``.
+        Phase B (mergeability check, CI wait, final label) always runs once
+        the PR exists, also with ``update_issue_labels=False``; a crash there
+        posts a crash comment and sets ``pr_created``.
     """
     logger.log(OUTPUT, "Starting create PR workflow...")
     logger.log(OUTPUT, "Using project directory: %s", project_dir)
 
     start_time = time.time()
 
-    # Cache branch-issue linkage BEFORE PR creation.
-    # GitHub automatically removes linkedBranches when a PR is created from a branch
-    # (the link transfers to the PR). If we query linkedBranches after PR creation,
-    # it returns empty. The cached issue number is used both for the PR body's closing
-    # reference and for label updates after PR creation succeeds.
+    # Branch-issue linkage, used for the PR body's closing reference and for
+    # the final label. It usually still resolves after PR creation (via open
+    # closing PRs). It is None only when the branch lacks the issue prefix,
+    # the PR has no closing reference, or the lookup fails; phase A's
+    # closing-references fallback covers the first case.
     cached_issue_number: int | None = validate_branch_issue_linkage(project_dir)
     if cached_issue_number:
         logger.log(OUTPUT, "Branch linked to issue #%s", cached_issue_number)
     else:
         logger.warning("Branch not linked to any issue")
 
-    def body() -> int:
+    def phase_a() -> int:
         nonlocal cached_issue_number
 
         # Step 1: Check prerequisites
@@ -666,35 +673,37 @@ def run_create_pr_workflow(
         # Fallback: query closingIssuesReferences if no issue found from branch
         if update_issue_labels and cached_issue_number is None:
             cached_issue_number = _resolve_issue_from_pr(project_dir, pr_number)
+        return 0
 
-        # Update GitHub issue label if requested
-        if update_issue_labels:
-            if cached_issue_number is None:
+    def phase_b() -> int:
+        branch = get_current_branch_name(project_dir)
+        if branch is None:
+            logger.error("Could not determine current branch; skipping PR checks")
+            label = "pr_created"
+        else:
+            label = run_post_creation(project_dir, branch)
+
+        if update_issue_labels and cached_issue_number:
+            logger.log(OUTPUT, "Updating GitHub issue label...")
+            try:
+                success = update_workflow_label(
+                    IssueManager(project_dir),
+                    from_label_id="pr_creating",
+                    to_label_id=label,
+                    validated_issue_number=cached_issue_number,
+                )
+                if success:
+                    logger.log(OUTPUT, "✓ Issue label updated: pr_creating → %s", label)
+                else:
+                    logger.warning("✗ Failed to update issue label (non-blocking)")
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                logger.error(f"Error updating issue label (non-blocking): {e}")
+        else:
+            if update_issue_labels:
                 logger.warning(
                     "Skipping label update: branch was not linked to an issue"
                 )
-            else:
-                logger.log(OUTPUT, "Updating GitHub issue label...")
-                try:
-                    from mcp_coder.mcp_workspace_github import IssueManager
-
-                    issue_manager = IssueManager(project_dir)
-                    success = update_workflow_label(
-                        issue_manager,
-                        from_label_id="pr_creating",
-                        to_label_id="pr_created",
-                        validated_issue_number=cached_issue_number,
-                    )
-
-                    if success:
-                        logger.log(
-                            OUTPUT, "✓ Issue label updated: pr-creating → pr-created"
-                        )
-                    else:
-                        logger.warning("✗ Failed to update issue label (non-blocking)")
-
-                except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-                    logger.error(f"Error updating issue label (non-blocking): {e}")
+            logger.log(OUTPUT, "Post-creation outcome: %s (label not updated)", label)
 
         if update_issue_labels and cached_issue_number is None:
             logger.log(OUTPUT, "Create PR workflow completed with warnings")
@@ -702,11 +711,24 @@ def run_create_pr_workflow(
             logger.log(OUTPUT, "Create PR workflow completed successfully!")
         return 0
 
-    return run_guarded(
-        body,
+    rc = run_guarded(
+        phase_a,
         project_dir=project_dir,
         from_label_id="pr_creating",
         general_category="pr_creating_failed",
+        workflow_title="PR Creation",
+        update_issue_labels=update_issue_labels,
+        post_issue_comments=post_issue_comments,
+        issue_number=cached_issue_number,
+    )
+    if rc != 0:
+        return rc
+    # Read after phase A, so an issue found by the closing-references fallback is used.
+    return run_guarded(
+        phase_b,
+        project_dir=project_dir,
+        from_label_id="pr_creating",
+        general_category="pr_created",
         workflow_title="PR Creation",
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
