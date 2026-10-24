@@ -19,6 +19,15 @@ def mock_post_creation() -> Iterator[MagicMock]:
         yield mock
 
 
+@pytest.fixture(autouse=True)
+def mock_find_open_pr() -> Iterator[MagicMock]:
+    """No open PR for the branch: the normal phase A runs."""
+    with patch(
+        "mcp_coder.workflows.create_pr.core._find_open_pr", return_value=None
+    ) as mock:
+        yield mock
+
+
 class TestRunCreatePrWorkflow:
     """Test suite for run_create_pr_workflow orchestration."""
 

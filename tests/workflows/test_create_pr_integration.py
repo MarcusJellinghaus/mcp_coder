@@ -371,6 +371,14 @@ class TestWorkflowMainFunction:
         ) as mock:
             yield mock
 
+    @pytest.fixture(autouse=True)
+    def _mock_find_open_pr(self) -> Iterator[MagicMock]:
+        """No open PR for the branch: the normal phase A runs."""
+        with patch(
+            "mcp_coder.workflows.create_pr.core._find_open_pr", return_value=None
+        ) as mock:
+            yield mock
+
     @patch(
         "mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage",
         return_value=None,
