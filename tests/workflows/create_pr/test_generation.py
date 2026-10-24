@@ -43,7 +43,7 @@ class TestGeneratePrSummary:
         assert title == "feat: Add authentication"
         assert "Detailed description" in body
         mock_get_diff.assert_called_once_with(
-            Path("/test/project"), base_branch="main", exclude_paths=["pr_info/steps/"]
+            Path("/test/project"), base_branch="main", exclude_paths=["pr_info/"]
         )
         mock_get_prompt.assert_called_once()
         mock_prompt_llm.assert_called_once()
