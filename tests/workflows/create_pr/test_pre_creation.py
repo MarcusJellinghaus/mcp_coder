@@ -9,7 +9,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
-from mcp_coder.workflows.create_pr.pre_creation import _rebase_if_needed
+from mcp_coder.workflows.create_pr.pre_creation import (
+    _find_open_pr,
+    _rebase_if_needed,
+    _resume_cleanup,
+)
 
 _MODULE = "mcp_coder.workflows.create_pr.pre_creation"
 _PROJECT = Path("/test")
@@ -106,3 +110,100 @@ class TestRebaseIfNeeded:
 
         mocks.attempt.assert_not_called()
         assert "git exploded" in caplog.text
+
+
+class TestFindOpenPr:
+    """Tests for _find_open_pr."""
+
+    @patch(f"{_MODULE}.PullRequestManager")
+    @patch(f"{_MODULE}.get_current_branch_name", return_value="feat")
+    def test_returns_first_open_pr(
+        self, _mock_branch: MagicMock, mock_manager: MagicMock
+    ) -> None:
+        """An open PR for the branch is returned."""
+        pr = MagicMock()
+        mock_manager.return_value.find_pull_request_by_head.return_value = [pr]
+
+        assert _find_open_pr(_PROJECT) is pr
+        mock_manager.return_value.find_pull_request_by_head.assert_called_once_with(
+            "feat"
+        )
+
+    @patch(f"{_MODULE}.PullRequestManager")
+    @patch(f"{_MODULE}.get_current_branch_name", return_value="feat")
+    def test_no_open_pr_returns_none(
+        self, _mock_branch: MagicMock, mock_manager: MagicMock
+    ) -> None:
+        """No open PR → None."""
+        mock_manager.return_value.find_pull_request_by_head.return_value = []
+
+        assert _find_open_pr(_PROJECT) is None
+
+    @patch(f"{_MODULE}.PullRequestManager")
+    @patch(f"{_MODULE}.get_current_branch_name", return_value=None)
+    def test_unknown_branch_returns_none(
+        self, _mock_branch: MagicMock, mock_manager: MagicMock
+    ) -> None:
+        """Branch unknown → None, no GitHub lookup."""
+        assert _find_open_pr(_PROJECT) is None
+        mock_manager.assert_not_called()
+
+    @patch(f"{_MODULE}.PullRequestManager")
+    @patch(f"{_MODULE}.get_current_branch_name", return_value="feat")
+    def test_lookup_error_returns_none(
+        self,
+        _mock_branch: MagicMock,
+        mock_manager: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A lookup exception is logged as a warning and never escapes."""
+        mock_manager.return_value.find_pull_request_by_head.side_effect = RuntimeError(
+            "api down"
+        )
+
+        with caplog.at_level(logging.WARNING):
+            assert _find_open_pr(_PROJECT) is None
+
+        assert "api down" in caplog.text
+
+
+class TestResumeCleanup:
+    """Tests for _resume_cleanup."""
+
+    @patch(f"{_MODULE}.check_git_clean")
+    def test_no_pr_info_does_nothing(
+        self, mock_clean: MagicMock, tmp_path: Path
+    ) -> None:
+        """No pr_info/ → None, cleanup not run."""
+        cleanup = MagicMock()
+
+        assert _resume_cleanup(tmp_path, cleanup) is None
+
+        cleanup.assert_not_called()
+        mock_clean.assert_not_called()
+
+    @patch(f"{_MODULE}.check_git_clean", return_value=True)
+    def test_pr_info_clean_runs_cleanup(
+        self, _mock_clean: MagicMock, tmp_path: Path
+    ) -> None:
+        """pr_info/ present and clean tree → cleanup's result is returned."""
+        (tmp_path / "pr_info").mkdir()
+        cleanup = MagicMock(return_value=("push", "rejected"))
+
+        assert _resume_cleanup(tmp_path, cleanup) == ("push", "rejected")
+
+        cleanup.assert_called_once_with(tmp_path)
+
+    @patch(f"{_MODULE}.check_git_clean", return_value=False)
+    def test_pr_info_dirty_tree_fails(
+        self, _mock_clean: MagicMock, tmp_path: Path
+    ) -> None:
+        """pr_info/ present and dirty tree → resume_cleanup failure, no cleanup."""
+        (tmp_path / "pr_info").mkdir()
+        cleanup = MagicMock()
+
+        result = _resume_cleanup(tmp_path, cleanup)
+
+        assert result is not None
+        assert result[0] == "resume_cleanup"
+        cleanup.assert_not_called()

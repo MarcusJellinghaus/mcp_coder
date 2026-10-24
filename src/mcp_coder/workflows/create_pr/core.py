@@ -57,7 +57,11 @@ from mcp_coder.workflows.create_pr.helpers import (
 )
 from mcp_coder.workflows.create_pr.helpers import parse_pr_summary as parse_pr_summary
 from mcp_coder.workflows.create_pr.post_creation import run_post_creation
-from mcp_coder.workflows.create_pr.pre_creation import _rebase_if_needed
+from mcp_coder.workflows.create_pr.pre_creation import (
+    _find_open_pr,
+    _rebase_if_needed,
+    _resume_cleanup,
+)
 
 # Note: PROMPTS_FILE_PATH imported from constants
 
@@ -567,24 +571,42 @@ def run_create_pr_workflow(
     else:
         logger.warning("Branch not linked to any issue")
 
+    # Resume: an open PR for this branch means phase A already ran.
+    existing_pr = _find_open_pr(project_dir)
+    if existing_pr and update_issue_labels and cached_issue_number is None:
+        cached_issue_number = _resolve_issue_from_pr(project_dir, existing_pr["number"])
+
+    def fail(stage: str, message: str, category: str = "pr_creating_failed") -> int:
+        """Report a deliberate phase A failure; returns the exit code 1."""
+        _handle_create_pr_failure(
+            stage=stage,
+            message=message,
+            project_dir=project_dir,
+            update_issue_labels=update_issue_labels,
+            post_issue_comments=post_issue_comments,
+            elapsed_time=time.time() - start_time,
+            issue_number=cached_issue_number,
+            category=category,
+        )
+        return 1
+
     def phase_a() -> int:
         nonlocal cached_issue_number
+
+        if existing_pr:
+            logger.log(
+                OUTPUT,
+                "PR #%s already exists - resuming at post-creation checks",
+                existing_pr["number"],
+            )
+            failure = _resume_cleanup(project_dir, _cleanup_commit_push)
+            return fail(*failure) if failure else 0
 
         # Step 1: Check prerequisites
         logger.log(OUTPUT, "Step 1/5: Checking prerequisites...")
         if not check_prerequisites(project_dir):
             logger.error("Prerequisites check failed")
-            elapsed = time.time() - start_time
-            _handle_create_pr_failure(
-                stage="prerequisites",
-                message="Prerequisites check failed",
-                project_dir=project_dir,
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-                elapsed_time=elapsed,
-                issue_number=cached_issue_number,
-            )
-            return 1
+            return fail("prerequisites", "Prerequisites check failed")
 
         # Rebase onto the base branch when behind (never fails the workflow)
         _rebase_if_needed(project_dir)
@@ -597,7 +619,6 @@ def run_create_pr_workflow(
             )
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(f"Failed to generate PR summary: {e}")
-            elapsed = time.time() - start_time
             reason = llm_failure_reason(e) or "general"
             category = {
                 "timeout": "pr_creating_timeout",
@@ -608,33 +629,12 @@ def run_create_pr_workflow(
                 if isinstance(e, McpServersUnavailableError)
                 else str(e)
             )
-            _handle_create_pr_failure(
-                stage="summary_generation",
-                message=message,
-                project_dir=project_dir,
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-                elapsed_time=elapsed,
-                issue_number=cached_issue_number,
-                category=category,
-            )
-            return 1
+            return fail("summary_generation", message, category)
 
         # Steps 3-4: Clean up repository, commit, push
         failure = _cleanup_commit_push(project_dir)
         if failure:
-            stage, message = failure
-            elapsed = time.time() - start_time
-            _handle_create_pr_failure(
-                stage=stage,
-                message=message,
-                project_dir=project_dir,
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-                elapsed_time=elapsed,
-                issue_number=cached_issue_number,
-            )
-            return 1
+            return fail(*failure)
 
         # Step 5: Create pull request
         logger.log(OUTPUT, "Step 5/5: Creating pull request...")
@@ -644,17 +644,7 @@ def run_create_pr_workflow(
         if not pr_result:
             error_msg = pr_error or "Failed to create pull request"
             logger.error(error_msg)
-            elapsed = time.time() - start_time
-            _handle_create_pr_failure(
-                stage="pr_creation",
-                message=error_msg,
-                project_dir=project_dir,
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-                elapsed_time=elapsed,
-                issue_number=cached_issue_number,
-            )
-            return 1
+            return fail("pr_creation", error_msg)
 
         pr_number = pr_result["number"]
         pr_url = pr_result.get("url", "")
