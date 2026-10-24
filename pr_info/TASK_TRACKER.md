@@ -29,9 +29,9 @@ See [step_1.md](./steps/step_1.md)
 
 ### Step 2: CI polling — cap the "no run" wait when `expected_sha` is given
 See [step_2.md](./steps/step_2.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move `_poll_mergeable_state` to `workflow_steps/rebase.py`
 See [step_3.md](./steps/step_3.md)
