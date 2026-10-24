@@ -62,7 +62,8 @@ _REBASE_HANDOFF: dict[str, tuple[str, str, str]] = {
     "no_base": (
         "Base branch not detected",
         "Rebase not attempted: no base branch could be detected",
-        "Add a `### Base Branch` section to the issue, then re-run",
+        "Add a `### Base Branch` section to the issue (only honoured when the "
+        "issue body is trusted — see docs/repository-setup/github.md), then re-run",
     ),
     "base_missing": (
         "Base branch missing on origin",

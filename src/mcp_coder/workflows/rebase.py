@@ -255,8 +255,10 @@ def _resolve_base_branch(
 
     An explicit ``base_branch_arg`` wins verbatim (no detection). Otherwise
     ``detect_base_branch_with_source`` runs; a base named in the issue's
-    ``### Base Branch`` is trusted, and a base found by the PR, merge-base or
-    default heuristics is accepted only when it is ``main``/``master``. Any
+    ``### Base Branch`` is accepted as-is — that section is only used when the
+    issue body is trusted, otherwise detection falls back to the PR,
+    merge-base or default heuristics — and a base found by those heuristics
+    is accepted only when it is ``main``/``master``. Any
     other or undetectable base returns an error asking for ``--base-branch``.
     """
     if base_branch_arg:
@@ -271,7 +273,9 @@ def _resolve_base_branch(
     return (
         None,
         f"Base '{branch}' was detected from {source.value}, not named in the "
-        "issue; add '### Base Branch' to the issue or pass --base-branch",
+        "issue; add '### Base Branch' to the issue (only honoured when the issue "
+        "body is trusted — see docs/repository-setup/github.md) or pass "
+        "--base-branch",
     )
 
 
