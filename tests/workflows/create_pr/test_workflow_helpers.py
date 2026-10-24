@@ -9,8 +9,189 @@ import pytest
 from mcp_coder.mcp_workspace_github import ClosingPRRef
 from mcp_coder.workflows.create_pr.core import (
     _add_pr_assignee_best_effort,
+    _cleanup_commit_push,
+    _resolve_issue_from_pr,
     validate_branch_issue_linkage,
 )
+
+CORE = "mcp_coder.workflows.create_pr.core"
+
+
+class TestCleanupCommitPush:
+    """Test suite for _cleanup_commit_push helper."""
+
+    @patch(f"{CORE}.git_push")
+    @patch(f"{CORE}.commit_all_changes")
+    @patch(f"{CORE}.is_working_directory_clean")
+    @patch(f"{CORE}.cleanup_repository")
+    def test_success_returns_none(
+        self,
+        mock_cleanup: MagicMock,
+        mock_clean: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Cleanup, commit and push all succeed → None."""
+        mock_cleanup.return_value = True
+        mock_clean.return_value = False
+        mock_commit.return_value = {"success": True, "commit_hash": "abc"}
+        mock_push.return_value = {"success": True}
+
+        assert _cleanup_commit_push(Path("/test")) is None
+        mock_commit.assert_called_once()
+        mock_push.assert_called_once_with(Path("/test"))
+
+    @patch(f"{CORE}.git_push")
+    @patch(f"{CORE}.commit_all_changes")
+    @patch(f"{CORE}.is_working_directory_clean")
+    @patch(f"{CORE}.cleanup_repository")
+    def test_cleanup_failure(
+        self,
+        mock_cleanup: MagicMock,
+        mock_clean: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """cleanup_repository False → ("cleanup", ...), nothing pushed."""
+        mock_cleanup.return_value = False
+
+        assert _cleanup_commit_push(Path("/test")) == (
+            "cleanup",
+            "Repository cleanup failed",
+        )
+        mock_clean.assert_not_called()
+        mock_commit.assert_not_called()
+        mock_push.assert_not_called()
+
+    @patch(f"{CORE}.git_push")
+    @patch(f"{CORE}.commit_all_changes")
+    @patch(f"{CORE}.is_working_directory_clean")
+    @patch(f"{CORE}.cleanup_repository")
+    def test_commit_error(
+        self,
+        mock_cleanup: MagicMock,
+        mock_clean: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Commit fails with a real error → ("cleanup", ...), nothing pushed."""
+        mock_cleanup.return_value = True
+        mock_clean.return_value = False
+        mock_commit.return_value = {"success": False, "error": "disk full"}
+
+        assert _cleanup_commit_push(Path("/test")) == (
+            "cleanup",
+            "Failed to commit cleanup: disk full",
+        )
+        mock_push.assert_not_called()
+
+    @patch(f"{CORE}.git_push")
+    @patch(f"{CORE}.commit_all_changes")
+    @patch(f"{CORE}.is_working_directory_clean")
+    @patch(f"{CORE}.cleanup_repository")
+    def test_commit_no_staged_files_continues(
+        self,
+        mock_cleanup: MagicMock,
+        mock_clean: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Commit reports "No staged files" → continues to push."""
+        mock_cleanup.return_value = True
+        mock_clean.return_value = False
+        mock_commit.return_value = {"success": False, "error": "No staged files"}
+        mock_push.return_value = {"success": True}
+
+        assert _cleanup_commit_push(Path("/test")) is None
+        mock_push.assert_called_once()
+
+    @patch(f"{CORE}.git_push")
+    @patch(f"{CORE}.commit_all_changes")
+    @patch(f"{CORE}.is_working_directory_clean")
+    @patch(f"{CORE}.cleanup_repository")
+    def test_push_failure(
+        self,
+        mock_cleanup: MagicMock,
+        mock_clean: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Push fails → ("push", <error>)."""
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_push.return_value = {"success": False, "error": "rejected"}
+
+        assert _cleanup_commit_push(Path("/test")) == ("push", "rejected")
+
+    @patch(f"{CORE}.git_push")
+    @patch(f"{CORE}.commit_all_changes")
+    @patch(f"{CORE}.is_working_directory_clean")
+    @patch(f"{CORE}.cleanup_repository")
+    def test_clean_tree_skips_commit(
+        self,
+        mock_cleanup: MagicMock,
+        mock_clean: MagicMock,
+        mock_commit: MagicMock,
+        mock_push: MagicMock,
+    ) -> None:
+        """Clean working tree → no commit call, still pushes."""
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_push.return_value = {"success": True}
+
+        assert _cleanup_commit_push(Path("/test")) is None
+        mock_commit.assert_not_called()
+        mock_push.assert_called_once()
+
+
+class TestResolveIssueFromPr:
+    """Test suite for _resolve_issue_from_pr helper."""
+
+    @patch(f"{CORE}.PullRequestManager")
+    def test_single_closing_issue(self, mock_pr_manager_class: MagicMock) -> None:
+        """[7] → 7."""
+        mock_pr_manager_class.return_value.get_closing_issue_numbers.return_value = [7]
+
+        assert _resolve_issue_from_pr(Path("/test"), 42) == 7
+        mock_pr_manager_class.return_value.get_closing_issue_numbers.assert_called_once_with(
+            42
+        )
+
+    @patch(f"{CORE}.PullRequestManager")
+    def test_multiple_closing_issues_uses_first(
+        self, mock_pr_manager_class: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """[7, 8] → 7 and a warning."""
+        mock_pr_manager_class.return_value.get_closing_issue_numbers.return_value = [
+            7,
+            8,
+        ]
+
+        with caplog.at_level(logging.WARNING):
+            assert _resolve_issue_from_pr(Path("/test"), 42) == 7
+
+        assert any(r.levelno == logging.WARNING for r in caplog.records)
+
+    @patch(f"{CORE}.PullRequestManager")
+    def test_no_closing_issues(self, mock_pr_manager_class: MagicMock) -> None:
+        """[] → None."""
+        mock_pr_manager_class.return_value.get_closing_issue_numbers.return_value = []
+
+        assert _resolve_issue_from_pr(Path("/test"), 42) is None
+
+    @patch(f"{CORE}.PullRequestManager")
+    def test_exception_returns_none(
+        self, mock_pr_manager_class: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Lookup raises → None and a warning, never re-raises."""
+        mock_pr_manager_class.return_value.get_closing_issue_numbers.side_effect = (
+            RuntimeError("boom")
+        )
+
+        with caplog.at_level(logging.WARNING):
+            assert _resolve_issue_from_pr(Path("/test"), 42) is None
+
+        assert "non-blocking" in caplog.text
 
 
 class TestAddPrAssigneeBestEffort:

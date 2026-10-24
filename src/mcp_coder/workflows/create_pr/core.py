@@ -433,6 +433,87 @@ def _add_pr_assignee_best_effort(project_dir: Path, pr_number: int) -> None:
         logger.warning("assignee-add failed (non-blocking): %s", e)
 
 
+def _cleanup_commit_push(project_dir: Path) -> tuple[str, str] | None:
+    """Clean up pr_info/ and profiler output, commit, push.
+
+    Args:
+        project_dir: Path to the project directory.
+
+    Returns:
+        None on success, else (stage, message) for _handle_create_pr_failure.
+    """
+    # Step 3: Clean up repository
+    logger.log(OUTPUT, "Step 3/5: Cleaning up repository...")
+    if not cleanup_repository(project_dir):
+        logger.error("Repository cleanup failed")
+        return "cleanup", "Repository cleanup failed"
+
+    # Check if there are changes to commit
+    if not is_working_directory_clean(
+        project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
+    ):
+        # Commit cleanup changes
+        logger.log(OUTPUT, "Committing cleanup changes...")
+        commit_result = commit_all_changes(
+            "chore: clean up build artifacts", project_dir
+        )
+
+        if not commit_result["success"]:
+            # Ignore "No staged files" - this is expected when cleanup had no effect
+            error_msg = commit_result.get("error") or ""
+            if "No staged files" not in error_msg:
+                logger.error(
+                    f"Failed to commit cleanup changes: {commit_result['error']}"
+                )
+                return "cleanup", f"Failed to commit cleanup: {commit_result['error']}"
+            logger.log(
+                OUTPUT, "No cleanup changes to commit (files were already clean)"
+            )
+        else:
+            logger.log(OUTPUT, "Cleanup committed: %s", commit_result["commit_hash"])
+    else:
+        logger.log(OUTPUT, "No cleanup changes to commit")
+
+    # Step 4: Push commits
+    logger.log(OUTPUT, "Step 4/5: Pushing commits...")
+    push_result = git_push(project_dir)
+    if not push_result["success"]:
+        logger.error(f"Failed to push commits: {push_result['error']}")
+        return "push", push_result.get("error", "Unknown push error")
+    logger.log(OUTPUT, "Commits pushed successfully")
+    return None
+
+
+def _resolve_issue_from_pr(project_dir: Path, pr_number: int) -> int | None:
+    """Closing-references fallback: first issue the PR closes, or None. Never raises.
+
+    Args:
+        project_dir: Path to the project directory.
+        pr_number: Number of the pull request to query.
+
+    Returns:
+        The first closing issue number, or None if none found or lookup failed.
+    """
+    logger.info("Attempting fallback: querying PR closing issues references...")
+    try:
+        pr_mgr = PullRequestManager(project_dir)
+        closing_issues = pr_mgr.get_closing_issue_numbers(pr_number)
+        if len(closing_issues) == 1:
+            logger.info("Fallback found closing issue #%s from PR", closing_issues[0])
+            return closing_issues[0]
+        if len(closing_issues) > 1:
+            logger.warning(
+                "Multiple closing issues found: %s, using first (#%s)",
+                closing_issues,
+                closing_issues[0],
+            )
+            return closing_issues[0]
+        logger.debug("No closing issues found for PR #%s", pr_number)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to query closing issues (non-blocking): %s", e)
+    return None
+
+
 def run_create_pr_workflow(
     project_dir: Path,
     provider: str,
@@ -531,14 +612,14 @@ def run_create_pr_workflow(
             )
             return 1
 
-        # Step 3: Clean up repository
-        logger.log(OUTPUT, "Step 3/5: Cleaning up repository...")
-        if not cleanup_repository(project_dir):
-            logger.error("Repository cleanup failed")
+        # Steps 3-4: Clean up repository, commit, push
+        failure = _cleanup_commit_push(project_dir)
+        if failure:
+            stage, message = failure
             elapsed = time.time() - start_time
             _handle_create_pr_failure(
-                stage="cleanup",
-                message="Repository cleanup failed",
+                stage=stage,
+                message=message,
                 project_dir=project_dir,
                 update_issue_labels=update_issue_labels,
                 post_issue_comments=post_issue_comments,
@@ -546,62 +627,6 @@ def run_create_pr_workflow(
                 issue_number=cached_issue_number,
             )
             return 1
-
-        # Check if there are changes to commit
-        if not is_working_directory_clean(
-            project_dir, ignore_files=DEFAULT_IGNORED_BUILD_ARTIFACTS
-        ):
-            # Commit cleanup changes
-            logger.log(OUTPUT, "Committing cleanup changes...")
-            commit_result = commit_all_changes(
-                "chore: clean up build artifacts", project_dir
-            )
-
-            if not commit_result["success"]:
-                # Ignore "No staged files" - this is expected when cleanup had no effect
-                error_msg = commit_result.get("error") or ""
-                if "No staged files" not in error_msg:
-                    logger.error(
-                        f"Failed to commit cleanup changes: {commit_result['error']}"
-                    )
-                    elapsed = time.time() - start_time
-                    _handle_create_pr_failure(
-                        stage="cleanup",
-                        message=f"Failed to commit cleanup: {commit_result['error']}",
-                        project_dir=project_dir,
-                        update_issue_labels=update_issue_labels,
-                        post_issue_comments=post_issue_comments,
-                        elapsed_time=elapsed,
-                        issue_number=cached_issue_number,
-                    )
-                    return 1
-                logger.log(
-                    OUTPUT, "No cleanup changes to commit (files were already clean)"
-                )
-            else:
-                logger.log(
-                    OUTPUT, "Cleanup committed: %s", commit_result["commit_hash"]
-                )
-        else:
-            logger.log(OUTPUT, "No cleanup changes to commit")
-
-        # Step 4: Push commits
-        logger.log(OUTPUT, "Step 4/5: Pushing commits...")
-        push_result = git_push(project_dir)
-        if not push_result["success"]:
-            logger.error(f"Failed to push commits: {push_result['error']}")
-            elapsed = time.time() - start_time
-            _handle_create_pr_failure(
-                stage="push",
-                message=push_result.get("error", "Unknown push error"),
-                project_dir=project_dir,
-                update_issue_labels=update_issue_labels,
-                post_issue_comments=post_issue_comments,
-                elapsed_time=elapsed,
-                issue_number=cached_issue_number,
-            )
-            return 1
-        logger.log(OUTPUT, "Commits pushed successfully")
 
         # Step 5: Create pull request
         logger.log(OUTPUT, "Step 5/5: Creating pull request...")
@@ -640,27 +665,7 @@ def run_create_pr_workflow(
 
         # Fallback: query closingIssuesReferences if no issue found from branch
         if update_issue_labels and cached_issue_number is None:
-            logger.info("Attempting fallback: querying PR closing issues references...")
-            try:
-                pr_mgr = PullRequestManager(project_dir)
-                closing_issues = pr_mgr.get_closing_issue_numbers(pr_number)
-                if len(closing_issues) == 1:
-                    cached_issue_number = closing_issues[0]
-                    logger.info(
-                        "Fallback found closing issue #%s from PR",
-                        cached_issue_number,
-                    )
-                elif len(closing_issues) > 1:
-                    logger.warning(
-                        "Multiple closing issues found: %s, using first (#%s)",
-                        closing_issues,
-                        closing_issues[0],
-                    )
-                    cached_issue_number = closing_issues[0]
-                else:
-                    logger.debug("No closing issues found for PR #%s", pr_number)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.warning("Failed to query closing issues (non-blocking): %s", e)
+            cached_issue_number = _resolve_issue_from_pr(project_dir, pr_number)
 
         # Update GitHub issue label if requested
         if update_issue_labels:
