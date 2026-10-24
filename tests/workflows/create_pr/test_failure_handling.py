@@ -105,8 +105,12 @@ class TestCreatePrFailureHandling:
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_prerequisites_failure_sets_label_and_posts_comment(
-        self, mock_prereqs: MagicMock, mock_handle_failure: MagicMock
+        self,
+        _mock_rebase: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
     ) -> None:
         """Test prerequisites failure calls failure handler."""
         mock_prereqs.return_value = False
@@ -124,8 +128,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_summary_generation_failure(
         self,
+        _mock_rebase: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
@@ -147,8 +153,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_summary_generation_mcp_unavailable_routes_to_mcp_label(
         self,
+        _mock_rebase: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
@@ -172,8 +180,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_summary_generation_timeout_routes_to_timeout_label(
         self,
+        _mock_rebase: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
@@ -197,8 +207,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_push_failure_is_fatal(
         self,
+        _mock_rebase: MagicMock,
         mock_push: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
@@ -228,8 +240,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_pr_creation_failure(
         self,
+        _mock_rebase: MagicMock,
         mock_create_pr: MagicMock,
         mock_push: MagicMock,
         mock_clean: MagicMock,
@@ -261,8 +275,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_cleanup_failure_is_fatal(
         self,
+        _mock_rebase: MagicMock,
         mock_cleanup: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
@@ -289,8 +305,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_cleanup_commit_failure(
         self,
+        _mock_rebase: MagicMock,
         mock_commit: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
@@ -323,8 +341,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure")
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_unexpected_exception_netted_by_guard(
         self,
+        _mock_rebase: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
         mock_workflow_failure: MagicMock,
@@ -353,8 +373,12 @@ class TestCreatePrFailureHandling:
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_safety_net_skipped_on_normal_failure(
-        self, mock_prereqs: MagicMock, mock_handle_failure: MagicMock
+        self,
+        _mock_rebase: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
     ) -> None:
         """Test safety net does NOT fire when failure is handled normally."""
         mock_prereqs.return_value = False
@@ -369,8 +393,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_comment_posted_even_when_update_issue_labels_false(
         self,
+        _mock_rebase: MagicMock,
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_handle_failure: MagicMock,
@@ -390,8 +416,10 @@ class TestCreatePrFailureHandling:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_label_not_set_when_update_issue_labels_false(
         self,
+        _mock_rebase: MagicMock,
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_handle_failure: MagicMock,
