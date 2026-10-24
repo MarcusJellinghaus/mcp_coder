@@ -319,8 +319,8 @@ class TestPollForCiCompletionLookupFailed:
 
     @staticmethod
     def _lookup_failed_run() -> dict[str, Any]:
-        """A run dict carrying the swallowed-lookup-failure flag (mcp-workspace#318)."""
-        return {"run": {"lookup_failed": True}, "jobs": []}
+        """A status carrying the swallowed-lookup-failure flag (mcp-workspace#318)."""
+        return {"run": {}, "jobs": [], "lookup_failed": True}
 
     @staticmethod
     def _run(status: str, sha: str, conclusion: str | None = None) -> dict[str, Any]:
@@ -392,22 +392,46 @@ class TestPollForCiCompletionLookupFailed:
         assert status is None
         assert passed is True
 
-    def test_lookup_failed_checked_before_empty_run_branch(self) -> None:
-        """A length-1 ``lookup_failed`` run is retried, not misread as other states."""
+    def test_lookup_failed_checked_before_empty_run_branch(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """With an empty ``run``, the lookup-failed budget wins over the no-run one."""
         mock_ci_manager = MagicMock()
-        mock_ci_manager.get_latest_ci_status.side_effect = [
-            self._lookup_failed_run(),
-            self._run("completed", "SHA1", conclusion="success"),
-        ]
+        mock_ci_manager.get_latest_ci_status.return_value = self._lookup_failed_run()
 
-        with patch("mcp_coder.workflow_steps.ci.time.sleep") as mock_sleep:
-            status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(
+                    mock_ci_manager, "main", expected_sha="abc1234567890"
+                )
 
-        assert mock_sleep.call_count == 1
-        assert mock_ci_manager.get_latest_ci_status.call_count == 2
+        assert (
+            mock_ci_manager.get_latest_ci_status.call_count
+            == CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS
+        )
+        assert status is None
         assert passed is True
-        assert status is not None
-        assert status["run"]["commit_sha"] == "SHA1"
+        assert "CI_API_ERROR" in caplog.text
+
+    def test_lookup_failed_inside_run_is_not_a_lookup_failure(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The old shape (flag inside ``run``) is an in-progress run, not a failure."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {
+            "run": {"lookup_failed": True},
+            "jobs": [],
+        }
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+
+        assert mock_ci_manager.get_latest_ci_status.call_count == CI_MAX_POLL_ATTEMPTS
+        assert status is None
+        assert passed is True
+        assert "CI_TIMEOUT: No completed run after polling" in caplog.text
+        assert "CI_API_ERROR" not in caplog.text
 
     def test_lookup_failed_absent_key_behaves_as_before(self) -> None:
         """Regression guard: a genuinely empty run dict behaves as pre-#318."""

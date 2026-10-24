@@ -348,7 +348,7 @@ def _poll_for_ci_completion(
             return None, True  # Graceful exit on API errors
 
         run_info = ci_status.get("run", {})
-        lookup_failed = bool(run_info.get("lookup_failed"))
+        lookup_failed = bool(ci_status.get("lookup_failed"))
 
         if lookup_failed:
             lookup_failed_attempts += 1
