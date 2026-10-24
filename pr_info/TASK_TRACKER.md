@@ -65,9 +65,9 @@ See [step_7.md](./steps/step_7.md)
 
 ### Step 8: Refactor create-pr — extract `_cleanup_commit_push` and `_resolve_issue_from_pr`
 See [step_8.md](./steps/step_8.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: Phase B module `create_pr/post_creation.py`
 See [step_9.md](./steps/step_9.md)
