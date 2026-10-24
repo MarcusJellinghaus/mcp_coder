@@ -993,12 +993,26 @@ flowchart LR
 
 **Process:**
 
-- Generates PR summary from git diff using LLM
+- Rebases onto the base branch if the branch is behind (a failed rebase is logged, not fatal)
+- Generates PR summary from git diff using LLM (the diff excludes `pr_info/`)
 - Cleans up pr_info folder (deletes steps/, clears TASK_TRACKER.md tasks)
 - Commits cleanup changes
 - Pushes branch to remote
 - Creates pull request on GitHub with generated summary
+- Post-creation checks: polls `mergeable_state`; on `dirty`, rebases and pushes once, then polls again
+- Waits for the CI run of the pushed HEAD — no fixing
+- Sets the final label from the outcome (table below)
 - Uses prompt 🔗 [PR Summary Generation](../../src/mcp_coder/prompts/prompts.md#pr-summary-generation)
+
+| Outcome | Final label |
+|---------|-------------|
+| CI green, CI timeout, no CI, `unknown` mergeability, API error | `status-10:pr-created` |
+| Still `dirty` after the rebase (CI wait skipped) | `status-74:pr-merge-conflict` |
+| CI failed | `status-81:failing-ci` (Jenkins runs `fix-ci`) |
+| Failure before the PR exists | `status-09f:pr-creating-failed` (or `09f-timeout` / `09f-mcp`) |
+| Crash after the PR exists | `status-10:pr-created` (crash comment posted) |
+
+**Resume.** If the branch already has an open PR, `create-pr` skips straight to the post-creation checks — after cleanup/commit/push if `pr_info/` is still on the branch. Recovering from `09f` with `set-status status-08:ready-pr` is therefore safe even when Jenkins killed the job after the PR was opened. `status-09:pr-creating` goes stale after 30 min, to cover the CI wait.
 
 **See detailed manual process below in section 6.1 for reference**
 
@@ -1203,6 +1217,8 @@ status-10:pr-created
   │                        └─ job crashed      → status-83  (human)
   └─ review feedback  → status-91  (human, /pr_comment_triage)
 ```
+
+**First check is done by create-pr.** `create-pr` already checks conflicts and waits for CI once, setting `74` or `81` directly (see [PR Creation](#6-pr-creation-workflow)). PR-health takes over for whatever it left at `status-10`: `unknown` mergeability, CI timeout or no CI — and for everything that happens later.
 
 **Order matters.** Conflicts come first because a branch that is behind its base can itself make CI fail; fixing the symptom first would waste CI-fix attempts. Review comments come last.
 
