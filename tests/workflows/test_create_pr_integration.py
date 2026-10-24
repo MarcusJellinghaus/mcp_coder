@@ -6,6 +6,7 @@ These tests verify the complete workflow integration including:
 - Git repository state management
 """
 
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -360,6 +361,15 @@ class TestWorkflowErrorHandling:
 
 class TestWorkflowMainFunction:
     """Test the main workflow orchestration function."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_post_creation(self) -> Iterator[MagicMock]:
+        """Phase B never polls GitHub in these tests."""
+        with patch(
+            "mcp_coder.workflows.create_pr.core.run_post_creation",
+            return_value="pr_created",
+        ) as mock:
+            yield mock
 
     @patch(
         "mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage",
