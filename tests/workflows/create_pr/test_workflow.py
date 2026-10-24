@@ -21,8 +21,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_complete_success(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_commit: MagicMock,
@@ -63,8 +65,12 @@ class TestRunCreatePrWorkflow:
 
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_prerequisites_fail(
-        self, mock_prereqs: MagicMock, mock_handle_failure: MagicMock
+        self,
+        _mock_rebase: MagicMock,
+        mock_prereqs: MagicMock,
+        mock_handle_failure: MagicMock,
     ) -> None:
         """Test workflow exits when prerequisites fail."""
         mock_prereqs.return_value = False
@@ -83,8 +89,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_pr_creation_fails(
         self,
+        _mock_rebase: MagicMock,
         mock_create_pr: MagicMock,
         mock_push: MagicMock,
         mock_clean: MagicMock,
@@ -114,8 +122,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_generate_summary_exception(
         self,
+        _mock_rebase: MagicMock,
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_handle_failure: MagicMock,
@@ -140,8 +150,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_session_params_passed_to_generate_summary(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_commit: MagicMock,
@@ -186,8 +198,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_appends_closing_reference_without_label_updates(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_clean: MagicMock,
@@ -229,8 +243,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_leaves_body_unchanged_when_not_linked(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_clean: MagicMock,
@@ -271,8 +287,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_caches_issue_number_before_pr_creation(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_issue_manager_class: MagicMock,
@@ -333,8 +351,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_skips_label_update_when_not_linked(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_issue_manager_class: MagicMock,
@@ -393,8 +413,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_fallback_finds_issue_via_closing_references(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_issue_manager_class: MagicMock,
@@ -458,8 +480,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_fallback_multiple_closing_issues_uses_first(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_issue_manager_class: MagicMock,
@@ -517,8 +541,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_fallback_no_closing_issues_skips_labels(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_clean: MagicMock,
@@ -567,8 +593,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_completed_with_warnings_when_no_issue_found(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_clean: MagicMock,
@@ -619,8 +647,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.mcp_workspace_github.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_skips_fallback_when_issue_already_found(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_issue_manager_class: MagicMock,
@@ -666,8 +696,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_assigns_pr_on_success(
         self,
+        _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
         mock_clean: MagicMock,
@@ -704,8 +736,10 @@ class TestRunCreatePrWorkflow:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_workflow_skips_assignee_add_on_pr_failure(
         self,
+        _mock_rebase: MagicMock,
         mock_create_pr: MagicMock,
         mock_push: MagicMock,
         mock_clean: MagicMock,
@@ -727,3 +761,50 @@ class TestRunCreatePrWorkflow:
 
         assert result == 1
         mock_add_assignee.assert_not_called()
+
+    @patch("mcp_coder.workflows.create_pr.core._add_pr_assignee_best_effort")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
+    def test_workflow_rebases_before_summary(
+        self,
+        mock_rebase: MagicMock,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        _mock_add_assignee: MagicMock,
+    ) -> None:
+        """Rebase-if-needed runs once, after prerequisites, before the summary."""
+        manager = MagicMock()
+        manager.attach_mock(mock_prereqs, "prereqs")
+        manager.attach_mock(mock_rebase, "rebase")
+        manager.attach_mock(mock_generate, "generate")
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Title", "Body")
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
+
+        result = run_create_pr_workflow(Path("/test"), "claude")
+
+        assert result == 0
+        mock_rebase.assert_called_once_with(Path("/test"))
+        names = [c[0] for c in manager.mock_calls]
+        assert names == ["prereqs", "rebase", "generate"]

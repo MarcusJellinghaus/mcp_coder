@@ -366,8 +366,10 @@ class TestWorkflowMainFunction:
         return_value=None,
     )
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_main_workflow_prerequisite_failure(
         self,
+        _mock_rebase: MagicMock,
         mock_check_prereqs: MagicMock,
         _mock_validate: MagicMock,
     ) -> None:
@@ -394,8 +396,10 @@ class TestWorkflowMainFunction:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_main_workflow_pr_creation_failure(
         self,
+        _mock_rebase: MagicMock,
         mock_create_pr: MagicMock,
         mock_git_push: MagicMock,
         mock_clean: MagicMock,

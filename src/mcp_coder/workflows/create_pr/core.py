@@ -55,6 +55,7 @@ from mcp_coder.workflows.create_pr.helpers import (
     handle_create_pr_failure as _handle_create_pr_failure_impl,
 )
 from mcp_coder.workflows.create_pr.helpers import parse_pr_summary as parse_pr_summary
+from mcp_coder.workflows.create_pr.pre_creation import _rebase_if_needed
 
 # Note: PROMPTS_FILE_PATH imported from constants
 
@@ -496,6 +497,9 @@ def run_create_pr_workflow(
                 issue_number=cached_issue_number,
             )
             return 1
+
+        # Rebase onto the base branch when behind (never fails the workflow)
+        _rebase_if_needed(project_dir)
 
         # Step 2: Generate PR summary
         logger.log(OUTPUT, "Step 2/5: Generating PR summary...")
