@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: `docs/repository-setup/github.md` — Trust and Validation section
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add `### Trust and Validation` subsection; update Parsing Rules, Validation, Epic Branches, Backward Compatibility
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `### Trust and Validation` subsection; update Parsing Rules, Validation, Epic Branches, Backward Compatibility
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `docs/cli-reference.md` — trust qualifiers
 See [step_2.md](./steps/step_2.md)
