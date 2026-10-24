@@ -65,7 +65,7 @@ class TestStaleTimeoutConfiguration:
         expected_timeouts = {
             "planning": 15,
             "implementing": 120,
-            "pr_creating": 15,
+            "pr_creating": 30,
         }
 
         for internal_id, expected_timeout in expected_timeouts.items():

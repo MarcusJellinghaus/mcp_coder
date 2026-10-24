@@ -91,7 +91,7 @@
       "color": "fed7aa",
       "description": "Bot is creating the pull request (auto/in-progress)",
       "category": "bot_busy",
-      "stale_timeout_minutes": 15
+      "stale_timeout_minutes": 30
     },
     {
       "internal_id": "pr_created",
