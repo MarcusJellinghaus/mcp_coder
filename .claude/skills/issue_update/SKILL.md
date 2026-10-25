@@ -46,7 +46,7 @@ mcp__mcp-workspace__delete_this_file(file_path=".scratch/issue_body_temp.md")
 - To change a base branch: Update the content under the existing section
 - To remove a base branch: Delete the entire `### Base Branch` section
 
-The base branch must be a single line. Multiple lines will cause an error during branch creation.
+The base branch must be a single line and a valid git ref name (no spaces, `..`, `~^:?*[\`, `@{` or `//`; no leading `-`/`.`; no trailing `.`, `/` or `.lock`). `github_issue_edit` rejects an invalid value on write; if it is written another way, it is ignored and the base branch falls back — see `docs/repository-setup/github.md`.
 
 **The updated issue should include:**
 - Summary of the requirement

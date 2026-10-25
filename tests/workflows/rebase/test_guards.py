@@ -127,6 +127,7 @@ class TestResolveBaseBranch:
         assert error is not None
         assert "--base-branch" in error
         assert "### Base Branch" in error
+        assert "issue body is trusted" in error
 
     def test_no_detection_errors(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
