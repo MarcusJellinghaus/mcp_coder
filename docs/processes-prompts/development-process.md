@@ -2,7 +2,7 @@
 
 You decide scope and merge; everything else can run unattended; failures come back to you as labelled issues.
 
-mcp-coder turns GitHub issues into reviewed pull requests with LLM sessions; see the [README](../../README.md) for what it is and why.
+mcp-coder turns GitHub issues into reviewed pull requests with LLM sessions; see the [README](../../README.md#why-a-structured-process) for what it is and why.
 
 ```mermaid
 flowchart LR

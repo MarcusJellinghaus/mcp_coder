@@ -13,6 +13,17 @@ MCP coder enhances source code with a structured development process that turns 
 
 MCP Coder combines the efficiency of AI automation with the reliability of human oversight, creating a development experience that's both faster and more robust than traditional approaches.
 
+## Why a structured process
+
+Spec-driven development, applied to GitHub issues:
+
+- Issue → refined spec → reviewed plan → implementation in small verified steps → reviewed code → PR.
+- Each step leaves an artifact: issue text, `pr_info/steps/`, commits, review logs.
+- Quality gates (pylint, pytest, mypy, CI) run on every step.
+- You decide scope and merge; the rest can run unattended; failures come back as labelled issues.
+
+Details: [Development Process](docs/processes-prompts/development-process.md).
+
 ## 🎯 Vision & Architecture
 
 MCP Coder implements a structured 3-layer development approach that separates human decision-making from AI implementation:
