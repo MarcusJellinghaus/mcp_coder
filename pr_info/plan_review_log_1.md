@@ -12,3 +12,11 @@ pr_info/steps/summary.md:11 — low — Nothing in the plan says when or by whom
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_2.md:37, remove the hardcoded claim that a ruleset-protected branch shows OK without `Administration: Read`. Make the sentence depend on the token-permission finding recorded under precondition 2: if `/rules/branches/{branch}` needs no extra permission, say so; if it also needs `Administration: Read`, say that instead.', 'In pr_info/steps/step_2.md:16, narrow precondition 2 so that it blocks only edit 1 and the permission sentence. Edits 2 (strictest-wins; `not verifiable` only when both sources lack protection) and 3 (the bypass-actors sentence) do not depend on the permission findings, so they should go ahead without waiting.', "In pr_info/steps/step_1.md:29, limit the 'must fail first' requirement to test cases 1–2. Mark cases 3–5 (suppressed when the parent fails, suppressed when the parent is unverifiable, key absent) as regression guards that already pass before the change."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-10-25
+**Findings**:
+Now verify code facts.NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
