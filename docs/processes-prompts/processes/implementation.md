@@ -18,6 +18,8 @@ With `auto_review_implementation` on, success goes to `status-17:code-review-bot
 
 Fully automated. The coordinator dispatches `implement` on Jenkins (`WORKFLOW_MAPPING`).
 
+`auto_review_implementation` on → see [Automated review](automated-review.md).
+
 **Quality gates:**
 
 - All code changes are validated through **pylint** → **pytest** → **mypy**, by the LLM and by routine when implementation is done.

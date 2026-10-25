@@ -14,6 +14,8 @@ A human reviews the pull request, checks CI and merges it.
 
 Human required — the only strictly human step. `status-10:pr-created` has no auto-launched command.
 
+While the PR waits, see [PR follow-up](pr-follow-up.md).
+
 **Tools:** GitHub PR interface
 
 **Key steps:**

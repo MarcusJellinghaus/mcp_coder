@@ -20,6 +20,8 @@ Other exits:
 
 Human or supervisor skill. vscodeclaude auto-launches `/implementation_review_supervisor` for this label. The supervisor ends at "ready for approval". The label change is a separate command.
 
+Escalations from `status-17` arrive here — see [Automated review](automated-review.md).
+
 **Tools:** MCP code quality checks
 
 ## Slash commands

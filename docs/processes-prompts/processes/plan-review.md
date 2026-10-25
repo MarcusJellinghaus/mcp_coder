@@ -17,6 +17,8 @@ Major restart → `status-02:awaiting-planning`, after deleting the plan files.
 
 Human, or a supervisor skill. Tier: human or supervisor skill.
 
+Escalations from `status-14` arrive here — see [Automated review](automated-review.md).
+
 - vscodeclaude auto-launches `/plan_review_supervisor`.
 - The supervisor ends at "ready for approval". `/plan_approve` is a separate step.
 

@@ -18,6 +18,8 @@ With `auto_review_plan` on, success goes to `status-14:plan-review-bot` instead 
 
 Fully automated. The coordinator dispatches `create-plan` on Jenkins (`WORKFLOW_MAPPING`).
 
+`auto_review_plan` on → see [Automated review](automated-review.md).
+
 Output: plan files with a summary and steps (`summary.md`, `step_*.md`).
 
 ## Slash commands
