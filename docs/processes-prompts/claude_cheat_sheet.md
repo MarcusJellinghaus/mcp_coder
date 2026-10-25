@@ -10,91 +10,152 @@ For a complete overview of the process, see [development-process.md](development
 
 | Command | Description |
 |---------|-------------|
+| **Issue discussion** | |
 | `/issue_analyse` | Analyze and discuss a GitHub issue |
+| `/issue_analyse_supervisor` | Analyse an issue autonomously; approves it when no questions remain |
 | `/issue_create` | Create a new GitHub issue from discussion |
 | `/issue_update` | Update issue description with discussed details |
 | `/issue_approve` | Approve issue to start planning |
+| **Plan review** | |
 | `/plan_review` | Review the implementation plan |
+| `/plan_review_supervisor` | Review the plan autonomously; ends at ready for approval |
 | `/plan_update` | Update plan files with discussed changes |
 | `/plan_approve` | Approve plan to start implementation |
-| `/implementation_finalise` | Complete remaining tasks if bot failed<br>to complete implementation plan |
+| **Code review / failure handling** | |
 | `/implementation_review` | Review implemented code (human-supervised) |
 | `/implementation_review_supervisor` | Review implemented code (autonomous agent-driven, uses knowledge base) |
-| `/implementation_approve` | Approve code to create PR |
-| `/implementation_needs_rework` | Return to implementation for fixes |
+| `/implementation_finalise` | Complete remaining tasks if `mcp-coder implement` failed to complete the plan |
 | `/implementation_new_tasks` | Add new implementation steps |
-| `/check_branch_status` | Check branch readiness and auto-fix CI |
+| `/implementation_needs_rework` | Return to implementation for fixes |
+| `/implementation_approve` | Approve code to create PR |
+| **PR follow-up** | |
 | `/pr_comment_triage` | Triage new PR comments and review threads: fix, reply or decline, then resolve |
-| `/commit_push` | Format, commit, and push changes |
-| `/discuss` | Step-by-step discussion of open questions |
 | `/rebase` | Rebase branch onto base branch |
+| **General** | |
+| `/discuss` | Step-by-step Q&A on open questions, on any topic |
+| `/commit_push` | Format, commit, and push changes |
+| `/check_branch_status` | Check CI status, rebase needs and task completion; auto-fix CI |
 
 ---
 
-## General Process
+## Happy Path
 
-The happy path workflow:
+1. **Issue discussion:** refine and approve the issue before planning.
 
-1. **Discuss the issue:** `/issue_analyse` → `/discuss` → `/issue_update` → `/issue_approve`
+   `/issue_analyse` → `/discuss` → `/issue_update` → `/issue_approve`
+
+   New issue instead: `/issue_create` → `/discuss` → `/issue_update` → `/issue_approve`
+
    > 🤖 *bot: mcp-coder coordinate → `create_plan`*
-2. **Review the plan:** `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → `/plan_approve`
+
+2. **Plan review:** review and refine the implementation plan.
+
+   `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → `/plan_approve`
+
+   Not ready? Repeat the review, starting with a cleared context. Ready when a review brings no new insights, or you are comfortable with the approach.
+
    > 🤖 *bot: mcp-coder coordinate → `implement`*
-3. **Review code:** `/implementation_review` or `/implementation_review_supervisor` → `/discuss` → `/commit_push` → `/implementation_approve`
+
+3. **Code review:** review the code, then approve or request rework.
+
+   - `/implementation_review`: human-supervised. Claude presents findings; you decide what to act on.
+   - `/implementation_review_supervisor`: autonomous. Claude supervises subagents and decides from the knowledge base; it escalates to you only when unsure or when a major refactoring is needed.
+
+   Either one → `/discuss`, then:
+
+   - Approve: `/commit_push` → `/implementation_approve`
+   - Rework: `/implementation_new_tasks` → `/commit_push` → `/implementation_needs_rework`
+
+   Smaller changes: ask the LLM to fix it directly, verify, then `/commit_push`.
+
    > 🤖 *bot: mcp-coder coordinate → `create_pr`*
-4. **Merge PR:** Review and merge in GitHub
+
+4. **PR follow-up** (while the PR waits at status-10):
+
+   - merge conflict → bot `fix-conflict`
+   - failing CI → bot `fix-ci`
+   - review comments → `/pr_comment_triage`
+
+   > 🤖 *bot: mcp-coder coordinate → `fix-conflict` / `fix-ci`*
+
+5. **Review and merge:** in GitHub.
 
 ---
 
-## Issue Discussion
+## Failure labels
 
-Refine and approve a GitHub issue before planning.
+A failure label means an automated step stopped and needs you.
 
-`/issue_analyse` → `/discuss` → `/issue_update` → `/issue_approve`
+1. Run `/check_branch_status` to see what happened. For `status-17f-tasks`, run `/implementation_finalise` instead.
+2. Fix the cause, then restart the stage with the command shown under its heading: `mcp-coder gh-tool set-status <label>`.
 
-Or create a new issue:
+Recovery details per label: [failure-handling.md](processes/failure-handling.md).
 
-`/issue_create` → `/discuss` → `/issue_update` → `/issue_approve`
+### Plan creation
 
----
+Restart with `mcp-coder gh-tool set-status status-02:awaiting-planning`.
 
-## Plan Review
+| Failure label | Reason |
+|---------------|--------|
+| `status-03f:planning-failed` | Any other error or crash |
+| `status-03f-timeout:planning-llm-timeout` | LLM timeout |
+| `status-03f-mcp:planning-mcp-unavailable` | MCP server(s) failed to connect |
+| `status-03f-prereq:planning-prereq-failed` | Dirty working dir, issue not found, base branch missing, branch creation failed, or `pr_info/` already exists or could not be created |
 
-Review and refine the implementation plan.
+### Automated plan review
 
-`/plan_review` → `/discuss` → `/plan_update` → `/commit_push`
+Restart with `mcp-coder gh-tool set-status status-14:plan-review-bot`.
 
-**Decision:** Is the plan ready?
-  ↳ Yes → `/plan_approve`
-  ↳ No, start over → `/clear` → `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → (repeat until ready)
+| Failure label | Reason |
+|---------------|--------|
+| `status-14f:plan-review-failed` | Generic error or unparseable verdict |
+| `status-14f-timeout:plan-review-llm-timeout` | LLM API timeout |
+| `status-14f-mcp:plan-review-mcp-unavailable` | MCP server unavailable |
 
-**Ready when** no new insights from review or comfortable with approach.
+### Implementation
 
----
+Restart with `mcp-coder gh-tool set-status status-05:plan-ready`.
 
-## Code Review
+| Failure label | Reason |
+|---------------|--------|
+| `status-06f:implementing-failed` | General implementation failure |
+| `status-06f-ci:ci-fix-needed` | CI exhausted 3 fix attempts |
+| `status-06f-timeout:llm-timeout` | LLM API timeout |
+| `status-06f-prep:task-tracker-prep-failed` | Task tracker preparation failed |
+| `status-06f-mcp:mcp-unavailable` | MCP server unavailable |
+| `status-06f-nochange:no-changes-after-retries` | LLM produced no file changes after 3 retry attempts |
+| `status-06f-blocked:implementation-blocked` | Agent could not verify the work and refused to claim it (`pr_info/.blocked.txt`) |
 
-Review code and either approve or request rework.
+### Automated code review
 
-- `/implementation_review` — human-supervised: Claude presents findings, you review and decide what to act on
-- `/implementation_review_supervisor` — autonomous: Claude acts as a supervisor, delegating to subagents and deciding based on the knowledge base; escalates to you only when unsure or a major refactoring is needed
+Restart with `mcp-coder gh-tool set-status status-17:code-review-bot`.
 
-`/implementation_review` or `/implementation_review_supervisor` → `/discuss`
+| Failure label | Reason |
+|---------------|--------|
+| `status-17f:code-review-failed` | Generic error or unparseable verdict |
+| `status-17f-ci:code-review-ci-fix-needed` | CI still red at the rounds cap |
+| `status-17f-timeout:code-review-llm-timeout` | LLM API timeout |
+| `status-17f-mcp:code-review-mcp-unavailable` | MCP server unavailable |
+| `status-17f-tasks:code-review-open-tasks` | `## Tasks` in `TASK_TRACKER.md` still has unchecked items; run `/implementation_finalise` first |
+| `status-17f-ci-unknown:code-review-ci-unknown` | The final gate could not prove CI green (pending, not configured, unknown or unavailable) |
 
-Then either:
+### PR creation
 
-- `/implementation_approve`
-- `/implementation_new_tasks` → `/commit_push` → `/implementation_needs_rework`
+Restart with `mcp-coder gh-tool set-status status-08:ready-pr`.
 
-**For smaller changes:** Ask the LLM to fix it directly, verify the change, then `/commit_push`.
+| Failure label | Reason |
+|---------------|--------|
+| `status-09f:pr-creating-failed` | Any other error or crash |
+| `status-09f-timeout:pr-creating-llm-timeout` | LLM timeout during summary generation |
+| `status-09f-mcp:pr-creating-mcp-unavailable` | MCP server(s) failed to connect |
 
----
+### PR follow-up
 
-## Utility Commands
+Once the conflict or CI problem is fixed by hand, hand the PR back with `mcp-coder gh-tool set-status status-10:pr-created`.
 
-| Command | Use When |
-|---------|----------|
-| `/check_branch_status` | Check CI status, rebase needs, and task completion |
-| `/commit_push` | Ready to commit and push changes |
-| `/discuss` | Need step-by-step Q&A on any topic |
-| `/implementation_finalise` | `mcp-coder implement` failed to complete the plan |
-| `/rebase` | Need to rebase branch onto base branch |
+| Failure label | Reason |
+|---------------|--------|
+| `status-73:merge-conflict-failed` | `fix-conflict` crashed, or the Jenkins job died |
+| `status-74:pr-merge-conflict` | Still conflicting, no open PR found, or rebase failed (see the issue comment) |
+| `status-83:ci-fix-failed` | `fix-ci` crashed, or the job died |
+| `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) |

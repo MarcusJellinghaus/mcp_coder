@@ -129,7 +129,7 @@
 mcp-coder prompt "Architecture maintenance workflow:
 
 1. READ PROCESS GUIDE:
-   - Read docs/architecture/ARCHITECTURE_MAINTENANCE.md completely
+   - Read docs/architecture/architecture-maintenance.md completely
    - Understand the 4-step maintenance process in Section 4
    - Note the quality gates in Section 5
 
