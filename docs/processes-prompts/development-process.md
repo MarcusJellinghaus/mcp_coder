@@ -5,48 +5,89 @@ You decide scope and merge; everything else can run unattended; failures come ba
 mcp-coder turns GitHub issues into reviewed pull requests with LLM sessions; see the [README](../../README.md#why-a-structured-process) for what it is and why.
 
 ```mermaid
-%%{init: {"flowchart": {"rankSpacing": 70, "nodeSpacing": 40}}}%%
 flowchart TD
+    subgraph Legend
+        direction LR
+        L4["Status label: status tracked in GitHub"]
+        L3(["Fully automated: executed by mcp-coder"])
+        L2(["Interactive LLM session"])
+        L1(["GitHub UI"])
+        L4 ~~~ L3 ~~~ L2 ~~~ L1
+    end
+    Legend ~~~ S01
+
     S01["01 created"]
+    H1(["/issue_analyse + /issue_approve<br/>/issue_analyse_supervisor"])
     S02["02 awaiting-planning"]
+    A2(["create-plan"])
     S04["04 plan-review"]
+    H3(["/plan_review + /plan_approve<br/>/plan_review_supervisor"])
     S05["05 plan-ready"]
+    A4(["implement"])
     S07["07 code-review"]
+    H5(["/implementation_review + /implementation_approve<br/>/implementation_review_supervisor"])
     S08["08 ready-pr"]
+    A6(["create-pr"])
     S10["10 pr-created"]
-    S71["71 conflict"]
-    S81["81 CI failed"]
-    S91["91 review feedback"]
+    H7(["review and merge"])
     M(["Merged"])
 
-    S01 -->|"/issue_analyse<br/>/discuss<br/>/issue_approve"| S02
-    S02 -->|create-plan| S04
-    S04 -->|/plan_approve| S05
-    S05 -->|implement| S07
-    S07 -->|"/implementation_approve"| S08
-    S08 -->|create-pr| S10
-    S10 -->|merge| M
+    S14["14 plan-review-bot"]
+    A8(["review-plan"])
+    S17["17 code-review-bot"]
+    A9(["review-implementation"])
 
-    S10 --> S71 -->|fix-conflict| S10
-    S10 --> S81 -->|fix-ci| S10
-    S10 --> S91 -->|"/pr_comment_triage"| S10
+    S71["71 merge-conflict"]
+    S81["81 failing-ci"]
+    S91["91 pr-review-comments"]
+    F1(["fix-conflict"])
+    F2(["fix-ci"])
+    F3(["/pr_comment_triage"])
 
-    S02 -.->|"auto_review_plan"| S05
-    S05 -.->|"auto_review_implementation"| S08
+    S01 --> H1 --> S02 --> A2
 
-    classDef human fill:#f87171,stroke:#b91c1c,color:#111
-    classDef supervisor fill:#fbbf24,stroke:#b45309,color:#111
-    classDef auto fill:#4ade80,stroke:#15803d,color:#111
-    class M,S10 human
-    class S01,S04,S07,S91 supervisor
-    class S02,S05,S08,S71,S81 auto
+    A2 -->|"manual review"| S04 --> H3 --> S05
+    A2 -.->|"auto_review_plan"| S14 --> A8 --> S05
+    A8 -.->|"needs human"| H3
+
+    S05 --> A4
+
+    A4 -->|"manual review"| S07 --> H5 --> S08
+    A4 -.->|"auto_review_implementation"| S17 --> A9 --> S08
+    A9 -.->|"needs human"| H5
+
+    S08 --> A6 --> S10 --> H7 --> M
+
+    S10 -->|"merge conflict"| S71 --> F1 --> S10
+    S10 -->|"CI error"| S81 --> F2 --> S10
+    S10 -->|"PR comment"| S91 --> F3 --> S10
+
+    classDef state fill:#f9fafb,stroke:#9ca3af,color:#374151,font-size:13px
+    classDef actHuman fill:#f87171,stroke:#b91c1c,color:#111,font-size:13px
+    classDef actSupervisor fill:#fbbf24,stroke:#b45309,color:#111,font-size:13px
+    classDef actAuto fill:#4ade80,stroke:#15803d,color:#111,font-size:13px
+    class S01,S02,S04,S05,S07,S08,S10,S14,S17,S71,S81,S91,M,L4 state
+    class H7,L1 actHuman
+    class H1,H3,H5,F3,L2 actSupervisor
+    class A2,A4,A6,A8,A9,F1,F2,L3 actAuto
 ```
 
-Dashed edges: review can run headless (`review-plan` / `review-implementation`) when `auto_review_plan` / `auto_review_implementation` is on.
+After `create-plan` and `implement`, the review runs in one of two ways:
 
-Legend: red = human required (merge, 10); yellow = human or supervisor skill (01, 04, 07, 91); green = fully automated (coordinator / vscodeclaude / Jenkins) (02, 05, 08, 71, 81).
+- **Interactive** (default): you work in an LLM session.
+- **Automated** (dashed): `review-plan` / `review-implementation`, only if `auto_review_plan` / `auto_review_implementation` is on. If it needs a human, it hands over to the interactive review.
 
-Renders on GitHub. Full state machine incl. failure labels: [workflow matrix](github_Issue_Workflow_Matrix.html).
+**Interactive sessions:**
+
+`/plan_review` and `/implementation_review` start a step-by-step session with the LLM (with `/discuss` and the update commands).
+
+`/plan_review_supervisor` and `/implementation_review_supervisor` run the review through subagents and stop at "ready for approval".
+
+Either way, the stage ends with `/plan_approve` or `/implementation_approve`.
+
+`/issue_analyse_supervisor` works the same way for the issue. It runs the analysis through subagents and escalates scope and requirements questions to you. It can approve (→ 02) itself once no questions remain; otherwise approve with `/issue_approve`.
+
+Full state machine incl. failure labels: [workflow matrix](github_Issue_Workflow_Matrix.html).
 
 ## Processes
 
