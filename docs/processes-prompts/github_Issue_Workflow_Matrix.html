@@ -238,6 +238,32 @@
         .status-code-review-tasks { --label-color: #d93f0b; }
         .status-code-review-ci-unknown { --label-color: #d93f0b; }
         
+        /* PR follow-up lanes */
+        .status-merge-conflict { --label-color: #fda4af; }
+        .status-fixing-merge-conflict { --label-color: #fb7185; }
+        .status-merge-conflict-failed { --label-color: #e99695; }
+        .status-pr-merge-conflict { --label-color: #b60205; }
+        .status-failing-ci { --label-color: #fda4af; }
+        .status-fixing-ci { --label-color: #fb7185; }
+        .status-ci-fix-failed { --label-color: #e99695; }
+        .status-pr-ci-failed { --label-color: #b60205; }
+        .status-pr-review-comments { --label-color: #b60205; }
+
+        /* Additional failure labels */
+        .status-planning-llm-timeout { --label-color: #e99695; }
+        .status-planning-mcp { --label-color: #e99695; }
+        .status-planning-prereq-failed { --label-color: #b60205; }
+        .status-pr-creating-timeout { --label-color: #e99695; }
+        .status-pr-creating-mcp { --label-color: #e99695; }
+
+        /* Auto-launch and manual commands */
+        .label-commands {
+            font-size: 0.75rem;
+            line-height: 1.4;
+            color: #4a5568;
+            margin-top: 8px;
+        }
+
         /* Flow arrows inline */
         .flow-cell {
             display: flex;
@@ -337,40 +363,81 @@
             </div>
         </div>
         
-        <!-- Row 1: Planning cycle (1 → 2 → 3 → 3f) -->
-        <div class="row-label">Planning Cycle</div>
+        <!-- Row 1: Planning (01 → 02 → 03 → 03f*) -->
+        <div class="row-label">Planning — create-plan</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            03 → 04 success; → 14 when <code>auto_review_plan</code> is on; → 03f* on error. Every 03f* label is retried with <code>set-status status-02:awaiting-planning</code>.
+        </div>
         <div class="workflow-row">
             <div class="label-card highlight-blue status-created">
-                <div class="step-number">1</div>
-                <div class="label-name">status:created</div>
+                <div class="step-number">01</div>
+                <div class="label-name">status-01:created</div>
                 <div class="label-description">Fresh issue, may need refinement</div>
+                <div class="label-commands">
+                    <div class="auto-command">&#x25b6; Auto: <code>/issue_analyse</code> → <code>/discuss</code></div>
+                    <div>&#x270b; Manual / exit: <code>/issue_analyse_supervisor</code> → 02, <code>/issue_update</code>, <code>/issue_approve</code> → 02</div>
+                </div>
                 <div class="status-badge badge-human">Ready</div>
             </div>
-            
+
             <div class="label-card muted status-awaiting-planning">
-                <div class="step-number">2</div>
-                <div class="label-name">status:awaiting-planning</div>
-                <div class="label-description">Issue refined, ready for planning</div>
+                <div class="step-number">02</div>
+                <div class="label-name">status-02:awaiting-planning</div>
+                <div class="label-description">Issue is refined and ready for implementation planning</div>
                 <div class="status-badge badge-pickup">Waiting</div>
             </div>
-            
+
             <div class="label-card muted status-planning">
-                <div class="step-number">3</div>
-                <div class="label-name">status:planning</div>
-                <div class="label-description">Plan being drafted</div>
+                <div class="step-number">03</div>
+                <div class="label-name">status-03:planning</div>
+                <div class="label-description">Implementation plan being drafted (auto/in-progress)</div>
                 <div class="status-badge badge-busy">Working</div>
             </div>
-            
+
             <div class="failed-stack">
                 <div class="label-card highlight-red status-planning-failed">
-                    <div class="step-number">3f</div>
+                    <div class="step-number">03f</div>
                     <div class="label-name">status-03f:planning-failed</div>
                     <div class="label-description">Plan generation failed</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-02:awaiting-planning</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Failed</div>
+                </div>
+                <div class="label-card highlight-red status-planning-llm-timeout">
+                    <div class="step-number">03f-timeout</div>
+                    <div class="label-name">status-03f-timeout:planning-llm-timeout</div>
+                    <div class="label-description">LLM timed out during planning</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-02:awaiting-planning</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Timeout</div>
+                </div>
+                <div class="label-card highlight-red status-planning-mcp">
+                    <div class="step-number">03f-mcp</div>
+                    <div class="label-name">status-03f-mcp:planning-mcp-unavailable</div>
+                    <div class="label-description">MCP server(s) failed to connect during planning</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-02:awaiting-planning</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">MCP Failed</div>
+                </div>
+                <div class="label-card highlight-red status-planning-prereq-failed">
+                    <div class="step-number">03f-prereq</div>
+                    <div class="label-name">status-03f-prereq:planning-prereq-failed</div>
+                    <div class="label-description">Planning prerequisites failed</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-02:awaiting-planning</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Prereq Failed</div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Arrow row -->
         <div class="row-arrow">
             <div class="arrow-down">&#x2193;</div>
@@ -378,77 +445,112 @@
             <div></div>
             <div></div>
         </div>
-        
-        <!-- Row 2: Implementation cycle (4 → 5 → 6 → 6f/6f-ci/6f-timeout) -->
-        <div class="row-label">Implementation Cycle</div>
+
+        <!-- Row 2: Implementation (04 → 05 → 06 → 06f*) -->
+        <div class="row-label">Implementation — implement</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            06 → 07 success; → 17 when <code>auto_review_implementation</code> is on; → 06f* on error. Every 06f* label is retried with <code>set-status status-05:plan-ready</code>.
+        </div>
         <div class="workflow-row">
             <div class="label-card highlight-blue status-plan-review">
-                <div class="step-number">4</div>
-                <div class="label-name">status:plan-review</div>
-                <div class="label-description">Plan available for review</div>
+                <div class="step-number">04</div>
+                <div class="label-name">status-04:plan-review</div>
+                <div class="label-description">First implementation plan available for review/discussion</div>
+                <div class="label-commands">
+                    <div class="auto-command">&#x25b6; Auto: <code>/plan_review_supervisor</code></div>
+                    <div>&#x270b; Manual / exit: <code>/plan_review</code>, <code>/discuss</code>, <code>/plan_update</code>, <code>/plan_approve</code> → 05, <code>/issue_approve</code> → 05</div>
+                </div>
                 <div class="status-badge badge-human">Ready</div>
             </div>
-            
+
             <div class="label-card muted status-plan-ready">
-                <div class="step-number">5</div>
-                <div class="label-name">status:plan-ready</div>
-                <div class="label-description">Plan approved, ready to code</div>
+                <div class="step-number">05</div>
+                <div class="label-name">status-05:plan-ready</div>
+                <div class="label-description">Implementation plan approved, ready to code</div>
                 <div class="status-badge badge-pickup">Waiting</div>
             </div>
-            
+
             <div class="label-card muted status-implementing">
-                <div class="step-number">6</div>
-                <div class="label-name">status:implementing</div>
-                <div class="label-description">Code being written</div>
+                <div class="step-number">06</div>
+                <div class="label-name">status-06:implementing</div>
+                <div class="label-description">Code being written (auto/in-progress)</div>
                 <div class="status-badge badge-busy">Working</div>
             </div>
-            
+
             <div class="failed-stack">
                 <div class="label-card highlight-red status-implementing-failed">
-                    <div class="step-number">6f</div>
+                    <div class="step-number">06f</div>
                     <div class="label-name">status-06f:implementing-failed</div>
                     <div class="label-description">General implementation failure</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-05:plan-ready</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+                <div class="label-card highlight-red status-task-tracker-prep-failed">
+                    <div class="step-number">06f-prep</div>
+                    <div class="label-name">status-06f-prep:task-tracker-prep-failed</div>
+                    <div class="label-description">Task tracker preparation failed</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-05:plan-ready</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Failed</div>
                 </div>
                 <div class="label-card highlight-red status-ci-fix-needed">
-                    <div class="step-number">6f-ci</div>
+                    <div class="step-number">06f-ci</div>
                     <div class="label-name">status-06f-ci:ci-fix-needed</div>
-                    <div class="label-description">CI exhausted 3 fix attempts</div>
+                    <div class="label-description">CI exhausted fix attempts, needs manual intervention</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-05:plan-ready</code></div>
+                    </div>
                     <div class="status-badge badge-failed">CI Failed</div>
                 </div>
                 <div class="label-card highlight-red status-llm-timeout">
-                    <div class="step-number">6f-t</div>
+                    <div class="step-number">06f-timeout</div>
                     <div class="label-name">status-06f-timeout:llm-timeout</div>
-                    <div class="label-description">LLM API timeout</div>
+                    <div class="label-description">LLM API timeout during implementation</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-05:plan-ready</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Timeout</div>
                 </div>
-                <div class="label-card highlight-red status-task-tracker-prep-failed">
-                    <div class="step-number">6f-prep</div>
-                    <div class="label-name">status-06f-prep:task-tracker-prep-failed</div>
-                    <div class="label-description">Task tracker preparation failed</div>
-                    <div class="status-badge badge-failed">Failed</div>
-                </div>
                 <div class="label-card highlight-red status-mcp-unavailable">
-                    <div class="step-number">6f-mcp</div>
+                    <div class="step-number">06f-mcp</div>
                     <div class="label-name">status-06f-mcp:mcp-unavailable</div>
-                    <div class="label-description">MCP server unavailable</div>
+                    <div class="label-description">MCP server(s) failed to connect during implementation</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-05:plan-ready</code></div>
+                    </div>
                     <div class="status-badge badge-failed">MCP Failed</div>
                 </div>
                 <div class="label-card highlight-red status-no-changes-after-retries">
-                    <div class="step-number">6f-nc</div>
+                    <div class="step-number">06f-nochange</div>
                     <div class="label-name">status-06f-nochange:no-changes-after-retries</div>
-                    <div class="label-description">No file changes after 3 retries</div>
+                    <div class="label-description">LLM produced no file changes after multiple retry attempts</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-05:plan-ready</code></div>
+                    </div>
                     <div class="status-badge badge-failed">No Changes</div>
                 </div>
                 <div class="label-card highlight-red status-implementation-blocked">
-                    <div class="step-number">6f-b</div>
+                    <div class="step-number">06f-blocked</div>
                     <div class="label-name">status-06f-blocked:implementation-blocked</div>
-                    <div class="label-description">Agent could not verify the work and refused to claim it</div>
+                    <div class="label-description">Agent reported it was blocked and could not verify the work</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-05:plan-ready</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Blocked</div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Arrow row -->
         <div class="row-arrow">
             <div class="arrow-down">&#x2193;</div>
@@ -456,90 +558,235 @@
             <div></div>
             <div></div>
         </div>
-        
-        <!-- Row 3: PR cycle (7 → 8 → 9 → 9f) -->
-        <div class="row-label">PR Creation Cycle</div>
+
+        <!-- Row 3: PR creation (07 → 08 → 09 → 09f*) -->
+        <div class="row-label">PR Creation — create-pr</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            09 → 10 success; → 09f* on error. Every 09f* label is retried with <code>set-status status-08:ready-pr</code>.
+        </div>
         <div class="workflow-row">
             <div class="label-card highlight-blue status-code-review">
-                <div class="step-number">7</div>
-                <div class="label-name">status:code-review</div>
-                <div class="label-description">Implementation complete, needs review</div>
+                <div class="step-number">07</div>
+                <div class="label-name">status-07:code-review</div>
+                <div class="label-description">Implementation complete, needs code review</div>
+                <div class="label-commands">
+                    <div class="auto-command">&#x25b6; Auto: <code>/implementation_review_supervisor</code></div>
+                    <div>&#x270b; Manual / exit: <code>/implementation_review</code>, <code>/implementation_finalise</code>, <code>/implementation_new_tasks</code>, <code>/implementation_approve</code> → 08, <code>/implementation_needs_rework</code> → 05, <code>/issue_approve</code> → 08</div>
+                </div>
                 <div class="status-badge badge-human">Ready</div>
             </div>
-            
+
             <div class="label-card muted status-ready-pr">
-                <div class="step-number">8</div>
-                <div class="label-name">status:ready-pr</div>
-                <div class="label-description">Code approved, ready for PR</div>
+                <div class="step-number">08</div>
+                <div class="label-name">status-08:ready-pr</div>
+                <div class="label-description">Approved for pull request creation</div>
                 <div class="status-badge badge-pickup">Waiting</div>
             </div>
-            
+
             <div class="label-card muted status-pr-creating">
-                <div class="step-number">9</div>
-                <div class="label-name">status:pr-creating</div>
-                <div class="label-description">Pull request being created</div>
+                <div class="step-number">09</div>
+                <div class="label-name">status-09:pr-creating</div>
+                <div class="label-description">Bot is creating the pull request (auto/in-progress)</div>
                 <div class="status-badge badge-busy">Working</div>
             </div>
-            
+
             <div class="failed-stack">
                 <div class="label-card highlight-red status-pr-creating-failed">
-                    <div class="step-number">9f</div>
+                    <div class="step-number">09f</div>
                     <div class="label-name">status-09f:pr-creating-failed</div>
-                    <div class="label-description">PR creation failed</div>
+                    <div class="label-description">Pull request creation failed</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-08:ready-pr</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+                <div class="label-card highlight-red status-pr-creating-timeout">
+                    <div class="step-number">09f-timeout</div>
+                    <div class="label-name">status-09f-timeout:pr-creating-llm-timeout</div>
+                    <div class="label-description">LLM timed out during PR creation</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-08:ready-pr</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Timeout</div>
+                </div>
+                <div class="label-card highlight-red status-pr-creating-mcp">
+                    <div class="step-number">09f-mcp</div>
+                    <div class="label-name">status-09f-mcp:pr-creating-mcp-unavailable</div>
+                    <div class="label-description">MCP server(s) failed to connect during PR creation</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-08:ready-pr</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">MCP Failed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arrow row -->
+        <div class="row-arrow">
+            <div class="arrow-down">&#x2193;</div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+
+        <!-- Row 4: Complete (10) -->
+        <div class="row-label">Complete</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            You decide merge. While a PR waits here the coordinator checks it for conflicts, failing CI and review feedback (rows below).
+        </div>
+        <div class="workflow-row-final">
+            <div class="label-card highlight-blue status-pr-created">
+                <div class="step-number">10</div>
+                <div class="label-name">status-10:pr-created</div>
+                <div class="label-description">Pull request created, awaiting approval/merge</div>
+                <div class="status-badge badge-human">Ready</div>
+            </div>
+            <div class="cell-empty"></div>
+            <div class="cell-empty"></div>
+            <div class="cell-empty"></div>
+        </div>
+
+        <!-- Row 5: PR follow-up, merge conflict (71 → 72 → 73/74) -->
+        <div class="row-label" style="border-top: 2px dashed #cbd5e0; padding-top: 20px; margin-top: 25px;">PR follow-up: merge conflict — fix-conflict</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            72 → 10 settled/not dirty or unknown after successful rebase; → 74 dirty / no PR / unknown after failed rebase; → 73 crash; branch undetermined → exit 1, stays 72.
+        </div>
+        <div class="workflow-row">
+            <div class="cell-empty"></div>
+
+            <div class="label-card muted status-merge-conflict">
+                <div class="step-number">71</div>
+                <div class="label-name">status-71:merge-conflict</div>
+                <div class="label-description">PR is no longer cleanly mergeable against its base</div>
+                <div class="status-badge badge-pickup">Waiting</div>
+            </div>
+
+            <div class="label-card muted status-fixing-merge-conflict">
+                <div class="step-number">72</div>
+                <div class="label-name">status-72:fixing-merge-conflict</div>
+                <div class="label-description">Mechanical rebase in progress to resolve merge conflict (auto/in-progress)</div>
+                <div class="status-badge badge-busy">Working</div>
+            </div>
+
+            <div class="failed-stack">
+                <div class="label-card highlight-red status-merge-conflict-failed">
+                    <div class="step-number">73</div>
+                    <div class="label-name">status-73:merge-conflict-failed</div>
+                    <div class="label-description">status-72 Jenkins job died without transitioning the label (crash watchdog)</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-10:pr-created</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Crash</div>
+                </div>
+                <div class="label-card highlight-red status-pr-merge-conflict">
+                    <div class="step-number">74</div>
+                    <div class="label-name">status-74:pr-merge-conflict</div>
+                    <div class="label-description">Rebase could not resolve the merge conflict - needs manual resolution</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: resolve (<code>/rebase</code>) → <code>set-status status-10:pr-created</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Failed</div>
                 </div>
             </div>
         </div>
-        
-        <!-- Arrow row -->
-        <div class="row-arrow">
-            <div class="arrow-down">&#x2193;</div>
-            <div></div>
-            <div></div>
-            <div></div>
+
+        <!-- Row 6: PR follow-up, failing CI (81 → 82 → 83/84) -->
+        <div class="row-label">PR follow-up: failing CI — fix-ci</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            82 → 10 CI green; → 84 formatter-config error, LLM timeout, MCP unavailable or fix attempts exhausted (comment has a Category line); → 83 crash; branch undetermined → exit 1, stays 82.
         </div>
-        
-        <!-- Row 4: Done (10) -->
-        <div class="row-label">Complete</div>
-        <div class="workflow-row-final">
-            <div class="label-card highlight-blue status-pr-created">
-                <div class="step-number">10</div>
-                <div class="label-name">status:pr-created</div>
-                <div class="label-description">Pull request created, ready to merge</div>
+        <div class="workflow-row">
+            <div class="cell-empty"></div>
+
+            <div class="label-card muted status-failing-ci">
+                <div class="step-number">81</div>
+                <div class="label-name">status-81:failing-ci</div>
+                <div class="label-description">PR's CI is failing and mergeable (conflict checked first)</div>
+                <div class="status-badge badge-pickup">Waiting</div>
+            </div>
+
+            <div class="label-card muted status-fixing-ci">
+                <div class="step-number">82</div>
+                <div class="label-name">status-82:fixing-ci</div>
+                <div class="label-description">CI auto-fix loop in progress (auto/in-progress)</div>
+                <div class="status-badge badge-busy">Working</div>
+            </div>
+
+            <div class="failed-stack">
+                <div class="label-card highlight-red status-ci-fix-failed">
+                    <div class="step-number">83</div>
+                    <div class="label-name">status-83:ci-fix-failed</div>
+                    <div class="label-description">status-82 Jenkins job died without transitioning the label (crash watchdog)</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-10:pr-created</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Crash</div>
+                </div>
+                <div class="label-card highlight-red status-pr-ci-failed">
+                    <div class="step-number">84</div>
+                    <div class="label-name">status-84:pr-ci-failed</div>
+                    <div class="label-description">CI auto-fix loop exhausted or hit an LLM failure - needs manual fix</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix CI → <code>set-status status-10:pr-created</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 7: PR follow-up, review comments (91) -->
+        <div class="row-label">PR follow-up: review comments — /pr_comment_triage</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            Never auto-fixed. 91 → 10 when <code>/pr_comment_triage</code> ends with <code>set-status status-10:pr-created</code>.
+        </div>
+        <div class="workflow-row">
+            <div class="label-card highlight-blue status-pr-review-comments">
+                <div class="step-number">91</div>
+                <div class="label-name">status-91:pr-review-comments</div>
+                <div class="label-description">PR has new review comments, unresolved threads, or a changes-requested review</div>
+                <div class="label-commands">
+                    <div class="auto-command">&#x25b6; Auto: <code>/pr_comment_triage</code></div>
+                    <div>&#x270b; Manual / exit: exits via <code>/pr_comment_triage</code> → 10</div>
+                </div>
                 <div class="status-badge badge-human">Ready</div>
             </div>
             <div class="cell-empty"></div>
             <div class="cell-empty"></div>
             <div class="cell-empty"></div>
         </div>
-        
+
         <!-- Optional: Automated Review Lane (branches from stages 4 & 7) -->
-        <div class="row-label" style="border-top: 2px dashed #cbd5e0; padding-top: 20px; margin-top: 25px;">Optional: Automated Review Lane <span style="font-weight: 400; font-style: italic; color: #718096;">— enabled per-repo via <code>auto_review_plan</code> / <code>auto_review_implementation</code> (default off)</span></div>
+        <div class="row-label" style="border-top: 2px dashed #cbd5e0; padding-top: 20px; margin-top: 25px;">Optional: Automated Review Lane <span style="font-weight: 400; font-style: italic; color: #718096;">— can run only when enabled per-repo via <code>auto_review_plan</code> / <code>auto_review_implementation</code> (default off)</span></div>
         <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 15px;">
-            When enabled, <code>create-plan</code> / <code>implement</code> route their success to the review-bot pickup label instead of the human review label. Each review ends in a 3-way outcome: <strong>success</strong> advances (→ <code>05:plan-ready</code> / <code>08:ready-pr</code>), <strong>needs-human</strong> reuses the interactive review label, <strong>error</strong> sets a failure label.
+            When enabled, <code>create-plan</code> / <code>implement</code> route their success to the review-bot pickup label instead of the human review label. Each review ends in a 3-way outcome: <strong>success</strong> advances (→ 05 / 08), <strong>escalate</strong> reuses the interactive review label (→ 04 / 07), <strong>error</strong> sets a failure label.
         </div>
 
-        <!-- Row: Automated Plan Review (14 → 14i → 14f-*) -->
-        <div class="row-label">Automated Plan Review</div>
+        <!-- Row 8: Automated plan review (14 → 14i → 14f*) -->
+        <div class="row-label">Automated plan review — review-plan (optional)</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            14i → 05 success; escalate → 04; error → 14f*. Every 14f* label is retried with <code>set-status status-14:plan-review-bot</code>.
+        </div>
         <div class="workflow-row">
-            <div class="label-card muted status-plan-review">
-                <div class="step-number">→4</div>
-                <div class="label-name">status-04:plan-review</div>
-                <div class="label-description">needs-human: escalation reuses the interactive supervisor</div>
-                <div class="status-badge badge-human">Escalate</div>
-            </div>
+            <div class="cell-empty"></div>
 
             <div class="label-card status-plan-review-bot">
                 <div class="step-number">14</div>
                 <div class="label-name">status-14:plan-review-bot</div>
-                <div class="label-description">Plan ready for automated review pickup (success → 05:plan-ready)</div>
+                <div class="label-description">Plan ready for automated review pickup</div>
                 <div class="status-badge badge-pickup">Waiting</div>
             </div>
 
             <div class="label-card status-plan-reviewing">
                 <div class="step-number">14i</div>
                 <div class="label-name">status-14i:plan-reviewing</div>
-                <div class="label-description">Plan being reviewed (auto/in-progress)</div>
+                <div class="label-description">Implementation plan being reviewed (auto/in-progress)</div>
                 <div class="status-badge badge-busy">Working</div>
             </div>
 
@@ -547,20 +794,32 @@
                 <div class="label-card highlight-red status-plan-review-failed">
                     <div class="step-number">14f</div>
                     <div class="label-name">status-14f:plan-review-failed</div>
-                    <div class="label-description">General failure / unparseable verdict</div>
+                    <div class="label-description">Automated plan review failed</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-14:plan-review-bot</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Failed</div>
                 </div>
                 <div class="label-card highlight-red status-plan-review-timeout">
-                    <div class="step-number">14f-t</div>
+                    <div class="step-number">14f-timeout</div>
                     <div class="label-name">status-14f-timeout:plan-review-llm-timeout</div>
-                    <div class="label-description">LLM API timeout</div>
+                    <div class="label-description">LLM timed out during automated plan review</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-14:plan-review-bot</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Timeout</div>
                 </div>
                 <div class="label-card highlight-red status-plan-review-mcp">
-                    <div class="step-number">14f-m</div>
+                    <div class="step-number">14f-mcp</div>
                     <div class="label-name">status-14f-mcp:plan-review-mcp-unavailable</div>
-                    <div class="label-description">MCP server unavailable</div>
-                    <div class="status-badge badge-failed">MCP</div>
+                    <div class="label-description">MCP server(s) failed to connect during automated plan review</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-14:plan-review-bot</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">MCP Failed</div>
                 </div>
             </div>
         </div>
@@ -573,20 +832,18 @@
             <div></div>
         </div>
 
-        <!-- Row: Automated Code Review (17 → 17i → 17f-*) -->
-        <div class="row-label">Automated Code Review</div>
+        <!-- Row 9: Automated code review (17 → 17i → 17f*) -->
+        <div class="row-label">Automated code review — review-implementation (optional)</div>
+        <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
+            17i → 08 success; escalate → 07; error → 17f*. Every 17f* label is retried with <code>set-status status-17:code-review-bot</code>.
+        </div>
         <div class="workflow-row">
-            <div class="label-card muted status-code-review">
-                <div class="step-number">→7</div>
-                <div class="label-name">status-07:code-review</div>
-                <div class="label-description">needs-human: escalation reuses the interactive supervisor</div>
-                <div class="status-badge badge-human">Escalate</div>
-            </div>
+            <div class="cell-empty"></div>
 
             <div class="label-card status-code-review-bot">
                 <div class="step-number">17</div>
                 <div class="label-name">status-17:code-review-bot</div>
-                <div class="label-description">Implementation ready for automated review pickup (success → 08:ready-pr)</div>
+                <div class="label-description">Implementation ready for automated review pickup</div>
                 <div class="status-badge badge-pickup">Waiting</div>
             </div>
 
@@ -601,141 +858,179 @@
                 <div class="label-card highlight-red status-code-review-failed">
                     <div class="step-number">17f</div>
                     <div class="label-name">status-17f:code-review-failed</div>
-                    <div class="label-description">General failure / unparseable verdict</div>
+                    <div class="label-description">Automated code review failed</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-17:code-review-bot</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Failed</div>
                 </div>
                 <div class="label-card highlight-red status-code-review-ci">
                     <div class="step-number">17f-ci</div>
                     <div class="label-name">status-17f-ci:code-review-ci-fix-needed</div>
-                    <div class="label-description">CI still red at the rounds cap</div>
+                    <div class="label-description">CI still failing after automated code review fix attempts</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-17:code-review-bot</code></div>
+                    </div>
                     <div class="status-badge badge-failed">CI Failed</div>
                 </div>
                 <div class="label-card highlight-red status-code-review-timeout">
-                    <div class="step-number">17f-t</div>
+                    <div class="step-number">17f-timeout</div>
                     <div class="label-name">status-17f-timeout:code-review-llm-timeout</div>
-                    <div class="label-description">LLM API timeout</div>
+                    <div class="label-description">LLM timed out during automated code review</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-17:code-review-bot</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Timeout</div>
                 </div>
                 <div class="label-card highlight-red status-code-review-mcp">
-                    <div class="step-number">17f-m</div>
+                    <div class="step-number">17f-mcp</div>
                     <div class="label-name">status-17f-mcp:code-review-mcp-unavailable</div>
-                    <div class="label-description">MCP server unavailable</div>
-                    <div class="status-badge badge-failed">MCP</div>
+                    <div class="label-description">MCP server(s) failed to connect during automated code review</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-17:code-review-bot</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">MCP Failed</div>
                 </div>
                 <div class="label-card highlight-red status-code-review-tasks">
                     <div class="step-number">17f-tasks</div>
                     <div class="label-name">status-17f-tasks:code-review-open-tasks</div>
-                    <div class="label-description">TASK_TRACKER has unchecked tasks</div>
+                    <div class="label-description">Open implementation tasks remain — run /implementation_finalise</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/implementation_finalise</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-17:code-review-bot</code></div>
+                    </div>
                     <div class="status-badge badge-failed">Open Tasks</div>
                 </div>
                 <div class="label-card highlight-red status-code-review-ci-unknown">
                     <div class="step-number">17f-ci-unknown</div>
                     <div class="label-name">status-17f-ci-unknown:code-review-ci-unknown</div>
-                    <div class="label-description">CI could not be proven green</div>
+                    <div class="label-description">Could not prove CI ran green during automated code review</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: fix → <code>set-status status-17:code-review-bot</code></div>
+                    </div>
                     <div class="status-badge badge-failed">CI Unknown</div>
                 </div>
             </div>
         </div>
 
-        <!-- Color Reference -->
+        <!-- Color Reference: one swatch per distinct labels.json colour -->
         <div class="color-reference">
             <h3 style="text-align: center; margin-bottom: 20px; color: #2d3748;">Color Reference</h3>
             <div class="color-grid">
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #10b981;"></div>
                     <div class="color-info">
-                        <div class="color-name">Created</div>
+                        <div class="color-name">01 created</div>
                         <div class="color-hex">#10b981</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #6ee7b7;"></div>
                     <div class="color-info">
-                        <div class="color-name">Awaiting Planning</div>
+                        <div class="color-name">02 awaiting-planning</div>
                         <div class="color-hex">#6ee7b7</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #a7f3d0;"></div>
                     <div class="color-info">
-                        <div class="color-name">Planning</div>
+                        <div class="color-name">03 planning</div>
                         <div class="color-hex">#a7f3d0</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #3b82f6;"></div>
                     <div class="color-info">
-                        <div class="color-name">Plan Review</div>
+                        <div class="color-name">04 plan-review</div>
                         <div class="color-hex">#3b82f6</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #93c5fd;"></div>
                     <div class="color-info">
-                        <div class="color-name">Plan Ready</div>
+                        <div class="color-name">05 plan-ready</div>
                         <div class="color-hex">#93c5fd</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #bfdbfe;"></div>
                     <div class="color-info">
-                        <div class="color-name">Implementing</div>
+                        <div class="color-name">06 implementing, 14i plan-reviewing</div>
                         <div class="color-hex">#bfdbfe</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #f59e0b;"></div>
                     <div class="color-info">
-                        <div class="color-name">Code Review</div>
+                        <div class="color-name">07 code-review</div>
                         <div class="color-hex">#f59e0b</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #fbbf24;"></div>
                     <div class="color-info">
-                        <div class="color-name">Ready PR</div>
+                        <div class="color-name">08 ready-pr, 17 code-review-bot</div>
                         <div class="color-hex">#fbbf24</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #fed7aa;"></div>
                     <div class="color-info">
-                        <div class="color-name">PR Creating</div>
+                        <div class="color-name">09 pr-creating, 17i code-reviewing</div>
                         <div class="color-hex">#fed7aa</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #8b5cf6;"></div>
                     <div class="color-info">
-                        <div class="color-name">PR Created</div>
+                        <div class="color-name">10 pr-created</div>
                         <div class="color-hex">#8b5cf6</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #fda4af;"></div>
+                    <div class="color-info">
+                        <div class="color-name">71 merge-conflict, 81 failing-ci</div>
+                        <div class="color-hex">#fda4af</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #fb7185;"></div>
+                    <div class="color-info">
+                        <div class="color-name">72 fixing-merge-conflict, 82 fixing-ci</div>
+                        <div class="color-hex">#fb7185</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-swatch" style="background-color: #e99695;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Timeout / MCP / crash: 03f-timeout, 03f-mcp, 06f-timeout, 06f-mcp, 09f-timeout, 09f-mcp, 14f-timeout, 14f-mcp, 17f-timeout, 17f-mcp, 73, 83</div>
+                        <div class="color-hex">#e99695</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #b60205;"></div>
                     <div class="color-info">
-                        <div class="color-name">Failed (general)</div>
+                        <div class="color-name">Failed (general): 03f, 03f-prereq, 06f, 06f-prep, 09f, 14f, 17f, 74, 84, 91</div>
                         <div class="color-hex">#b60205</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #d93f0b;"></div>
                     <div class="color-info">
-                        <div class="color-name">CI Fix Needed</div>
+                        <div class="color-name">CI / needs manual work: 06f-ci, 06f-nochange, 06f-blocked, 17f-ci, 17f-tasks, 17f-ci-unknown</div>
                         <div class="color-hex">#d93f0b</div>
-                    </div>
-                </div>
-                <div class="color-item">
-                    <div class="color-swatch" style="background-color: #e99695;"></div>
-                    <div class="color-info">
-                        <div class="color-name">LLM Timeout</div>
-                        <div class="color-hex">#e99695</div>
                     </div>
                 </div>
                 <div class="color-item">
                     <div class="color-swatch" style="background-color: #60a5fa;"></div>
                     <div class="color-info">
-                        <div class="color-name">Plan Review Bot</div>
+                        <div class="color-name">14 plan-review-bot</div>
                         <div class="color-hex">#60a5fa</div>
                     </div>
                 </div>
