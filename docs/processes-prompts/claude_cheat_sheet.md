@@ -11,10 +11,12 @@ For a complete overview of the process, see [development-process.md](development
 | Command | Description |
 |---------|-------------|
 | `/issue_analyse` | Analyze and discuss a GitHub issue |
+| `/issue_analyse_supervisor` | Analyse an issue autonomously; ends at ready for approval |
 | `/issue_create` | Create a new GitHub issue from discussion |
 | `/issue_update` | Update issue description with discussed details |
 | `/issue_approve` | Approve issue to start planning |
 | `/plan_review` | Review the implementation plan |
+| `/plan_review_supervisor` | Review the plan autonomously; ends at ready for approval |
 | `/plan_update` | Update plan files with discussed changes |
 | `/plan_approve` | Approve plan to start implementation |
 | `/implementation_finalise` | Complete remaining tasks if bot failed<br>to complete implementation plan |
@@ -41,7 +43,19 @@ The happy path workflow:
    > 🤖 *bot: mcp-coder coordinate → `implement`*
 3. **Review code:** `/implementation_review` or `/implementation_review_supervisor` → `/discuss` → `/commit_push` → `/implementation_approve`
    > 🤖 *bot: mcp-coder coordinate → `create_pr`*
-4. **Merge PR:** Review and merge in GitHub
+4. **PR follow-up (while the PR waits at status-10):**
+   merge conflict → bot `fix-conflict`; failing CI → bot `fix-ci`;
+   review comments → `/pr_comment_triage`
+   > 🤖 *bot: mcp-coder coordinate → `fix-conflict` / `fix-ci`*
+5. **Merge PR:** Review and merge in GitHub
+
+---
+
+## Failure labels
+
+`/check_branch_status` is the entry command for every failure label. Exception: `status-17f-tasks` uses `/implementation_finalise`.
+
+Details per label: [failure-handling.md](processes/failure-handling.md).
 
 ---
 
@@ -65,7 +79,7 @@ Review and refine the implementation plan.
 
 **Decision:** Is the plan ready?
   ↳ Yes → `/plan_approve`
-  ↳ No, start over → `/clear` → `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → (repeat until ready)
+  ↳ No, start over → clear the context → `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → (repeat until ready)
 
 **Ready when** no new insights from review or comfortable with approach.
 
