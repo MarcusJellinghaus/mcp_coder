@@ -92,5 +92,6 @@ Not applicable.
 ## Checks
 
 - `check_file_size` (`max_lines=750`).
+- Run `tools/lychee_check.bat` via Bash: 0 errors (fix broken links before committing).
 - All `14f-*` / `17f-*` names in `labels.json` appear in `automated-review.md`; 73 / 74 / 83 / 84 appear in `pr-follow-up.md` (check with `search_files`).
 - Format, then commit: `docs(processes): add pr-follow-up and automated-review docs`.

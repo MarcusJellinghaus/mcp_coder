@@ -110,6 +110,7 @@ Not applicable (docs only).
 ## Checks
 
 - `mcp__mcp-workspace__check_file_size` with `max_lines=750`: the new files are not listed.
+- Run `tools/lychee_check.bat` via Bash (`cmd //c tools\\lychee_check.bat`): 0 errors. Fix any broken relative link before committing. If `lychee` is not on PATH, write one line to `pr_info/.blocked.txt` and stop.
 - Every slash command named exists under `.claude/skills/` (check with `list_directory`).
 - If a skill named here is missing from `.claude/skills/`, write one line to `pr_info/.blocked.txt` and stop.
 - `mcp__mcp-tools-py__run_format_code`, then commit: `docs(processes): add issue-discussion, plan-creation, plan-review, implementation docs`.

@@ -73,5 +73,6 @@ Not applicable.
 ## Checks
 
 - `check_file_size` (`max_lines=750`).
+- Run `tools/lychee_check.bat` via Bash: 0 errors (fix broken links before committing; the offline check ignores fragments, so the stale `#8-…` / `#10-…` anchors fixed in step 6 do not fail it).
 - If the check output still flags `development-process.md` as a stale allowlist entry after the edit, write one line to `pr_info/.blocked.txt` and stop.
 - Format, then commit: `docs(processes): rewrite development-process.md as short overview`.

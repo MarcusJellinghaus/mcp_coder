@@ -31,7 +31,7 @@ Plain links to `development-process.md` stay valid and are not changed:
 
 1. Re-run `search_files` with pattern `development-process\.md#` over the repo. After the edits, the only matches allowed are inside `pr_info/`.
 2. Run the link check via the Bash tool (no MCP equivalent): `cmd //c tools\\lychee_check.bat`. If `lychee` is not on PATH, write one line to `pr_info/.blocked.txt` and stop.
-3. Fix every reported broken link. Common case: relative prefixes in `processes/*.md` (`../../../` to the repo root).
+3. Fix every reported broken link. Steps 1–5 already ran lychee clean, so any error here comes from this step's edits.
 
 ## ALGORITHM
 

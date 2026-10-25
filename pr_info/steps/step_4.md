@@ -55,4 +55,5 @@ Not applicable.
 
 - Every label in `labels.json` with `"failure": true` appears once (check with `search_files`).
 - `check_file_size` (`max_lines=750`).
+- Run `tools/lychee_check.bat` via Bash: 0 errors (fix broken links before committing).
 - Format, then commit: `docs(processes): add failure-handling index`.

@@ -92,5 +92,6 @@ Not applicable.
 ## Checks
 
 - `check_file_size` (`max_lines=750`): the new files are not listed.
+- Run `tools/lychee_check.bat` via Bash: 0 errors (fix broken links before committing).
 - Every slash command named exists under `.claude/skills/`. If one is missing, write one line to `pr_info/.blocked.txt` and stop.
 - Format, then commit: `docs(processes): add code-review, pr-creation, pr-merge docs`.
