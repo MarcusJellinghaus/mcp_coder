@@ -32,7 +32,6 @@ Escalations from `status-14` arrive here — see [Automated review](automated-re
 | [`/plan_update`](../../../.claude/skills/plan_update/SKILL.md) | Update the plan files and log decisions | — |
 | [`/commit_push`](../../../.claude/skills/commit_push/SKILL.md) | Commit and push the updated plan | — |
 | [`/plan_approve`](../../../.claude/skills/plan_approve/SKILL.md) | Approve the plan | `status-05:plan-ready` |
-| [`/issue_approve`](../../../.claude/skills/issue_approve/SKILL.md) | Approve from `status-04` | `status-05:plan-ready` |
 
 Iterate review, discussion and update until no more changes are required, then approve.
 

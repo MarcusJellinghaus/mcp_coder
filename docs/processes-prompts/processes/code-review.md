@@ -36,7 +36,6 @@ Escalations from `status-17` arrive here — see [Automated review](automated-re
 | [`/commit_push`](../../../.claude/skills/commit_push/SKILL.md) | Commit and push the updated plan or fixes | — |
 | [`/implementation_approve`](../../../.claude/skills/implementation_approve/SKILL.md) | Approve; only when `/check_branch_status` reports `Ready to merge` | `status-08:ready-pr` |
 | [`/implementation_needs_rework`](../../../.claude/skills/implementation_needs_rework/SKILL.md) | Send back for rework; next step is implementation, not plan review | `status-05:plan-ready` |
-| [`/issue_approve`](../../../.claude/skills/issue_approve/SKILL.md) | Generic approval (07 → 08) | `status-08:ready-pr` |
 
 Rework chain: `/implementation_new_tasks` → `/commit_push` → `/implementation_needs_rework`, then `mcp-coder implement` processes the new steps.
 
