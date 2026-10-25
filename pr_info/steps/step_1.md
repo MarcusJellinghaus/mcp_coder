@@ -3,7 +3,8 @@
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md`, then implement `pr_info/steps/step_1.md` exactly.
-> Write the tests first (they must fail), then the implementation. Run pylint,
+> Write the tests first (cases 1–2 must fail; cases 3–5 are regression guards that
+> already pass), then the implementation. Run pylint,
 > pytest (`-n auto`, fast unit-test marker filter from CLAUDE.md) and mypy; all must
 > pass. Run `run_format_code`, then make exactly one commit.
 
@@ -17,6 +18,11 @@
 No new functions. Two constant changes, and some existing tests are extended.
 
 ### Tests first (`test_verify_format_section_basic.py`)
+
+Cases 1–2 must fail before the implementation. Cases 3–5 are regression guards:
+they already pass before the change (an unregistered key prints raw as
+`require_pull_request`, so `"Require pull request"` is absent anyway) and must keep
+passing after it.
 
 1. `TestGitHubLabelMappings._GITHUB_KEYS`: insert `"require_pull_request"` right
    after `"branch_deletion"` (feeds `test_all_github_keys_in_label_map`).
