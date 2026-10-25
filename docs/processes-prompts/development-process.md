@@ -5,6 +5,7 @@ You decide scope and merge; everything else can run unattended; failures come ba
 mcp-coder turns GitHub issues into reviewed pull requests with LLM sessions; see the [README](../../README.md#why-a-structured-process) for what it is and why.
 
 ```mermaid
+%%{init: {"flowchart": {"rankSpacing": 70, "nodeSpacing": 40}}}%%
 flowchart TD
     S01["01 created"]
     S02["02 awaiting-planning"]
@@ -18,17 +19,17 @@ flowchart TD
     S91["91 review feedback"]
     M(["Merged"])
 
-    S01 -->|"/issue_analyse … /issue_approve"| S02
+    S01 -->|"/issue_analyse<br/>/discuss<br/>/issue_approve"| S02
     S02 -->|create-plan| S04
     S04 -->|/plan_approve| S05
     S05 -->|implement| S07
-    S07 -->|/implementation_approve| S08
+    S07 -->|"/implementation_approve"| S08
     S08 -->|create-pr| S10
     S10 -->|merge| M
 
     S10 --> S71 -->|fix-conflict| S10
     S10 --> S81 -->|fix-ci| S10
-    S10 --> S91 -->|/pr_comment_triage| S10
+    S10 --> S91 -->|"/pr_comment_triage"| S10
 
     S02 -.->|"auto_review_plan"| S05
     S05 -.->|"auto_review_implementation"| S08
