@@ -29,7 +29,7 @@ Complete documentation for MCP Coder.
 - **[CLI Reference](cli-reference.md)** - Complete command documentation with examples
 - **[Development Process](processes-prompts/development-process.md)** - Process overview; per-process docs hold details and prompt links
 - **[Claude Code Cheat Sheet](processes-prompts/claude_cheat_sheet.md)** - Quick reference for slash commands
-- **[GitHub Issue Workflow Matrix](processes-prompts/github_Issue_Workflow_Matrix.html)** - Visual workflow state diagram
+- **[GitHub Issue Workflow Matrix](https://htmlpreview.github.io/?https://github.com/MarcusJellinghaus/mcp_coder/blob/main/docs/processes-prompts/github_Issue_Workflow_Matrix.html)** - Visual workflow state diagram
 
 ---
 

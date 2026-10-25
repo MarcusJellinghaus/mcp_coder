@@ -9,16 +9,15 @@ The `implement` workflow works through the plan step by step, with quality check
 | `status-05:plan-ready` | bot_pickup |
 | `status-06:implementing` | bot_busy |
 | `status-07:code-review` | human_action |
+| `status-17:code-review-bot` | bot_pickup |
 
 `status-05:plan-ready` → `status-06:implementing` → `status-07:code-review`
 
-With `auto_review_implementation` on, success goes to `status-17:code-review-bot` instead (see [configuration](../../configuration/config.md)).
+With `auto_review_implementation` on (default off, see [configuration](../../configuration/config.md)), success goes to `status-17:code-review-bot` instead. See [Code review](07-code-review.md).
 
 ## Actor
 
 Fully automated. The coordinator dispatches `implement` on Jenkins (`WORKFLOW_MAPPING`).
-
-`auto_review_implementation` on → see [Automated review](automated-review.md).
 
 **Quality gates:**
 

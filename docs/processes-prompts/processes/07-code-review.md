@@ -1,16 +1,22 @@
 # Code Review
 
-A human or a supervisor skill reviews the implementation and decides: approve, rework, or redesign.
+The implementation is reviewed and a decision is made: approve, rework, or redesign. The review is interactive by default (a human or a supervisor skill) and can optionally run automated.
 
 ## Labels
 
-| Label | Category |
-|---|---|
-| `status-07:code-review` | human_action |
+How `implement` ends decides which review runs: `status-07` by default, `status-17` with `auto_review_implementation` on.
 
-`status-07:code-review` → `status-08:ready-pr` (approve)
+| Label | Category | Review |
+|---|---|---|
+| `status-07:code-review` | human_action | Interactive |
+| `status-17:code-review-bot` | bot_pickup | Automated |
+| `status-17i:code-reviewing` | bot_busy | Automated |
+| `status-08:ready-pr` | bot_pickup | — |
 
-Other exits:
+- Interactive: `status-07:code-review` → `status-08:ready-pr` (approve)
+- Automated: `status-17:code-review-bot` → `status-17i:code-reviewing` → `status-08:ready-pr` (success), `status-07:code-review` (needs a human) or `status-17f-*` (failure)
+
+Other exits from the interactive review:
 
 - → `status-05:plan-ready`: rework (new tasks, then re-implement)
 - minor fixes: stay on `status-07:code-review`
@@ -18,13 +24,15 @@ Other exits:
 
 ## Actor
 
-Human or supervisor skill. vscodeclaude auto-launches `/implementation_review_supervisor` for this label. The supervisor ends at "ready for approval". The label change is a separate command.
-
-Escalations from `status-17` arrive here — see [Automated review](automated-review.md).
+**Interactive (`status-07`):** a human or a supervisor skill. vscodeclaude auto-launches `/implementation_review_supervisor` for this label. The supervisor ends at "ready for approval". The label change is a separate command. Escalations from the automated review arrive here.
 
 **Tools:** MCP code quality checks
 
+**Automated (`status-17`):** fully automated. The coordinator dispatches `review-implementation` on Jenkins, only with `auto_review_implementation` on (default off, see [configuration](../../configuration/config.md)). It reviews, fixes and re-runs rebase and CI in rounds, and moves the issue to `status-08` once converged and CI is proven green. When it needs a human, it hands over to `status-07`. How it runs: [Automated review](14-automated-review.md).
+
 ## Slash commands
+
+These apply to the interactive review (`status-07`). The automated review needs none, apart from `/check_branch_status` after a failure label and `/implementation_finalise` for `status-17f-tasks`.
 
 | Command | Purpose | Resulting label |
 |---|---|---|
@@ -41,7 +49,9 @@ Rework chain: `/implementation_new_tasks` → `/commit_push` → `/implementatio
 
 ## Failure exits
 
-None — human stage.
+**Interactive (`status-07`):** none — human stage.
+
+**Automated (`status-17`):** the six `status-17f-*` labels (`17f`, `17f-ci`, `17f-timeout`, `17f-mcp`, `17f-tasks`, `17f-ci-unknown`). Recovery: `mcp-coder gh-tool set-status status-17:code-review-bot`. Causes: [Automated review](14-automated-review.md#failure-exits).
 
 ## Additional prompt details
 

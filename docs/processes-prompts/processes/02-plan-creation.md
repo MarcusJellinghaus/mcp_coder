@@ -9,16 +9,15 @@ The `create-plan` workflow turns an approved issue into an implementation plan i
 | `status-02:awaiting-planning` | bot_pickup |
 | `status-03:planning` | bot_busy |
 | `status-04:plan-review` | human_action |
+| `status-14:plan-review-bot` | bot_pickup |
 
 `status-02:awaiting-planning` → `status-03:planning` → `status-04:plan-review`
 
-With `auto_review_plan` on, success goes to `status-14:plan-review-bot` instead (see [configuration](../../configuration/config.md)).
+With `auto_review_plan` on (default off, see [configuration](../../configuration/config.md)), success goes to `status-14:plan-review-bot` instead. See [Plan review](04-plan-review.md).
 
 ## Actor
 
 Fully automated. The coordinator dispatches `create-plan` on Jenkins (`WORKFLOW_MAPPING`).
-
-`auto_review_plan` on → see [Automated review](automated-review.md).
 
 Output: plan files with a summary and steps (`summary.md`, `step_*.md`).
 

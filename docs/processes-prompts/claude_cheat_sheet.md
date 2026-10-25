@@ -19,35 +19,61 @@ For a complete overview of the process, see [development-process.md](development
 | `/plan_review_supervisor` | Review the plan autonomously; ends at ready for approval |
 | `/plan_update` | Update plan files with discussed changes |
 | `/plan_approve` | Approve plan to start implementation |
-| `/implementation_finalise` | Complete remaining tasks if bot failed<br>to complete implementation plan |
+| `/implementation_finalise` | Complete remaining tasks if `mcp-coder implement` failed to complete the plan |
 | `/implementation_review` | Review implemented code (human-supervised) |
 | `/implementation_review_supervisor` | Review implemented code (autonomous agent-driven, uses knowledge base) |
 | `/implementation_approve` | Approve code to create PR |
 | `/implementation_needs_rework` | Return to implementation for fixes |
 | `/implementation_new_tasks` | Add new implementation steps |
-| `/check_branch_status` | Check branch readiness and auto-fix CI |
+| `/check_branch_status` | Check CI status, rebase needs and task completion; auto-fix CI |
 | `/pr_comment_triage` | Triage new PR comments and review threads: fix, reply or decline, then resolve |
 | `/commit_push` | Format, commit, and push changes |
-| `/discuss` | Step-by-step discussion of open questions |
+| `/discuss` | Step-by-step Q&A on open questions, on any topic |
 | `/rebase` | Rebase branch onto base branch |
 
 ---
 
-## General Process
+## Happy Path
 
-The happy path workflow:
+1. **Issue discussion:** refine and approve the issue before planning.
 
-1. **Discuss the issue:** `/issue_analyse` → `/discuss` → `/issue_update` → `/issue_approve`
+   `/issue_analyse` → `/discuss` → `/issue_update` → `/issue_approve`
+
+   New issue instead: `/issue_create` → `/discuss` → `/issue_update` → `/issue_approve`
+
    > 🤖 *bot: mcp-coder coordinate → `create_plan`*
-2. **Review the plan:** `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → `/plan_approve`
+
+2. **Plan review:** review and refine the implementation plan.
+
+   `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → `/plan_approve`
+
+   Not ready? Repeat the review, starting with a cleared context. Ready when a review brings no new insights, or you are comfortable with the approach.
+
    > 🤖 *bot: mcp-coder coordinate → `implement`*
-3. **Review code:** `/implementation_review` or `/implementation_review_supervisor` → `/discuss` → `/commit_push` → `/implementation_approve`
+
+3. **Code review:** review the code, then approve or request rework.
+
+   - `/implementation_review`: human-supervised. Claude presents findings; you decide what to act on.
+   - `/implementation_review_supervisor`: autonomous. Claude supervises subagents and decides from the knowledge base; it escalates to you only when unsure or when a major refactoring is needed.
+
+   Either one → `/discuss`, then:
+
+   - Approve: `/commit_push` → `/implementation_approve`
+   - Rework: `/implementation_new_tasks` → `/commit_push` → `/implementation_needs_rework`
+
+   Smaller changes: ask the LLM to fix it directly, verify, then `/commit_push`.
+
    > 🤖 *bot: mcp-coder coordinate → `create_pr`*
-4. **PR follow-up (while the PR waits at status-10):**
-   merge conflict → bot `fix-conflict`; failing CI → bot `fix-ci`;
-   review comments → `/pr_comment_triage`
+
+4. **PR follow-up** (while the PR waits at status-10):
+
+   - merge conflict → bot `fix-conflict`
+   - failing CI → bot `fix-ci`
+   - review comments → `/pr_comment_triage`
+
    > 🤖 *bot: mcp-coder coordinate → `fix-conflict` / `fix-ci`*
-5. **Merge PR:** Review and merge in GitHub
+
+5. **Review and merge:** in GitHub.
 
 ---
 
@@ -56,59 +82,3 @@ The happy path workflow:
 `/check_branch_status` is the entry command for every failure label. Exception: `status-17f-tasks` uses `/implementation_finalise`.
 
 Details per label: [failure-handling.md](processes/failure-handling.md).
-
----
-
-## Issue Discussion
-
-Refine and approve a GitHub issue before planning.
-
-`/issue_analyse` → `/discuss` → `/issue_update` → `/issue_approve`
-
-Or create a new issue:
-
-`/issue_create` → `/discuss` → `/issue_update` → `/issue_approve`
-
----
-
-## Plan Review
-
-Review and refine the implementation plan.
-
-`/plan_review` → `/discuss` → `/plan_update` → `/commit_push`
-
-**Decision:** Is the plan ready?
-  ↳ Yes → `/plan_approve`
-  ↳ No, start over → clear the context → `/plan_review` → `/discuss` → `/plan_update` → `/commit_push` → (repeat until ready)
-
-**Ready when** no new insights from review or comfortable with approach.
-
----
-
-## Code Review
-
-Review code and either approve or request rework.
-
-- `/implementation_review` — human-supervised: Claude presents findings, you review and decide what to act on
-- `/implementation_review_supervisor` — autonomous: Claude acts as a supervisor, delegating to subagents and deciding based on the knowledge base; escalates to you only when unsure or a major refactoring is needed
-
-`/implementation_review` or `/implementation_review_supervisor` → `/discuss`
-
-Then either:
-
-- `/implementation_approve`
-- `/implementation_new_tasks` → `/commit_push` → `/implementation_needs_rework`
-
-**For smaller changes:** Ask the LLM to fix it directly, verify the change, then `/commit_push`.
-
----
-
-## Utility Commands
-
-| Command | Use When |
-|---------|----------|
-| `/check_branch_status` | Check CI status, rebase needs, and task completion |
-| `/commit_push` | Ready to commit and push changes |
-| `/discuss` | Need step-by-step Q&A on any topic |
-| `/implementation_finalise` | `mcp-coder implement` failed to complete the plan |
-| `/rebase` | Need to rebase branch onto base branch |

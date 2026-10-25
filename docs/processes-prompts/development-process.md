@@ -87,25 +87,25 @@ Either way, the stage ends with `/plan_approve` or `/implementation_approve`.
 
 `/issue_analyse_supervisor` works the same way for the issue. It runs the analysis through subagents and escalates scope and requirements questions to you. It can approve (→ 02) itself once no questions remain; otherwise approve with `/issue_approve`.
 
-Full state machine incl. failure labels: [workflow matrix](github_Issue_Workflow_Matrix.html).
+Full state machine incl. failure labels: [workflow matrix](https://htmlpreview.github.io/?https://github.com/MarcusJellinghaus/mcp_coder/blob/main/docs/processes-prompts/github_Issue_Workflow_Matrix.html).
 
 ## Processes
 
 | Process | Trigger label | Actor | Slash commands | Doc |
 |---|---|---|---|---|
-| Issue discussion | `status-01:created` | Human or supervisor skill | `/issue_analyse`, `/discuss`, `/issue_update`, `/issue_create`, `/issue_approve`, `/issue_analyse_supervisor` | [issue-discussion](processes/issue-discussion.md) |
-| Plan creation | `status-02:awaiting-planning` | Automated (`create-plan`) | none | [plan-creation](processes/plan-creation.md) |
-| Plan review | `status-04:plan-review` | Human or supervisor skill | `/plan_review_supervisor`, `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` | [plan-review](processes/plan-review.md) |
-| Implementation | `status-05:plan-ready` | Automated (`implement`) | `/implementation_finalise`, `/commit_push`, `/check_branch_status` | [implementation](processes/implementation.md) |
-| Code review | `status-07:code-review` | Human or supervisor skill | `/implementation_review_supervisor`, `/implementation_review`, `/discuss`, `/implementation_approve`, `/implementation_needs_rework`, `/implementation_new_tasks`, `/implementation_finalise`, `/commit_push` | [code-review](processes/code-review.md) |
-| PR creation | `status-08:ready-pr` | Automated (`create-pr`) | none | [pr-creation](processes/pr-creation.md) |
-| PR merge | `status-10:pr-created` | Human | `/check_branch_status` | [pr-merge](processes/pr-merge.md) |
-| PR follow-up | `status-71`, `status-81`, `status-91` | Automated (71, 81); human or supervisor skill (91) | `/pr_comment_triage`, `/check_branch_status`, `/rebase` | [pr-follow-up](processes/pr-follow-up.md) |
-| Automated review | `status-14`, `status-17` (with `auto_review_plan` / `auto_review_implementation`) | Automated (`review-plan`, `review-implementation`) | `/check_branch_status`, `/implementation_finalise` | [automated-review](processes/automated-review.md) |
+| Issue discussion | `status-01:created` | Human or supervisor skill | `/issue_analyse`, `/discuss`, `/issue_update`, `/issue_create`, `/issue_approve`, `/issue_analyse_supervisor` | [issue-discussion](processes/01-issue-discussion.md) |
+| Plan creation | `status-02:awaiting-planning` | Automated (`create-plan`) | none | [plan-creation](processes/02-plan-creation.md) |
+| Plan review | `status-04:plan-review` | Human or supervisor skill | `/plan_review_supervisor`, `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` | [plan-review](processes/04-plan-review.md) |
+| Implementation | `status-05:plan-ready` | Automated (`implement`) | `/implementation_finalise`, `/commit_push`, `/check_branch_status` | [implementation](processes/05-implementation.md) |
+| Code review | `status-07:code-review` | Human or supervisor skill | `/implementation_review_supervisor`, `/implementation_review`, `/discuss`, `/implementation_approve`, `/implementation_needs_rework`, `/implementation_new_tasks`, `/implementation_finalise`, `/commit_push` | [code-review](processes/07-code-review.md) |
+| PR creation | `status-08:ready-pr` | Automated (`create-pr`) | none | [pr-creation](processes/08-pr-creation.md) |
+| PR merge | `status-10:pr-created` | Human | `/check_branch_status` | [pr-merge](processes/10-pr-merge.md) |
+| PR follow-up | `status-71`, `status-81`, `status-91` | Automated (71, 81); human or supervisor skill (91) | `/pr_comment_triage`, `/check_branch_status`, `/rebase` | [pr-follow-up](processes/71-pr-follow-up.md) |
+| Automated review | `status-14`, `status-17` (with `auto_review_plan` / `auto_review_implementation`) | Automated (`review-plan`, `review-implementation`) | `/check_branch_status`, `/implementation_finalise` | [automated-review](processes/14-automated-review.md) |
 | Failure handling | any failure label | Human or supervisor skill | `/check_branch_status` | [failure-handling](processes/failure-handling.md) |
 
 ## Links
 
 - [Claude Code Cheat Sheet](claude_cheat_sheet.md)
 - [Label Setup](../getting-started/label-setup.md) (prerequisite)
-- [Workflow Matrix](github_Issue_Workflow_Matrix.html)
+- [Workflow Matrix](https://htmlpreview.github.io/?https://github.com/MarcusJellinghaus/mcp_coder/blob/main/docs/processes-prompts/github_Issue_Workflow_Matrix.html)

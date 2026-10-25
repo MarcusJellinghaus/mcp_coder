@@ -520,7 +520,7 @@ mcp-coder fix-conflict [OPTIONS]
 **Options:**
 - `--project-dir PATH` - Project directory path (default: current directory)
 
-**Description:** Jenkins-dispatched workflow for `status-71:merge-conflict` (see [PR-health](processes-prompts/processes/pr-follow-up.md)). Runs the mechanical rebase only — no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself:
+**Description:** Jenkins-dispatched workflow for `status-71:merge-conflict` (see [PR-health](processes-prompts/processes/71-pr-follow-up.md)). Runs the mechanical rebase only — no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself:
 
 - settled and not `dirty`, or still `unknown` after a successful rebase → `status-10:pr-created`;
 - still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase/push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, base, conflicting/uncommitted files).
@@ -550,7 +550,7 @@ mcp-coder fix-ci [OPTIONS]
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
-**Description:** Jenkins-dispatched workflow for `status-81:failing-ci` (see [PR-health](processes-prompts/processes/pr-follow-up.md)). Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the issue to `status-10:pr-created`. Exhausted fix attempts, an LLM timeout or an unavailable MCP server post a comment (the Category line gives the reason) and set `status-84:pr-ci-failed`. Unexpected crashes are caught by `run_guarded()`, which comments and sets `status-83:ci-fix-failed`. Normally run by the coordinator, not by hand.
+**Description:** Jenkins-dispatched workflow for `status-81:failing-ci` (see [PR-health](processes-prompts/processes/71-pr-follow-up.md)). Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the issue to `status-10:pr-created`. Exhausted fix attempts, an LLM timeout or an unavailable MCP server post a comment (the Category line gives the reason) and set `status-84:pr-ci-failed`. Unexpected crashes are caught by `run_guarded()`, which comments and sets `status-83:ci-fix-failed`. Normally run by the coordinator, not by hand.
 
 **Examples:**
 ```bash
