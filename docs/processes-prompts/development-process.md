@@ -101,7 +101,8 @@ Full state machine incl. failure labels: [workflow matrix](https://htmlpreview.g
 | PR creation | `status-08:ready-pr` | Automated (`create-pr`) | none | [pr-creation](processes/08-pr-creation.md) |
 | PR merge | `status-10:pr-created` | Human | `/check_branch_status` | [pr-merge](processes/10-pr-merge.md) |
 | PR follow-up | `status-71`, `status-81`, `status-91` | Automated (71, 81); human or supervisor skill (91) | `/pr_comment_triage`, `/check_branch_status`, `/rebase` | [pr-follow-up](processes/71-pr-follow-up.md) |
-| Automated review | `status-14`, `status-17` (with `auto_review_plan` / `auto_review_implementation`) | Automated (`review-plan`, `review-implementation`) | `/check_branch_status`, `/implementation_finalise` | [automated-review](processes/14-automated-review.md) |
+| Automated plan review | `status-14` (with `auto_review_plan`) | Automated (`review-plan`) | `/check_branch_status` | [automated-plan-review](processes/14-automated-plan-review.md) |
+| Automated code review | `status-17` (with `auto_review_implementation`) | Automated (`review-implementation`) | `/check_branch_status`, `/implementation_finalise` | [automated-code-review](processes/17-automated-code-review.md) |
 | Failure handling | any failure label | Human or supervisor skill | `/check_branch_status` | [failure-handling](processes/failure-handling.md) |
 
 ## Links

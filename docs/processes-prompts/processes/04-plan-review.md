@@ -26,7 +26,7 @@ Major restart → `status-02:awaiting-planning`, after deleting the plan files.
 - The supervisor ends at "ready for approval". `/plan_approve` is a separate step.
 - Escalations from the automated review arrive here.
 
-**Automated (`status-14`):** fully automated. The coordinator dispatches `review-plan` on Jenkins, only with `auto_review_plan` on (default off, see [configuration](../../configuration/config.md)). It reviews and fixes the plan in rounds and moves the issue to `status-05` once converged. When it needs a human, it hands over to `status-04`. How it runs: [Automated review](14-automated-review.md).
+**Automated (`status-14`):** fully automated. The coordinator dispatches `review-plan` on Jenkins, only with `auto_review_plan` on (default off, see [configuration](../../configuration/config.md)). It reviews and fixes the plan in rounds and moves the issue to `status-05` once converged. When it needs a human, it hands over to `status-04`. How it runs: [Automated plan review](14-automated-plan-review.md).
 
 ## Slash commands
 
@@ -47,7 +47,7 @@ Iterate review, discussion and update until no more changes are required, then a
 
 **Interactive (`status-04`):** none — human stage.
 
-**Automated (`status-14`):** `status-14f:plan-review-failed`, `status-14f-timeout:plan-review-llm-timeout` and `status-14f-mcp:plan-review-mcp-unavailable`. Recovery: `mcp-coder gh-tool set-status status-14:plan-review-bot`. Causes: [Automated review](14-automated-review.md#failure-exits).
+**Automated (`status-14`):** `status-14f:plan-review-failed`, `status-14f-timeout:plan-review-llm-timeout` and `status-14f-mcp:plan-review-mcp-unavailable`. Recovery: `mcp-coder gh-tool set-status status-14:plan-review-bot`. Causes: [Automated plan review](14-automated-plan-review.md#failure-exits).
 
 ## Additional prompt details
 

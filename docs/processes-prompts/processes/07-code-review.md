@@ -28,7 +28,7 @@ Other exits from the interactive review:
 
 **Tools:** MCP code quality checks
 
-**Automated (`status-17`):** fully automated. The coordinator dispatches `review-implementation` on Jenkins, only with `auto_review_implementation` on (default off, see [configuration](../../configuration/config.md)). It reviews, fixes and re-runs rebase and CI in rounds, and moves the issue to `status-08` once converged and CI is proven green. When it needs a human, it hands over to `status-07`. How it runs: [Automated review](14-automated-review.md).
+**Automated (`status-17`):** fully automated. The coordinator dispatches `review-implementation` on Jenkins, only with `auto_review_implementation` on (default off, see [configuration](../../configuration/config.md)). It reviews, fixes and re-runs rebase and CI in rounds, and moves the issue to `status-08` once converged and CI is proven green. When it needs a human, it hands over to `status-07`. How it runs: [Automated code review](17-automated-code-review.md).
 
 ## Slash commands
 
@@ -51,7 +51,7 @@ Rework chain: `/implementation_new_tasks` → `/commit_push` → `/implementatio
 
 **Interactive (`status-07`):** none — human stage.
 
-**Automated (`status-17`):** the six `status-17f-*` labels (`17f`, `17f-ci`, `17f-timeout`, `17f-mcp`, `17f-tasks`, `17f-ci-unknown`). Recovery: `mcp-coder gh-tool set-status status-17:code-review-bot`. Causes: [Automated review](14-automated-review.md#failure-exits).
+**Automated (`status-17`):** the six `status-17f-*` labels (`17f`, `17f-ci`, `17f-timeout`, `17f-mcp`, `17f-tasks`, `17f-ci-unknown`). Recovery: `mcp-coder gh-tool set-status status-17:code-review-bot`. Causes: [Automated code review](17-automated-code-review.md#failure-exits).
 
 ## Additional prompt details
 

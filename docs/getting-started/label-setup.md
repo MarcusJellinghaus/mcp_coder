@@ -316,7 +316,7 @@ These labels are used only when automated review is enabled via `auto_review_pla
 | `status-17:code-review-bot` | Implementation ready for automated review pickup |
 | `status-17i:code-reviewing` | Implementation being reviewed (auto/in-progress) |
 
-Automated review can also emit fine-grained failure labels (`status-14f-*` for plan review, `status-17f-*` for code review). See the [Automated Review](../processes-prompts/processes/14-automated-review.md) doc for the full list and recovery steps.
+Automated review can also emit fine-grained failure labels (`status-14f-*` for plan review, `status-17f-*` for code review). See [Automated plan review](../processes-prompts/processes/14-automated-plan-review.md) and [Automated code review](../processes-prompts/processes/17-automated-code-review.md) for the full lists and recovery steps.
 
 The complete, authoritative label set (colors, categories, timeouts) is defined in [`config/labels.json`](../../src/mcp_coder/config/labels.json).
 
