@@ -24,7 +24,7 @@ implement ────▶ status-17 → status-17i (coordinator dispatches revie
 
 ## Actor
 
-Fully automated, and it **can** run only when the per-repo flag `auto_review_implementation` is on. It defaults to `false` (see [Configuration Guide](../../configuration/config.md)). With the flag off, `implement` transitions to `status-07:code-review` for the interactive review ([Code review](07-code-review.md)). With the flag on, that success transition targets `status-17` instead.
+Tier: automated. It **can** run only when the per-repo flag `auto_review_implementation` is on. It defaults to `false` (see [Configuration Guide](../../configuration/config.md)). With the flag off, `implement` transitions to `status-07:code-review` for the interactive review ([Code review](07-code-review.md)). With the flag on, that success transition targets `status-17` instead.
 
 ### How a review runs
 

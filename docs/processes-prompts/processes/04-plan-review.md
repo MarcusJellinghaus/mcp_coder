@@ -1,6 +1,6 @@
 # Plan Review
 
-Review and approve the implementation plan before any code is written. The review is interactive by default (a human or a supervisor skill) and can optionally run automated.
+Review and approve the implementation plan before any code is written. The review is an interactive LLM session by default and can optionally run automated.
 
 ## Labels
 
@@ -20,13 +20,13 @@ Major restart → `status-02:awaiting-planning`, after deleting the plan files.
 
 ## Actor
 
-**Interactive (`status-04`):** a human, or a supervisor skill. Tier: human or supervisor skill.
+**Interactive (`status-04`):** tier: interactive LLM session — you, or a supervisor skill.
 
 - vscodeclaude auto-launches `/plan_review_supervisor`.
 - The supervisor ends at "ready for approval". `/plan_approve` is a separate step.
 - Escalations from the automated review arrive here.
 
-**Automated (`status-14`):** fully automated. The coordinator dispatches `review-plan` on Jenkins, only with `auto_review_plan` on (default off, see [configuration](../../configuration/config.md)). It reviews and fixes the plan in rounds and moves the issue to `status-05` once converged. When it needs a human, it hands over to `status-04`. How it runs: [Automated plan review](14-automated-plan-review.md).
+**Automated (`status-14`):** tier: automated. The coordinator dispatches `review-plan` on Jenkins, only with `auto_review_plan` on (default off, see [configuration](../../configuration/config.md)). It reviews and fixes the plan in rounds and moves the issue to `status-05` once converged. When it needs a human, it hands over to `status-04`. How it runs: [Automated plan review](14-automated-plan-review.md).
 
 ## Slash commands
 
@@ -48,55 +48,3 @@ Iterate review, discussion and update until no more changes are required, then a
 **Interactive (`status-04`):** none — human stage.
 
 **Automated (`status-14`):** `status-14f:plan-review-failed`, `status-14f-timeout:plan-review-llm-timeout` and `status-14f-mcp:plan-review-mcp-unavailable`. Recovery: `mcp-coder gh-tool set-status status-14:plan-review-bot`. Causes: [Automated plan review](14-automated-plan-review.md#failure-exits).
-
-## Additional prompt details
-
-<details>
-<summary>📋 Commit updated implementation plan with message</summary>
-
-```
-Updated implementation plan
-```
-
-</details>
-
-<details>
-<summary>📋 Requirements Update Note</summary>
-
-```
-In case of after updating the pyproject.toml requirements, 
-put something in the project plan to stop and tell me, 
-so that I can install the requirements. 
-This is important so that unit tests can work.
-```
-
-Alternatively, update the pyproject.toml already at this stage, and install the dependencies (if required).
-</details>
-
-<details>
-<summary>📋 Consistency Review</summary>
-
-```
-Please clean up the project plan. Ensure that it is consistent.
-```
-
-or
-
-```
-Please review the project plan for a new feature in the folder PR_Info\steps.
-Please review for consistency.
-Please tell me all inconsistencies you find and how you want to fix them.
-```
-
-</details>
-
-<details>
-<summary>📋 Change Summary Request</summary>
-
-```
-Please summarise the changes you want to do to the project plan for confirmation as 
-(one-liner bullet points)
-```
-
-Use in case of uncertainty.
-</details>

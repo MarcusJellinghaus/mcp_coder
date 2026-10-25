@@ -14,7 +14,7 @@ The `create-pr` workflow generates a PR summary, cleans up `pr_info/`, pushes th
 
 ## Actor
 
-Fully automated. The coordinator dispatches `create-pr` on Jenkins (`WORKFLOW_MAPPING`).
+Tier: automated. The coordinator dispatches `create-pr` on Jenkins (`WORKFLOW_MAPPING`).
 
 **Output:** Pull request on GitHub with a generated summary.
 

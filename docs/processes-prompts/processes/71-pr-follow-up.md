@@ -40,8 +40,8 @@ status-10:pr-created
 
 | Labels | Actor |
 |---|---|
-| `status-71` / `status-81` | Fully automated. The coordinator dispatches Jenkins `fix-conflict` / `fix-ci`; the job sets the final label itself. Without Jenkins configured for a repo, the issue waits unprocessed. |
-| `status-91`, `status-73` / `74` / `83` / `84` | Human or supervisor skill in a vscodeclaude session. |
+| `status-71` / `status-81` | Automated. The coordinator dispatches Jenkins `fix-conflict` / `fix-ci`; the job sets the final label itself. Without Jenkins configured for a repo, the issue waits unprocessed. |
+| `status-91`, `status-73` / `74` / `83` / `84` | Interactive LLM session (vscodeclaude). |
 
 `fix-conflict` is a plain rebase with no LLM. `fix-ci` reuses the `implement` CI-fix loop. See [CLI Reference](../../cli-reference.md#fix-conflict).
 

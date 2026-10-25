@@ -15,7 +15,7 @@ A major restart from a later stage lands back on `status-01:created` (`mcp-coder
 
 ## Actor
 
-Human, or a supervisor skill. Tier: human or supervisor skill.
+Tier: interactive LLM session — you, or a supervisor skill.
 
 - vscodeclaude auto-launches `/issue_analyse`, then `/discuss` (from `labels.json`).
 - `/issue_analyse_supervisor` runs the analysis through subagents and approves (→ `status-02`). It escalates scope and requirements questions to you.
@@ -34,16 +34,3 @@ Human, or a supervisor skill. Tier: human or supervisor skill.
 ## Failure exits
 
 None — human stage.
-
-## Additional prompt details
-
-<details>
-<summary>📋 Add analysis to Issue Text (click to expand and copy)</summary>
-
-```
-Let's draft the initial analysis text, with some very limited, concise implementation ideas to be added to the initial issue text.
-The implementation plan should be developed later. Focus on the issue and include the discussed details.
-Please provide the issue text as markdown artifact, so that I can easily update the issue on GitHub by adding the analysis text.
-```
-
-</details>

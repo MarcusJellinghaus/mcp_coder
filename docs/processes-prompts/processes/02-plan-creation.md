@@ -17,7 +17,7 @@ With `auto_review_plan` on (default off, see [configuration](../../configuration
 
 ## Actor
 
-Fully automated. The coordinator dispatches `create-plan` on Jenkins (`WORKFLOW_MAPPING`).
+Tier: automated. The coordinator dispatches `create-plan` on Jenkins (`WORKFLOW_MAPPING`).
 
 Output: plan files with a summary and steps (`summary.md`, `step_*.md`).
 

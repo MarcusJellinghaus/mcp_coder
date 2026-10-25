@@ -17,7 +17,7 @@ With `auto_review_implementation` on (default off, see [configuration](../../con
 
 ## Actor
 
-Fully automated. The coordinator dispatches `implement` on Jenkins (`WORKFLOW_MAPPING`).
+Tier: automated. The coordinator dispatches `implement` on Jenkins (`WORKFLOW_MAPPING`).
 
 **Quality gates:**
 

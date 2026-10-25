@@ -21,7 +21,7 @@ create-plan ──▶ status-14 → status-14i (coordinator dispatches review-pl
 
 ## Actor
 
-Fully automated, and it **can** run only when the per-repo flag `auto_review_plan` is on. It defaults to `false` (see [Configuration Guide](../../configuration/config.md)). With the flag off, `create-plan` transitions to `status-04:plan-review` for the interactive review ([Plan review](04-plan-review.md)). With the flag on, that success transition targets `status-14` instead.
+Tier: automated. It **can** run only when the per-repo flag `auto_review_plan` is on. It defaults to `false` (see [Configuration Guide](../../configuration/config.md)). With the flag off, `create-plan` transitions to `status-04:plan-review` for the interactive review ([Plan review](04-plan-review.md)). With the flag on, that success transition targets `status-14` instead.
 
 ### How a review runs
 

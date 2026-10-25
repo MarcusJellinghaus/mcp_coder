@@ -1,6 +1,6 @@
 # Code Review
 
-The implementation is reviewed and a decision is made: approve, rework, or redesign. The review is interactive by default (a human or a supervisor skill) and can optionally run automated.
+The implementation is reviewed and a decision is made: approve, rework, or redesign. The review is an interactive LLM session by default and can optionally run automated.
 
 ## Labels
 
@@ -24,11 +24,11 @@ Other exits from the interactive review:
 
 ## Actor
 
-**Interactive (`status-07`):** a human or a supervisor skill. vscodeclaude auto-launches `/implementation_review_supervisor` for this label. The supervisor ends at "ready for approval". The label change is a separate command. Escalations from the automated review arrive here.
+**Interactive (`status-07`):** tier: interactive LLM session — you, or a supervisor skill. vscodeclaude auto-launches `/implementation_review_supervisor` for this label. The supervisor ends at "ready for approval". The label change is a separate command. Escalations from the automated review arrive here.
 
 **Tools:** MCP code quality checks
 
-**Automated (`status-17`):** fully automated. The coordinator dispatches `review-implementation` on Jenkins, only with `auto_review_implementation` on (default off, see [configuration](../../configuration/config.md)). It reviews, fixes and re-runs rebase and CI in rounds, and moves the issue to `status-08` once converged and CI is proven green. When it needs a human, it hands over to `status-07`. How it runs: [Automated code review](17-automated-code-review.md).
+**Automated (`status-17`):** tier: automated. The coordinator dispatches `review-implementation` on Jenkins, only with `auto_review_implementation` on (default off, see [configuration](../../configuration/config.md)). It reviews, fixes and re-runs rebase and CI in rounds, and moves the issue to `status-08` once converged and CI is proven green. When it needs a human, it hands over to `status-07`. How it runs: [Automated code review](17-automated-code-review.md).
 
 ## Slash commands
 
@@ -52,96 +52,3 @@ Rework chain: `/implementation_new_tasks` → `/commit_push` → `/implementatio
 **Interactive (`status-07`):** none — human stage.
 
 **Automated (`status-17`):** the six `status-17f-*` labels (`17f`, `17f-ci`, `17f-timeout`, `17f-mcp`, `17f-tasks`, `17f-ci-unknown`). Recovery: `mcp-coder gh-tool set-status status-17:code-review-bot`. Causes: [Automated code review](17-automated-code-review.md#failure-exits).
-
-## Additional prompt details
-
-#### Code Review Prompt
-
-Or use the code review prompt directly:
-<details>
-<summary>📋 Code Review Prompt (click to expand and copy)</summary>
-
-> **Slash Command:** `/implementation_review` ([`.claude/skills/implementation_review/SKILL.md`](../../../.claude/skills/implementation_review/SKILL.md))
->
-> **Additional capability:** Checks git status and confirms branch before review.
-
-````
-## Code Review Request
-
-Run this command to get the changes to review:
-```
-git diff --unified=5 --no-prefix %BASE_BRANCH%...HEAD -- . ":(exclude)pr_info/.conversations/**"
-```
-
-No need to run all checks; do not use pylint warnings. Feel free to further analyse any mentioned files and/or the file structure.
-
-### Focus Areas:
-- Logic errors or bugs
-- Tests for `__main__` functions should be removed (not needed)
-- Unnecessary debug code or print statements
-- Code that could break existing functionality
-- Compliance with existing architecture principles, see `docs/architecture/architecture.md`
-
-### Output Format:
-1. **Summary** - What changed (1-2 sentences)
-2. **Critical Issues** - Must fix before merging
-3. **Suggestions** - Nice to have improvements
-4. **Good** - What works well
-
-Do not perform any action. Just present the code review.
-````
-
-</details>
-
-#### ABC Discussion Prompt
-
-**Review the result of the pull request review**
-<details>
-<summary>📋 ABC Discussion Prompt (click to expand and copy)</summary>
-
-```
-Can we go through all open suggested changes and questions step by step?
-You explain, ask and I answer until we discussed all topics?
-Please offer, whenever possible, simple options like 
-- A
-- B
-- C
-
-We will use the discussion later to add more tasks to the implementation plan files under `pr_info/steps`
-```
-
-</details>
-
-#### Commit message after plan extension
-
-Commit the changes with the extended implementation plan with
-
-```
-  Implementation plan extended based on code review findings
-```
-
-#### Detailed Code Review Process
-
-**Objective:** Review and document the completed feature
-
-After all implementation steps are complete:
-
-##### 5.1 Run more detailed checks / additional checks and update tasks
-
-Run certain checks in an automated way and deal with possibly highlighted issues:
-
-- Pylint warnings
-- (custom checks - to be developed)
-- Check pytest runtime
-- Update architecture document
-  ( to be further extended )
-- double-check also results of CI pipeline
-
-##### 5.2 PR Review
-
-**Process:**
-
-- Review the entire pull request for the feature via an LLM prompt
-- Review of LLM review output, decide on next steps based on findings
-
-**Tools:**

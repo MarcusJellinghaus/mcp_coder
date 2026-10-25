@@ -9,7 +9,7 @@ flowchart TD
     subgraph Legend
         direction LR
         L4["Status label: status tracked in GitHub"]
-        L3(["Fully automated: executed by mcp-coder"])
+        L3(["Automated: executed by mcp-coder"])
         L2(["Interactive LLM session"])
         L1(["GitHub UI"])
         L4 ~~~ L3 ~~~ L2 ~~~ L1
@@ -77,7 +77,7 @@ After `create-plan` and `implement`, the review runs in one of two ways:
 - **Interactive** (default): you work in an LLM session.
 - **Automated** (dashed): `review-plan` / `review-implementation`, only if `auto_review_plan` / `auto_review_implementation` is on. If it needs a human, it hands over to the interactive review.
 
-**Interactive sessions:**
+**Interactive LLM sessions** are you working with the LLM, step by step or through a supervisor skill:
 
 `/plan_review` and `/implementation_review` start a step-by-step session with the LLM (with `/discuss` and the update commands).
 
@@ -93,17 +93,17 @@ Full state machine incl. failure labels: [workflow matrix](https://htmlpreview.g
 
 | Process | Trigger label | Actor | Slash commands | Doc |
 |---|---|---|---|---|
-| Issue discussion | `status-01:created` | Human or supervisor skill | `/issue_analyse`, `/discuss`, `/issue_update`, `/issue_create`, `/issue_approve`, `/issue_analyse_supervisor` | [issue-discussion](processes/01-issue-discussion.md) |
+| Issue discussion | `status-01:created` | Interactive LLM session | `/issue_analyse`, `/discuss`, `/issue_update`, `/issue_create`, `/issue_approve`, `/issue_analyse_supervisor` | [issue-discussion](processes/01-issue-discussion.md) |
 | Plan creation | `status-02:awaiting-planning` | Automated (`create-plan`) | none | [plan-creation](processes/02-plan-creation.md) |
-| Plan review | `status-04:plan-review` | Human or supervisor skill | `/plan_review_supervisor`, `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` | [plan-review](processes/04-plan-review.md) |
+| Plan review | `status-04:plan-review` | Interactive LLM session | `/plan_review_supervisor`, `/plan_review`, `/discuss`, `/plan_update`, `/commit_push`, `/plan_approve` | [plan-review](processes/04-plan-review.md) |
 | Implementation | `status-05:plan-ready` | Automated (`implement`) | `/implementation_finalise`, `/commit_push`, `/check_branch_status` | [implementation](processes/05-implementation.md) |
-| Code review | `status-07:code-review` | Human or supervisor skill | `/implementation_review_supervisor`, `/implementation_review`, `/discuss`, `/implementation_approve`, `/implementation_needs_rework`, `/implementation_new_tasks`, `/implementation_finalise`, `/commit_push` | [code-review](processes/07-code-review.md) |
+| Code review | `status-07:code-review` | Interactive LLM session | `/implementation_review_supervisor`, `/implementation_review`, `/discuss`, `/implementation_approve`, `/implementation_needs_rework`, `/implementation_new_tasks`, `/implementation_finalise`, `/commit_push` | [code-review](processes/07-code-review.md) |
 | PR creation | `status-08:ready-pr` | Automated (`create-pr`) | none | [pr-creation](processes/08-pr-creation.md) |
-| PR merge | `status-10:pr-created` | Human | `/check_branch_status` | [pr-merge](processes/10-pr-merge.md) |
-| PR follow-up | `status-71`, `status-81`, `status-91` | Automated (71, 81); human or supervisor skill (91) | `/pr_comment_triage`, `/check_branch_status`, `/rebase` | [pr-follow-up](processes/71-pr-follow-up.md) |
+| PR merge | `status-10:pr-created` | GitHub UI | `/check_branch_status` | [pr-merge](processes/10-pr-merge.md) |
+| PR follow-up | `status-71`, `status-81`, `status-91` | Automated (71, 81); interactive LLM session (91) | `/pr_comment_triage`, `/check_branch_status`, `/rebase` | [pr-follow-up](processes/71-pr-follow-up.md) |
 | Automated plan review | `status-14` (with `auto_review_plan`) | Automated (`review-plan`) | `/check_branch_status` | [automated-plan-review](processes/14-automated-plan-review.md) |
 | Automated code review | `status-17` (with `auto_review_implementation`) | Automated (`review-implementation`) | `/check_branch_status`, `/implementation_finalise` | [automated-code-review](processes/17-automated-code-review.md) |
-| Failure handling | any failure label | Human or supervisor skill | `/check_branch_status` | [failure-handling](processes/failure-handling.md) |
+| Failure handling | any failure label | Interactive LLM session | `/check_branch_status` | [failure-handling](processes/failure-handling.md) |
 
 ## Links
 

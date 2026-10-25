@@ -12,7 +12,7 @@ A human reviews the pull request, checks CI and merges it.
 
 ## Actor
 
-Human required — the only strictly human step. Usually done in the GitHub UI. `status-10:pr-created` has no auto-launched command.
+Tier: GitHub UI — the only strictly human step. `status-10:pr-created` has no auto-launched command.
 
 While the PR waits, see [PR follow-up](71-pr-follow-up.md).
 
