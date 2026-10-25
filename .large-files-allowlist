@@ -6,7 +6,6 @@
 
 docs/cli-reference.md
 docs/configuration/config.md
-docs/processes-prompts/development-process.md
 tools/safe_delete_folder.py
 src/mcp_coder/cli/parsers.py
 tests/cli/commands/coordinator/test_core.py
