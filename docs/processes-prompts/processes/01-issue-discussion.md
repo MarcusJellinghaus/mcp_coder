@@ -1,6 +1,6 @@
 # Issue Discussion
 
-Turn a raw idea into a refined, approved issue. This is a human stage: you decide scope and requirements.
+Turn a raw idea into a refined, approved issue. This is an interactive stage: you decide scope and requirements.
 
 ## Labels
 

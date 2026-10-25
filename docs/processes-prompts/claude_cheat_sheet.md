@@ -12,7 +12,7 @@ For a complete overview of the process, see [development-process.md](development
 |---------|-------------|
 | **Issue discussion** | |
 | `/issue_analyse` | Analyze and discuss a GitHub issue |
-| `/issue_analyse_supervisor` | Analyse an issue autonomously; ends at ready for approval |
+| `/issue_analyse_supervisor` | Analyse an issue autonomously; approves it when no questions remain |
 | `/issue_create` | Create a new GitHub issue from discussion |
 | `/issue_update` | Update issue description with discussed details |
 | `/issue_approve` | Approve issue to start planning |

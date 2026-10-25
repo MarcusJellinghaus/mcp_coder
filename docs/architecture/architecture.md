@@ -101,7 +101,7 @@ AI-powered software development automation toolkit that orchestrates end-to-end 
 
 ### Component Responsibilities
 - **mcp_coder**: GitHub orchestrator + workflow logic
-  - Event-driven automation based on GitHub label changes
+  - Event-driven automation based on GitHub status labels, see [Development Process](../processes-prompts/development-process.md)
   - Workflow state management and transitions
   - GitHub API integration and content posting
 - **Claude Code**: AI reasoning + content creation
@@ -333,6 +333,12 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
   - `task_processing.py` - Individual task processing, mypy checks, formatting
   - **Blocked channel**: an agent that cannot verify its work writes one line to `pr_info/.blocked.txt`; the workflow reads it before the files-changed check, fails the run with `status-06f-blocked` and surfaces the text. Task results travel as `TaskOutcome(success, reason, detail)`.
   - **CLI Integration**: Accessible via `cli/commands/implement.py`
+- **Other label-triggered workflows**: each runs for one label in `WORKFLOW_MAPPING` (`cli/commands/coordinator/workflow_constants.py`); per-label flow and failure labels are in the [process docs](../processes-prompts/development-process.md)
+  - `workflows/create_plan/` - `create-plan`: `status-02` → `status-03` → `status-04` (or `status-14`)
+  - `workflows/create_pr/` - `create-pr`: `status-08` → `status-09` → `status-10`
+  - `workflows/fix_conflict/` - `fix-conflict`: `status-71` → `status-72` → `status-10` (or `status-74` / `status-73`)
+  - `workflows/fix_ci/` - `fix-ci`: `status-81` → `status-82` → `status-10` (or `status-84` / `status-83`)
+  - `workflows/vscodeclaude/` - Interactive session launcher for human-action labels; it also detects the PR follow-up cases (merge conflict, failing CI, review comments → `status-91`)
 - **Automated review workflows**: `workflows/review/` - Shared engine behind `mcp-coder review-plan` and `review-implementation` (tests: `workflows/review/test_*.py`)
   - `core.py` - Multi-round review loop (fresh reviewer session per round + persistent supervisor session, rounds cap 5), 3-way outcome routing
   - `config.py` - `ReviewConfig` (`REVIEW_PLAN` / `REVIEW_IMPLEMENTATION`) parameterizing the shared engine
@@ -352,12 +358,28 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 
 ## 6. Runtime View
 
+The scenarios show the default path. With `auto_review_plan` / `auto_review_implementation` on, an automated review runs between the steps; see [Development Process](../processes-prompts/development-process.md).
+
 ### Scenario 1: GitHub Issue → Implementation Planning
-1. **mcp_coder** detects `status:awaiting-planning` label change
+1. **mcp_coder** detects the `status-02:awaiting-planning` label (the coordinator dispatches `create-plan`; the label moves to `status-03:planning`)
 2. **mcp_coder** → **Claude Code**: "Create implementation plan for issue X"
 3. **Claude Code** → **MCP servers**: Read issue content, analyze codebase
 4. **Claude Code** → **mcp_coder**: Returns structured implementation plan
-5. **mcp_coder** → **GitHub**: Posts plan as comment, changes label to `status:plan-review`
+5. **mcp_coder** → **GitHub**: Posts plan as comment, changes label to `status-04:plan-review` (`status-14:plan-review-bot` with `auto_review_plan` on)
+
+### Scenario 2: Code Implementation Execution
+1. The plan is approved (`/plan_approve`, or the automated plan review) → label `status-05:plan-ready`; the label moves to `status-06:implementing`
+2. **mcp_coder** → **Claude Code**: "Implement according to approved plan"
+3. **Claude Code** → **MCP servers**: File operations, code writing, quality checks
+4. **Claude Code** → **mcp_coder**: Implementation complete notification
+5. **mcp_coder** → **GitHub**: Update status to `status-07:code-review` (`status-17:code-review-bot` with `auto_review_implementation` on)
+
+### Scenario 3: Pull Request Creation
+1. The code is approved (`/implementation_approve`, or the automated code review) → label `status-08:ready-pr`; the label moves to `status-09:pr-creating`
+2. **mcp_coder** → **Claude Code**: "Create pull request with summary"
+3. **Claude Code** → **MCP servers**: Generate PR description, final quality checks
+4. **Claude Code** → **mcp_coder**: PR content and metadata
+5. **mcp_coder** → **GitHub**: Create PR, update label to `status-10:pr-created`
 
 ### Scenario 4: Driving a Project from Another Directory
 1. The shell sits anywhere — typically the tool environment on a build server, not the checkout
@@ -369,20 +391,6 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 5. Claude modifies files in project directory
 6. Git operations target project directory
 
-### Scenario 2: Code Implementation Execution
-1. Human approves plan → label changed to `status:plan-ready`
-2. **mcp_coder** → **Claude Code**: "Implement according to approved plan"
-3. **Claude Code** → **MCP servers**: File operations, code writing, quality checks
-4. **Claude Code** → **mcp_coder**: Implementation complete notification
-5. **mcp_coder** → **GitHub**: Update status to `status:code-review`
-
-### Scenario 3: Pull Request Creation
-1. Human approves code → label changed to `status:ready-pr`
-2. **mcp_coder** → **Claude Code**: "Create pull request with summary"
-3. **Claude Code** → **MCP servers**: Generate PR description, final quality checks
-4. **Claude Code** → **mcp_coder**: PR content and metadata
-5. **mcp_coder** → **GitHub**: Create PR, update label to `status:pr-created`
-
 ---
 
 ## 7. Deployment View
@@ -393,7 +401,7 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 - **MCP Servers**: Deployed as separate services
 - **Configuration**: User config in `~/.mcp_coder/config.toml`
 - **Project Configuration**: `.claude/CLAUDE.md` for project-specific instructions
-- **Skills**: `.claude/skills/` contains workflow skills for Claude Code interactive sessions (e.g., `/plan_review`, `/implementation_review`, `/implementation_review_supervisor`, `/commit_push`). See [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for quick reference.
+- **Skills**: `.claude/skills/` contains workflow skills for Claude Code interactive sessions (e.g., `/plan_review`, `/plan_review_supervisor`, `/implementation_review`, `/implementation_review_supervisor`, `/pr_comment_triage`, `/commit_push`). See [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for quick reference.
 
 ### Integration Testing
 - **Separate Repository**: `mcpy_coder_integration_test` for external testing
@@ -506,7 +514,7 @@ The workflow code is layered into three tiers, enforced by the import-linter `La
 - **Tools**: import-linter, tach, pycycle for static analysis of module dependencies; vulture for dead code detection
 - **Configuration**: `.importlinter` (20 contracts), `tach.toml` (layer definitions)
 - **CI Integration**: Architecture checks run automatically on pull requests
-- **Documentation**: See `docs/architecture/dependencies/README.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
+- **Documentation**: See `docs/architecture/dependencies/readme.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
 - **Visualization**: `docs/architecture/dependencies/dependency_graph.html` for interactive dependency graph
 
 ### Refactoring Guidelines

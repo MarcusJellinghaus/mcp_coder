@@ -57,6 +57,20 @@ No production code changes. The documentation is restructured as follows.
 - The `.large-files-allowlist` entry is removed in the **overview step** (step 5), not the last step. The file-size check reports stale entries, so the removal must land in the same commit that shrinks the file to keep every commit green.
 - The issue's commit groups (1) and (5) are split into several steps: one commit per independent part. The relative order is unchanged.
 
+## Changes after implementation (supersede the steps below)
+
+The steps describe the first implementation. Review rounds changed the result; where a step contradicts this list, this list wins.
+
+- **File names:** the process docs are numbered by their first status label: `01-issue-discussion`, `02-plan-creation`, `04-plan-review`, `05-implementation`, `07-code-review`, `08-pr-creation`, `10-pr-merge`, `71-pr-follow-up`. `failure-handling` stays unnumbered.
+- **Automated review split:** `automated-review.md` became `14-automated-plan-review.md` and `17-automated-code-review.md`. `04-plan-review` and `07-code-review` explain both the interactive lane (04 / 07) and the automated lane (14 / 17).
+- **"Additional prompt details" removed everywhere:** no process doc keeps moved prompts any more. The prompts remain in git history, in `prompts.md`, and in the skills. This replaces the "move verbatim" rule above, including the "Code Review Request" exception.
+- **`/issue_approve`** is documented for issue discussion only. Plan and code review use `/plan_approve` and `/implementation_approve`.
+- **Tier names:** "Interactive LLM session" (you, or a supervisor skill), "Automated" (executed by mcp-coder) and "GitHub UI" replace "human or supervisor skill", "fully automated" and "human required".
+- **Overview diagram:** actions are large coloured boxes, status labels are small, a legend is included, and the manual and automated review lanes sit side by side.
+- **Workflow matrix links** point to htmlpreview.github.io (`blob/main/...`), because GitHub does not render `.html` files. They work after merge.
+- **Cheat sheet:** the overview table is grouped by stage, the per-process sections are merged into the happy path, and all 27 failure labels are listed with reasons.
+- **`docs/architecture/architecture.md`:** runtime scenarios use the numbered label names and mention the automated review lanes; the workflow list covers `create-plan`, `create-pr`, `fix-conflict`, `fix-ci` and `vscodeclaude`.
+
 ## Verified behaviour (documented as the code shows it)
 
 - **`fix-conflict`:**
