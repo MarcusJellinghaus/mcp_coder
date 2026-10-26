@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Move `logs_dir` derivation tests to `tests/llm/test_interface_logs_dir.py`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: move `TestPromptLLMLogsDirDerivation`, `TestPromptLLMStreamLogsDirDerivation` via `move_symbol` (dry run first)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestPromptLLMLogsDirDerivation`, `TestPromptLLMStreamLogsDirDerivation` via `move_symbol` (dry run first)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Move langchain routing tests to `tests/llm/test_interface_langchain.py`
 See [step_5.md](./steps/step_5.md)
