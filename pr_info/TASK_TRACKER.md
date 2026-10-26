@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Move retry-wrapper tests to `test_task_processing_retry.py`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: move `TestProcessTaskWithRetry`, fix imports, verify collect counts (base 20)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestProcessTaskWithRetry`, fix imports, verify collect counts (base 20)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Move branch-name tests, drop allowlist entry, final verification
 See [step_4.md](./steps/step_4.md)
