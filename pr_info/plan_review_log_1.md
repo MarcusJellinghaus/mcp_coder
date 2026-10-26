@@ -16,3 +16,12 @@ applied
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_3.md:74, name the base ref for the whole-branch compact diff. Diff the base branch (from `get_base_branch`, e.g. `main`) against the working tree with `pathspec=["tests/", ".large-files-allowlist"]`, so the committed step 1–2 moves and the removed `from typing import Any` that line 76 expects all show up, along with the uncommitted step-3 changes.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 3 — 2026-10-26
+**Findings**:
+`pr_info/steps/summary.md:72` — high — The compact-diff rule runs `git diff` before the commit, and `move_symbol` writes the destination file without staging it. `git diff` leaves out untracked files, so in steps 1–3 each moved class shows up only as a deleted block with no matching addition. That breaks the "only moved blocks" rule and triggers a needless `.blocked.txt` stop. Fix: `git add` the new destination file (or stage everything) before running the compact diff.
+`pr_info/steps/step_3.md:74` — high — Same problem in the whole-branch diff: `git diff <base>` against the working tree shows the committed step 1–2 files, but not the unstaged new `test_prompt_system_prompts.py`. `TestAddSystemPromptsFlag` therefore shows up as a pure deletion, and line 78 would stop the run. Fix: stage the step-3 changes first and diff with `args=["--cached", "<base>"]`, or run the diff after staging.
+**Decisions**:
+Verdict(decision='tasks', tasks=['In pr_info/steps/summary.md:72, run `git add` on the new destination file(s) (or stage all changes) before the compact diff, and diff the staged changes (`--cached`). Unstaged new files from `move_symbol` are untracked, so each moved class would show up as a pure deletion.', 'In pr_info/steps/step_3.md:74, stage the step-3 changes first, then run the whole-branch diff as `args=["--cached", "<base>"]` with `pathspec=["tests/", ".large-files-allowlist"]`. That way the new `test_prompt_system_prompts.py` shows up and `TestAddSystemPromptsFlag` is no longer reported as a pure deletion.'], escalate_reason=None)
+**Changes**:
+applied
