@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: README badge lines — [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: insert three badge lines under `# MCP Coder` in `README.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `docs(readme): add metadata, tooling and security badges`
+- [x] Implementation: insert three badge lines under `# MCP Coder` in `README.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `docs(readme): add metadata, tooling and security badges`
 
 ## Pull Request
 

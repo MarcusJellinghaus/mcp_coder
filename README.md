@@ -1,5 +1,11 @@
 # MCP Coder
 
+[![CI](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/mcp-coder)](https://pypi.org/project/mcp-coder/) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/MarcusJellinghaus/mcp_coder/main/pyproject.toml)](https://pypi.org/project/mcp-coder/) [![License](https://img.shields.io/github/license/MarcusJellinghaus/mcp_coder)](LICENSE)
+
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![mypy](https://img.shields.io/badge/mypy-strict-blue)](https://mypy.readthedocs.io/) [![pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint) [![architecture](https://img.shields.io/badge/architecture-import--linter%20%C2%B7%20tach%20%C2%B7%20pycycle%20%C2%B7%20deptry%20%C2%B7%20vulture-blue)](docs/architecture/architecture.md) [![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/MarcusJellinghaus/9a7892066964f11765a07d74285ad104/raw/mcp_coder-coverage.json)](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/ci.yml)
+
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MarcusJellinghaus/mcp_coder/badge)](https://scorecard.dev/viewer/?uri=github.com/MarcusJellinghaus/mcp_coder) [![CodeQL](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/github-code-scanning/codeql)
+
 **What is MCP Coder?**
 
 MCP coder enhances source code with a structured development process that turns GitHub issues into working code automatically. AI supported discussions allow to specify and review the relevant items of the specification, implementation plan and resulting code. Code quality is also ensured by rigorous usage of classical code quality assurance.
