@@ -2,13 +2,49 @@
 """Shared pytest fixtures for Claude provider tests."""
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 import pytest
+
+from mcp_coder.utils.subprocess_runner import CommandResult
 
 # Type alias for the stream output factory function
 # Uses Callable[..., str] to allow optional/default arguments
 StreamJsonFactory = Callable[..., str]
+
+
+class _MockStreamResult:
+    """Mimics StreamResult for testing: iterable with a .result property."""
+
+    def __init__(
+        self,
+        lines: list[str],
+        return_code: int = 0,
+        timed_out: bool = False,
+    ) -> None:
+        self._lines = lines
+        self._result = CommandResult(
+            return_code=return_code,
+            stdout="",
+            stderr="",
+            timed_out=timed_out,
+        )
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._lines)
+
+    @property
+    def result(self) -> CommandResult:
+        return self._result
+
+
+def _make_stream_gen(
+    lines: list[str],
+    return_code: int = 0,
+    timed_out: bool = False,
+) -> _MockStreamResult:
+    """Create a mock StreamResult mimicking stream_subprocess output."""
+    return _MockStreamResult(lines, return_code=return_code, timed_out=timed_out)
 
 
 @pytest.fixture
