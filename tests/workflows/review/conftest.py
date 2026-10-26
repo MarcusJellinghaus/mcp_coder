@@ -116,7 +116,14 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     # _fail paths): mocked so the flush never touches real git; tests assert the
     # commit fired.
     mocks.commit_all_changes = MagicMock(
-        return_value={"success": True, "commit_hash": "FLUSHSHA"}
+        return_value={
+            "success": True,
+            "commit_hash": "FLUSHSHA",
+            "error": None,
+            "error_category": None,
+            "returncode": 0,
+            "stderr": "",
+        }
     )
     monkeypatch.setattr(handoff, "commit_all_changes", mocks.commit_all_changes)
     mocks.flush_push = MagicMock(return_value=True)
@@ -125,23 +132,24 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     # Scoped log flush (handoff._flush_round_log with only=, used by the
     # top-of-loop flush and _route_to_human): without these it would run against
     # the non-repo tmp_path, where stage_specific_files returns False and
-    # nothing is ever committed. An empty index means no unrelated staged entry
-    # blocks the scoped commit.
-    mocks.handoff_get_full_status = MagicMock(
-        return_value={"staged": [], "modified": [], "untracked": []}
-    )
-    monkeypatch.setattr(handoff, "get_full_status", mocks.handoff_get_full_status)
+    # nothing is ever committed.
     mocks.stage_specific_files = MagicMock(return_value=True)
     monkeypatch.setattr(handoff, "stage_specific_files", mocks.stage_specific_files)
-    mocks.commit_staged_files = MagicMock(
+    mocks.commit_paths = MagicMock(
         return_value={
             "success": True,
             "commit_hash": "LOGSHA",
             "error": None,
             "error_category": None,
+            "returncode": 0,
+            "stderr": "",
         }
     )
-    monkeypatch.setattr(handoff, "commit_staged_files", mocks.commit_staged_files)
+    monkeypatch.setattr(handoff, "commit_paths", mocks.commit_paths)
+    mocks.unstage_paths = MagicMock(
+        return_value={"success": True, "error": None, "returncode": 0, "stderr": ""}
+    )
+    monkeypatch.setattr(handoff, "unstage_paths", mocks.unstage_paths)
 
     mocks.update_workflow_label = MagicMock(return_value=True)
     monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)

@@ -83,23 +83,27 @@ class TestFormatElapsedTime:
 class TestGetDiffStat:
     """Tests for get_diff_stat."""
 
-    @patch("mcp_coder.workflow_utils.failure_handling.execute_command")
-    def test_returns_diff_stat(self, mock_exec: MagicMock) -> None:
-        mock_exec.return_value = MagicMock(
-            return_code=0, stdout=" file.py | 2 +-\n 1 file changed"
-        )
+    @patch("mcp_coder.workflow_utils.failure_handling.git_diff")
+    def test_returns_diff_stat(self, mock_diff: MagicMock) -> None:
+        mock_diff.return_value = " a.py | 2 +-\n 1 file changed"
+        project_dir = Path("/fake/project")
+
+        result = get_diff_stat(project_dir)
+
+        assert result == " a.py | 2 +-\n 1 file changed"
+        mock_diff.assert_called_once_with(project_dir, ["HEAD", "--stat"])
+
+    @patch("mcp_coder.workflow_utils.failure_handling.git_diff")
+    def test_returns_empty_when_no_changes(self, mock_diff: MagicMock) -> None:
+        mock_diff.return_value = "No changes found"
 
         result = get_diff_stat(Path("/fake/project"))
 
-        assert result == " file.py | 2 +-\n 1 file changed"
-        mock_exec.assert_called_once_with(
-            ["git", "diff", "HEAD", "--stat"],
-            cwd=str(Path("/fake/project")),
-        )
+        assert result == ""
 
-    @patch("mcp_coder.workflow_utils.failure_handling.execute_command")
-    def test_returns_empty_on_error(self, mock_exec: MagicMock) -> None:
-        mock_exec.return_value = MagicMock(return_code=1, stdout="", stderr="error")
+    @patch("mcp_coder.workflow_utils.failure_handling.git_diff")
+    def test_returns_empty_on_error(self, mock_diff: MagicMock) -> None:
+        mock_diff.side_effect = ValueError("not a git repository")
 
         result = get_diff_stat(Path("/fake/project"))
 

@@ -383,17 +383,19 @@ def test_route_leaves_unrelated_dirty_files_uncommitted(
     """
     log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
     stage = MagicMock(return_value=True)
-    commit_staged = MagicMock(return_value={"success": True, "commit_hash": "abc"})
-    commit_all = MagicMock(return_value={"success": True, "commit_hash": "def"})
-    monkeypatch.setattr(
-        handoff,
-        "get_full_status",
-        MagicMock(
-            return_value={"staged": [], "modified": ["src/foo.py"], "untracked": []}
-        ),
+    commit_paths = MagicMock(
+        return_value={
+            "success": True,
+            "commit_hash": "abc1234",
+            "error": None,
+            "error_category": None,
+            "returncode": 0,
+            "stderr": "",
+        }
     )
+    commit_all = MagicMock()
     monkeypatch.setattr(handoff, "stage_specific_files", stage)
-    monkeypatch.setattr(handoff, "commit_staged_files", commit_staged)
+    monkeypatch.setattr(handoff, "commit_paths", commit_paths)
     monkeypatch.setattr(handoff, "commit_all_changes", commit_all)
     monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
     monkeypatch.setattr(handoff, "IssueManager", MagicMock())
@@ -417,7 +419,7 @@ def test_route_leaves_unrelated_dirty_files_uncommitted(
 
     commit_all.assert_not_called()  # src/foo.py stays dirty
     stage.assert_called_once_with([log_path], tmp_path)
-    commit_staged.assert_called_once()
+    commit_paths.assert_called_once_with("Add review round log", [log_path], tmp_path)
 
 
 @pytest.mark.git_integration

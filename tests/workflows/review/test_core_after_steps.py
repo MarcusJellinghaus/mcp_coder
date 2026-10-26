@@ -253,7 +253,7 @@ def test_tasks_ci_red_every_round_caps_with_ci_label(
     assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["ci"]
     # The last round's log is flushed to the committed review log before _fail,
     # scoped to that file so the red round's tree is not swept in.
-    env.commit_staged_files.assert_called()
+    env.commit_paths.assert_called()
     env.commit_all_changes.assert_not_called()
 
 
@@ -642,9 +642,7 @@ def test_tasks_round_flushes_log_before_next_round_rebase(
     at_rebase: list[tuple[int, int]] = []
 
     def _rebase(_project_dir: Path) -> RebaseOutcome:
-        at_rebase.append(
-            (env.commit_staged_files.call_count, env.flush_push.call_count)
-        )
+        at_rebase.append((env.commit_paths.call_count, env.flush_push.call_count))
         return RebaseOutcome("ok", "main", "abc1234")
 
     env.attempt_rebase_and_push.side_effect = _rebase

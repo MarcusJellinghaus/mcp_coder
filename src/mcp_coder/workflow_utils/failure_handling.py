@@ -21,14 +21,16 @@ from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
     get_latest_commit_sha,
+    git_diff,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
-from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
 
 logger = logging.getLogger(__name__)
 
 SHORT_SHA_LENGTH = 7
+
+_NO_DIFF = "No changes found"  # git_diff's sentinel for an empty diff
 
 CommentField = tuple[str, str | None]
 
@@ -123,14 +125,10 @@ def get_diff_stat(project_dir: Path) -> str:
         Diff stat output, or empty string on error.
     """
     try:
-        result = execute_command(
-            ["git", "diff", "HEAD", "--stat"], cwd=str(project_dir)
-        )
-        if result.return_code == 0:
-            return result.stdout
-        return ""
+        stat = git_diff(project_dir, ["HEAD", "--stat"])
     except Exception:  # pylint: disable=broad-exception-caught
-        return ""
+        return ""  # git_diff raises on a non-repo or git failure
+    return "" if stat == _NO_DIFF else stat
 
 
 def format_elapsed_time(seconds: float) -> str:

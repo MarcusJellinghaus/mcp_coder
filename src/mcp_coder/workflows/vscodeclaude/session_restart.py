@@ -5,17 +5,13 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
+from ...mcp_workspace_git import checkout_branch, fetch_remote, pull
 from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
     IssueManager,
     RepoIdentifier,
     get_all_cached_issues,
-)
-from ...utils.subprocess_runner import (
-    CalledProcessError,
-    CommandOptions,
-    execute_subprocess,
 )
 from ...utils.user_config import get_cache_refresh_minutes
 from .config import _get_configured_repos
@@ -83,11 +79,8 @@ def _prepare_restart_branch(
         - branch_name: Branch name if switched, None if staying on current
     """
     # 1. Always run git fetch origin (fatal if fails)
-    try:
-        options = CommandOptions(cwd=str(folder_path), check=True)
-        execute_subprocess(["git", "fetch", "origin"], options)
-    except CalledProcessError as e:
-        logger.error("git fetch failed for %s: %s", folder_path, e)
+    if not fetch_remote(folder_path):
+        logger.error("git fetch failed for %s", folder_path)
         return BranchPrepResult(False, "Git error", None)
 
     # 2. If status doesn't require branch, return success (stay on current branch)
@@ -108,12 +101,14 @@ def _prepare_restart_branch(
         return BranchPrepResult(False, "Dirty", None)
 
     # 5. Checkout and pull
-    try:
-        options = CommandOptions(cwd=str(folder_path), check=True)
-        execute_subprocess(["git", "checkout", linked_branch], options)
-        execute_subprocess(["git", "pull"], options)
-    except CalledProcessError as e:
-        logger.error("Git operation failed: %s", e)
+    if not checkout_branch(linked_branch, folder_path):
+        logger.error("Git operation failed: checkout of '%s'", linked_branch)
+        return BranchPrepResult(False, "Git error", None)
+    pulled = pull(folder_path)
+    if not pulled["success"]:
+        logger.error(
+            "Git operation failed: pull: %s", pulled["stderr"] or pulled["error"]
+        )
         return BranchPrepResult(False, "Git error", None)
 
     return BranchPrepResult(True, None, linked_branch)

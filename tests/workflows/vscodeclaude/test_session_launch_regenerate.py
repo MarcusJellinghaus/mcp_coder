@@ -3,7 +3,6 @@
 import json
 import platform
 from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
 
@@ -11,6 +10,10 @@ from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.session_launch import regenerate_session_files
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 from tests.github_factories import make_issue_data
+
+_BRANCH_TARGET = (
+    "mcp_coder.workflows.vscodeclaude.session_launch.get_current_branch_name"
+)
 
 
 @pytest.mark.skipif(
@@ -65,10 +68,7 @@ class TestRegenerateSessionFiles:
     ) -> None:
         """Regenerate creates startup script (.bat or .sh)."""
         # Mock git branch detection
-        monkeypatch.setattr(
-            "subprocess.run",
-            lambda *args, **kwargs: Mock(returncode=0, stdout="main\n"),
-        )
+        monkeypatch.setattr(_BRANCH_TARGET, lambda _path: "main")
 
         script_path = regenerate_session_files(mock_session, mock_issue)
 
@@ -83,10 +83,7 @@ class TestRegenerateSessionFiles:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Regenerate creates .vscode/tasks.json for auto-run on folder open."""
-        monkeypatch.setattr(
-            "subprocess.run",
-            lambda *args, **kwargs: Mock(returncode=0, stdout="main\n"),
-        )
+        monkeypatch.setattr(_BRANCH_TARGET, lambda _path: "main")
 
         regenerate_session_files(mock_session, mock_issue)
 
@@ -106,10 +103,7 @@ class TestRegenerateSessionFiles:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Regenerate creates .vscodeclaude_status.txt."""
-        monkeypatch.setattr(
-            "subprocess.run",
-            lambda *args, **kwargs: Mock(returncode=0, stdout="main\n"),
-        )
+        monkeypatch.setattr(_BRANCH_TARGET, lambda _path: "main")
 
         regenerate_session_files(mock_session, mock_issue)
 
@@ -118,6 +112,42 @@ class TestRegenerateSessionFiles:
         content = status_file.read_text(encoding="utf-8")
         assert "#123" in content
         assert "Test issue for regeneration" in content
+
+    @pytest.mark.parametrize(
+        ("current_branch", "expected"),
+        [("feature-x", "feature-x"), (None, "main")],
+    )
+    def test_regenerate_status_file_branch_name(
+        self,
+        session_folder: Path,
+        mock_session: VSCodeClaudeSession,
+        mock_issue: IssueData,
+        monkeypatch: pytest.MonkeyPatch,
+        current_branch: str | None,
+        expected: str,
+    ) -> None:
+        """Status file gets the current branch; None (detached HEAD) -> "main"."""
+        branch_calls: list[Path] = []
+        status_calls: list[dict[str, object]] = []
+
+        def fake_get_branch(path: Path) -> str | None:
+            branch_calls.append(path)
+            return current_branch
+
+        def fake_create_status(**kwargs: object) -> None:
+            status_calls.append(kwargs)
+
+        monkeypatch.setattr(_BRANCH_TARGET, fake_get_branch)
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
+            fake_create_status,
+        )
+
+        regenerate_session_files(mock_session, mock_issue)
+
+        assert branch_calls == [session_folder]
+        assert len(status_calls) == 1
+        assert status_calls[0]["branch_name"] == expected
 
     def test_regenerate_creates_workspace_file(
         self,
@@ -128,10 +158,7 @@ class TestRegenerateSessionFiles:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Regenerate creates .code-workspace file."""
-        monkeypatch.setattr(
-            "subprocess.run",
-            lambda *args, **kwargs: Mock(returncode=0, stdout="main\n"),
-        )
+        monkeypatch.setattr(_BRANCH_TARGET, lambda _path: "main")
 
         regenerate_session_files(mock_session, mock_issue)
 
@@ -151,10 +178,7 @@ class TestRegenerateSessionFiles:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Workspace file must have task.allowAutomaticTasks setting."""
-        monkeypatch.setattr(
-            "subprocess.run",
-            lambda *args, **kwargs: Mock(returncode=0, stdout="main\n"),
-        )
+        monkeypatch.setattr(_BRANCH_TARGET, lambda _path: "main")
 
         regenerate_session_files(mock_session, mock_issue)
 
@@ -177,10 +201,7 @@ class TestRegenerateSessionFiles:
         This is a comprehensive test to prevent regression where files
         are forgotten during regeneration.
         """
-        monkeypatch.setattr(
-            "subprocess.run",
-            lambda *args, **kwargs: Mock(returncode=0, stdout="main\n"),
-        )
+        monkeypatch.setattr(_BRANCH_TARGET, lambda _path: "main")
 
         regenerate_session_files(mock_session, mock_issue)
 

@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from typing import cast
 
+from ...mcp_workspace_git import get_current_branch_name
 from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
@@ -18,12 +19,7 @@ from ...utils.pyproject_config import (
     get_install_extras,
     get_post_install_checks,
 )
-from ...utils.subprocess_runner import (
-    CalledProcessError,
-    CommandOptions,
-    execute_subprocess,
-    launch_process,
-)
+from ...utils.subprocess_runner import launch_process
 from ...utils.user_config import get_cache_refresh_minutes
 from .config import (
     get_github_username,
@@ -504,16 +500,8 @@ def regenerate_session_files(
     status = get_issue_status(issue)
     is_intervention = session.get("is_intervention", False)
 
-    # Get current branch from git
-    try:
-        options = CommandOptions(cwd=str(folder_path), check=True)
-        result = execute_subprocess(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            options,
-        )
-        branch_name = result.stdout.strip()
-    except CalledProcessError:
-        branch_name = "main"
+    # Detached HEAD or any failure yields None -> explicit "main" fallback.
+    branch_name = get_current_branch_name(folder_path) or "main"
 
     # Regenerate startup script with session folder path for MCP environment variables
     script_path = create_startup_script(

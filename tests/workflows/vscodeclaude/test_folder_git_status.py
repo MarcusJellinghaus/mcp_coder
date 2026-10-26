@@ -2,144 +2,98 @@
 
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, patch
 
-import pytest
+from mcp_coder.workflows.vscodeclaude.status import (
+    check_folder_dirty,
+    get_folder_git_status,
+)
 
-from mcp_coder.workflows.vscodeclaude.status import get_folder_git_status
+_MODULE = "mcp_coder.workflows.vscodeclaude.status"
+
+
+def _status(success: bool, clean: bool) -> dict[str, Any]:
+    """Build a fake get_working_tree_status result."""
+    return {
+        "success": success,
+        "error": None if success else "git status failed (exit 128)",
+        "returncode": 0 if success else 128,
+        "stderr": "",
+        "clean": clean,
+        "staged": [],
+        "modified": [] if clean else ["file.py"],
+        "untracked": [],
+    }
 
 
 class TestGetFolderGitStatus:
     """Tests for get_folder_git_status function."""
 
     def test_returns_missing_when_folder_not_exists(self, tmp_path: Path) -> None:
-        """Returns 'Missing' when folder does not exist."""
+        """Returns 'Missing' when folder does not exist; git is never queried."""
         non_existent = tmp_path / "does_not_exist"
 
-        result = get_folder_git_status(non_existent)
+        with (
+            patch(f"{_MODULE}.is_git_repository") as mock_is_repo,
+            patch(f"{_MODULE}.get_working_tree_status") as mock_status,
+        ):
+            result = get_folder_git_status(non_existent)
 
         assert result == "Missing"
+        mock_is_repo.assert_not_called()
+        mock_status.assert_not_called()
 
-    def test_returns_no_git_when_not_a_repo(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_no_git_when_not_a_repo(self, tmp_path: Path) -> None:
         """Returns 'No Git' when folder exists but is not a git repo."""
-        from mcp_coder.utils.subprocess_runner import CalledProcessError
-
-        folder = tmp_path / "not_a_repo"
-        folder.mkdir()
-
-        def mock_execute(cmd: list[str], options: Any = None) -> None:
-            # git rev-parse fails for non-git folders
-            if "rev-parse" in cmd:
-                raise CalledProcessError(128, cmd)
-            raise CalledProcessError(1, cmd)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
-            mock_execute,
-        )
-
-        result = get_folder_git_status(folder)
+        with (
+            patch(f"{_MODULE}.is_git_repository", return_value=False),
+            patch(f"{_MODULE}.get_working_tree_status") as mock_status,
+        ):
+            result = get_folder_git_status(tmp_path)
 
         assert result == "No Git"
+        mock_status.assert_not_called()
 
-    def test_returns_clean_when_no_changes(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_clean_when_no_changes(self, tmp_path: Path) -> None:
         """Returns 'Clean' when git repo has no uncommitted changes."""
-        from mcp_coder.utils.subprocess_runner import CommandResult
-
-        def mock_execute(cmd: list[str], options: Any = None) -> CommandResult:
-            # git rev-parse succeeds (is a git repo)
-            if "rev-parse" in cmd:
-                return CommandResult(
-                    return_code=0,
-                    stdout=".git",
-                    stderr="",
-                    timed_out=False,
-                )
-            # git status --porcelain returns empty (clean)
-            if "status" in cmd:
-                return CommandResult(
-                    return_code=0,
-                    stdout="",  # Empty = clean
-                    stderr="",
-                    timed_out=False,
-                )
-            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
-            mock_execute,
-        )
-
-        result = get_folder_git_status(tmp_path)
+        with (
+            patch(f"{_MODULE}.is_git_repository", return_value=True),
+            patch(
+                f"{_MODULE}.get_working_tree_status",
+                return_value=_status(success=True, clean=True),
+            ) as mock_status,
+        ):
+            result = get_folder_git_status(tmp_path)
 
         assert result == "Clean"
+        mock_status.assert_called_once_with(tmp_path)
 
-    def test_returns_dirty_when_has_changes(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_dirty_when_has_changes(self, tmp_path: Path) -> None:
         """Returns 'Dirty' when git repo has uncommitted changes."""
-        from mcp_coder.utils.subprocess_runner import CommandResult
-
-        def mock_execute(cmd: list[str], options: Any = None) -> CommandResult:
-            # git rev-parse succeeds (is a git repo)
-            if "rev-parse" in cmd:
-                return CommandResult(
-                    return_code=0,
-                    stdout=".git",
-                    stderr="",
-                    timed_out=False,
-                )
-            # git status --porcelain returns modified file
-            if "status" in cmd:
-                return CommandResult(
-                    return_code=0,
-                    stdout="M file.py\n",  # Modified file
-                    stderr="",
-                    timed_out=False,
-                )
-            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
-            mock_execute,
-        )
-
-        result = get_folder_git_status(tmp_path)
+        with (
+            patch(f"{_MODULE}.is_git_repository", return_value=True),
+            patch(
+                f"{_MODULE}.get_working_tree_status",
+                return_value=_status(success=True, clean=False),
+            ),
+        ):
+            result = get_folder_git_status(tmp_path)
 
         assert result == "Dirty"
 
-    def test_returns_error_when_git_status_fails(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Returns 'Error' when git status command fails after rev-parse succeeds."""
-        from mcp_coder.utils.subprocess_runner import CalledProcessError, CommandResult
-
-        call_count = {"rev_parse": 0}
-
-        def mock_execute(cmd: list[str], options: Any = None) -> CommandResult:
-            # git rev-parse succeeds (is a git repo)
-            if "rev-parse" in cmd:
-                call_count["rev_parse"] += 1
-                return CommandResult(
-                    return_code=0,
-                    stdout=".git",
-                    stderr="",
-                    timed_out=False,
-                )
-            # git status fails
-            if "status" in cmd:
-                raise CalledProcessError(1, cmd)
-            return CommandResult(return_code=0, stdout="", stderr="", timed_out=False)
-
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
-            mock_execute,
-        )
-
-        result = get_folder_git_status(tmp_path)
+    def test_returns_error_when_git_status_fails(self, tmp_path: Path) -> None:
+        """Returns 'Error' (never 'Clean') when git status fails."""
+        mock_is_repo = MagicMock(return_value=True)
+        with (
+            patch(f"{_MODULE}.is_git_repository", mock_is_repo),
+            patch(
+                f"{_MODULE}.get_working_tree_status",
+                return_value=_status(success=False, clean=False),
+            ),
+        ):
+            result = get_folder_git_status(tmp_path)
+            dirty = check_folder_dirty(tmp_path)
 
         assert result == "Error"
-        assert call_count["rev_parse"] == 1  # Verify rev-parse was called
+        assert dirty is True  # cleanup never deletes on a git failure
+        mock_is_repo.assert_called_with(tmp_path)

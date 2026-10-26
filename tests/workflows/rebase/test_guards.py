@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 from git import Repo
 
-from mcp_coder.workflow_utils.base_branch import BaseBranchSource
+from mcp_coder.mcp_workspace_git import BaseBranchSource
 from mcp_coder.workflows import rebase as rebase_module
 from mcp_coder.workflows.rebase import (
     _check_pr_info_absent_on_base,
@@ -128,6 +128,7 @@ class TestResolveBaseBranch:
         assert "--base-branch" in error
         assert "### Base Branch" in error
         assert "issue body is trusted" in error
+        assert f"detected from {source.value}," in error
 
     def test_no_detection_errors(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -142,6 +143,193 @@ class TestResolveBaseBranch:
         assert base is None
         assert error is not None
         assert "--base-branch" in error
+
+
+_CLEAN_STATUS: dict[str, Any] = {
+    "success": True,
+    "error": None,
+    "returncode": 0,
+    "stderr": "",
+    "clean": True,
+    "staged": [],
+    "modified": [],
+    "untracked": [],
+}
+
+
+@pytest.fixture
+def preflight_passing(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """Patch every ``_preflight`` shim call to a passing default."""
+    monkeypatch.setattr(
+        rebase_module, "get_working_tree_status", lambda _pd: dict(_CLEAN_STATUS)
+    )
+    monkeypatch.setattr(rebase_module, "is_rebase_in_progress", lambda _pd: False)
+    monkeypatch.setattr(rebase_module, "get_current_branch_name", lambda _pd: "feature")
+    monkeypatch.setattr(
+        rebase_module, "get_remote_url", lambda _pd: "https://example.com/r.git"
+    )
+    monkeypatch.setattr(
+        rebase_module,
+        "check_formatter_config",
+        lambda _pd, warn_legacy_key=False: None,
+    )
+    return monkeypatch
+
+
+class TestPreflightMocked:
+    """``_preflight`` against the mocked shim (fail-closed semantics)."""
+
+    def test_all_pass(self, tmp_path: Path, preflight_passing: Any) -> None:
+        """Every guard passing yields ``None``."""
+        assert _preflight(tmp_path) is None
+
+    def test_status_failure_reported_distinctly(
+        self, tmp_path: Path, preflight_passing: pytest.MonkeyPatch
+    ) -> None:
+        """A failed ``git status`` fails closed with its own message and stderr."""
+        preflight_passing.setattr(
+            rebase_module,
+            "get_working_tree_status",
+            lambda _pd: {
+                **_CLEAN_STATUS,
+                "success": False,
+                "clean": False,
+                "error": "git status failed (exit 128)",
+                "returncode": 128,
+                "stderr": "fatal: not a git repository\n",
+            },
+        )
+
+        assert (
+            _preflight(tmp_path)
+            == "Could not read working tree status: fatal: not a git repository"
+        )
+
+    def test_status_failure_without_stderr_uses_error(
+        self, tmp_path: Path, preflight_passing: pytest.MonkeyPatch
+    ) -> None:
+        """Without stderr, the status failure message falls back to ``error``."""
+        preflight_passing.setattr(
+            rebase_module,
+            "get_working_tree_status",
+            lambda _pd: {
+                **_CLEAN_STATUS,
+                "success": False,
+                "clean": False,
+                "error": "git status failed (exit 128)",
+            },
+        )
+
+        assert (
+            _preflight(tmp_path)
+            == "Could not read working tree status: git status failed (exit 128)"
+        )
+
+    def test_dirty_tree(
+        self, tmp_path: Path, preflight_passing: pytest.MonkeyPatch
+    ) -> None:
+        """A successful status that is not clean keeps the not-clean message."""
+        preflight_passing.setattr(
+            rebase_module,
+            "get_working_tree_status",
+            lambda _pd: {**_CLEAN_STATUS, "clean": False, "untracked": ["x.txt"]},
+        )
+
+        assert _preflight(tmp_path) == "Working tree not clean"
+
+    def test_rebase_in_progress(
+        self, tmp_path: Path, preflight_passing: pytest.MonkeyPatch
+    ) -> None:
+        """A rebase in progress is refused."""
+        preflight_passing.setattr(
+            rebase_module, "is_rebase_in_progress", lambda _pd: True
+        )
+
+        assert _preflight(tmp_path) == "Repository is mid-rebase/merge"
+
+    def test_no_origin(
+        self, tmp_path: Path, preflight_passing: pytest.MonkeyPatch
+    ) -> None:
+        """``get_remote_url`` returning ``None`` means no ``origin``."""
+        preflight_passing.setattr(rebase_module, "get_remote_url", lambda _pd: None)
+
+        assert _preflight(tmp_path) == "Remote 'origin' not found"
+
+
+class TestCheckPrInfoAbsentOnBaseMocked:
+    """``_check_pr_info_absent_on_base`` against a mocked ``list_tree``."""
+
+    @staticmethod
+    def _listing(success: bool, entries: list[str]) -> dict[str, Any]:
+        return {
+            "success": success,
+            "error": None if success else "git ls-tree failed (exit 128)",
+            "returncode": 0 if success else 128,
+            "stderr": "",
+            "entries": entries,
+        }
+
+    def test_listing_failure_is_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A failed listing is an error, never read as absent."""
+        calls: list[tuple[Path, str, str]] = []
+
+        def _list(pd: Path, ref: str, path: str) -> dict[str, Any]:
+            calls.append((pd, ref, path))
+            return self._listing(False, [])
+
+        monkeypatch.setattr(rebase_module, "list_tree", _list)
+
+        message = _check_pr_info_absent_on_base(tmp_path, "main")
+
+        assert message is not None
+        assert message.startswith("Could not list pr_info/ on origin/main")
+        assert "exit 128" in message
+        assert calls == [(tmp_path, "origin/main", "pr_info")]
+
+    def test_listing_failure_includes_stderr(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Git's stderr is preferred over the generic error in the message."""
+        stderr = "fatal: Not a valid object name origin/main"
+        monkeypatch.setattr(
+            rebase_module,
+            "list_tree",
+            lambda _pd, _ref, _path: {
+                **self._listing(False, []),
+                "stderr": stderr + "\n",
+            },
+        )
+
+        message = _check_pr_info_absent_on_base(tmp_path, "main")
+
+        assert message == f"Could not list pr_info/ on origin/main: {stderr}"
+
+    def test_entries_present_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Any entry under ``pr_info/`` is refused."""
+        monkeypatch.setattr(
+            rebase_module,
+            "list_tree",
+            lambda _pd, _ref, _path: self._listing(True, ["pr_info/a.md"]),
+        )
+
+        assert (
+            _check_pr_info_absent_on_base(tmp_path, "main")
+            == "pr_info/ present on origin/main"
+        )
+
+    def test_empty_passes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An empty listing passes the guard."""
+        monkeypatch.setattr(
+            rebase_module, "list_tree", lambda _pd, _ref, _path: self._listing(True, [])
+        )
+
+        assert _check_pr_info_absent_on_base(tmp_path, "main") is None
 
 
 @pytest.mark.git_integration
@@ -260,3 +448,13 @@ class TestCheckPrInfoAbsentOnBase:
         message = _check_pr_info_absent_on_base(project_dir, "withprinfo")
         assert message is not None
         assert "pr_info" in message
+
+    def test_missing_base_on_origin_returns_error(
+        self, feature_repo_with_origin: tuple[Repo, Path]
+    ) -> None:
+        """A base absent on origin is an error, not \"pr_info/ absent\"."""
+        _, project_dir = feature_repo_with_origin
+
+        message = _check_pr_info_absent_on_base(project_dir, "no-such-branch")
+        assert message is not None
+        assert message.startswith("Could not list pr_info/ on origin/no-such-branch")

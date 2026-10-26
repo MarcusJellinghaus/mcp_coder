@@ -13,29 +13,41 @@ self-reports an outcome.
 import logging
 from collections import Counter
 from pathlib import Path
-from typing import NamedTuple
 
 from mcp_coder.constants import PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import (
+    BaseBranchSource,
+    RebaseResult,
+    commit_all_changes,
     fetch_remote,
+    get_conflict_blob_info,
     get_current_branch_name,
     get_latest_commit_sha,
+    get_remote_url,
+    get_working_tree_status,
     git_push,
-    is_working_directory_clean,
+    has_staged_changes,
+    is_rebase_in_progress,
+    list_tree,
     needs_rebase,
+    read_conflict_stage,
+    rebase_abort,
+    rebase_continue,
+    rebase_skip,
+    rebase_start,
+    resolve_take_theirs_or_remove,
+    stage_all_changes,
 )
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.utils.log_utils import OUTPUT
-from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_steps.rebase import _reset_hard
 from mcp_coder.workflow_utils.base_branch import (
-    BaseBranchSource,
     check_base_branch_on_origin,
     detect_base_branch_with_source,
 )
@@ -48,55 +60,51 @@ from mcp_coder.workflows.rebase_checks import (
 logger = logging.getLogger(__name__)
 
 
-class _GitResult(NamedTuple):
-    """Minimal git result exposing ``returncode``/``stdout``/``stderr``.
-
-    Mirrors the subset of ``subprocess.CompletedProcess`` that the rebase
-    callers inspect, decoupling them from the ``mcp-coder-utils``
-    ``CommandResult`` (whose field is ``return_code``).
-    """
-
-    returncode: int
-    stdout: str
-    stderr: str
-
-
-def _run_git(project_dir: Path, *args: str) -> _GitResult:
-    """Run ``git <args>`` in ``project_dir`` (list form, no shell, ``check=False``).
-
-    Never raises on a non-zero git exit; the caller decides what a failure means.
+def _is_clean(project_dir: Path) -> bool:
+    """Fail-closed clean check: a git failure is never clean.
 
     Returns:
-        A result object so callers can inspect ``.returncode``, ``.stdout``
-        and ``.stderr``.
+        True only if the status query succeeded and the tree is clean.
     """
-    # Fixed argv, no shell, trusted ``git`` CLI — routed through the
-    # subprocess_runner shim (mcp-coder-utils) per the library-isolation contract.
-    result = execute_command(["git", *args], cwd=str(project_dir))
-    return _GitResult(
-        returncode=result.return_code,
-        stdout=result.stdout,
-        stderr=result.stderr,
-    )
+    status = get_working_tree_status(project_dir)
+    return status["success"] and status["clean"]
 
 
-def _is_rebase_in_progress(project_dir: Path) -> bool:
-    """Return True if a rebase is mid-flight.
+def _rebase_in_progress_or_none(project_dir: Path) -> bool | None:
+    """Best-effort rebase-state probe for except/finally sites.
 
-    Detected purely from the filesystem: git creates ``.git/rebase-merge`` (merge
-    backend) or ``.git/rebase-apply`` (apply backend) while a rebase is unfinished.
+    Returns:
+        Whether a rebase is in progress, or None (logged) if it cannot be
+        determined.
     """
-    git_dir = project_dir / ".git"
-    return (git_dir / "rebase-merge").exists() or (git_dir / "rebase-apply").exists()
+    try:
+        return is_rebase_in_progress(project_dir)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.error("Could not determine rebase state: %s", exc)
+        return None
 
 
 def _abort_rebase(project_dir: Path) -> None:
-    """Best-effort ``git rebase --abort`` (never raises).
+    """Best-effort ``git rebase --abort`` (never raises; a failure is logged).
 
-    Used by the ``finally`` safety net; if no rebase is in progress git simply
-    exits non-zero, which ``_run_git`` swallows.
+    Used by the ``finally`` safety net.
     """
-    _run_git(project_dir, "rebase", "--abort")
+    result = rebase_abort(project_dir)
+    if not result["success"]:
+        logger.error(
+            "git rebase --abort failed: %s", result["stderr"] or result["error"]
+        )
+
+
+def _restore_note(project_dir: Path, sha: str) -> str:
+    """Restore pre-rebase state via the shared ``_reset_hard``.
+
+    Returns:
+        The suffix for the user-visible abort message.
+    """
+    if _reset_hard(project_dir, sha):
+        return "; pre-rebase state restored"
+    return "; restoring pre-rebase state FAILED (see log)"
 
 
 def _rebase_success_shape(project_dir: Path, pre_sha: str) -> bool:
@@ -104,71 +112,16 @@ def _rebase_success_shape(project_dir: Path, pre_sha: str) -> bool:
 
     This is the git-side corroboration of a claimed rebase success: no rebase may
     be in progress, the working tree must be clean, and HEAD must differ from the
-    pre-rebase commit.
+    pre-rebase commit. An undeterminable rebase state (logged) counts as failure.
     """
-    if _is_rebase_in_progress(project_dir):
+    if _rebase_in_progress_or_none(project_dir) is not False:
         return False
-    if not is_working_directory_clean(project_dir):
+    if not _is_clean(project_dir):
         return False
     return get_latest_commit_sha(project_dir) != pre_sha
 
 
 # --- Conflict handling ---
-
-
-def _conflicted_files(project_dir: Path) -> list[str]:
-    """Return the unmerged paths (repo-relative, git's own output order)."""
-    result = _run_git(project_dir, "diff", "--name-only", "--diff-filter=U")
-    return [line for line in result.stdout.splitlines() if line.strip()]
-
-
-def _binary_conflict(project_dir: Path) -> str | None:
-    """Return the first conflicted path with binary content, or ``None``.
-
-    At a conflict stop, bare ``git diff --numstat`` omits unmerged paths
-    (verified against real git), so binary-ness is decided at blob level:
-    stage SHAs via ``git ls-files -u``, then ``git diff --numstat <ours>
-    <theirs>`` where ``-`` added/deleted columns reliably mean binary.
-    """
-    listing = _run_git(project_dir, "ls-files", "-u")
-    stages: dict[str, dict[int, str]] = {}
-    for line in listing.stdout.splitlines():
-        # "<mode> <sha> <stage>\t<path>"
-        meta, _, path = line.partition("\t")
-        fields = meta.split()
-        if len(fields) != 3 or not path:
-            continue
-        stages.setdefault(path, {})[int(fields[2])] = fields[1]
-    for path, shas in stages.items():
-        # A missing side (delete/modify) falls back to the common ancestor so
-        # single-sided binary content is still caught; identical blobs simply
-        # produce no diff output.
-        ours = shas.get(2) or shas.get(1)
-        theirs = shas.get(3) or shas.get(1)
-        if not ours or not theirs:
-            continue
-        numstat = _run_git(project_dir, "diff", "--numstat", ours, theirs)
-        for stat_line in numstat.stdout.splitlines():
-            columns = stat_line.split("\t")
-            if len(columns) >= 2 and columns[0] == "-" and columns[1] == "-":
-                return path
-    return None
-
-
-def _resolve_pr_info_conflict(project_dir: Path, file: str) -> bool:
-    """Resolve a ``pr_info/`` conflict deterministically (keep the feature side).
-
-    ``git checkout --theirs`` takes the feature version (stage 3); when that
-    side does not exist (delete/modify — the feature branch deleted the file)
-    the fallback is ``git rm`` so the file stays deleted.
-
-    Returns:
-        True when the file is resolved and staged.
-    """
-    checkout = _run_git(project_dir, "checkout", "--theirs", "--", file)
-    if checkout.returncode == 0:
-        return _run_git(project_dir, "add", "--", file).returncode == 0
-    return _run_git(project_dir, "rm", "--", file).returncode == 0
 
 
 def _has_conflict_markers(project_dir: Path, file: str) -> bool:
@@ -190,27 +143,25 @@ def _show_stage(project_dir: Path, stage: int, file: str) -> str | None:
 
     Stages: 1 = common ancestor (merge base), 2 = ours (the base branch being
     rebased onto), 3 = theirs (the feature commits being replayed). A missing
-    side (e.g. delete/modify) yields ``None``.
+    side (e.g. delete/modify), a binary blob or a read failure yields ``None``.
     """
-    result = _run_git(project_dir, "show", f":{stage}:{file}")
-    if result.returncode != 0:
-        return None
-    return result.stdout
+    result = read_conflict_stage(project_dir, stage, file)
+    return result["content"] if result["success"] else None
 
 
-def _stage_all_and_continue(project_dir: Path) -> _GitResult:
+def _stage_all_and_continue(project_dir: Path) -> RebaseResult:
     """Stage everything and run the non-interactive ``rebase --continue``.
 
-    ``git add -A`` is deliberate (no pathspec): per-file adds break on
-    delete/modify resolutions and adjacent LLM edits. ``-c core.editor=true``
-    keeps the continue from ever blocking on an editor.
+    Staging everything is deliberate (no pathspec): per-file adds break on
+    delete/modify resolutions and adjacent LLM edits. A staging failure
+    surfaces via the continue (it stops again) and the loop's re-check.
 
     Returns:
-        The ``_GitResult`` of the continue; non-zero usually means the next
-        commit also conflicts (the loop's continue condition, not an error).
+        The ``RebaseResult`` of the continue; ``stopped_on_conflict`` usually
+        means the next commit also conflicts (the loop's continue condition).
     """
-    _run_git(project_dir, "add", "-A")
-    return _run_git(project_dir, "-c", "core.editor=true", "rebase", "--continue")
+    stage_all_changes(project_dir)
+    return rebase_continue(project_dir)
 
 
 # --- Check baseline / comparison: extracted to rebase_checks.py ---
@@ -228,17 +179,20 @@ def _preflight(project_dir: Path) -> str | None:
     short-circuits with a human-readable reason (the caller maps this to exit
     code ``2``).
     """
-    if not is_working_directory_clean(project_dir):
+    status = get_working_tree_status(project_dir)
+    if not status["success"]:
+        detail = (status["stderr"] or "").strip() or status["error"]
+        return f"Could not read working tree status: {detail}"
+    if not status["clean"]:
         return "Working tree not clean"
 
-    merge_head = project_dir / ".git" / "MERGE_HEAD"
-    if _is_rebase_in_progress(project_dir) or merge_head.exists():
+    if is_rebase_in_progress(project_dir):
         return "Repository is mid-rebase/merge"
 
     if get_current_branch_name(project_dir) in _STANDARD_BASES:
         return "Refusing to rebase main/master"
 
-    if _run_git(project_dir, "remote", "get-url", "origin").returncode != 0:
+    if get_remote_url(project_dir) is None:
         return "Remote 'origin' not found"
 
     return check_formatter_config(project_dir, warn_legacy_key=True)
@@ -278,14 +232,15 @@ def _resolve_base_branch(
 def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | None:
     """Return ``None`` if ``pr_info/`` is absent on ``origin/<base>``, else an error.
 
-    Uses ``git ls-tree origin/<base> pr_info``: any non-empty stdout means the
-    path exists on the base branch, which is refused (the base must not already
-    carry ``pr_info/``).
+    Any entry under ``pr_info/`` on the base branch is refused (the base must not
+    already carry ``pr_info/``). A failed listing (e.g. missing
+    ``origin/<base>``) is an error too — never read as "absent".
     """
-    result = _run_git(project_dir, "ls-tree", f"origin/{base_branch}", "pr_info")
-    if result.stdout.strip():
-        return f"pr_info/ present on origin/{base_branch}"
-    return None
+    listing = list_tree(project_dir, f"origin/{base_branch}", "pr_info")
+    if not listing["success"]:
+        detail = (listing["stderr"] or "").strip() or listing["error"]
+        return f"Could not list pr_info/ on origin/{base_branch}: {detail}"
+    return f"pr_info/ present on origin/{base_branch}" if listing["entries"] else None
 
 
 # --- LLM steps ---
@@ -413,7 +368,6 @@ def _format_failure_keys(keys: set[FailureKey]) -> str:
 
 _MAX_SAME_FILE_CONFLICTS = 3  # /rebase abort rule 4
 _MAX_FIX_ATTEMPTS = 2  # /rebase abort rule 5
-_RESTORED_NOTE = "; pre-rebase state restored"  # only appended when reset succeeded
 
 
 def run_rebase_workflow(
@@ -506,32 +460,41 @@ def run_rebase_workflow(
             get_branch_name_for_logging(project_dir),
             base,
         )
-        result = _run_git(project_dir, "rebase", f"origin/{base}")
-        while result.returncode != 0:  # conflict stop (or unexpected failure)
-            if not _is_rebase_in_progress(project_dir):
+        result: RebaseResult = rebase_start(project_dir, f"origin/{base}")
+        while result["status"] != "completed":
+            if result["status"] == "error":
                 logger.log(
                     OUTPUT,
                     "Aborted: git rebase failed unexpectedly: %s",
-                    result.stderr.strip() or result.stdout.strip(),
+                    (result["stderr"] or "").strip() or result["error"],
                 )
                 return 1
-            files = _conflicted_files(project_dir)
+            info = get_conflict_blob_info(project_dir)
+            if not info["success"]:
+                logger.log(
+                    OUTPUT, "Aborted: could not read conflicts: %s", info["error"]
+                )
+                return 1
+            files = [entry["path"] for entry in info["entries"]]
             if not files:
-                if _run_git(project_dir, "diff", "--cached", "--quiet").returncode == 0:
+                if not has_staged_changes(project_dir):
                     # Resolved commit became empty (all changes already on base).
                     logger.log(
                         OUTPUT,
                         "Skipping commit made redundant by rebase (already on base)...",
                     )
-                    result = _run_git(project_dir, "rebase", "--skip")
+                    result = rebase_skip(project_dir)
                     continue
                 logger.log(
                     OUTPUT,
                     "Aborted: rebase stopped without conflicted files: %s",
-                    result.stderr.strip() or result.stdout.strip(),
+                    (result["stderr"] or "").strip(),
                 )
                 return 1
-            binary = _binary_conflict(project_dir)
+            binary = next(
+                (entry["path"] for entry in info["entries"] if entry["is_binary"]),
+                None,
+            )
             if binary:
                 logger.log(OUTPUT, "Aborted: binary conflict in %s", binary)
                 return 1
@@ -551,7 +514,8 @@ def run_rebase_workflow(
                 return 1
             pr_info_files = [f for f in files if f.startswith("pr_info/")]
             for file in pr_info_files:
-                if not _resolve_pr_info_conflict(project_dir, file):
+                # Keep the feature side; removed if the feature branch deleted it.
+                if not resolve_take_theirs_or_remove(project_dir, file)["success"]:
                     logger.log(OUTPUT, "Aborted: could not auto-resolve %s", file)
                     return 1
             others = [f for f in files if f not in pr_info_files]
@@ -610,23 +574,19 @@ def run_rebase_workflow(
                 step_name=f"fix_{attempt}",
             )
             run_formatters(project_dir)
-            _run_git(project_dir, "add", "-A")
-            # An empty commit exits non-zero — harmless (re-check runs anyway;
+            # Result ignored: nothing to commit is harmless (re-check runs anyway;
             # identical regressions then hit the stall guard or attempt cap).
-            _run_git(
-                project_dir,
-                "commit",
-                "-m",
-                f"fix: resolve regressions from rebase onto origin/{base}",
+            commit_all_changes(
+                f"fix: resolve regressions from rebase onto origin/{base}", project_dir
             )
             regressions = _run_all_checks(project_dir) - baseline
         if regressions:
-            restored = _reset_hard(project_dir, pre_sha)
+            note = _restore_note(project_dir, pre_sha)
             logger.log(
                 OUTPUT,
                 "Aborted: %d unfixed regression(s)%s",
                 len(regressions),
-                _RESTORED_NOTE if restored else "",
+                note,
             )
             return 1
 
@@ -634,11 +594,11 @@ def run_rebase_workflow(
             # Reset is safe here: the rebase completed, so the finally net
             # won't act — same never-leave-rebased-unpushed invariant as the
             # other post-rebase failure paths.
-            restored = _reset_hard(project_dir, pre_sha)
+            note = _restore_note(project_dir, pre_sha)
             logger.log(
                 OUTPUT,
                 "Aborted: git state does not corroborate a successful rebase%s",
-                _RESTORED_NOTE if restored else "",
+                note,
             )
             return 1
 
@@ -649,34 +609,28 @@ def run_rebase_workflow(
             return 0
 
         logger.error("Force-push rejected/failed: %s", push_result.get("error"))
-        # never leave unpushed rebased commits
-        restored = _reset_hard(project_dir, pre_sha)
-        logger.log(
-            OUTPUT,
-            "Aborted: force-push rejected%s",
-            _RESTORED_NOTE if restored else "",
-        )
+        note = _restore_note(project_dir, pre_sha)  # never leave unpushed commits
+        logger.log(OUTPUT, "Aborted: force-push rejected%s", note)
         return 2
     except CheckRunError as exc:
         # Verification/re-check infrastructure failure: the rebase already
         # completed, so the finally net cannot restore — explicit reset.
-        restored = _reset_hard(project_dir, pre_sha)
+        note = _restore_note(project_dir, pre_sha)
         logger.error("Verification checks failed to run: %s", exc)
-        logger.log(
-            OUTPUT,
-            "Aborted: checks failed to run%s",
-            _RESTORED_NOTE if restored else "",
-        )
+        logger.log(OUTPUT, "Aborted: checks failed to run%s", note)
         return 1
     except Exception as exc:  # pylint: disable=broad-exception-caught
         # LLM failure/timeout or unexpected error. Mid-rebase: the finally net
         # aborts. Post-rebase (regression-fix phase): explicit reset — same
-        # never-leave-rebased-unpushed invariant as the paths above.
-        if not _is_rebase_in_progress(project_dir):
-            _reset_hard(project_dir, pre_sha)
+        # never-leave-rebased-unpushed invariant as the paths above. Unknown
+        # rebase state: neither (logged by the probe).
         logger.error("Rebase failed: %s", exc)
-        logger.log(OUTPUT, "Aborted: %s", exc)
+        if _rebase_in_progress_or_none(project_dir) is False:
+            note = _restore_note(project_dir, pre_sha)
+            logger.log(OUTPUT, "Aborted: %s%s", exc, note)
+        else:
+            logger.log(OUTPUT, "Aborted: %s", exc)
         return 1
     finally:
-        if _is_rebase_in_progress(project_dir):
+        if _rebase_in_progress_or_none(project_dir):
             _abort_rebase(project_dir)

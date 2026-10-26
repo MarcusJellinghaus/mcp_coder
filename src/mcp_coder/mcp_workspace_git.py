@@ -7,12 +7,19 @@ Git functionality lives in the mcp_workspace package.
 File issues or feature requests there: MarcusJellinghaus/mcp-workspace
 """
 
+# Base branch detection
+from mcp_workspace.git_operations.base_branch import (
+    BaseBranchSource,
+    detect_base_branch_with_source,
+)
+
 # Branch queries
 from mcp_workspace.git_operations.branch_queries import (
     branch_exists,
     extract_issue_number_from_branch,
     get_current_branch_name,
     get_default_branch_name,
+    get_remote_branch_commit_sha,
     has_remote_tracking_branch,
     validate_branch_name,
 )
@@ -26,6 +33,7 @@ from mcp_workspace.git_operations.branches import (
 
 # Commits
 from mcp_workspace.git_operations.commits import (
+    commit_paths,
     commit_staged_files,
     get_latest_commit_sha,
 )
@@ -33,8 +41,16 @@ from mcp_workspace.git_operations.commits import (
 # Compact diffs
 from mcp_workspace.git_operations.compact_diffs import get_compact_diff
 
+# Conflicts
+from mcp_workspace.git_operations.conflicts import (
+    get_conflict_blob_info,
+    list_tree,
+    read_conflict_stage,
+    resolve_take_theirs_or_remove,
+)
+
 # Core
-from mcp_workspace.git_operations.core import CommitResult
+from mcp_workspace.git_operations.core import CommitResult, RebaseResult
 
 # Diffs
 from mcp_workspace.git_operations.diffs import (
@@ -48,11 +64,30 @@ from mcp_workspace.git_operations.parent_branch_detection import (
     detect_parent_branch_via_merge_base,
 )
 
+# Read operations
+from mcp_workspace.git_operations.read_operations import git_diff
+
+# Rebase
+from mcp_workspace.git_operations.rebase import (
+    is_rebase_in_progress,
+    probe_rebase_conflicts,
+    rebase_abort,
+    rebase_continue,
+    rebase_skip,
+    rebase_start,
+    reset_hard,
+)
+
 # Remotes
 from mcp_workspace.git_operations.remotes import (
+    clone_repo,
     fetch_remote,
+    get_remote_url,
     get_repository_identifier,
     git_push,
+    list_remote_branches,
+    probe_origin_branch,
+    pull,
     push_branch,
     rebase_onto_branch,
 )
@@ -60,6 +95,8 @@ from mcp_workspace.git_operations.remotes import (
 # Repository status
 from mcp_workspace.git_operations.repository_status import (
     get_full_status,
+    get_working_tree_status,
+    has_staged_changes,
     is_git_repository,
     is_working_directory_clean,
 )
@@ -68,6 +105,7 @@ from mcp_workspace.git_operations.repository_status import (
 from mcp_workspace.git_operations.staging import (
     stage_all_changes,
     stage_specific_files,
+    unstage_paths,
 )
 
 # Verification
@@ -107,4 +145,29 @@ __all__ = [
     "MERGE_BASE_DISTANCE_THRESHOLD",
     "detect_parent_branch_via_merge_base",
     "verify_git",
+    "get_remote_branch_commit_sha",
+    "git_diff",
+    "probe_origin_branch",
+    "list_remote_branches",
+    "commit_paths",
+    "unstage_paths",
+    "pull",
+    "clone_repo",
+    "get_working_tree_status",
+    "BaseBranchSource",
+    "detect_base_branch_with_source",
+    "probe_rebase_conflicts",
+    "rebase_abort",
+    "reset_hard",
+    "is_rebase_in_progress",
+    "list_tree",
+    "get_remote_url",
+    "RebaseResult",
+    "rebase_start",
+    "rebase_continue",
+    "rebase_skip",
+    "get_conflict_blob_info",
+    "read_conflict_stage",
+    "resolve_take_theirs_or_remove",
+    "has_staged_changes",
 ]

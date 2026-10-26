@@ -254,19 +254,13 @@ class TestStatusDisplay:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns False for clean git repo."""
-        from mcp_coder.utils.subprocess_runner import CommandResult
-
-        def mock_execute(cmd: list[str], options: Any = None) -> CommandResult:
-            return CommandResult(
-                return_code=0,
-                stdout="",  # Empty = clean
-                stderr="",
-                timed_out=False,
-            )
-
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
-            mock_execute,
+            "mcp_coder.workflows.vscodeclaude.status.is_git_repository",
+            lambda _path: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.get_working_tree_status",
+            lambda _path: {"success": True, "clean": True},
         )
 
         assert check_folder_dirty(tmp_path) is False
@@ -275,19 +269,13 @@ class TestStatusDisplay:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Returns True when uncommitted changes exist."""
-        from mcp_coder.utils.subprocess_runner import CommandResult
-
-        def mock_execute(cmd: list[str], options: Any = None) -> CommandResult:
-            return CommandResult(
-                return_code=0,
-                stdout="M  file.py\n",  # Modified file
-                stderr="",
-                timed_out=False,
-            )
-
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
-            mock_execute,
+            "mcp_coder.workflows.vscodeclaude.status.is_git_repository",
+            lambda _path: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.get_working_tree_status",
+            lambda _path: {"success": True, "clean": False},
         )
 
         assert check_folder_dirty(tmp_path) is True
@@ -295,15 +283,14 @@ class TestStatusDisplay:
     def test_check_folder_dirty_returns_true_on_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Returns True (conservative) when git command fails."""
-        from mcp_coder.utils.subprocess_runner import CalledProcessError
-
-        def mock_execute(cmd: list[str], options: Any = None) -> None:
-            raise CalledProcessError(1, cmd)
-
+        """Returns True (conservative) when git status fails."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.status.execute_subprocess",
-            mock_execute,
+            "mcp_coder.workflows.vscodeclaude.status.is_git_repository",
+            lambda _path: True,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.status.get_working_tree_status",
+            lambda _path: {"success": False, "clean": False},
         )
 
         assert check_folder_dirty(tmp_path) is True
