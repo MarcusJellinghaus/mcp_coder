@@ -439,4 +439,4 @@ class TestApiKeyOverrideRow:
         rows = dict(result["effective_config"])
 
         assert "api_key_override" not in result
-        assert rows["api_key"] == "sk-a...5678   (from config.toml)"
+        assert rows["api_key"] == "sk-a...5678, len=19   (from config.toml)"

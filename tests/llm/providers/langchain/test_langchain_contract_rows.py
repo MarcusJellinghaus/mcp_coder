@@ -164,7 +164,7 @@ class TestApiKeyNoFindingBranch:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-from-env-12345678")
         result = _run_verify(_openai_config())
 
-        assert result["api_key"]["value"] == "sk-f...5678"
+        assert result["api_key"]["value"] == "sk-f...5678, len=20"
         assert result["api_key"]["source"] == "OPENAI_API_KEY env var"
 
 

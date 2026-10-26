@@ -14,7 +14,7 @@ from mcp_coder_utils.log_utils import (
     log_function_call,
 )
 from mcp_coder_utils.log_utils import setup_logging as _upstream_setup_logging
-from mcp_coder_utils.redaction import REDACTED_VALUE, RedactableDict
+from mcp_coder_utils.redaction import REDACTED_VALUE, RedactableDict, token_fingerprint
 
 __all__ = [
     "OUTPUT",
@@ -25,6 +25,7 @@ __all__ = [
     "setup_logging",
     "REDACTED_VALUE",
     "RedactableDict",
+    "token_fingerprint",
 ]
 
 
