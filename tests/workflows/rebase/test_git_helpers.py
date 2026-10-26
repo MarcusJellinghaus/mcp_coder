@@ -1,29 +1,30 @@
 """Git-backed tests for the low-level git helpers in ``workflows/rebase.py``.
 
-Covers ``_run_git``, ``_is_rebase_in_progress``, ``_abort_rebase``,
-``_rebase_success_shape`` and the conflict helpers
-(``_conflicted_files``, ``_binary_conflict``, ``_resolve_pr_info_conflict``,
-``_show_stage``, ``_stage_all_and_continue``), plus the shared
-``_reset_hard`` from ``workflow_steps/rebase.py``. Tests touching a real git
+Covers ``_run_git``, ``_abort_rebase``, ``_restore_note`` (over the shared
+``_reset_hard`` from ``workflow_steps/rebase.py``), ``_rebase_success_shape``
+and the conflict helpers (``_conflicted_files``, ``_binary_conflict``,
+``_resolve_pr_info_conflict``, ``_show_stage``, ``_stage_all_and_continue``).
+Tests touching a real git
 repository are marked ``git_integration`` and build on a temp-repo fixture
 with an initial commit; the pure text helper ``_has_conflict_markers`` gets
 plain unit tests.
 """
 
+import logging
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from mcp_coder.workflow_steps.rebase import _reset_hard
+from mcp_coder.mcp_workspace_git import is_rebase_in_progress
 from mcp_coder.workflows.rebase import (
     _abort_rebase,
     _binary_conflict,
     _conflicted_files,
     _has_conflict_markers,
-    _is_rebase_in_progress,
     _rebase_success_shape,
     _resolve_pr_info_conflict,
+    _restore_note,
     _run_git,
     _show_stage,
     _stage_all_and_continue,
@@ -68,48 +69,29 @@ class TestRunGit:
 
 
 @pytest.mark.git_integration
-class TestIsRebaseInProgress:
-    """Tests for the filesystem-based mid-rebase detection."""
-
-    def test_false_on_clean_repo(self, git_repo_with_files: tuple[Any, Path]) -> None:
-        """A repo with no rebase state is not mid-rebase."""
-        _, project_dir = git_repo_with_files
-
-        assert _is_rebase_in_progress(project_dir) is False
-
-    def test_true_with_rebase_merge_dir(
-        self, git_repo_with_files: tuple[Any, Path]
-    ) -> None:
-        """A ``.git/rebase-merge`` directory signals a rebase in progress."""
-        _, project_dir = git_repo_with_files
-
-        (project_dir / ".git" / "rebase-merge").mkdir()
-
-        assert _is_rebase_in_progress(project_dir) is True
-
-    def test_true_with_rebase_apply_dir(
-        self, git_repo_with_files: tuple[Any, Path]
-    ) -> None:
-        """A ``.git/rebase-apply`` directory signals a rebase in progress."""
-        _, project_dir = git_repo_with_files
-
-        (project_dir / ".git" / "rebase-apply").mkdir()
-
-        assert _is_rebase_in_progress(project_dir) is True
-
-
-@pytest.mark.git_integration
 class TestAbortRebase:
     """Tests for the best-effort rebase abort."""
 
     def test_no_raise_when_not_rebasing(
-        self, git_repo_with_files: tuple[Any, Path]
+        self, git_repo_with_files: tuple[Any, Path], caplog: pytest.LogCaptureFixture
     ) -> None:
         """Aborting with no rebase in progress is a silent no-op."""
         _, project_dir = git_repo_with_files
 
-        # Must not raise even though there is nothing to abort.
+        with caplog.at_level(logging.ERROR, logger="mcp_coder.workflows.rebase"):
+            _abort_rebase(project_dir)
+
+        assert not caplog.records
+
+    def test_aborts_stopped_rebase(self, git_repo_with_files: tuple[Any, Path]) -> None:
+        """A rebase stopped at a conflict is aborted."""
+        repo, project_dir = git_repo_with_files
+        _start_conflicted_rebase(repo, project_dir, "conflict.txt")
+        assert is_rebase_in_progress(project_dir) is True
+
         _abort_rebase(project_dir)
+
+        assert is_rebase_in_progress(project_dir) is False
 
 
 @pytest.mark.git_integration
@@ -119,16 +101,32 @@ class TestResetHard:
     def test_reset_restores_captured_sha(
         self, git_repo_with_files: tuple[Any, Path]
     ) -> None:
-        """After a new commit, ``_reset_hard`` returns HEAD to the captured sha."""
+        """After a new commit, ``_restore_note`` returns HEAD to the captured sha."""
         repo, project_dir = git_repo_with_files
         original_sha = repo.head.commit.hexsha
 
         new_sha = _commit_new_file(repo, project_dir, "extra.txt", "content")
         assert new_sha != original_sha
 
-        _reset_hard(project_dir, original_sha)
+        assert _restore_note(project_dir, original_sha) == (
+            "; pre-rebase state restored"
+        )
 
         assert repo.head.commit.hexsha == original_sha
+
+    def test_failure_returns_failed_note_and_logs_error(
+        self, git_repo_with_files: tuple[Any, Path], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """An unknown sha leaves HEAD alone and yields the FAILED note."""
+        repo, project_dir = git_repo_with_files
+        head = repo.head.commit.hexsha
+
+        with caplog.at_level(logging.ERROR, logger="mcp_coder.workflow_steps.rebase"):
+            note = _restore_note(project_dir, "0" * 40)
+
+        assert note == "; restoring pre-rebase state FAILED (see log)"
+        assert repo.head.commit.hexsha == head
+        assert any(r.levelno == logging.ERROR for r in caplog.records)
 
 
 @pytest.mark.git_integration
@@ -352,7 +350,7 @@ class TestStageAllAndContinue:
         result = _stage_all_and_continue(project_dir)
 
         assert result.returncode == 0
-        assert _is_rebase_in_progress(project_dir) is False
+        assert is_rebase_in_progress(project_dir) is False
         assert _conflicted_files(project_dir) == []
 
 

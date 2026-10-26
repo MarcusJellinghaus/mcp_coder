@@ -16,9 +16,9 @@ from mcp_coder.mcp_workspace_git import (
     get_remote_branch_commit_sha,
     probe_rebase_conflicts,
     rebase_onto_branch,
+    reset_hard,
 )
 from mcp_coder.mcp_workspace_github import PullRequestManager
-from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_utils.base_branch import (
     check_base_branch_on_origin,
@@ -203,12 +203,14 @@ def _reset_hard(project_dir: Path, sha: str) -> bool:
         True if the reset succeeded.
     """
     try:
-        result = execute_command(["git", "reset", "--hard", sha], cwd=str(project_dir))
+        result = reset_hard(project_dir, sha)
     except Exception:  # pylint: disable=broad-exception-caught
-        logger.warning("git reset --hard %s failed", sha, exc_info=True)
+        logger.error("git reset --hard %s failed", sha, exc_info=True)
         return False
-    if result.return_code != 0:
-        logger.warning("git reset --hard %s failed: %s", sha, result.stderr.strip())
+    if not result["success"]:
+        logger.error(
+            "git reset --hard %s failed: %s", sha, result["stderr"] or result["error"]
+        )
         return False
     return True
 

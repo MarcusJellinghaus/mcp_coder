@@ -24,9 +24,13 @@ from mcp_coder.mcp_workspace_git import (
     fetch_remote,
     get_current_branch_name,
     get_latest_commit_sha,
+    get_remote_url,
+    get_working_tree_status,
     git_push,
-    is_working_directory_clean,
+    is_rebase_in_progress,
+    list_tree,
     needs_rebase,
+    rebase_abort,
 )
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
@@ -80,23 +84,38 @@ def _run_git(project_dir: Path, *args: str) -> _GitResult:
     )
 
 
-def _is_rebase_in_progress(project_dir: Path) -> bool:
-    """Return True if a rebase is mid-flight.
+def _is_clean(project_dir: Path) -> bool:
+    """Fail-closed clean check: a git failure is never clean."""
+    status = get_working_tree_status(project_dir)
+    return status["success"] and status["clean"]
 
-    Detected purely from the filesystem: git creates ``.git/rebase-merge`` (merge
-    backend) or ``.git/rebase-apply`` (apply backend) while a rebase is unfinished.
-    """
-    git_dir = project_dir / ".git"
-    return (git_dir / "rebase-merge").exists() or (git_dir / "rebase-apply").exists()
+
+def _rebase_in_progress_or_none(project_dir: Path) -> bool | None:
+    """Best-effort for except/finally sites: None (logged) if it cannot be determined."""
+    try:
+        return is_rebase_in_progress(project_dir)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.error("Could not determine rebase state: %s", exc)
+        return None
 
 
 def _abort_rebase(project_dir: Path) -> None:
-    """Best-effort ``git rebase --abort`` (never raises).
+    """Best-effort ``git rebase --abort`` (never raises; a failure is logged).
 
-    Used by the ``finally`` safety net; if no rebase is in progress git simply
-    exits non-zero, which ``_run_git`` swallows.
+    Used by the ``finally`` safety net.
     """
-    _run_git(project_dir, "rebase", "--abort")
+    result = rebase_abort(project_dir)
+    if not result["success"]:
+        logger.error(
+            "git rebase --abort failed: %s", result["stderr"] or result["error"]
+        )
+
+
+def _restore_note(project_dir: Path, sha: str) -> str:
+    """Restore pre-rebase state; return the suffix for the user-visible abort message."""
+    if _reset_hard(project_dir, sha):
+        return "; pre-rebase state restored"
+    return "; restoring pre-rebase state FAILED (see log)"
 
 
 def _rebase_success_shape(project_dir: Path, pre_sha: str) -> bool:
@@ -104,11 +123,11 @@ def _rebase_success_shape(project_dir: Path, pre_sha: str) -> bool:
 
     This is the git-side corroboration of a claimed rebase success: no rebase may
     be in progress, the working tree must be clean, and HEAD must differ from the
-    pre-rebase commit.
+    pre-rebase commit. An undeterminable rebase state (logged) counts as failure.
     """
-    if _is_rebase_in_progress(project_dir):
+    if _rebase_in_progress_or_none(project_dir) is not False:
         return False
-    if not is_working_directory_clean(project_dir):
+    if not _is_clean(project_dir):
         return False
     return get_latest_commit_sha(project_dir) != pre_sha
 
@@ -228,17 +247,16 @@ def _preflight(project_dir: Path) -> str | None:
     short-circuits with a human-readable reason (the caller maps this to exit
     code ``2``).
     """
-    if not is_working_directory_clean(project_dir):
+    if not _is_clean(project_dir):
         return "Working tree not clean"
 
-    merge_head = project_dir / ".git" / "MERGE_HEAD"
-    if _is_rebase_in_progress(project_dir) or merge_head.exists():
+    if is_rebase_in_progress(project_dir):
         return "Repository is mid-rebase/merge"
 
     if get_current_branch_name(project_dir) in _STANDARD_BASES:
         return "Refusing to rebase main/master"
 
-    if _run_git(project_dir, "remote", "get-url", "origin").returncode != 0:
+    if get_remote_url(project_dir) is None:
         return "Remote 'origin' not found"
 
     return check_formatter_config(project_dir, warn_legacy_key=True)
@@ -278,14 +296,14 @@ def _resolve_base_branch(
 def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | None:
     """Return ``None`` if ``pr_info/`` is absent on ``origin/<base>``, else an error.
 
-    Uses ``git ls-tree origin/<base> pr_info``: any non-empty stdout means the
-    path exists on the base branch, which is refused (the base must not already
-    carry ``pr_info/``).
+    Any entry under ``pr_info/`` on the base branch is refused (the base must not
+    already carry ``pr_info/``). A failed listing (e.g. missing
+    ``origin/<base>``) is an error too — never read as "absent".
     """
-    result = _run_git(project_dir, "ls-tree", f"origin/{base_branch}", "pr_info")
-    if result.stdout.strip():
-        return f"pr_info/ present on origin/{base_branch}"
-    return None
+    listing = list_tree(project_dir, f"origin/{base_branch}", "pr_info")
+    if not listing["success"]:
+        return f"Could not list pr_info/ on origin/{base_branch}: {listing['error']}"
+    return f"pr_info/ present on origin/{base_branch}" if listing["entries"] else None
 
 
 # --- LLM steps ---
@@ -413,7 +431,6 @@ def _format_failure_keys(keys: set[FailureKey]) -> str:
 
 _MAX_SAME_FILE_CONFLICTS = 3  # /rebase abort rule 4
 _MAX_FIX_ATTEMPTS = 2  # /rebase abort rule 5
-_RESTORED_NOTE = "; pre-rebase state restored"  # only appended when reset succeeded
 
 
 def run_rebase_workflow(
@@ -508,7 +525,7 @@ def run_rebase_workflow(
         )
         result = _run_git(project_dir, "rebase", f"origin/{base}")
         while result.returncode != 0:  # conflict stop (or unexpected failure)
-            if not _is_rebase_in_progress(project_dir):
+            if not is_rebase_in_progress(project_dir):
                 logger.log(
                     OUTPUT,
                     "Aborted: git rebase failed unexpectedly: %s",
@@ -621,12 +638,12 @@ def run_rebase_workflow(
             )
             regressions = _run_all_checks(project_dir) - baseline
         if regressions:
-            restored = _reset_hard(project_dir, pre_sha)
+            note = _restore_note(project_dir, pre_sha)
             logger.log(
                 OUTPUT,
                 "Aborted: %d unfixed regression(s)%s",
                 len(regressions),
-                _RESTORED_NOTE if restored else "",
+                note,
             )
             return 1
 
@@ -634,11 +651,11 @@ def run_rebase_workflow(
             # Reset is safe here: the rebase completed, so the finally net
             # won't act — same never-leave-rebased-unpushed invariant as the
             # other post-rebase failure paths.
-            restored = _reset_hard(project_dir, pre_sha)
+            note = _restore_note(project_dir, pre_sha)
             logger.log(
                 OUTPUT,
                 "Aborted: git state does not corroborate a successful rebase%s",
-                _RESTORED_NOTE if restored else "",
+                note,
             )
             return 1
 
@@ -649,34 +666,28 @@ def run_rebase_workflow(
             return 0
 
         logger.error("Force-push rejected/failed: %s", push_result.get("error"))
-        # never leave unpushed rebased commits
-        restored = _reset_hard(project_dir, pre_sha)
-        logger.log(
-            OUTPUT,
-            "Aborted: force-push rejected%s",
-            _RESTORED_NOTE if restored else "",
-        )
+        note = _restore_note(project_dir, pre_sha)  # never leave unpushed commits
+        logger.log(OUTPUT, "Aborted: force-push rejected%s", note)
         return 2
     except CheckRunError as exc:
         # Verification/re-check infrastructure failure: the rebase already
         # completed, so the finally net cannot restore — explicit reset.
-        restored = _reset_hard(project_dir, pre_sha)
+        note = _restore_note(project_dir, pre_sha)
         logger.error("Verification checks failed to run: %s", exc)
-        logger.log(
-            OUTPUT,
-            "Aborted: checks failed to run%s",
-            _RESTORED_NOTE if restored else "",
-        )
+        logger.log(OUTPUT, "Aborted: checks failed to run%s", note)
         return 1
     except Exception as exc:  # pylint: disable=broad-exception-caught
         # LLM failure/timeout or unexpected error. Mid-rebase: the finally net
         # aborts. Post-rebase (regression-fix phase): explicit reset — same
-        # never-leave-rebased-unpushed invariant as the paths above.
-        if not _is_rebase_in_progress(project_dir):
-            _reset_hard(project_dir, pre_sha)
+        # never-leave-rebased-unpushed invariant as the paths above. Unknown
+        # rebase state: neither (logged by the probe).
         logger.error("Rebase failed: %s", exc)
-        logger.log(OUTPUT, "Aborted: %s", exc)
+        if _rebase_in_progress_or_none(project_dir) is False:
+            note = _restore_note(project_dir, pre_sha)
+            logger.log(OUTPUT, "Aborted: %s%s", exc, note)
+        else:
+            logger.log(OUTPUT, "Aborted: %s", exc)
         return 1
     finally:
-        if _is_rebase_in_progress(project_dir):
+        if _rebase_in_progress_or_none(project_dir):
             _abort_rebase(project_dir)

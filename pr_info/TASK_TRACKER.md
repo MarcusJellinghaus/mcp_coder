@@ -101,9 +101,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 12: `workflows/rebase.py` guards and helpers onto upstream primitives
 [step_12.md](./steps/step_12.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 13: `workflows/rebase.py` rebase/conflict loop onto upstream primitives
 [step_13.md](./steps/step_13.md)

@@ -9,8 +9,10 @@ code plus the safety-net side effects (force-push, reset, abort-in-finally)
 and OUTPUT-level progress logging.
 """
 
+import logging
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,14 +20,47 @@ import pytest
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_steps import commit as commit_module
+from mcp_coder.workflow_steps import rebase as rebase_step_module
 from mcp_coder.workflows import rebase as rebase_module
-from mcp_coder.workflows.rebase import _GitResult, _preflight, run_rebase_workflow
+from mcp_coder.workflows.rebase import (
+    _check_pr_info_absent_on_base,
+    _GitResult,
+    _preflight,
+    _rebase_success_shape,
+    run_rebase_workflow,
+)
 from mcp_coder.workflows.rebase_checks import CheckRunError, FailureKey
 
 _REAL_PREFLIGHT = _preflight
+_REAL_PR_INFO_GUARD = _check_pr_info_absent_on_base
+_REAL_SUCCESS_SHAPE = _rebase_success_shape
 
 _OK = _GitResult(0, "", "")
 _FAIL = _GitResult(1, "", "boom")
+
+_GIT_OK: dict[str, Any] = {
+    "success": True,
+    "error": None,
+    "returncode": 0,
+    "stderr": "",
+}
+_GIT_FAIL: dict[str, Any] = {
+    "success": False,
+    "error": "git reset --hard failed (exit 128)",
+    "returncode": 128,
+    "stderr": "fatal: bad revision",
+}
+_CLEAN_STATUS: dict[str, Any] = {
+    "success": True,
+    "error": None,
+    "returncode": 0,
+    "stderr": "",
+    "clean": True,
+    "staged": [],
+    "modified": [],
+    "untracked": [],
+}
+_FAILED_STATUS = {**_CLEAN_STATUS, "success": False, "clean": False}
 
 _REGRESSION: set[FailureKey] = {("pytest", "tests/test_new.py::test_case")}
 
@@ -96,7 +131,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     def set_git(args: tuple[str, ...], *results: _GitResult) -> None:
         git_results[args] = list(results)
 
-    # Conflict-loop helpers + git-state helpers used by the safety net.
+    # Conflict-loop helpers + git-state shim calls used by the safety net.
     conflicted = MagicMock(return_value=[])
     binary = MagicMock(return_value=None)
     resolve_pr_info = MagicMock(return_value=True)
@@ -104,18 +139,20 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     stage_continue = MagicMock(return_value=_OK)
     mid_rebase = MagicMock(return_value=False)
     success_shape = MagicMock(return_value=True)
-    abort = MagicMock()
-    reset = MagicMock()
+    abort = MagicMock(return_value=_GIT_OK)
+    reset = MagicMock(return_value=_GIT_OK)
+    status = MagicMock(return_value=_CLEAN_STATUS)
     push = MagicMock(return_value={"success": True, "error": None})
     monkeypatch.setattr(rebase_module, "_conflicted_files", conflicted)
     monkeypatch.setattr(rebase_module, "_binary_conflict", binary)
     monkeypatch.setattr(rebase_module, "_resolve_pr_info_conflict", resolve_pr_info)
     monkeypatch.setattr(rebase_module, "_has_conflict_markers", has_markers)
     monkeypatch.setattr(rebase_module, "_stage_all_and_continue", stage_continue)
-    monkeypatch.setattr(rebase_module, "_is_rebase_in_progress", mid_rebase)
+    monkeypatch.setattr(rebase_module, "is_rebase_in_progress", mid_rebase)
     monkeypatch.setattr(rebase_module, "_rebase_success_shape", success_shape)
-    monkeypatch.setattr(rebase_module, "_abort_rebase", abort)
-    monkeypatch.setattr(rebase_module, "_reset_hard", reset)
+    monkeypatch.setattr(rebase_module, "rebase_abort", abort)
+    monkeypatch.setattr(rebase_step_module, "reset_hard", reset)
+    monkeypatch.setattr(rebase_module, "get_working_tree_status", status)
     monkeypatch.setattr(rebase_module, "git_push", push)
 
     return SimpleNamespace(
@@ -134,6 +171,7 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         success_shape=success_shape,
         abort=abort,
         reset=reset,
+        status=status,
         push=push,
         needs=needs,
         fetch=fetch,
@@ -168,8 +206,10 @@ def test_formatter_config_error_returns_2_without_llm(
 ) -> None:
     """A formatter config error in the real pre-flight maps to ``2``, no LLM."""
     monkeypatch.setattr(rebase_module, "_preflight", _REAL_PREFLIGHT)
-    monkeypatch.setattr(rebase_module, "is_working_directory_clean", lambda _pd: True)
     monkeypatch.setattr(rebase_module, "get_current_branch_name", lambda _pd: "feature")
+    monkeypatch.setattr(
+        rebase_module, "get_remote_url", lambda _pd: "https://example.com/r.git"
+    )
     monkeypatch.setattr(
         rebase_module,
         "check_formatter_config",
@@ -252,6 +292,30 @@ def test_pr_info_present_on_base_returns_2(
 
     assert _run(tmp_path) == 2
     patched.run_git.assert_not_called()
+
+
+def test_pr_info_listing_failure_returns_2(
+    patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed ``list_tree`` on ``origin/<base>`` is a guard error (exit ``2``)."""
+    monkeypatch.setattr(
+        rebase_module, "_check_pr_info_absent_on_base", _REAL_PR_INFO_GUARD
+    )
+    monkeypatch.setattr(
+        rebase_module,
+        "list_tree",
+        lambda _pd, _ref, _path: {
+            "success": False,
+            "error": "git ls-tree failed (exit 128)",
+            "returncode": 128,
+            "stderr": "fatal: Not a valid object name origin/main",
+            "entries": [],
+        },
+    )
+
+    assert _run(tmp_path) == 2
+    patched.run_git.assert_not_called()
+    patched.all_checks.assert_not_called()
 
 
 # --- Baseline ---
@@ -544,6 +608,142 @@ def test_push_rejected_resets_and_returns_2(
 
     assert _run(tmp_path) == 2
     patched.reset.assert_called_once_with(tmp_path, "presha")
+
+
+# --- Safety net: reset / abort / unknown rebase state ---
+
+
+def test_reset_failure_reported_as_failed(
+    patched: SimpleNamespace, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A failed ``reset_hard`` says FAILED in the abort message and logs an error."""
+    patched.success_shape.return_value = False
+    patched.reset.return_value = _GIT_FAIL
+
+    with caplog.at_level(OUTPUT, logger="mcp_coder.workflows.rebase"):
+        assert _run(tmp_path) == 1
+
+    output = [r.getMessage() for r in caplog.records if r.levelno == OUTPUT]
+    aborted = [m for m in output if m.startswith("Aborted:")]
+    assert len(aborted) == 1
+    assert "FAILED" in aborted[0]
+    assert "pre-rebase state restored" not in aborted[0]
+    errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert any("reset --hard presha failed" in m for m in errors)
+
+
+def test_reset_success_reported_as_restored(
+    patched: SimpleNamespace, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A successful reset keeps the ``pre-rebase state restored`` phrase."""
+    patched.push.return_value = {"success": False, "error": "stale info"}
+
+    with caplog.at_level(OUTPUT, logger="mcp_coder.workflows.rebase"):
+        assert _run(tmp_path) == 2
+
+    output = [r.getMessage() for r in caplog.records if r.levelno == OUTPUT]
+    assert "Aborted: force-push rejected; pre-rebase state restored" in output
+
+
+def test_unknown_rebase_state_in_except_skips_reset_and_abort(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """``is_rebase_in_progress`` raising in except/finally: exit 1, no reset/abort."""
+    patched.all_checks.side_effect = [set(), set(_REGRESSION)]
+    patched.prompt.side_effect = LLMTimeoutError("no output for 600s")
+    patched.mid_rebase.side_effect = ValueError("not a git repository")
+
+    assert _run(tmp_path) == 1
+    patched.reset.assert_not_called()
+    patched.abort.assert_not_called()
+
+
+def test_finally_does_not_abort_when_not_mid_rebase(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """The finally net aborts only when ``is_rebase_in_progress`` is True."""
+    patched.success_shape.return_value = False
+
+    assert _run(tmp_path) == 1
+    patched.abort.assert_not_called()
+
+
+def test_finally_aborts_when_mid_rebase(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A rebase left in progress is aborted by the finally net."""
+    _start_conflict_loop(patched)
+    patched.conflicted.return_value = ["assets/img.png"]
+    patched.binary.return_value = "assets/img.png"
+
+    assert _run(tmp_path) == 1
+    patched.abort.assert_called_once_with(tmp_path)
+
+
+def test_abort_failure_is_logged(
+    patched: SimpleNamespace, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A failed ``rebase_abort`` in the finally net is logged at error level."""
+    _start_conflict_loop(patched)
+    patched.conflicted.return_value = ["assets/img.png"]
+    patched.binary.return_value = "assets/img.png"
+    patched.abort.return_value = {**_GIT_FAIL, "stderr": "abort exploded"}
+
+    with caplog.at_level(logging.ERROR, logger="mcp_coder.workflows.rebase"):
+        assert _run(tmp_path) == 1
+
+    errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert any("rebase --abort failed: abort exploded" in m for m in errors)
+
+
+def test_success_shape_raise_resets_to_pre_sha(
+    patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Completed rebase, then the state probe raises: shape False, reset, exit 1."""
+    monkeypatch.setattr(rebase_module, "_rebase_success_shape", _REAL_SUCCESS_SHAPE)
+    patched.mid_rebase.side_effect = ValueError("not a git repository")
+
+    assert _run(tmp_path) == 1
+    patched.reset.assert_called_once_with(tmp_path, "presha")
+    patched.push.assert_not_called()
+    patched.abort.assert_not_called()
+
+
+# --- _rebase_success_shape (shim-mocked) ---
+
+
+def test_success_shape_false_when_status_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed ``get_working_tree_status`` is never clean (fail-closed)."""
+    monkeypatch.setattr(rebase_module, "is_rebase_in_progress", lambda _pd: False)
+    monkeypatch.setattr(
+        rebase_module, "get_working_tree_status", lambda _pd: _FAILED_STATUS
+    )
+    monkeypatch.setattr(rebase_module, "get_latest_commit_sha", lambda _pd: "newsha")
+
+    assert _REAL_SUCCESS_SHAPE(tmp_path, "presha") is False
+
+
+def test_success_shape_false_when_state_probe_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An ``is_rebase_in_progress`` raise is logged and reads as not-successful."""
+
+    def _raise(_pd: Path) -> bool:
+        raise ValueError("not a git repository")
+
+    monkeypatch.setattr(rebase_module, "is_rebase_in_progress", _raise)
+    monkeypatch.setattr(
+        rebase_module, "get_working_tree_status", lambda _pd: _CLEAN_STATUS
+    )
+    monkeypatch.setattr(rebase_module, "get_latest_commit_sha", lambda _pd: "newsha")
+
+    with caplog.at_level(logging.ERROR, logger="mcp_coder.workflows.rebase"):
+        assert _REAL_SUCCESS_SHAPE(tmp_path, "presha") is False
+    assert any(
+        "Could not determine rebase state" in r.getMessage() for r in caplog.records
+    )
 
 
 # --- Session threading ---

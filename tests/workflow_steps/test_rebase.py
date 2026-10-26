@@ -666,15 +666,28 @@ class TestResetHard:
     @pytest.mark.parametrize(
         ("side_effect", "expected"),
         [
-            pytest.param([_result(0)], True, id="ok"),
-            pytest.param([_result(128)], False, id="nonzero"),
+            pytest.param(
+                [{"success": True, "error": None, "returncode": 0, "stderr": ""}],
+                True,
+                id="ok",
+            ),
+            pytest.param(
+                [
+                    {
+                        "success": False,
+                        "error": "reset failed",
+                        "returncode": 128,
+                        "stderr": "fatal: bad revision",
+                    }
+                ],
+                False,
+                id="failure",
+            ),
             pytest.param(OSError("no git"), False, id="exception"),
         ],
     )
     def test_reset_result(self, side_effect: object, expected: bool) -> None:
-        with patch(f"{_MODULE}.execute_command", side_effect=side_effect) as cmd:
+        with patch(f"{_MODULE}.reset_hard", side_effect=side_effect) as reset:
             assert _reset_hard(Path("/fake/project"), "abc123") is expected
 
-        cmd.assert_called_once_with(
-            ["git", "reset", "--hard", "abc123"], cwd=str(Path("/fake/project"))
-        )
+        reset.assert_called_once_with(Path("/fake/project"), "abc123")

@@ -41,6 +41,9 @@ from mcp_workspace.git_operations.commits import (
 # Compact diffs
 from mcp_workspace.git_operations.compact_diffs import get_compact_diff
 
+# Conflicts
+from mcp_workspace.git_operations.conflicts import list_tree
+
 # Core
 from mcp_workspace.git_operations.core import CommitResult
 
@@ -60,12 +63,18 @@ from mcp_workspace.git_operations.parent_branch_detection import (
 from mcp_workspace.git_operations.read_operations import git_diff
 
 # Rebase
-from mcp_workspace.git_operations.rebase import probe_rebase_conflicts
+from mcp_workspace.git_operations.rebase import (
+    is_rebase_in_progress,
+    probe_rebase_conflicts,
+    rebase_abort,
+    reset_hard,
+)
 
 # Remotes
 from mcp_workspace.git_operations.remotes import (
     clone_repo,
     fetch_remote,
+    get_remote_url,
     get_repository_identifier,
     git_push,
     list_remote_branches,
@@ -139,4 +148,9 @@ __all__ = [
     "BaseBranchSource",
     "detect_base_branch_with_source",
     "probe_rebase_conflicts",
+    "rebase_abort",
+    "reset_hard",
+    "is_rebase_in_progress",
+    "list_tree",
+    "get_remote_url",
 ]
