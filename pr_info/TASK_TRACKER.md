@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Move status tests to `test_task_tracker_status.py`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: move `TestGetStepProgress`, `TestIsTaskDone`, `TestGetTaskCounts` via `move_symbol`; delete empty banner; remove base file from `.large-files-allowlist`; verify counts (19 / 22)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestGetStepProgress`, `TestIsTaskDone`, `TestGetTaskCounts` via `move_symbol`; delete empty banner; remove base file from `.large-files-allowlist`; verify counts (19 / 22)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Move validation tests to `test_task_tracker_validation.py`
 See [step_4.md](./steps/step_4.md)
