@@ -183,14 +183,56 @@ class TestPreflightMocked:
         """Every guard passing yields ``None``."""
         assert _preflight(tmp_path) is None
 
-    def test_status_failure_not_clean(
+    def test_status_failure_reported_distinctly(
         self, tmp_path: Path, preflight_passing: pytest.MonkeyPatch
     ) -> None:
-        """A failed ``git status`` is never read as clean."""
+        """A failed ``git status`` fails closed with its own message and stderr."""
         preflight_passing.setattr(
             rebase_module,
             "get_working_tree_status",
-            lambda _pd: {**_CLEAN_STATUS, "success": False, "clean": False},
+            lambda _pd: {
+                **_CLEAN_STATUS,
+                "success": False,
+                "clean": False,
+                "error": "git status failed (exit 128)",
+                "returncode": 128,
+                "stderr": "fatal: not a git repository\n",
+            },
+        )
+
+        assert (
+            _preflight(tmp_path)
+            == "Could not read working tree status: fatal: not a git repository"
+        )
+
+    def test_status_failure_without_stderr_uses_error(
+        self, tmp_path: Path, preflight_passing: pytest.MonkeyPatch
+    ) -> None:
+        """Without stderr, the status failure message falls back to ``error``."""
+        preflight_passing.setattr(
+            rebase_module,
+            "get_working_tree_status",
+            lambda _pd: {
+                **_CLEAN_STATUS,
+                "success": False,
+                "clean": False,
+                "error": "git status failed (exit 128)",
+            },
+        )
+
+        assert (
+            _preflight(tmp_path)
+            == "Could not read working tree status: git status failed (exit 128)"
+        )
+
+    def test_dirty_tree(
+        self, tmp_path: Path, preflight_passing: pytest.MonkeyPatch
+    ) -> None:
+        """A successful status that is not clean keeps the not-clean message."""
+        preflight_passing.setattr(
+            rebase_module,
+            "get_working_tree_status",
+            lambda _pd: {**_CLEAN_STATUS, "clean": False, "untracked": ["x.txt"]},
         )
 
         assert _preflight(tmp_path) == "Working tree not clean"
@@ -245,6 +287,24 @@ class TestCheckPrInfoAbsentOnBaseMocked:
         assert message.startswith("Could not list pr_info/ on origin/main")
         assert "exit 128" in message
         assert calls == [(tmp_path, "origin/main", "pr_info")]
+
+    def test_listing_failure_includes_stderr(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Git's stderr is preferred over the generic error in the message."""
+        stderr = "fatal: Not a valid object name origin/main"
+        monkeypatch.setattr(
+            rebase_module,
+            "list_tree",
+            lambda _pd, _ref, _path: {
+                **self._listing(False, []),
+                "stderr": stderr + "\n",
+            },
+        )
+
+        message = _check_pr_info_absent_on_base(tmp_path, "main")
+
+        assert message == f"Could not list pr_info/ on origin/main: {stderr}"
 
     def test_entries_present_refused(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

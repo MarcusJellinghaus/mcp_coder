@@ -179,7 +179,11 @@ def _preflight(project_dir: Path) -> str | None:
     short-circuits with a human-readable reason (the caller maps this to exit
     code ``2``).
     """
-    if not _is_clean(project_dir):
+    status = get_working_tree_status(project_dir)
+    if not status["success"]:
+        detail = (status["stderr"] or "").strip() or status["error"]
+        return f"Could not read working tree status: {detail}"
+    if not status["clean"]:
         return "Working tree not clean"
 
     if is_rebase_in_progress(project_dir):
@@ -234,7 +238,8 @@ def _check_pr_info_absent_on_base(project_dir: Path, base_branch: str) -> str | 
     """
     listing = list_tree(project_dir, f"origin/{base_branch}", "pr_info")
     if not listing["success"]:
-        return f"Could not list pr_info/ on origin/{base_branch}: {listing['error']}"
+        detail = (listing["stderr"] or "").strip() or listing["error"]
+        return f"Could not list pr_info/ on origin/{base_branch}: {detail}"
     return f"pr_info/ present on origin/{base_branch}" if listing["entries"] else None
 
 
