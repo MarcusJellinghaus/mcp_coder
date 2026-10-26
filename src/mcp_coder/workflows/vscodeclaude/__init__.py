@@ -280,7 +280,12 @@ from .config import (
 from .detection import (
     DetectionSnapshot,
     capture_detection_snapshot,
+    check_vscode_running,
+    clear_vscode_process_cache,
+    clear_vscode_window_cache,
     gather_signals,
+    is_vscode_open_for_folder,
+    is_vscode_window_open_for_folder,
 )
 
 # Helpers (re-exported for backward compatibility)
@@ -316,13 +321,8 @@ from .session_restart import restart_closed_sessions
 # Session management
 from .sessions import (
     add_session,
-    check_vscode_running,
-    clear_vscode_process_cache,
-    clear_vscode_window_cache,
     get_session_for_issue,
     get_sessions_file_path,
-    is_vscode_open_for_folder,
-    is_vscode_window_open_for_folder,
     load_sessions,
     remove_session,
     save_sessions,
