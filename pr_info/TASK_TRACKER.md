@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Register `require_pull_request` and show error notes on unverifiable protection rows
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests in `test_verify_format_section_basic.py` (cases 1–8) + `_LABEL_MAP`, `_BRANCH_PROTECTION_CHILDREN` and error-display conditions in `verify_formatting.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_verify_format_section_basic.py` (cases 1–8) + `_LABEL_MAP`, `_BRANCH_PROTECTION_CHILDREN` and error-display conditions in `verify_formatting.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Document ruleset-aware branch protection checks
 See [step_2.md](./steps/step_2.md)

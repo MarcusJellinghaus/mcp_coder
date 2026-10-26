@@ -94,6 +94,7 @@ class TestBranchProtectionNesting:
         """200: Children render at 4-space indent under parent when ok=True."""
         result: dict[str, Any] = {
             "branch_protection": {"ok": True, "value": "main protected"},
+            "require_pull_request": {"ok": True, "value": "required"},
             "ci_checks_required": {"ok": True, "value": "8 checks configured"},
             "strict_mode": {"ok": True, "value": "enabled"},
             "force_push": {"ok": True, "value": "disabled"},
@@ -108,12 +109,20 @@ class TestBranchProtectionNesting:
         assert parent_lines[0].startswith("  ")
         assert "[OK]" in parent_lines[0]
         # Children at 4-space indent
-        for child_label in ("CI checks required", "Force push", "Branch deletion"):
+        for child_label in (
+            "Require pull request",
+            "CI checks required",
+            "Force push",
+            "Branch deletion",
+        ):
             child_lines = [line for line in lines if child_label in line]
             assert len(child_lines) == 1, f"Expected 1 line for {child_label}"
             assert child_lines[0].startswith("    "), (
                 f"{child_label} should be at 4-space indent"
             )
+        assert (
+            _format_row("Require pull request", "[OK]", "required", indent=4) in output
+        )
 
     def test_children_suppressed_when_parent_fails(self) -> None:
         """404: Only parent line appears when branch_protection ok=False."""
@@ -122,6 +131,11 @@ class TestBranchProtectionNesting:
                 "ok": False,
                 "value": "not configured",
                 "severity": "warning",
+            },
+            "require_pull_request": {
+                "ok": False,
+                "value": "unknown",
+                "error": "no protection",
             },
             "ci_checks_required": {
                 "ok": False,
@@ -154,13 +168,15 @@ class TestBranchProtectionNesting:
         assert "[ERR]" in parent_lines[0]
         assert "not configured" in parent_lines[0]
         # Children suppressed
+        assert "Require pull request" not in output
+        assert "require_pull_request" not in output
         assert "CI checks required" not in output
         assert "Strict mode" not in output
         assert "Force push" not in output
         assert "Branch deletion" not in output
 
     def test_children_suppressed_when_parent_unverifiable(self) -> None:
-        """403: Parent shows [WARN] and children are suppressed when ok=None."""
+        """403: Parent shows [WARN] plus its error note; children suppressed."""
         value = "not verifiable — token lacks Administration: Read"
         error = (
             "get_protection failed: HTTP 403: "
@@ -169,6 +185,7 @@ class TestBranchProtectionNesting:
         row = {"ok": None, "value": value, "error": error, "severity": "warning"}
         result: dict[str, Any] = {
             "branch_protection": dict(row),
+            "require_pull_request": dict(row),
             "ci_checks_required": dict(row),
             "strict_mode": dict(row),
             "force_push": dict(row),
@@ -184,7 +201,12 @@ class TestBranchProtectionNesting:
         assert "not verifiable" in parent_lines[0]
         assert "[ERR]" not in output
         assert "not configured" not in output
-        assert "Resource not accessible" not in output
+        assert (
+            _format_row("Branch protection", "[WARN]", f"{value} ({error})", indent=2)
+            in output
+        )
+        assert "Require pull request" not in output
+        assert "require_pull_request" not in output
         assert "CI checks required" not in output
         assert "Strict mode" not in output
         assert "Force push" not in output
@@ -209,6 +231,75 @@ class TestBranchProtectionNesting:
         assert "[OK]" not in strict_line
         assert "[ERR]" not in strict_line
         assert "[WARN]" not in strict_line
+        assert "Require pull request" not in output
+        assert "require_pull_request" not in output
+
+    def test_unverifiable_child_shows_error(self) -> None:
+        """ok=None child under an [OK] parent shows [WARN] with its error note."""
+        result: dict[str, Any] = {
+            "branch_protection": {"ok": True, "value": "main protected"},
+            "require_pull_request": {
+                "ok": None,
+                "value": "not verifiable — HTTP 403",
+                "error": "rulesets not verifiable: HTTP 403",
+            },
+            "overall_ok": True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        assert (
+            _format_row(
+                "Require pull request",
+                "[WARN]",
+                "not verifiable — HTTP 403 (rulesets not verifiable: HTTP 403)",
+                indent=4,
+            )
+            in output
+        )
+
+    def test_unverifiable_parent_shows_error(self) -> None:
+        """ok=None branch_protection shows its error; other ok=None rows do not."""
+        result: dict[str, Any] = {
+            "branch_protection": {
+                "ok": None,
+                "value": "not verifiable — HTTP 403",
+                "error": "rulesets not verifiable: HTTP 403",
+            },
+            "auto_delete_branches": {
+                "ok": None,
+                "value": "unknown",
+                "error": "repository not accessible",
+            },
+            "overall_ok": True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        assert (
+            _format_row(
+                "Branch protection",
+                "[WARN]",
+                "not verifiable — HTTP 403 (rulesets not verifiable: HTTP 403)",
+                indent=2,
+            )
+            in output
+        )
+        assert "repository not accessible" not in output
+
+    def test_ok_rows_hide_error(self) -> None:
+        """ok=True parent and child rows never show their error note."""
+        result: dict[str, Any] = {
+            "branch_protection": {
+                "ok": True,
+                "value": "main protected (ruleset)",
+                "error": "get_protection failed: HTTP 403",
+            },
+            "require_pull_request": {
+                "ok": True,
+                "value": "required",
+                "error": "get_protection failed: HTTP 403",
+            },
+            "overall_ok": True,
+        }
+        output = _format_section("GITHUB", result, self._symbols())
+        assert "get_protection failed" not in output
 
     def test_non_github_section_unaffected(self) -> None:
         """Claude section entries remain flat at 2-space indent."""
@@ -244,6 +335,7 @@ class TestGitHubLabelMappings:
         "strict_mode",
         "force_push",
         "branch_deletion",
+        "require_pull_request",
         "auto_delete_branches",
         "perm_contents_read",
         "perm_administration_read",
