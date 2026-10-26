@@ -377,17 +377,10 @@ class TestRestartClosedSessionsBranchHandling:
             lambda **kwargs: mock_script_path,
         )
 
-        # Mock git rev-parse to return the branch that was checked out
-        def mock_execute(cmd: list[str], options: Any) -> Any:
-            if "rev-parse" in cmd and "--abbrev-ref" in cmd:
-                return type(
-                    "Result", (), {"stdout": "feat-123", "stderr": "", "return_code": 0}
-                )()
-            return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
-
+        # Current branch read after checkout is the branch that was checked out
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.execute_subprocess",
-            mock_execute,
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_current_branch_name",
+            lambda _path: "feat-123",
         )
 
         monkeypatch.setattr(
@@ -523,27 +516,20 @@ class TestRestartClosedSessionsBranchHandling:
             labels=["status-04:plan-review"],
         )
 
-        # Track execute_subprocess calls
-        execute_calls: list[list[str]] = []
+        # Track get_current_branch_name calls
+        branch_calls: list[Path] = []
         status_file_calls: list[dict[str, Any]] = []
 
-        def mock_execute(cmd: list[str], options: Any) -> Any:
-            execute_calls.append(cmd)
-            # When git rev-parse is called, return the feature branch
-            if "git" in str(cmd) and "rev-parse" in str(cmd):
-                return type(
-                    "Result",
-                    (),
-                    {"stdout": "feature/test-branch", "stderr": "", "return_code": 0},
-                )()
-            return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
+        def mock_get_branch(path: Path) -> str:
+            branch_calls.append(path)
+            return "feature/test-branch"
 
         def mock_create_status(**kwargs: Any) -> None:
             status_file_calls.append(kwargs)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.execute_subprocess",
-            mock_execute,
+            "mcp_coder.workflows.vscodeclaude.session_launch.get_current_branch_name",
+            mock_get_branch,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.create_status_file",
@@ -573,13 +559,8 @@ class TestRestartClosedSessionsBranchHandling:
 
         regenerate_session_files(session, issue)
 
-        # Verify git rev-parse was called to get current branch
-        assert any(
-            "git" in str(call)
-            and "rev-parse" in str(call)
-            and "--abbrev-ref" in str(call)
-            for call in execute_calls
-        ), "git rev-parse --abbrev-ref HEAD should be called"
+        # Verify the current branch was read from the session folder
+        assert branch_calls == [working_folder]
 
         # Verify create_status_file was called with branch from git
         assert len(status_file_calls) == 1

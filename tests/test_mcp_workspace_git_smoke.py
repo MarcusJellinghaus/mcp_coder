@@ -30,7 +30,9 @@ def test_key_symbols_accessible() -> None:
 
 
 def test_all_exports_defined() -> None:
-    """__all__ has expected count."""
-    from mcp_coder.mcp_workspace_git import __all__
+    """Every name in __all__ is unique and defined on the shim."""
+    import mcp_coder.mcp_workspace_git as shim
 
-    assert len(__all__) == 30
+    assert len(set(shim.__all__)) == len(shim.__all__)
+    for name in shim.__all__:
+        assert hasattr(shim, name), name
