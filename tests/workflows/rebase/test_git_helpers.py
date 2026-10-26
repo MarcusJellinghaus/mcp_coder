@@ -1,13 +1,12 @@
 """Git-backed tests for the low-level git helpers in ``workflows/rebase.py``.
 
-Covers ``_run_git``, ``_abort_rebase``, ``_restore_note`` (over the shared
-``_reset_hard`` from ``workflow_steps/rebase.py``), ``_rebase_success_shape``
-and the conflict helpers (``_conflicted_files``, ``_binary_conflict``,
-``_resolve_pr_info_conflict``, ``_show_stage``, ``_stage_all_and_continue``).
-Tests touching a real git
-repository are marked ``git_integration`` and build on a temp-repo fixture
-with an initial commit; the pure text helper ``_has_conflict_markers`` gets
-plain unit tests.
+Covers ``_abort_rebase``, ``_restore_note`` (over the shared ``_reset_hard``
+from ``workflow_steps/rebase.py``), ``_rebase_success_shape``, ``_show_stage``
+and ``_stage_all_and_continue``, plus the upstream ``stage_all_changes`` /
+``commit_all_changes`` behaviour the rebase loop relies on. Tests touching a
+real git repository are marked ``git_integration`` and build on a temp-repo
+fixture with an initial commit; the pure text helper ``_has_conflict_markers``
+gets plain unit tests.
 """
 
 import logging
@@ -16,16 +15,21 @@ from typing import Any
 
 import pytest
 
-from mcp_coder.mcp_workspace_git import is_rebase_in_progress
+from mcp_coder.mcp_workspace_git import (
+    checkout_branch,
+    commit_all_changes,
+    create_branch,
+    get_conflict_blob_info,
+    is_rebase_in_progress,
+    rebase_continue,
+    rebase_start,
+    stage_all_changes,
+)
 from mcp_coder.workflows.rebase import (
     _abort_rebase,
-    _binary_conflict,
-    _conflicted_files,
     _has_conflict_markers,
     _rebase_success_shape,
-    _resolve_pr_info_conflict,
     _restore_note,
-    _run_git,
     _show_stage,
     _stage_all_and_continue,
 )
@@ -40,32 +44,6 @@ def _commit_new_file(repo: Any, project_dir: Path, name: str, content: str) -> s
     repo.index.add([name])
     repo.index.commit(f"Add {name}")
     return str(repo.head.commit.hexsha)
-
-
-@pytest.mark.git_integration
-class TestRunGit:
-    """Tests for the raw ``_run_git`` subprocess runner."""
-
-    def test_rev_parse_head_succeeds(
-        self, git_repo_with_files: tuple[Any, Path]
-    ) -> None:
-        """``rev-parse HEAD`` returns ``returncode == 0`` and the HEAD sha."""
-        repo, project_dir = git_repo_with_files
-
-        result = _run_git(project_dir, "rev-parse", "HEAD")
-
-        assert result.returncode == 0
-        assert result.stdout.strip() == repo.head.commit.hexsha
-
-    def test_invalid_subcommand_nonzero(
-        self, git_repo_with_files: tuple[Any, Path]
-    ) -> None:
-        """An unknown ref yields a non-zero return code without raising."""
-        _, project_dir = git_repo_with_files
-
-        result = _run_git(project_dir, "rev-parse", "no-such-ref")
-
-        assert result.returncode != 0
 
 
 @pytest.mark.git_integration
@@ -208,53 +186,23 @@ def _start_conflicted_rebase(
     """
     base_branch = str(repo.active_branch.name)
     _write_and_commit(repo, project_dir, filename, ancestor, f"Add {filename}")
-    _run_git(project_dir, "branch", "feature")
+    assert create_branch("feature", project_dir)
+    assert checkout_branch(base_branch, project_dir)
     _write_and_commit(repo, project_dir, filename, base_version, "Base edit")
-    _run_git(project_dir, "checkout", "feature")
+    assert checkout_branch("feature", project_dir)
     if feature_version is None:
         repo.index.remove([filename], working_tree=True)
         repo.index.commit(f"Delete {filename}")
     else:
         _write_and_commit(repo, project_dir, filename, feature_version, "Feature edit")
-    result = _run_git(project_dir, "rebase", base_branch)
-    assert result.returncode != 0, "rebase should stop at the conflict"
+    result = rebase_start(project_dir, base_branch)
+    assert result["status"] == "stopped_on_conflict", result
     return base_branch
 
 
 @pytest.mark.git_integration
-class TestConflictedFiles:
-    """Tests for the unmerged-path listing."""
-
-    def test_empty_on_clean_repo(self, git_repo_with_files: tuple[Any, Path]) -> None:
-        """A repo without conflicts lists no conflicted files."""
-        _, project_dir = git_repo_with_files
-
-        assert _conflicted_files(project_dir) == []
-
-    def test_lists_conflicted_file(self, git_repo_with_files: tuple[Any, Path]) -> None:
-        """A stopped rebase exposes the conflicted path."""
-        repo, project_dir = git_repo_with_files
-
-        _start_conflicted_rebase(repo, project_dir, "conflict.txt")
-
-        assert _conflicted_files(project_dir) == ["conflict.txt"]
-
-
-@pytest.mark.git_integration
 class TestShowStage:
-    """Tests for reading the three index stages of a conflicted file."""
-
-    def test_all_three_stages_present(
-        self, git_repo_with_files: tuple[Any, Path]
-    ) -> None:
-        """Stage 1/2/3 return ancestor, base (ours) and feature (theirs)."""
-        repo, project_dir = git_repo_with_files
-
-        _start_conflicted_rebase(repo, project_dir, "conflict.txt")
-
-        assert _show_stage(project_dir, 1, "conflict.txt") == _ANCESTOR.decode()
-        assert _show_stage(project_dir, 2, "conflict.txt") == _BASE_VERSION.decode()
-        assert _show_stage(project_dir, 3, "conflict.txt") == _FEATURE_VERSION.decode()
+    """Tests for reading an index stage of a conflicted file."""
 
     def test_missing_side_returns_none(
         self, git_repo_with_files: tuple[Any, Path]
@@ -271,68 +219,23 @@ class TestShowStage:
 
 
 @pytest.mark.git_integration
-class TestResolvePrInfoConflict:
-    """Tests for the deterministic pr_info/ auto-resolution."""
+class TestStageAllInRebase:
+    """Upstream ``stage_all_changes`` stages LLM-resolved unmerged files."""
 
-    def test_theirs_resolution(self, git_repo_with_files: tuple[Any, Path]) -> None:
-        """A both-modified pr_info/ file resolves to the feature version."""
-        repo, project_dir = git_repo_with_files
-        _start_conflicted_rebase(repo, project_dir, "pr_info/notes.md")
-
-        assert _resolve_pr_info_conflict(project_dir, "pr_info/notes.md") is True
-
-        # read_text() normalizes newlines — git autocrlf may check the feature
-        # version out with CRLF on Windows.
-        content = (project_dir / "pr_info" / "notes.md").read_text(encoding="utf-8")
-        assert content == _FEATURE_VERSION.decode()
-        assert _conflicted_files(project_dir) == []
-
-    def test_delete_modify_falls_back_to_rm(
+    def test_resolved_file_staged_and_continue_completes(
         self, git_repo_with_files: tuple[Any, Path]
     ) -> None:
-        """When the feature branch deleted the file, it stays deleted."""
+        """Resolved content is staged, no conflicts remain, continue completes."""
         repo, project_dir = git_repo_with_files
-        _start_conflicted_rebase(
-            repo, project_dir, "pr_info/notes.md", feature_version=None
-        )
-
-        assert _resolve_pr_info_conflict(project_dir, "pr_info/notes.md") is True
-
-        assert not (project_dir / "pr_info" / "notes.md").exists()
-        assert _conflicted_files(project_dir) == []
-
-
-@pytest.mark.git_integration
-class TestBinaryConflict:
-    """Tests for binary-conflict detection (both mandatory — a false positive
-    would abort every LLM conflict resolution)."""
-
-    def test_none_for_text_conflict(
-        self, git_repo_with_files: tuple[Any, Path]
-    ) -> None:
-        """A plain text conflict must NOT read as binary."""
-        repo, project_dir = git_repo_with_files
-
         _start_conflicted_rebase(repo, project_dir, "conflict.txt")
+        (project_dir / "conflict.txt").write_bytes(b"resolved\n")
 
-        assert _binary_conflict(project_dir) is None
+        assert stage_all_changes(project_dir) is True
 
-    def test_detects_binary_conflict(
-        self, git_repo_with_files: tuple[Any, Path]
-    ) -> None:
-        """Conflicting NUL-byte blobs are reported as a binary conflict."""
-        repo, project_dir = git_repo_with_files
-
-        _start_conflicted_rebase(
-            repo,
-            project_dir,
-            "blob.bin",
-            ancestor=b"\x00\x01ancestor\x00",
-            base_version=b"\x00\x02base\x00",
-            feature_version=b"\x00\x03feature\x00",
-        )
-
-        assert _binary_conflict(project_dir) == "blob.bin"
+        info = get_conflict_blob_info(project_dir)
+        assert info["success"] is True
+        assert info["entries"] == []
+        assert rebase_continue(project_dir)["status"] == "completed"
 
 
 @pytest.mark.git_integration
@@ -349,9 +252,26 @@ class TestStageAllAndContinue:
 
         result = _stage_all_and_continue(project_dir)
 
-        assert result.returncode == 0
+        assert result["status"] == "completed"
         assert is_rebase_in_progress(project_dir) is False
-        assert _conflicted_files(project_dir) == []
+
+
+@pytest.mark.git_integration
+class TestCommitAllChanges:
+    """Upstream ``commit_all_changes`` as used by the regression-fix loop."""
+
+    def test_clean_tree_is_success_without_commit(
+        self, git_repo_with_files: tuple[Any, Path]
+    ) -> None:
+        """Nothing to commit is ``success=True`` with no commit hash."""
+        repo, project_dir = git_repo_with_files
+        head = repo.head.commit.hexsha
+
+        result = commit_all_changes("fix: nothing", project_dir)
+
+        assert result["success"] is True
+        assert result["commit_hash"] is None
+        assert repo.head.commit.hexsha == head
 
 
 class TestHasConflictMarkers:

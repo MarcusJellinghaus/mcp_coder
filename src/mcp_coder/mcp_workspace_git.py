@@ -42,10 +42,15 @@ from mcp_workspace.git_operations.commits import (
 from mcp_workspace.git_operations.compact_diffs import get_compact_diff
 
 # Conflicts
-from mcp_workspace.git_operations.conflicts import list_tree
+from mcp_workspace.git_operations.conflicts import (
+    get_conflict_blob_info,
+    list_tree,
+    read_conflict_stage,
+    resolve_take_theirs_or_remove,
+)
 
 # Core
-from mcp_workspace.git_operations.core import CommitResult
+from mcp_workspace.git_operations.core import CommitResult, RebaseResult
 
 # Diffs
 from mcp_workspace.git_operations.diffs import (
@@ -67,6 +72,9 @@ from mcp_workspace.git_operations.rebase import (
     is_rebase_in_progress,
     probe_rebase_conflicts,
     rebase_abort,
+    rebase_continue,
+    rebase_skip,
+    rebase_start,
     reset_hard,
 )
 
@@ -88,6 +96,7 @@ from mcp_workspace.git_operations.remotes import (
 from mcp_workspace.git_operations.repository_status import (
     get_full_status,
     get_working_tree_status,
+    has_staged_changes,
     is_git_repository,
     is_working_directory_clean,
 )
@@ -153,4 +162,12 @@ __all__ = [
     "is_rebase_in_progress",
     "list_tree",
     "get_remote_url",
+    "RebaseResult",
+    "rebase_start",
+    "rebase_continue",
+    "rebase_skip",
+    "get_conflict_blob_info",
+    "read_conflict_stage",
+    "resolve_take_theirs_or_remove",
+    "has_staged_changes",
 ]
