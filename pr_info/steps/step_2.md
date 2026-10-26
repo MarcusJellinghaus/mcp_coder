@@ -85,7 +85,8 @@ format, run checks, collect again (30 + 9, directory total == baseline); commit
   directory total equals the baseline, `test_claude_code_cli.py` = 30 and
   `test_claude_code_cli_streaming.py` = 9.
 - `run_pytest_check(markers=["claude_cli_integration"], extra_args=["-n", "auto"])` if the Claude CLI
-  is available. Otherwise, note in the commit body that it was skipped and why.
+  is available. Otherwise, note in the commit body that it was skipped and why. The PR description
+  must also state that it was skipped and why; do not rely on the commit body alone.
 - `mcp__mcp-tools-py__run_lint_imports_check`
 - `mcp__mcp-tools-py__run_tach_check`
 - `mcp__mcp-tools-py__run_vulture_check`
