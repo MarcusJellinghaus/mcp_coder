@@ -165,6 +165,26 @@ class TestCreateDefaultConfig:
         assert "# [llm]" in content
         assert "# default_provider" in content
 
+    def test_create_default_config_has_trusted_commenters(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that config template has a commented-out trusted_commenters key."""
+        # Setup
+        config_file = tmp_path / ".mcp_coder" / "config.toml"
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        create_default_config()
+
+        # Verify
+        content = config_file.read_text(encoding="utf-8")
+        assert "# trusted_commenters" in content
+        with open(config_file, "rb") as f:
+            config = tomllib.load(f)
+        assert "trusted_commenters" not in config["github"]
+
     def test_create_default_config_has_mcp_section(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -78,6 +78,9 @@ The auto-created template includes all sections with example values:
 # GitHub authentication
 # Environment variable (higher priority): GITHUB_TOKEN
 token = "ghp_your_github_personal_access_token_here"
+# Extra logins whose PR/issue comments are trusted, besides repo
+# owners, members and collaborators (e.g. a CI machine user)
+# trusted_commenters = ["your-ci-bot"]
 
 [jenkins]
 # Jenkins server configuration
@@ -132,6 +135,26 @@ post_issue_comments = true
 ```
 
 ## Configuration Sections
+
+### [github]
+
+GitHub authentication and comment-trust settings.
+
+| Field | Type | Description |
+| ------- | ------ | ------------- |
+| `token` | string | GitHub personal access token. Env override: `GITHUB_TOKEN` |
+| `test_repo_url` | string | Repository used by GitHub integration tests. Env override: `GITHUB_TEST_REPO_URL` |
+| `trusted_commenters` | list of strings | Extra logins whose PR/issue comments are trusted, besides repo owners, members and collaborators (e.g. a CI machine user). See [mcp-workspace GitHub configuration](https://github.com/MarcusJellinghaus/mcp-workspace#github-configuration) |
+
+`trusted_commenters` has no environment-variable override; it is read from the config file only.
+
+**Example:**
+
+```toml
+[github]
+token = "ghp_your_github_personal_access_token_here"
+trusted_commenters = ["your-ci-bot"]
+```
 
 ### [coordinator]
 
