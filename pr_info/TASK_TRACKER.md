@@ -21,6 +21,63 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Record baseline; move `TestIsClaudeMd` to `tests/prompts/test_prompt_loader.py`
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: record baseline counts + marker check, move `TestIsClaudeMd` via `move_symbol` (dry run first)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move claude path of `prompt_llm` to `tests/llm/test_interface_prompt_llm.py`
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: move `TestPromptLLMRouting`, `TestLLMTimeoutErrorNormalization`, `TestPromptLLM` via `move_symbol` (dry run first)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Move mlflow tests to `tests/llm/test_interface_mlflow.py`
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: move `TestMlflowConversationIntegration` via `move_symbol` (dry run first)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Move `logs_dir` derivation tests to `tests/llm/test_interface_logs_dir.py`
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: move `TestPromptLLMLogsDirDerivation`, `TestPromptLLMStreamLogsDirDerivation` via `move_symbol` (dry run first)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Move langchain routing tests to `tests/llm/test_interface_langchain.py`
+See [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation: move `TestPromptLlmLangchainRouting` via `move_symbol` (dry run first); method-local imports stay in place
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: Move `prompt_llm_stream` tests to `tests/llm/test_interface_stream.py`
+See [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation: move `TestPromptLlmStream`, `TestPromptLlmStreamToolsParam` via `move_symbol` (dry run first)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: Move system-prompt tests to `tests/llm/test_interface_system_prompts.py`; remove allowlist entry
+See [step_7.md](./steps/step_7.md)
+
+- [ ] Implementation: move `TestPromptLlmInjectPrompts`, `TestBuildClaudeSystemPrompts` via `move_symbol` (dry run first); remove `tests/llm/test_interface.py` from `.large-files-allowlist`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 8: Move copilot tests to `tests/llm/test_interface_copilot.py`; final verification
+See [step_8.md](./steps/step_8.md)
+
+- [ ] Implementation: move copilot classes via `move_symbol` in two calls (8a: 3 classes, 8b: `TestCopilotProviderValidation`); final checks (lint-imports, tach, vulture, file size, counts, marker check, search check)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: compact diff against base branch shows only moved blocks, import changes, new-file headers, blank-line hunks and the allowlist line
+- [ ] PR summary prepared
