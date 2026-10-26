@@ -3,7 +3,6 @@
 
 import json
 import tempfile
-from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -19,47 +18,9 @@ from mcp_coder.llm.providers.claude.claude_code_cli import (
 from mcp_coder.llm.providers.claude.claude_code_cli_streaming import (
     ask_claude_code_cli_stream,
 )
-from mcp_coder.utils.subprocess_runner import (
-    CalledProcessError,
-    CommandResult,
-    TimeoutExpired,
-)
+from mcp_coder.utils.subprocess_runner import CalledProcessError, TimeoutExpired
 
-from .conftest import StreamJsonFactory
-
-
-class _MockStreamResult:
-    """Mimics StreamResult for testing: iterable with a .result property."""
-
-    def __init__(
-        self,
-        lines: list[str],
-        return_code: int = 0,
-        timed_out: bool = False,
-    ) -> None:
-        self._lines = lines
-        self._result = CommandResult(
-            return_code=return_code,
-            stdout="",
-            stderr="",
-            timed_out=timed_out,
-        )
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._lines)
-
-    @property
-    def result(self) -> CommandResult:
-        return self._result
-
-
-def _make_stream_gen(
-    lines: list[str],
-    return_code: int = 0,
-    timed_out: bool = False,
-) -> _MockStreamResult:
-    """Create a mock StreamResult mimicking stream_subprocess output."""
-    return _MockStreamResult(lines, return_code=return_code, timed_out=timed_out)
+from .conftest import StreamJsonFactory, _make_stream_gen
 
 
 class TestClaudeCodeCliBackwardCompatibility:
