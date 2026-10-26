@@ -59,9 +59,9 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: Move `prompt_llm_stream` tests to `tests/llm/test_interface_stream.py`
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: move `TestPromptLlmStream`, `TestPromptLlmStreamToolsParam` via `move_symbol` (dry run first)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestPromptLlmStream`, `TestPromptLlmStreamToolsParam` via `move_symbol` (dry run first)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Move system-prompt tests to `tests/llm/test_interface_system_prompts.py`; remove allowlist entry
 See [step_7.md](./steps/step_7.md)
