@@ -11,7 +11,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.subprocess_runner import CommandResult
 from mcp_coder.workflow_utils.base_branch import (
     BaseBranchSource,
     check_base_branch_on_origin,
@@ -427,47 +426,55 @@ class TestDetectBaseBranchWithSource:
 class TestCheckBaseBranchOnOrigin:
     """Tests for check_base_branch_on_origin."""
 
+    PROBE = "mcp_coder.workflow_utils.base_branch.probe_origin_branch"
+
     @staticmethod
-    def _result(return_code: int, stderr: str = "") -> CommandResult:
-        return CommandResult(
-            return_code=return_code, stdout="", stderr=stderr, timed_out=False
-        )
+    def _probe(
+        exists: bool | None, stderr: str | None = "", error: str | None = None
+    ) -> dict[str, object]:
+        return {
+            "success": exists is not None,
+            "error": error,
+            "returncode": 0 if exists is not None else 128,
+            "stderr": stderr,
+            "exists": exists,
+        }
 
     def test_returns_none_when_branch_exists(self) -> None:
-        """Return code 0 means the branch exists on origin."""
+        """exists=True means the branch exists on origin."""
         project_dir = Path("/test/project")
-        with patch(
-            "mcp_coder.workflow_utils.base_branch.execute_command",
-            return_value=self._result(0),
-        ) as mock_exec:
-            result = check_base_branch_on_origin(project_dir, "epic/x")
+        with patch(self.PROBE, return_value=self._probe(True)) as mock_probe:
+            result = check_base_branch_on_origin(project_dir, "main")
 
         assert result is None
-        mock_exec.assert_called_once_with(
-            ["git", "ls-remote", "--exit-code", "--heads", "origin", "epic/x"],
-            cwd=str(project_dir),
-        )
+        mock_probe.assert_called_once_with(project_dir, "main")
 
     def test_returns_message_when_branch_missing(self) -> None:
-        """Return code 2 means no matching ref on origin."""
-        with patch(
-            "mcp_coder.workflow_utils.base_branch.execute_command",
-            return_value=self._result(2),
-        ):
-            result = check_base_branch_on_origin(Path("/test/project"), "epic/x")
+        """exists=False without detail gives the bare message."""
+        with patch(self.PROBE, return_value=self._probe(False, stderr="")):
+            result = check_base_branch_on_origin(Path("/test/project"), "main")
 
-        assert result is not None
-        assert "epic/x" in result
-        assert "origin" in result
+        assert result == (
+            "Base branch 'main' not found on origin; create and push it first"
+        )
 
     def test_message_includes_stderr(self) -> None:
-        """Other failures include git's stderr in the message."""
-        with patch(
-            "mcp_coder.workflow_utils.base_branch.execute_command",
-            return_value=self._result(128, "fatal: could not read from remote\n"),
-        ):
-            result = check_base_branch_on_origin(Path("/test/project"), "epic/x")
+        """Origin unreachable includes git's stderr in the message."""
+        probe = self._probe(None, stderr="fatal: could not read from remote\n")
+        with patch(self.PROBE, return_value=probe):
+            result = check_base_branch_on_origin(Path("/test/project"), "main")
 
         assert result is not None
-        assert "epic/x" in result
-        assert "fatal: could not read from remote" in result
+        assert result.startswith("Base branch 'main' not found on origin")
+        assert result.endswith("(fatal: could not read from remote)")
+
+    def test_message_falls_back_to_error(self) -> None:
+        """Without stderr, the probe's error is the detail."""
+        probe = self._probe(
+            None, stderr=None, error="Not a git repository: /test/project"
+        )
+        with patch(self.PROBE, return_value=probe):
+            result = check_base_branch_on_origin(Path("/test/project"), "main")
+
+        assert result is not None
+        assert result.endswith("(Not a git repository: /test/project)")

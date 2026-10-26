@@ -18,9 +18,9 @@ from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
     get_default_branch_name,
+    probe_origin_branch,
 )
 from mcp_coder.mcp_workspace_github import IssueData, IssueManager, PullRequestManager
-from mcp_coder.utils.subprocess_runner import execute_command
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ def detect_base_branch_with_source(
 def check_base_branch_on_origin(project_dir: Path, base_branch: str) -> str | None:
     """Check that the base branch exists on origin.
 
-    Asks the remote directly via ``git ls-remote``, so it works in a fresh
+    Asks origin directly (``probe_origin_branch``), so it works in a fresh
     clone that lacks ``origin/<base_branch>``.
 
     Args:
@@ -142,13 +142,10 @@ def check_base_branch_on_origin(project_dir: Path, base_branch: str) -> str | No
     Returns:
         None if the branch exists on origin, else an error message.
     """
-    result = execute_command(
-        ["git", "ls-remote", "--exit-code", "--heads", "origin", base_branch],
-        cwd=str(project_dir),
-    )
-    if result.return_code == 0:
+    probe = probe_origin_branch(project_dir, base_branch)
+    if probe["exists"] is True:
         return None
-    detail = result.stderr.strip()
+    detail = (probe["stderr"] or probe["error"] or "").strip()
     message = (
         f"Base branch '{base_branch}' not found on origin; create and push it first"
     )
