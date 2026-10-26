@@ -21,6 +21,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Split `test_issues.py` into eligibility and branch-check siblings — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: move eligibility classes → `test_issues_eligibility.py`, `TestBuildEligibleIssuesWithBranchCheck` → `test_issues_branch_check.py` via `move_symbol`, fix imports, drop `.large-files-allowlist` entry
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move `TestBuildEligibleIssuesPrefetched` to `test_issues_branch_check.py` — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: move class from `coordinator/test_core.py` via `move_symbol`, verify method-local imports intact, dedupe destination imports
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against base branch
+- [ ] PR summary prepared
