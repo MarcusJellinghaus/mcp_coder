@@ -60,7 +60,7 @@ run_format_code; standard checks; final verification; commit
 - **`search_files(pattern="test_session_restart import", glob="tests/**/*.py")`** → **0** hits.
 - **Other checks:** `run_lint_imports_check`, `run_tach_check` and `run_vulture_check` pass.
 - **`mcp__mcp-workspace__check_file_size`** passes with no stale allowlist entries. Every created or receiving file is under 600 lines.
-- **Compact diff of the whole branch** against the base branch (`mcp__mcp-workspace__git` diff, `compact=true`). Only these may appear:
+- **Compact diff of the whole branch** against the base branch (`mcp__mcp-workspace__git` diff, `compact=true`, `pathspec=["tests/", ".large-files-allowlist"]`; `pr_info/` changes are expected and excluded). Only these may appear:
   - the deleted-file header;
   - the three new-file headers;
   - import changes in the new files and in `conftest.py`;

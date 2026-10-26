@@ -74,7 +74,7 @@ No new folders or `__init__.py` files, and no changes to `.importlinter`, `tach.
 4. `mcp__mcp-tools-py__run_mypy_check`
 5. `mcp__mcp-tools-py__run_pytest_check` with `extra_args=["-n", "auto", "-m", "<fast-unit marker exclusion from CLAUDE.md>"]`
 6. `mcp__mcp-tools-py__run_pytest_check(extra_args=["--collect-only", "-q", "tests/workflows/vscodeclaude/"])` → the directory baseline recorded in step 1 (688 or the recorded value)
-7. `mcp__mcp-workspace__git` diff with `compact=true` → only moved blocks (suppressed), import changes, and the allowed edits for that step.
+7. `mcp__mcp-workspace__git` diff of this step's uncommitted changes against the previous commit (`HEAD`), with `compact=true` and `pathspec=["tests/", ".large-files-allowlist"]` → only moved blocks (suppressed), import changes, and the allowed edits for that step. `pr_info/` edits (recorded baseline, task tracker) are excluded by the pathspec.
 
 ## Testing approach (TDD note)
 This is a pure move, so no new tests are written. The existing 16 tests are the safety net. Every step checks per-class collect counts and pass results before and after its move.
