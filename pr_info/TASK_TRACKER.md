@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Coverage badge in `ci.yml` + `README Badges` docs — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `coverage` job writes total to step output + `Update coverage badge` step; `## README Badges` section in `docs/repository-setup/github.md`; table rows in `docs/repository-setup/README.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `ci: publish combined coverage badge to gist`
+- [x] Implementation: `coverage` job writes total to step output + `Update coverage badge` step; `## README Badges` section in `docs/repository-setup/github.md`; table rows in `docs/repository-setup/README.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `ci: publish combined coverage badge to gist`
 
 ### Step 3: OpenSSF Scorecard workflow — [step_3.md](./steps/step_3.md)
 
