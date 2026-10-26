@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -12,8 +12,39 @@ from mcp_coder.icoder.core.app_core import AppCore
 from mcp_coder.icoder.core.event_log import EventLog
 from mcp_coder.icoder.env_setup import RuntimeInfo
 from mcp_coder.icoder.permissions import PermissionConfig
-from mcp_coder.icoder.services.llm_service import FakeLLMService
+from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
+from mcp_coder.icoder.ui.app import ICoderApp
+from mcp_coder.llm.types import StreamEvent
 from mcp_coder.utils.mcp_verification import MCPServerInfo
+
+
+@pytest.fixture
+def icoder_app(fake_llm: FakeLLMService, event_log: EventLog) -> ICoderApp:
+    """Create ICoderApp with fake dependencies."""
+    app_core = AppCore(llm_service=fake_llm, event_log=event_log)
+    return ICoderApp(app_core)
+
+
+@pytest.fixture
+def make_icoder_app(
+    event_log: EventLog,
+) -> Callable[..., ICoderApp]:
+    """Factory to create ICoderApp with custom FakeLLM responses or a custom LLM service."""
+
+    def _factory(
+        *,
+        responses: list[list[StreamEvent]] | None = None,
+        llm_service: LLMService | None = None,
+        format_tools: bool = True,
+    ) -> ICoderApp:
+        llm = llm_service or FakeLLMService(responses=responses or [])
+        return ICoderApp(
+            AppCore(llm_service=llm, event_log=event_log),
+            format_tools=format_tools,
+        )
+
+    return _factory
+
 
 FAKE_RUNTIME_INFO = RuntimeInfo(
     mcp_coder_version="0.42.0",
