@@ -90,7 +90,7 @@ edit the two docstrings in test_detection.py; run_ruff_fix F401; run checks + au
    - `test_sessions_pid_identity.py`: one `replace_all` of `vscodeclaude.sessions.psutil.` → `vscodeclaude.detection.psutil.` (6 targets). The `get_sessions_file_path` targets stay.
    - `test_sessions_active_fallback.py`, only inside the three window-title tests (`test_returns_false_on_non_windows`, `test_requires_both_issue_and_repo_in_title`, `test_does_not_match_title_without_bracket_prefix`):
      - one `replace_all` of `vscodeclaude.sessions._get_vscode_` → `vscodeclaude.detection._get_vscode_` (4 targets)
-     - three single edits of `sessions.HAS_WIN32GUI` → `detection.HAS_WIN32GUI`
+     - one `replace_all` of `vscodeclaude.sessions.HAS_WIN32GUI",\n` → `vscodeclaude.detection.HAS_WIN32GUI",\n` (3 targets, original lines 1570, 1600, 1632). The plain string `sessions.HAS_WIN32GUI` occurs 9 times, so a single edit would not be unique. This pattern matches only the 3 targets that move: the 6 that stay have `, True` / `, False` on the same line.
      - The other 6 `sessions.HAS_WIN32GUI` targets, all `session_has_artifacts` / `check_vscode_running` / `is_vscode_open_for_folder` / `update_session_pid` targets and the caplog logger names stay.
    - `test_sessions_active_grace.py`, `test_sessions_lookup.py`, `test_sessions.py`: no string edits.
 5. **Test imports.** Re-point the moved names to `mcp_coder.workflows.vscodeclaude.detection`:
