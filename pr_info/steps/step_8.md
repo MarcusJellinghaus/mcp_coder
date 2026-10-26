@@ -1,27 +1,24 @@
-# Step 8 — Move copilot tests to `tests/llm/test_interface_copilot.py`; remove allowlist entry; final verification
+# Step 8 — Move copilot tests to `tests/llm/test_interface_copilot.py`; final verification
 
 ## LLM prompt
-> Read `pr_info/steps/summary.md` (especially "Rules that apply to every step"), then implement `pr_info/steps/step_8.md`. This is a pure move with `move_symbol` plus one `.large-files-allowlist` line removal: no code changes besides imports. On any failure listed under "Blocked if", write one line to `pr_info/.blocked.txt` and stop. Finish with all checks green and exactly one commit.
+> Read `pr_info/steps/summary.md` (especially "Rules that apply to every step"), then implement `pr_info/steps/step_8.md`. This is a pure move with `move_symbol`: no code changes besides imports. On any failure listed under "Blocked if", write one line to `pr_info/.blocked.txt` and stop. Finish with all checks green and exactly one commit.
 
 ## WHERE
 - Source: `tests/llm/test_interface.py`
 - Destination (new): `tests/llm/test_interface_copilot.py`
-- `.large-files-allowlist`
 
 ## WHAT
 - 8a: `move_symbol` with `["TestPromptLlmCopilotRouting", "TestCopilotSystemPromptHandling", "TestCopilotTimeoutHandling"]` (2 + 3 + 1 tests).
 - 8b: `move_symbol` with `["TestCopilotProviderValidation"]` (2 tests). Its block may land above the others; leave it there.
-- Remove the line `tests/llm/test_interface.py` from `.large-files-allowlist`, matched by path.
 
 ## HOW
 - Two calls because of the ≤ 3 symbols-per-call limit.
 - After 8a, `LLMTimeoutError` and `TimeoutExpired` are unused in the base and must be removed (by the tool or via ruff `F401`).
-- The allowlist entry is removed in this step because this is the first point at which the base drops below 600 lines.
+- No `.large-files-allowlist` change here: the entry was removed in step 7, where the base first drops below 600 lines.
 
 ## ALGORITHM
 ```
 dry_run(8a); move(8a); dry_run(8b); move(8b)          # each dry run lists only the 2 files
-edit .large-files-allowlist: delete line "tests/llm/test_interface.py"
 format; ruff (F401) -> fix imports only
 pylint; mypy; pytest FAST_UNIT; lint_imports; tach; vulture; check_file_size
 recount (all 9 files + totals); marker check on all 9 files; search check; compact diff; commit
@@ -66,10 +63,10 @@ Final counts (unfiltered and with `-m FAST_UNIT`; both must match):
   - the import removals in `test_interface.py` (`asyncio`, `Any`, `TimeoutExpired`, `LLMTimeoutError`)
   - the seven new files' import blocks
   - blank-line hunks
-  - the one allowlist line
+  - the one allowlist line (removed in step 7)
 
 ## Blocked if
 Any trigger in summary "Failure handling" applies, or a final check fails. In that case write one line to `pr_info/.blocked.txt` and stop.
 
 ## Commit
-`test(llm): move copilot tests to test_interface_copilot; drop allowlist entry`
+`test(llm): move copilot tests to test_interface_copilot`

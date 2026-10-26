@@ -28,7 +28,7 @@ Part of #353. Process: `docs/processes-prompts/refactoring-guide.md`.
 | `tests/llm/test_interface_stream.py` | create | `TestPromptLlmStream`, `TestPromptLlmStreamToolsParam` | 15 |
 | `tests/llm/test_interface_system_prompts.py` | create | `TestPromptLlmInjectPrompts`, `TestBuildClaudeSystemPrompts` | 9 |
 | `tests/llm/test_interface_copilot.py` | create | `TestPromptLlmCopilotRouting`, `TestCopilotSystemPromptHandling`, `TestCopilotTimeoutHandling`, `TestCopilotProviderValidation` | 8 |
-| `.large-files-allowlist` | modify (step 8) | remove the line `tests/llm/test_interface.py` | — |
+| `.large-files-allowlist` | modify (step 7) | remove the line `tests/llm/test_interface.py` | — |
 
 No folder is created. No other file changes (`docs/architecture/architecture.md:183` stays accurate).
 
@@ -42,8 +42,8 @@ No folder is created. No other file changes (`docs/architecture/architecture.md:
 | 4 | `logs_dir` → `test_interface_logs_dir.py` | 54 |
 | 5 | langchain → `test_interface_langchain.py` | 42 |
 | 6 | stream → `test_interface_stream.py` | 27 |
-| 7 | system prompts → `test_interface_system_prompts.py` | 18 |
-| 8 | copilot → `test_interface_copilot.py` + allowlist removal + full verification | 10 |
+| 7 | system prompts → `test_interface_system_prompts.py` + allowlist removal | 18 |
+| 8 | copilot → `test_interface_copilot.py` + full verification | 10 |
 
 Invariant counts after every step: `tests/llm/` = 1391 (1397 before step 1), `tests/prompts/` = 46 (40 before step 1), whole suite = 6463. Record the real baseline in step 1. If it differs from these numbers, apply the same deltas to the recorded values.
 
@@ -54,7 +54,7 @@ TDD note: this is a pure move, so no new tests are written. The 98 existing test
 ### Allowed edits (everything else is forbidden)
 - Import statements in the source and destination files.
 - Removing section-banner comments that are left with nothing under them.
-- The `.large-files-allowlist` line removal (step 8 only).
+- The `.large-files-allowlist` line removal (step 7 only).
 - Moving whole top-level statements unchanged, only as the last resort in "How to move" step 4 below.
 - Nothing inside a class body changes: no `@patch` strings, method-local imports or decorators.
 - `PROJECT_DIR`, its comment (lines 13–14) and the comment `# Real integration tests for LLM interface are removed` (3 lines, originally 488–490) stay in `test_interface.py` unchanged.
@@ -80,7 +80,7 @@ TDD note: this is a pure move, so no new tests are written. The 98 existing test
 - Counts: `run_pytest_check(extra_args=["--collect-only", "-qq", "tests/llm", "tests/prompts"])` prints one `path: N` line per file. Directory totals are the sums. `run_pytest_check(extra_args=["--collect-only", "-q"])` gives the whole-suite total. If `-qq` prints no per-file lines, fall back to `--collect-only -q <file>` per file.
 - Marker check: run the same `--collect-only -qq` call with `-m FAST_UNIT` over the files the step touched. The counts must equal the unfiltered counts, so no moved test drops out of the CI unit job.
 - `mcp__mcp-workspace__check_file_size` passes. Every touched file is under 600 lines.
-- Compact diff (`mcp__mcp-workspace__git` `diff`, `compact=true`). It may show only suppressed moved blocks, import lines, new-file headers, blank-line hunks and (step 8) the allowlist line. No hunk may appear in a test body, `PROJECT_DIR`, the comments or the module docstring.
+- Compact diff (`mcp__mcp-workspace__git` `diff`, `compact=true`). It may show only suppressed moved blocks, import lines, new-file headers, blank-line hunks and (step 7) the allowlist line. No hunk may appear in a test body, `PROJECT_DIR`, the comments or the module docstring.
 - Commit: run `run_format_code`, then `git add` and `git commit` with the message given in the step.
 
 ### Failure handling
