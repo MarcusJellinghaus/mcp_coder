@@ -21,6 +21,23 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move shared stream-mock helpers into `conftest.py`
+
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: move `_MockStreamResult` and `_make_stream_gen` to `conftest.py` via `move_symbol` (dry run first) and normalize imports; collected test counts match baseline
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move `TestAskClaudeCodeCliStream` to `test_claude_code_cli_streaming.py`
+
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: move `TestAskClaudeCodeCliStream` to the new file via `move_symbol` (dry run first), normalize imports in both files, remove the `.large-files-allowlist` entry; collected counts 30 + 9, directory total matches baseline
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review the full branch diff and confirm it contains only moves, import changes and the allowlist removal
+- [ ] PR summary prepared, stating whether the `claude_cli_integration` tests were run or skipped and why
