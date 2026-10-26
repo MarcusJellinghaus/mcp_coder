@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Move parsing tests to `test_task_tracker_parsing.py`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: move `TestFindImplementationSection`, `TestParseTaskLines`, `TestNormalizeTaskName` via `move_symbol`; verify imports and counts (24 / 59)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestFindImplementationSection`, `TestParseTaskLines`, `TestNormalizeTaskName` via `move_symbol`; verify imports and counts (24 / 59)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move incomplete-task tests to `test_task_tracker_incomplete_tasks.py`
 See [step_2.md](./steps/step_2.md)
