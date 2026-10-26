@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: `LICENSE` + PEP 639 license metadata — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: add MIT `LICENSE`; `pyproject.toml` → `setuptools>=77`, `license = "MIT"`, `license-files`, remove `License ::` classifier
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `build: add MIT LICENSE and PEP 639 license metadata`
+
+### Step 2: Coverage badge in `ci.yml` + `README Badges` docs — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: `coverage` job writes total to step output + `Update coverage badge` step; `## README Badges` section in `docs/repository-setup/github.md`; table rows in `docs/repository-setup/README.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `ci: publish combined coverage badge to gist`
+
+### Step 3: OpenSSF Scorecard workflow — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: create `.github/workflows/scorecard.yml`; Scorecard/CodeQL docs in `github.md`; shared-files row in `docs/repository-setup/README.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `ci: add OpenSSF Scorecard workflow`
+
+### Step 4: README badge lines — [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: insert three badge lines under `# MCP Coder` in `README.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared: `docs(readme): add metadata, tooling and security badges`
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `main`, address findings
+- [ ] PR summary prepared
