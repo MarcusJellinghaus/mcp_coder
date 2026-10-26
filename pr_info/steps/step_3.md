@@ -34,7 +34,7 @@
 
 ## ALGORITHM
 ```
-assert collect_only(test_main.py) == 71 and collect_only(test_parsers.py) == 12
+assert collect_only(test_main.py) == 71 and collect_only(test_parsers.py) == 10
 record collect_only("tests/cli/")
 move_symbol(test_main.py, [TestCoordinatorCommand, TestCoordinatorRunCommand],
             test_main_coordinator.py, dry_run) -> check, then run
@@ -53,7 +53,7 @@ Expected `--collect-only -q` counts: `test_main.py` 39, `test_main_coordinator.p
 `test_gh_parsers.py` 7; `tests/cli/` equals the recorded baseline (and the step 1 baseline).
 
 ## Preconditions (if one fails: write one line to `pr_info/.blocked.txt` and stop)
-- `test_main.py` collects 71 and `test_parsers.py` collects 12 before the move.
+- `test_main.py` collects 71 and `test_parsers.py` collects 10 before the move.
 - Each dry run would modify only `test_main.py` and its destination file.
 - After the single-symbol retry, the parametrize decorator is attached to
   `test_execution_dir_flag_rejected`, and the function collects 10 tests.

@@ -43,7 +43,7 @@ format -> ruff fix F401 -> compare imports to HOW -> run checks -> compare count
 ```
 
 ## DATA
-Expected `--collect-only -q` counts: `test_parsers.py` 12, `test_workflow_parsers.py` 10,
+Expected `--collect-only -q` counts: `test_parsers.py` 10, `test_workflow_parsers.py` 10,
 `test_interactive_parsers.py` 7, `test_gh_parsers.py` 7; `tests/cli/` equals the recorded
 baseline.
 

@@ -69,7 +69,7 @@ no renames, no test deletions or merges.
 |---|---:|---:|---:|
 | `test_main.py` | 71 | 71 | 39 |
 | `test_main_coordinator.py` | — | — | 10 |
-| `test_parsers.py` | 34 | 12 | 32 |
+| `test_parsers.py` | 34 | 10 | 32 |
 | `test_workflow_parsers.py` | — | 10 | 10 |
 | `test_interactive_parsers.py` | — | 7 | 7 |
 | `test_gh_parsers.py` | — | 7 | 7 |
