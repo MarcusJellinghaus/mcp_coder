@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 
 ### Step 2: Streaming tests → `test_app_pilot_streaming.py`
 See [step_2.md](./steps/step_2.md)
-- [ ] Implementation: moves 2a–2e (incl. `ErrorAfterChunksLLMService`), fix imports, add `pytestmark`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: moves 2a–2e (incl. `ErrorAfterChunksLLMService`), fix imports, add `pytestmark`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Cancel tests → `test_app_pilot_cancel.py`
 See [step_3.md](./steps/step_3.md)
