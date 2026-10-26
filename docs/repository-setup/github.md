@@ -1,6 +1,6 @@
 # GitHub Setup
 
-GitHub-side configuration: tokens, labels, actions, CI, and automated dependency management.
+GitHub-side configuration: tokens, labels, actions, CI, badges, and automated dependency management.
 
 ## GitHub Token Configuration
 
@@ -495,6 +495,38 @@ jobs:
 ### Monitor CI Results
 
 Use [`mcp-coder check branch-status`](../cli-reference.md) to monitor CI pipeline results and get comprehensive feedback on code quality checks.
+
+## README Badges
+
+The README shows CI, PyPI, Python, license, static tool badges, a live coverage badge, OpenSSF
+Scorecard and CodeQL. Only the coverage badge needs setup.
+
+### Coverage badge
+
+The `coverage` job in `ci.yml` writes the combined coverage total to a public gist on every push to
+`main`; shields.io renders it from the gist's raw URL. The write step is `continue-on-error`, so a
+broken token never fails CI — the badge just stops updating.
+
+One-time setup (repo owner):
+
+- **Gist:** one public gist shared by all repos, one file per repo named `<repo>-coverage.json`
+  (here `mcp_coder-coverage.json`). Placeholder content:
+  `{"schemaVersion": 1, "label": "coverage", "message": "pending", "color": "lightgrey"}`
+- **Token:** fine-grained PAT with account permission **Gists: read and write** only; repository
+  access "Public repositories" (read-only — the minimum GitHub offers); no expiration.
+- **Repo secret** `BADGE_GIST_TOKEN` = the PAT. **Repo variable** `BADGE_GIST_ID` = the gist ID.
+
+Rotation: replace the PAT and update `BADGE_GIST_TOKEN` if the token leaks. If it is ever replaced
+by an expiring token, the badge silently stops updating on expiry.
+
+> **Copying `ci.yml` to another repo:** rename `filename:` in the `Update coverage badge` step to
+> that repo's own `<repo>-coverage.json`. The gist is shared — an unrenamed copy overwrites
+> `mcp_coder`'s badge.
+
+### Scorecard and CodeQL badges
+
+`.github/workflows/scorecard.yml` needs no secrets: it publishes results for the Scorecard badge and
+uploads SARIF to code scanning. The CodeQL badge reflects CodeQL default setup (no workflow file).
 
 ## Automated Dependency Management
 

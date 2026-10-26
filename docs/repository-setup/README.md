@@ -31,7 +31,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 
 | Topic | File | Applies to |
 |---|---|---|
-| GitHub-side: tokens, labels, actions, CI, dependabot | [github.md](github.md) | Any downstream repo |
+| GitHub-side: tokens, labels, actions, CI, badges, dependabot | [github.md](github.md) | Any downstream repo |
 | Jenkins: API user permissions, credentials, coordinator job setup | [jenkins.md](jenkins.md) | Repos dispatched by the coordinator |
 | Claude Code: `.claude/`, `.mcp.json`, launchers, architecture docs | [claude-code.md](claude-code.md) | Any downstream repo |
 | Agent permissions: how `.claude/agents/*.md` are wired, and what `bypassPermissions` does and does not enforce | [agent-permissions.md](agent-permissions.md) | Any downstream repo — reference only, `mcp-coder init` does not deploy `docs/` |
@@ -64,8 +64,9 @@ The following files in this repository serve as references/templates for other p
 | `.mcp.json` (+ `.mcp.{linux,windows,macos}.json`) | G | Yes | No | Server paths, project name, `--test-folder`, reference projects |
 | `.github/workflows/label-new-issues.yml` | G | Yes | Yes | — |
 | `.github/workflows/approve-command.yml` | G | Yes | Yes | — |
-| `.github/workflows/ci.yml` | P | No | No | Python version, package name, test paths |
+| `.github/workflows/ci.yml` | P | No | No | Python version, package name, test paths, coverage badge filename (`<repo>-coverage.json`) |
 | `.github/dependabot.yml` | G | No | Yes | — |
+| `.github/workflows/scorecard.yml` | G | No | Yes | — |
 | `.gitattributes` | G | No | Yes | — |
 | `.large-files-allowlist` | G | No | No | Files exempt from size limits |
 | `claude_local.bat` / `claude.bat` | G | No | Mostly | Path to `claude.exe` if non-standard |

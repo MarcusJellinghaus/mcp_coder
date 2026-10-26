@@ -270,9 +270,23 @@ jobs:
           merge-multiple: true
 
       - name: Combine coverage data
+        id: coverage_combine
         run: |
           coverage combine coverage-data
           coverage xml -o coverage.xml
+          echo "total=$(coverage report --format=total)" >> "$GITHUB_OUTPUT"
+
+      - name: Update coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        uses: schneegans/dynamic-badges-action@28b0fa8bdeb46170ac397105ece0c1fe58f68910 # v1.9.0
+        with:
+          auth: ${{ secrets.BADGE_GIST_TOKEN }}
+          gistID: ${{ vars.BADGE_GIST_ID }}
+          filename: mcp_coder-coverage.json
+          label: coverage
+          message: ${{ steps.coverage_combine.outputs.total }}%
+          color: blue
 
       - name: Run diff-cover
         if: github.event_name == 'pull_request'
