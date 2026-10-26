@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Baseline + move blocked-marker tests to `test_task_processing_blocked.py`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: record baseline (55/193/55 passed, write `pr_info/.suite_baseline.txt`), move `TestReadAndClearBlocked`, `TestBlockedExitInPrompts`, `TestProcessSingleTaskBlocked`, fix imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record baseline (55/193/55 passed, write `pr_info/.suite_baseline.txt`), move `TestReadAndClearBlocked`, `TestBlockedExitInPrompts`, `TestProcessSingleTaskBlocked`, fix imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move mypy fix-up tests to `test_task_processing_mypy.py`
 See [step_2.md](./steps/step_2.md)
