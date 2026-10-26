@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from mcp_coder.workflow_steps.rebase import _reset_hard
 from mcp_coder.workflows.rebase import (
     _abort_rebase,
     _binary_conflict,
@@ -21,7 +22,6 @@ from mcp_coder.workflows.rebase import (
     _has_conflict_markers,
     _is_rebase_in_progress,
     _rebase_success_shape,
-    _reset_hard,
     _resolve_pr_info_conflict,
     _run_git,
     _show_stage,

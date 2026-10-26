@@ -33,6 +33,7 @@ from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatters
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
+from mcp_coder.workflow_steps.rebase import _reset_hard
 from mcp_coder.workflow_utils.base_branch import (
     BaseBranchSource,
     check_base_branch_on_origin,
@@ -96,11 +97,6 @@ def _abort_rebase(project_dir: Path) -> None:
     exits non-zero, which ``_run_git`` swallows.
     """
     _run_git(project_dir, "rebase", "--abort")
-
-
-def _reset_hard(project_dir: Path, sha: str) -> None:
-    """Restore pre-rebase state with ``git reset --hard <sha>``."""
-    _run_git(project_dir, "reset", "--hard", sha)
 
 
 def _rebase_success_shape(project_dir: Path, pre_sha: str) -> bool:
