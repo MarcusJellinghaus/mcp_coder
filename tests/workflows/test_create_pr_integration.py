@@ -6,6 +6,7 @@ These tests verify the complete workflow integration including:
 - Git repository state management
 """
 
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -361,13 +362,32 @@ class TestWorkflowErrorHandling:
 class TestWorkflowMainFunction:
     """Test the main workflow orchestration function."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_post_creation(self) -> Iterator[MagicMock]:
+        """Phase B never polls GitHub in these tests."""
+        with patch(
+            "mcp_coder.workflows.create_pr.core.run_post_creation",
+            return_value="pr_created",
+        ) as mock:
+            yield mock
+
+    @pytest.fixture(autouse=True)
+    def _mock_find_open_pr(self) -> Iterator[MagicMock]:
+        """No open PR for the branch: the normal phase A runs."""
+        with patch(
+            "mcp_coder.workflows.create_pr.core._find_open_pr", return_value=None
+        ) as mock:
+            yield mock
+
     @patch(
         "mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage",
         return_value=None,
     )
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_main_workflow_prerequisite_failure(
         self,
+        _mock_rebase: MagicMock,
         mock_check_prereqs: MagicMock,
         _mock_validate: MagicMock,
     ) -> None:
@@ -394,8 +414,10 @@ class TestWorkflowMainFunction:
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.git_push")
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
     def test_main_workflow_pr_creation_failure(
         self,
+        _mock_rebase: MagicMock,
         mock_create_pr: MagicMock,
         mock_git_push: MagicMock,
         mock_clean: MagicMock,

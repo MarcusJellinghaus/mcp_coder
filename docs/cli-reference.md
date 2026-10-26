@@ -461,7 +461,13 @@ mcp-coder create-pr [OPTIONS]
 - `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
 - `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
 
-**Description:** Create a pull request with AI-generated summary based on the changes made. Requires clean working directory and completed tasks.
+**Description:** Create a pull request with AI-generated summary based on the changes made. Requires clean working directory and completed tasks. Rebases first when the branch is behind its base.
+
+**Post-creation checks:** once the PR exists, `create-pr` polls its `mergeable_state` (one rebase-and-push on `dirty`), then waits for the CI run of the pushed HEAD without fixing anything. The outcome sets the final label: `status-10:pr-created`, `status-74:pr-merge-conflict` (still conflicting) or `status-81:failing-ci`. The checks also run with `--no-update-issue-labels`; the outcome is then only logged. If the branch already has an open PR, `create-pr` resumes at these checks instead of creating a new one.
+
+**Description refresh:** if the post-creation rebase pushed new commits, the PR title/body is regenerated from the full branch diff (closing references kept). Best-effort — it never changes the label or exit code. `fix-ci` refreshes the same way when its fixes pushed commits.
+
+**Exit codes:** `0` = PR exists and every post-creation outcome was handled (including conflict and failing CI); `1` = failure before the PR exists, or a crash.
 
 **Prerequisites:**
 - Clean working directory (no uncommitted changes)

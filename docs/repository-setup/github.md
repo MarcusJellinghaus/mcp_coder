@@ -196,7 +196,7 @@ Default timeouts:
 |-------|---------|
 | status-03:planning | 15 minutes |
 | status-06:implementing | 120 minutes |
-| status-09:pr-creating | 15 minutes |
+| status-09:pr-creating | 30 minutes |
 | status-14i:plan-reviewing | 30 minutes |
 | status-17i:code-reviewing | 120 minutes |
 

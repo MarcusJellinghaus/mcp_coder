@@ -14,6 +14,7 @@ from mcp_coder.workflow_steps.rebase import (
     _base_sha,
     _classify_failed_rebase,
     _get_rebase_target_branch,
+    _reset_hard,
 )
 from mcp_coder.workflows.implement.core import run_implement_workflow
 
@@ -708,3 +709,23 @@ class TestRebaseIntegration:
         mock_prepare.assert_called_once()
         # Result is 1 because prepare_task_tracker returns False
         assert result == 1
+
+
+class TestResetHard:
+    """Tests for _reset_hard."""
+
+    @pytest.mark.parametrize(
+        ("side_effect", "expected"),
+        [
+            pytest.param([_result(0)], True, id="ok"),
+            pytest.param([_result(128)], False, id="nonzero"),
+            pytest.param(OSError("no git"), False, id="exception"),
+        ],
+    )
+    def test_reset_result(self, side_effect: object, expected: bool) -> None:
+        with patch(f"{_MODULE}.execute_command", side_effect=side_effect) as cmd:
+            assert _reset_hard(Path("/fake/project"), "abc123") is expected
+
+        cmd.assert_called_once_with(
+            ["git", "reset", "--hard", "abc123"], cwd=str(Path("/fake/project"))
+        )

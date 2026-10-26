@@ -316,10 +316,11 @@ def _poll_for_ci_completion(
             seconds after a push is still the *previous* commit's run — reading
             its green conclusion would declare a commit CI never saw green. When
             given, a run for any other commit counts as "no run yet" and polling
-            continues — bounded by ``CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS`` rather
-            than the full poll cap, since the run-registration gap is seconds
-            and a run that never appears for this commit would otherwise stall
-            the caller for the whole cap. Omit it (the default) to accept
+            continues. Both "no run" and "run for another commit" share one
+            budget, ``CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS``, rather than the full
+            poll cap, since the run-registration gap is seconds and a run that
+            never appears for this commit would otherwise stall the caller for
+            the whole cap. Omit it (the default) to accept
             whichever run is newest, as callers that did not just push should.
 
     Returns:
@@ -329,9 +330,10 @@ def _poll_for_ci_completion(
     """
     poll_start_time = time.time()
     heartbeat_iteration_interval = 8  # ~2min at 15s intervals
-    # Attempts spent looking at a run for some *other* commit; bounded
-    # separately from the overall cap (see CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS).
-    other_commit_attempts = 0
+    # Attempts spent seeing no run, or a run for some *other* commit, while
+    # waiting on expected_sha; bounded separately from the overall cap (see
+    # CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS). Lookup-failed reads never count.
+    expected_sha_attempts = 0
     # Consecutive swallowed-lookup-failure reads (mcp-workspace#318's
     # `lookup_failed` flag); bounded separately too (see
     # CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS). Resets on any other kind of read.
@@ -348,7 +350,7 @@ def _poll_for_ci_completion(
             return None, True  # Graceful exit on API errors
 
         run_info = ci_status.get("run", {})
-        lookup_failed = bool(run_info.get("lookup_failed"))
+        lookup_failed = bool(ci_status.get("lookup_failed"))
 
         if lookup_failed:
             lookup_failed_attempts += 1
@@ -367,17 +369,24 @@ def _poll_for_ci_completion(
             and observed_sha != expected_sha
         )
 
-        if is_other_commit:
-            other_commit_attempts += 1
+        no_run = len(run_info) == 0
+        waiting_on_expected = (
+            not lookup_failed
+            and expected_sha is not None
+            and (no_run or is_other_commit)
+        )
 
-        if lookup_failed or len(run_info) == 0 or is_other_commit:
+        if waiting_on_expected:
+            expected_sha_attempts += 1
+
+        if lookup_failed or no_run or is_other_commit:
             if lookup_failed:
                 budget_spent = (
                     lookup_failed_attempts >= CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS
                 )
-            elif is_other_commit:
+            elif waiting_on_expected:
                 budget_spent = (
-                    other_commit_attempts >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+                    expected_sha_attempts >= CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
                 )
             else:
                 budget_spent = False
@@ -410,7 +419,7 @@ def _poll_for_ci_completion(
                     "CI_TIMEOUT: No CI run appeared for %s after %d attempts "
                     "- skipping CI check",
                     _short_sha(expected_sha or "unknown"),
-                    other_commit_attempts,
+                    expected_sha_attempts,
                 )
             else:
                 logger.info(

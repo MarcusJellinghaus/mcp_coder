@@ -314,13 +314,137 @@ class TestPollForCiCompletionShaCorrelation:
         assert mock_ci_manager.get_latest_ci_status.call_count == 1
 
 
+class TestPollForCiCompletionNoRunWithExpectedSha:
+    """With ``expected_sha``, "no run" shares the expected-sha budget."""
+
+    @staticmethod
+    def _no_run() -> dict[str, Any]:
+        """A status with no workflow run at all."""
+        return {"run": {}, "jobs": []}
+
+    @staticmethod
+    def _run(status: str, sha: str, conclusion: str | None = None) -> dict[str, Any]:
+        """Build one ``get_latest_ci_status`` payload."""
+        return {
+            "run": {
+                "status": status,
+                "conclusion": conclusion,
+                "run_ids": [1],
+                "commit_sha": sha,
+            },
+            "jobs": [],
+        }
+
+    def test_no_run_gives_up_on_expected_sha_budget(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """No run ever appearing costs the small budget, not the full cap."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = self._no_run()
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(
+                    mock_ci_manager, "main", expected_sha="NEWSHA"
+                )
+
+        assert status is None
+        assert passed is True
+        assert (
+            mock_ci_manager.get_latest_ci_status.call_count
+            == CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+        )
+        assert "CI_NOT_CONFIGURED" in caplog.text
+
+    def test_no_run_and_other_commit_share_one_counter(self) -> None:
+        """Alternating no-run and other-commit reads exhaust one shared budget."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = [
+            (
+                self._no_run()
+                if i % 2 == 0
+                else self._run("completed", "OLDSHA", conclusion="success")
+            )
+            for i in range(CI_MAX_POLL_ATTEMPTS)
+        ]
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            status, passed = _poll_for_ci_completion(
+                mock_ci_manager, "main", expected_sha="NEWSHA"
+            )
+
+        assert status is None
+        assert passed is True
+        assert (
+            mock_ci_manager.get_latest_ci_status.call_count
+            == CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS
+        )
+
+    def test_no_run_then_expected_run_succeeds(self) -> None:
+        """A run for the expected commit after a short gap is accepted."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = [
+            self._no_run(),
+            self._no_run(),
+            self._run("completed", "NEWSHA", conclusion="success"),
+        ]
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            status, passed = _poll_for_ci_completion(
+                mock_ci_manager, "main", expected_sha="NEWSHA"
+            )
+
+        assert passed is True
+        assert status is not None
+        assert status["run"]["commit_sha"] == "NEWSHA"
+        assert mock_ci_manager.get_latest_ci_status.call_count == 3
+
+    def test_lookup_failed_reads_do_not_count_against_expected_sha_budget(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Lookup-failed reads (empty ``run``) use their own cap only."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.side_effect = (
+            [{"run": {}, "jobs": [], "lookup_failed": True}] * 2
+            + [self._no_run()] * (CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS - 1)
+            + [self._run("completed", "NEWSHA", conclusion="success")]
+        )
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(
+                    mock_ci_manager, "main", expected_sha="NEWSHA"
+                )
+
+        assert passed is True
+        assert status is not None
+        assert status["run"]["commit_sha"] == "NEWSHA"
+        assert "CI_NOT_CONFIGURED" not in caplog.text
+
+    def test_no_run_without_expected_sha_polls_full_cap(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Without ``expected_sha``, no-run still waits out the full cap."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = self._no_run()
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+
+        assert status is None
+        assert passed is True
+        assert mock_ci_manager.get_latest_ci_status.call_count == CI_MAX_POLL_ATTEMPTS
+        assert "CI_NOT_CONFIGURED" in caplog.text
+
+
 class TestPollForCiCompletionLookupFailed:
     """``lookup_failed`` runs get their own small, bounded retry budget."""
 
     @staticmethod
     def _lookup_failed_run() -> dict[str, Any]:
-        """A run dict carrying the swallowed-lookup-failure flag (mcp-workspace#318)."""
-        return {"run": {"lookup_failed": True}, "jobs": []}
+        """A status carrying the swallowed-lookup-failure flag (mcp-workspace#318)."""
+        return {"run": {}, "jobs": [], "lookup_failed": True}
 
     @staticmethod
     def _run(status: str, sha: str, conclusion: str | None = None) -> dict[str, Any]:
@@ -392,22 +516,46 @@ class TestPollForCiCompletionLookupFailed:
         assert status is None
         assert passed is True
 
-    def test_lookup_failed_checked_before_empty_run_branch(self) -> None:
-        """A length-1 ``lookup_failed`` run is retried, not misread as other states."""
+    def test_lookup_failed_checked_before_empty_run_branch(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """With an empty ``run``, the lookup-failed budget wins over the no-run one."""
         mock_ci_manager = MagicMock()
-        mock_ci_manager.get_latest_ci_status.side_effect = [
-            self._lookup_failed_run(),
-            self._run("completed", "SHA1", conclusion="success"),
-        ]
+        mock_ci_manager.get_latest_ci_status.return_value = self._lookup_failed_run()
 
-        with patch("mcp_coder.workflow_steps.ci.time.sleep") as mock_sleep:
-            status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(
+                    mock_ci_manager, "main", expected_sha="abc1234567890"
+                )
 
-        assert mock_sleep.call_count == 1
-        assert mock_ci_manager.get_latest_ci_status.call_count == 2
+        assert (
+            mock_ci_manager.get_latest_ci_status.call_count
+            == CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS
+        )
+        assert status is None
         assert passed is True
-        assert status is not None
-        assert status["run"]["commit_sha"] == "SHA1"
+        assert "CI_API_ERROR" in caplog.text
+
+    def test_lookup_failed_inside_run_is_not_a_lookup_failure(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The old shape (flag inside ``run``) is an in-progress run, not a failure."""
+        mock_ci_manager = MagicMock()
+        mock_ci_manager.get_latest_ci_status.return_value = {
+            "run": {"lookup_failed": True},
+            "jobs": [],
+        }
+
+        with patch("mcp_coder.workflow_steps.ci.time.sleep"):
+            with caplog.at_level(logging.INFO):
+                status, passed = _poll_for_ci_completion(mock_ci_manager, "main")
+
+        assert mock_ci_manager.get_latest_ci_status.call_count == CI_MAX_POLL_ATTEMPTS
+        assert status is None
+        assert passed is True
+        assert "CI_TIMEOUT: No completed run after polling" in caplog.text
+        assert "CI_API_ERROR" not in caplog.text
 
     def test_lookup_failed_absent_key_behaves_as_before(self) -> None:
         """Regression guard: a genuinely empty run dict behaves as pre-#318."""

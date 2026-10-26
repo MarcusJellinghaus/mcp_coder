@@ -34,6 +34,8 @@ status-10:pr-created
 
 **Detection order at `status-10`:** conflict → CI → review comments. At most one acts per poll; the rest are re-checked next poll. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag.
 
+**First check is done by create-pr.** `create-pr` already checks conflicts and waits for CI once, setting `74` or `81` directly (see [PR Creation](08-pr-creation.md)). PR follow-up takes over for whatever it left at `status-10`: `unknown` mergeability, CI timeout or no CI — and for everything that happens later.
+
 **Order matters.** Conflicts come first because a branch that is behind its base can itself make CI fail; fixing the symptom first would waste CI-fix attempts. Review comments come last.
 
 ## Actor

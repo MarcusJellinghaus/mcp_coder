@@ -335,7 +335,7 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
   - **CLI Integration**: Accessible via `cli/commands/implement.py`
 - **Other label-triggered workflows**: each runs for one label in `WORKFLOW_MAPPING` (`cli/commands/coordinator/workflow_constants.py`); per-label flow and failure labels are in the [process docs](../processes-prompts/development-process.md)
   - `workflows/create_plan/` - `create-plan`: `status-02` → `status-03` → `status-04` (or `status-14`)
-  - `workflows/create_pr/` - `create-pr`: `status-08` → `status-09` → `status-10`
+  - `workflows/create_pr/` - `create-pr`: `status-08` → `status-09` → `status-10` (or `status-74` / `status-81` from the post-creation checks)
   - `workflows/fix_conflict/` - `fix-conflict`: `status-71` → `status-72` → `status-10` (or `status-74` / `status-73`)
   - `workflows/fix_ci/` - `fix-ci`: `status-81` → `status-82` → `status-10` (or `status-84` / `status-83`)
   - `workflows/vscodeclaude/` - Interactive session launcher for human-action labels; it also detects the PR follow-up cases (merge conflict, failing CI, review comments → `status-91`)
@@ -379,7 +379,7 @@ The scenarios show the default path. With `auto_review_plan` / `auto_review_impl
 2. **mcp_coder** → **Claude Code**: "Create pull request with summary"
 3. **Claude Code** → **MCP servers**: Generate PR description, final quality checks
 4. **Claude Code** → **mcp_coder**: PR content and metadata
-5. **mcp_coder** → **GitHub**: Create PR, update label to `status-10:pr-created`
+5. **mcp_coder** → **GitHub**: Create PR, check mergeability and wait for CI, update label to `status-10:pr-created` (`status-74` / `status-81` on conflict / failing CI)
 
 ### Scenario 4: Driving a Project from Another Directory
 1. The shell sits anywhere — typically the tool environment on a build server, not the checkout

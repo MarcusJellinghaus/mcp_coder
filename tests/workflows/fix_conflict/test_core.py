@@ -10,6 +10,7 @@ from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.fix_conflict.core import run_fix_conflict_workflow
 
 MODULE = "mcp_coder.workflows.fix_conflict.core"
+_REBASE_MODULE = "mcp_coder.workflow_steps.rebase"
 _SHARED_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
 _BRANCH_HEAD = "mcp_coder.workflow_utils.failure_handling._branch_head"
 PROJECT_DIR = Path("/fake/project")
@@ -32,10 +33,10 @@ def _patch_all(
     return (
         patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
         patch(f"{MODULE}._attempt_rebase_and_push", return_value=outcome),
-        patch(f"{MODULE}.PullRequestManager", return_value=pr_manager),
+        patch(f"{_REBASE_MODULE}.PullRequestManager", return_value=pr_manager),
         patch(f"{MODULE}.IssueManager"),
         patch(f"{MODULE}.update_workflow_label"),
-        patch(f"{MODULE}.time.sleep"),
+        patch(f"{_REBASE_MODULE}.time.sleep"),
         patch(f"{MODULE}.handle_workflow_failure"),
     ), pr_manager
 
