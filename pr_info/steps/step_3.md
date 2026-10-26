@@ -71,7 +71,8 @@ run_standard_checks(); check counts + audits; commit
 - Call-site audit (`search_files`, `glob="tests/**/*.py"`):
   - `test_prompt\.\w` → 0 matches
   - `from tests\.cli\.commands\.test_prompt import _make_text_events` → 2 matches (`_claude_cwd`, `_system_prompts`)
-- Compact diff over the whole branch follows the summary's compact-diff rule. The only non-move hunks:
+- Compact diff over the whole branch, limited to `pathspec=["tests/", ".large-files-allowlist"]` (so `pr_info/`
+  changes are not counted), follows the summary's compact-diff rule. The only non-move hunks:
   the removed `from typing import Any`, the new files' import headers, and the one allowlist line.
 - If any count or check deviates, write one line to `pr_info/.blocked.txt` and stop.
 

@@ -21,6 +21,8 @@ leaves `.large-files-allowlist`.
 - **No re-exports or stubs.** Siblings import **only** `_make_text_events` from `test_prompt.py`.
   They never import a `Test*` class, because pytest would then collect it twice.
 - If a precondition or check fails, write one line to `pr_info/.blocked.txt` and stop.
+- If a test that passed at baseline fails at its new location, do not fix it by adding fixtures,
+  `conftest.py` entries or patches. Write one line to `pr_info/.blocked.txt` and stop.
 
 ## Architectural / design changes
 
