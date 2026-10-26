@@ -1,17 +1,16 @@
-# Step 4 — Move validation tests to `test_task_tracker_validation.py` and drop the allowlist entry
+# Step 4 — Move validation tests to `test_task_tracker_validation.py`
 
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md`, then implement `pr_info/steps/step_4.md` exactly. This is a pure
 > move-only refactoring: use `mcp__mcp-tools-py__move_symbol`, never move code by hand, and edit only
-> import lines plus the `.large-files-allowlist` entry. Follow the summary's move procedure, checks and
+> import lines. Follow the summary's move procedure, checks and
 > failure rule, then run the final verification below. Produce exactly one commit.
 
 ## WHERE
 
 - Source: `tests/workflow_utils/test_task_tracker.py`
 - Destination (new): `tests/workflow_utils/test_task_tracker_validation.py`
-- `.large-files-allowlist`: remove the line `tests/workflow_utils/test_task_tracker.py`
 
 ## WHAT
 
@@ -21,8 +20,8 @@ Move these top-level test classes verbatim in one call. No new functions or sign
 |---|---|---:|
 | 4 | `["TestValidateTaskTracker", "TestTaskTrackerTemplate"]` | 6 + 3 |
 
-The allowlist removal belongs in this step because the base file only drops under 750 lines (~285)
-after this move.
+The base file is already under the 750 limit and off `.large-files-allowlist` after step 3; this move
+takes it from ~460 to ~285 lines.
 
 ## HOW
 
@@ -35,7 +34,6 @@ after this move.
   TaskTrackerFileNotFoundError, TaskTrackerSectionNotFoundError, _find_implementation_section,
   _get_incomplete_tasks, _read_task_tracker, get_step_progress)`. The module docstring,
   `MULTI_PHASE_CONTENT` (with its 2-line comment) and `create_test_tracker_content` are unchanged.
-- Remove the allowlist line by matching its path with `edit_file`. Change nothing else in that file.
 
 ## ALGORITHM
 
@@ -43,7 +41,7 @@ after this move.
 precondition: step 3 is committed and dest file does not exist, else write one line to pr_info/.blocked.txt and stop
 record collect counts: tests/workflow_utils/ and whole suite
 dry_run -> verify only 2 files listed -> real run -> inspect (import os local)
-fix imports only if they differ from the expected end state; remove the allowlist line
+fix imports only if they differ from the expected end state
 run_format_code; run the summary's per-step checks plus the final verification below
 verify counts, then commit
 ```

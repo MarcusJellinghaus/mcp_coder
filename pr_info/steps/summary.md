@@ -45,7 +45,7 @@ Total: 83 tests, the same as today.
 | `tests/workflow_utils/test_task_tracker_incomplete_tasks.py` | created | 2 |
 | `tests/workflow_utils/test_task_tracker_status.py` | created | 3 |
 | `tests/workflow_utils/test_task_tracker_validation.py` | created | 4 |
-| `.large-files-allowlist` | modified (remove `tests/workflow_utils/test_task_tracker.py`) | 4 |
+| `.large-files-allowlist` | modified (remove `tests/workflow_utils/test_task_tracker.py`) | 3 |
 
 No new folders, no `__init__.py` or `conftest.py` changes (`tests/workflow_utils/__init__.py` exists).
 
