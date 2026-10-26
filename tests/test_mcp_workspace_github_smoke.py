@@ -12,7 +12,7 @@ def test_all_exports_defined() -> None:
     """__all__ has expected count."""
     from mcp_coder.mcp_workspace_github import __all__
 
-    assert len(__all__) == 31
+    assert len(__all__) == 32
 
 
 def test_get_github_token_importable() -> None:
@@ -21,6 +21,14 @@ def test_get_github_token_importable() -> None:
 
     assert callable(get_github_token)
     assert "get_github_token" in __all__
+
+
+def test_create_empty_issue_data_importable() -> None:
+    """create_empty_issue_data is re-exported from the shim and returns an empty issue."""
+    from mcp_coder.mcp_workspace_github import __all__, create_empty_issue_data
+
+    assert create_empty_issue_data()["number"] == 0
+    assert "create_empty_issue_data" in __all__
 
 
 def test_key_symbols_importable() -> None:

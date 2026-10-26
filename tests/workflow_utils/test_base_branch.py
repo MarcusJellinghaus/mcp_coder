@@ -11,7 +11,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.utils.subprocess_runner import CommandResult
 from mcp_coder.workflow_utils.base_branch import (
     BaseBranchSource,
@@ -19,6 +18,7 @@ from mcp_coder.workflow_utils.base_branch import (
     detect_base_branch,
     detect_base_branch_with_source,
 )
+from tests.github_factories import make_issue_data
 
 # ============================================================================
 # Fixtures
@@ -140,21 +140,12 @@ class TestDetectBaseBranchFromIssueData:
         project_dir = Path("/test/project")
         mocks.pr_manager.return_value.list_pull_requests.return_value = []
 
-        issue_data: IssueData = {
-            "number": 370,
-            "title": "Test Issue",
-            "body": "",
-            "state": "open",
-            "labels": [],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-            "base_branch": "feature/v2",
-        }
+        issue_data = make_issue_data(
+            number=370,
+            title="Test Issue",
+            url="",
+            base_branch="feature/v2",
+        )
 
         result = detect_base_branch(
             project_dir, current_branch="370-feature", issue_data=issue_data

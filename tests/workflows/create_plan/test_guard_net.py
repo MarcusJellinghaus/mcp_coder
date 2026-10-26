@@ -7,6 +7,7 @@ import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.create_plan import run_create_plan_workflow
+from tests.github_factories import make_issue_data
 
 # Common patch prefix
 _CORE = "mcp_coder.workflows.create_plan.core"
@@ -22,19 +23,16 @@ class TestGuardNet:
     @pytest.fixture
     def mock_issue_data(self) -> IssueData:
         """Create mock issue data for testing."""
-        return IssueData(
+        return make_issue_data(
             number=123,
             title="Test Issue",
             body="Test issue body",
-            state="open",
             labels=["enhancement"],
             assignees=["testuser"],
             user="author",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/123",
-            locked=False,
-            author_association=None,
         )
 
     def test_system_exit_netted_to_planning_failed(

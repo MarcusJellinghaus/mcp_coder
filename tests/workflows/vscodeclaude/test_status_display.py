@@ -18,6 +18,7 @@ from mcp_coder.workflows.vscodeclaude.status import (
 from mcp_coder.workflows.vscodeclaude.types import (
     VSCodeClaudeSession,
 )
+from tests.github_factories import make_issue_data
 
 
 class TestStatusDisplay:
@@ -87,20 +88,12 @@ class TestStatusDisplay:
         """Returns False when status unchanged."""
         # Use cached_issues instead of mocking _get_coordinator
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "...",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test",
+                labels=["status-07:code-review"],
+                url="...",
+            )
         }
 
         session: VSCodeClaudeSession = {
@@ -122,20 +115,12 @@ class TestStatusDisplay:
         """Returns True when status changed."""
         # Use cached_issues instead of mocking _get_coordinator
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test",
-                "body": "",
-                "state": "open",
-                "labels": ["status-08:ready-pr"],  # Changed from session
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "...",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test",
+                labels=["status-08:ready-pr"],  # Changed from session
+                url="...",
+            )
         }
 
         session: VSCodeClaudeSession = {
@@ -157,20 +142,12 @@ class TestStatusDisplay:
         """Returns False when open issue has no status label (logs warning)."""
         # Use cached_issues instead of mocking _get_coordinator
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test",
-                "body": "",
-                "state": "open",
-                "labels": ["other-label"],  # No status label
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "...",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test",
+                labels=["other-label"],  # No status label
+                url="...",
+            )
         }
 
         session: VSCodeClaudeSession = {
@@ -222,20 +199,13 @@ class TestStatusDisplay:
         """Returns True when issue is closed."""
         # Use cached_issues instead of mocking _get_coordinator
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test",
-                "body": "",
-                "state": "closed",
-                "labels": ["status-07:code-review"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "...",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test",
+                state="closed",
+                labels=["status-07:code-review"],
+                url="...",
+            )
         }
 
         session: VSCodeClaudeSession = {
@@ -257,20 +227,12 @@ class TestStatusDisplay:
         """Returns False when issue is open."""
         # Use cached_issues instead of mocking _get_coordinator
         cached_issues: dict[int, IssueData] = {
-            123: {
-                "number": 123,
-                "title": "Test",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "...",
-                "locked": False,
-                "author_association": None,
-            }
+            123: make_issue_data(
+                number=123,
+                title="Test",
+                labels=["status-07:code-review"],
+                url="...",
+            )
         }
 
         session: VSCodeClaudeSession = {
@@ -426,20 +388,9 @@ class TestStatusDisplay:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Displays eligible issues not yet in sessions."""
-        issue: IssueData = {
-            "number": 456,
-            "title": "New issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/456",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=456, title="New issue", labels=["status-07:code-review"]
+        )
 
         eligible_issues: list[tuple[str, IssueData]] = [("myrepo", issue)]
 
@@ -461,20 +412,9 @@ class TestStatusDisplay:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Eligible issue with status-10:pr-created shows (awaiting merge) action."""
-        issue: IssueData = {
-            "number": 435,
-            "title": "PR created issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-10:pr-created"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/435",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=435, title="PR created issue", labels=["status-10:pr-created"]
+        )
 
         eligible_issues: list[tuple[str, IssueData]] = [("owner/repo", issue)]
 

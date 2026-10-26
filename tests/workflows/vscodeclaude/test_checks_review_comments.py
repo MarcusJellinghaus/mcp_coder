@@ -16,6 +16,7 @@ from mcp_coder.workflows.vscodeclaude.checks import (
     _check_review_comments,
     _review_comments_watermark,
 )
+from tests.github_factories import make_issue_data
 
 REVIEW_LABEL = "status-91:pr-review-comments"
 CREATED_LABEL = "status-10:pr-created"
@@ -77,20 +78,12 @@ def _empty_pr_feedback(**overrides: Any) -> dict[str, Any]:
 
 
 def _make_issue(number: int) -> IssueData:
-    return {
-        "number": number,
-        "title": "PR Created Issue",
-        "labels": ["status-10:pr-created"],
-        "assignees": ["testuser"],
-        "state": "open",
-        "url": f"https://github.com/owner/repo/issues/{number}",
-        "body": "",
-        "user": None,
-        "created_at": None,
-        "updated_at": None,
-        "locked": False,
-        "author_association": None,
-    }
+    return make_issue_data(
+        number=number,
+        title="PR Created Issue",
+        labels=["status-10:pr-created"],
+        assignees=["testuser"],
+    )
 
 
 MOCK_REVIEW_LABELS_CONFIG: dict[str, Any] = {

@@ -14,6 +14,7 @@ from mcp_coder.workflows.create_plan import (
     run_planning_prompts,
     validate_output_files,
 )
+from tests.github_factories import make_issue_data
 
 _CORE = "mcp_coder.workflows.create_plan.core"
 
@@ -70,19 +71,16 @@ class TestFormatInitialPrompt:
     def test_format_initial_prompt(self) -> None:
         """Test format_initial_prompt with basic issue data."""
         prompt_template = "Please analyze the following issue:"
-        issue_data = IssueData(
+        issue_data = make_issue_data(
             number=123,
             title="Test Issue",
             body="This is a test issue body",
-            state="open",
             labels=["bug"],
             assignees=["testuser"],
             user="author",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/123",
-            locked=False,
-            author_association=None,
         )
 
         result = format_initial_prompt(prompt_template, issue_data)
@@ -98,19 +96,14 @@ class TestFormatInitialPrompt:
     def test_format_initial_prompt_multiline_body(self) -> None:
         """Test format_initial_prompt with multiline issue body."""
         prompt_template = "Analyze this:"
-        issue_data = IssueData(
+        issue_data = make_issue_data(
             number=456,
             title="Multiline Issue",
             body="Line 1\nLine 2\nLine 3",
-            state="open",
-            labels=[],
-            assignees=[],
             user="author",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/456",
-            locked=False,
-            author_association=None,
         )
 
         result = format_initial_prompt(prompt_template, issue_data)
@@ -120,19 +113,13 @@ class TestFormatInitialPrompt:
     def test_format_initial_prompt_empty_body(self) -> None:
         """Test format_initial_prompt with empty issue body."""
         prompt_template = "Test prompt"
-        issue_data = IssueData(
+        issue_data = make_issue_data(
             number=789,
             title="Empty Body Issue",
-            body="",
-            state="open",
-            labels=[],
-            assignees=[],
             user="author",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-02T00:00:00",
             url="https://github.com/test/repo/issues/789",
-            locked=False,
-            author_association=None,
         )
 
         result = format_initial_prompt(prompt_template, issue_data)
@@ -144,19 +131,14 @@ class TestFormatInitialPrompt:
 
 def _make_issue_data() -> IssueData:
     """Create standard issue data for tests."""
-    return IssueData(
+    return make_issue_data(
         number=123,
         title="Test Issue",
         body="Test body",
-        state="open",
-        labels=[],
-        assignees=[],
         user="author",
         created_at="2024-01-01T00:00:00",
         updated_at="2024-01-02T00:00:00",
         url="https://github.com/test/repo/issues/123",
-        locked=False,
-        author_association=None,
     )
 
 

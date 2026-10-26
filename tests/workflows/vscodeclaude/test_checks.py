@@ -14,6 +14,7 @@ from mcp_coder.workflows.vscodeclaude.checks import (
     _resolve_pr_target,
     check_pr_health,
 )
+from tests.github_factories import make_issue_data
 
 CHECKS = "mcp_coder.workflows.vscodeclaude.checks"
 REPO_CONFIG = {"repo_url": "https://github.com/owner/repo"}
@@ -67,20 +68,12 @@ MOCK_CI_LABELS_CONFIG: dict[str, Any] = {
 
 
 def _make_pr_issue(number: int, labels: list[str] | None = None) -> IssueData:
-    return {
-        "number": number,
-        "title": "PR Created Issue",
-        "labels": labels if labels is not None else ["status-10:pr-created"],
-        "assignees": ["testuser"],
-        "state": "open",
-        "url": f"https://github.com/owner/repo/issues/{number}",
-        "body": "",
-        "user": None,
-        "created_at": None,
-        "updated_at": None,
-        "locked": False,
-        "author_association": None,
-    }
+    return make_issue_data(
+        number=number,
+        title="PR Created Issue",
+        labels=labels if labels is not None else ["status-10:pr-created"],
+        assignees=["testuser"],
+    )
 
 
 def _make_pr(number: int = 1, mergeable_state: str = "clean") -> PullRequestData:

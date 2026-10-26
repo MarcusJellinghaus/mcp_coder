@@ -1,6 +1,6 @@
 """Test issue selection and filtering for VSCode Claude."""
 
-from typing import Any, cast
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -17,6 +17,7 @@ from mcp_coder.workflows.vscodeclaude.issues import (
     is_status_eligible_for_session,
     status_requires_linked_branch,
 )
+from tests.github_factories import make_issue_data
 
 
 class TestIssueSelection:
@@ -49,48 +50,20 @@ class TestIssueSelection:
     ) -> None:
         """Only returns issues assigned to user."""
         mock_issues = [
-            {
-                "number": 1,
-                "title": "Issue 1",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["testuser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/1",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 2,
-                "title": "Issue 2",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["otheruser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/2",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 3,
-                "title": "Issue 3",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": [],  # Unassigned
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/3",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                labels=["status-07:code-review"],
+                assignees=["testuser"],
+            ),
+            make_issue_data(
+                number=2,
+                labels=["status-07:code-review"],
+                assignees=["otheruser"],
+            ),
+            make_issue_data(
+                number=3,
+                labels=["status-07:code-review"],
+                assignees=[],  # Unassigned
+            ),
         ]
 
         mock_issue_manager = Mock()
@@ -120,48 +93,13 @@ class TestIssueSelection:
     ) -> None:
         """Issues sorted by priority (later stages first)."""
         mock_issues = [
-            {
-                "number": 1,
-                "title": "Issue 1",
-                "body": "",
-                "state": "open",
-                "labels": ["status-01:created"],
-                "assignees": ["user"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/1",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 2,
-                "title": "Issue 2",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["user"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/2",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 3,
-                "title": "Issue 3",
-                "body": "",
-                "state": "open",
-                "labels": ["status-04:plan-review"],
-                "assignees": ["user"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/3",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(labels=["status-01:created"], assignees=["user"]),
+            make_issue_data(
+                number=2, labels=["status-07:code-review"], assignees=["user"]
+            ),
+            make_issue_data(
+                number=3, labels=["status-04:plan-review"], assignees=["user"]
+            ),
         ]
 
         mock_issue_manager = Mock()
@@ -195,34 +133,12 @@ class TestIssueSelection:
     ) -> None:
         """Skips issues with ignore_labels."""
         mock_issues = [
-            {
-                "number": 1,
-                "title": "Issue 1",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review", "Overview"],
-                "assignees": ["user"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/1",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 2,
-                "title": "Issue 2",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["user"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/2",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                labels=["status-07:code-review", "Overview"], assignees=["user"]
+            ),
+            make_issue_data(
+                number=2, labels=["status-07:code-review"], assignees=["user"]
+            ),
         ]
 
         mock_issue_manager = Mock()
@@ -256,62 +172,30 @@ class TestFilterEligibleVscodeclaudeIssues:
         """Filters pre-fetched issues by eligibility criteria."""
         # Pre-fetched issues list (simulating cache data)
         all_issues = [
-            {
-                "number": 1,
-                "title": "Eligible issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["testuser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/1",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 2,
-                "title": "Wrong assignee",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["otheruser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/2",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 3,
-                "title": "Closed issue",
-                "body": "",
-                "state": "closed",
-                "labels": ["status-07:code-review"],
-                "assignees": ["testuser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/3",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 4,
-                "title": "Has ignore label",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review", "Overview"],
-                "assignees": ["testuser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/4",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                title="Eligible issue",
+                labels=["status-07:code-review"],
+                assignees=["testuser"],
+            ),
+            make_issue_data(
+                number=2,
+                title="Wrong assignee",
+                labels=["status-07:code-review"],
+                assignees=["otheruser"],
+            ),
+            make_issue_data(
+                number=3,
+                title="Closed issue",
+                state="closed",
+                labels=["status-07:code-review"],
+                assignees=["testuser"],
+            ),
+            make_issue_data(
+                number=4,
+                title="Has ignore label",
+                labels=["status-07:code-review", "Overview"],
+                assignees=["testuser"],
+            ),
         ]
 
         # Mock labels config
@@ -328,10 +212,7 @@ class TestFilterEligibleVscodeclaudeIssues:
             lambda: mock_labels_config,
         )
 
-        # Filter issues - cast for mypy
-        eligible = _filter_eligible_vscodeclaude_issues(
-            cast(list[IssueData], all_issues), "testuser"
-        )
+        eligible = _filter_eligible_vscodeclaude_issues(all_issues, "testuser")
 
         # Should only have issue #1 (others filtered out)
         assert len(eligible) == 1
@@ -342,34 +223,15 @@ class TestFilterEligibleVscodeclaudeIssues:
     ) -> None:
         """Issues are sorted by VSCODECLAUDE_PRIORITY."""
         all_issues = [
-            {
-                "number": 1,
-                "title": "Created",
-                "body": "",
-                "state": "open",
-                "labels": ["status-01:created"],
-                "assignees": ["user"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/1",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 2,
-                "title": "Code review",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["user"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/2",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                title="Created", labels=["status-01:created"], assignees=["user"]
+            ),
+            make_issue_data(
+                number=2,
+                title="Code review",
+                labels=["status-07:code-review"],
+                assignees=["user"],
+            ),
         ]
 
         mock_labels_config = {
@@ -386,9 +248,7 @@ class TestFilterEligibleVscodeclaudeIssues:
             lambda: mock_labels_config,
         )
 
-        eligible = _filter_eligible_vscodeclaude_issues(
-            cast(list[IssueData], all_issues), "user"
-        )
+        eligible = _filter_eligible_vscodeclaude_issues(all_issues, "user")
 
         # Code review comes before created in priority
         assert len(eligible) == 2
@@ -404,20 +264,11 @@ class TestGetCachedEligibleVscodeclaudeIssues:
     ) -> None:
         """Calls get_all_cached_issues and filters results."""
         cached_issues = [
-            {
-                "number": 1,
-                "title": "Cached issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["testuser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/1",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                title="Cached issue",
+                labels=["status-07:code-review"],
+                assignees=["testuser"],
+            ),
         ]
 
         # Mock cache function
@@ -477,20 +328,12 @@ class TestGetCachedEligibleVscodeclaudeIssues:
 
         # Mock direct API fetch
         api_issues = [
-            {
-                "number": 99,
-                "title": "API issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-07:code-review"],
-                "assignees": ["testuser"],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "https://github.com/owner/repo/issues/99",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                number=99,
+                title="API issue",
+                labels=["status-07:code-review"],
+                assignees=["testuser"],
+            ),
         ]
         mock_issue_manager = Mock()
         mock_issue_manager.list_issues.return_value = api_issues
@@ -769,20 +612,9 @@ class TestBuildEligibleIssuesWithBranchCheck:
         )
 
         # Mock eligible issues
-        mock_issue = {
-            "number": 1,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["status-01:created"],
-            "assignees": ["testuser"],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/1",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            title="Test", labels=["status-01:created"], assignees=["testuser"]
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
             lambda **kwargs: [mock_issue],
@@ -841,20 +673,9 @@ class TestBuildEligibleIssuesWithBranchCheck:
         )
 
         # Mock issue at status-04
-        mock_issue = {
-            "number": 1,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/1",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            title="Test", labels=["status-04:plan-review"], assignees=["testuser"]
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
             lambda **kwargs: [mock_issue],
@@ -911,20 +732,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
         )
 
         # Mock issue at status-07
-        mock_issue = {
-            "number": 2,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": ["testuser"],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/2",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=2,
+            title="Test",
+            labels=["status-07:code-review"],
+            assignees=["testuser"],
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
             lambda **kwargs: [mock_issue],
@@ -979,20 +792,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
         )
 
         # Mock issue at status-04
-        mock_issue = {
-            "number": 3,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": ["testuser"],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/3",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=3,
+            title="Test",
+            labels=["status-04:plan-review"],
+            assignees=["testuser"],
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
             lambda **kwargs: [mock_issue],
@@ -1048,20 +853,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
         )
 
         # Mock issue at status-01
-        mock_issue = {
-            "number": 4,
-            "title": "Test",
-            "body": "",
-            "state": "open",
-            "labels": ["status-01:created"],
-            "assignees": ["testuser"],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/4",
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=4,
+            title="Test",
+            labels=["status-01:created"],
+            assignees=["testuser"],
+        )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_cached_eligible_vscodeclaude_issues",
             lambda **kwargs: [mock_issue],
@@ -1117,24 +914,17 @@ class TestBuildEligibleIssuesWithBranchCheck:
         )
 
         # Mock get_cached_eligible_vscodeclaude_issues to fail for bad-repo
-        def mock_get_cached(repo_full_name: str, **kwargs: Any) -> list[dict[str, Any]]:
+        def mock_get_cached(repo_full_name: str, **kwargs: Any) -> list[IssueData]:
             if "bad" in repo_full_name:
                 raise RuntimeError("API error")
             return [
-                {
-                    "number": 5,
-                    "title": "Good issue",
-                    "body": "",
-                    "state": "open",
-                    "labels": ["status-01:created"],
-                    "assignees": ["testuser"],
-                    "user": None,
-                    "created_at": None,
-                    "updated_at": None,
-                    "url": "https://github.com/owner/good/issues/5",
-                    "locked": False,
-                    "author_association": None,
-                }
+                make_issue_data(
+                    number=5,
+                    title="Good issue",
+                    labels=["status-01:created"],
+                    assignees=["testuser"],
+                    url="https://github.com/owner/good/issues/5",
+                )
             ]
 
         monkeypatch.setattr(

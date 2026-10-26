@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData
 from mcp_coder.workflows.vscodeclaude.session_launch import (
     launch_vscode,
     prepare_and_launch_session,
@@ -18,6 +17,7 @@ from mcp_coder.workflows.vscodeclaude.types import (
     RepoVSCodeClaudeConfig,
     VSCodeClaudeConfig,
 )
+from tests.github_factories import make_issue_data
 
 
 class TestMCPEnvironmentVariablesBugFix:
@@ -155,20 +155,12 @@ class TestMCPEnvironmentVariablesBugFix:
         )
 
         # Prepare test data
-        issue_data: IssueData = {
-            "number": 123,
-            "title": "Test Issue",
-            "url": "https://github.com/owner/test-repo/issues/123",
-            "labels": ["status-01:created"],
-            "assignees": [],
-            "state": "open",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        issue_data = make_issue_data(
+            number=123,
+            title="Test Issue",
+            url="https://github.com/owner/test-repo/issues/123",
+            labels=["status-01:created"],
+        )
 
         repo_config = {"repo_url": "https://github.com/owner/test-repo"}
         vscodeclaude_config: VSCodeClaudeConfig = {

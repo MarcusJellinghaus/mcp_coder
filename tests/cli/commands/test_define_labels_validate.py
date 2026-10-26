@@ -14,6 +14,7 @@ import pytest
 
 from mcp_coder.cli.commands.define_labels import validate_issues
 from mcp_coder.mcp_workspace_github import IssueData
+from tests.github_factories import make_issue_data
 
 
 class TestValidateIssues:
@@ -55,20 +56,12 @@ class TestValidateIssues:
     ) -> None:
         """Test that issues with multiple status labels are reported as errors."""
         issues: list[IssueData] = [
-            {
-                "number": 23,
-                "title": "Issue with multiple labels",
-                "body": "",
-                "state": "open",
-                "labels": ["status-01:created", "status-03:planning"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            }
+            make_issue_data(
+                number=23,
+                title="Issue with multiple labels",
+                labels=["status-01:created", "status-03:planning"],
+                url="",
+            )
         ]
 
         mock_issue_manager = MagicMock()
@@ -90,20 +83,12 @@ class TestValidateIssues:
     ) -> None:
         """Test that stale bot_busy processes are reported as warnings."""
         issues: list[IssueData] = [
-            {
-                "number": 78,
-                "title": "Stale implementing issue",
-                "body": "",
-                "state": "open",
-                "labels": ["status-06:implementing"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            }
+            make_issue_data(
+                number=78,
+                title="Stale implementing issue",
+                labels=["status-06:implementing"],
+                url="",
+            )
         ]
 
         # Create event timestamp 150 minutes ago (over 120 min threshold)
@@ -135,34 +120,17 @@ class TestValidateIssues:
     ) -> None:
         """Test that valid issues pass validation without errors or warnings."""
         issues: list[IssueData] = [
-            {
-                "number": 1,
-                "title": "Valid issue with human_action label",
-                "body": "",
-                "state": "open",
-                "labels": ["status-01:created"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
-            {
-                "number": 2,
-                "title": "Valid issue with fresh bot_busy label",
-                "body": "",
-                "state": "open",
-                "labels": ["status-06:implementing"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            },
+            make_issue_data(
+                title="Valid issue with human_action label",
+                labels=["status-01:created"],
+                url="",
+            ),
+            make_issue_data(
+                number=2,
+                title="Valid issue with fresh bot_busy label",
+                labels=["status-06:implementing"],
+                url="",
+            ),
         ]
 
         # Create event timestamp 10 minutes ago (under 120 min threshold)
@@ -190,20 +158,12 @@ class TestValidateIssues:
     ) -> None:
         """Test that staleness checks run even in dry-run mode."""
         issues: list[IssueData] = [
-            {
-                "number": 100,
-                "title": "Stale issue in dry run",
-                "body": "",
-                "state": "open",
-                "labels": ["status-06:implementing"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            }
+            make_issue_data(
+                number=100,
+                title="Stale issue in dry run",
+                labels=["status-06:implementing"],
+                url="",
+            )
         ]
 
         # Create stale timestamp
@@ -245,20 +205,12 @@ class TestValidateIssues:
         )
 
         issues: list[IssueData] = [
-            {
-                "number": 50,
-                "title": "Issue with unconfigured timeout",
-                "body": "",
-                "state": "open",
-                "labels": ["status-09:pr-creating"],
-                "assignees": [],
-                "user": None,
-                "created_at": None,
-                "updated_at": None,
-                "url": "",
-                "locked": False,
-                "author_association": None,
-            }
+            make_issue_data(
+                number=50,
+                title="Issue with unconfigured timeout",
+                labels=["status-09:pr-creating"],
+                url="",
+            )
         ]
 
         mock_issue_manager = MagicMock()

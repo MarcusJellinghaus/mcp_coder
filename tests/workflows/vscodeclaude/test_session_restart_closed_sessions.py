@@ -21,6 +21,7 @@ from mcp_coder.workflows.vscodeclaude.types import (
     SessionAssessment,
     Transition,
 )
+from tests.github_factories import make_issue_data
 
 
 def _make_assessment(
@@ -144,20 +145,12 @@ class TestRestartClosedSessionsBranchHandling:
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
 
-        cached_issue: IssueData = {
-            "number": 123,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-01:created"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=123,
+            title="Test",
+            labels=["status-01:created"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
         }
@@ -226,20 +219,12 @@ class TestRestartClosedSessionsBranchHandling:
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
 
-        cached_issue: IssueData = {
-            "number": 456,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=456,
+            title="Test",
+            labels=["status-04:plan-review"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {456: cached_issue}
         }
@@ -310,20 +295,12 @@ class TestRestartClosedSessionsBranchHandling:
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
 
-        cached_issue: IssueData = {
-            "number": 789,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-07:code-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=789,
+            title="Test",
+            labels=["status-07:code-review"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {789: cached_issue}
         }
@@ -439,20 +416,11 @@ class TestRestartClosedSessionsBranchHandling:
         sessions_file.write_text(json.dumps(store))
 
         # Issue is now at status-04
-        cached_issue: IssueData = {
-            "number": 123,
-            "title": "Test Issue",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/123",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-04:plan-review"],
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {123: cached_issue}
         }
@@ -504,20 +472,12 @@ class TestRestartClosedSessionsBranchHandling:
         store = {"sessions": [session], "last_updated": ""}
         sessions_file.write_text(json.dumps(store))
 
-        cached_issue: IssueData = {
-            "number": 999,
-            "title": "Test",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        cached_issue = make_issue_data(
+            number=999,
+            title="Test",
+            labels=["status-04:plan-review"],
+            url="",
+        )
         cached_issues: dict[str, dict[int, IssueData]] = {
             "owner/repo": {999: cached_issue}
         }
@@ -557,20 +517,11 @@ class TestRestartClosedSessionsBranchHandling:
             "is_intervention": False,
         }
 
-        issue: IssueData = {
-            "number": 123,
-            "title": "Test Issue",
-            "state": "open",
-            "labels": ["status-04:plan-review"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "https://github.com/owner/repo/issues/123",
-            "body": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-04:plan-review"],
+        )
 
         # Track execute_subprocess calls
         execute_calls: list[list[str]] = []

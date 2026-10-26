@@ -22,6 +22,7 @@ from mcp_coder.cli.commands.coordinator.issue_stats import (
     validate_issue_labels,
 )
 from mcp_coder.mcp_workspace_github import IssueData
+from tests.github_factories import make_issue_data
 
 
 # Test fixtures
@@ -41,19 +42,14 @@ def test_labels_config(tmp_path: Path) -> dict[str, Any]:
 @pytest.fixture
 def sample_issue() -> IssueData:
     """Create a sample IssueData for testing."""
-    return IssueData(
+    return make_issue_data(
         number=123,
         title="Test issue",
         body="Test body",
-        state="open",
         labels=["status-01:created"],
-        assignees=[],
         user="testuser",
         created_at="2024-01-01T00:00:00",
         updated_at="2024-01-01T00:00:00",
-        url="https://github.com/owner/repo/issues/123",
-        locked=False,
-        author_association=None,
     )
 
 
@@ -61,89 +57,59 @@ def sample_issue() -> IssueData:
 def sample_issues() -> list[IssueData]:
     """Create a list of sample issues for testing."""
     return [
-        IssueData(
+        make_issue_data(
             number=1,
             title="Issue with status-01",
             body="Body 1",
-            state="open",
             labels=["status-01:created", "bug"],
-            assignees=[],
             user="user1",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-01T00:00:00",
-            url="https://github.com/owner/repo/issues/1",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=2,
             title="Issue with status-04",
             body="Body 2",
-            state="open",
             labels=["status-04:plan-review"],
-            assignees=[],
             user="user2",
             created_at="2024-01-02T00:00:00",
             updated_at="2024-01-02T00:00:00",
-            url="https://github.com/owner/repo/issues/2",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=3,
             title="Issue with status-02",
             body="Body 3",
-            state="open",
             labels=["status-02:awaiting-planning", "enhancement"],
-            assignees=[],
             user="user3",
             created_at="2024-01-03T00:00:00",
             updated_at="2024-01-03T00:00:00",
-            url="https://github.com/owner/repo/issues/3",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=4,
             title="Issue with status-06",
             body="Body 4",
-            state="open",
             labels=["status-06:implementing"],
-            assignees=[],
             user="user4",
             created_at="2024-01-04T00:00:00",
             updated_at="2024-01-04T00:00:00",
-            url="https://github.com/owner/repo/issues/4",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=5,
             title="Issue without status label",
             body="Body 5",
-            state="open",
             labels=["bug", "enhancement"],
-            assignees=[],
             user="user5",
             created_at="2024-01-05T00:00:00",
             updated_at="2024-01-05T00:00:00",
-            url="https://github.com/owner/repo/issues/5",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=6,
             title="Issue with multiple status labels",
             body="Body 6",
-            state="open",
             labels=["status-01:created", "status-04:plan-review"],
-            assignees=[],
             user="user6",
             created_at="2024-01-06T00:00:00",
             updated_at="2024-01-06T00:00:00",
-            url="https://github.com/owner/repo/issues/6",
-            locked=False,
-            author_association=None,
         ),
     ]
 
@@ -175,19 +141,12 @@ def test_validate_issue_labels_single_valid(sample_issue: IssueData) -> None:
 
 def test_validate_issue_labels_no_status() -> None:
     """Test validation with no status label."""
-    issue = IssueData(
-        number=1,
+    issue = make_issue_data(
         title="Test",
-        body="",
-        state="open",
         labels=["bug", "enhancement"],
-        assignees=[],
         user="user",
         created_at="2024-01-01T00:00:00",
         updated_at="2024-01-01T00:00:00",
-        url="https://github.com/owner/repo/issues/1",
-        locked=False,
-        author_association=None,
     )
     valid_labels = {"status-01:created", "status-02:awaiting-planning"}
     is_valid, error_type = validate_issue_labels(issue, valid_labels)
@@ -197,19 +156,12 @@ def test_validate_issue_labels_no_status() -> None:
 
 def test_validate_issue_labels_multiple_status() -> None:
     """Test validation with multiple status labels."""
-    issue = IssueData(
-        number=1,
+    issue = make_issue_data(
         title="Test",
-        body="",
-        state="open",
         labels=["status-01:created", "status-02:awaiting-planning", "bug"],
-        assignees=[],
         user="user",
         created_at="2024-01-01T00:00:00",
         updated_at="2024-01-01T00:00:00",
-        url="https://github.com/owner/repo/issues/1",
-        locked=False,
-        author_association=None,
     )
     valid_labels = {"status-01:created", "status-02:awaiting-planning"}
     is_valid, error_type = validate_issue_labels(issue, valid_labels)
@@ -239,33 +191,20 @@ def test_filter_ignored_issues_with_ignored_labels(
 def test_filter_ignored_issues_labels_with_spaces() -> None:
     """Test filtering with labels containing spaces."""
     issues = [
-        IssueData(
-            number=1,
+        make_issue_data(
             title="Test 1",
-            body="",
-            state="open",
             labels=["on hold", "status-01:created"],
-            assignees=[],
             user="user",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-01T00:00:00",
-            url="https://github.com/owner/repo/issues/1",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=2,
             title="Test 2",
-            body="",
-            state="open",
             labels=["status-02:awaiting-planning"],
-            assignees=[],
             user="user",
             created_at="2024-01-02T00:00:00",
             updated_at="2024-01-02T00:00:00",
-            url="https://github.com/owner/repo/issues/2",
-            locked=False,
-            author_association=None,
         ),
     ]
     filtered = filter_ignored_issues(issues, ["on hold"])
@@ -338,19 +277,12 @@ def test_group_issues_by_category_zero_counts_included(
     """Test that labels with zero issues are included in the structure."""
     # Create only one issue
     issues = [
-        IssueData(
-            number=1,
+        make_issue_data(
             title="Test",
-            body="",
-            state="open",
             labels=["status-01:created"],
-            assignees=[],
             user="user",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-01T00:00:00",
-            url="https://github.com/owner/repo/issues/1",
-            locked=False,
-            author_association=None,
         )
     ]
 
@@ -382,19 +314,13 @@ def test_format_issue_line_normal(sample_issue: IssueData) -> None:
 
 def test_format_issue_line_long_title() -> None:
     """Test formatting issue line with long title that needs truncation."""
-    issue = IssueData(
+    issue = make_issue_data(
         number=456,
         title="A" * 100,  # Very long title
-        body="",
-        state="open",
         labels=["status-01:created"],
-        assignees=[],
         user="user",
         created_at="2024-01-01T00:00:00",
         updated_at="2024-01-01T00:00:00",
-        url="https://github.com/owner/repo/issues/456",
-        locked=False,
-        author_association=None,
     )
     repo_url = "https://github.com/owner/repo"
     line = format_issue_line(issue, repo_url, max_title_length=80)
@@ -564,47 +490,28 @@ def test_ignore_labels_integration_with_filtering() -> None:
     """
     # Create test issues with various labels
     issues = [
-        IssueData(
-            number=1,
+        make_issue_data(
             title="Active issue",
-            body="",
-            state="open",
             labels=["status-01:created", "bug"],
-            assignees=[],
             user="user1",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-01T00:00:00",
-            url="https://github.com/owner/repo/issues/1",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=2,
             title="Won't fix issue",
-            body="",
-            state="open",
             labels=["status-02:awaiting-planning", "wontfix"],
-            assignees=[],
             user="user2",
             created_at="2024-01-02T00:00:00",
             updated_at="2024-01-02T00:00:00",
-            url="https://github.com/owner/repo/issues/2",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=3,
             title="On hold issue",
-            body="",
-            state="open",
             labels=["status-04:plan-review", "on hold"],
-            assignees=[],
             user="user3",
             created_at="2024-01-03T00:00:00",
             updated_at="2024-01-03T00:00:00",
-            url="https://github.com/owner/repo/issues/3",
-            locked=False,
-            author_association=None,
         ),
     ]
 
@@ -628,33 +535,18 @@ def test_ignore_labels_with_labels_containing_special_characters() -> None:
     script handle these correctly.
     """
     issues = [
-        IssueData(
-            number=1,
-            title="Issue 1",
-            body="",
-            state="open",
+        make_issue_data(
             labels=["status-01:created", "type:bug-fix"],
-            assignees=[],
             user="user1",
             created_at="2024-01-01T00:00:00",
             updated_at="2024-01-01T00:00:00",
-            url="https://github.com/owner/repo/issues/1",
-            locked=False,
-            author_association=None,
         ),
-        IssueData(
+        make_issue_data(
             number=2,
-            title="Issue 2",
-            body="",
-            state="open",
             labels=["status-02:awaiting-planning", "priority: low"],
-            assignees=[],
             user="user2",
             created_at="2024-01-02T00:00:00",
             updated_at="2024-01-02T00:00:00",
-            url="https://github.com/owner/repo/issues/2",
-            locked=False,
-            author_association=None,
         ),
     ]
 

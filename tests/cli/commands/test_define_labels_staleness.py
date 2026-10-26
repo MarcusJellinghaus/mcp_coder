@@ -12,7 +12,7 @@ from mcp_coder.cli.commands.define_labels import (
     calculate_elapsed_minutes,
     check_stale_bot_process,
 )
-from mcp_coder.mcp_workspace_github import IssueData
+from tests.github_factories import make_issue_data
 
 
 class TestCalculateElapsedMinutes:
@@ -58,20 +58,9 @@ class TestCheckStaleBotProcess:
 
     def test_returns_false_when_under_threshold(self) -> None:
         """Test that returns False when elapsed time is under threshold."""
-        issue: IssueData = {
-            "number": 1,
-            "title": "Test issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-06:implementing"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            title="Test issue", labels=["status-06:implementing"], url=""
+        )
 
         # Create event timestamp 10 minutes ago (under 120 min threshold)
         recent_timestamp = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
@@ -96,20 +85,9 @@ class TestCheckStaleBotProcess:
 
     def test_returns_true_when_over_threshold(self) -> None:
         """Test that returns True when elapsed time is over threshold."""
-        issue: IssueData = {
-            "number": 2,
-            "title": "Stale issue",
-            "body": "",
-            "state": "open",
-            "labels": ["status-06:implementing"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=2, title="Stale issue", labels=["status-06:implementing"], url=""
+        )
 
         # Create event timestamp 150 minutes ago (over 120 min threshold)
         stale_timestamp = (datetime.now(UTC) - timedelta(minutes=150)).isoformat()
@@ -134,20 +112,12 @@ class TestCheckStaleBotProcess:
 
     def test_returns_none_when_no_labeled_event(self) -> None:
         """Test that returns None when no matching labeled event found."""
-        issue: IssueData = {
-            "number": 3,
-            "title": "Issue without events",
-            "body": "",
-            "state": "open",
-            "labels": ["status-06:implementing"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=3,
+            title="Issue without events",
+            labels=["status-06:implementing"],
+            url="",
+        )
 
         mock_issue_manager = MagicMock()
         mock_issue_manager.get_issue_events.return_value = []  # No events
@@ -161,20 +131,12 @@ class TestCheckStaleBotProcess:
 
     def test_returns_false_when_timeout_not_configured(self) -> None:
         """Test that returns False when timeout is None (not configured)."""
-        issue: IssueData = {
-            "number": 4,
-            "title": "Issue with unconfigured timeout",
-            "body": "",
-            "state": "open",
-            "labels": ["status-06:implementing"],
-            "assignees": [],
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "url": "",
-            "locked": False,
-            "author_association": None,
-        }
+        issue = make_issue_data(
+            number=4,
+            title="Issue with unconfigured timeout",
+            labels=["status-06:implementing"],
+            url="",
+        )
 
         mock_issue_manager = MagicMock()
 

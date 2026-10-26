@@ -13,6 +13,7 @@ from mcp_coder.workflows.vscodeclaude.session_launch import (
     process_eligible_issues,
 )
 from mcp_coder.workflows.vscodeclaude.workspace import create_status_file
+from tests.github_factories import make_issue_data
 
 
 class TestLaunch:
@@ -230,20 +231,12 @@ class TestSkipGithubInstallThreading:
         folder_path = tmp_path / "repo_42"
         folder_path.mkdir()
 
-        mock_issue: IssueData = {
-            "number": 42,
-            "title": "Test",
-            "labels": ["status-01:created"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/42",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=42,
+            title="Test",
+            labels=["status-01:created"],
+            assignees=["testuser"],
+        )
 
         # Mock all workspace functions
         monkeypatch.setattr(
@@ -317,20 +310,12 @@ class TestSkipGithubInstallThreading:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """process_eligible_issues passes skip_github_install=True to prepare_and_launch_session."""
-        mock_issue: IssueData = {
-            "number": 123,
-            "title": "Test Issue",
-            "labels": ["status-01:created"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/123",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        mock_issue = make_issue_data(
+            number=123,
+            title="Test Issue",
+            labels=["status-01:created"],
+            assignees=["testuser"],
+        )
 
         mock_issue_manager = MagicMock()
         mock_branch_manager = MagicMock()
@@ -450,20 +435,12 @@ class TestSetupCommandsResolution:
 
     @staticmethod
     def _make_issue() -> IssueData:
-        return {
-            "number": 42,
-            "title": "Test",
-            "labels": ["status-01:created"],
-            "assignees": ["testuser"],
-            "state": "open",
-            "url": "https://github.com/owner/repo/issues/42",
-            "body": "",
-            "user": None,
-            "created_at": None,
-            "updated_at": None,
-            "locked": False,
-            "author_association": None,
-        }
+        return make_issue_data(
+            number=42,
+            title="Test",
+            labels=["status-01:created"],
+            assignees=["testuser"],
+        )
 
     @pytest.mark.parametrize(
         "platform_name,repo_cfg,expected_commands",
