@@ -9,3 +9,11 @@ pr_info/steps/summary.md:32 — medium — The plan drops `test_issues_eligibili
 Verdict(decision='tasks', tasks=["Realign the plan with the issue's Target layout and its one-test-file-per-section Split axis decision. In pr_info/steps/summary.md (around line 32), restore `test_issues_eligibility.py` as a target file, and drop the rationale for keeping the eligibility classes in `test_issues.py`.", 'Update step 1 so it also moves `TestIssueSelection`, `TestFilterEligibleVscodeclaudeIssues` and `TestGetCachedEligibleVscodeclaudeIssues` into `test_issues_eligibility.py`.', 'Change the expected test counts in step_1.md:53 and step_2.md:59 to 32 / 8 / 9 so they match the restored layout.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-10-26
+**Findings**:
+Checking whether `test_core.py` still uses `IssueData`/`make_issue_data` after the move.NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
