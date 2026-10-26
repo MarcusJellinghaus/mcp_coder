@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Move validation tests to `test_task_tracker_validation.py`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: move `TestValidateTaskTracker`, `TestTaskTrackerTemplate` via `move_symbol`; verify imports, counts (9 / 13) and final verification list
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestValidateTaskTracker`, `TestTaskTrackerTemplate` via `move_symbol`; verify imports, counts (9 / 13) and final verification list
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
