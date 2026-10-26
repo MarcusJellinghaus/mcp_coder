@@ -3,7 +3,8 @@
 This module is intentionally dependency-free: it imports nothing from within
 ``mcp_coder.cli`` (only stdlib/typing). Both the categorized help overview
 (``cli/commands/help.py``) and the individual subparsers
-(``cli/parsers.py`` / ``cli/gh_parsers.py``) read from these constants, so a
+(``cli/parsers.py`` / ``cli/workflow_parsers.py`` / ``cli/interactive_parsers.py`` /
+``cli/gh_parsers.py``) read from these constants, so a
 command's description cannot drift between the two.
 """
 

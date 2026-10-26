@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Split `src/mcp_coder/cli/parsers.py` into three modules — [step_1.md](./steps/step_1.md)
-- [ ] Implementation: move workflow/interactive parser functions to `workflow_parsers.py` / `interactive_parsers.py`, update `main.py` imports, `command_catalog.py` docstring, `.large-files-allowlist`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move workflow/interactive parser functions to `workflow_parsers.py` / `interactive_parsers.py`, update `main.py` imports, `command_catalog.py` docstring, `.large-files-allowlist`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Split `tests/cli/test_parsers.py` to mirror the parser modules — [step_2.md](./steps/step_2.md)
 - [ ] Implementation: move test classes to `test_workflow_parsers.py`, `test_interactive_parsers.py`, `test_gh_parsers.py`; verify collect counts
