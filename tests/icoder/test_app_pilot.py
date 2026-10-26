@@ -114,9 +114,6 @@ async def test_shift_enter_newline(icoder_app: ICoderApp) -> None:
         assert "\n" in input_area.text
 
 
-# --- Streaming buffer regression tests (a–e + edge cases) ---
-
-
 async def _submit_and_wait(
     app: ICoderApp, pilot: Pilot[Any], text: str = "test"
 ) -> None:
@@ -127,9 +124,6 @@ async def _submit_and_wait(
     input_area.insert(text)
     await pilot.press("enter")
     await pilot.pause(delay=0.5)
-
-
-# --- Streaming edge-case regression tests (f–h) ---
 
 
 async def test_tui_renders_runtime_info_on_mount(
@@ -311,18 +305,6 @@ async def test_token_display_hidden_after_stream_without_usage(
         assert token_widget.has_class("hidden")
 
 
-# --- BusyIndicator integration tests ---
-
-
-# --- Plain text rendering tests (Step 3) ---
-
-
-# --- Cancel / Escape key tests ---
-
-
-# --- Step 9: append_unit migration (clickable units + orphan cleanup) ---
-
-
 # --- Step 3: skill_name threading + permission_warning render ---
 
 
@@ -459,8 +441,6 @@ async def test_resume_path_skips_startup_notices(
         assert "is disabled" not in text
 
 
-# --- Step 9: approval_request branch + the direct UI -> engine cancel channel ---
-
 _APPROVAL_TOOL = "mcp__srv__do_it"
 
 
@@ -490,11 +470,6 @@ class _RecordingEngine(ApprovalEngine):
 
     def cancel_all(self) -> None:
         self.cancel_calls += 1
-
-
-# --- #1046 step 2: ApprovalModal pushed directly (no stream wiring yet) ---
-
-# --- #1046 step 3: modal pushed from the stream + once/session scopes applied ---
 
 
 def _isolate_user_layer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -533,8 +508,3 @@ async def _open_modal_and_press(
     assert isinstance(app.screen, ApprovalModal)
     await pilot.press(key)
     await pilot.pause()
-
-
-# --- #1046 step 5: persist choice writes .icoder/settings.local.json ---
-
-# --- Step 10: shutdown hook + closed-app guard (R9) ---

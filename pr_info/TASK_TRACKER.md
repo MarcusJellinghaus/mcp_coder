@@ -67,9 +67,9 @@ See [step_7.md](./steps/step_7.md)
 
 ### Step 8: Banner cleanup, allowlist removal, final verification
 See [step_8.md](./steps/step_8.md)
-- [ ] Implementation: delete the 11 stale banners, remove `tests/icoder/test_app_pilot.py` from `.large-files-allowlist`, run full verification
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: delete the 11 stale banners, remove `tests/icoder/test_app_pilot.py` from `.large-files-allowlist`, run full verification
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: compact diff against base branch shows only moves, import changes, `pytestmark` lines, deleted banners and the allowlist line
