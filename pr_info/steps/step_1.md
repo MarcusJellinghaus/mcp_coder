@@ -36,7 +36,7 @@ No functions are created or changed.
 ```
 before = collect-only counts: test_commit_operations.py, tests/workflow_utils/
 move_symbol dry run -> if it touches files other than source/dest: write one line to pr_info/.blocked.txt and stop
-move_symbol apply; read both file headers; fix imports (ruff_fix F401 / add missing)
+move_symbol apply; read both file headers; fix imports (ruff_fix F401 with target_directories=["tests/workflow_utils/test_commit_operations.py", "tests/workflow_utils/test_commit_operations_parsing.py"] / add missing)
 remove allowlist entry
 run standard checks; compare counts to DATA
 ```

@@ -41,7 +41,7 @@ The same-named class in `tests/workflow_utils/test_commit_operations.py` stays w
 ```
 before = collect-only counts: test_commit.py, tests/cli/commands/, tests/workflow_utils/
 move_symbol dry run -> touches test_commit_operations.py or any file besides source/dest: write one line to pr_info/.blocked.txt and stop
-move_symbol apply; read both file headers; fix imports (ruff_fix F401 / add missing)
+move_symbol apply; read both file headers; fix imports (ruff_fix F401 with target_directories=["tests/cli/commands/test_commit.py", "tests/workflow_utils/test_commit_operations_parsing.py"] / add missing)
 run standard checks; compare counts to DATA
 ```
 

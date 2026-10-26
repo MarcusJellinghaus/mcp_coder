@@ -37,7 +37,11 @@
     (`_push_after_commit` dropped), `create_parser`.
   - `test_commit_push.py`: `argparse`, `logging`, `Path`, `Mock`, `patch`, `pytest`,
     `from mcp_coder.cli.commands.commit import _push_after_commit, execute_commit_auto`.
-    Keep only what is actually used, removing stale ones with `run_ruff_fix(select=["F401"])`.
+    Keep only what is actually used, removing stale ones with
+    `run_ruff_fix(select=["F401"], target_directories=["tests/cli/commands/test_commit.py", "tests/cli/commands/test_commit_push.py"])`.
+- After all moves and the import fix, `test_commit.py` must not import from `test_commit_push`
+  (moving `MODULE` first makes `move_symbol` add a temporary `MODULE` import there). If it
+  still does → write one line to `pr_info/.blocked.txt` and stop.
 - `.large-files-allowlist`: delete the line `tests/cli/commands/test_commit.py`.
 - `vulture_whitelist.py:136`:
   `# test_commit.py - @patch decorator parameters for push tests` →
@@ -49,7 +53,9 @@
 before = collect-only counts: test_commit.py, tests/cli/commands/
 move MODULE (dry run, apply); move both push classes (dry run, apply)
 verify MODULE precedes classes and no import from test_commit; else write one line to pr_info/.blocked.txt and stop
-fix imports (ruff_fix F401 / add missing); edit allowlist + vulture comment
+fix imports (ruff_fix F401 with target_directories=[test_commit.py, test_commit_push.py] / add missing)
+verify test_commit.py has no import from test_commit_push; else write one line to pr_info/.blocked.txt and stop
+edit allowlist + vulture comment
 run standard checks; compare counts to DATA; check_file_size reports no stale entries
 ```
 

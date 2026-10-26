@@ -18,8 +18,9 @@ Get both allowlisted test files under 750 lines and off `.large-files-allowlist`
   (always `dry_run=true` first, always pass `source_file` explicitly), `find_references`.
 - `move_symbol` dry runs don't show the import lines it writes → read the header of every
   touched file after each move.
-- Leftover unused imports → `mcp__mcp-tools-py__run_ruff_fix(select=["F401"])`. Missing
-  imports → add by `edit_file` (import lines only).
+- Leftover unused imports → `mcp__mcp-tools-py__run_ruff_fix(select=["F401"],
+  target_directories=[<source file>, <destination file>])` — only the files the step touches,
+  never the whole project. Missing imports → add by `edit_file` (import lines only).
 - No new module docstrings (`D` ignored for `tests/**`; pylint `C` disabled), no stubs,
   no re-exports.
 - Sources untouched: `src/mcp_coder/cli/commands/commit.py`,
