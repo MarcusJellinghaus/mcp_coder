@@ -69,6 +69,7 @@ from mcp_workspace.git_operations.remotes import (
 # Repository status
 from mcp_workspace.git_operations.repository_status import (
     get_full_status,
+    get_working_tree_status,
     is_git_repository,
     is_working_directory_clean,
 )
@@ -125,4 +126,5 @@ __all__ = [
     "unstage_paths",
     "pull",
     "clone_repo",
+    "get_working_tree_status",
 ]

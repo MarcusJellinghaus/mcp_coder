@@ -5,8 +5,8 @@ from pathlib import Path
 
 from tabulate import tabulate
 
+from ...mcp_workspace_git import get_working_tree_status, is_git_repository
 from ...mcp_workspace_github import IssueData, IssueManager
-from ...utils.subprocess_runner import CommandOptions, execute_subprocess
 from .helpers import get_issue_status, load_to_be_deleted
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
 from .types import SessionAction, SessionAssessment, VSCodeClaudeSession
@@ -173,20 +173,14 @@ def get_folder_git_status(folder_path: Path) -> str:
     if not folder_path.exists():
         return "Missing"
 
-    options = CommandOptions(cwd=str(folder_path), check=True)
-
-    # Check if git repo
-    try:
-        execute_subprocess(["git", "rev-parse", "--git-dir"], options)
-    except Exception:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    if not is_git_repository(folder_path):
         return "No Git"
 
-    # Check for changes
-    try:
-        result = execute_subprocess(["git", "status", "--porcelain"], options)
-        return "Dirty" if result.stdout.strip() else "Clean"
-    except Exception:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    status = get_working_tree_status(folder_path)
+    if not status["success"]:
+        # Never read a git failure as clean
         return "Error"
+    return "Clean" if status["clean"] else "Dirty"
 
 
 def check_folder_dirty(folder_path: Path) -> bool:
