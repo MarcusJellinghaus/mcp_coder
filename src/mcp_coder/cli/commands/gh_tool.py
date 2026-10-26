@@ -12,10 +12,10 @@ from mcp_coder.mcp_workspace_git import (
     checkout_branch,
     fetch_remote,
     get_repository_identifier,
+    list_remote_branches,
 )
 
 from ...mcp_workspace_github import IssueBranchManager, IssueManager
-from ...utils.subprocess_runner import execute_command
 from ...workflow_utils.base_branch import detect_base_branch
 from ...workflows.utils import resolve_project_dir
 
@@ -88,11 +88,9 @@ def _find_precreate_candidates(
         return None
     linked, closing_prs = lookup
 
-    ls_result = execute_command(
-        ["git", "ls-remote", "--heads", "origin"], cwd=str(project_dir)
-    )
-    if ls_result.return_code != 0:
-        logger.error("git ls-remote failed: %s", ls_result.stderr)
+    remote = list_remote_branches(project_dir)
+    if not remote["success"]:
+        logger.error("git ls-remote failed: %s", remote["stderr"] or remote["error"])
         return None
 
     pattern = re.compile(rf"(^|/){issue_number}[-_]")
@@ -103,8 +101,7 @@ def _find_precreate_candidates(
         candidates.setdefault(
             pr.head_ref_name, f"closing PR #{pr.number} -> {pr.head_ref_name}"
         )
-    for line in ls_result.stdout.splitlines():
-        name = line.split("\t")[-1].removeprefix("refs/heads/")
+    for name in remote["branches"]:
         if pattern.search(name):
             candidates.setdefault(name, f"remote branch {name}")
     return candidates

@@ -9,7 +9,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.cli.commands.gh_tool import execute_checkout_issue_branch
+from mcp_coder.cli.commands.gh_tool import (
+    _find_precreate_candidates,
+    execute_checkout_issue_branch,
+)
 
 # ============================================================================
 # Fixtures for checkout-issue-branch
@@ -55,11 +58,30 @@ def mock_repo_identifier() -> Generator[MagicMock, None, None]:
         yield mock
 
 
+def _remote_result(*branches: str, success: bool = True) -> dict[str, Any]:
+    """Build a ``list_remote_branches`` result for the given branch names."""
+    if not success:
+        return {
+            "success": False,
+            "error": "git ls-remote failed (exit 1)",
+            "returncode": 1,
+            "stderr": "fatal: no remote",
+            "branches": [],
+        }
+    return {
+        "success": True,
+        "error": None,
+        "returncode": 0,
+        "stderr": "",
+        "branches": list(branches),
+    }
+
+
 @pytest.fixture
-def mock_execute_command() -> Generator[MagicMock, None, None]:
-    """Mock execute_command for git ls-remote (success, no branches)."""
-    with patch("mcp_coder.cli.commands.gh_tool.execute_command") as mock:
-        mock.return_value = MagicMock(return_code=0, stdout="", stderr="")
+def mock_list_remote_branches() -> Generator[MagicMock, None, None]:
+    """Mock list_remote_branches (success, no branches)."""
+    with patch("mcp_coder.cli.commands.gh_tool.list_remote_branches") as mock:
+        mock.return_value = _remote_result()
         yield mock
 
 
@@ -85,7 +107,7 @@ def checkout_mocks(
     mock_issue_manager: MagicMock,
     mock_branch_manager: MagicMock,
     mock_repo_identifier: MagicMock,
-    mock_execute_command: MagicMock,
+    mock_list_remote_branches: MagicMock,
     mock_fetch_remote: MagicMock,
     mock_checkout_branch: MagicMock,
 ) -> dict[str, MagicMock]:
@@ -95,15 +117,10 @@ def checkout_mocks(
         "issue": mock_issue_manager,
         "branch": mock_branch_manager,
         "repo_id": mock_repo_identifier,
-        "exec": mock_execute_command,
+        "remote": mock_list_remote_branches,
         "fetch": mock_fetch_remote,
         "checkout": mock_checkout_branch,
     }
-
-
-def _ls_remote_stdout(*branches: str) -> str:
-    """Build ``git ls-remote --heads`` output for the given branch names."""
-    return "".join(f"abc123\trefs/heads/{b}\n" for b in branches)
 
 
 # ============================================================================
@@ -162,9 +179,7 @@ class TestCheckoutIssueBranchExitCodes:
         assert result == 0
         captured = capsys.readouterr()
         assert captured.out.strip() == "456-new-feature"
-        checkout_mocks["exec"].assert_called_once_with(
-            ["git", "ls-remote", "--heads", "origin"], cwd=str(Path("/test/project"))
-        )
+        checkout_mocks["remote"].assert_called_once_with(Path("/test/project"))
 
     def test_checkout_branch_creation_fails(
         self,
@@ -280,9 +295,7 @@ class TestCheckoutIssueBranchExitCodes:
         elif case == "lookup_none":
             mgr.get_linked_branch_and_closing_prs_or_none.return_value = None
         elif case == "ls_remote_fails":
-            checkout_mocks["exec"].return_value = MagicMock(
-                return_code=1, stdout="", stderr="fatal: no remote"
-            )
+            checkout_mocks["remote"].return_value = _remote_result(success=False)
         else:
             mgr.get_branch_with_pr_fallback.side_effect = ValueError("API error")
 
@@ -377,9 +390,7 @@ class TestCheckoutIssueBranchBehavior:
         mgr = checkout_mocks["branch"].return_value
         mgr.get_branch_with_pr_fallback.return_value = None
         mgr.get_linked_branch_and_closing_prs_or_none.return_value = lookup
-        checkout_mocks["exec"].return_value = MagicMock(
-            return_code=0, stdout=_ls_remote_stdout(*remote), stderr=""
-        )
+        checkout_mocks["remote"].return_value = _remote_result(*remote)
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
         with caplog.at_level(logging.INFO):
@@ -431,9 +442,7 @@ class TestCheckoutIssueBranchBehavior:
         mgr = checkout_mocks["branch"].return_value
         mgr.get_branch_with_pr_fallback.return_value = None
         mgr.get_linked_branch_and_closing_prs_or_none.return_value = lookup
-        checkout_mocks["exec"].return_value = MagicMock(
-            return_code=0, stdout=_ls_remote_stdout(*remote), stderr=""
-        )
+        checkout_mocks["remote"].return_value = _remote_result(*remote)
 
         args = argparse.Namespace(issue_number=123, project_dir=None)
         with caplog.at_level(logging.DEBUG):
@@ -484,6 +493,33 @@ class TestCheckoutIssueBranchBehavior:
         execute_checkout_issue_branch(args)
 
         checkout_mocks["fetch"].assert_called_once_with(Path("/test/project"))
+
+
+class TestFindPrecreateCandidates:
+    """Tests for _find_precreate_candidates remote branch handling."""
+
+    def test_remote_branch_names_matched(
+        self, mock_list_remote_branches: MagicMock
+    ) -> None:
+        """Branch names from list_remote_branches are matched against the issue."""
+        mgr = MagicMock()
+        mgr.get_linked_branch_and_closing_prs_or_none.return_value = ([], [])
+        mock_list_remote_branches.return_value = _remote_result("123-feature", "other")
+
+        result = _find_precreate_candidates(mgr, Path("/test/project"), 123)
+
+        assert result == {"123-feature": "remote branch 123-feature"}
+        mock_list_remote_branches.assert_called_once_with(Path("/test/project"))
+
+    def test_remote_listing_failure_returns_none(
+        self, mock_list_remote_branches: MagicMock
+    ) -> None:
+        """A failed remote listing is not an empty list -> None."""
+        mgr = MagicMock()
+        mgr.get_linked_branch_and_closing_prs_or_none.return_value = ([], [])
+        mock_list_remote_branches.return_value = _remote_result(success=False)
+
+        assert _find_precreate_candidates(mgr, Path("/test/project"), 123) is None
 
 
 # ============================================================================

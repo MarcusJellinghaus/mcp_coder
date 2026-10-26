@@ -57,6 +57,7 @@ from mcp_workspace.git_operations.remotes import (
     fetch_remote,
     get_repository_identifier,
     git_push,
+    list_remote_branches,
     probe_origin_branch,
     push_branch,
     rebase_onto_branch,
@@ -115,4 +116,5 @@ __all__ = [
     "get_remote_branch_commit_sha",
     "git_diff",
     "probe_origin_branch",
+    "list_remote_branches",
 ]
