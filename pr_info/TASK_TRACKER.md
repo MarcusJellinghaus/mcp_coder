@@ -66,9 +66,9 @@ See [step_6.md](./steps/step_6.md)
 ### Step 7: Move system-prompt tests to `tests/llm/test_interface_system_prompts.py`; remove allowlist entry
 See [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation: move `TestPromptLlmInjectPrompts`, `TestBuildClaudeSystemPrompts` via `move_symbol` (dry run first); remove `tests/llm/test_interface.py` from `.large-files-allowlist`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestPromptLlmInjectPrompts`, `TestBuildClaudeSystemPrompts` via `move_symbol` (dry run first); remove `tests/llm/test_interface.py` from `.large-files-allowlist`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Move copilot tests to `tests/llm/test_interface_copilot.py`; final verification
 See [step_8.md](./steps/step_8.md)
