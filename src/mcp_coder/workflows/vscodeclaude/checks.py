@@ -17,6 +17,8 @@ from ...mcp_workspace_github import (
     IssueManager,
     PullRequestData,
     PullRequestManager,
+    get_trusted_commenters,
+    is_trusted_author,
 )
 from ...utils.log_utils import OUTPUT
 from ...workflow_utils.label_transitions import update_workflow_label
@@ -192,55 +194,91 @@ def _check_review_comments(
     repo_name: str,
     review_label_name: str,
     created_label_name: str,
+    trusted: frozenset[str],
 ) -> bool:
     """Escalate a status-10 PR to status-91 on outstanding review feedback.
 
+    Only items by trusted authors (OWNER/MEMBER/COLLABORATOR or a login in
+    ``trusted``) escalate, and only on a PR whose author is trusted.
     Unresolved threads always count. Changes-requested reviews and
     conversation comments count only if newer than the last status-91 →
     status-10 relabel; comments whose first line carries ❌ (automated
-    mcp-coder notes) never count.
+    mcp-coder notes) never count. Untrusted items that would otherwise
+    count produce at most one OUTPUT line and no label change.
 
     Never raises: any failure is logged and swallowed so one bad issue
     can't block the rest of the batch this poll.
 
     Returns:
-        True iff outstanding review feedback was detected (label update
-        attempted).
+        True iff outstanding trusted review feedback was detected (label
+        update attempted).
     """
     try:
-        feedback = pr_manager.get_pr_feedback(pr["number"])
-        if feedback["unresolved_threads"]:
-            triggered = True
-        else:
-            comments = [
-                comment
-                for comment in feedback["conversation_comments"]
-                if not is_marked(comment["body"])
-            ]
-            timestamps = [
-                review["submitted_at"] for review in feedback["changes_requested"]
-            ] + [comment["created_at"] for comment in comments]
-            if not timestamps:
-                triggered = False
-            else:
-                events = issue_manager.get_issue_events(
-                    issue["number"], IssueEventType.LABELED
-                )
-                watermark = _review_comments_watermark(
-                    events, review_label_name, created_label_name
-                )
-                triggered = watermark is None or any(
-                    ts is None or ts > watermark for ts in timestamps
-                )
-        if triggered:
-            _escalate(
-                issue,
-                issue_manager,
-                "pr_review_comments",
-                review_label_name,
+        if not is_trusted_author(pr["user"], pr["author_association"], trusted):
+            logger.log(
+                OUTPUT,
+                "PR-health: %s #%d: untrusted PR author @%s — review comments not checked",
                 repo_name,
+                issue["number"],
+                pr["user"],
+            )
+            return False
+
+        def ok(login: str | None, association: str | None) -> bool:
+            return is_trusted_author(login, association, trusted)
+
+        feedback = pr_manager.get_pr_feedback(pr["number"])
+        threads = feedback["unresolved_threads"]
+        if any(ok(t["author"], t["author_association"]) for t in threads):
+            _escalate(
+                issue, issue_manager, "pr_review_comments", review_label_name, repo_name
             )
             return True
+
+        items: list[tuple[str, str | None, str | None]] = [
+            (r["author"], r["author_association"], r["submitted_at"])
+            for r in feedback["changes_requested"]
+        ] + [
+            (c["author"], c["author_association"], c["created_at"])
+            for c in feedback["conversation_comments"]
+            if not is_marked(c["body"])
+        ]
+        watermark = (
+            _review_comments_watermark(
+                issue_manager.get_issue_events(issue["number"], IssueEventType.LABELED),
+                review_label_name,
+                created_label_name,
+            )
+            if items
+            else None
+        )
+        new = [
+            item
+            for item in items
+            if item[2] is None or watermark is None or item[2] > watermark
+        ]
+        if any(ok(login, assoc) for login, assoc, _ in new):
+            _escalate(
+                issue, issue_manager, "pr_review_comments", review_label_name, repo_name
+            )
+            return True
+
+        logins = dict.fromkeys(
+            [
+                t["author"]
+                for t in threads
+                if not ok(t["author"], t["author_association"])
+            ]
+            + [login for login, assoc, _ in new if not ok(login, assoc)]
+        )
+        if logins:
+            logger.log(
+                OUTPUT,
+                "PR-health: %s #%d: untrusted PR feedback from %s — review manually",
+                repo_name,
+                issue["number"],
+                ", ".join(f"@{login}" for login in logins),
+            )
         return False
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning(
@@ -288,6 +326,7 @@ def check_pr_health(
         label_names = build_label_lookups(
             load_labels_config(get_labels_config_path(None))
         )["id_to_name"]
+        trusted = get_trusted_commenters()
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         logger.warning("PR-health: skipping repo %s: %s", repo_name, exc)
         return
@@ -323,6 +362,7 @@ def check_pr_health(
                     repo_name,
                     label_names["pr_review_comments"],
                     label_names["pr_created"],
+                    trusted,
                 )
             )
         )
