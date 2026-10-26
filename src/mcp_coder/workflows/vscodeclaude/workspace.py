@@ -13,7 +13,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from mcp_coder.mcp_workspace_git import checkout_branch, fetch_remote
+from mcp_coder.mcp_workspace_git import (
+    checkout_branch,
+    clone_repo,
+    fetch_remote,
+    is_git_repository,
+    pull,
+)
 from mcp_coder.mcp_workspace_github import CommentData, IssueManager
 
 from ...utils.subprocess_runner import (
@@ -244,38 +250,26 @@ def setup_git_repo(
     is_empty = not any(folder_path.iterdir()) if folder_path.exists() else True
     has_git = (folder_path / ".git").exists()
 
-    # Validate existing git repo is functional
-    git_is_valid = False
-    if has_git:
-        try:
-            options = CommandOptions(cwd=str(folder_path))
-            result = execute_subprocess(
-                ["git", "rev-parse", "--is-inside-work-tree"],
-                options,
-            )
-            git_is_valid = result.return_code == 0
-        except Exception:
-            git_is_valid = False
-
-        if not git_is_valid:
-            # Corrupted git repo - delete and re-clone
-            logger.warning(
-                "Corrupted git repository at %s, deleting and re-cloning",
-                folder_path,
-            )
-            shutil.rmtree(folder_path, onerror=_remove_readonly)  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
-            folder_path.mkdir(parents=True, exist_ok=True)
-            is_empty = True
-            has_git = False
+    if has_git and not is_git_repository(folder_path):
+        # Corrupted git repo - delete and re-clone
+        logger.warning(
+            "Corrupted git repository at %s, deleting and re-cloning",
+            folder_path,
+        )
+        shutil.rmtree(folder_path, onerror=_remove_readonly)  # pylint: disable=deprecated-argument  # onexc requires Python 3.12+
+        folder_path.mkdir(parents=True, exist_ok=True)
+        is_empty = True
+        has_git = False
 
     if is_empty:
         # Clone into folder
         logger.info("Cloning %s into %s", repo_url, folder_path)
-        clone_options = CommandOptions(check=True)
-        execute_subprocess(
-            ["git", "clone", repo_url, str(folder_path)],
-            clone_options,
-        )
+        try:
+            clone_repo(repo_url, folder_path)
+        except ValueError as e:
+            # Message is already credential-scrubbed; `from None` keeps the
+            # original exception out of __context__
+            raise CalledProcessError(1, "clone_repo", output=str(e)) from None
     elif not has_git:
         # Folder has content but no .git - error
         raise ValueError(
@@ -290,7 +284,7 @@ def setup_git_repo(
     if not checkout_branch(branch, folder_path):
         raise CalledProcessError(
             returncode=1,
-            cmd=["git", "checkout", branch],
+            cmd="checkout_branch",
             output=f"Failed to checkout branch '{branch}'",
         )
 
@@ -299,15 +293,18 @@ def setup_git_repo(
     if not fetch_remote(folder_path):
         raise CalledProcessError(
             returncode=1,
-            cmd=["git", "fetch"],
+            cmd="fetch_remote",
             output="Failed to fetch from origin",
         )
 
-    pull_options = CommandOptions(cwd=str(folder_path), check=True)
-    execute_subprocess(
-        ["git", "pull"],
-        pull_options,
-    )
+    pulled = pull(folder_path)
+    if not pulled["success"]:
+        raise CalledProcessError(
+            returncode=1,
+            cmd="pull",
+            output=pulled["error"],
+            stderr=pulled["stderr"],
+        )
 
 
 def validate_mcp_json(folder_path: Path) -> None:

@@ -55,6 +55,7 @@ from mcp_workspace.git_operations.read_operations import git_diff
 
 # Remotes
 from mcp_workspace.git_operations.remotes import (
+    clone_repo,
     fetch_remote,
     get_repository_identifier,
     git_push,
@@ -123,4 +124,5 @@ __all__ = [
     "commit_paths",
     "unstage_paths",
     "pull",
+    "clone_repo",
 ]
