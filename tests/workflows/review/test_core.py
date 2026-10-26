@@ -110,7 +110,7 @@ def test_escalate_sets_escalate_label_and_logs_reason(
     assert to_id == REVIEW_PLAN.escalate_label_id
     # Handoff path: the last round's log is flushed (scoped to that file, never
     # the whole tree) and a comment is posted.
-    env.commit_staged_files.assert_called()
+    env.commit_paths.assert_called()
     env.commit_all_changes.assert_not_called()
     lines = env.issue_manager.return_value.add_comment.call_args.args[1].splitlines()
     assert lines[0] == "## ❌ Plan Review Handed Off"
@@ -181,7 +181,7 @@ def test_tasks_round_log_lands_at_the_next_round_entry(
     # file and nothing else.
     log_path = tmp_path / "pr_info" / "plan_review_log_1.md"
     env.stage_specific_files.assert_called_once_with([log_path], tmp_path)
-    env.commit_staged_files.assert_called_once()
+    env.commit_paths.assert_called_once()
     # It does not push: the single push here is round 2's own terminal flush.
     assert env.flush_push.call_count == 1
 
@@ -295,7 +295,7 @@ def test_rounds_cap_exhausted_hands_off(env: SimpleNamespace, tmp_path: Path) ->
     _, to_id = _label_transition(env.update_workflow_label)
     assert to_id == REVIEW_PLAN.escalate_label_id
     # The last round's log is flushed to the committed review log, scoped.
-    env.commit_staged_files.assert_called()
+    env.commit_paths.assert_called()
     env.commit_all_changes.assert_not_called()
     # A handoff comment is posted on the issue.
     env.issue_manager.return_value.add_comment.assert_called_once()

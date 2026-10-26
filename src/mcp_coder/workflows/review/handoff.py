@@ -12,19 +12,15 @@ import time
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import (
-    CommitResult,
     commit_all_changes,
-    commit_staged_files,
-    get_full_status,
-    get_latest_commit_sha,
+    commit_paths,
     stage_specific_files,
+    unstage_paths,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
-from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import push_changes
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.failure_handling import (
-    SHORT_SHA_LENGTH,
     CommentField,
     WorkflowFailure,
     build_failure_comment,
@@ -192,117 +188,6 @@ def _fail(
     return 1
 
 
-def _relative_to_project(only: Path, project_dir: Path) -> str | None:
-    """Return ``only`` as a project-relative POSIX path, or ``None`` if outside.
-
-    Args:
-        only: The round-log path.
-        project_dir: Repository root.
-
-    Returns:
-        The git-style relative path, or ``None`` when ``only`` lies outside
-        ``project_dir`` (which git could not commit anyway).
-    """
-    try:
-        return only.resolve().relative_to(project_dir.resolve()).as_posix()
-    except ValueError:
-        return None
-
-
-def _unrelated_staged_entries(only: Path, project_dir: Path) -> list[str]:
-    """Return the index entries that are not ``only``.
-
-    ``commit_staged_files`` commits whatever the index holds, so it can only be
-    used while the index is free of other entries. This reports the ones that
-    would otherwise ride along, which sends the flush down the pathspec-scoped
-    route (:func:`_commit_only_path`) instead.
-
-    Args:
-        only: The round-log path the caller intends to commit alone.
-        project_dir: Repository root; entries are read relative to it.
-
-    Returns:
-        Project-relative paths staged besides ``only``; empty when the index
-        holds nothing else. A path outside ``project_dir`` reports every staged
-        entry as unrelated.
-    """
-    staged = get_full_status(project_dir)["staged"]
-    if not staged:
-        return []
-    relative = _relative_to_project(only, project_dir)
-    if relative is None:
-        return staged
-    return [entry for entry in staged if Path(entry) != Path(relative)]
-
-
-def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResult:
-    """Commit one path alone, leaving every other staged entry in the index.
-
-    ``git commit -- <path>`` builds a temporary index from that path's
-    working-tree content: the commit contains it and nothing else, and the
-    unrelated entries stay staged and uncommitted. mcp-workspace exposes no
-    pathspec-scoped commit, so this goes through the trusted ``git`` CLI —
-    fixed argv, no shell, routed through the ``subprocess_runner`` shim per the
-    library-isolation contract (the same escape hatch ``workflows/rebase.py``
-    uses).
-
-    The caller stages ``only`` first, so a first-run *untracked* log file is
-    already known to the index and the pathspec matches it.
-
-    Args:
-        message: Commit message for the round-log commit.
-        only: The round-log path to commit alone.
-        project_dir: Repository root; the commit runs here.
-
-    Returns:
-        A ``CommitResult`` shaped like ``commit_staged_files``'s — including a
-        ``commit_hash`` shortened to the same 7 characters — so the caller's
-        success / ``commit_hash`` / push tail is shared. "Nothing to commit for
-        that path" surfaces as git's non-zero exit, i.e. ``success: False``,
-        which the caller already warns on.
-    """
-    relative = _relative_to_project(only, project_dir)
-    if relative is None:
-        return {
-            "success": False,
-            "commit_hash": None,
-            "error": f"Round log {only} is outside {project_dir}",
-            "error_category": "validation_failed",
-            "returncode": None,
-            "stderr": None,
-        }
-    result = execute_command(
-        ["git", "commit", "-m", message, "--", relative], cwd=str(project_dir)
-    )
-    if result.return_code != 0:
-        # A timeout, a missing ``git`` binary or a permission error exits 1 with
-        # both streams empty and the cause only in ``execution_error``, so all
-        # three are reported - this path exists to name a cause.
-        reported = [
-            part.strip()
-            for part in (result.stderr, result.stdout, result.execution_error)
-            if part and part.strip()
-        ]
-        return {
-            "success": False,
-            "commit_hash": None,
-            "error": "; ".join(reported)
-            or f"git commit -- {relative} exited {result.return_code}",
-            "error_category": "commit_failed",
-            "returncode": result.return_code,
-            "stderr": result.stderr,
-        }
-    sha = get_latest_commit_sha(project_dir)
-    return {
-        "success": True,
-        "commit_hash": sha[:SHORT_SHA_LENGTH] if sha else None,
-        "error": None,
-        "error_category": None,
-        "returncode": result.return_code,
-        "stderr": result.stderr,
-    }
-
-
 def _unstage_path(only: Path, project_dir: Path) -> None:
     """Drop one path's index entry again after a failed flush; best-effort.
 
@@ -313,34 +198,23 @@ def _unstage_path(only: Path, project_dir: Path) -> None:
     entry. So a failed flush would turn a rebase that would have succeeded into
     a needs-human handoff.
 
-    ``git reset HEAD -- <path>`` restores that one index entry from HEAD and
-    touches nothing else: a previously untracked log becomes untracked again,
-    and a tracked-and-modified log keeps its working-tree modification (which
-    blocks a rebase either way — the goal is only not to *add* blocking state).
-    Other staged entries are left alone, which is the whole point of the
-    pathspec route. mcp-workspace exposes no unstage operation, so this takes
-    the same escape hatch as :func:`_commit_only_path`.
+    ``unstage_paths`` restores that one index entry from HEAD and touches
+    nothing else: a previously untracked log becomes untracked again, and a
+    tracked-and-modified log keeps its working-tree modification (which blocks
+    a rebase either way — the goal is only not to *add* blocking state). Other
+    staged entries are left alone. A path outside ``project_dir`` is rejected
+    by ``unstage_paths`` itself and only warned here.
 
     Args:
         only: The round-log path whose index entry should be restored.
-        project_dir: Repository root; the reset runs here.
+        project_dir: Repository root; the unstage runs here.
     """
-    relative = _relative_to_project(only, project_dir)
-    if relative is None:
-        return
-    result = execute_command(
-        ["git", "reset", "-q", "HEAD", "--", relative], cwd=str(project_dir)
-    )
-    if result.return_code != 0:
-        reported = [
-            part.strip()
-            for part in (result.stderr, result.stdout, result.execution_error)
-            if part and part.strip()
-        ]
+    result = unstage_paths([only], project_dir)
+    if not result["success"]:
         logger.warning(
             "Could not unstage the round log %s after the failed commit: %s",
-            relative,
-            "; ".join(reported) or f"git reset exited {result.return_code}",
+            only,
+            (result["stderr"] or "").strip() or result["error"],
         )
 
 
@@ -361,9 +235,9 @@ def _flush_round_log(
     (``push=False``) so the next round's rebase is not refused for unstaged
     changes. Neither re-writes the log — the caller wrote it first.
 
-    The push is skipped when the commit failed, when it succeeded but committed
-    nothing (``commit_hash is None``), when ``only=`` could not be committed,
-    and whenever ``push=False``.
+    The push is skipped when the commit failed, when there was nothing to
+    commit (``nothing_to_commit``, or ``commit_hash is None``), and whenever
+    ``push=False``.
 
     A failed ``only=`` commit also has its index entry restored
     (:func:`_unstage_path`), so the failed flush leaves the tree no more
@@ -371,20 +245,18 @@ def _flush_round_log(
 
     Every git call reports failure by return value rather than by raising
     (``stage_specific_files``/``push_changes`` return ``bool``;
-    ``commit_all_changes``/``commit_staged_files`` return a ``CommitResult``),
-    so each falsy result is checked and warned. A broad ``try/except``
-    additionally swallows any unexpected raise so a broken-commit terminal path
-    never recurses into a second failure.
+    ``commit_all_changes``/``commit_paths`` return a ``CommitResult``), so each
+    falsy result is checked and warned. A broad ``try/except`` additionally
+    swallows any unexpected raise so a broken-commit terminal path never
+    recurses into a second failure.
 
     Args:
         project_dir: Repository root; git ops target this.
         message: Commit message for the round-log commit.
         only: When given, commit *only* this path — ``stage_specific_files``
-            plus ``commit_staged_files`` instead of ``commit_all_changes``, so
-            a dirty tree cannot ride along under ``message``. When the index
-            already holds unrelated entries, ``commit_staged_files`` would
-            carry them along, so the commit is made by pathspec instead
-            (:func:`_commit_only_path`): the round log still lands, and those
+            (a first flush finds the log untracked) plus ``commit_paths``
+            instead of ``commit_all_changes``, so neither a dirty tree nor
+            unrelated staged entries can ride along under ``message``. Those
             entries stay staged and uncommitted for
             ``_attempt_rebase_and_push``'s tripwire to name.
         push: When False, leave the commit local; the caller's own push carries
@@ -397,20 +269,12 @@ def _flush_round_log(
                     "Could not stage the round log %s - not committing", only
                 )
                 return
-            unrelated = _unrelated_staged_entries(only, project_dir)
-            if unrelated:
-                logger.info(
-                    "Index also holds unrelated staged entries (%s) - "
-                    "committing the round log by pathspec and leaving them "
-                    "staged rather than sweeping them in under '%s'",
-                    ", ".join(sorted(unrelated)),
-                    message,
-                )
-                result = _commit_only_path(message, only, project_dir)
-            else:
-                result = commit_staged_files(message, project_dir)
+            result = commit_paths(message, [only], project_dir)
         else:
             result = commit_all_changes(message, project_dir)
+        if result["error_category"] == "nothing_to_commit":
+            logger.debug("Round-log commit had nothing to commit")
+            return
         if not result["success"]:
             logger.warning(
                 "Round-log commit did not succeed: %s",

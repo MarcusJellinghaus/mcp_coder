@@ -27,6 +27,7 @@ from mcp_workspace.git_operations.branches import (
 
 # Commits
 from mcp_workspace.git_operations.commits import (
+    commit_paths,
     commit_staged_files,
     get_latest_commit_sha,
 )
@@ -74,6 +75,7 @@ from mcp_workspace.git_operations.repository_status import (
 from mcp_workspace.git_operations.staging import (
     stage_all_changes,
     stage_specific_files,
+    unstage_paths,
 )
 
 # Verification
@@ -117,4 +119,6 @@ __all__ = [
     "git_diff",
     "probe_origin_branch",
     "list_remote_branches",
+    "commit_paths",
+    "unstage_paths",
 ]

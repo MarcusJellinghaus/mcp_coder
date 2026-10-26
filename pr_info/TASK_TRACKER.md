@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 6: `review/handoff` scoped commit and unstage
 [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: `vscodeclaude/session_restart` fetch / checkout / pull
 [step_7.md](./steps/step_7.md)
