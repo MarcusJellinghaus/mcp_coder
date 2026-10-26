@@ -73,8 +73,9 @@ run_standard_checks(); check counts + audits; commit
   - `from tests\.cli\.commands\.test_prompt import _make_text_events` → 2 matches (`_claude_cwd`, `_system_prompts`)
 - Compact diff over the whole branch, run before the commit: first stage the step-3 changes
   (`git add tests/ .large-files-allowlist`), so the new `test_prompt_system_prompts.py` is tracked. Then diff the
-  base branch (from `get_base_branch`, e.g. `main`) against the index:
-  `mcp__mcp-workspace__git(command="diff", args=["--cached", "<base>"], compact=true,
+  remote-tracking base ref `origin/<base>` (`<base>` from `get_base_branch`, e.g. `origin/main`; this checkout
+  has no local `main` ref, so a bare `main` fails with `bad revision`) against the index:
+  `mcp__mcp-workspace__git(command="diff", args=["--cached", "origin/<base>"], compact=true,
   pathspec=["tests/", ".large-files-allowlist"])`. This leaves out the `pr_info/` changes and shows the committed
   steps 1–2 together with the staged step-3 changes. The diff must follow the summary's compact-diff rule. The only non-move hunks:
   the removed `from typing import Any`, the new files' import headers, and the one allowlist line.
