@@ -112,5 +112,5 @@ See [step_15.md](./steps/step_15.md)
 - [x] Commit message prepared
 
 ## Pull Request
-- [ ] PR review: review all changes against the summary and steps
+- [x] PR review: review all changes against the summary and steps
 - [ ] PR summary prepared
