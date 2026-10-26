@@ -33,7 +33,8 @@ def make_icoder_app(event_log: EventLog) -> Callable[..., ICoderApp]: ...
 ```
 baseline: collect file (96), tests/icoder/ (1062), whole suite (6463); run file -n auto (96 passed);
           -m "not textual_integration" on the file -> "No Tests Found"
-if any baseline differs from summary numbers -> write the actual numbers on one line to pr_info/.blocked.txt and stop
+if the file count != 96, or the baseline run / marker check fails -> write one line to pr_info/.blocked.txt and stop
+if tests/icoder/ or whole-suite counts differ from summary numbers -> record the actual numbers and use them in later steps (do not block)
 move_symbol(["icoder_app", "make_icoder_app"], dest=conftest.py, dry_run=True) -> gate
 move_symbol(... real)
 fix imports (F401 in test_app_pilot.py, missing names in conftest.py)
