@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move claude path of `prompt_llm` to `tests/llm/test_interface_prompt_llm.py`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move `TestPromptLLMRouting`, `TestLLMTimeoutErrorNormalization`, `TestPromptLLM` via `move_symbol` (dry run first)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestPromptLLMRouting`, `TestLLMTimeoutErrorNormalization`, `TestPromptLLM` via `move_symbol` (dry run first)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move mlflow tests to `tests/llm/test_interface_mlflow.py`
 See [step_3.md](./steps/step_3.md)
