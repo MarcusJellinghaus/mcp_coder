@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move `TestPromptClaudeCwd` → `test_prompt_claude_cwd.py`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move `TestPromptClaudeCwd` with `move_symbol` (dry run first), import `_make_text_events` from `test_prompt.py`, fix imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestPromptClaudeCwd` with `move_symbol` (dry run first), import `_make_text_events` from `test_prompt.py`, fix imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move `TestAddSystemPromptsFlag` → `test_prompt_system_prompts.py` + drop allowlist entry
 See [step_3.md](./steps/step_3.md)
