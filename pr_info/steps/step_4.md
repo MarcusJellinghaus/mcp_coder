@@ -51,8 +51,9 @@ Final verification. Any failure → blocked:
 - `search_files(pattern="test_task_processing\\w*\\.(?!py\\b)\\w", glob="tests/**/*.py")` → 0 matches.
 - `search_files(pattern="_tracker_count_always_decreases", glob="tests/**/*.py")` → only the two
   definitions (in `test_task_processing.py` and `test_task_progress_gate.py`).
-- Compact diff (`mcp__mcp-workspace__git` `diff` against the base branch, `compact=true`). Allowed
-  outside suppressed moved blocks:
+- Compact diff (`mcp__mcp-workspace__git` `diff` against the base branch, `compact=true`,
+  `pathspec=["tests/workflows/implement/", ".large-files-allowlist"]`). The pathspec leaves out the
+  branch's own `pr_info/` files. Allowed outside suppressed moved blocks:
   - import blocks;
   - headers of the new files;
   - moved-block preview/summary lines;
