@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Register `require_pull_request` and show error notes on unverifiable protection rows
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: tests in `test_verify_format_section_basic.py` (cases 1–8) + `_LABEL_MAP`, `_BRANCH_PROTECTION_CHILDREN` and error-display conditions in `verify_formatting.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Document ruleset-aware branch protection checks
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: reword "not verifiable" note and add bypass-actors sentence in `docs/repository-setup/github.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against `pr_info/steps/summary.md` and `Decisions.md`
+- [ ] PR summary prepared
