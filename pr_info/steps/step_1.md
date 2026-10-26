@@ -83,3 +83,8 @@ Return value unchanged: comment body `str` or `None`.
   - OWNER ❌ comment followed by 3 untrusted comments → OWNER body still found.
 - Existing `TestCreateStatusFileNote` tests keep passing unchanged (they
   exercise `_fetch_marked_comment` via `create_status_file`).
+- New in `TestCreateStatusFileNote`: patch
+  `mcp_coder.workflows.vscodeclaude.workspace.get_trusted_commenters` →
+  `frozenset({"friend"})`; a ❌ comment from `user="friend",
+  author_association="NONE"` appears in the status file (proves
+  `_fetch_marked_comment` passes the allowlist through).

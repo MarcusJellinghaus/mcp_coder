@@ -102,7 +102,10 @@ return False
     line;
   - `get_issue_events` called at most once with several reviews + comments;
   - untrusted review/comment older than watermark → no `OUTPUT` line;
-    untrusted thread with watermark → `OUTPUT` line;
+  - untrusted thread plus an untrusted review/comment older than the
+    watermark (events contain a status-91 → status-10 relabel, so
+    `get_issue_events` is called and a watermark is set) → `False`,
+    `OUTPUT` line still lists the thread author;
   - same untrusted login on thread + comment → listed once.
 
 ### `test_checks.py`
