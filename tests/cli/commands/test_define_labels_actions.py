@@ -8,6 +8,7 @@ Tests cover:
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,19 @@ from mcp_coder.cli.commands.define_labels_actions import (
     generate_label_new_issues_yml,
     write_github_actions,
 )
+
+_USES_RE = re.compile(r"^\s*(?:- )?uses:")
+_PIN_RE = re.compile(r"^\s*(?:- )?uses: [\w.\-/]+@[0-9a-f]{40} # v\d")
+
+
+def _generated_workflows() -> dict[str, str]:
+    """Return generated workflow YAML text keyed by file name."""
+    return {
+        "label-new-issues.yml": generate_label_new_issues_yml("status-01:created"),
+        "approve-command.yml": generate_approve_command_yml(
+            [("status-01:created", "status-02:awaiting-planning")]
+        ),
+    }
 
 
 class TestBuildPromotions:
@@ -130,6 +144,42 @@ class TestGenerateApproveCommandYml:
         content = generate_approve_command_yml([])
         parsed = yaml.safe_load(content)
         assert parsed is not None
+
+    def test_job_gated_on_author_association(self) -> None:
+        """Job runs only for OWNER/MEMBER/COLLABORATOR commenters."""
+        content = generate_approve_command_yml(
+            [("status-01:created", "status-02:awaiting-planning")]
+        )
+        parsed = yaml.safe_load(content)
+        cond = parsed["jobs"]["handle-approve"]["if"]
+        assert "github.event.comment.author_association" in cond
+        assert 'fromJSON(\'["OWNER","MEMBER","COLLABORATOR"]\')' in cond
+
+    def test_success_comment_separator(self) -> None:
+        """Success comment separates the status line with a blank line."""
+        content = generate_approve_command_yml(
+            [("status-01:created", "status-02:awaiting-planning")]
+        )
+        assert "\\n\\nThe bot can now pick up" in content
+
+
+class TestGeneratedWorkflowHardening:
+    """Test hardening shared by both generated workflows."""
+
+    @pytest.mark.parametrize("name", ["label-new-issues.yml", "approve-command.yml"])
+    def test_top_level_permissions_empty(self, name: str) -> None:
+        """Top-level permissions grant nothing by default."""
+        parsed = yaml.safe_load(_generated_workflows()[name])
+        assert parsed["permissions"] == {}
+
+    @pytest.mark.parametrize("name", ["label-new-issues.yml", "approve-command.yml"])
+    def test_uses_sha_pinned(self, name: str) -> None:
+        """Every uses: line is pinned to a 40-hex SHA with a version comment."""
+        content = _generated_workflows()[name]
+        uses_lines = [line for line in content.splitlines() if _USES_RE.match(line)]
+        assert uses_lines
+        for line in uses_lines:
+            assert _PIN_RE.match(line), line
 
 
 class TestWriteGithubActions:

@@ -12,6 +12,10 @@ from mcp_coder.utils.text_io import write_lf_text
 
 logger = logging.getLogger(__name__)
 
+_GITHUB_SCRIPT_REF = (
+    "actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0"
+)
+
 
 def generate_label_new_issues_yml(default_label_name: str) -> str:
     """Return the YAML content for label-new-issues.yml.
@@ -28,6 +32,8 @@ on:
   issues:
     types: [opened]
 
+permissions: {{}}
+
 jobs:
   add-label:
     runs-on: ubuntu-latest
@@ -35,7 +41,7 @@ jobs:
       issues: write
     steps:
       - name: Add status label
-        uses: actions/github-script@v8
+        uses: {_GITHUB_SCRIPT_REF}
         with:
           script: |
             github.rest.issues.addLabels({{
@@ -74,16 +80,18 @@ on:
   issue_comment:
     types: [created]
 
+permissions: {{}}
+
 jobs:
   handle-approve:
     runs-on: ubuntu-latest
-    # Only run on issues (not PRs) and when comment is /approve
-    if: github.event.issue.pull_request == null && contains(github.event.comment.body, '/approve')
+    # Only run on issues (not PRs), when comment contains /approve, and only for trusted commenters (OWNER/MEMBER/COLLABORATOR); untrusted -> skipped silently
+    if: github.event.issue.pull_request == null && contains(github.event.comment.body, '/approve') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     permissions:
       issues: write
     steps:
       - name: Handle approve command
-        uses: actions/github-script@v8
+        uses: {_GITHUB_SCRIPT_REF}
         with:
           script: |
             const comment = context.payload.comment.body.trim();
@@ -137,7 +145,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `✅ Status promoted: \\`${{oldStatus}}\\` → \\`${{newStatus}}\\`\\nThe bot can now pick up this issue for the next step.`
+                body: `✅ Status promoted: \\`${{oldStatus}}\\` → \\`${{newStatus}}\\`\\n\\nThe bot can now pick up this issue for the next step.`
               }});
             }} else {{
               // No matching status found

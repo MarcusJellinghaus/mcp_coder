@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Generator — pin, permissions, trust gate, separator (TDD)
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests in `test_define_labels_actions.py` + `_GITHUB_SCRIPT_REF`, `permissions: {}`, `author_association` gate, `\n\n` separator in `define_labels_actions.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests in `test_define_labels_actions.py` + `_GITHUB_SCRIPT_REF`, `permissions: {}`, `author_association` gate, `\n\n` separator in `define_labels_actions.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Regenerate committed workflows, replace doc snippets, consistency test
 See [step_2.md](./steps/step_2.md)
