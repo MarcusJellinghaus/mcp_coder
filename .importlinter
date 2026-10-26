@@ -72,17 +72,15 @@ ignore_imports =
 # -----------------------------------------------------------------------------
 # Contract: MCP Workspace Git Operations Isolation
 # -----------------------------------------------------------------------------
-# TODO: Cannot enforce shim-only access to mcp_workspace.git_operations.
-# import-linter v2.11 (grimp) doesn't resolve external subpackage paths.
-# Enforcement relies on code review + layered architecture contract.
+# Enforced by `tools/check_forbidden_calls.py` (rule `workspace-git-direct-import`)
+# — import-linter cannot resolve external subpackages.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
 # Contract: MCP Workspace GitHub Operations Isolation
 # -----------------------------------------------------------------------------
-# TODO: Re-add when import-linter supports external subpackage paths in
-# forbidden_modules. Same limitation as the git shim contract above.
-# The layered architecture contract enforces shim positioning in the meantime.
+# Enforced by `tools/check_forbidden_calls.py` (rule `workspace-github-direct-import`)
+# — import-linter cannot resolve external subpackages.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
@@ -494,6 +492,8 @@ modules =
 # The 'subprocess' module should only be used by subprocess_runner.
 # All other modules must use subprocess_runner as an abstraction layer.
 # This is the first library isolation contract enforced in tests as well.
+# Running git through the allowed runner is caught by
+# `tools/check_forbidden_calls.py` (rule `git`).
 # -----------------------------------------------------------------------------
 [importlinter:contract:subprocess_isolation]
 name = Subprocess Library Isolation

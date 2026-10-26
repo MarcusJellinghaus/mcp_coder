@@ -61,13 +61,22 @@ logger = logging.getLogger(__name__)
 
 
 def _is_clean(project_dir: Path) -> bool:
-    """Fail-closed clean check: a git failure is never clean."""
+    """Fail-closed clean check: a git failure is never clean.
+
+    Returns:
+        True only if the status query succeeded and the tree is clean.
+    """
     status = get_working_tree_status(project_dir)
     return status["success"] and status["clean"]
 
 
 def _rebase_in_progress_or_none(project_dir: Path) -> bool | None:
-    """Best-effort for except/finally sites: None (logged) if it cannot be determined."""
+    """Best-effort rebase-state probe for except/finally sites.
+
+    Returns:
+        Whether a rebase is in progress, or None (logged) if it cannot be
+        determined.
+    """
     try:
         return is_rebase_in_progress(project_dir)
     except Exception as exc:  # pylint: disable=broad-exception-caught
@@ -88,7 +97,11 @@ def _abort_rebase(project_dir: Path) -> None:
 
 
 def _restore_note(project_dir: Path, sha: str) -> str:
-    """Restore pre-rebase state; return the suffix for the user-visible abort message."""
+    """Restore pre-rebase state via the shared ``_reset_hard``.
+
+    Returns:
+        The suffix for the user-visible abort message.
+    """
     if _reset_hard(project_dir, sha):
         return "; pre-rebase state restored"
     return "; restoring pre-rebase state FAILED (see log)"

@@ -103,6 +103,7 @@ jobs:
           - {name: "mypy", install: ".[typecheck]", cmd: "mypy --version && mypy --strict src tests"}
           - {name: "file-size", cmd: "mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist"}
           - {name: "no-url-deps", cmd: "python tools/check_no_url_deps.py"}
+          - {name: "forbidden-calls", cmd: "python tools/check_forbidden_calls.py"}
     name: ${{ matrix.check.name }}
     steps:
       - uses: actions/checkout@v7

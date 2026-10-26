@@ -13,7 +13,6 @@ from ...mcp_workspace_github import (
     RepoIdentifier,
     get_all_cached_issues,
 )
-from ...utils.subprocess_runner import CalledProcessError
 from ...utils.user_config import get_cache_refresh_minutes
 from .config import _get_configured_repos
 from .helpers import get_issue_status
@@ -102,18 +101,14 @@ def _prepare_restart_branch(
         return BranchPrepResult(False, "Dirty", None)
 
     # 5. Checkout and pull
-    try:
-        if not checkout_branch(linked_branch, folder_path):
-            raise CalledProcessError(
-                1, "checkout_branch", output=f"Failed to checkout '{linked_branch}'"
-            )
-        pulled = pull(folder_path)
-        if not pulled["success"]:
-            raise CalledProcessError(
-                1, "pull", output=pulled["error"], stderr=pulled["stderr"]
-            )
-    except CalledProcessError as e:
-        logger.error("Git operation failed: %s", e)
+    if not checkout_branch(linked_branch, folder_path):
+        logger.error("Git operation failed: checkout of '%s'", linked_branch)
+        return BranchPrepResult(False, "Git error", None)
+    pulled = pull(folder_path)
+    if not pulled["success"]:
+        logger.error(
+            "Git operation failed: pull: %s", pulled["stderr"] or pulled["error"]
+        )
         return BranchPrepResult(False, "Git error", None)
 
     return BranchPrepResult(True, None, linked_branch)
