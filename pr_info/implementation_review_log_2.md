@@ -17,3 +17,18 @@ Rebase notes: `main` (#1312) moved `_reset_hard` into `workflow_steps/rebase.py`
 - `tests/workflows/rebase/test_guards.py`: tests for both messages.
 **Status**: committed
 
+## Round 2 — 2026-10-26
+**Findings**:
+- No critical/should-fix issues; 51290c2 verified (stderr fallback safe — `GitResult.stderr` always present, `error` always set on failure).
+- Minor: `_preflight` calls `is_rebase_in_progress` outside the orchestrator's try; raises `ValueError` only if the dir stops being a repo between two calls.
+**Decisions**:
+- Skip: practically unreachable, speculative.
+**Changes**: none
+**Status**: no changes needed
+
+## Final Status
+- Rounds: 2 (one with code changes, one clean).
+- Commits: `b016b6d` (post-rebase format), `51290c2` (round 1 fixes), plus this log.
+- vulture: clean. lint-imports: 19 contracts kept, 0 broken.
+- CI green on 51290c2; branch up to date with `main`.
+- No open issues.
