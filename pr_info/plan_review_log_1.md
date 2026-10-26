@@ -18,3 +18,11 @@ pr_info/steps/step_2.md:14 — low — The step says "19 test functions (20 coll
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_8.md:49, replace the hard-coded final targets (6463 whole-suite, 1062 for tests/icoder/) with a comparison against the baseline counts recorded in step 1, as step_1.md:37 and summary.md:47 already require. Change the tests/icoder/ count in the DATA lines of steps 2–7 the same way, so each one is relative to the recorded baseline.', 'In pr_info/steps/step_2.md:14, change "19 test functions (20 collected)" to "20 test functions (20 collected)". Calls 2a–2e list 6+4+2+5+3 = 20 functions and none is parametrized.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 3 — 2026-10-26
+**Findings**:
+pr_info/steps/summary.md:80 — medium — The common per-step check still requires `tests/icoder/` to collect exactly 1062. Rounds 1–2 fixed this everywhere else: summary.md:47, step_1.md and the DATA lines of steps 2–8 compare against the baseline recorded in step 1. If main has drifted, this line can stop a valid run.
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
