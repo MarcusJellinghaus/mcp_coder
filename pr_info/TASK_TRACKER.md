@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Split `tests/cli/test_parsers.py` to mirror the parser modules — [step_2.md](./steps/step_2.md)
-- [ ] Implementation: move test classes to `test_workflow_parsers.py`, `test_interactive_parsers.py`, `test_gh_parsers.py`; verify collect counts
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move test classes to `test_workflow_parsers.py`, `test_interactive_parsers.py`, `test_gh_parsers.py`; verify collect counts
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Split `tests/cli/test_main.py` — [step_3.md](./steps/step_3.md)
 - [ ] Implementation: move coordinator tests to `test_main_coordinator.py`, parser tests to `test_parsers.py`, update `.large-files-allowlist`; verify collect counts
