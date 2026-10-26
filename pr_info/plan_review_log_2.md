@@ -13,3 +13,15 @@ Supervisor-driven plan review (`/plan_review_supervisor`) of `pr_info/steps/` af
 **User decisions**: none
 **Changes**: `pr_info/steps/step_2.md` — strictest-wins wording for the not-verifiable bullet; replace/qualify the `Administration: Read` opening sentence; precondition and `.blocked.txt` instruction removed.
 **Status**: committed
+
+## Round 2 — 2026-10-26
+**Findings**:
+- Plan re-verified against issue and upstream #354; round-1 step 2 edits coherent with strictest-wins.
+- step_1.md cases 3–4 (low): guard checks only the label; before the change the row leaks under its raw key `require_pull_request`, so the guard misses the failure.
+- step_2.md:20-23 (low): "if the permission is mentioned, qualify it" leaves it to the implementer whether `Administration: Read` appears.
+- Side effect noted (not a finding): parent row will show `unknown (repository not accessible)` when the repo can't be accessed — direct consequence of Decision 2.
+
+**Decisions**: both findings accepted (straightforward); side effect accepted as intended by Decision 2.
+**User decisions**: none
+**Changes**: `step_1.md` — cases 3 and 4 assert raw key absent; must-fail list now 1, 2, 3, 4, 6, 7, regression guards 5, 8. `step_2.md` — definite qualified `Administration: Read` sentence.
+**Status**: committed

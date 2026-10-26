@@ -3,8 +3,8 @@
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/Decisions.md`, then implement
-> `pr_info/steps/step_1.md` exactly. Write the tests first (cases 1, 2, 4, 6, 7 must
-> fail; cases 3, 5, 8 are regression guards that already pass), then the
+> `pr_info/steps/step_1.md` exactly. Write the tests first (cases 1, 2, 3, 4, 6, 7 must
+> fail; cases 5, 8 are regression guards that already pass), then the
 > implementation. Run pylint, pytest (`-n auto`, fast unit-test marker filter from
 > CLAUDE.md) and mypy; all must pass. Run `run_format_code`, then make exactly one
 > commit.
@@ -37,10 +37,13 @@ Result dicts use the upstream key order: `require_pull_request` directly after
 3. `test_children_suppressed_when_parent_fails` (hidden, parent `ok=False`):
    - add `"require_pull_request": {"ok": False, "value": "unknown", "error": "no protection"}`
      right after `branch_protection`;
-   - assert `"Require pull request" not in output`.
+   - assert `"Require pull request" not in output` and
+     `"require_pull_request" not in output` (without the registration the row
+     leaks under its raw key).
 4. `test_children_suppressed_when_parent_unverifiable` (hidden, parent `ok=None`):
    - add `"require_pull_request": dict(row)` right after `branch_protection`;
-   - assert `"Require pull request" not in output`;
+   - assert `"Require pull request" not in output` and
+     `"require_pull_request" not in output`;
    - **flip** `assert "Resource not accessible" not in output` to
      `assert _format_row("Branch protection", "[WARN]", f"{value} ({error})", indent=2) in output`
      (parent now shows its error, Decision 3). Keep the other assertions; update the

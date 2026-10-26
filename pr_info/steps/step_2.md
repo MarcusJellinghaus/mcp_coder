@@ -17,8 +17,8 @@
 1. **"Not verifiable" note (~L36-37):** replace the unconditional opening
    sentence ("Without `Administration: Read`, `verify` shows branch protection as
    `[WARN] not verifiable`") — it no longer holds when rulesets protect the branch.
-   If the permission is mentioned, qualify it: classic protection needs
-   `Administration: Read`; without it, rows depend on rulesets alone. The reworded
+   Keep one qualified sentence: classic protection needs `Administration: Read`;
+   without it, the protection rows rely on rulesets alone. The reworded
    note states:
    - branch protection is read from both classic protection and rulesets; a
      protection found by either source counts and shows `[OK]`;
