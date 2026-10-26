@@ -45,8 +45,9 @@ Siblings never import a `Test*` class (it would be collected twice) and never im
 | `test_task_processing_retry.py` (new) | `TestProcessTaskWithRetry` | 8 |
 | `test_task_processing_branch_name.py` (new) | `TestBranchNameSource` | 2 |
 
-Total: 55 tests, which is unchanged. Collected tests in `tests/workflows/implement/` = 193. Whole
-suite = 6463 (2026-10-26; step 1 records the actual values).
+Total: 55 tests, which is unchanged. Collected tests in `tests/workflows/implement/` = 193. The
+whole-suite count is not fixed in the plan, because it drifts as `main` moves: step 1 records it
+in `pr_info/.suite_baseline.txt`, and step 4 checks it is unchanged.
 
 ## Files created / modified
 - Modified: `tests/workflows/implement/test_task_processing.py` (classes moved out, import block shrinks)

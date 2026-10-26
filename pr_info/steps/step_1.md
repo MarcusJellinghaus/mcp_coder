@@ -16,9 +16,11 @@ Move three top-level test classes unchanged:
 ## HOW
 1. **Baseline** (before any edit). Use the collect counts from the summary, then
    `run_pytest_check(extra_args=["--collect-only", "-q"])` for the whole suite. Expected:
-   `test_task_processing.py: 55`, directory 193, suite 6463.
+   `test_task_processing.py: 55`, directory 193.
    Then run `test_task_processing.py` with `-n auto` and the fast-unit filter: 55 passed.
    If a number differs from these, write the actual values to `pr_info/.blocked.txt` and stop.
+   The whole-suite count has no expected value: write it to `pr_info/.suite_baseline.txt`
+   (the number only) and commit that file with this step. Step 4 compares against it.
 2. `move_symbol(source_file="tests/workflows/implement/test_task_processing.py", symbol_names=["TestReadAndClearBlocked", "TestBlockedExitInPrompts"], dest_file="tests/workflows/implement/test_task_processing_blocked.py")`
    (dry run first).
 3. `move_symbol(..., symbol_names=["TestProcessSingleTaskBlocked"], dest_file=<same>)` (dry run
@@ -27,7 +29,8 @@ Move three top-level test classes unchanged:
 
 ## ALGORITHM
 ```
-record baseline counts; abort if they differ from 55/193/6463/55 passed
+record baseline counts; abort if they differ from 55/193/55 passed
+write whole-suite count to pr_info/.suite_baseline.txt
 dry-run + move [TestReadAndClearBlocked, TestBlockedExitInPrompts]
 dry-run + move [TestProcessSingleTaskBlocked]
 verify alias import, decorators, helper import
