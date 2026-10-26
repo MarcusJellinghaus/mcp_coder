@@ -49,6 +49,9 @@ from mcp_workspace.git_operations.parent_branch_detection import (
     detect_parent_branch_via_merge_base,
 )
 
+# Read operations
+from mcp_workspace.git_operations.read_operations import git_diff
+
 # Remotes
 from mcp_workspace.git_operations.remotes import (
     fetch_remote,
@@ -109,4 +112,5 @@ __all__ = [
     "detect_parent_branch_via_merge_base",
     "verify_git",
     "get_remote_branch_commit_sha",
+    "git_diff",
 ]
