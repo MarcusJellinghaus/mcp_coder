@@ -9,14 +9,17 @@ file from `.large-files-allowlist`.
 
 ## Pure refactoring — rules for every step
 - **Move, don't change.** Classes move verbatim. No logic edits, renames, test deletions or merges.
-- **Only allowed edits:** import statements, and removing the one `.large-files-allowlist` line.
+- **Only allowed edits:** import statements, removing the one `.large-files-allowlist` line, and
+  (last resort of the move procedure's recovery path only) moving whole top-level statements unchanged.
   Nothing else is touched: no `pytestmark` (the source has none), no docstrings (`D` is ignored for
   `tests/**`), no `conftest.py`, no `vulture_whitelist.py`, no `docs/`.
 - **Use the refactoring tools:** `mcp__mcp-tools-py__move_symbol` (dry run first, ≤ 2 symbols per
-  call), `list_symbols`, `find_references`. Never move code by hand.
+  call), `list_symbols`, `find_references`. Hand-moving code is allowed only as the last resort in
+  the move procedure's recovery path.
 - **MCP tools only, no Bash** (commits excepted, per CLAUDE.md).
-- **Failure action:** on any failed precondition or check named in a step, write one line to
-  `pr_info/.blocked.txt` and stop. Don't hand-edit to work around it.
+- **Failure action:** on a failed precondition or check named in a step, write one line to
+  `pr_info/.blocked.txt` and stop. The one exception is the move procedure's recovery path, which
+  runs first; block only once it is exhausted. Don't hand-edit to work around anything else.
 
 ## Architectural / design changes
 None in `src/`. The source module stays as it is: it is under the limit and cohesive.
@@ -72,6 +75,15 @@ for each file instead.
 2. Real call. A timeout, `Token <…> cannot be matched`, or an empty destination → blocked.
 3. Check the destination: class bodies, decorators, `@patch` strings and method-local imports are
    unchanged.
+4. **Recovery path.** If collection fails with a `NameError` / `ImportError` after the import fix-up,
+   or a symbol lands in the wrong place, work through these in order:
+   1. Try a different grouping or call order. Undo the failed attempt by moving the symbols back with
+      `move_symbol` (there is no git revert).
+   2. If that fails, use `move_module`, or undo with `move_symbol`.
+   3. Last resort: hand-move whole top-level statements. Change nothing inside them.
+
+   Use at most two tool options before the last resort. Write blocked only after all of these fail,
+   or if a fix needs a hand edit outside the allowed edits.
 
 **Import fix-up** (the only hand edits allowed):
 - Rewrite a relative import of `_make_llm_response` to the absolute form.
@@ -81,4 +93,10 @@ for each file instead.
   module.
 
 **Standard checks per step:** `run_format_code`, `run_ruff_check`, `run_pylint_check`,
-`run_mypy_check`, then pytest with `-n auto` and the fast-unit filter. Then run the collect counts.
+`run_mypy_check`, then pytest in two runs, both with `-n auto` and the fast-unit filter:
+1. The full fast-unit suite (no path argument).
+2. The affected files run directly: `tests/workflows/implement/test_task_processing.py` plus every
+   `test_task_processing_*.py` sibling that exists so far (all five files by step 4). Expected:
+   55 passed.
+
+Then run the collect counts.

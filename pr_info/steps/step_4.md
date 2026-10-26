@@ -46,8 +46,7 @@ Final verification. Any failure → blocked:
   the fixture stays valid.
 - `check_file_size` passes and reports no stale allowlist entries. All five files are under 750 lines.
 - Collect counts: base **18**, `_blocked` **21**, `_mypy` **6**, `_retry` **8**, `_branch_name`
-  **2**, directory **193**. Whole suite (`--collect-only -q`) is **6463**, or whatever step 1
-  recorded.
+  **2**, directory **193**. Whole suite (`--collect-only -q`) is **6463**.
 - The five files run with `-n auto` and the fast-unit filter: **55 passed**.
 - `search_files(pattern="test_task_processing\\w*\\.(?!py\\b)\\w", glob="tests/**/*.py")` → 0 matches.
 - `search_files(pattern="_tracker_count_always_decreases", glob="tests/**/*.py")` → only the two
@@ -56,6 +55,7 @@ Final verification. Any failure → blocked:
   outside suppressed moved blocks:
   - import blocks;
   - headers of the new files;
+  - moved-block preview/summary lines;
   - blank-line-only hunks;
   - the one allowlist removal.
 
