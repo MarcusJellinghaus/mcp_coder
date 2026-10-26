@@ -20,6 +20,7 @@ from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import (
+    BaseBranchSource,
     fetch_remote,
     get_current_branch_name,
     get_latest_commit_sha,
@@ -35,7 +36,6 @@ from mcp_coder.workflow_steps.commit import check_formatter_config, run_formatte
 from mcp_coder.workflow_steps.constants import LLM_INACTIVITY_TIMEOUT_SECONDS
 from mcp_coder.workflow_steps.rebase import _reset_hard
 from mcp_coder.workflow_utils.base_branch import (
-    BaseBranchSource,
     check_base_branch_on_origin,
     detect_base_branch_with_source,
 )

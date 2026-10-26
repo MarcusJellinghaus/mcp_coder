@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 from git import Repo
 
-from mcp_coder.workflow_utils.base_branch import BaseBranchSource
+from mcp_coder.mcp_workspace_git import BaseBranchSource
 from mcp_coder.workflows import rebase as rebase_module
 from mcp_coder.workflows.rebase import (
     _check_pr_info_absent_on_base,
@@ -128,6 +128,7 @@ class TestResolveBaseBranch:
         assert "--base-branch" in error
         assert "### Base Branch" in error
         assert "issue body is trusted" in error
+        assert f"detected from {source.value}," in error
 
     def test_no_detection_errors(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -4,34 +4,29 @@ This module provides a unified function for detecting the base branch
 of a feature branch by checking multiple sources in priority order:
 1. Linked issue's base branch section (explicit user intent)
 2. Open PR base branch (if PR already exists)
-3. Git merge-base (heuristic fallback from git history)
+3. Git merge-base (heuristic fallback from git history; upstream also checks
+   that the winner still exists on origin, via a network ``ls-remote``)
 4. Default branch (main/master)
+
+Detection is done upstream (``mcp_workspace``); this module only builds and
+injects the GitHub managers it needs.
 """
 
 import logging
-from enum import Enum
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import (
-    MERGE_BASE_DISTANCE_THRESHOLD,
-    detect_parent_branch_via_merge_base,
+    BaseBranchSource,
     extract_issue_number_from_branch,
     get_current_branch_name,
-    get_default_branch_name,
     probe_origin_branch,
+)
+from mcp_coder.mcp_workspace_git import (
+    detect_base_branch_with_source as _upstream_detect_with_source,
 )
 from mcp_coder.mcp_workspace_github import IssueData, IssueManager, PullRequestManager
 
 logger = logging.getLogger(__name__)
-
-
-class BaseBranchSource(Enum):
-    """Where a detected base branch came from."""
-
-    ISSUE = "issue"
-    PR = "pr"
-    MERGE_BASE = "merge-base"
-    DEFAULT = "default"
 
 
 def detect_base_branch(
@@ -85,9 +80,8 @@ def detect_base_branch_with_source(
     Note:
         Makes up to 2 GitHub API calls if issue_data not provided:
         - Issue fetch (if branch has issue number)
-        - PR list lookup (if no issue base branch found)
+        - PR lookup (if no issue base branch found)
     """
-    # Get current branch if not provided
     if current_branch is None:
         current_branch = get_current_branch_name(project_dir)
         logger.debug(f"Detected current branch: {current_branch}")
@@ -96,37 +90,10 @@ def detect_base_branch_with_source(
         logger.debug("No current branch (detached HEAD), returning None")
         return None
 
-    # 1. Try issue base_branch first (explicit user intent - highest priority)
-    logger.debug("Attempting base branch detection via issue base_branch")
-    base_branch = _detect_from_issue(project_dir, current_branch, issue_data)
-    if base_branch:
-        return base_branch, BaseBranchSource.ISSUE
-
-    # 2. Try PR lookup (existing PR knows its base)
-    logger.debug("Attempting base branch detection via PR lookup")
-    base_branch = _detect_from_pr(project_dir, current_branch)
-    if base_branch:
-        return base_branch, BaseBranchSource.PR
-
-    # 3. Try git merge-base (heuristic fallback)
-    logger.debug("Attempting base branch detection via git merge-base")
-    base_branch = detect_parent_branch_via_merge_base(
-        project_dir, current_branch, MERGE_BASE_DISTANCE_THRESHOLD
+    pr_manager, issue_manager = _build_managers(project_dir, current_branch, issue_data)
+    return _upstream_detect_with_source(
+        project_dir, current_branch, issue_data, pr_manager, issue_manager
     )
-    if base_branch:
-        return base_branch, BaseBranchSource.MERGE_BASE
-
-    # 4. Fall back to default branch
-    logger.debug("Attempting base branch detection via default branch")
-    base_branch = _detect_default_branch(project_dir)
-    if base_branch:
-        return base_branch, BaseBranchSource.DEFAULT
-
-    # All detection methods failed - return None
-    logger.warning(
-        "Could not detect base branch from issue, PR, merge-base, or default"
-    )
-    return None
 
 
 def check_base_branch_on_origin(project_dir: Path, base_branch: str) -> str | None:
@@ -152,43 +119,14 @@ def check_base_branch_on_origin(project_dir: Path, base_branch: str) -> str | No
     return f"{message} ({detail})" if detail else message
 
 
-def _detect_from_pr(project_dir: Path, current_branch: str) -> str | None:
-    """Detect base branch from open PR.
+def _build_managers(
+    project_dir: Path, current_branch: str, issue_data: IssueData | None
+) -> tuple[PullRequestManager | None, IssueManager | None]:
+    """Build the GitHub managers upstream detection needs.
 
-    Args:
-        project_dir: Project directory path
-        current_branch: Current branch name
-
-    Returns:
-        Base branch name if PR found, None otherwise
-    """
-    try:
-        pr_manager = PullRequestManager(project_dir)
-        open_prs = pr_manager.list_pull_requests(state="open")
-
-        for pr in open_prs:
-            if pr.get("head_branch") == current_branch:
-                base_branch = pr.get("base_branch")
-                logger.info(f"Found base branch from PR: {base_branch}")
-                return base_branch
-
-        logger.debug(f"No open PR found for branch '{current_branch}'")
-        return None
-
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.debug(f"PR detection failed: {e}")
-        return None
-
-
-def _detect_from_issue(
-    project_dir: Path,
-    current_branch: str,
-    issue_data: IssueData | None = None,
-) -> str | None:
-    """Detect base branch from linked issue.
-
-    If issue_data is provided, uses its base_branch directly.
-    Otherwise, extracts issue number from branch name and fetches issue.
+    Each manager is built in its own try; a failure (e.g. missing token)
+    yields None, so upstream skips that detection step. No IssueManager is
+    built when issue_data is given or the branch has no issue number.
 
     Args:
         project_dir: Project directory path
@@ -196,63 +134,22 @@ def _detect_from_issue(
         issue_data: Optional pre-fetched issue data
 
     Returns:
-        Base branch name if issue has base_branch, None otherwise
+        Tuple of (pr_manager, issue_manager), each None if unavailable.
     """
-    # If issue_data provided, check its base_branch directly
-    if issue_data is not None:
-        base_branch = issue_data.get("base_branch")
-        if base_branch:
-            logger.info(f"Found base branch from provided issue data: {base_branch}")
-            return base_branch
-        logger.debug("Provided issue_data has no base_branch")
-        return None
-
-    # Extract issue number from branch name
-    issue_number = extract_issue_number_from_branch(current_branch)
-    if issue_number is None:
-        logger.debug(f"No issue number in branch name '{current_branch}'")
-        return None
-
+    pr_manager: PullRequestManager | None = None
     try:
-        issue_manager = IssueManager(project_dir=project_dir)
-        fetched_issue = issue_manager.get_issue(issue_number)
-
-        # Check if issue was found (number=0 indicates not found)
-        if fetched_issue.get("number", 0) == 0:
-            logger.debug(f"Issue #{issue_number} not found")
-            return None
-
-        base_branch = fetched_issue.get("base_branch")
-        if base_branch:
-            logger.info(f"Found base branch from issue #{issue_number}: {base_branch}")
-            return base_branch
-
-        logger.debug(f"Issue #{issue_number} has no base_branch specified")
-        return None
-
+        pr_manager = PullRequestManager(project_dir)
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.debug(f"Issue detection failed: {e}")
-        return None
+        logger.debug(f"PR manager unavailable: {e}")
 
+    issue_manager: IssueManager | None = None
+    if (
+        issue_data is None
+        and extract_issue_number_from_branch(current_branch) is not None
+    ):
+        try:
+            issue_manager = IssueManager(project_dir=project_dir)
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            logger.debug(f"Issue manager unavailable: {e}")
 
-def _detect_default_branch(project_dir: Path) -> str | None:
-    """Detect default branch (main/master).
-
-    Args:
-        project_dir: Project directory path
-
-    Returns:
-        Default branch name if found, None otherwise
-    """
-    try:
-        default_branch = get_default_branch_name(project_dir)
-        if default_branch:
-            logger.info(f"Using default branch: {default_branch}")
-            return default_branch
-
-        logger.debug("Could not determine default branch")
-        return None
-
-    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        logger.debug(f"Default branch detection failed: {e}")
-        return None
+    return pr_manager, issue_manager

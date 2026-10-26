@@ -7,6 +7,12 @@ Git functionality lives in the mcp_workspace package.
 File issues or feature requests there: MarcusJellinghaus/mcp-workspace
 """
 
+# Base branch detection
+from mcp_workspace.git_operations.base_branch import (
+    BaseBranchSource,
+    detect_base_branch_with_source,
+)
+
 # Branch queries
 from mcp_workspace.git_operations.branch_queries import (
     branch_exists,
@@ -127,4 +133,6 @@ __all__ = [
     "pull",
     "clone_repo",
     "get_working_tree_status",
+    "BaseBranchSource",
+    "detect_base_branch_with_source",
 ]
