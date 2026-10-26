@@ -60,6 +60,7 @@ from mcp_workspace.git_operations.remotes import (
     git_push,
     list_remote_branches,
     probe_origin_branch,
+    pull,
     push_branch,
     rebase_onto_branch,
 )
@@ -121,4 +122,5 @@ __all__ = [
     "list_remote_branches",
     "commit_paths",
     "unstage_paths",
+    "pull",
 ]

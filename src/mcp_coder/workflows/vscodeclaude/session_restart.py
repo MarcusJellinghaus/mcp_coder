@@ -5,6 +5,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
+from ...mcp_workspace_git import checkout_branch, fetch_remote, pull
 from ...mcp_workspace_github import (
     IssueBranchManager,
     IssueData,
@@ -12,11 +13,7 @@ from ...mcp_workspace_github import (
     RepoIdentifier,
     get_all_cached_issues,
 )
-from ...utils.subprocess_runner import (
-    CalledProcessError,
-    CommandOptions,
-    execute_subprocess,
-)
+from ...utils.subprocess_runner import CalledProcessError
 from ...utils.user_config import get_cache_refresh_minutes
 from .config import _get_configured_repos
 from .helpers import get_issue_status
@@ -83,11 +80,8 @@ def _prepare_restart_branch(
         - branch_name: Branch name if switched, None if staying on current
     """
     # 1. Always run git fetch origin (fatal if fails)
-    try:
-        options = CommandOptions(cwd=str(folder_path), check=True)
-        execute_subprocess(["git", "fetch", "origin"], options)
-    except CalledProcessError as e:
-        logger.error("git fetch failed for %s: %s", folder_path, e)
+    if not fetch_remote(folder_path):
+        logger.error("git fetch failed for %s", folder_path)
         return BranchPrepResult(False, "Git error", None)
 
     # 2. If status doesn't require branch, return success (stay on current branch)
@@ -109,9 +103,15 @@ def _prepare_restart_branch(
 
     # 5. Checkout and pull
     try:
-        options = CommandOptions(cwd=str(folder_path), check=True)
-        execute_subprocess(["git", "checkout", linked_branch], options)
-        execute_subprocess(["git", "pull"], options)
+        if not checkout_branch(linked_branch, folder_path):
+            raise CalledProcessError(
+                1, "checkout_branch", output=f"Failed to checkout '{linked_branch}'"
+            )
+        pulled = pull(folder_path)
+        if not pulled["success"]:
+            raise CalledProcessError(
+                1, "pull", output=pulled["error"], stderr=pulled["stderr"]
+            )
     except CalledProcessError as e:
         logger.error("Git operation failed: %s", e)
         return BranchPrepResult(False, "Git error", None)

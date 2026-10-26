@@ -296,12 +296,14 @@ class TestBranchHandlingIntegration:
         )
 
         # Mock git fetch success, but dirty status
-        def mock_execute(cmd: list[str], options: Any) -> Any:
-            return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
-
+        mock_checkout = MagicMock(return_value=True)
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
-            mock_execute,
+            "mcp_coder.workflows.vscodeclaude.session_restart.fetch_remote",
+            MagicMock(return_value=True),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_restart.checkout_branch",
+            mock_checkout,
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
@@ -352,6 +354,7 @@ class TestBranchHandlingIntegration:
 
         # Should NOT restart due to dirty repo
         assert len(result) == 0
+        mock_checkout.assert_not_called()
 
     def test_git_fetch_runs_on_every_restart(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -359,14 +362,28 @@ class TestBranchHandlingIntegration:
         """git fetch origin runs on every restart regardless of status."""
         fetch_calls: list[str] = []
 
-        def mock_execute(cmd: list[str], options: Any) -> Any:
-            if "fetch" in cmd:
-                fetch_calls.append("fetch")
-            return type("Result", (), {"stdout": "", "stderr": "", "return_code": 0})()
+        def mock_fetch(folder_path: Path) -> bool:
+            fetch_calls.append("fetch")
+            return True
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.execute_subprocess",
-            mock_execute,
+            "mcp_coder.workflows.vscodeclaude.session_restart.fetch_remote",
+            mock_fetch,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_restart.checkout_branch",
+            MagicMock(return_value=True),
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.session_restart.pull",
+            MagicMock(
+                return_value={
+                    "success": True,
+                    "error": None,
+                    "returncode": 0,
+                    "stderr": "",
+                }
+            ),
         )
 
         mock_branch_manager = type(
