@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Baseline + move `TestSessionIdOutputFormat` → `test_prompt_session_id_format.py`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: record baseline counts in step_1.md Notes, move `TestSessionIdOutputFormat` with `move_symbol` (dry run first), fix imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record baseline counts in step_1.md Notes, move `TestSessionIdOutputFormat` with `move_symbol` (dry run first), fix imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move `TestPromptClaudeCwd` → `test_prompt_claude_cwd.py`
 See [step_2.md](./steps/step_2.md)

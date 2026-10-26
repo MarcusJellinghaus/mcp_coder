@@ -69,4 +69,9 @@ commit
 
 ## Notes
 
-<!-- baseline numbers recorded here -->
+Baseline (2026-10-26, actual counts — these replace the planned 1039 / 6463 for all later checks):
+
+- `tests/cli/commands/test_prompt.py` collect: **22**
+- `tests/cli/commands/` collect: **1028**
+- whole suite collect: **6587**
+- `test_prompt.py` with fast-unit exclusion: **22 passed**
