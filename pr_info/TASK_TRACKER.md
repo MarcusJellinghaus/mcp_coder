@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Move push tests from `test_commit.py` to `test_commit_push.py`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: record counts, `move_symbol` `MODULE` then `TestPushAfterCommit` + `TestCommitAutoPush` (dry run, then apply), verify order/no cross-imports, fix imports, remove `tests/cli/commands/test_commit.py` from `.large-files-allowlist`, update `vulture_whitelist.py:136` comment, verify end-state counts (18/12/19/25/10 = 84)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record counts, `move_symbol` `MODULE` then `TestPushAfterCommit` + `TestCommitAutoPush` (dry run, then apply), verify order/no cross-imports, fix imports, remove `tests/cli/commands/test_commit.py` from `.large-files-allowlist`, update `vulture_whitelist.py:136` comment, verify end-state counts (18/12/19/25/10 = 84)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
