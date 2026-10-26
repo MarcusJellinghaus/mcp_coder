@@ -238,6 +238,13 @@ _._no_branch_issue_link
 # failure-comment builder never calls real git
 _._stub_branch_head
 
+# create_pr/test_failure_handling.py, test_create_pr_integration.py and
+# create_pr/test_workflow.py - Autouse fixtures stubbing post-creation polling
+# and the open-PR lookup so phase A runs without GitHub
+_._mock_post_creation
+_._mock_find_open_pr
+_.mock_find_open_pr
+
 # =============================================================================
 # API COMPLETENESS - CommandResult Dataclass Fields
 # =============================================================================
