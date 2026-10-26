@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Move `TestBuildEligibleIssuesPrefetched` to `test_issues_branch_check.py` — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move class from `coordinator/test_core.py` via `move_symbol`, verify method-local imports intact, dedupe destination imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move class from `coordinator/test_core.py` via `move_symbol`, verify method-local imports intact, dedupe destination imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
