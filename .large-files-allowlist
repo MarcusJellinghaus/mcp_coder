@@ -14,5 +14,4 @@ tests/llm/test_interface.py
 tests/workflow_utils/test_task_tracker.py
 tests/workflows/implement/test_task_processing.py
 tests/workflows/vscodeclaude/test_cleanup.py
-tests/workflows/vscodeclaude/test_sessions.py
 tests/workflows/vscodeclaude/test_session_restart.py

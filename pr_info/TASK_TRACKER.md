@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Split `test_sessions.py` into six files (tests only)
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: record baseline counts, move test classes via `move_symbol` into the 5 new files, fix imports (ruff F401), remove `test_sessions.py` from `.large-files-allowlist`, verify collect counts
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record baseline counts, move test classes via `move_symbol` into the 5 new files, fix imports (ruff F401), remove `test_sessions.py` from `.large-files-allowlist`, verify collect counts
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move the VSCode probes from `sessions.py` into `detection.py`
 See [step_2.md](./steps/step_2.md)
