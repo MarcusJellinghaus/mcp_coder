@@ -133,7 +133,7 @@ _.require_copilot_cli
 # test_copilot_cli.py - @patch decorator requires accepting the mock parameter
 _.mock_settings
 
-# test_commit.py - @patch decorator parameters for push tests
+# test_commit_push.py - @patch decorator parameters for push tests
 _.mock_has_tracking
 
 # coordinator/test_commands.py - @patch(apply_assessments) decorator parameter
