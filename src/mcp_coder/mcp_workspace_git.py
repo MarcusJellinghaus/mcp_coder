@@ -13,6 +13,7 @@ from mcp_workspace.git_operations.branch_queries import (
     extract_issue_number_from_branch,
     get_current_branch_name,
     get_default_branch_name,
+    get_remote_branch_commit_sha,
     has_remote_tracking_branch,
     validate_branch_name,
 )
@@ -107,4 +108,5 @@ __all__ = [
     "MERGE_BASE_DISTANCE_THRESHOLD",
     "detect_parent_branch_via_merge_base",
     "verify_git",
+    "get_remote_branch_commit_sha",
 ]

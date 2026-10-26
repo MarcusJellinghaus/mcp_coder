@@ -48,11 +48,20 @@ def mock_check_base_on_origin() -> Iterator[MagicMock]:
 
 @pytest.fixture(autouse=True)
 def mock_execute_command() -> Iterator[MagicMock]:
-    """Keep the rev-parse / merge-tree probes off real git; rev-parse fails."""
+    """Keep the merge-tree probe off real git."""
     with patch(
         f"{_MODULE}.execute_command", return_value=_result(return_code=1)
     ) as mock_exec:
         yield mock_exec
+
+
+@pytest.fixture(autouse=True)
+def mock_remote_sha() -> Iterator[MagicMock]:
+    """Keep the origin/<base> sha lookup off real git; it finds nothing."""
+    with patch(
+        f"{_MODULE}.get_remote_branch_commit_sha", return_value=None
+    ) as mock_sha:
+        yield mock_sha
 
 
 class TestRebaseOutcome:
@@ -82,43 +91,19 @@ class TestBaseSha:
     """Tests for _base_sha."""
 
     def test_truncates_to_seven_chars(
-        self, mock_execute_command: MagicMock, tmp_path: Path
+        self, mock_remote_sha: MagicMock, tmp_path: Path
     ) -> None:
         """Test the SHA of origin/<base> is truncated to 7 chars."""
-        mock_execute_command.return_value = _result(stdout=f"{_FULL_SHA}\n")
+        mock_remote_sha.return_value = _FULL_SHA
 
         assert _base_sha(tmp_path, "main") == "abc1234"
-        args = mock_execute_command.call_args
-        assert args[0][0] == [
-            "git",
-            "rev-parse",
-            "--verify",
-            "--quiet",
-            "origin/main",
-        ]
-        assert args[1]["cwd"] == str(tmp_path)
+        mock_remote_sha.assert_called_once_with(tmp_path, "main")
 
-    def test_none_when_rev_parse_fails(
-        self, mock_execute_command: MagicMock, tmp_path: Path
+    def test_none_when_sha_unavailable(
+        self, mock_remote_sha: MagicMock, tmp_path: Path
     ) -> None:
-        """Test a non-zero rev-parse yields None."""
-        mock_execute_command.return_value = _result(return_code=1)
-
-        assert _base_sha(tmp_path, "main") is None
-
-    def test_none_when_stdout_empty(
-        self, mock_execute_command: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test an exit-0 rev-parse with no output yields None."""
-        mock_execute_command.return_value = _result(stdout="  \n")
-
-        assert _base_sha(tmp_path, "main") is None
-
-    def test_none_when_execute_raises(
-        self, mock_execute_command: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test an exception from execute_command yields None."""
-        mock_execute_command.side_effect = OSError("no git")
+        """Test an unresolvable origin/<base> yields None."""
+        mock_remote_sha.return_value = None
 
         assert _base_sha(tmp_path, "main") is None
 
@@ -200,7 +185,7 @@ class TestAttemptRebaseOutcomes:
         mock_detect: MagicMock,
         mock_rebase: MagicMock,
         mock_push: MagicMock,
-        mock_execute_command: MagicMock,
+        mock_remote_sha: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test a clean rebase + push returns ok with base and short SHA."""
@@ -208,7 +193,7 @@ class TestAttemptRebaseOutcomes:
         mock_detect.return_value = "main"
         mock_rebase.return_value = True
         mock_push.return_value = True
-        mock_execute_command.return_value = _result(stdout=_FULL_SHA)
+        mock_remote_sha.return_value = _FULL_SHA
 
         outcome = _attempt_rebase_and_push(tmp_path)
 
@@ -269,6 +254,7 @@ class TestAttemptRebaseOutcomes:
         mock_push: MagicMock,
         mock_check_base_on_origin: MagicMock,
         mock_execute_command: MagicMock,
+        mock_remote_sha: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test a base missing on origin returns base_missing with no SHA."""
@@ -281,6 +267,7 @@ class TestAttemptRebaseOutcomes:
         assert outcome == RebaseOutcome("base_missing", "epic/x")
         assert outcome.base_sha is None
         mock_execute_command.assert_not_called()
+        mock_remote_sha.assert_not_called()
 
     def test_conflict(
         self,
@@ -289,16 +276,17 @@ class TestAttemptRebaseOutcomes:
         mock_rebase: MagicMock,
         mock_push: MagicMock,
         mock_execute_command: MagicMock,
+        mock_remote_sha: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test a failed rebase classified by merge-tree as a conflict."""
         mock_status.return_value = self._CLEAN
         mock_detect.return_value = "main"
         mock_rebase.return_value = False
-        mock_execute_command.side_effect = [
-            _result(stdout=_FULL_SHA),
-            _result(return_code=1, stdout=f"{_TREE_OID}\na.py\n"),
-        ]
+        mock_remote_sha.return_value = _FULL_SHA
+        mock_execute_command.return_value = _result(
+            return_code=1, stdout=f"{_TREE_OID}\na.py\n"
+        )
 
         outcome = _attempt_rebase_and_push(tmp_path)
 
@@ -312,16 +300,15 @@ class TestAttemptRebaseOutcomes:
         mock_rebase: MagicMock,
         mock_push: MagicMock,
         mock_execute_command: MagicMock,
+        mock_remote_sha: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test a failed rebase merge-tree cannot explain is rebase_failed."""
         mock_status.return_value = self._CLEAN
         mock_detect.return_value = "main"
         mock_rebase.return_value = False
-        mock_execute_command.side_effect = [
-            _result(stdout=_FULL_SHA),
-            _result(stdout=f"{_TREE_OID}\n"),
-        ]
+        mock_remote_sha.return_value = _FULL_SHA
+        mock_execute_command.return_value = _result(stdout=f"{_TREE_OID}\n")
 
         outcome = _attempt_rebase_and_push(tmp_path)
 
@@ -334,7 +321,7 @@ class TestAttemptRebaseOutcomes:
         mock_detect: MagicMock,
         mock_rebase: MagicMock,
         mock_push: MagicMock,
-        mock_execute_command: MagicMock,
+        mock_remote_sha: MagicMock,
         tmp_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
@@ -343,7 +330,7 @@ class TestAttemptRebaseOutcomes:
         mock_detect.return_value = "main"
         mock_rebase.return_value = True
         mock_push.return_value = False
-        mock_execute_command.return_value = _result(stdout=_FULL_SHA)
+        mock_remote_sha.return_value = _FULL_SHA
 
         with caplog.at_level(logging.WARNING):
             outcome = _attempt_rebase_and_push(tmp_path)
@@ -351,7 +338,7 @@ class TestAttemptRebaseOutcomes:
         assert outcome == RebaseOutcome("push_failed", "main", "abc1234")
         assert any(r.levelno == logging.WARNING for r in caplog.records)
 
-    def test_base_sha_none_when_rev_parse_fails(
+    def test_base_sha_none_when_sha_unavailable(
         self,
         mock_status: MagicMock,
         mock_detect: MagicMock,
@@ -359,7 +346,7 @@ class TestAttemptRebaseOutcomes:
         mock_push: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test base_sha is None when rev-parse fails (fixture default)."""
+        """Test base_sha is None when origin/<base> is unresolvable (default)."""
         mock_status.return_value = self._CLEAN
         mock_detect.return_value = "main"
         mock_rebase.return_value = True

@@ -12,7 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from mcp_coder.mcp_workspace_git import get_full_status, rebase_onto_branch
+from mcp_coder.mcp_workspace_git import (
+    get_full_status,
+    get_remote_branch_commit_sha,
+    rebase_onto_branch,
+)
 from mcp_coder.mcp_workspace_github import PullRequestManager
 from mcp_coder.utils.subprocess_runner import execute_command
 from mcp_coder.workflow_steps.commit import push_changes
@@ -109,17 +113,8 @@ def _base_sha(project_dir: Path, base: str) -> str | None:
     Returns:
         SHA truncated to ``SHORT_SHA_LENGTH``, or None on any failure.
     """
-    try:
-        result = execute_command(
-            ["git", "rev-parse", "--verify", "--quiet", f"origin/{base}"],
-            cwd=str(project_dir),
-        )
-    except Exception:  # pylint: disable=broad-exception-caught
-        return None
-    sha = result.stdout.strip()
-    if result.return_code != 0 or not sha:
-        return None
-    return sha[:SHORT_SHA_LENGTH]
+    sha = get_remote_branch_commit_sha(project_dir, base)
+    return sha[:SHORT_SHA_LENGTH] if sha else None
 
 
 def _classify_failed_rebase(
