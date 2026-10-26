@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Split `test_issues.py` into eligibility and branch-check siblings — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: move eligibility classes → `test_issues_eligibility.py`, `TestBuildEligibleIssuesWithBranchCheck` → `test_issues_branch_check.py` via `move_symbol`, fix imports, drop `.large-files-allowlist` entry
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move eligibility classes → `test_issues_eligibility.py`, `TestBuildEligibleIssuesWithBranchCheck` → `test_issues_branch_check.py` via `move_symbol`, fix imports, drop `.large-files-allowlist` entry
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move `TestBuildEligibleIssuesPrefetched` to `test_issues_branch_check.py` — [step_2.md](./steps/step_2.md)
 
