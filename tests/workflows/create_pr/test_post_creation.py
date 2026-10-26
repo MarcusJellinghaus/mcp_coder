@@ -131,6 +131,31 @@ class TestRunPostCreation:
         assert names[:3] == ["sha", "rebase", "sha"]
         assert mocks.ci_poll.call_args.kwargs["expected_sha"] == "rebased-sha"
 
+    def test_push_failed_waits_on_pushed_sha_without_refresh(
+        self, mocks: _Mocks
+    ) -> None:
+        """Rebase push fails → HEAD reset; CI waits on the PR's SHA; no refresh."""
+        head = {"sha": "pushed-sha"}
+
+        def rebase(_project_dir: Path) -> RebaseOutcome:
+            head["sha"] = "unpushed-sha"
+            return RebaseOutcome(reason="push_failed", base_branch="main")
+
+        def reset(_project_dir: Path, sha: str) -> bool:
+            head["sha"] = sha
+            return True
+
+        mocks.poll.side_effect = ["dirty", "clean"]
+        mocks.rebase.side_effect = rebase
+        mocks.sha.side_effect = lambda _project_dir: head["sha"]
+
+        with patch(f"{_MODULE}._reset_hard", side_effect=reset) as mock_reset:
+            assert run_post_creation(_PROJECT, _BRANCH, _PROVIDER) == "pr_created"
+
+        mock_reset.assert_called_once_with(_PROJECT, "pushed-sha")
+        assert mocks.ci_poll.call_args.kwargs["expected_sha"] == "pushed-sha"
+        mocks.refresh.assert_not_called()
+
     def test_none_sha_passed_through(self, mocks: _Mocks) -> None:
         """A None HEAD is passed to the CI wait unchanged."""
         mocks.sha.return_value = None

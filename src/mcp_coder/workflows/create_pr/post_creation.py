@@ -18,6 +18,7 @@ from mcp_coder.workflow_steps.pr_description import refresh_pr_description
 from mcp_coder.workflow_steps.rebase import (
     _attempt_rebase_and_push,
     _poll_mergeable_state,
+    _reset_hard,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,15 +49,23 @@ def run_post_creation(
         "pr_merge_conflict", "failing_ci" or "pr_created".
     """
     head_before = get_latest_commit_sha(project_dir)
-    label = _check_mergeability_and_ci(project_dir, branch)
+    label = _check_mergeability_and_ci(project_dir, branch, head_before)
     if get_latest_commit_sha(project_dir) != head_before:
         logger.log(OUTPUT, "New commits were pushed; refreshing PR description")
         refresh_pr_description(project_dir, branch, provider, mcp_config, settings_file)
     return label
 
 
-def _check_mergeability_and_ci(project_dir: Path, branch: str) -> str:
+def _check_mergeability_and_ci(
+    project_dir: Path, branch: str, head_before: str | None
+) -> str:
     """Check mergeability (rebasing once on ``dirty``), then wait for CI.
+
+    Args:
+        project_dir: Path to the project directory.
+        branch: Head branch of the PR.
+        head_before: Local HEAD at the start of phase B; restored when the
+            rebase succeeds locally but its push fails.
 
     Returns:
         Label ID: "pr_merge_conflict", "failing_ci" or "pr_created".
@@ -66,6 +75,10 @@ def _check_mergeability_and_ci(project_dir: Path, branch: str) -> str:
     if state == "dirty":
         outcome = _attempt_rebase_and_push(project_dir)
         logger.log(OUTPUT, "Rebase result: %s", outcome.reason)
+        if outcome.reason == "push_failed" and head_before:
+            # Undo the unpushed rebase: the CI wait and the description
+            # refresh must see the HEAD the PR actually has.
+            _reset_hard(project_dir, head_before)
         state = _poll_mergeable_state(project_dir, branch)
         if state == "dirty":
             logger.log(

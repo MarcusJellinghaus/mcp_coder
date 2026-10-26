@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
 
@@ -419,3 +420,59 @@ class TestRunCreatePrWorkflowAfterCreation:
         mock_rebase.assert_called_once_with(Path("/test"))
         names = [c[0] for c in manager.mock_calls]
         assert names == ["prereqs", "rebase", "generate"]
+
+    @patch("mcp_coder.workflows.create_pr.core._handle_create_pr_failure")
+    @patch("mcp_coder.workflows.create_pr.core._add_pr_assignee_best_effort")
+    @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
+    @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
+    @patch("mcp_coder.workflows.create_pr.core.git_push")
+    @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
+    @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
+    @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
+    @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
+    @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
+    def test_workflow_continues_when_rebase_push_fails(
+        self,
+        mock_detect_base: MagicMock,
+        mock_get_branch: MagicMock,
+        mock_clean: MagicMock,
+        mock_cleanup: MagicMock,
+        mock_create_pr: MagicMock,
+        mock_push: MagicMock,
+        mock_generate: MagicMock,
+        mock_prereqs: MagicMock,
+        _mock_add_assignee: MagicMock,
+        mock_failure: MagicMock,
+    ) -> None:
+        """Pre-PR rebase push fails → HEAD restored, PR still created, no 09f."""
+        pre = "mcp_coder.workflows.create_pr.pre_creation"
+        mock_prereqs.return_value = True
+        mock_generate.return_value = ("Title", "Body")
+        mock_push.return_value = {"success": True}
+        mock_create_pr.return_value = (
+            {"number": 42, "url": "https://github.com/test/repo/pull/42"},
+            None,
+        )
+        mock_cleanup.return_value = True
+        mock_clean.return_value = True
+        mock_get_branch.return_value = "feature-branch"
+        mock_detect_base.return_value = "main"
+
+        with (
+            patch(f"{pre}.get_current_branch_name", return_value="feature-branch"),
+            patch(f"{pre}.detect_base_branch", return_value="main"),
+            patch(f"{pre}.needs_rebase", return_value=(True, "behind")),
+            patch(f"{pre}.get_latest_commit_sha", return_value="before"),
+            patch(
+                f"{pre}._attempt_rebase_and_push",
+                return_value=RebaseOutcome(reason="push_failed", base_branch="main"),
+            ),
+            patch(f"{pre}._reset_hard", return_value=True) as mock_reset,
+        ):
+            result = run_create_pr_workflow(Path("/test"), "claude")
+
+        assert result == 0
+        mock_reset.assert_called_once_with(Path("/test"), "before")
+        mock_push.assert_called_once_with(Path("/test"))
+        mock_create_pr.assert_called_once()
+        mock_failure.assert_not_called()

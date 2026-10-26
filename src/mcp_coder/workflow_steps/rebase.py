@@ -214,6 +214,30 @@ def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
     return RebaseOutcome("ok", target, sha)
 
 
+def _reset_hard(project_dir: Path, sha: str) -> bool:
+    """Reset the current branch to ``sha`` (``git reset --hard``). Never raises.
+
+    Used to undo a rebase whose push failed, so local HEAD matches the
+    remote again.
+
+    Args:
+        project_dir: Path to the project directory
+        sha: Commit to reset to
+
+    Returns:
+        True if the reset succeeded.
+    """
+    try:
+        result = execute_command(["git", "reset", "--hard", sha], cwd=str(project_dir))
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.warning("git reset --hard %s failed", sha, exc_info=True)
+        return False
+    if result.return_code != 0:
+        logger.warning("git reset --hard %s failed: %s", sha, result.stderr.strip())
+        return False
+    return True
+
+
 def _poll_mergeable_state(project_dir: Path, branch_name: str) -> str | None:
     """Poll ``find_pull_request_by_head`` for a settled mergeable_state.
 

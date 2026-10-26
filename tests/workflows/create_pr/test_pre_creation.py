@@ -25,6 +25,8 @@ class _Mocks:
     base: MagicMock
     needs: MagicMock
     attempt: MagicMock
+    sha: MagicMock
+    reset: MagicMock
 
 
 @pytest.fixture
@@ -38,8 +40,17 @@ def mocks() -> Iterator[_Mocks]:
             f"{_MODULE}._attempt_rebase_and_push",
             return_value=RebaseOutcome(reason="ok", base_branch="main"),
         ) as attempt,
+        patch(f"{_MODULE}.get_latest_commit_sha", return_value="before") as sha,
+        patch(f"{_MODULE}._reset_hard", return_value=True) as reset,
     ):
-        yield _Mocks(branch=branch, base=base, needs=needs, attempt=attempt)
+        yield _Mocks(
+            branch=branch,
+            base=base,
+            needs=needs,
+            attempt=attempt,
+            sha=sha,
+            reset=reset,
+        )
 
 
 class TestRebaseIfNeeded:
@@ -98,6 +109,26 @@ class TestRebaseIfNeeded:
         _rebase_if_needed(_PROJECT)
 
         mocks.attempt.assert_called_once_with(_PROJECT)
+        mocks.reset.assert_not_called()
+
+    def test_push_failed_restores_head(self, mocks: _Mocks) -> None:
+        """Rebased locally but push failed → reset to the pre-rebase HEAD."""
+        mocks.needs.return_value = (True, "behind")
+        mocks.attempt.return_value = RebaseOutcome(
+            reason="push_failed", base_branch="main"
+        )
+
+        _rebase_if_needed(_PROJECT)
+
+        mocks.reset.assert_called_once_with(_PROJECT, "before")
+
+    def test_ok_rebase_keeps_head(self, mocks: _Mocks) -> None:
+        """A pushed rebase is not undone."""
+        mocks.needs.return_value = (True, "behind")
+
+        _rebase_if_needed(_PROJECT)
+
+        mocks.reset.assert_not_called()
 
     def test_exception_is_swallowed(
         self, mocks: _Mocks, caplog: pytest.LogCaptureFixture

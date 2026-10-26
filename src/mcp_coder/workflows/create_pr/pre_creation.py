@@ -8,11 +8,15 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-from mcp_coder.mcp_workspace_git import get_current_branch_name, needs_rebase
+from mcp_coder.mcp_workspace_git import (
+    get_current_branch_name,
+    get_latest_commit_sha,
+    needs_rebase,
+)
 from mcp_coder.mcp_workspace_github import PullRequestData, PullRequestManager
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_steps.prerequisites import check_git_clean
-from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push
+from mcp_coder.workflow_steps.rebase import _attempt_rebase_and_push, _reset_hard
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 
 logger = logging.getLogger(__name__)
@@ -90,7 +94,11 @@ def _rebase_if_needed(project_dir: Path) -> None:
             return
 
         logger.log(OUTPUT, "Branch is behind origin/%s; rebasing...", base)
+        head_before = get_latest_commit_sha(project_dir)
         outcome = _attempt_rebase_and_push(project_dir)
         logger.log(OUTPUT, "Rebase result: %s", outcome.reason)
+        if outcome.reason == "push_failed" and head_before:
+            # Undo the unpushed rebase so the later plain push fast-forwards.
+            _reset_hard(project_dir, head_before)
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.warning("Rebase before PR failed (non-blocking): %s", e)
