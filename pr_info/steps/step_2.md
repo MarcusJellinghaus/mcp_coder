@@ -26,7 +26,7 @@
   - `make_issue_data` (`tests.github_factories`)
 
   Ruff `F401`/`F821` decides the final set.
-- **In the source,** remove imports that are now unused (for example `prepare_and_launch_session`, `CalledProcessError`, `Path`). Use `run_ruff_fix(select=["F401"])` as described in the summary.
+- **In the source,** remove imports that are now unused (for example `prepare_and_launch_session`, `CalledProcessError`). Ruff `F401` decides which are unused. `Path` stays, because groups C and D still use `tmp_path: Path`. Use `run_ruff_fix(select=["F401"])` as described in the summary.
 - If rope imported a name from a different module than the original did, rewrite only that import line.
 
 ## ALGORITHM
@@ -35,7 +35,7 @@ move_symbol dry run -> must list only the source and the destination file
 move_symbol (real)
 fix imports (ruff F401/F821 clean) in both files
 run_format_code
-gate: pytest -v on destination -> 3 passed; directory collect -> 688
+gate: pytest -v on destination -> 3 passed; directory collect -> recorded baseline (step 1)
 standard checks; commit
 ```
 
@@ -43,7 +43,7 @@ standard checks; commit
 - **Dry run** touches files other than the two named → write one line to `pr_info/.blocked.txt` and stop.
 - **`run_pytest_check(extra_args=["-v", "tests/workflows/vscodeclaude/test_session_launch_prepare.py"])`** → **3 passed**.
 - **`run_pytest_check(extra_args=["-v", "tests/workflows/vscodeclaude/test_session_restart.py"])`** → **13 passed**.
-- **Directory collect-only** → **688**.
+- **Directory collect-only** → the directory baseline recorded in step 1.
 - **Compact diff:** a new file header, the moved block (suppressed), and import changes only. A changed method body or indentation, or a gate failure, means: move the class back with `move_symbol`, write one line to `pr_info/.blocked.txt` and stop.
 
 ## Commit

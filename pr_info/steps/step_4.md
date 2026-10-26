@@ -39,7 +39,7 @@ move_symbol dry run -> must list only the source and the destination file
 move_symbol (real)
 check: calls are bare `_make_assessment(`; `import logging` still inside the zombie test
 fix imports (ruff clean) in both files; run_format_code
-gate: pytest -v destination -> 5 passed; directory collect -> 688
+gate: pytest -v destination -> 5 passed; directory collect -> recorded baseline (step 1)
 standard checks; commit
 ```
 
@@ -48,7 +48,7 @@ standard checks; commit
 - **`search_files(pattern="test_session_restart\\._make_assessment\\(", glob="tests/**/*.py")`** → **0** hits.
 - **`run_pytest_check(extra_args=["-v", "tests/workflows/vscodeclaude/test_session_restart_lifecycle.py"])`** → **5 passed**.
 - **`run_pytest_check(extra_args=["-v", "tests/workflows/vscodeclaude/test_session_restart.py"])`** → **7 passed**.
-- **Directory collect-only** → **688**.
+- **Directory collect-only** → the directory baseline recorded in step 1.
 - **On any gate failure, including a qualified call site or a hoisted or dropped `import logging`:** move the class back with `move_symbol`, write one line to `pr_info/.blocked.txt` and stop.
 
 ## Commit

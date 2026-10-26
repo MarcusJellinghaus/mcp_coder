@@ -35,7 +35,7 @@
 dry run + move TestRestartClosedSessionsIssueStatus -> new file
 dry run (must list exactly 4 files) + move _make_assessment -> conftest.py
 fix import lines (conftest types block; both importers use the absolute conftest import)
-gate: directory collect 688; source collects 0; 4 destination files -> 22 passed
+gate: directory collect = recorded baseline (step 1); source collects 0; 4 destination files -> 22 passed
 pre-delete: list_symbols(source) == [TestSessionRestart]; no importers -> delete file; edit allowlist
 run_format_code; standard checks; final verification; commit
 ```
@@ -46,7 +46,7 @@ run_format_code; standard checks; final verification; commit
   - On a hit: move the helper and then the class back with `move_symbol`, write one line to `pr_info/.blocked.txt` and stop.
 - **Gate before the delete:**
   - `run_pytest_check(extra_args=["--collect-only", "-q", "tests/workflows/vscodeclaude/test_session_restart.py"])` → **0**.
-  - Directory collect-only → **688**.
+  - Directory collect-only → the directory baseline recorded in step 1.
   - `run_pytest_check(extra_args=["-v", "tests/workflows/vscodeclaude/test_session_restart_lifecycle.py", "tests/workflows/vscodeclaude/test_session_restart_issue_status.py", "tests/workflows/vscodeclaude/test_session_launch_prepare.py", "tests/workflows/vscodeclaude/test_session_launch_process_issues.py"])` → **22 passed**, split **5 / 7 / 3 / 7** by file.
   - If any of these fails: write one line to `pr_info/.blocked.txt` and stop.
 - **Pre-delete checks:**
@@ -55,7 +55,7 @@ run_format_code; standard checks; final verification; commit
   - If either check fails: don't delete. Write one line to `pr_info/.blocked.txt` and stop.
 
 ## Final verification (after the delete and allowlist edit)
-- **Standard checks** from the summary: format, ruff, pylint, mypy, fast unit tests with `-n auto`, directory collect **688**. The 22-passed `-v` run of the four files above must still pass.
+- **Standard checks** from the summary: format, ruff, pylint, mypy, fast unit tests with `-n auto`, directory collect = the baseline recorded in step 1. The 22-passed `-v` run of the four files above must still pass.
 - **`search_files(pattern="from tests\\.workflows\\.vscodeclaude\\.conftest import _make_assessment", glob="tests/**/*.py")`** → **2** hits (`_lifecycle`, `_issue_status`).
 - **`search_files(pattern="test_session_restart import", glob="tests/**/*.py")`** → **0** hits.
 - **Other checks:** `run_lint_imports_check`, `run_tach_check` and `run_vulture_check` pass.

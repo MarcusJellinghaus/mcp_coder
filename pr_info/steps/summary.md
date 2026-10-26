@@ -57,7 +57,7 @@ All test files are in `tests/workflows/vscodeclaude/`.
 No new folders or `__init__.py` files, and no changes to `.importlinter`, `tach.toml` or `vulture_whitelist.py`.
 
 ## Baseline (measured 2026-10-26)
-- `tests/workflows/vscodeclaude/` collect-only: **688** tests. This must stay 688 after every step.
+- `tests/workflows/vscodeclaude/` collect-only: **688** tests on 2026-10-26. Step 1 measures and records the actual count (**688, or the recorded value**). It must stay equal to that recorded value after every step.
 - `test_session_restart.py` collects **16**, `test_session_launch_process_issues.py` collects **6**, and both together give **22 passed**.
 
 ## Steps (one commit each)
@@ -73,7 +73,7 @@ No new folders or `__init__.py` files, and no changes to `.importlinter`, `tach.
 3. `mcp__mcp-tools-py__run_pylint_check`
 4. `mcp__mcp-tools-py__run_mypy_check`
 5. `mcp__mcp-tools-py__run_pytest_check` with `extra_args=["-n", "auto", "-m", "<fast-unit marker exclusion from CLAUDE.md>"]`
-6. `mcp__mcp-tools-py__run_pytest_check(extra_args=["--collect-only", "-q", "tests/workflows/vscodeclaude/"])` → **688**
+6. `mcp__mcp-tools-py__run_pytest_check(extra_args=["--collect-only", "-q", "tests/workflows/vscodeclaude/"])` → the directory baseline recorded in step 1 (688 or the recorded value)
 7. `mcp__mcp-workspace__git` diff with `compact=true` → only moved blocks (suppressed), import changes, and the allowed edits for that step.
 
 ## Testing approach (TDD note)

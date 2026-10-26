@@ -24,7 +24,7 @@ move_symbol dry run -> must list only the source and the destination file
 move_symbol (real)
 destination imports unchanged; source F401 cleaned
 run_format_code
-gate: pytest -v destination -> 7 passed; directory collect -> 688
+gate: pytest -v destination -> 7 passed; directory collect -> recorded baseline (step 1)
 standard checks; commit
 ```
 
@@ -32,7 +32,7 @@ standard checks; commit
 - **Dry run** touches files other than the two named → write one line to `pr_info/.blocked.txt` and stop.
 - **`run_pytest_check(extra_args=["-v", "tests/workflows/vscodeclaude/test_session_launch_process_issues.py"])`** → **7 passed**.
 - **`run_pytest_check(extra_args=["-v", "tests/workflows/vscodeclaude/test_session_restart.py"])`** → **12 passed**.
-- **Directory collect-only** → **688**.
+- **Directory collect-only** → the directory baseline recorded in step 1.
 - **Compact diff:** the moved block (suppressed) and import removals in the source only. Nothing changes in the destination's import block. On any gate failure: move the class back with `move_symbol`, write one line to `pr_info/.blocked.txt` and stop.
 
 ## Commit
