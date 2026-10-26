@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move incomplete-task tests to `test_task_tracker_incomplete_tasks.py`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move `TestGetIncompleteTasksInternal`, `TestGetIncompleteTasks`, `TestHasIncompleteWork`, `TestGetIncompleteTasksEdgeCases` via `move_symbol`; verify imports and counts (18 / 41)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestGetIncompleteTasksInternal`, `TestGetIncompleteTasks`, `TestHasIncompleteWork`, `TestGetIncompleteTasksEdgeCases` via `move_symbol`; verify imports and counts (18 / 41)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move status tests to `test_task_tracker_status.py`
 See [step_3.md](./steps/step_3.md)
