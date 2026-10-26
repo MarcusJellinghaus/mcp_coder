@@ -37,5 +37,5 @@ See [step_2.md](./steps/step_2.md)
 
 ## Pull Request
 
-- [ ] PR review: review full branch diff against `main` for pure-refactoring compliance
+- [x] PR review: review full branch diff against `main` for pure-refactoring compliance
 - [ ] PR summary prepared
