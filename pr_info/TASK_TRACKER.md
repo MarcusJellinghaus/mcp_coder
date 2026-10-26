@@ -101,9 +101,9 @@ See [step_13.md](./steps/step_13.md)
 
 ### Step 14: `refresh_pr_description` + prompt (blocked by mcp-workspace#349)
 See [step_14.md](./steps/step_14.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 15: Call the refresh from create-pr phase B and `fix-ci` (blocked by mcp-workspace#349)
 See [step_15.md](./steps/step_15.md)

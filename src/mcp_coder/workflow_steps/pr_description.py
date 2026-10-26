@@ -2,6 +2,16 @@
 
 import logging
 import re
+from pathlib import Path
+
+from mcp_coder.constants import PROMPTS_FILE_PATH
+from mcp_coder.llm.env import prepare_llm_environment
+from mcp_coder.llm.interface import prompt_llm
+from mcp_coder.mcp_workspace_git import get_branch_diff
+from mcp_coder.mcp_workspace_github import PullRequestManager
+from mcp_coder.prompt_manager import get_prompt_with_substitutions
+from mcp_coder.utils.git_utils import get_branch_name_for_logging
+from mcp_coder.workflow_utils.base_branch import detect_base_branch
 
 logger = logging.getLogger(__name__)
 
@@ -113,3 +123,97 @@ def parse_pr_summary(llm_response: str) -> tuple[str, str]:
 
     logger.info(f"Parsed PR title: {title}")
     return title, body
+
+
+def refresh_pr_description(
+    project_dir: Path,
+    branch: str,
+    provider: str,
+    mcp_config: str | None = None,
+    settings_file: str | None = None,
+) -> bool:
+    """Refresh the open PR's title/body from the full branch diff. Best-effort, never raises.
+
+    Closing references in the current PR body are re-applied to the new body.
+    Never changes a label.
+
+    Args:
+        project_dir: Path to project directory
+        branch: Head branch of the open PR
+        provider: LLM provider (e.g., 'claude')
+        mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
+
+    Returns:
+        True if the PR was updated, False if unchanged, skipped or failed.
+    """
+    try:
+        pr_manager = PullRequestManager(project_dir)
+        prs = pr_manager.find_pull_request_by_head(branch)
+        if not prs:
+            logger.warning(
+                "No open PR for branch %s - skipping description refresh", branch
+            )
+            return False
+
+        pr = pr_manager.get_pull_request(prs[0]["number"])
+        base_branch = detect_base_branch(project_dir, current_branch=branch)
+        if base_branch is None:
+            logger.warning(
+                "Could not detect base branch - skipping description refresh"
+            )
+            return False
+
+        diff_content = get_branch_diff(
+            project_dir, base_branch=base_branch, exclude_paths=["pr_info/"]
+        )
+        if not diff_content or not diff_content.strip():
+            logger.info("No diff content - skipping description refresh")
+            return False
+
+        current_body = pr.get("body") or ""
+        prompt = get_prompt_with_substitutions(
+            str(PROMPTS_FILE_PATH),
+            "PR Description Refresh",
+            {
+                "pr_title": pr.get("title") or "",
+                "pr_body": current_body,
+                "git_diff_content": diff_content,
+            },
+        )
+
+        logger.info(
+            f"Calling LLM for PR description refresh using provider={provider}..."
+        )
+        text = prompt_llm(
+            prompt,
+            provider=provider,
+            # Inactivity budget (was wall-clock), kept below the CI step cap.
+            timeout=300,
+            env_vars=prepare_llm_environment(project_dir),
+            project_dir=str(project_dir),
+            mcp_config=mcp_config,
+            settings_file=settings_file,
+            branch_name=get_branch_name_for_logging(project_dir),
+        )["text"].strip()
+
+        if text.upper().startswith("UNCHANGED"):
+            logger.info("PR #%s description still accurate - not updated", pr["number"])
+            return False
+
+        title, body = parse_pr_summary(text)
+        for issue_number in closing_issue_numbers(current_body):
+            body = ensure_closing_reference(body, issue_number)
+
+        updated = bool(
+            pr_manager.update_pull_request(pr["number"], title=title, body=body)
+        )
+        if updated:
+            logger.info("PR #%s description refreshed", pr["number"])
+        else:
+            logger.warning("PR #%s description update failed", pr["number"])
+        return updated
+
+    except Exception as e:  # pylint: disable=broad-exception-caught  # best-effort
+        logger.warning("PR description refresh failed (non-blocking): %s", e)
+        return False
