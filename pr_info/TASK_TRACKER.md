@@ -25,9 +25,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Baseline + move fixtures to `conftest.py`
 See [step_1.md](./steps/step_1.md)
-- [ ] Implementation: record baseline counts, move `icoder_app` / `make_icoder_app` to `tests/icoder/conftest.py`, fix imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record baseline counts, move `icoder_app` / `make_icoder_app` to `tests/icoder/conftest.py`, fix imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Streaming tests → `test_app_pilot_streaming.py`
 See [step_2.md](./steps/step_2.md)

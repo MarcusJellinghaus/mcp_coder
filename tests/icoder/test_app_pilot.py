@@ -34,7 +34,7 @@ from mcp_coder.icoder.permissions.model import (
 )
 from mcp_coder.icoder.permissions.resolver import resolve
 from mcp_coder.icoder.permissions.skill_frame import SkillFrame
-from mcp_coder.icoder.services.llm_service import FakeLLMService, LLMService
+from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.approval_modal import ApprovalModal
 from mcp_coder.icoder.ui.widgets.busy_indicator import BusyIndicator
@@ -45,34 +45,6 @@ from mcp_coder.llm.types import StreamEvent
 from mcp_coder.utils.mcp_verification import ClaudeMCPStatus, MCPServerInfo
 
 pytestmark = pytest.mark.textual_integration
-
-
-@pytest.fixture
-def icoder_app(fake_llm: FakeLLMService, event_log: EventLog) -> ICoderApp:
-    """Create ICoderApp with fake dependencies."""
-    app_core = AppCore(llm_service=fake_llm, event_log=event_log)
-    return ICoderApp(app_core)
-
-
-@pytest.fixture
-def make_icoder_app(
-    event_log: EventLog,
-) -> Callable[..., ICoderApp]:
-    """Factory to create ICoderApp with custom FakeLLM responses or a custom LLM service."""
-
-    def _factory(
-        *,
-        responses: list[list[StreamEvent]] | None = None,
-        llm_service: LLMService | None = None,
-        format_tools: bool = True,
-    ) -> ICoderApp:
-        llm = llm_service or FakeLLMService(responses=responses or [])
-        return ICoderApp(
-            AppCore(llm_service=llm, event_log=event_log),
-            format_tools=format_tools,
-        )
-
-    return _factory
 
 
 async def test_app_launches(icoder_app: ICoderApp) -> None:
