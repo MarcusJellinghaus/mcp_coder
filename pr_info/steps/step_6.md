@@ -11,6 +11,8 @@
 - `src/mcp_coder/mcp_workspace_git.py` — export `commit_paths` (from `.commits`) and `unstage_paths` (from `.staging`)
 - `src/mcp_coder/workflows/review/handoff.py` — `_flush_round_log`, `_unstage_path`; delete `_relative_to_project`, `_unrelated_staged_entries`, `_commit_only_path`
 - `tests/workflows/review/test_handoff.py` (~211–438), `tests/workflows/review/test_handoff_route.py` (~424)
+- `tests/workflows/review/conftest.py` (~130–144) — replace the `monkeypatch.setattr(handoff, "get_full_status" / "commit_staged_files", ...)` mocks (they raise `AttributeError` once the imports go) with `commit_paths` / `unstage_paths` mocks (`mocks.commit_paths` returns a full `CommitResult` with `commit_hash="LOGSHA"`; `mocks.unstage_paths` returns a successful `GitResult`)
+- `tests/workflows/review/test_core.py` (~113, ~184, ~298) and `tests/workflows/review/test_core_after_steps.py` (~256, ~646) — `env.commit_staged_files` assertions become `env.commit_paths` (and, where a failed flush is asserted, `env.unstage_paths`) assertions
 
 ## WHAT
 

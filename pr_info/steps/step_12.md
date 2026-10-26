@@ -1,29 +1,27 @@
-# Step 12 — `workflows/rebase.py` onto upstream rebase primitives
+# Step 12 — `workflows/rebase.py` guards and helpers onto upstream primitives
 
 ## LLM prompt
 
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_12.md`. Implement step 12 only,
 > tests first. Run pylint, pytest (fast unit set, `-n auto`, plus `-m git_integration` for
 > `tests/workflows/rebase/test_git_helpers.py`) and mypy until all pass, run the formatter,
-> and make one commit: `refactor(rebase): drive rebase via mcp_workspace_git primitives`.
+> and make one commit: `refactor(rebase): guards and restore helpers via mcp_workspace_git`.
 
-## Precondition
+## Scope
 
-The new test `TestStageAllInRebase` (below) confirms `stage_all_changes` stages LLM-resolved
-unmerged files so `rebase_continue` completes. If it cannot pass with upstream
-`stage_all_changes`, write one line to `pr_info/.blocked.txt` and stop.
+Everything in `workflows/rebase.py` **except** the rebase/conflict loop and the fix-loop
+`add -A` / `commit -m`: those stay on `_run_git` until step 13.
 
 ## WHERE
 
-- `src/mcp_coder/mcp_workspace_git.py` — export `RebaseResult` (`.core`), `rebase_start`, `rebase_continue`, `rebase_skip`, `rebase_abort`, `reset_hard`, `is_rebase_in_progress` (`.rebase`); `get_conflict_blob_info`, `read_conflict_stage`, `resolve_take_theirs_or_remove`, `list_tree` (`.conflicts`); `has_staged_changes`, `get_working_tree_status` (`.repository_status`, latter already exported in step 9); `get_remote_url` (`.remotes`)
+- `src/mcp_coder/mcp_workspace_git.py` — export `rebase_abort`, `reset_hard`, `is_rebase_in_progress` (`.rebase`); `list_tree` (`.conflicts`); `get_remote_url` (`.remotes`). `get_working_tree_status` is already exported (step 9).
 - `src/mcp_coder/workflows/rebase.py`
-- `tests/workflows/rebase/test_workflow.py`, `test_guards.py`, `test_git_helpers.py`, `test_llm_steps.py`
+- `tests/workflows/rebase/test_workflow.py`, `test_guards.py`, `test_git_helpers.py`
 
 ## WHAT — removals
 
-`_GitResult`, `_run_git`, `_is_rebase_in_progress` (`.git/rebase-*` probe), `_conflicted_files`,
-`_binary_conflict`, `_resolve_pr_info_conflict` (inlined), the `.git/MERGE_HEAD` check, the
-`is_working_directory_clean` and `execute_command` imports.
+`_is_rebase_in_progress` (`.git/rebase-*` probe), the `.git/MERGE_HEAD` check, the
+`is_working_directory_clean` import. `_run_git` / `_GitResult` stay (step 13 removes them).
 
 ## WHAT — helpers (names kept where they exist)
 
@@ -53,18 +51,7 @@ def _reset_hard(project_dir: Path, sha: str) -> str:
         return "pre-rebase state restored"
     logger.error("git reset --hard %s failed: %s", sha, result["stderr"] or result["error"])
     return f"restoring pre-rebase state FAILED ({result['error']})"
-
-def _show_stage(project_dir: Path, stage: int, file: str) -> str | None:
-    result = read_conflict_stage(project_dir, stage, file)
-    return result["content"] if result["success"] else None
-
-def _stage_all_and_continue(project_dir: Path) -> RebaseResult:
-    stage_all_changes(project_dir)       # errors surface via the continue / re-check
-    return rebase_continue(project_dir)  # upstream sets GIT_EDITOR=true
 ```
-
-`RebaseResult` is the one result type this step exports from the shim (`.core`), because
-`_stage_all_and_continue` and the loop variable need an annotation under `mypy --strict`.
 
 ## WHAT — call-site changes
 
@@ -77,55 +64,32 @@ def _stage_all_and_continue(project_dir: Path) -> RebaseResult:
       return f"Could not list pr_info/ on origin/{base_branch}: {listing['error']}"
   return f"pr_info/ present on origin/{base_branch}" if listing["entries"] else None
   ```
-- Fix loop: `commit_all_changes(f"fix: resolve regressions from rebase onto origin/{base}", project_dir)` replaces `add -A` + `commit -m` (result ignored as today; "no changes" is `success=True, commit_hash=None`).
-- Every "pre-rebase state restored" message uses the phrase returned by `_reset_hard`.
+- Every "pre-rebase state restored" message uses the phrase returned by `_reset_hard`
+  (call `_reset_hard` before logging the message).
 - `except Exception`: `if _rebase_in_progress_or_none(...) is False: phrase = _reset_hard(...)`; include the phrase in `"Aborted: ..."` when a reset ran.
 - `finally`: `if _rebase_in_progress_or_none(project_dir): _abort_rebase(project_dir)` (None/False → skip).
-
-## ALGORITHM — conflict loop
-
-```
-result = rebase_start(dir, f"origin/{base}")
-while result["status"] != "completed":
-    if result["status"] == "error": log "Aborted: git rebase failed unexpectedly: <stderr or error>"; return 1
-    info = get_conflict_blob_info(dir); if not info["success"]: log "Aborted: could not read conflicts: <error>"; return 1
-    files = [e["path"] for e in info["entries"]]
-    if not files: if not has_staged_changes(dir): result = rebase_skip(dir); continue  else abort "stopped without conflicted files"
-    binary = first e["path"] with e["is_binary"] -> abort; then repeat-count, pr_info via resolve_take_theirs_or_remove(...)["success"], LLM, markers (unchanged)
-    result = _stage_all_and_continue(dir)
-```
-
-`list_unmerged_paths` is not needed: `get_conflict_blob_info` gives paths (sorted) and
-binary-ness in one call and fails closed with `success=False`.
+- Conflict loop (interim, until step 13): the `if not _is_rebase_in_progress(...)` check becomes
+  `if not is_rebase_in_progress(...)` (a raise goes to the outer `except`).
 
 ## Tests (write first)
 
-`test_workflow.py` / `test_guards.py` — replace the argv-keyed `_run_git` mock with patches of
-the shim names in `mcp_coder.workflows.rebase` (`rebase_start`, `rebase_continue`,
-`rebase_skip`, `get_conflict_blob_info`, `has_staged_changes`, `is_rebase_in_progress`,
-`reset_hard`, `rebase_abort`, `list_tree`, `get_remote_url`, `get_working_tree_status`,
-`stage_all_changes`, `commit_all_changes`, `resolve_take_theirs_or_remove`, `read_conflict_stage`). Cover:
+`test_workflow.py` / `test_guards.py` — patch the new shim names in `mcp_coder.workflows.rebase`
+(`is_rebase_in_progress`, `reset_hard`, `rebase_abort`, `list_tree`, `get_remote_url`,
+`get_working_tree_status`); replace the `_is_rebase_in_progress` and
+`is_working_directory_clean` monkeypatches; drop the `_run_git` queue entries for
+`remote get-url`, `ls-tree`, `reset --hard` and `rebase --abort` (the loop entries stay). Cover:
 
 - preflight: status `success=False` → `"Working tree not clean"`; rebase in progress; `get_remote_url` `None`.
 - `list_tree` `success=False` → preflight error (exit 2); entries present → refused; empty → passes.
-- loop: `stopped_on_conflict` → continue → `completed`; `error` status → exit 1; empty stop + no staged → `rebase_skip`; empty stop + staged → exit 1; binary entry → exit 1; blob-info failure → exit 1; `pr_info/` file resolved via `resolve_take_theirs_or_remove`.
 - `reset_hard` failure → message contains "FAILED"; logged at error level.
 - `except Exception` with `is_rebase_in_progress` raising → exit code still 1, no reset, no abort.
 - `finally` aborts only when `is_rebase_in_progress` is `True`.
 - `_rebase_success_shape` false when status `success=False`.
 
-`test_git_helpers.py` (real git) — delete `TestRunGit`, `TestIsRebaseInProgress`,
-`TestConflictedFiles`, `TestShowStage` (or reduce to one `_show_stage` absent-side case),
-`TestResolvePrInfoConflict`, `TestBinaryConflict`; adapt `TestAbortRebase` / `TestResetHard`
-to the new return contract; keep `TestRebaseSuccessShape`, `TestHasConflictMarkers` and the
-`_start_conflicted_rebase` fixture (replace its `_run_git` setup calls with shim calls). Add:
-
-- `TestStageAllInRebase`: at a conflict stop, write resolved content, `stage_all_changes` → `True`, `get_conflict_blob_info` has no entries, `rebase_continue` → `completed`.
-- `commit_all_changes` on a clean tree → `success=True, commit_hash=None`.
-
-`test_llm_steps.py` — update any patch of `_run_git` / `_show_stage` internals.
+`test_git_helpers.py` (real git) — delete `TestIsRebaseInProgress`; adapt `TestAbortRebase` /
+`TestResetHard` to the new contract (`_reset_hard` returns the phrase); keep
+`TestRebaseSuccessShape`. `_start_conflicted_rebase` keeps its `_run_git` setup for now.
 
 ## DATA
 
-- `RebaseResult["status"]`: `completed | stopped_on_conflict | error`.
-- Exit codes `0 / 1 / 2` unchanged.
+- `_reset_hard` → `str` phrase. Exit codes `0 / 1 / 2` unchanged.

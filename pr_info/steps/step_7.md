@@ -10,7 +10,8 @@
 
 - `src/mcp_coder/mcp_workspace_git.py` — export `pull` (from `mcp_workspace.git_operations.remotes`)
 - `src/mcp_coder/workflows/vscodeclaude/session_restart.py` — `_prepare_restart_branch` (~59–119); drop `execute_subprocess` / `CommandOptions` imports, keep `CalledProcessError`
-- `tests/workflows/vscodeclaude/test_session_restart_prepare_branch.py`, `test_session_restart_branch_integration.py` (~317, ~390), `test_session_restart_closed_sessions.py` (~412, ~575–594)
+- `tests/workflows/vscodeclaude/test_session_restart_prepare_branch.py`, `test_session_restart_branch_integration.py` (~317, ~390)
+  (`test_session_restart_closed_sessions.py` only patches `session_launch.execute_subprocess`, already rewritten in step 1)
 
 ## WHAT
 
@@ -46,7 +47,7 @@ Patch `mcp_coder.workflows.vscodeclaude.session_restart.{fetch_remote, checkout_
 - checkout `False` → `"Git error"`, pull not called.
 - pull `success=False` → `"Git error"`.
 - happy path → `(True, None, linked_branch)`; `checkout_branch(linked_branch, folder_path)` and `pull(folder_path)` called.
-- Replace every `execute_subprocess` side-effect keyed on argv (`"fetch" in cmd`, `"checkout"`, `"pull"`, `"rev-parse"`) in the three test files.
+- Replace every `execute_subprocess` side-effect keyed on argv (`"fetch" in cmd`, `"checkout"`, `"pull"`) in the two test files.
 
 ## DATA
 

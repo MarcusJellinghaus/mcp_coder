@@ -64,13 +64,14 @@ Upstream API: mcp-workspace `main` ≥ 59cc455 (PR #356). No version pin.
 | 9 | 3 | `vscodeclaude/status` (dirty gate) |
 | 10 | 4 | `base_branch.py` consolidation |
 | 11 | 5 | `workflow_steps/rebase` merge-tree probe |
-| 12 | 5 | `workflows/rebase.py` |
-| 13 | 6 | Enforcement tool + CI + wrappers + `.importlinter` comments (last, so CI is never red mid-PR) |
+| 12 | 5 | `workflows/rebase.py` guards and helpers (preflight, `pr_info/` guard, success shape, reset/abort, except/finally) |
+| 13 | 5 | `workflows/rebase.py` rebase/conflict loop; `_run_git` removed |
+| 14 | 6 | Enforcement tool + CI + wrappers + `.importlinter` comments (last, so CI is never red mid-PR) |
 
 ## Files created or modified
 
 ### Modified — source
-- `src/mcp_coder/mcp_workspace_git.py` (steps 1–12: new exports)
+- `src/mcp_coder/mcp_workspace_git.py` (steps 1–13: new exports)
 - `src/mcp_coder/workflows/vscodeclaude/session_launch.py` (1)
 - `src/mcp_coder/workflow_steps/rebase.py` (2, 11)
 - `src/mcp_coder/workflow_utils/failure_handling.py` (3)
@@ -80,7 +81,7 @@ Upstream API: mcp-workspace `main` ≥ 59cc455 (PR #356). No version pin.
 - `src/mcp_coder/workflows/vscodeclaude/session_restart.py` (7)
 - `src/mcp_coder/workflows/vscodeclaude/workspace.py` (8)
 - `src/mcp_coder/workflows/vscodeclaude/status.py` (9)
-- `src/mcp_coder/workflows/rebase.py` (10: import of `BaseBranchSource`; 12)
+- `src/mcp_coder/workflows/rebase.py` (10: import of `BaseBranchSource`; 12, 13)
 
 ### Modified — tests
 - `tests/test_mcp_workspace_git_smoke.py` (1)
@@ -89,21 +90,22 @@ Upstream API: mcp-workspace `main` ≥ 59cc455 (PR #356). No version pin.
 - `tests/workflow_utils/test_failure_handling.py` (3)
 - `tests/workflow_utils/test_base_branch.py` (4, 10)
 - `tests/cli/commands/test_gh_tool_checkout.py` (5)
-- `tests/workflows/review/test_handoff.py`, `tests/workflows/review/test_handoff_route.py` (6)
-- `tests/workflows/vscodeclaude/test_session_restart_prepare_branch.py`, `test_session_restart_branch_integration.py`, `test_session_restart_closed_sessions.py` (7)
+- `tests/workflows/review/test_handoff.py`, `tests/workflows/review/test_handoff_route.py`, `tests/workflows/review/conftest.py`, `tests/workflows/review/test_core.py`, `tests/workflows/review/test_core_after_steps.py` (6)
+- `tests/workflows/vscodeclaude/test_session_restart_prepare_branch.py`, `test_session_restart_branch_integration.py` (7)
 - `tests/workflows/vscodeclaude/test_workspace_git.py`, `test_workspace.py` (8)
 - `tests/workflows/vscodeclaude/test_folder_git_status.py`, `test_status_display.py` (9)
 - `tests/workflows/rebase/test_guards.py` (10, 12)
-- `tests/workflows/rebase/test_workflow.py`, `tests/workflows/rebase/test_git_helpers.py`, `tests/workflows/rebase/test_llm_steps.py` (12)
+- `tests/workflows/rebase/test_workflow.py`, `tests/workflows/rebase/test_git_helpers.py` (12, 13)
+- `tests/workflows/rebase/test_llm_steps.py` (13)
 
 ### Created
-- `tools/check_forbidden_calls.py` (13)
-- `tools/forbidden_calls_check.sh`, `tools/forbidden_calls_check.bat` (13)
-- `tests/tools/test_check_forbidden_calls.py` (13)
+- `tools/check_forbidden_calls.py` (14)
+- `tools/forbidden_calls_check.sh`, `tools/forbidden_calls_check.bat` (14)
+- `tests/tools/test_check_forbidden_calls.py` (14)
 
 ### Modified — config
-- `.github/workflows/ci.yml` (13: `forbidden-calls` matrix entry)
-- `.importlinter` (13: comments only)
+- `.github/workflows/ci.yml` (14: `forbidden-calls` matrix entry)
+- `.importlinter` (14: comments only)
 
 ## Common rules for every step
 
