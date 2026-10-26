@@ -25,3 +25,11 @@ applied
 Verdict(decision='tasks', tasks=['In pr_info/steps/summary.md:72, run `git add` on the new destination file(s) (or stage all changes) before the compact diff, and diff the staged changes (`--cached`). Unstaged new files from `move_symbol` are untracked, so each moved class would show up as a pure deletion.', 'In pr_info/steps/step_3.md:74, stage the step-3 changes first, then run the whole-branch diff as `args=["--cached", "<base>"]` with `pathspec=["tests/", ".large-files-allowlist"]`. That way the new `test_prompt_system_prompts.py` shows up and `TestAddSystemPromptsFlag` is no longer reported as a pure deletion.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 4 — 2026-10-26
+**Findings**:
+`pr_info/steps/step_3.md:76` — high — Step 3 plugs the bare `get_base_branch` result (`main`) into `git diff --cached main`. This checkout has no local `main` ref: running `git diff --cached main -- tests/ .large-files-allowlist` fails with `fatal: bad revision 'main'`, while `origin/main` works. The required whole-branch compact diff would therefore error out, and the "any check deviates → `.blocked.txt` and stop" rule halts step 3. Fix: diff against `origin/<base>` (e.g. `args=["--cached", "origin/main"]`).
+**Decisions**:
+Verdict(decision='tasks', tasks=['In pr_info/steps/step_3.md:76, diff against the remote-tracking ref `origin/<base>` (from `get_base_branch`, e.g. `args=["--cached", "origin/main"]` with `pathspec=["tests/", ".large-files-allowlist"]`) instead of the bare branch name. This checkout has no local `main` ref, so `git diff --cached main` fails with `fatal: bad revision \'main\'`.'], escalate_reason=None)
+**Changes**:
+applied
