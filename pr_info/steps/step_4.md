@@ -69,7 +69,9 @@ the step (232 / 6587 on 2026-10-26 unless the branch was rebased).
 - [ ] `run_lint_imports_check`, `run_tach_check`, `run_vulture_check`
 - [ ] `check_file_size` passes and reports no stale allowlist entries
 - [ ] `search_files(pattern="test_task_tracker\\w*\\.(?!py\\b)\\w", glob="tests/**/*.py")` → 0 matches
-- [ ] Compact diff of the whole branch against the base branch (`git` diff, `compact=true`). It may contain only:
+- [ ] Compact diff of the whole branch against the base branch (`git` diff, `compact=true`,
+  `pathspec=["tests/workflow_utils/", ".large-files-allowlist"]` so the branch's `pr_info/` planning
+  files are excluded). It may contain only:
   - the shortened import list in `test_task_tracker.py`
   - the headers and import blocks of the four new files
   - the 3 deleted banner lines
