@@ -24,13 +24,19 @@
 
 ## HOW
 
-- **Two calls, in this order** (`MODULE` must be defined above the classes, whose
-  `@patch(f"{MODULE}...")` decorators evaluate at class definition):
-  1. `move_symbol(source_file="tests/cli/commands/test_commit.py", symbol_names=["MODULE"], dest_file="tests/cli/commands/test_commit_push.py")` — dry run, then apply.
-  2. `move_symbol(source_file="tests/cli/commands/test_commit.py", symbol_names=["TestPushAfterCommit", "TestCommitAutoPush"], dest_file="tests/cli/commands/test_commit_push.py")` — dry run, then apply.
-- Check that `MODULE = ...` comes before `class TestPushAfterCommit` in `test_commit_push.py`,
-  and that the file does not import from `test_commit`. Otherwise write one line to
-  `pr_info/.blocked.txt` and stop. Do not reorder by hand.
+- **One call, all three symbols in source order** (`MODULE` must be defined above the classes,
+  whose `@patch(f"{MODULE}...")` decorators evaluate at class definition; `move_symbol` moves
+  the list in reverse and inserts each at the top, so one call keeps source order, while two
+  separate calls put `MODULE` last):
+  `move_symbol(source_file="tests/cli/commands/test_commit.py", symbol_names=["MODULE", "TestPushAfterCommit", "TestCommitAutoPush"], dest_file="tests/cli/commands/test_commit_push.py")` — dry run, then apply.
+- The call leaves a stale `from tests.cli.commands.test_commit import MODULE` (or similar) in
+  `test_commit_push.py`, shadowed by the moved `MODULE` (ruff F811, not auto-fixable). Delete
+  that import line by hand — it is an import edit.
+- Check that `MODULE = ...` comes before `class TestPushAfterCommit` in `test_commit_push.py`.
+  If it does not, move the `MODULE = ...` assignment (that one statement only) by hand to
+  directly below the imports — the only hand reordering allowed in this PR.
+- Check that `test_commit_push.py` does not import from `test_commit`. Otherwise write one
+  line to `pr_info/.blocked.txt` and stop.
 - Expected imports afterwards:
   - `test_commit.py`: `argparse`, `logging`, `Path`, `Mock`, `patch`, `pytest`,
     `from mcp_coder.cli.commands.commit import execute_commit_auto, validate_git_repository`
@@ -40,8 +46,8 @@
     Keep only what is actually used, removing stale ones with
     `run_ruff_fix(select=["F401"], target_directories=["tests/cli/commands/test_commit.py", "tests/cli/commands/test_commit_push.py"])`.
 - After all moves and the import fix, `test_commit.py` must not import from `test_commit_push`
-  (moving `MODULE` first makes `move_symbol` add a temporary `MODULE` import there). If it
-  still does → write one line to `pr_info/.blocked.txt` and stop.
+  (no remaining test there uses `MODULE`). If it does → write one line to
+  `pr_info/.blocked.txt` and stop.
 - `.large-files-allowlist`: delete the line `tests/cli/commands/test_commit.py`.
 - `vulture_whitelist.py:136`:
   `# test_commit.py - @patch decorator parameters for push tests` →
@@ -51,8 +57,10 @@
 
 ```
 before = collect-only counts: test_commit.py, tests/cli/commands/
-move MODULE (dry run, apply); move both push classes (dry run, apply)
-verify MODULE precedes classes and no import from test_commit; else write one line to pr_info/.blocked.txt and stop
+move MODULE + both push classes in one call (dry run, apply)
+delete stale `import MODULE` from test_commit in test_commit_push.py
+if MODULE does not precede the classes: move that one assignment by hand to below the imports
+verify no import from test_commit; else write one line to pr_info/.blocked.txt and stop
 fix imports (ruff_fix F401 with target_directories=[test_commit.py, test_commit_push.py] / add missing)
 verify test_commit.py has no import from test_commit_push; else write one line to pr_info/.blocked.txt and stop
 edit allowlist + vulture comment

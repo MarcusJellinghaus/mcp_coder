@@ -11,7 +11,8 @@ Get both allowlisted test files under 750 lines and off `.large-files-allowlist`
 
 - **Move, don't change.** Classes, functions, constants move verbatim. No logic edits, no
   renames, no reordering, no reformatting beyond `run_format_code`, no test deletions or merges
-  (duplicates included).
+  (duplicates included). Sole exception: step 4 may move the `MODULE = ...` assignment by hand
+  if `move_symbol` leaves it below the classes that use it.
 - **Only allowed edits:** import statements, `.large-files-allowlist`, and the file-name
   reference in the `vulture_whitelist.py:136` comment.
 - **Use the refactoring tools — never move code by hand:** `list_symbols`, `move_symbol`
