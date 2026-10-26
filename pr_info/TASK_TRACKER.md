@@ -37,9 +37,9 @@ See [step_2.md](./steps/step_2.md)
 
 ### Step 3: Cancel tests → `test_app_pilot_cancel.py`
 See [step_3.md](./steps/step_3.md)
-- [ ] Implementation: moves 3a, 3a' (`SlowLLMService`), fix imports, add `import pytest` + `pytestmark`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: moves 3a, 3a' (`SlowLLMService`), fix imports, add `import pytest` + `pytestmark`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Content-unit tests → `test_app_pilot_content_units.py`
 See [step_4.md](./steps/step_4.md)
