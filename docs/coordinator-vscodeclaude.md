@@ -111,7 +111,9 @@ Issues must also:
 
 1. **Merge conflict** → `status-71:merge-conflict` (Jenkins runs `fix-conflict`)
 2. **Failing CI** → `status-81:failing-ci` (Jenkins runs `fix-ci`)
-3. **New review feedback** (unresolved thread, or a changes-requested review / PR comment newer than the last triage; comments whose first line contains ❌ are ignored) → `status-91:pr-review-comments`
+3. **New review feedback** (unresolved thread, or a changes-requested review / PR comment newer than the last triage; comments whose first line contains ❌ are ignored) → `status-91:pr-review-comments`. Only items from trusted authors (`OWNER`, `MEMBER`, `COLLABORATOR`, or `[github] trusted_commenters`) on a PR whose author is trusted count. Untrusted feedback never escalates: the coordinator prints one line per issue (`untrusted PR feedback from @a — review manually`) and writes nothing to GitHub.
+
+An account that posts PRs or ❌ notes on the owner's behalf (e.g. a Jenkins machine user via `github_credentials_id`) must be `COLLABORATOR` or listed in `[github] trusted_commenters` on the vscodeclaude host — otherwise its ❌ notes are dropped from the status file and its PRs never reach `status-91`.
 
 `status-91` and the escalation labels `status-73`, `74`, `83` and `84` open an interactive session: `/pr_comment_triage` for `91`, `/check_branch_status` for the others. See [PR-health](processes-prompts/processes/71-pr-follow-up.md) for the full label flow.
 
