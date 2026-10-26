@@ -562,7 +562,7 @@
         <!-- Row 3: PR creation (07 → 08 → 09 → 09f*) -->
         <div class="row-label">PR Creation — create-pr</div>
         <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
-            09 → 10 success; → 09f* on error. Every 09f* label is retried with <code>set-status status-08:ready-pr</code>.
+            09 → 10 success; → 74 if still conflicting after one rebase, → 81 if CI fails (checked once after creation); → 09f* on error before the PR exists. Every 09f* label is retried with <code>set-status status-08:ready-pr</code>; a re-run with an open PR resumes at the post-creation checks.
         </div>
         <div class="workflow-row">
             <div class="label-card highlight-blue status-code-review">
