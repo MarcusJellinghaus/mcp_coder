@@ -7,7 +7,6 @@ from typing import Any
 import pytest
 
 from mcp_coder.mcp_workspace_github import IssueData
-from mcp_coder.workflows.vscodeclaude.session_launch import process_eligible_issues
 from mcp_coder.workflows.vscodeclaude.session_restart import (
     BranchPrepResult,
     restart_closed_sessions,
@@ -67,25 +66,6 @@ def _make_assessment(
 
 class TestSessionRestart:
     """Test main orchestration functions."""
-
-
-class TestProcessEligibleIssuesMaxSessions:
-    """Tests for the max_sessions limit in process_eligible_issues()."""
-
-    def test_process_eligible_issues_respects_max_sessions(
-        self,
-    ) -> None:
-        """Doesn't start sessions beyond max."""
-        # Should return empty since already at/above max
-        sessions = process_eligible_issues(
-            repo_name="test",
-            repo_config={"repo_url": "https://github.com/owner/repo.git"},
-            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 2},
-            max_sessions=2,
-            current_count=2,
-        )
-
-        assert sessions == []
 
 
 class TestRestartClosedSessionsLifecycle:

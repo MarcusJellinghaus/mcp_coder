@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Move `TestProcessEligibleIssuesMaxSessions` to `test_session_launch_process_issues.py` — [step_3.md](./steps/step_3.md)
-- [ ] Implementation: `move_symbol` (dry run first), destination imports unchanged, gates pass (7 passed / 12 passed, directory baseline)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `move_symbol` (dry run first), destination imports unchanged, gates pass (7 passed / 12 passed, directory baseline)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Move `TestRestartClosedSessionsLifecycle` to `test_session_restart_lifecycle.py` — [step_4.md](./steps/step_4.md)
 - [ ] Implementation: `move_symbol` (dry run first), bare `_make_assessment(` calls, `import logging` stays in zombie test, gates pass (5 passed / 7 passed, directory baseline)

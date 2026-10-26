@@ -13,6 +13,25 @@ from mcp_coder.workflows.vscodeclaude.session_launch import (
 from tests.github_factories import make_issue_data
 
 
+class TestProcessEligibleIssuesMaxSessions:
+    """Tests for the max_sessions limit in process_eligible_issues()."""
+
+    def test_process_eligible_issues_respects_max_sessions(
+        self,
+    ) -> None:
+        """Doesn't start sessions beyond max."""
+        # Should return empty since already at/above max
+        sessions = process_eligible_issues(
+            repo_name="test",
+            repo_config={"repo_url": "https://github.com/owner/repo.git"},
+            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 2},
+            max_sessions=2,
+            current_count=2,
+        )
+
+        assert sessions == []
+
+
 class TestProcessEligibleIssuesBranchRequirement:
     """Tests for branch requirement enforcement in process_eligible_issues()."""
 
