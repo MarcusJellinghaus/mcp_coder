@@ -73,9 +73,9 @@ See [step_7.md](./steps/step_7.md)
 ### Step 8: Move copilot tests to `tests/llm/test_interface_copilot.py`; final verification
 See [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation: move copilot classes via `move_symbol` in two calls (8a: 3 classes, 8b: `TestCopilotProviderValidation`); final checks (lint-imports, tach, vulture, file size, counts, marker check, search check)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move copilot classes via `move_symbol` in two calls (8a: 3 classes, 8b: `TestCopilotProviderValidation`); final checks (lint-imports, tach, vulture, file size, counts, marker check, search check)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
