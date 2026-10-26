@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Move `TestAddSystemPromptsFlag` → `test_prompt_system_prompts.py` + drop allowlist entry
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: move `TestAddSystemPromptsFlag` with `move_symbol` (dry run first), fix imports, remove `tests/cli/commands/test_prompt.py` from `.large-files-allowlist`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestAddSystemPromptsFlag` with `move_symbol` (dry run first), fix imports, remove `tests/cli/commands/test_prompt.py` from `.large-files-allowlist`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
