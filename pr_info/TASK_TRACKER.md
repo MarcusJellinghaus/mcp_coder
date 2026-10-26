@@ -61,9 +61,9 @@ See [step_6.md](./steps/step_6.md)
 
 ### Step 7: Shutdown tests → `test_app_pilot_shutdown.py`
 See [step_7.md](./steps/step_7.md)
-- [ ] Implementation: moves 7a, 7a' (`_ApprovalPendingLLMService`), 7b (`_QUIT_TIMEOUT`), delete stale `_QUIT_TIMEOUT` import, fix imports, add `pytestmark`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: moves 7a, 7a' (`_ApprovalPendingLLMService`), 7b (`_QUIT_TIMEOUT`), delete stale `_QUIT_TIMEOUT` import, fix imports, add `pytestmark`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Banner cleanup, allowlist removal, final verification
 See [step_8.md](./steps/step_8.md)
