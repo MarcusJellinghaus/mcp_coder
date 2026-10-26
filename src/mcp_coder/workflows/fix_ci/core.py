@@ -10,10 +10,11 @@ from pathlib import Path
 
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
-from mcp_coder.mcp_workspace_git import get_current_branch_name
+from mcp_coder.mcp_workspace_git import get_current_branch_name, get_latest_commit_sha
 from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import check_formatter_config
+from mcp_coder.workflow_steps.pr_description import refresh_pr_description
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
     build_failure_comment,
@@ -95,11 +96,22 @@ def run_fix_ci_workflow(
             logger.error("Could not determine current branch")
             return 1
 
+        head_before = get_latest_commit_sha(project_dir)
+
+        def _refresh_if_pushed() -> None:
+            # Runs while the issue is still at fixing_ci; never raises.
+            if get_latest_commit_sha(project_dir) != head_before:
+                logger.info("New commits were pushed; refreshing PR description")
+                refresh_pr_description(
+                    project_dir, branch, provider, mcp_config, settings_file
+                )
+
         try:
             ci_ok = check_and_fix_ci(
                 project_dir, branch, provider, mcp_config, settings_file
             )
         except (LLMTimeoutError, McpServersUnavailableError) as exc:
+            _refresh_if_pushed()
             reason = llm_failure_reason(exc) or "general"
             category = _LLM_FAILURE_CATEGORY_DISPLAY.get(reason, "General")
             return _fail(
@@ -111,6 +123,7 @@ def run_fix_ci_workflow(
                 post_issue_comments=post_issue_comments,
             )
 
+        _refresh_if_pushed()
         if ci_ok:
             if update_issue_labels:
                 update_workflow_label(

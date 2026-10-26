@@ -491,7 +491,9 @@ class TestPhaseB:
         )
 
         assert result == 0
-        mock_post_creation.assert_called_once_with(Path("/test"), "feature-branch")
+        mock_post_creation.assert_called_once_with(
+            Path("/test"), "feature-branch", "claude", None, None
+        )
         phase_a_ok["update_label"].assert_called_once_with(
             phase_a_ok["issue_manager"].return_value,
             from_label_id="pr_creating",

@@ -465,6 +465,8 @@ mcp-coder create-pr [OPTIONS]
 
 **Post-creation checks:** once the PR exists, `create-pr` polls its `mergeable_state` (one rebase-and-push on `dirty`), then waits for the CI run of the pushed HEAD without fixing anything. The outcome sets the final label: `status-10:pr-created`, `status-74:pr-merge-conflict` (still conflicting) or `status-81:failing-ci`. The checks also run with `--no-update-issue-labels`; the outcome is then only logged. If the branch already has an open PR, `create-pr` resumes at these checks instead of creating a new one.
 
+**Description refresh:** if the post-creation rebase pushed new commits, the PR title/body is regenerated from the full branch diff (closing references kept). Best-effort — it never changes the label or exit code. `fix-ci` refreshes the same way when its fixes pushed commits.
+
 **Exit codes:** `0` = PR exists and every post-creation outcome was handled (including conflict and failing CI); `1` = failure before the PR exists, or a crash.
 
 **Prerequisites:**

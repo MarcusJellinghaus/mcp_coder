@@ -28,7 +28,7 @@ Tier: automated. The coordinator dispatches `create-pr` on Jenkins (`WORKFLOW_MA
 - Creates pull request on GitHub with generated summary
 - Post-creation checks: polls `mergeable_state`; on `dirty`, rebases and pushes once, then polls again
 - Waits for the CI run of the pushed HEAD — no fixing
-- Refreshes the PR title/body if the post-creation checks pushed new commits
+- If the rebase pushed new commits, refreshes the PR title/body (best-effort, never changes the label); `fix-ci` does the same after pushing fixes
 - Sets the final label from the outcome (table below)
 - Uses prompt 🔗 [PR Summary Generation](../../../src/mcp_coder/prompts/prompts.md#pr-summary-generation)
 

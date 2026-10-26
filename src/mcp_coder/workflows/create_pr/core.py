@@ -676,7 +676,9 @@ def run_create_pr_workflow(
             logger.error("Could not determine current branch; skipping PR checks")
             label = "pr_created"
         else:
-            label = run_post_creation(project_dir, branch)
+            label = run_post_creation(
+                project_dir, branch, provider, mcp_config, settings_file
+            )
 
         if update_issue_labels and cached_issue_number:
             logger.log(OUTPUT, "Updating GitHub issue label...")

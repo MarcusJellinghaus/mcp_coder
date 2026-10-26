@@ -1,6 +1,9 @@
 """Tests for the fix_ci workflow (Jenkins-side CI auto-fix loop)."""
 
+from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,6 +18,22 @@ MODULE = "mcp_coder.workflows.fix_ci.core"
 PROJECT_DIR = Path("/fake/project")
 BRANCH_NAME = "123-fix-something"
 BRANCH_HEAD = "mcp_coder.workflow_utils.failure_handling._branch_head"
+
+
+@dataclass
+class _RefreshMocks:
+    sha: MagicMock
+    refresh: MagicMock
+
+
+@pytest.fixture(autouse=True)
+def refresh_mocks() -> Iterator[_RefreshMocks]:
+    """Keep HEAD unchanged and the PR description refresh mocked by default."""
+    with (
+        patch(f"{MODULE}.get_latest_commit_sha", return_value="same") as sha,
+        patch(f"{MODULE}.refresh_pr_description", return_value=True) as refresh,
+    ):
+        yield _RefreshMocks(sha=sha, refresh=refresh)
 
 
 def test_ci_passes_transitions_to_pr_created() -> None:
@@ -235,3 +254,126 @@ def test_format_code_false_skips_formatter(
     assert result == 0
     commit_changes.assert_called_once()
     wrapper.assert_not_called()
+
+
+class TestRefreshPrDescription:
+    """fix-ci refreshes the PR description when check_and_fix_ci pushed."""
+
+    @staticmethod
+    def _run(
+        refresh_mocks: _RefreshMocks, check_kwargs: dict[str, Any]
+    ) -> tuple[int, MagicMock]:
+        manager = MagicMock()
+        manager.attach_mock(refresh_mocks.refresh, "refresh")
+        with (
+            patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+            patch(f"{MODULE}.check_and_fix_ci", **check_kwargs),
+            patch(f"{MODULE}.IssueManager"),
+            patch(f"{MODULE}.update_workflow_label") as mock_update,
+            patch(f"{MODULE}.handle_workflow_failure") as mock_handle,
+            patch(BRANCH_HEAD, return_value=("feat", "abc1234")),
+        ):
+            manager.attach_mock(mock_update, "update_label")
+            manager.attach_mock(mock_handle, "handle_failure")
+            result = run_fix_ci_workflow(
+                PROJECT_DIR,
+                "claude",
+                "mcp.json",
+                "settings.json",
+                update_issue_labels=True,
+                post_issue_comments=True,
+            )
+        return result, manager
+
+    @staticmethod
+    def _names(manager: MagicMock) -> list[str]:
+        return [c[0] for c in manager.mock_calls]
+
+    def test_green_refreshes_before_label_update(
+        self, refresh_mocks: _RefreshMocks
+    ) -> None:
+        refresh_mocks.sha.side_effect = ["before", "after"]
+
+        result, manager = self._run(refresh_mocks, {"return_value": True})
+
+        assert result == 0
+        refresh_mocks.refresh.assert_called_once_with(
+            PROJECT_DIR, BRANCH_NAME, "claude", "mcp.json", "settings.json"
+        )
+        assert self._names(manager) == ["refresh", "update_label"]
+        assert manager.update_label.call_args[0][1:] == ("fixing_ci", "pr_created")
+
+    def test_exhausted_refreshes_before_fail(
+        self, refresh_mocks: _RefreshMocks
+    ) -> None:
+        refresh_mocks.sha.side_effect = ["before", "after"]
+
+        result, manager = self._run(refresh_mocks, {"return_value": False})
+
+        assert result == 1
+        assert self._names(manager) == ["refresh", "handle_failure"]
+        failure = manager.handle_failure.call_args[0][0]
+        assert failure.category == "pr_ci_failed"
+        assert failure.stage == "CI pipeline fix"
+
+    def test_llm_timeout_refreshes_before_fail(
+        self, refresh_mocks: _RefreshMocks
+    ) -> None:
+        refresh_mocks.sha.side_effect = ["before", "after"]
+
+        result, manager = self._run(
+            refresh_mocks, {"side_effect": LLMTimeoutError("timed out")}
+        )
+
+        assert result == 1
+        assert self._names(manager) == ["refresh", "handle_failure"]
+        failure = manager.handle_failure.call_args[0][0]
+        assert failure.category == "pr_ci_failed"
+        assert failure.stage == "CI pipeline analysis"
+
+    @pytest.mark.parametrize(
+        "check_kwargs",
+        [
+            {"return_value": True},
+            {"return_value": False},
+            {"side_effect": LLMTimeoutError("timed out")},
+        ],
+    )
+    def test_head_unchanged_skips_refresh(
+        self, refresh_mocks: _RefreshMocks, check_kwargs: dict[str, Any]
+    ) -> None:
+        self._run(refresh_mocks, check_kwargs)
+
+        refresh_mocks.refresh.assert_not_called()
+
+    def test_unexpected_exception_skips_refresh(
+        self, refresh_mocks: _RefreshMocks
+    ) -> None:
+        refresh_mocks.sha.side_effect = ["before", "after"]
+        with (
+            patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+            patch(f"{MODULE}.check_and_fix_ci", side_effect=RuntimeError("boom")),
+            patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"),
+            patch(BRANCH_HEAD, return_value=("feat", "abc1234")),
+        ):
+            result = run_fix_ci_workflow(
+                PROJECT_DIR, "claude", update_issue_labels=True
+            )
+
+        assert result == 1
+        refresh_mocks.refresh.assert_not_called()
+
+    def test_system_exit_skips_refresh_and_propagates(
+        self, refresh_mocks: _RefreshMocks
+    ) -> None:
+        refresh_mocks.sha.side_effect = ["before", "after"]
+        with (
+            patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+            patch(f"{MODULE}.check_and_fix_ci", side_effect=SystemExit(143)),
+            patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"),
+            patch(BRANCH_HEAD, return_value=("feat", "abc1234")),
+        ):
+            with pytest.raises(SystemExit):
+                run_fix_ci_workflow(PROJECT_DIR, "claude", update_issue_labels=True)
+
+        refresh_mocks.refresh.assert_not_called()

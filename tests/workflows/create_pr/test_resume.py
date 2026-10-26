@@ -76,7 +76,9 @@ class TestResumePath:
         mocks.generate.assert_not_called()
         mocks.create_pr.assert_not_called()
         mocks.cleanup.assert_not_called()
-        mocks.post_creation.assert_called_once_with(tmp_path, "5-feat")
+        mocks.post_creation.assert_called_once_with(
+            tmp_path, "5-feat", "claude", None, None
+        )
         mocks.update_label.assert_called_once()
         kwargs = mocks.update_label.call_args.kwargs
         assert kwargs["to_label_id"] == "pr_created"

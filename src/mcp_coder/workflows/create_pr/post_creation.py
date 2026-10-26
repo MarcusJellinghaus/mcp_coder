@@ -14,6 +14,7 @@ from mcp_coder.mcp_workspace_git import get_latest_commit_sha
 from mcp_coder.mcp_workspace_github import CIResultsManager
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_steps.ci import _poll_for_ci_completion
+from mcp_coder.workflow_steps.pr_description import refresh_pr_description
 from mcp_coder.workflow_steps.rebase import (
     _attempt_rebase_and_push,
     _poll_mergeable_state,
@@ -22,16 +23,43 @@ from mcp_coder.workflow_steps.rebase import (
 logger = logging.getLogger(__name__)
 
 
-def run_post_creation(project_dir: Path, branch: str) -> str:
+def run_post_creation(
+    project_dir: Path,
+    branch: str,
+    provider: str,
+    mcp_config: str | None = None,
+    settings_file: str | None = None,
+) -> str:
     """Check mergeability, then wait for CI. No fixing.
+
+    If this phase pushed new commits (a rebase), the PR title/body is
+    refreshed afterwards. The refresh is best-effort and never changes the
+    returned label.
 
     Args:
         project_dir: Path to the project directory.
         branch: Head branch of the PR.
+        provider: LLM provider used for the description refresh.
+        mcp_config: Optional path to MCP configuration file.
+        settings_file: Optional path to .claude/settings.local.json.
 
     Returns:
         Label ID for the final transition from pr_creating:
         "pr_merge_conflict", "failing_ci" or "pr_created".
+    """
+    head_before = get_latest_commit_sha(project_dir)
+    label = _check_mergeability_and_ci(project_dir, branch)
+    if get_latest_commit_sha(project_dir) != head_before:
+        logger.log(OUTPUT, "New commits were pushed; refreshing PR description")
+        refresh_pr_description(project_dir, branch, provider, mcp_config, settings_file)
+    return label
+
+
+def _check_mergeability_and_ci(project_dir: Path, branch: str) -> str:
+    """Check mergeability (rebasing once on ``dirty``), then wait for CI.
+
+    Returns:
+        Label ID: "pr_merge_conflict", "failing_ci" or "pr_created".
     """
     state = _poll_mergeable_state(project_dir, branch)
     logger.log(OUTPUT, "PR mergeable_state: %s", state)
