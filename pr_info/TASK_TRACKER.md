@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move `TestParseLLMCommitResponse` from `test_commit.py` to `test_commit_operations_parsing.py`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: check precondition, record counts, `move_symbol` `TestParseLLMCommitResponse` (dry run, then apply), fix imports, verify counts (`test_commit.py` 44 → 40, parsing 21 → 25)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: check precondition, record counts, `move_symbol` `TestParseLLMCommitResponse` (dry run, then apply), fix imports, verify counts (`test_commit.py` 44 → 40, parsing 21 → 25)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move `generate_commit_message_with_llm` classes to `test_commit_operations_default_args.py`
 See [step_3.md](./steps/step_3.md)

@@ -312,3 +312,52 @@ More body content here"""
 
         assert summary == "feat: add new feature"
         assert body is None
+
+
+class TestParseLLMCommitResponse:
+    """Tests for parse_llm_commit_response function."""
+
+    def test_parse_llm_commit_response_single_line(self) -> None:
+        """Test parsing single line LLM response."""
+        response = "feat: add new feature"
+
+        summary, body = parse_llm_commit_response(response)
+
+        assert summary == "feat: add new feature"
+        assert body is None
+
+    def test_parse_llm_commit_response_multi_line(self) -> None:
+        """Test parsing multi-line LLM response."""
+        response = """feat: add new feature
+
+This adds a new authentication feature
+with proper error handling."""
+
+        summary, body = parse_llm_commit_response(response)
+
+        assert (
+            summary
+            == "feat: add new feature\n\nThis adds a new authentication feature\nwith proper error handling."
+        )
+        assert (
+            body
+            == "This adds a new authentication feature\nwith proper error handling."
+        )
+
+    def test_parse_llm_commit_response_empty(self) -> None:
+        """Test parsing empty LLM response."""
+        response = ""
+
+        summary, body = parse_llm_commit_response(response)
+
+        assert summary == ""
+        assert body is None
+
+    def test_parse_llm_commit_response_whitespace_only(self) -> None:
+        """Test parsing whitespace-only LLM response."""
+        response = "   \n  \t  \n  "
+
+        summary, body = parse_llm_commit_response(response)
+
+        assert summary == ""
+        assert body is None
