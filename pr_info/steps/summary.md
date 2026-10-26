@@ -85,7 +85,9 @@ not git_integration and not claude_cli_integration and not claude_api_integratio
 `run_pytest_check(extra_args=["-n", "auto", "-m", "<fast-unit exclusion>"])` →
 `run_lint_imports_check` → `run_tach_check` → `run_vulture_check` → `check_file_size`.
 
-**Compact-diff rule:** `mcp__mcp-workspace__git(command="diff", compact=true)` may show only these:
+**Compact-diff rule:** first stage the step's changes (`git add tests/ .large-files-allowlist`).
+`move_symbol` leaves a new destination file untracked, and an unstaged diff would show its moved class as a
+pure deletion. Then `mcp__mcp-workspace__git(command="diff", args=["--cached"], compact=true)` may show only these:
 moved blocks, import-line changes, new-file import headers, blank-line-only hunks, and (in step 3) the
 one allowlist line. No hunk may touch a test body, `_make_text_events`, `TestExecutePrompt` or the module
 docstring.

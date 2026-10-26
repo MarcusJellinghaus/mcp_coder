@@ -71,10 +71,12 @@ run_standard_checks(); check counts + audits; commit
 - Call-site audit (`search_files`, `glob="tests/**/*.py"`):
   - `test_prompt\.\w` → 0 matches
   - `from tests\.cli\.commands\.test_prompt import _make_text_events` → 2 matches (`_claude_cwd`, `_system_prompts`)
-- Compact diff over the whole branch, run before the commit: diff the base branch (from `get_base_branch`,
-  e.g. `main`) against the working tree, `mcp__mcp-workspace__git(command="diff", args=["<base>"], compact=true,
-  pathspec=["tests/", ".large-files-allowlist"])` (so `pr_info/` changes are not counted and the committed
-  steps 1–2 show up with the uncommitted step-3 changes), follows the summary's compact-diff rule. The only non-move hunks:
+- Compact diff over the whole branch, run before the commit: first stage the step-3 changes
+  (`git add tests/ .large-files-allowlist`), so the new `test_prompt_system_prompts.py` is tracked. Then diff the
+  base branch (from `get_base_branch`, e.g. `main`) against the index:
+  `mcp__mcp-workspace__git(command="diff", args=["--cached", "<base>"], compact=true,
+  pathspec=["tests/", ".large-files-allowlist"])`. This leaves out the `pr_info/` changes and shows the committed
+  steps 1–2 together with the staged step-3 changes. The diff must follow the summary's compact-diff rule. The only non-move hunks:
   the removed `from typing import Any`, the new files' import headers, and the one allowlist line.
 - If any count or check deviates, write one line to `pr_info/.blocked.txt` and stop.
 
