@@ -121,5 +121,5 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Pull Request
 
-- [ ] PR review: review full branch diff against base branch
+- [x] PR review: review full branch diff against base branch
 - [ ] PR summary prepared
