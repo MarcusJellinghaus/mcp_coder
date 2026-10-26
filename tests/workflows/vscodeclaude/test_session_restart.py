@@ -74,6 +74,10 @@ def _make_assessment(
 class TestSessionRestart:
     """Test main orchestration functions."""
 
+
+class TestPrepareAndLaunchSession:
+    """Tests for prepare_and_launch_session() success and failure cleanup."""
+
     def test_prepare_and_launch_session_success(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -271,6 +275,10 @@ class TestSessionRestart:
         # Folder should be cleaned up on failure
         assert not folder_path.exists()
 
+
+class TestProcessEligibleIssuesMaxSessions:
+    """Tests for the max_sessions limit in process_eligible_issues()."""
+
     def test_process_eligible_issues_respects_max_sessions(
         self,
     ) -> None:
@@ -285,6 +293,10 @@ class TestSessionRestart:
         )
 
         assert sessions == []
+
+
+class TestRestartClosedSessionsLifecycle:
+    """Tests for orphan, liveness and relaunch handling in restart_closed_sessions()."""
 
     def test_restart_closed_sessions_removes_orphans(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -514,6 +526,10 @@ class TestSessionRestart:
         assert "Zombie session for issue #123" in caplog.text
         loaded = load_sessions()
         assert len(loaded["sessions"]) == 1
+
+
+class TestRestartClosedSessionsIssueStatus:
+    """Tests for issue-status gating in restart_closed_sessions()."""
 
     def test_restart_closed_sessions_skips_blocked_issues(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

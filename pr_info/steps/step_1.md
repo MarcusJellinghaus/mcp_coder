@@ -61,6 +61,6 @@ standard checks; commit
 
 ## Recorded baseline
 Filled in during step 1, before editing:
-- `tests/workflows/vscodeclaude/` collect-only: ___
-- `test_session_restart.py` collect-only: ___
-- `test_session_launch_process_issues.py` collect-only: ___
+- `tests/workflows/vscodeclaude/` collect-only: 688
+- `test_session_restart.py` collect-only: 16
+- `test_session_launch_process_issues.py` collect-only: 6

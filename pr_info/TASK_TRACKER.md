@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: Split `TestSessionRestart` into four classes — [step_1.md](./steps/step_1.md)
-- [ ] Implementation: record collect-only baselines, insert the four class headers, gates pass (16 passed, split 3/1/5/7)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record collect-only baselines, insert the four class headers, gates pass (16 passed, split 3/1/5/7)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move `TestPrepareAndLaunchSession` to `test_session_launch_prepare.py` — [step_2.md](./steps/step_2.md)
 - [ ] Implementation: `move_symbol` (dry run first), fix imports, gates pass (3 passed / 13 passed, directory baseline)
