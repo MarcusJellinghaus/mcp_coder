@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Move `TestPrepareAndLaunchSession` to `test_session_launch_prepare.py` — [step_2.md](./steps/step_2.md)
-- [ ] Implementation: `move_symbol` (dry run first), fix imports, gates pass (3 passed / 13 passed, directory baseline)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `move_symbol` (dry run first), fix imports, gates pass (3 passed / 13 passed, directory baseline)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move `TestProcessEligibleIssuesMaxSessions` to `test_session_launch_process_issues.py` — [step_3.md](./steps/step_3.md)
 - [ ] Implementation: `move_symbol` (dry run first), destination imports unchanged, gates pass (7 passed / 12 passed, directory baseline)
