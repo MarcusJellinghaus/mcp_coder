@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `LICENSE` + PEP 639 license metadata — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: add MIT `LICENSE`; `pyproject.toml` → `setuptools>=77`, `license = "MIT"`, `license-files`, remove `License ::` classifier
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `build: add MIT LICENSE and PEP 639 license metadata`
+- [x] Implementation: add MIT `LICENSE`; `pyproject.toml` → `setuptools>=77`, `license = "MIT"`, `license-files`, remove `License ::` classifier
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `build: add MIT LICENSE and PEP 639 license metadata`
 
 ### Step 2: Coverage badge in `ci.yml` + `README Badges` docs — [step_2.md](./steps/step_2.md)
 
