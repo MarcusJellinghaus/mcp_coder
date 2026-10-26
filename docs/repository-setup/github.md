@@ -33,8 +33,18 @@ token = "ghp_your_github_token_here"
    - `Actions: Read`
    - `Commit statuses: Read`
 
-   Without `Administration: Read`, `verify` shows branch protection as
-   `[WARN] not verifiable`. That is not an error, and the exit code is unaffected.
+   `verify` reads branch protection from both classic protection and rulesets.
+   Classic protection needs `Administration: Read`; without it, the protection rows
+   rely on rulesets alone.
+   - A protection found by either source counts and shows `[OK]`.
+   - A row shows "not configured" only when both sources answered.
+   - If one source can't be read and the other doesn't show the protection, the row
+     shows `[WARN] not verifiable` — including when classic protection shows none and
+     rulesets can't be read.
+   - `[WARN] not verifiable` is not an error, and the exit code is unaffected.
+
+   Effective rules do not expose bypass actors, so "protected" does not mean "nobody
+   can bypass".
 
 2. **Classic PAT** (simpler, broader). Use the `repo` scope (`public_repo` covers public
    repositories only). Classic scopes grant permissions in bundles, so a `repo`-scope

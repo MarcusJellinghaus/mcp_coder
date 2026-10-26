@@ -143,6 +143,7 @@ _LABEL_MAP: dict[str, str] = {
     "repo_url": "Repo URL",
     "repo_accessible": "Repo accessible",
     "branch_protection": "Branch protection",
+    "require_pull_request": "Require pull request",
     "ci_checks_required": "CI checks required",
     "strict_mode": "Strict mode",
     "force_push": "Force push",
@@ -184,7 +185,13 @@ _LABEL_MAP: dict[str, str] = {
 
 
 _BRANCH_PROTECTION_CHILDREN = frozenset(
-    {"ci_checks_required", "strict_mode", "force_push", "branch_deletion"}
+    {
+        "require_pull_request",
+        "ci_checks_required",
+        "strict_mode",
+        "force_push",
+        "branch_deletion",
+    }
 )
 
 
@@ -229,7 +236,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
                     symbol = symbols["warning"]
                 row_value = value
                 error = entry.get("error")
-                if error and ok is False:
+                if error and ok is not True:
                     row_value = f"{value} ({error})"
                 lines.append(_format_row(label, symbol, row_value, indent=4))
             continue
@@ -245,7 +252,7 @@ def _format_section(title: str, result: dict[str, Any], symbols: dict[str, str])
             symbol = symbols["warning"]
         row_value = value
         error = entry.get("error")
-        if error and ok is False:
+        if error and (ok is False or (ok is None and key == "branch_protection")):
             row_value = f"{value} ({error})"
         indent = 4 if key.startswith("perm_") else 2
         lines.append(_format_row(label, symbol, row_value, indent=indent))
