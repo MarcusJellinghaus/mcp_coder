@@ -523,6 +523,11 @@ by an expiring token, the badge silently stops updating on expiry.
 > that repo's own `<repo>-coverage.json`. The gist is shared — an unrenamed copy overwrites
 > `mcp_coder`'s badge.
 
+### Scorecard and CodeQL badges
+
+`.github/workflows/scorecard.yml` needs no secrets: it publishes results for the Scorecard badge and
+uploads SARIF to code scanning. The CodeQL badge reflects CodeQL default setup (no workflow file).
+
 ## Automated Dependency Management
 
 - **Purpose:** Security updates and dependency monitoring

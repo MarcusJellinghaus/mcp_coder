@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: OpenSSF Scorecard workflow — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: create `.github/workflows/scorecard.yml`; Scorecard/CodeQL docs in `github.md`; shared-files row in `docs/repository-setup/README.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared: `ci: add OpenSSF Scorecard workflow`
+- [x] Implementation: create `.github/workflows/scorecard.yml`; Scorecard/CodeQL docs in `github.md`; shared-files row in `docs/repository-setup/README.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared: `ci: add OpenSSF Scorecard workflow`
 
 ### Step 4: README badge lines — [step_4.md](./steps/step_4.md)
 
