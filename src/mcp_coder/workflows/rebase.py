@@ -413,6 +413,7 @@ def _format_failure_keys(keys: set[FailureKey]) -> str:
 
 _MAX_SAME_FILE_CONFLICTS = 3  # /rebase abort rule 4
 _MAX_FIX_ATTEMPTS = 2  # /rebase abort rule 5
+_RESTORED_NOTE = "; pre-rebase state restored"  # only appended when reset succeeded
 
 
 def run_rebase_workflow(
@@ -620,24 +621,25 @@ def run_rebase_workflow(
             )
             regressions = _run_all_checks(project_dir) - baseline
         if regressions:
+            restored = _reset_hard(project_dir, pre_sha)
             logger.log(
                 OUTPUT,
-                "Aborted: %d unfixed regression(s); pre-rebase state restored",
+                "Aborted: %d unfixed regression(s)%s",
                 len(regressions),
+                _RESTORED_NOTE if restored else "",
             )
-            _reset_hard(project_dir, pre_sha)
             return 1
 
         if not _rebase_success_shape(project_dir, pre_sha):
             # Reset is safe here: the rebase completed, so the finally net
             # won't act — same never-leave-rebased-unpushed invariant as the
             # other post-rebase failure paths.
+            restored = _reset_hard(project_dir, pre_sha)
             logger.log(
                 OUTPUT,
-                "Aborted: git state does not corroborate a successful rebase; "
-                "pre-rebase state restored",
+                "Aborted: git state does not corroborate a successful rebase%s",
+                _RESTORED_NOTE if restored else "",
             )
-            _reset_hard(project_dir, pre_sha)
             return 1
 
         logger.log(OUTPUT, "Force-pushing (with lease)...")
@@ -647,15 +649,24 @@ def run_rebase_workflow(
             return 0
 
         logger.error("Force-push rejected/failed: %s", push_result.get("error"))
-        _reset_hard(project_dir, pre_sha)  # never leave unpushed rebased commits
-        logger.log(OUTPUT, "Aborted: force-push rejected; pre-rebase state restored")
+        # never leave unpushed rebased commits
+        restored = _reset_hard(project_dir, pre_sha)
+        logger.log(
+            OUTPUT,
+            "Aborted: force-push rejected%s",
+            _RESTORED_NOTE if restored else "",
+        )
         return 2
     except CheckRunError as exc:
         # Verification/re-check infrastructure failure: the rebase already
         # completed, so the finally net cannot restore — explicit reset.
-        _reset_hard(project_dir, pre_sha)
+        restored = _reset_hard(project_dir, pre_sha)
         logger.error("Verification checks failed to run: %s", exc)
-        logger.log(OUTPUT, "Aborted: checks failed to run; pre-rebase state restored")
+        logger.log(
+            OUTPUT,
+            "Aborted: checks failed to run%s",
+            _RESTORED_NOTE if restored else "",
+        )
         return 1
     except Exception as exc:  # pylint: disable=broad-exception-caught
         # LLM failure/timeout or unexpected error. Mid-rebase: the finally net

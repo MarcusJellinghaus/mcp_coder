@@ -1,9 +1,10 @@
 """Git-backed tests for the low-level git helpers in ``workflows/rebase.py``.
 
 Covers ``_run_git``, ``_is_rebase_in_progress``, ``_abort_rebase``,
-``_reset_hard``, ``_rebase_success_shape`` and the conflict helpers
+``_rebase_success_shape`` and the conflict helpers
 (``_conflicted_files``, ``_binary_conflict``, ``_resolve_pr_info_conflict``,
-``_show_stage``, ``_stage_all_and_continue``). Tests touching a real git
+``_show_stage``, ``_stage_all_and_continue``), plus the shared
+``_reset_hard`` from ``workflow_steps/rebase.py``. Tests touching a real git
 repository are marked ``git_integration`` and build on a temp-repo fixture
 with an initial commit; the pure text helper ``_has_conflict_markers`` gets
 plain unit tests.
