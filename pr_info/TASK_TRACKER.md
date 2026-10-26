@@ -21,6 +21,31 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Split `TestSessionRestart` into four classes — [step_1.md](./steps/step_1.md)
+- [ ] Implementation: record collect-only baselines, insert the four class headers, gates pass (16 passed, split 3/1/5/7)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move `TestPrepareAndLaunchSession` to `test_session_launch_prepare.py` — [step_2.md](./steps/step_2.md)
+- [ ] Implementation: `move_symbol` (dry run first), fix imports, gates pass (3 passed / 13 passed, directory baseline)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Move `TestProcessEligibleIssuesMaxSessions` to `test_session_launch_process_issues.py` — [step_3.md](./steps/step_3.md)
+- [ ] Implementation: `move_symbol` (dry run first), destination imports unchanged, gates pass (7 passed / 12 passed, directory baseline)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Move `TestRestartClosedSessionsLifecycle` to `test_session_restart_lifecycle.py` — [step_4.md](./steps/step_4.md)
+- [ ] Implementation: `move_symbol` (dry run first), bare `_make_assessment(` calls, `import logging` stays in zombie test, gates pass (5 passed / 7 passed, directory baseline)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: Move `TestRestartClosedSessionsIssueStatus` and `_make_assessment`, delete `test_session_restart.py`, update allowlist — [step_5.md](./steps/step_5.md)
+- [ ] Implementation: move class, move helper to `conftest.py`, fix imports, pre-delete checks, delete file, remove allowlist line, final verification (22 passed, lint-imports, tach, vulture, file size, branch compact diff)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: compact diff of the whole branch against the base branch shows only moved blocks, import changes, four class headers, deleted file and allowlist line
+- [ ] PR summary prepared
