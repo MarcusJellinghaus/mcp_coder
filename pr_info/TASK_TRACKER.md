@@ -33,9 +33,9 @@ See [step_1.md](./steps/step_1.md)
 
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move `TestAskClaudeCodeCliStream` to the new file via `move_symbol` (dry run first), normalize imports in both files, remove the `.large-files-allowlist` entry; collected counts 30 + 9, directory total matches baseline
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestAskClaudeCodeCliStream` to the new file via `move_symbol` (dry run first), normalize imports in both files, remove the `.large-files-allowlist` entry; collected counts 30 + 9, directory total matches baseline
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
