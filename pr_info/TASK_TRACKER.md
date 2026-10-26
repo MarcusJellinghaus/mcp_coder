@@ -43,9 +43,9 @@ See [step_3.md](./steps/step_3.md)
 
 ### Step 4: Content-unit tests → `test_app_pilot_content_units.py`
 See [step_4.md](./steps/step_4.md)
-- [ ] Implementation: moves 4a, 4a' (`_make_click_tool_unit`), 4b, 4c, fix imports, add `pytestmark`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: moves 4a, 4a' (`_make_click_tool_unit`), 4b, 4c, fix imports, add `pytestmark`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Approval tests → `test_app_pilot_approval.py`
 See [step_5.md](./steps/step_5.md)
