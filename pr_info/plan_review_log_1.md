@@ -10,3 +10,11 @@ pr_info/steps/summary.md:83 — low — The standard checks don't say what scope
 Verdict(decision='tasks', tasks=["In pr_info/steps/summary.md (move procedure, lines 69–74), replace the blanket 'Never move code by hand' and 'block on any failure' rules with the issue's recovery path. On NameError/ImportError at collection or a misplaced symbol, first try a different grouping or call order. If that fails, use move_module, or undo with move_symbol. As a last resort, hand-move whole top-level statements. Block only after all of these fail.", "In pr_info/steps/step_4.md (~line 56), add 'moved-block preview/summary lines' to the list of allowed compact-diff output, as the issue's Verification section allows.", "Resolve the contradiction between pr_info/steps/step_4.md:49 and pr_info/steps/step_1.md:21. Since step 1 stops on any count other than 6463, remove 'or whatever step 1 recorded' from step_4.md and state 6463 as the expected value.", "In pr_info/steps/summary.md (~line 83, standard checks), give the pytest scope for each step. Every step runs the full fast-unit suite with -n auto, and the five affected test files are also run directly, matching the issue's Verification section."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-10-26
+**Findings**:
+pr_info/steps/step_4.md:54 — high — The compact-diff check runs against the base branch with no pathspec, so it will also show the branch's `pr_info/` files (`steps/*`, `TASK_TRACKER.md`, `plan_review_log_*.md`). None of these are on the allowed list in lines 56–60, so read strictly, a correct split gets written to `.blocked.txt` at the last step. Fix: limit the diff to `tests/workflows/implement/` and `.large-files-allowlist` with `pathspec`, or add `pr_info/` to the allowed list.
+**Decisions**:
+Verdict(decision='tasks', tasks=["In pr_info/steps/step_4.md (~line 54), scope the compact-diff check against the base branch with a pathspec limited to `tests/workflows/implement/` and `.large-files-allowlist`. The branch's own `pr_info/` files (steps, TASK_TRACKER.md, plan_review_log_*.md) are then not counted as disallowed changes, and a correct split no longer ends up in `.blocked.txt`."], escalate_reason=None)
+**Changes**:
+applied
