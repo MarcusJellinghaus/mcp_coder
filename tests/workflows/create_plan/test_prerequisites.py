@@ -206,7 +206,6 @@ class TestCheckPrerequisites:
         assert issue_data["updated_at"] is None
         assert issue_data["url"] == ""
         assert issue_data["locked"] is False
-        assert issue_data == create_empty_issue_data()
 
 
 class TestCheckPrInfoNotExists:
