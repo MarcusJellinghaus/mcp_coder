@@ -59,6 +59,9 @@ from mcp_workspace.git_operations.parent_branch_detection import (
 # Read operations
 from mcp_workspace.git_operations.read_operations import git_diff
 
+# Rebase
+from mcp_workspace.git_operations.rebase import probe_rebase_conflicts
+
 # Remotes
 from mcp_workspace.git_operations.remotes import (
     clone_repo,
@@ -135,4 +138,5 @@ __all__ = [
     "get_working_tree_status",
     "BaseBranchSource",
     "detect_base_branch_with_source",
+    "probe_rebase_conflicts",
 ]

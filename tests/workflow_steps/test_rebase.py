@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.utils.subprocess_runner import CommandResult
 from mcp_coder.workflow_steps.rebase import (
     RebaseOutcome,
     _attempt_rebase_and_push,
@@ -20,20 +19,16 @@ from mcp_coder.workflows.implement.core import run_implement_workflow
 
 _MODULE = "mcp_coder.workflow_steps.rebase"
 _FULL_SHA = "abc1234def5678abc1234def5678abc1234def56"
-_TREE_OID = "0123456789abcdef0123456789abcdef01234567"
 
 
-def _result(
-    return_code: int = 0, stdout: str = "", execution_error: str | None = None
-) -> CommandResult:
-    """Build a CommandResult for the mocked ``execute_command``."""
-    return CommandResult(
-        return_code=return_code,
-        stdout=stdout,
-        stderr="",
-        timed_out=False,
-        execution_error=execution_error,
-    )
+def _probe(status: str, files: list[str] | None = None) -> dict[str, object]:
+    """Build a RebaseProbe-shaped dict for the mocked ``probe_rebase_conflicts``."""
+    return {
+        "success": status == "clean",
+        "error": None if status in ("clean", "conflict") else status,
+        "status": status,
+        "files": files or [],
+    }
 
 
 @pytest.fixture(autouse=True)
@@ -47,12 +42,12 @@ def mock_check_base_on_origin() -> Iterator[MagicMock]:
 
 
 @pytest.fixture(autouse=True)
-def mock_execute_command() -> Iterator[MagicMock]:
-    """Keep the merge-tree probe off real git."""
+def mock_probe() -> Iterator[MagicMock]:
+    """Keep the rebase conflict probe off real git."""
     with patch(
-        f"{_MODULE}.execute_command", return_value=_result(return_code=1)
-    ) as mock_exec:
-        yield mock_exec
+        f"{_MODULE}.probe_rebase_conflicts", return_value=_probe("error")
+    ) as mock_probe_fn:
+        yield mock_probe_fn
 
 
 @pytest.fixture(autouse=True)
@@ -111,61 +106,30 @@ class TestBaseSha:
 class TestClassifyFailedRebase:
     """Tests for _classify_failed_rebase."""
 
-    def test_conflict_with_files(
-        self, mock_execute_command: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test exit 1 + tree OID + files classifies as a conflict."""
-        mock_execute_command.return_value = _result(
-            return_code=1, stdout=f"{_TREE_OID}\nsrc/a.py\nsrc/b.py\n"
-        )
+    def test_conflict_with_files(self, mock_probe: MagicMock, tmp_path: Path) -> None:
+        """Test a conflict probe classifies as a conflict with its files."""
+        mock_probe.return_value = _probe("conflict", ["a.py", "b.py"])
 
         assert _classify_failed_rebase(tmp_path, "main") == (
             "conflict",
-            ("src/a.py", "src/b.py"),
+            ("a.py", "b.py"),
         )
-        assert mock_execute_command.call_args[0][0] == [
-            "git",
-            "merge-tree",
-            "--write-tree",
-            "--name-only",
-            "--no-messages",
-            "origin/main",
-            "HEAD",
-        ]
+        mock_probe.assert_called_once_with(tmp_path, "origin/main")
 
-    def test_execution_error_is_rebase_failed(
-        self, mock_execute_command: MagicMock, tmp_path: Path
+    @pytest.mark.parametrize("status", ["clean", "unsupported", "error"])
+    def test_non_conflict_status_is_rebase_failed(
+        self, mock_probe: MagicMock, tmp_path: Path, status: str
     ) -> None:
-        """Test exit 1 + empty stdout + execution_error is a generic failure."""
-        mock_execute_command.return_value = _result(
-            return_code=1, execution_error="git not found"
-        )
+        """Test clean / unsupported / error probes are a generic failure."""
+        mock_probe.return_value = _probe(status)
 
         assert _classify_failed_rebase(tmp_path, "main") == ("rebase_failed", ())
 
-    def test_non_oid_first_line_is_rebase_failed(
-        self, mock_execute_command: MagicMock, tmp_path: Path
+    def test_probe_raising_is_rebase_failed(
+        self, mock_probe: MagicMock, tmp_path: Path
     ) -> None:
-        """Test exit 1 with a non-OID first line (old git usage) is generic."""
-        mock_execute_command.return_value = _result(
-            return_code=1, stdout="usage: git merge-tree ...\n"
-        )
-
-        assert _classify_failed_rebase(tmp_path, "main") == ("rebase_failed", ())
-
-    def test_exit_zero_is_rebase_failed(
-        self, mock_execute_command: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test a clean merge-tree (exit 0) means the failure was not a conflict."""
-        mock_execute_command.return_value = _result(stdout=f"{_TREE_OID}\n")
-
-        assert _classify_failed_rebase(tmp_path, "main") == ("rebase_failed", ())
-
-    def test_execute_raising_is_rebase_failed(
-        self, mock_execute_command: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test an exception from execute_command is a generic failure."""
-        mock_execute_command.side_effect = RuntimeError("boom")
+        """Test an exception from the probe is a generic failure."""
+        mock_probe.side_effect = RuntimeError("boom")
 
         assert _classify_failed_rebase(tmp_path, "main") == ("rebase_failed", ())
 
@@ -253,7 +217,7 @@ class TestAttemptRebaseOutcomes:
         mock_rebase: MagicMock,
         mock_push: MagicMock,
         mock_check_base_on_origin: MagicMock,
-        mock_execute_command: MagicMock,
+        mock_probe: MagicMock,
         mock_remote_sha: MagicMock,
         tmp_path: Path,
     ) -> None:
@@ -266,7 +230,7 @@ class TestAttemptRebaseOutcomes:
 
         assert outcome == RebaseOutcome("base_missing", "epic/x")
         assert outcome.base_sha is None
-        mock_execute_command.assert_not_called()
+        mock_probe.assert_not_called()
         mock_remote_sha.assert_not_called()
 
     def test_conflict(
@@ -275,18 +239,16 @@ class TestAttemptRebaseOutcomes:
         mock_detect: MagicMock,
         mock_rebase: MagicMock,
         mock_push: MagicMock,
-        mock_execute_command: MagicMock,
+        mock_probe: MagicMock,
         mock_remote_sha: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test a failed rebase classified by merge-tree as a conflict."""
+        """Test a failed rebase classified by the probe as a conflict."""
         mock_status.return_value = self._CLEAN
         mock_detect.return_value = "main"
         mock_rebase.return_value = False
         mock_remote_sha.return_value = _FULL_SHA
-        mock_execute_command.return_value = _result(
-            return_code=1, stdout=f"{_TREE_OID}\na.py\n"
-        )
+        mock_probe.return_value = _probe("conflict", ["a.py"])
 
         outcome = _attempt_rebase_and_push(tmp_path)
 
@@ -299,16 +261,16 @@ class TestAttemptRebaseOutcomes:
         mock_detect: MagicMock,
         mock_rebase: MagicMock,
         mock_push: MagicMock,
-        mock_execute_command: MagicMock,
+        mock_probe: MagicMock,
         mock_remote_sha: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """Test a failed rebase merge-tree cannot explain is rebase_failed."""
+        """Test a failed rebase the probe cannot explain is rebase_failed."""
         mock_status.return_value = self._CLEAN
         mock_detect.return_value = "main"
         mock_rebase.return_value = False
         mock_remote_sha.return_value = _FULL_SHA
-        mock_execute_command.return_value = _result(stdout=f"{_TREE_OID}\n")
+        mock_probe.return_value = _probe("clean")
 
         outcome = _attempt_rebase_and_push(tmp_path)
 

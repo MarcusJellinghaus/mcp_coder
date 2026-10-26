@@ -6,7 +6,6 @@ from ``implement/rebase.py`` so multiple workflows can share it.
 """
 
 import logging
-import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +14,7 @@ from typing import Literal
 from mcp_coder.mcp_workspace_git import (
     get_full_status,
     get_remote_branch_commit_sha,
+    probe_rebase_conflicts,
     rebase_onto_branch,
 )
 from mcp_coder.mcp_workspace_github import PullRequestManager
@@ -37,9 +37,6 @@ RebaseReason = Literal[
     "rebase_failed",
     "push_failed",
 ]
-
-# First line of `git merge-tree --write-tree` output: a SHA-1 or SHA-256 tree OID.
-_TREE_OID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 _POLL_ATTEMPTS = 6
 _POLL_INTERVAL_SECONDS = 5
@@ -120,40 +117,23 @@ def _base_sha(project_dir: Path, base: str) -> str | None:
 def _classify_failed_rebase(
     project_dir: Path, base: str
 ) -> tuple[RebaseReason, tuple[str, ...]]:
-    """Classify a failed rebase with a read-only ``git merge-tree`` probe.
+    """Classify a failed rebase with a read-only rebase conflict probe.
 
     Args:
         project_dir: Path to the project directory
         base: Base branch name
 
     Returns:
-        ``("conflict", files)`` when merge-tree reports conflicts, else
-        ``("rebase_failed", ())`` - including exit 0, timeouts, missing git
-        and git older than 2.38.
+        ``("conflict", files)`` when the probe's ``status`` is ``"conflict"``,
+        else ``("rebase_failed", ())`` - for ``"clean"``, ``"unsupported"``
+        (git older than 2.38), ``"error"`` and an exception from the probe.
     """
     try:
-        result = execute_command(
-            [
-                "git",
-                "merge-tree",
-                "--write-tree",
-                "--name-only",
-                "--no-messages",
-                f"origin/{base}",
-                "HEAD",
-            ],
-            cwd=str(project_dir),
-        )
+        probe = probe_rebase_conflicts(project_dir, f"origin/{base}")
     except Exception:  # pylint: disable=broad-exception-caught
         return "rebase_failed", ()
-    lines = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
-    if (
-        result.return_code == 1
-        and not result.execution_error
-        and lines
-        and _TREE_OID.fullmatch(lines[0])
-    ):
-        return "conflict", tuple(lines[1:])
+    if probe["status"] == "conflict":
+        return "conflict", tuple(probe["files"])
     return "rebase_failed", ()
 
 
