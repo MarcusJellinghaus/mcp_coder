@@ -18,30 +18,26 @@ Get `tests/workflows/vscodeclaude/test_issues.py` (948 lines) under the 750-line
 
 ## Design change (test layout only — `src/` is untouched)
 `src/mcp_coder/workflows/vscodeclaude/issues.py` (408 lines) stays as is. Its tests split into
-the base file plus one prefixed sibling (`foo.py` ↔ `test_foo.py` + `test_foo_<concern>.py`):
+the base file plus prefixed siblings, one test file per section of `issues.py`
+(`foo.py` ↔ `test_foo.py` + `test_foo_<concern>.py`), as in the issue's Target layout:
 
 | Test file | Covers `issues.py` section | Classes | Tests | ~Lines |
 |---|---|---|---:|---:|
-| `test_issues.py` (kept) | Label config, status rules, eligibility (25–300) | `TestIssueSelection`, `TestFilterEligibleVscodeclaudeIssues`, `TestGetCachedEligibleVscodeclaudeIssues`, `TestNumericPriorityExtraction`, `TestGetIgnoreLabels`, `TestGetMatchingIgnoreLabel`, `TestIsStatusEligibleForSession`, `TestStatusRequiresLinkedBranch` | 40 | ~560 |
+| `test_issues.py` (kept) | Label config + status rules (25–137) | `TestNumericPriorityExtraction`, `TestGetIgnoreLabels`, `TestGetMatchingIgnoreLabel`, `TestIsStatusEligibleForSession`, `TestStatusRequiresLinkedBranch` | 32 | ~215 |
+| `test_issues_eligibility.py` (new) | Eligibility (139–300) | `TestIssueSelection`, `TestFilterEligibleVscodeclaudeIssues`, `TestGetCachedEligibleVscodeclaudeIssues` | 8 | ~365 |
 | `test_issues_branch_check.py` (new) | Branch check (303–408) | `TestBuildEligibleIssuesWithBranchCheck` (from `test_issues.py`), `TestBuildEligibleIssuesPrefetched` (from `coordinator/test_core.py`) | 9 | ~530 |
 | `test_issues_branch_requirements.py` | — | unchanged | 5 | 32 |
 
 `tests/cli/commands/coordinator/test_core.py` loses only `TestBuildEligibleIssuesPrefetched`
 (52 → 50 tests, 1298 → ~1172 lines) and **stays allowlisted** (its split is a separate issue).
 
-### Deviation from the issue's target layout (KISS)
-The issue planned a third file, `test_issues_eligibility.py`. That layout was sized when
-`test_issues.py` was 1158 lines. Since #1309 (`make_issue_data` factory) it is 948 lines, so
-moving only the branch-check class already leaves `test_issues.py` at ~560 lines (< 600 soft
-target). Dropping the eligibility file means 2 moves instead of 3 and one new file instead of two.
-Every "Done when" criterion of the issue still holds.
-
-### Other drift from the issue text (since #1309)
+### Drift from the issue text (since #1309)
 - `cast` is no longer imported; `make_issue_data` (`tests.github_factories`) is.
 - `TestBuildEligibleIssuesPrefetched` has no `# type: ignore[arg-type]` any more; it uses
   `IssueData` annotations and `make_issue_data` instead. Mypy now proves `IssueData` resolves in
   the destination.
-- Line numbers: `TestBuildEligibleIssuesWithBranchCheck` 562–948 in `test_issues.py`;
+- Line numbers: eligibility classes 23–367 and `TestBuildEligibleIssuesWithBranchCheck` 562–948
+  in `test_issues.py` (948 lines);
   `TestBuildEligibleIssuesPrefetched` 1173–1298 in `coordinator/test_core.py`.
 
 ### Fixtures
@@ -53,15 +49,17 @@ by running the two tests before and after the move.
 ## Files created / modified
 | Path | Change |
 |---|---|
+| `tests/workflows/vscodeclaude/test_issues_eligibility.py` | **new** — receives the three eligibility classes |
 | `tests/workflows/vscodeclaude/test_issues_branch_check.py` | **new** — receives both branch-check classes |
-| `tests/workflows/vscodeclaude/test_issues.py` | loses `TestBuildEligibleIssuesWithBranchCheck`; imports trimmed |
+| `tests/workflows/vscodeclaude/test_issues.py` | loses the eligibility and branch-check classes; imports trimmed |
 | `tests/cli/commands/coordinator/test_core.py` | loses `TestBuildEligibleIssuesPrefetched`; imports unchanged |
 | `.large-files-allowlist` | remove `tests/workflows/vscodeclaude/test_issues.py` |
 
 No `src/`, `conftest.py`, `.importlinter`, `tach.toml` or `vulture_whitelist.py` changes.
 
 ## Steps
-1. `step_1.md` — move `TestBuildEligibleIssuesWithBranchCheck` → `test_issues_branch_check.py`; drop allowlist entry.
+1. `step_1.md` — move the eligibility classes → `test_issues_eligibility.py` and
+   `TestBuildEligibleIssuesWithBranchCheck` → `test_issues_branch_check.py`; drop allowlist entry.
 2. `step_2.md` — move `TestBuildEligibleIssuesPrefetched` → `test_issues_branch_check.py`.
 
 ## Check suite (run at the end of every step)
@@ -72,5 +70,5 @@ No `src/`, `conftest.py`, `.importlinter`, `tach.toml` or `vulture_whitelist.py`
 - `mcp__mcp-tools-py__run_pytest_check` with `extra_args=["-n", "auto", "-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not copilot_cli_integration and not formatter_integration and not github_integration and not install_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"]` (moved tests carry no integration markers)
 - `mcp__mcp-tools-py__run_lint_imports_check`, `mcp__mcp-tools-py__run_tach_check`, `mcp__mcp-tools-py__run_vulture_check`
 - `mcp__mcp-workspace__check_file_size` — passes, no stale allowlist entries
-- `mcp__mcp-workspace__git` `diff` (`compact=true`) — only import hunks, the new file header,
+- `mcp__mcp-workspace__git` `diff` (`compact=true`) — only import hunks, new file headers,
   moved-block summary lines, blank-line-only hunks and the allowlist line. Moved code suppressed.

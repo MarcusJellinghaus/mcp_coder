@@ -56,8 +56,8 @@ run checks + 2 tests at new location + compare collect counts
 ```
 
 ## DATA — expected results
-- `--collect-only -q`: `test_issues_branch_check.py` 9, `test_issues.py` 40,
-  `test_issues_branch_requirements.py` 5, `coordinator/test_core.py` 50,
+- `--collect-only -q`: `test_issues.py` 32, `test_issues_eligibility.py` 8,
+  `test_issues_branch_check.py` 9, `test_issues_branch_requirements.py` 5, `coordinator/test_core.py` 50,
   `tests/workflows/vscodeclaude/` 682, `tests/cli/commands/coordinator/` 156.
   Total across the three original files: 99 before and after.
 - `test_issues_branch_check.py` ~530 lines; `coordinator/test_core.py` ~1172 lines, still allowlisted.
