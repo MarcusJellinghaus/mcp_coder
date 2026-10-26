@@ -16,6 +16,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from mcp_coder.utils.config_hints import suggest
+from mcp_coder.utils.log_utils import token_fingerprint
 
 from . import _load_langchain_config
 from ._config_diagnostics import (
@@ -45,20 +46,18 @@ _BACKEND_PACKAGES: dict[str, str] = {
 
 
 def _mask_api_key(key: str | None) -> str | None:
-    """Mask an API key, showing first 4 and last 4 characters.
+    """Mask an API key via :func:`token_fingerprint`.
+
+    Thin adapter: callers rely on None (not ``""``) for an absent key.
 
     Args:
         key: The API key to mask, or None.
 
     Returns:
-        Masked key string (e.g. ``"sk-1...xyz9"``), ``"****"`` if the key is
-        8 characters or fewer, or None if the key is None or empty.
+        Fingerprint string (e.g. ``"sk-1...xyz9, len=51"``), or None if the
+        key is None or empty.
     """
-    if not key:
-        return None
-    if len(key) <= 8:
-        return "****"
-    return f"{key[:4]}...{key[-4:]}"
+    return token_fingerprint(key) or None
 
 
 def _resolve_api_key(

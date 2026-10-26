@@ -17,16 +17,16 @@ class TestMaskApiKey:
     """Focused tests for _mask_api_key helper."""
 
     def test_normal_key(self) -> None:
-        assert _mask_api_key("sk-abcd1234wxyz5678") == "sk-a...5678"
+        assert _mask_api_key("sk-abcd1234wxyz5678") == "sk-a...5678, len=19"
 
     def test_short_key(self) -> None:
-        assert _mask_api_key("short") == "****"
+        assert _mask_api_key("short") == "<malformed>, len=5"
 
-    def test_exactly_8_chars(self) -> None:
-        assert _mask_api_key("12345678") == "****"
+    def test_15_chars_reveals_nothing(self) -> None:
+        assert _mask_api_key("123456789012345") == "<malformed>, len=15"
 
-    def test_9_chars(self) -> None:
-        assert _mask_api_key("123456789") == "1234...6789"
+    def test_16_chars(self) -> None:
+        assert _mask_api_key("1234567890123456") == "1234...3456, len=16"
 
     def test_none(self) -> None:
         assert _mask_api_key(None) is None
@@ -95,7 +95,7 @@ class TestVerifyLangchain:
         }
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
-        assert result["api_key"]["value"] == "sk-a...5678"
+        assert result["api_key"]["value"] == "sk-a...5678, len=19"
         assert result["api_key"]["source"] == "config.toml"
 
     @patch("mcp_coder.llm.providers.langchain.verification._check_package_installed")
@@ -224,7 +224,7 @@ class TestVerifyLangchain:
             result = verify_langchain()
         assert result["api_key"]["ok"] is True
         assert result["api_key"]["source"] == "OPENAI_API_KEY env var"
-        assert result["api_key"]["value"] == "sk-f...5678"
+        assert result["api_key"]["value"] == "sk-f...5678, len=20"
 
 
 class TestCheckMcpAdapterPackages:

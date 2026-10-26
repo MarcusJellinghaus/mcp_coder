@@ -64,7 +64,7 @@ class TestVerifyLangchainOllama:
         with patch.dict("os.environ", {}, clear=True):
             result = verify_langchain()
         assert result["api_key"]["ok"] is True
-        assert result["api_key"]["value"] == "olla...1234"
+        assert result["api_key"]["value"] == "olla...1234, len=21"
         assert result["api_key"]["source"] == "config.toml"
 
     @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
@@ -198,7 +198,7 @@ class TestVerifyLangchainOllama:
             result = verify_langchain()
         assert result["api_key"]["ok"] is True
         assert result["api_key"]["source"] == "OLLAMA_API_KEY env var"
-        assert result["api_key"]["value"] == "env-...abcd"
+        assert result["api_key"]["value"] == "env-...abcd, len=18"
 
     @patch("mcp_coder.llm.providers.langchain._models.check_ollama_tool_capability")
     @patch("mcp_coder.llm.providers.langchain._models._check_ollama_daemon")
