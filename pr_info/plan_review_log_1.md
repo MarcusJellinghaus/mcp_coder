@@ -9,3 +9,11 @@ Reviewing plan; checking whether a stale allowlist entry after step 3 breaks CI.
 Verdict(decision='tasks', tasks=["In pr_info/steps/step_3.md, move the removal of `test_task_tracker.py` from `.large-files-allowlist` into step 3, because the base file is about 460 lines after step 3 and so under the 750-line limit. Update step 3's DATA section (around line 63) to match, and update the Files table in pr_info/summary.md to show the allowlist change in step 3.", 'In pr_info/steps/step_4.md, remove the allowlist removal from the WHERE, WHAT and HOW sections. Fix line 24 so it no longer says the base file only drops under 750 lines (~285) in step 4. It should say the file is already under the limit after step 3 and goes from about 460 to about 285 lines in step 4.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-10-26
+**Findings**:
+`pr_info/steps/step_4.md:71` — high — The final compact diff covers the whole branch against the base branch, and its allowlist leaves out the `pr_info/` files this branch adds (`steps/*`, `TASK_TRACKER.md`, `plan_review_log_*.md`, from commit e5296d7 onward). Those hunks will always appear in the diff, and the failure rule ("Anything else → write `.blocked.txt` and stop") will then block every run. Fix: limit the diff with a pathspec to `tests/workflow_utils/` and `.large-files-allowlist`, or exclude `pr_info/`.
+**Decisions**:
+Verdict(decision='tasks', tasks=['In pr_info/steps/step_4.md (around line 71), limit the final compact diff with a pathspec to `tests/workflow_utils/` and `.large-files-allowlist`, or explicitly exclude `pr_info/`. This stops the `pr_info/` planning files this branch adds (steps/*, TASK_TRACKER.md, plan_review_log_*.md) from setting off the `.blocked.txt` failure rule on every run.'], escalate_reason=None)
+**Changes**:
+applied
