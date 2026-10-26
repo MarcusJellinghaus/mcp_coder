@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Record baseline; move `TestIsClaudeMd` to `tests/prompts/test_prompt_loader.py`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: record baseline counts + marker check, move `TestIsClaudeMd` via `move_symbol` (dry run first)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record baseline counts + marker check, move `TestIsClaudeMd` via `move_symbol` (dry run first)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move claude path of `prompt_llm` to `tests/llm/test_interface_prompt_llm.py`
 See [step_2.md](./steps/step_2.md)

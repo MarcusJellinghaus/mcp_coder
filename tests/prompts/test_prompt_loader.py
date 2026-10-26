@@ -21,6 +21,66 @@ from mcp_coder.prompts.prompt_loader import (
 )
 from mcp_coder.utils.pyproject_config import get_prompts_config
 
+
+class TestIsClaudeMd:
+    """Tests for is_claude_md function."""
+
+    def test_is_claude_md_true_root_level(self, tmp_path: Path) -> None:
+        """Detects CLAUDE.md at project root."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        claude_md = tmp_path / "CLAUDE.md"
+        claude_md.write_text("# Instructions")
+
+        assert is_claude_md(claude_md, str(tmp_path)) is True
+
+    def test_is_claude_md_true_dot_claude_dir(self, tmp_path: Path) -> None:
+        """Detects .claude/CLAUDE.md."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        dot_claude = tmp_path / ".claude"
+        dot_claude.mkdir()
+        claude_md = dot_claude / "CLAUDE.md"
+        claude_md.write_text("# Instructions")
+
+        assert is_claude_md(claude_md, str(tmp_path)) is True
+
+    def test_is_claude_md_false_non_matching(self, tmp_path: Path) -> None:
+        """Non-CLAUDE.md paths return False."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        custom = tmp_path / "my-prompt.md"
+        custom.write_text("custom prompt")
+
+        assert is_claude_md(custom, str(tmp_path)) is False
+
+    def test_is_claude_md_parent_dir(self, tmp_path: Path) -> None:
+        """Detects CLAUDE.md in parent directory."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        parent_claude = tmp_path / "CLAUDE.md"
+        parent_claude.write_text("# Parent instructions")
+        sub_project = tmp_path / "subproject"
+        sub_project.mkdir()
+
+        assert is_claude_md(parent_claude, str(sub_project)) is True
+
+    def test_is_claude_md_none_path(self) -> None:
+        """Returns False when path is None."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        assert is_claude_md(None, "/some/dir") is False
+
+    def test_is_claude_md_none_project_dir(self, tmp_path: Path) -> None:
+        """Returns False when project_dir is None."""
+        from mcp_coder.prompts.prompt_loader import is_claude_md
+
+        claude_md = tmp_path / "CLAUDE.md"
+        claude_md.write_text("# Instructions")
+
+        assert is_claude_md(claude_md, None) is False
+
+
 _LOADER_LOGGER = "mcp_coder.prompts.prompt_loader"
 
 
