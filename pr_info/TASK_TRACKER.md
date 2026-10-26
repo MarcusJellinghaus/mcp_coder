@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Move mlflow tests to `tests/llm/test_interface_mlflow.py`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: move `TestMlflowConversationIntegration` via `move_symbol` (dry run first)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestMlflowConversationIntegration` via `move_symbol` (dry run first)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Move `logs_dir` derivation tests to `tests/llm/test_interface_logs_dir.py`
 See [step_4.md](./steps/step_4.md)
