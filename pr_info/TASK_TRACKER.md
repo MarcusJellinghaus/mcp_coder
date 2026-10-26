@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Document ruleset-aware branch protection checks
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: reword "not verifiable" note and add bypass-actors sentence in `docs/repository-setup/github.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: reword "not verifiable" note and add bypass-actors sentence in `docs/repository-setup/github.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
