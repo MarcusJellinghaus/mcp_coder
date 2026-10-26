@@ -1,6 +1,8 @@
 """Tests for CLI main entry point."""
 
 import argparse
+import ast
+import inspect
 import logging
 import sys
 from unittest.mock import Mock, patch
@@ -460,3 +462,20 @@ class TestFaulthandlerSafetyNet:
         )
         assert result.return_code == 0
         assert "OK" in result.stdout
+
+    def test_faulthandler_enabled_before_package_imports(self) -> None:
+        """faulthandler.enable() runs before any mcp_coder-internal import."""
+        tree = ast.parse(inspect.getsource(sys.modules["mcp_coder.cli.main"]))
+        enable_line = next(
+            node.lineno
+            for node in tree.body
+            if isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Call)
+            and ast.unparse(node.value.func) == "faulthandler.enable"
+        )
+        first_relative_import_line = next(
+            node.lineno
+            for node in tree.body
+            if isinstance(node, ast.ImportFrom) and node.level > 0
+        )
+        assert enable_line < first_relative_import_line
