@@ -22,6 +22,8 @@ from mcp_workspace.github_operations import (
     PullRequestManager,
     RepoIdentifier,
     get_authenticated_username,
+    get_trusted_commenters,
+    is_trusted_author,
     verify_github,
     verify_github_security,
 )
@@ -58,6 +60,7 @@ from mcp_workspace.github_operations.issues.linked_branches_mixin import Closing
 from mcp_workspace.github_operations.pr_types import (
     ChangesRequestedData,
     ConversationCommentData,
+    ReviewThreadData,
 )
 
 __all__: list[str] = [
@@ -83,6 +86,10 @@ __all__: list[str] = [
     "PullRequestData",
     "ChangesRequestedData",
     "ConversationCommentData",
+    "ReviewThreadData",
+    # Trust
+    "get_trusted_commenters",
+    "is_trusted_author",
     # Repository
     "RepoIdentifier",
     # Issues

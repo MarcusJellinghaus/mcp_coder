@@ -20,7 +20,12 @@ from mcp_coder.mcp_workspace_git import (
     is_git_repository,
     pull,
 )
-from mcp_coder.mcp_workspace_github import CommentData, IssueManager
+from mcp_coder.mcp_workspace_github import (
+    CommentData,
+    IssueManager,
+    get_trusted_commenters,
+    is_trusted_author,
+)
 
 from ...utils.subprocess_runner import (
     CalledProcessError,
@@ -625,12 +630,19 @@ def create_vscode_task(folder_path: Path, script_path: Path) -> None:
 
 def _find_marked_comment(
     comments: list[CommentData],
+    trusted: frozenset[str],
     *,
     marker: str = "❌",
     window: int = 3,
 ) -> str | None:
-    """Return the body of the most recent ❌-marked comment, or None."""
-    for comment in reversed(comments[-window:]):
+    """Return the body of the most recent trusted ❌-marked comment, or None."""
+    # Filter before the window so untrusted comments cannot push a note out.
+    trusted_comments = [
+        c
+        for c in comments
+        if is_trusted_author(c["user"], c["author_association"], trusted)
+    ]
+    for comment in reversed(trusted_comments[-window:]):
         if is_marked(comment["body"], marker):
             return comment["body"]
     return None
@@ -648,7 +660,7 @@ def _fetch_marked_comment(project_dir: Path, issue_number: int) -> str | None:
     """
     try:
         comments = IssueManager(project_dir=project_dir).get_comments(issue_number)
-        return _find_marked_comment(comments)
+        return _find_marked_comment(comments, get_trusted_commenters())
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.warning("Failed to fetch issue comments for #%s: %s", issue_number, exc)
         return None
