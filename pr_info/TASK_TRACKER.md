@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Move `generate_commit_message_with_llm` classes to `test_commit_operations_default_args.py`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: record counts, `move_symbol` `TestGenerateCommitMessageWithLLM` + `TestGenerateCommitMessageWithLLMExtended` from `test_commit.py` (dry run, then apply), fix imports, verify counts (`test_commit.py` 40 → 30, default_args 10)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record counts, `move_symbol` `TestGenerateCommitMessageWithLLM` + `TestGenerateCommitMessageWithLLMExtended` from `test_commit.py` (dry run, then apply), fix imports, verify counts (`test_commit.py` 40 → 30, default_args 10)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Move push tests from `test_commit.py` to `test_commit_push.py`
 See [step_4.md](./steps/step_4.md)
