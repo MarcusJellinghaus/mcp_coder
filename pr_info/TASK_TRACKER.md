@@ -21,6 +21,35 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move parsing tests to `test_task_tracker_parsing.py`
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: move `TestFindImplementationSection`, `TestParseTaskLines`, `TestNormalizeTaskName` via `move_symbol`; verify imports and counts (24 / 59)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move incomplete-task tests to `test_task_tracker_incomplete_tasks.py`
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: move `TestGetIncompleteTasksInternal`, `TestGetIncompleteTasks`, `TestHasIncompleteWork`, `TestGetIncompleteTasksEdgeCases` via `move_symbol`; verify imports and counts (18 / 41)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Move status tests to `test_task_tracker_status.py`
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: move `TestGetStepProgress`, `TestIsTaskDone`, `TestGetTaskCounts` via `move_symbol`; delete empty banner; remove base file from `.large-files-allowlist`; verify counts (19 / 22)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: Move validation tests to `test_task_tracker_validation.py`
+See [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation: move `TestValidateTaskTracker`, `TestTaskTrackerTemplate` via `move_symbol`; verify imports, counts (9 / 13) and final verification list
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against base branch
+- [ ] PR summary prepared
