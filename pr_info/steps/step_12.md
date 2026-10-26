@@ -55,7 +55,10 @@ def _reset_hard(project_dir: Path, sha: str) -> str:
 
 ## WHAT — call-site changes
 
-- `_rebase_success_shape`: `is_rebase_in_progress(...)` (raises → outer `except`), then `_is_clean`, then sha compare.
+- `_rebase_success_shape`: `is_rebase_in_progress(...)` wrapped in `try`; a raise is logged
+  at error level and returns `False` (not propagated to the outer `except`, whose reset is
+  skipped when rebase state is unknown), so the existing call site runs `_reset_hard`. Then
+  `_is_clean`, then sha compare.
 - `_preflight`: `if not _is_clean(...)` → `"Working tree not clean"`; `if is_rebase_in_progress(...)` → `"Repository is mid-rebase/merge"` (message kept); `if get_remote_url(project_dir) is None` → `"Remote 'origin' not found"`.
 - `_check_pr_info_absent_on_base`:
   ```python
@@ -85,6 +88,8 @@ def _reset_hard(project_dir: Path, sha: str) -> str:
 - `except Exception` with `is_rebase_in_progress` raising → exit code still 1, no reset, no abort.
 - `finally` aborts only when `is_rebase_in_progress` is `True`.
 - `_rebase_success_shape` false when status `success=False`.
+- completed rebase, then `is_rebase_in_progress` raises inside `_rebase_success_shape` →
+  returns `False`, `_reset_hard` called with `pre_sha`, exit code 1.
 
 `test_git_helpers.py` (real git) — delete `TestIsRebaseInProgress`; adapt `TestAbortRebase` /
 `TestResetHard` to the new contract (`_reset_hard` returns the phrase); keep
