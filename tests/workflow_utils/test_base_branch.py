@@ -50,8 +50,6 @@ def mocks() -> Generator[BaseBranchMocks, None, None]:
         )
 
 
-
-
 class TestDetectBaseBranchWithSource:
     """Tests for the detect_base_branch_with_source wrapper."""
 
