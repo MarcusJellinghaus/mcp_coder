@@ -268,6 +268,8 @@ def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResu
             "commit_hash": None,
             "error": f"Round log {only} is outside {project_dir}",
             "error_category": "validation_failed",
+            "returncode": None,
+            "stderr": None,
         }
     result = execute_command(
         ["git", "commit", "-m", message, "--", relative], cwd=str(project_dir)
@@ -287,6 +289,8 @@ def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResu
             "error": "; ".join(reported)
             or f"git commit -- {relative} exited {result.return_code}",
             "error_category": "commit_failed",
+            "returncode": result.return_code,
+            "stderr": result.stderr,
         }
     sha = get_latest_commit_sha(project_dir)
     return {
@@ -294,6 +298,8 @@ def _commit_only_path(message: str, only: Path, project_dir: Path) -> CommitResu
         "commit_hash": sha[:SHORT_SHA_LENGTH] if sha else None,
         "error": None,
         "error_category": None,
+        "returncode": result.return_code,
+        "stderr": result.stderr,
     }
 
 
