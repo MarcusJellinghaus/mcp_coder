@@ -5,9 +5,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.workflows.vscodeclaude.detection import (
+    is_vscode_window_open_for_folder,
+)
 from mcp_coder.workflows.vscodeclaude.sessions import (
     is_session_active,
-    is_vscode_window_open_for_folder,
 )
 from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 
@@ -316,7 +318,7 @@ class TestIsSessionActiveFallbackChain:
     ) -> None:
         """Should return False when win32gui not available."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             False,
         )
 
@@ -334,19 +336,19 @@ class TestIsSessionActiveFallbackChain:
         """Should require BOTH issue number AND repo name in title."""
         # Window has issue number but wrong repo
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [
                 (100, "[#219 review] Title - different_repo - Visual Studio Code")
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [
                 {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -368,17 +370,17 @@ class TestIsSessionActiveFallbackChain:
         an active vscodeclaude workspace session.
         """
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [(100, "#219 Fix the thing - mcp_coder - Visual Studio Code")],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [
                 {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 

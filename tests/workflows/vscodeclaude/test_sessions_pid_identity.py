@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.workflows.vscodeclaude.detection import check_vscode_running
 from mcp_coder.workflows.vscodeclaude.sessions import (
-    check_vscode_running,
     load_sessions,
     update_session_pid,
 )
@@ -95,11 +95,11 @@ class TestCreateTimeIdentityVerification:
         mock_process.create_time.return_value = 2000.0
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.pid_exists",
             lambda pid: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
             lambda pid: mock_process,
         )
 
@@ -114,11 +114,11 @@ class TestCreateTimeIdentityVerification:
         mock_process.create_time.return_value = 1000.5
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.pid_exists",
             lambda pid: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
             lambda pid: mock_process,
         )
 
@@ -150,7 +150,7 @@ class TestCreateTimeIdentityVerification:
         mock_process = MagicMock()
         mock_process.create_time.return_value = 999.0
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
             lambda pid: mock_process,
         )
 
@@ -189,7 +189,7 @@ class TestCreateTimeIdentityVerification:
             raise psutil.NoSuchProcess(pid)
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
             raise_no_such,
         )
 

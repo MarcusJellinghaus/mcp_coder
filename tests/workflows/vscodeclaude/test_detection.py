@@ -1,7 +1,7 @@
 """Tests for the detection snapshot + ``gather_signals`` (IO/Windows boundary).
 
 These exercise the only place that touches psutil/win32. Every test mocks the
-sessions helpers, so no real VSCode is required. The key behaviours under test:
+detection helpers, so no real VSCode is required. The key behaviours under test:
 
 - title-positive is authoritative and independent of cmdline (the #38 restore
   case): a window title hit yields ``title_match=True`` even with no cmdline
@@ -77,7 +77,7 @@ def _force_windows(monkeypatch: pytest.MonkeyPatch, enabled: bool = True) -> Non
 
 
 def _stub_pid_alive(monkeypatch: pytest.MonkeyPatch, alive: bool) -> None:
-    """Stub check_vscode_running as imported into the detection module."""
+    """Stub check_vscode_running in the detection module."""
     monkeypatch.setattr(f"{DETECTION}.check_vscode_running", lambda *_: alive)
 
 

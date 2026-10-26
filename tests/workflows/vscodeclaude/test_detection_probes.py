@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mcp_coder.workflows.vscodeclaude.sessions import (
+from mcp_coder.workflows.vscodeclaude.detection import (
     VSCODE_PROCESS_NAMES,
     _get_vscode_processes,
     check_vscode_running,
@@ -36,11 +36,11 @@ class TestVSCodeProcessNameMatching:
         mock_process.name.return_value = "my-code-tool.exe"
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.pid_exists",
             lambda pid: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
             lambda pid: mock_process,
         )
 
@@ -54,11 +54,11 @@ class TestVSCodeProcessNameMatching:
         mock_process.name.return_value = "Code.exe"
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.pid_exists",
             lambda pid: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
             lambda pid: mock_process,
         )
 
@@ -72,11 +72,11 @@ class TestVSCodeProcessNameMatching:
         mock_process.name.return_value = "code"
 
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.pid_exists",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.pid_exists",
             lambda pid: True,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.Process",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.Process",
             lambda pid: mock_process,
         )
 
@@ -103,7 +103,7 @@ class TestVSCodeProcessNameMatching:
 
         clear_vscode_process_cache()
         with patch(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.process_iter",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.process_iter",
             return_value=[mock_vscode, mock_checker],
         ):
             processes = _get_vscode_processes(refresh=True)
@@ -125,7 +125,7 @@ class TestVSCodeProcessNameMatching:
 
         clear_vscode_process_cache()
         with patch(
-            "mcp_coder.workflows.vscodeclaude.sessions.psutil.process_iter",
+            "mcp_coder.workflows.vscodeclaude.detection.psutil.process_iter",
             return_value=[mock_insiders],
         ):
             processes = _get_vscode_processes(refresh=True)
@@ -146,20 +146,20 @@ class TestWindowTitleMatching:
         """Should match window with issue number pattern and repo name."""
         # Mock window titles to return a workspace window owned by pid=100
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [
                 (100, "[#219 plan-review] Fix bug - mcp_coder - Visual Studio Code")
             ],
         )
         # That pid's cmdline references the folder so the title is bound to it
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [
                 {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -177,17 +177,17 @@ class TestWindowTitleMatching:
         """Should NOT match main repo window without issue number pattern."""
         # Mock window titles to return only main repo window (no issue number)
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [(100, "mcp_coder - Visual Studio Code")],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [
                 {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -205,19 +205,19 @@ class TestWindowTitleMatching:
     ) -> None:
         """Should NOT match window for a different issue."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [
                 (100, "[#123 code-review] Other issue - mcp_coder - Visual Studio Code")
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [
                 {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -234,15 +234,15 @@ class TestWindowTitleMatching:
     ) -> None:
         """Should extract repo name from owner/repo format."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [(100, "[#219 created] New issue - my_repo - Visual Studio Code")],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [{"pid": 100, "cmdline_lower": "code.exe /workspace/my_repo_219"}],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -257,17 +257,17 @@ class TestWindowTitleMatching:
     def test_case_insensitive_matching(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Should match case-insensitively."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [(100, "[#219 review] Title - MCP_CODER - Visual Studio Code")],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [
                 {"pid": 100, "cmdline_lower": "code.exe /workspace/mcp_coder_219"}
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -284,15 +284,15 @@ class TestWindowTitleMatching:
     ) -> None:
         """Should return False when no VSCode windows exist."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -317,18 +317,18 @@ class TestWindowTitleMatching:
         mcp_coder_946 must NOT match A's title.
         """
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [
                 {"pid": 100, "cmdline_lower": "code.exe /tmp/mcp_coder_950"},
                 {"pid": 200, "cmdline_lower": "code.exe /tmp/mcp_coder_946"},
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [(100, "[#946 stuff] - mcp_coder")],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -345,18 +345,18 @@ class TestWindowTitleMatching:
     ) -> None:
         """Same scenario but matching window is on the PID that owns the folder."""
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_processes",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_processes",
             lambda: [
                 {"pid": 100, "cmdline_lower": "code.exe /tmp/mcp_coder_950"},
                 {"pid": 200, "cmdline_lower": "code.exe /tmp/mcp_coder_946"},
             ],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_window_titles",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_window_titles",
             lambda: [(200, "[#946 stuff] - mcp_coder")],
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
 
@@ -372,7 +372,7 @@ class TestWindowTitleMatching:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """_get_vscode_window_titles returns list of (int, str) tuples."""
-        from mcp_coder.workflows.vscodeclaude.sessions import (
+        from mcp_coder.workflows.vscodeclaude.detection import (
             _get_vscode_window_titles,
             clear_vscode_window_cache,
         )
@@ -381,12 +381,12 @@ class TestWindowTitleMatching:
 
         # Force the Windows code path on
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.HAS_WIN32GUI",
+            "mcp_coder.workflows.vscodeclaude.detection.HAS_WIN32GUI",
             True,
         )
         # PID lookup says pids 100 and 200 are VSCode
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions._get_vscode_pids",
+            "mcp_coder.workflows.vscodeclaude.detection._get_vscode_pids",
             lambda: {100, 200},
         )
 
@@ -412,12 +412,12 @@ class TestWindowTitleMatching:
         # attributes do not exist (the production code only imports them
         # when HAS_WIN32GUI is True).
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.win32gui",
+            "mcp_coder.workflows.vscodeclaude.detection.win32gui",
             mock_win32gui,
             raising=False,
         )
         monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.sessions.win32process",
+            "mcp_coder.workflows.vscodeclaude.detection.win32process",
             mock_win32process,
             raising=False,
         )

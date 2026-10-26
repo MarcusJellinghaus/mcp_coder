@@ -25,13 +25,13 @@ from ...mcp_workspace_github import (
 )
 from .audit import append_run, assessment_to_record
 from .config import get_github_username
-from .detection import capture_detection_snapshot, gather_signals
+from .detection import capture_detection_snapshot, gather_signals, get_pid_create_time
 from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
     is_status_eligible_for_session,
 )
-from .sessions import get_pid_create_time, load_sessions, save_sessions
+from .sessions import load_sessions, save_sessions
 from .status import get_folder_git_status, is_session_stale
 from .types import (
     Decision,

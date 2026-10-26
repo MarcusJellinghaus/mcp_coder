@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move the VSCode probes from `sessions.py` into `detection.py`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move the 14 probe symbols + `HAS_WIN32GUI` guard to `detection.py`, fix src imports/call sites, re-point test imports and patch targets, update `test_detection.py` docstrings, run audits
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move the 14 probe symbols + `HAS_WIN32GUI` guard to `detection.py`, fix src imports/call sites, re-point test imports and patch targets, update `test_detection.py` docstrings, run audits
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

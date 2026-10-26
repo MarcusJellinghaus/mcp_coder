@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 
 from mcp_coder.workflows.vscodeclaude.assessment import build_active_session_set
+from mcp_coder.workflows.vscodeclaude.detection import check_vscode_running
 from mcp_coder.workflows.vscodeclaude.sessions import (
     add_session,
-    check_vscode_running,
     get_session_for_issue,
     get_sessions_file_path,
     load_sessions,
