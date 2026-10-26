@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Move `TestStripClaudeFooters` to `test_commit_operations_parsing.py`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: record collect-only counts, `move_symbol` `TestStripClaudeFooters` (dry run, then apply), fix imports, remove `tests/workflow_utils/test_commit_operations.py` from `.large-files-allowlist`, verify counts (40 → 19 + 21)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: record collect-only counts, `move_symbol` `TestStripClaudeFooters` (dry run, then apply), fix imports, remove `tests/workflow_utils/test_commit_operations.py` from `.large-files-allowlist`, verify counts (40 → 19 + 21)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move `TestParseLLMCommitResponse` from `test_commit.py` to `test_commit_operations_parsing.py`
 See [step_2.md](./steps/step_2.md)

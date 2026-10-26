@@ -14,7 +14,6 @@ tests/icoder/test_app_pilot.py
 tests/cli/commands/test_prompt.py
 tests/llm/providers/claude/test_claude_code_cli.py
 tests/llm/test_interface.py
-tests/workflow_utils/test_commit_operations.py
 tests/workflow_utils/test_task_tracker.py
 tests/workflows/implement/test_task_processing.py
 tests/workflows/vscodeclaude/test_cleanup.py
