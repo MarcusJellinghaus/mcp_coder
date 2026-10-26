@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Split `tests/cli/test_main.py` — [step_3.md](./steps/step_3.md)
-- [ ] Implementation: move coordinator tests to `test_main_coordinator.py`, parser tests to `test_parsers.py`, update `.large-files-allowlist`; verify collect counts
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move coordinator tests to `test_main_coordinator.py`, parser tests to `test_parsers.py`, update `.large-files-allowlist`; verify collect counts
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: review full branch diff against `main`
