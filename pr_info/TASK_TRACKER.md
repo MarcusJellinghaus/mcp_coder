@@ -49,9 +49,9 @@ See [step_4.md](./steps/step_4.md)
 
 ### Step 5: Approval tests → `test_app_pilot_approval.py`
 See [step_5.md](./steps/step_5.md)
-- [ ] Implementation: moves 5a–5e, delete stale `_LONG_CMD` import, fix imports, add `pytestmark`, verify 6 shared helpers remain in base file
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: moves 5a–5e, delete stale `_LONG_CMD` import, fix imports, add `pytestmark`, verify 6 shared helpers remain in base file
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Approval-persist tests → `test_app_pilot_approval_persist.py`
 See [step_6.md](./steps/step_6.md)
