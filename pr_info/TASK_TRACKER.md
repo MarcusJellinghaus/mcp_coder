@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move mypy fix-up tests to `test_task_processing_mypy.py`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move `TestCheckAndFixMypy`, fix imports, verify collect counts (base 28)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestCheckAndFixMypy`, fix imports, verify collect counts (base 28)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move retry-wrapper tests to `test_task_processing_retry.py`
 See [step_3.md](./steps/step_3.md)
