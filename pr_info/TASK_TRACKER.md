@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Move `TestRestartClosedSessionsLifecycle` to `test_session_restart_lifecycle.py` — [step_4.md](./steps/step_4.md)
-- [ ] Implementation: `move_symbol` (dry run first), bare `_make_assessment(` calls, `import logging` stays in zombie test, gates pass (5 passed / 7 passed, directory baseline)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `move_symbol` (dry run first), bare `_make_assessment(` calls, `import logging` stays in zombie test, gates pass (5 passed / 7 passed, directory baseline)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Move `TestRestartClosedSessionsIssueStatus` and `_make_assessment`, delete `test_session_restart.py`, update allowlist — [step_5.md](./steps/step_5.md)
 - [ ] Implementation: move class, move helper to `conftest.py`, fix imports, pre-delete checks, delete file, remove allowlist line, final verification (22 passed, lint-imports, tach, vulture, file size, branch compact diff)
