@@ -48,7 +48,7 @@ run the step checks
 ```
 
 ## DATA
-- Collected: `test_app_pilot_approval.py` gives **22**, `test_app_pilot.py` **33**, `tests/icoder/` **1062**.
+- Collected: `test_app_pilot_approval.py` gives **22**, `test_app_pilot.py` **33**, `tests/icoder/` equals the baseline recorded in step 1 (1062 on 2026-10-26).
 
 ## Commit
 `test(icoder): split approval pilot tests from test_app_pilot (#1323)`

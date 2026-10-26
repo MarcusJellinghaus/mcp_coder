@@ -11,7 +11,7 @@
 - Destination (new): `tests/icoder/test_app_pilot_streaming.py`
 
 ## WHAT
-These symbols move: 19 test functions (20 collected) and the helper class `ErrorAfterChunksLLMService`.
+These symbols move: 20 test functions (20 collected) and the helper class `ErrorAfterChunksLLMService`.
 
 Move calls (dry run each one right before its real call):
 - 2a `["test_llm_streaming", "test_streaming_single_chunk_no_newline", "test_model_stream_slash_text_never_dispatches", "test_streaming_multi_chunk_no_newlines", "test_streaming_mid_newline", "test_streaming_multiple_newlines_in_chunk"]`
@@ -39,7 +39,7 @@ run the step checks
 ```
 
 ## DATA
-- Collected: `test_app_pilot_streaming.py` gives **20**, `test_app_pilot.py` **76**, `tests/icoder/` **1062**.
+- Collected: `test_app_pilot_streaming.py` gives **20**, `test_app_pilot.py` **76**, `tests/icoder/` equals the baseline recorded in step 1 (1062 on 2026-10-26).
 
 ## Commit
 `test(icoder): split streaming pilot tests from test_app_pilot (#1323)`

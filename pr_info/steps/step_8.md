@@ -46,7 +46,7 @@ run the full verification below
 - `run_ruff_check`, `run_pylint_check`, `run_mypy_check`, `run_lint_imports_check`, `run_tach_check`, `run_vulture_check`
 - `check_file_size` passes, with no stale allowlist entry; all 7 files are under 750 lines
 - `--collect-only -q` per file: `test_app_pilot.py` 19, `_streaming` 20, `_cancel` 5, `_content_units` 16,
-  `_approval` 22, `_approval_persist` 11, `_shutdown` 3; `tests/icoder/` 1062; whole suite 6463
+  `_approval` 22, `_approval_persist` 11, `_shutdown` 3; `tests/icoder/` and whole suite equal the baseline counts recorded in step 1
 - `run_pytest_check(extra_args=["-q", "-n", "auto", "tests/icoder/"], timeout_seconds=600)`: everything that passed at baseline passes
 - The fast unit suite from CLAUDE.md with `-n auto` passes
 - `-m "not textual_integration"` on each of the 7 files gives "No Tests Found"
