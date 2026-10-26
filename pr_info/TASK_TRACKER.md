@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Split `test_sessions.py` into six files (tests only)
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: record baseline counts, move test classes via `move_symbol` into the 5 new files, fix imports (ruff F401), remove `test_sessions.py` from `.large-files-allowlist`, verify collect counts
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move the VSCode probes from `sessions.py` into `detection.py`
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: move the 14 probe symbols + `HAS_WIN32GUI` guard to `detection.py`, fix src imports/call sites, re-point test imports and patch targets, update `test_detection.py` docstrings, run audits
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `main` for pure-refactoring compliance
+- [ ] PR summary prepared
