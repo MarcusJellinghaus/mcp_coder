@@ -55,9 +55,9 @@ See [step_5.md](./steps/step_5.md)
 
 ### Step 6: Approval-persist tests → `test_app_pilot_approval_persist.py`
 See [step_6.md](./steps/step_6.md)
-- [ ] Implementation: moves 6a, 6b', 6b'', 6c, delete stale `_UNPARSEABLE_TOOL` import, fix imports, add `pytestmark`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: moves 6a, 6b', 6b'', 6c, delete stale `_UNPARSEABLE_TOOL` import, fix imports, add `pytestmark`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Shutdown tests → `test_app_pilot_shutdown.py`
 See [step_7.md](./steps/step_7.md)
