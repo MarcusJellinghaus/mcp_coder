@@ -245,6 +245,7 @@ The section is honoured only when the issue body is trusted:
 - **Untrusted → ignored entirely**: no value, no error, no Review Gate block. Tool output does not mention it; only a log line records it.
 - **Ref-name rule**: the value must be a valid git ref name ([`git check-ref-format`](https://git-scm.com/docs/git-check-ref-format)): no spaces or control characters; no `..`, `~`, `^`, `:`, `?`, `*`, `[`, `\`, `@{` or `//`; no leading `-` or `.`; no trailing `.`, `/` or `.lock`.
 - **Malformed** (multiple lines or an invalid ref name) in a trusted issue: mcp_coder commands ignore it silently, as if it were untrusted. Only mcp-workspace tools report it: the `check_branch_status` MALFORMED line / Review Gate, and `get_base_branch`.
+- **Workflows**: GitHub Actions that change labels apply the same trusted set; see [Label-Changing Workflows Must Gate on Author Trust](#label-changing-workflows-must-gate-on-author-trust).
 
 **Fallback** when there is no usable section (missing, empty, untrusted or malformed):
 
@@ -318,6 +319,8 @@ Add new feature to main branch
 > ```
 > This writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/` based on your label config.
 
+> Existing repositories: re-run `mcp-coder gh-tool define-labels --generate-github-actions` to pick up the `/approve` trust gate, `permissions: {}` and the pinned action.
+
 Alternatively, set up these two workflows manually:
 
 #### 1. Auto-Label New Issues
@@ -331,6 +334,8 @@ on:
   issues:
     types: [opened]
 
+permissions: {}
+
 jobs:
   add-label:
     runs-on: ubuntu-latest
@@ -338,7 +343,7 @@ jobs:
       issues: write
     steps:
       - name: Add status label
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             github.rest.issues.addLabels({
@@ -362,64 +367,95 @@ on:
   issue_comment:
     types: [created]
 
+permissions: {}
+
 jobs:
   handle-approve:
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request == null && contains(github.event.comment.body, '/approve')
+    # Only run on issues (not PRs), when comment contains /approve, and only for trusted commenters (OWNER/MEMBER/COLLABORATOR); untrusted -> skipped silently
+    if: github.event.issue.pull_request == null && contains(github.event.comment.body, '/approve') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     permissions:
       issues: write
     steps:
       - name: Handle approve command
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const comment = context.payload.comment.body.trim();
-            if (comment !== '/approve') return;
-            
+
+            // Only process if comment is exactly /approve
+            if (comment !== '/approve') {
+              return;
+            }
+
             const issue = context.payload.issue;
             const labels = issue.labels.map(l => l.name);
-            
+
+            // Define the promotion paths: [current_status, next_status]
             const promotions = {
               'status-01:created': 'status-02:awaiting-planning',
-              'status-04:plan-review': 'status-05:plan-ready', 
-              'status-07:code-review': 'status-08:ready-pr'
+              'status-04:plan-review': 'status-05:plan-ready',
+              'status-07:code-review': 'status-08:ready-pr',
             };
-            
+
+            let promoted = false;
+            let oldStatus = null;
+            let newStatus = null;
+
+            // Check which status the issue currently has and promote it
             for (const [currentStatus, nextStatus] of Object.entries(promotions)) {
               if (labels.includes(currentStatus)) {
+                // Remove old status
                 await github.rest.issues.removeLabel({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
                   name: currentStatus
-                }).catch(() => {});
-                
+                }).catch(() => {}); // Ignore errors if label doesn't exist
+
+                // Add new status
                 await github.rest.issues.addLabels({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issue.number,
                   labels: [nextStatus]
                 });
-                
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: `✅ Status promoted: \`${currentStatus}\` → \`${nextStatus}\``
-                });
-                return;
+
+                oldStatus = currentStatus;
+                newStatus = nextStatus;
+                promoted = true;
+                break;
               }
             }
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              body: `⚠️ Cannot promote. Issue needs status: \`status-01:created\`, \`status-04:plan-review\`, or \`status-07:code-review\``
-            });
+
+            // Post confirmation comment
+            if (promoted) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ Status promoted: \`${oldStatus}\` → \`${newStatus}\`\n\nThe bot can now pick up this issue for the next step.`
+              });
+            } else {
+              // No matching status found
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `⚠️ Cannot promote issue. The issue must have one of these statuses:\n- \`status-01:created\`\n- \`status-04:plan-review\`\n- \`status-07:code-review\`\n\nCurrent labels: ${labels.filter(l => l.startsWith('status-')).join(', ') || 'none'}`
+              });
+            }
 ```
 
 **Purpose:** Handles `/approve` comments to promote issues through workflow stages.
+
+### Label-Changing Workflows Must Gate on Author Trust
+
+Any workflow that changes labels on behalf of a comment or event author must gate on `author_association` (`OWNER`, `MEMBER`, `COLLABORATOR`), e.g.:
+
+`if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)`
+
+**Why:** GitHub restricts label edits to users with triage access or higher, but a workflow runs with `GITHUB_TOKEN` write access and bypasses that restriction. Without the gate, any GitHub user could move an issue through the bot pipeline. The generated `approve-command.yml` applies this gate.
 
 ### Installing Actions
 

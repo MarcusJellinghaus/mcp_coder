@@ -67,6 +67,7 @@ The following files in this repository serve as references/templates for other p
 | `.github/workflows/ci.yml` | P | No | No | Python version, package name, test paths, coverage badge filename (`<repo>-coverage.json`) |
 | `.github/dependabot.yml` | G | No | Yes | — |
 | `.github/workflows/scorecard.yml` | G | No | Yes | — |
+| `SECURITY.md` | G | No | No | Adjust contact and scope |
 | `.gitattributes` | G | No | Yes | — |
 | `.large-files-allowlist` | G | No | No | Files exempt from size limits |
 | `claude_local.bat` / `claude.bat` | G | No | Mostly | Path to `claude.exe` if non-standard |

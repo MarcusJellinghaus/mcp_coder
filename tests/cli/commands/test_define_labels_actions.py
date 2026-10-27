@@ -8,6 +8,7 @@ Tests cover:
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,24 @@ from mcp_coder.cli.commands.define_labels_actions import (
     generate_label_new_issues_yml,
     write_github_actions,
 )
+from mcp_coder.config.label_config import get_labels_config_path, load_labels_config
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+_WORKFLOW_NAMES = ["label-new-issues.yml", "approve-command.yml"]
+_DOC_FILES = ["docs/repository-setup/github.md", "docs/getting-started/label-setup.md"]
+
+_USES_RE = re.compile(r"^\s*(?:- )?uses:")
+_PIN_RE = re.compile(r"^\s*(?:- )?uses: [\w.\-/]+@[0-9a-f]{40} # v\d")
+
+
+def _generated_workflows() -> dict[str, str]:
+    """Return generated workflow YAML text keyed by file name."""
+    return {
+        "label-new-issues.yml": generate_label_new_issues_yml("status-01:created"),
+        "approve-command.yml": generate_approve_command_yml(
+            [("status-01:created", "status-02:awaiting-planning")]
+        ),
+    }
 
 
 class TestBuildPromotions:
@@ -125,11 +144,63 @@ class TestGenerateApproveCommandYml:
         assert "issue_comment" in parsed[True]
         assert "handle-approve" in parsed["jobs"]
 
+    def test_multiple_promotions_valid_yaml(self) -> None:
+        """Status list stays inside the script block with several promotions."""
+        content = generate_approve_command_yml(
+            [
+                ("status-01:created", "status-02:awaiting-planning"),
+                ("status-04:plan-review", "status-05:plan-ready"),
+                ("status-07:code-review", "status-08:ready-pr"),
+            ]
+        )
+        parsed = yaml.safe_load(content)
+        assert parsed["name"] == "Approve Command"
+        assert (
+            "statuses:\\n- \\`status-01:created\\`\\n- \\`status-04:plan-review\\`"
+            in content
+        )
+
     def test_empty_promotions(self) -> None:
         """Works with empty promotions list."""
         content = generate_approve_command_yml([])
         parsed = yaml.safe_load(content)
         assert parsed is not None
+
+    def test_job_gated_on_author_association(self) -> None:
+        """Job runs only for OWNER/MEMBER/COLLABORATOR commenters."""
+        content = generate_approve_command_yml(
+            [("status-01:created", "status-02:awaiting-planning")]
+        )
+        parsed = yaml.safe_load(content)
+        cond = parsed["jobs"]["handle-approve"]["if"]
+        assert "github.event.comment.author_association" in cond
+        assert 'fromJSON(\'["OWNER","MEMBER","COLLABORATOR"]\')' in cond
+
+    def test_success_comment_separator(self) -> None:
+        """Success comment separates the status line with a blank line."""
+        content = generate_approve_command_yml(
+            [("status-01:created", "status-02:awaiting-planning")]
+        )
+        assert "\\n\\nThe bot can now pick up" in content
+
+
+class TestGeneratedWorkflowHardening:
+    """Test hardening shared by both generated workflows."""
+
+    @pytest.mark.parametrize("name", ["label-new-issues.yml", "approve-command.yml"])
+    def test_top_level_permissions_empty(self, name: str) -> None:
+        """Top-level permissions grant nothing by default."""
+        parsed = yaml.safe_load(_generated_workflows()[name])
+        assert parsed["permissions"] == {}
+
+    @pytest.mark.parametrize("name", ["label-new-issues.yml", "approve-command.yml"])
+    def test_uses_sha_pinned(self, name: str) -> None:
+        """Every uses: line is pinned to a 40-hex SHA with a version comment."""
+        content = _generated_workflows()[name]
+        uses_lines = [line for line in content.splitlines() if _USES_RE.match(line)]
+        assert uses_lines
+        for line in uses_lines:
+            assert _PIN_RE.match(line), line
 
 
 class TestWriteGithubActions:
@@ -208,3 +279,37 @@ class TestWriteGithubActions:
         workflows_dir = tmp_path / ".github" / "workflows"
         for name in ("label-new-issues.yml", "approve-command.yml"):
             assert b"\r" not in (workflows_dir / name).read_bytes()
+
+
+class TestGeneratedWorkflowsConsistency:
+    """Committed workflows and doc snippets match the generator output."""
+
+    @pytest.fixture
+    def generated(self, tmp_path: Path) -> dict[str, str]:
+        """Generate workflows from the repo's labels config into tmp_path."""
+        config = load_labels_config(get_labels_config_path(REPO_ROOT))
+        write_github_actions(tmp_path, config)
+        workflows_dir = tmp_path / ".github" / "workflows"
+        return {
+            name: (workflows_dir / name).read_text(encoding="utf-8")
+            for name in _WORKFLOW_NAMES
+        }
+
+    @pytest.mark.parametrize("name", _WORKFLOW_NAMES)
+    def test_committed_workflow_matches_generator(
+        self, generated: dict[str, str], name: str
+    ) -> None:
+        """Committed workflow file equals the generator output."""
+        committed = (REPO_ROOT / ".github" / "workflows" / name).read_text(
+            encoding="utf-8"
+        )
+        assert committed == generated[name]
+
+    @pytest.mark.parametrize("doc", _DOC_FILES)
+    @pytest.mark.parametrize("name", _WORKFLOW_NAMES)
+    def test_doc_contains_generator_output(
+        self, generated: dict[str, str], doc: str, name: str
+    ) -> None:
+        """Doc snippet contains the exact generator output."""
+        content = (REPO_ROOT / doc).read_text(encoding="utf-8")
+        assert generated[name] in content
