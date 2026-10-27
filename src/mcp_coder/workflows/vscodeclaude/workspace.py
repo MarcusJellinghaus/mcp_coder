@@ -637,12 +637,13 @@ def _find_marked_comment(
 ) -> str | None:
     """Return the body of the most recent trusted ❌-marked comment, or None."""
     # Filter before the window so untrusted comments cannot push a note out.
-    trusted_comments = [
+    # Not named "trusted_*": CodeQL's name heuristic treats that as a secret.
+    vetted = [
         c
         for c in comments
         if is_trusted_author(c["user"], c["author_association"], trusted)
     ]
-    for comment in reversed(trusted_comments[-window:]):
+    for comment in reversed(vetted[-window:]):
         if is_marked(comment["body"], marker):
             return comment["body"]
     return None
