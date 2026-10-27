@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Move `TestGetStaleSessions` → `test_cleanup_get_stale_sessions.py`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: baseline counts, move `TestGetStaleSessions` with `move_symbol`, fix imports to end state
-- [ ] Quality checks: pylint, pytest, mypy (plus ruff F401, collect counts 23/6/N, 30 passed) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: baseline counts, move `TestGetStaleSessions` with `move_symbol`, fix imports to end state
+- [x] Quality checks: pylint, pytest, mypy (plus ruff F401, collect counts 23/6/N, 30 passed) — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move `TestSoftDeleteAndRetry` → `test_cleanup_retry.py`; drop the allowlist entry
 See [step_2.md](./steps/step_2.md)
