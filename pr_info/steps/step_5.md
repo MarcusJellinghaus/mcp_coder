@@ -4,13 +4,13 @@
 
 > Read `pr_info/steps/summary.md`, then implement **Step 5** exactly as described in `pr_info/steps/step_5.md`.
 > Use TDD: write `tests/tools/test_jenkins_builds.py` first (client mocked), then `tools/jenkins_builds.py` and the `.bat` / `.sh` wrappers.
-> Run pylint, the fast pytest set and mypy; all must pass. Then run the formatter. Stage the `.sh` with `git add --chmod=+x tools/jenkins_builds.sh`, then make one commit.
+> Run pylint, the fast pytest set and mypy; all must pass. Then run the formatter, then make one commit. `tools/jenkins_builds.sh` already exists as an executable placeholder: overwrite its content with `save_file`. Its executable mode is already in git, so no chmod is needed.
 
 ## WHERE
 
 - `tools/jenkins_builds.py` — **new**
 - `tools/jenkins_builds.bat` — **new**
-- `tools/jenkins_builds.sh` — **new**, committed executable
+- `tools/jenkins_builds.sh` — **existing placeholder**, replace content (already executable in git)
 - `tests/tools/test_jenkins_builds.py` — **new**
 
 ## WHAT

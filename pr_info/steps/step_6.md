@@ -4,13 +4,13 @@
 
 > Read `pr_info/steps/summary.md`, then implement **Step 6** exactly as described in `pr_info/steps/step_6.md`.
 > Use TDD: write `tests/tools/test_jenkins_download_logs.py` first, then create `tests/tools/conftest.py`, `tools/jenkins_download_logs.py` and the wrappers.
-> Run pylint, the fast pytest set and mypy. Also run `run_pytest_check(extra_args=["-n", "auto"], markers=["jenkins_integration"])`; those tests must pass, or skip when Jenkins is not configured. All must pass. Then run the formatter. Stage the `.sh` with `git add --chmod=+x tools/jenkins_download_logs.sh`, then make one commit.
+> Run pylint, the fast pytest set and mypy. Also run `run_pytest_check(extra_args=["-n", "auto"], markers=["jenkins_integration"])`; those tests must pass, or skip when Jenkins is not configured. All must pass. Then run the formatter, then make one commit. `tools/jenkins_download_logs.sh` already exists as an executable placeholder: overwrite its content with `save_file`. Its executable mode is already in git, so no chmod is needed.
 
 ## WHERE
 
 - `tools/jenkins_download_logs.py` — **new**
 - `tools/jenkins_download_logs.bat` — **new**
-- `tools/jenkins_download_logs.sh` — **new**, committed executable
+- `tools/jenkins_download_logs.sh` — **existing placeholder**, replace content (already executable in git)
 - `tests/tools/conftest.py` — **new**
 - `tests/tools/test_jenkins_download_logs.py` — **new**
 

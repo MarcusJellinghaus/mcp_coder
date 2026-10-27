@@ -55,6 +55,7 @@ All Jenkins logic lives in `mcp_coder.utils.jenkins_operations`, so the tools ca
 - `docs/repository-setup/internal.md`
 - `.claude/CLAUDE.md`
 - `.claude/settings.local.json`
+- `tools/forbidden_calls_check.sh`, `tools/ruff_check.sh`, `tools/mlflow/start_mlflow.sh` — mode set to executable
 
 ## Steps
 
