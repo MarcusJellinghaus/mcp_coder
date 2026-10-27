@@ -3,6 +3,10 @@
     "allow": [
       "Bash(mcp-coder gh-tool:*)",
       "Bash(start docs/architecture/dependency_graph.html)",
+      "Bash(tools/jenkins_builds.bat:*)",
+      "Bash(tools/jenkins_builds.sh:*)",
+      "Bash(tools/jenkins_download_logs.bat:*)",
+      "Bash(tools/jenkins_download_logs.sh:*)",
       "mcp__mcp-tools-py__find_references",
       "mcp__mcp-tools-py__get_library_source",
       "mcp__mcp-tools-py__list_symbols",

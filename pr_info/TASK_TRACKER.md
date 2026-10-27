@@ -66,9 +66,9 @@ See [step_6.md](./steps/step_6.md)
 ### Step 7: Docs and agent setup
 See [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation: `docs/repository-setup/internal.md` rows, `## Jenkins` in `.claude/CLAUDE.md`, allow entries in `.claude/settings.local.json`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `docs/repository-setup/internal.md` rows, `## Jenkins` in `.claude/CLAUDE.md`, allow entries in `.claude/settings.local.json`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

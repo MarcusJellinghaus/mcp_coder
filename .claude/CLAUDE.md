@@ -127,6 +127,11 @@ mcp-coder gh-tool set-status <label>
 
 **Multi-line commit messages:** use a POSIX heredoc — `git commit -F - <<'EOF' … EOF`. PowerShell here-strings (`@'...'@`) work only in the PowerShell tool; in Bash they silently leave a literal `@` in the subject line.
 
+## Jenkins
+
+- Recent builds: `tools/jenkins_builds.sh [--limit N] [--folder PATH] [--status failure,...]`
+- Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--outdir .scratch/jenkins_logs]` — read them with `read_file`, delete `.scratch/` when done.
+
 ## Shared Libraries
 
 This repo uses `mcp-coder-utils` for subprocess execution, logging, and redaction. Three shim modules in `src/mcp_coder/utils/` re-export the upstream API:
