@@ -31,6 +31,25 @@ from mcp_coder.cli.commands.coordinator import (
 )
 
 
+class TestCommandTemplates:
+    """Tests for command template strings."""
+
+    def test_templates_do_not_contain_update_labels_flag(self) -> None:
+        """Assert --update-labels is absent from all 6 command templates."""
+        templates = [
+            ("CREATE_PLAN_COMMAND_TEMPLATE", CREATE_PLAN_COMMAND_TEMPLATE),
+            ("IMPLEMENT_COMMAND_TEMPLATE", IMPLEMENT_COMMAND_TEMPLATE),
+            ("CREATE_PR_COMMAND_TEMPLATE", CREATE_PR_COMMAND_TEMPLATE),
+            ("CREATE_PLAN_COMMAND_WINDOWS", CREATE_PLAN_COMMAND_WINDOWS),
+            ("IMPLEMENT_COMMAND_WINDOWS", IMPLEMENT_COMMAND_WINDOWS),
+            ("CREATE_PR_COMMAND_WINDOWS", CREATE_PR_COMMAND_WINDOWS),
+        ]
+        for name, template in templates:
+            assert "--update-labels" not in template, (
+                f"{name} still contains --update-labels"
+            )
+
+
 class TestTemplateWatchdogLines:
     """Tests for watchdog set-status lines in coordinator templates."""
 
