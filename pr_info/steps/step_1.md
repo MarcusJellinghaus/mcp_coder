@@ -32,7 +32,10 @@
    | Path | Expected |
    |---|---:|
    | `tests/cli/commands/coordinator/test_core.py` | 50 |
+   | `tests/cli/commands/coordinator/test_core.py::TestDispatchWorkflowSilentFallthroughGuard` | 14 |
    | `tests/cli/commands/coordinator/test_command_templates.py` | 31 |
+   | `tests/utils/test_user_config.py` | 27 |
+   | `tests/test_mcp_workspace_github_smoke.py` | 5 |
    | `tests/cli/commands/coordinator/` | 156 |
    | `tests/utils/` | 441 |
    | whole suite (no path) | 6587 |

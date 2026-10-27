@@ -46,8 +46,11 @@ All aliases come from `mcp_coder.mcp_workspace_github`.
 4. **Check the method-local imports:**
    - Each of `TestCacheFilePath`'s two test methods must still contain its own
      `from mcp_coder.mcp_workspace_github import RepoIdentifier`, verbatim.
-   - If one was hoisted or dropped: write one line to `pr_info/.blocked.txt` and stop.
-     Never restore it by hand.
+   - If one was removed from its method (hoisted to module level) or dropped: write one line
+     to `pr_info/.blocked.txt` and stop. Never restore it by hand.
+   - If both method-local imports are still in place and the tool also added a module-level
+     `RepoIdentifier` import, that is not hoisting. Delete the extra import (an `F401` import
+     edit) and continue. Do not stop.
 5. **Destination imports**, exactly:
    ```python
    import json
@@ -67,7 +70,8 @@ All aliases come from `mcp_coder.mcp_workspace_github`.
    )
    from tests.github_factories import make_issue_data
    ```
-   No module-level `RepoIdentifier`: it would be unused (`F401`).
+   No module-level `RepoIdentifier`: it would be unused (`F401`). If the tool added one,
+   delete it (see HOW 4).
 6. **`test_core.py`:**
    - Remove these now-unused imports (ruff `F401` reports them): `json`, `tempfile`, `Path`,
      `CacheData`, `get_cache_file_path`, `load_cache_file`, `log_stale_cache_entries`,
