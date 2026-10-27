@@ -47,17 +47,18 @@ from tests.workflows.vscodeclaude.test_cleanup import (
 ## ALGORITHM
 
 ```
-1. move_symbol(TestSoftDeleteAndRetry, dry_run=True) -> must list only the two files
-2. move_symbol(TestSoftDeleteAndRetry) for real
-3. Confirm all 7 method-local helpers imports are still inside their methods, verbatim
-4. Fix the imports to the end state above, then remove the allowlist line
-5. Run the checks and counts, then format and commit
+1. Pre-move baseline: run_pytest_check(extra_args=["--collect-only", "-q", "tests/workflows/vscodeclaude/"]) -> record the count as N
+2. move_symbol(TestSoftDeleteAndRetry, dry_run=True) -> must list only the two files
+3. move_symbol(TestSoftDeleteAndRetry) for real
+4. Confirm all 7 method-local helpers imports are still inside their methods, verbatim
+5. Fix the imports to the end state above, then remove the allowlist line
+6. Run the checks and counts, then format and commit
 ```
 
 ## DATA (expected numbers)
 
 - `test_cleanup.py` = 14, `test_cleanup_get_stale_sessions.py` = 6, `test_cleanup_retry.py` = 9 (total 29).
-- `tests/workflows/vscodeclaude/` = the baseline N recorded in step 1 (≈680).
+- `tests/workflows/vscodeclaude/` = N, the count collected in ALGORITHM step 1 before any move (≈680).
 - Line counts: `test_cleanup.py` ≈ 528, `test_cleanup_retry.py` ≈ 350. All files are under 750.
 
 ## Preconditions / failure actions
