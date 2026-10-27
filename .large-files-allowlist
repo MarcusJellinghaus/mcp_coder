@@ -13,4 +13,3 @@ tests/cli/commands/test_prompt.py
 tests/workflow_utils/test_task_tracker.py
 tests/workflows/implement/test_task_processing.py
 tests/workflows/vscodeclaude/test_cleanup.py
-tests/workflows/vscodeclaude/test_session_restart.py

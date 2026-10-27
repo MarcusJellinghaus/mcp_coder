@@ -1,5 +1,3 @@
-"""Tests for session restart orchestration."""
-
 import json
 from pathlib import Path
 
@@ -10,60 +8,8 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
     BranchPrepResult,
     restart_closed_sessions,
 )
-from mcp_coder.workflows.vscodeclaude.types import (
-    Decision,
-    DetectionSignals,
-    IssueState,
-    LivenessRule,
-    LivenessVerdict,
-    SessionAction,
-    SessionAssessment,
-    Transition,
-)
 from tests.github_factories import make_issue_data
-
-
-def _make_assessment(
-    folder: str,
-    *,
-    active: bool = False,
-    action: SessionAction = SessionAction.RESTART,
-) -> SessionAssessment:
-    """Build a minimal :class:`SessionAssessment` for restart consumer tests.
-
-    Restart reads ``verdict.active`` and ``decision.action``; the remaining typed
-    sub-results are filled with neutral defaults.
-    """
-    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
-    return SessionAssessment(
-        folder=folder,
-        signals=DetectionSignals(
-            folder_exists=True,
-            title_match=active,
-            cmdline_match=False,
-            pid_alive=False,
-            found_pid=None,
-            age_seconds=0.0,
-            within_grace=False,
-            directory_empty=False,
-        ),
-        verdict=LivenessVerdict(active=active, rule=rule),
-        issue_state=IssueState(
-            is_open=True,
-            is_stale=False,
-            is_blocked=False,
-            is_unassigned=False,
-            is_eligible=True,
-        ),
-        transition=Transition(flipped_to_inactive=False),
-        decision=Decision(action=action, reason="", destructive=False),
-        pid_needs_refresh=False,
-        found_pid=None,
-    )
-
-
-class TestSessionRestart:
-    """Test main orchestration functions."""
+from tests.workflows.vscodeclaude.conftest import _make_assessment
 
 
 class TestRestartClosedSessionsIssueStatus:

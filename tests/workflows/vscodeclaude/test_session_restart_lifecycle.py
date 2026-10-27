@@ -12,7 +12,7 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
 from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
 from mcp_coder.workflows.vscodeclaude.types import SessionAction
 from tests.github_factories import make_issue_data
-from tests.workflows.vscodeclaude.test_session_restart import _make_assessment
+from tests.workflows.vscodeclaude.conftest import _make_assessment
 
 
 class TestRestartClosedSessionsLifecycle:

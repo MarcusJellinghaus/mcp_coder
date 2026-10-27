@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: Move `TestRestartClosedSessionsIssueStatus` and `_make_assessment`, delete `test_session_restart.py`, update allowlist — [step_5.md](./steps/step_5.md)
-- [ ] Implementation: move class, move helper to `conftest.py`, fix imports, pre-delete checks, delete file, remove allowlist line, final verification (22 passed, lint-imports, tach, vulture, file size, branch compact diff)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move class, move helper to `conftest.py`, fix imports, pre-delete checks, delete file, remove allowlist line, final verification (22 passed, lint-imports, tach, vulture, file size, branch compact diff)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: compact diff of the whole branch against the base branch shows only moved blocks, import changes, four class headers, deleted file and allowlist line
