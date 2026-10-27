@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: `JenkinsClient.get_recent_builds` and `get_console_output`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `test_client_builds.py` (python-jenkins mocked), two methods in `client.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `test_client_builds.py` (python-jenkins mocked), two methods in `client.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move Jenkins integration fixtures to `integration_fixtures.py`
 See [step_3.md](./steps/step_3.md)

@@ -28,21 +28,24 @@ Example:
 
 import logging
 import re
+from collections.abc import Collection
 from typing import Any, cast
 
 from jenkins import Jenkins, JenkinsException, NotFoundException
-from requests import Session
+from requests import Request, Session
 from requests.exceptions import HTTPError
 
 from ..log_utils import log_function_call
 from ..user_config import get_config_values
+from .builds import build_tree_query, flatten_builds, select_builds, validate_statuses
 from .diagnostics import (
     diagnose_403,
     diagnose_404,
     diagnose_build_404,
     extract_jenkins_error,
+    job_url_path,
 )
-from .models import JobStatus
+from .models import BuildInfo, JobStatus
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -459,3 +462,94 @@ class JenkinsClient:
             raise JenkinsError(
                 f"Failed to get status for queue_id {queue_id}: {str(e)}"
             ) from e
+
+    @log_function_call
+    def get_recent_builds(
+        self,
+        limit: int = 100,
+        folder: str | None = None,
+        statuses: Collection[str] | None = None,
+    ) -> list[BuildInfo]:
+        """List the newest builds across all jobs, in one request.
+
+        The ``tree=`` query only reaches MAX_DEPTH levels of nested jobs
+        (folders and multibranch projects count); deeper jobs are not reported.
+
+        ``limit`` is a window over the newest builds across all jobs: builds are
+        merged, sorted newest first and truncated to ``limit``, and only then
+        filtered by ``statuses``. A ``limit`` above 100 switches the query to
+        ``allBuilds``, which may be slow on large servers.
+
+        Args:
+            limit: Number of newest builds to consider.
+            folder: Full folder path from the root, e.g. "A/B". None lists the
+                whole server. A folder that points at a job returns [].
+            statuses: Statuses to keep (see builds.VALID_STATUSES), or None/empty
+                for all.
+
+        Returns:
+            BuildInfo list, newest first, at most ``limit`` entries.
+
+        Raises:
+            ValueError: If a status is unknown (before any request is sent).
+            JenkinsError: For any Jenkins or transport failure, including a
+                missing folder.
+        """
+        validate_statuses(statuses)
+        # Unencoded on purpose: get_info applies quote() to item itself.
+        item = (
+            "/".join(f"job/{part}" for part in folder.split("/") if part)
+            if folder
+            else ""
+        )
+        context = (
+            f"Failed to list builds in folder '{folder}'"
+            if folder
+            else "Failed to list builds"
+        )
+        try:
+            tree = self._client.get_info(item=item, query=build_tree_query(limit))
+            found = flatten_builds(tree)
+        except JenkinsException as e:
+            raise self._wrap_jenkins_error(e, context, job_path=folder) from None
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            raise JenkinsError(f"{context}: {e}") from e
+        return select_builds(found, limit, statuses)
+
+    # No @log_function_call: it would log the whole console log.
+    def get_console_output(self, job_path: str, build_number: int) -> str:
+        """Fetch the full console log of one build.
+
+        Uses ``jenkins_open`` rather than ``get_build_console_output``, which
+        hides 404s, so a missing build gets the build-404 diagnosis.
+
+        Args:
+            job_path: Jenkins fullName; URL-encoded segments (``feature%2Fx``)
+                are kept as-is and encoded again for the URL.
+            build_number: Build number.
+
+        Returns:
+            The whole console log.
+
+        Raises:
+            JenkinsError: For any Jenkins or transport failure.
+        """
+        url = f"{self.base_url}{job_url_path(job_path)}/{build_number}/consoleText"
+        context = f"Failed to get console output for '{job_path}' #{build_number}"
+        try:
+            text = str(self._client.jenkins_open(Request("GET", url)))
+        except JenkinsException as e:
+            raise self._wrap_jenkins_error(
+                e, context, job_path=job_path, build_number=build_number
+            ) from None
+        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            raise JenkinsError(f"{context}: {e}") from e
+        logger.debug(
+            "Fetched console output",
+            extra={
+                "job_path": job_path,
+                "build_number": build_number,
+                "length": len(text),
+            },
+        )
+        return text
