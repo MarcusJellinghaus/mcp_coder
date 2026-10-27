@@ -21,6 +21,11 @@ from mcp_coder.cli.commands.define_labels_actions import (
     generate_label_new_issues_yml,
     write_github_actions,
 )
+from mcp_coder.config.label_config import get_labels_config_path, load_labels_config
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+_WORKFLOW_NAMES = ["label-new-issues.yml", "approve-command.yml"]
+_DOC_FILES = ["docs/repository-setup/github.md", "docs/getting-started/label-setup.md"]
 
 _USES_RE = re.compile(r"^\s*(?:- )?uses:")
 _PIN_RE = re.compile(r"^\s*(?:- )?uses: [\w.\-/]+@[0-9a-f]{40} # v\d")
@@ -274,3 +279,37 @@ class TestWriteGithubActions:
         workflows_dir = tmp_path / ".github" / "workflows"
         for name in ("label-new-issues.yml", "approve-command.yml"):
             assert b"\r" not in (workflows_dir / name).read_bytes()
+
+
+class TestGeneratedWorkflowsConsistency:
+    """Committed workflows and doc snippets match the generator output."""
+
+    @pytest.fixture
+    def generated(self, tmp_path: Path) -> dict[str, str]:
+        """Generate workflows from the repo's labels config into tmp_path."""
+        config = load_labels_config(get_labels_config_path(REPO_ROOT))
+        write_github_actions(tmp_path, config)
+        workflows_dir = tmp_path / ".github" / "workflows"
+        return {
+            name: (workflows_dir / name).read_text(encoding="utf-8")
+            for name in _WORKFLOW_NAMES
+        }
+
+    @pytest.mark.parametrize("name", _WORKFLOW_NAMES)
+    def test_committed_workflow_matches_generator(
+        self, generated: dict[str, str], name: str
+    ) -> None:
+        """Committed workflow file equals the generator output."""
+        committed = (REPO_ROOT / ".github" / "workflows" / name).read_text(
+            encoding="utf-8"
+        )
+        assert committed == generated[name]
+
+    @pytest.mark.parametrize("doc", _DOC_FILES)
+    @pytest.mark.parametrize("name", _WORKFLOW_NAMES)
+    def test_doc_contains_generator_output(
+        self, generated: dict[str, str], doc: str, name: str
+    ) -> None:
+        """Doc snippet contains the exact generator output."""
+        content = (REPO_ROOT / doc).read_text(encoding="utf-8")
+        assert generated[name] in content

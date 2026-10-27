@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Regenerate committed workflows, replace doc snippets, consistency test
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: `TestGeneratedWorkflowsConsistency` test, regenerate `approve-command.yml` / `label-new-issues.yml` via scratch probe, replace YAML snippets + re-run note in `github.md` and `label-setup.md`, delete `.scratch/`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `TestGeneratedWorkflowsConsistency` test, regenerate `approve-command.yml` / `label-new-issues.yml` via scratch probe, replace YAML snippets + re-run note in `github.md` and `label-setup.md`, delete `.scratch/`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Document the label-workflow rule
 See [step_3.md](./steps/step_3.md)
