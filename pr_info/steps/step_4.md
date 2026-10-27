@@ -26,7 +26,8 @@ check, write one line to `pr_info/.blocked.txt` and stop. Commit once at the end
 dry-run + move [TestBranchNameSource]; verify _PROJECT_DIR stayed inside the class
 fix module-level imports; remove allowlist line
 standard checks + lint-imports + tach + vulture + check_file_size
-collect counts (per file, directory, whole suite) + searches + compact diff
+collect counts (per file, directory, whole suite) + searches
+compact diff of committed steps (base...HEAD) + plain diff of this step's uncommitted changes
 commit
 ```
 
@@ -52,16 +53,23 @@ Final verification. Any failure → blocked:
 - `search_files(pattern="test_task_processing\\w*\\.(?!py\\b)\\w", glob="tests/**/*.py")` → 0 matches.
 - `search_files(pattern="_tracker_count_always_decreases", glob="tests/**/*.py")` → only the two
   definitions (in `test_task_processing.py` and `test_task_progress_gate.py`).
-- Compact diff (`mcp__mcp-workspace__git` `diff` against the base branch, `compact=true`,
-  `pathspec=["tests/workflows/implement/", ".large-files-allowlist"]`). The pathspec leaves out the
-  branch's own `pr_info/` files. Allowed outside suppressed moved blocks:
-  - import blocks;
-  - headers of the new files;
-  - moved-block preview/summary lines;
-  - blank-line-only hunks;
-  - the one allowlist removal.
+- Diff checks, in two parts. This step's changes are not committed yet, and `git diff` does not
+  show the untracked `test_task_processing_branch_name.py`, so a diff of the working tree against the
+  base branch shows the moved `TestBranchNameSource` as a deletion. Don't block on that.
+  1. **Committed steps 1–3:** `mcp__mcp-workspace__git` `diff` with `args=["<base branch>...HEAD"]`,
+     `compact=true`, `pathspec=["tests/workflows/implement/", ".large-files-allowlist"]`. The
+     pathspec leaves out the branch's own `pr_info/` files. Allowed outside suppressed moved blocks:
+     - import blocks;
+     - headers of the new files;
+     - moved-block preview/summary lines;
+     - blank-line-only hunks.
+  2. **This step (uncommitted):** `mcp__mcp-workspace__git` `diff` with no revision, `compact=false`,
+     `pathspec=["tests/workflows/implement/test_task_processing.py", ".large-files-allowlist"]`.
+     Allowed: the whole `TestBranchNameSource` class removed, import lines, blank lines, and the one
+     allowlist removal. The new file itself is covered by the move procedure's step 3 check.
 
-  Any hunk in a test body, in `_make_llm_response`, in the fixture, in the docstring, in
-  `vulture_whitelist.py` or in `docs/` → blocked.
+  Any other hunk — in a test body, in `_make_llm_response`, in the fixture, in the docstring, in
+  `vulture_whitelist.py` or in `docs/` → blocked. The full branch compact diff runs again in the PR
+  review task, after this step is committed.
 
 Commit message: `test(implement): move branch-name tests, drop test_task_processing.py from allowlist (#1329)`

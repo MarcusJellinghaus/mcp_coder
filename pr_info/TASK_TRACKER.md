@@ -45,7 +45,7 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Move branch-name tests, drop allowlist entry, final verification
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: move `TestBranchNameSource`, fix imports, remove `.large-files-allowlist` line, run final verification (lint-imports, tach, vulture, check_file_size, counts, searches, compact diff)
+- [ ] Implementation: move `TestBranchNameSource`, fix imports, remove `.large-files-allowlist` line, run final verification (lint-imports, tach, vulture, check_file_size, counts, searches, compact diff of committed steps + plain diff of this step)
 - [ ] Quality checks: pylint, pytest, mypy — fix all issues
 - [ ] Commit message prepared
 
