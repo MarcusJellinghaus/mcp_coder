@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Move eligibility classes → `test_core_eligibility.py`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: dry-run then move `TestGetEligibleIssues`, `TestGetCachedEligibleIssues` in one call, verify class-level fixtures, set destination imports, drop unused imports + 2 stale bullets in test_core.py, remove stale allowlist entry if flagged, verify collect counts (test_core.py 32, new file 5)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: dry-run then move `TestGetEligibleIssues`, `TestGetCachedEligibleIssues` in one call, verify class-level fixtures, set destination imports, drop unused imports + 2 stale bullets in test_core.py, remove stale allowlist entry if flagged, verify collect counts (test_core.py 32, new file 5)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Move dispatch classes → `test_core_dispatch.py`; final verification
 See [step_5.md](./steps/step_5.md)
