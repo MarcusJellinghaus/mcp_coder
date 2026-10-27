@@ -22,41 +22,7 @@ from mcp_coder.workflows.vscodeclaude.types import (
     VSCodeClaudeSession,
 )
 from tests.github_factories import make_issue_data
-
-
-def _make_assessment(
-    folder: str,
-    *,
-    active: bool = False,
-    action: SessionAction = SessionAction.RESTART,
-) -> SessionAssessment:
-    """Build a minimal RESTART-candidate assessment for restart consumer tests."""
-    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
-    return SessionAssessment(
-        folder=folder,
-        signals=DetectionSignals(
-            folder_exists=True,
-            title_match=active,
-            cmdline_match=False,
-            pid_alive=False,
-            found_pid=None,
-            age_seconds=0.0,
-            within_grace=False,
-            directory_empty=False,
-        ),
-        verdict=LivenessVerdict(active=active, rule=rule),
-        issue_state=IssueState(
-            is_open=True,
-            is_stale=False,
-            is_blocked=False,
-            is_unassigned=False,
-            is_eligible=True,
-        ),
-        transition=Transition(flipped_to_inactive=False),
-        decision=Decision(action=action, reason="", destructive=False),
-        pid_needs_refresh=False,
-        found_pid=None,
-    )
+from tests.workflows.vscodeclaude.conftest import make_assessment
 
 
 class TestClosedIssueIntegration:
@@ -117,7 +83,7 @@ class TestClosedIssueIntegration:
             updated_at="2025-12-31T08:00:00Z",
         )
 
-        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
+        assessments = {s["folder"]: make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -398,7 +364,7 @@ class TestClosedIssueIntegration:
 
         cached_issues = {"owner/repo": {414: issue_414, 408: issue_408, 100: issue_100}}
 
-        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
+        assessments = {s["folder"]: make_assessment(s["folder"]) for s in sessions}
 
         with (
             patch(
@@ -492,7 +458,7 @@ class TestClosedIssueIntegration:
 
         cached_issues = {"owner/repo": {414: issue_414}}
 
-        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
+        assessments = {s["folder"]: make_assessment(s["folder"]) for s in sessions}
 
         # Step 1: Test restart_closed_sessions
         with (

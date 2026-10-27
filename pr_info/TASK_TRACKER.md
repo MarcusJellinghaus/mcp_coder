@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Replace the four identical local copies with `make_assessment`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: delete local `_make_assessment` in `test_session_restart_cache.py`, `test_session_restart_closed_sessions.py`, `test_session_restart_branch_integration.py`, `test_closed_issues_integration.py`; import shared `make_assessment`; ruff fix F401 and verify `types` imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues (collect-only and pass counts unchanged)
-- [ ] Commit message prepared
+- [x] Implementation: delete local `_make_assessment` in `test_session_restart_cache.py`, `test_session_restart_closed_sessions.py`, `test_session_restart_branch_integration.py`, `test_closed_issues_integration.py`; import shared `make_assessment`; ruff fix F401 and verify `types` imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (collect-only and pass counts unchanged)
+- [x] Commit message prepared
 
 ### Step 3: Replace the SKIP-action copies with `make_assessment(..., action=SKIP)`
 See [step_3.md](./steps/step_3.md)
