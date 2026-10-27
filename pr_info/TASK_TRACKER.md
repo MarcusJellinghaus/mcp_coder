@@ -59,9 +59,9 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: Signed release assets job
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: add `attach-signed-artifacts` job to `publish.yml`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `attach-signed-artifacts` job to `publish.yml`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
