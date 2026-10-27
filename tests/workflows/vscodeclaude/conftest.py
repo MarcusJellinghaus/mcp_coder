@@ -22,46 +22,6 @@ from mcp_coder.workflows.vscodeclaude.types import (
     VSCodeClaudeSession,
 )
 
-
-def _make_assessment(
-    folder: str,
-    *,
-    active: bool = False,
-    action: SessionAction = SessionAction.RESTART,
-) -> SessionAssessment:
-    """Build a minimal :class:`SessionAssessment` for restart consumer tests.
-
-    Restart reads ``verdict.active`` and ``decision.action``; the remaining typed
-    sub-results are filled with neutral defaults.
-    """
-    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
-    return SessionAssessment(
-        folder=folder,
-        signals=DetectionSignals(
-            folder_exists=True,
-            title_match=active,
-            cmdline_match=False,
-            pid_alive=False,
-            found_pid=None,
-            age_seconds=0.0,
-            within_grace=False,
-            directory_empty=False,
-        ),
-        verdict=LivenessVerdict(active=active, rule=rule),
-        issue_state=IssueState(
-            is_open=True,
-            is_stale=False,
-            is_blocked=False,
-            is_unassigned=False,
-            is_eligible=True,
-        ),
-        transition=Transition(flipped_to_inactive=False),
-        decision=Decision(action=action, reason="", destructive=False),
-        pid_needs_refresh=False,
-        found_pid=None,
-    )
-
-
 # Mock vscodeclaude config data for tests
 MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
     "status-01:created": {
@@ -108,9 +68,8 @@ def mock_vscodeclaude_config(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Shared builders for the assessment test modules
-# (test_assessment_layers / test_assessment_issue_facts /
-# test_assessment_orchestration). Plain helpers, imported directly.
+# Shared builders for the vscodeclaude test modules. Plain helpers, imported
+# directly.
 # ---------------------------------------------------------------------------
 
 
@@ -135,6 +94,63 @@ def make_signals(
         age_seconds=age_seconds,
         within_grace=within_grace,
         directory_empty=directory_empty,
+    )
+
+
+def make_assessment(
+    folder: str,
+    *,
+    active: bool = False,
+    action: SessionAction = SessionAction.RESTART,
+) -> SessionAssessment:
+    """Build a minimal :class:`SessionAssessment` for assessment consumer tests.
+
+    Consumers read ``verdict.active`` and ``decision.action``; the remaining
+    typed sub-results are filled with neutral defaults.
+    """
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=make_signals(title_match=active),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=action, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
+
+
+def make_sample_assessment(folder: str = "/path/to/folder") -> SessionAssessment:
+    """A rich, active sample assessment for serializer and explain output tests."""
+    return SessionAssessment(
+        folder=folder,
+        signals=make_signals(
+            title_match=True, pid_alive=True, found_pid=1234, age_seconds=12.5
+        ),
+        verdict=LivenessVerdict(active=True, rule=LivenessRule.TITLE),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+            stale_target=None,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(
+            action=SessionAction.KEEP_ACTIVE,
+            reason="vscode running",
+            destructive=False,
+        ),
+        pid_needs_refresh=False,
+        found_pid=1234,
     )
 
 

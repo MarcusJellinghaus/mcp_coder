@@ -12,7 +12,7 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
 from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
 from mcp_coder.workflows.vscodeclaude.types import SessionAction
 from tests.github_factories import make_issue_data
-from tests.workflows.vscodeclaude.conftest import _make_assessment
+from tests.workflows.vscodeclaude.conftest import make_assessment
 
 
 class TestRestartClosedSessionsLifecycle:
@@ -44,7 +44,7 @@ class TestRestartClosedSessionsLifecycle:
 
         restarted = restart_closed_sessions(
             assessments={
-                folder: _make_assessment(folder, action=SessionAction.REMOVE_MISSING)
+                folder: make_assessment(folder, action=SessionAction.REMOVE_MISSING)
             }
         )
 
@@ -89,7 +89,7 @@ class TestRestartClosedSessionsLifecycle:
         sessions_file.write_text(json.dumps(store))
 
         restarted = restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))}
+            assessments={str(working_folder): make_assessment(str(working_folder))}
         )
 
         # No sessions restarted because repo not in config
@@ -164,7 +164,7 @@ class TestRestartClosedSessionsLifecycle:
         }
 
         restarted = restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))},
+            assessments={str(working_folder): make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -199,7 +199,7 @@ class TestRestartClosedSessionsLifecycle:
         sessions_file.write_text(json.dumps(store))
 
         restarted = restart_closed_sessions(
-            assessments={folder: _make_assessment(folder, active=True)}
+            assessments={folder: make_assessment(folder, active=True)}
         )
 
         # No sessions restarted since vscode is running
@@ -233,7 +233,7 @@ class TestRestartClosedSessionsLifecycle:
         with caplog.at_level(logging.WARNING):
             restarted = restart_closed_sessions(
                 assessments={
-                    folder: _make_assessment(
+                    folder: make_assessment(
                         folder,
                         active=True,
                         action=SessionAction.INVESTIGATE_ZOMBIE,

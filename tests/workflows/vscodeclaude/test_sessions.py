@@ -19,47 +19,12 @@ from mcp_coder.workflows.vscodeclaude.sessions import (
     update_session_status,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
-    Decision,
-    DetectionSignals,
-    IssueState,
-    LivenessRule,
-    LivenessVerdict,
     SessionAction,
     SessionAssessment,
-    Transition,
     VSCodeClaudeSession,
     VSCodeClaudeSessionStore,
 )
-
-
-def _make_assessment(folder: str, *, active: bool = False) -> SessionAssessment:
-    """Build a minimal SessionAssessment for the build_active_session_set wrapper."""
-    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
-    return SessionAssessment(
-        folder=folder,
-        signals=DetectionSignals(
-            folder_exists=True,
-            title_match=active,
-            cmdline_match=False,
-            pid_alive=False,
-            found_pid=None,
-            age_seconds=0.0,
-            within_grace=False,
-            directory_empty=False,
-        ),
-        verdict=LivenessVerdict(active=active, rule=rule),
-        issue_state=IssueState(
-            is_open=True,
-            is_stale=False,
-            is_blocked=False,
-            is_unassigned=False,
-            is_eligible=True,
-        ),
-        transition=Transition(flipped_to_inactive=False),
-        decision=Decision(action=SessionAction.SKIP, reason="", destructive=False),
-        pid_needs_refresh=False,
-        found_pid=None,
-    )
+from tests.workflows.vscodeclaude.conftest import make_assessment
 
 
 class TestSessionManagement:
@@ -258,8 +223,12 @@ class TestSessionManagement:
             cached_issues_by_repo: object = None,
         ) -> dict[str, SessionAssessment]:
             return {
-                folder_a: _make_assessment(folder_a, active=True),
-                folder_b: _make_assessment(folder_b, active=False),
+                folder_a: make_assessment(
+                    folder_a, active=True, action=SessionAction.SKIP
+                ),
+                folder_b: make_assessment(
+                    folder_b, active=False, action=SessionAction.SKIP
+                ),
             }
 
         monkeypatch.setattr(

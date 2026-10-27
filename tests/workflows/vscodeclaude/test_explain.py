@@ -18,50 +18,9 @@ from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
 from mcp_coder.cli.main import create_parser
 from mcp_coder.workflows.vscodeclaude.assessment import render_explain
 from mcp_coder.workflows.vscodeclaude.types import (
-    Decision,
-    DetectionSignals,
-    IssueState,
-    LivenessRule,
-    LivenessVerdict,
-    SessionAction,
-    SessionAssessment,
-    Transition,
     VSCodeClaudeSession,
 )
-
-
-def _make_assessment(folder: str = "/path/to/folder") -> SessionAssessment:
-    """Build a sample assessment exercising every signal field and a winning rule."""
-    return SessionAssessment(
-        folder=folder,
-        signals=DetectionSignals(
-            folder_exists=True,
-            title_match=True,
-            cmdline_match=False,
-            pid_alive=True,
-            found_pid=4321,
-            age_seconds=42.5,
-            within_grace=False,
-            directory_empty=False,
-        ),
-        verdict=LivenessVerdict(active=True, rule=LivenessRule.TITLE),
-        issue_state=IssueState(
-            is_open=True,
-            is_stale=False,
-            is_blocked=False,
-            is_unassigned=False,
-            is_eligible=True,
-            stale_target=None,
-        ),
-        transition=Transition(flipped_to_inactive=False),
-        decision=Decision(
-            action=SessionAction.KEEP_ACTIVE,
-            reason="vscode running",
-            destructive=False,
-        ),
-        pid_needs_refresh=False,
-        found_pid=4321,
-    )
+from tests.workflows.vscodeclaude.conftest import make_sample_assessment
 
 
 class TestRenderExplain:
@@ -69,7 +28,7 @@ class TestRenderExplain:
 
     def test_includes_every_signal_field_and_winning_rule(self) -> None:
         """Every DetectionSignals field and the winning rule appear in the dump."""
-        text = render_explain({"/path/to/folder": _make_assessment()})
+        text = render_explain({"/path/to/folder": make_sample_assessment()})
 
         for signal_field in (
             "folder_exists",
@@ -91,8 +50,8 @@ class TestRenderExplain:
     def test_one_block_per_session(self) -> None:
         """Each session contributes its own to_explain() block."""
         assessments = {
-            "/a": _make_assessment("/a"),
-            "/b": _make_assessment("/b"),
+            "/a": make_sample_assessment("/a"),
+            "/b": make_sample_assessment("/b"),
         }
 
         text = render_explain(assessments)
@@ -140,7 +99,9 @@ class TestExplainIsWriteFree:
                 "is_intervention": False,
             }
         ]
-        assessments = {s["folder"]: _make_assessment(s["folder"]) for s in sessions}
+        assessments = {
+            s["folder"]: make_sample_assessment(s["folder"]) for s in sessions
+        }
 
         monkeypatch.setattr(
             "mcp_coder.cli.commands.coordinator.commands_vscodeclaude.load_sessions",

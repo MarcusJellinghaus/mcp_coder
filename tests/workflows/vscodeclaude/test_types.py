@@ -10,18 +10,17 @@ import pytest
 from mcp_coder.workflows.vscodeclaude.types import (
     DEFAULT_MAX_SESSIONS,
     Decision,
-    DetectionSignals,
     IssueState,
     LivenessRule,
     LivenessVerdict,
     RepoVSCodeClaudeConfig,
     SessionAction,
-    SessionAssessment,
     Transition,
     VSCodeClaudeConfig,
     VSCodeClaudeSession,
     VSCodeClaudeSessionStore,
 )
+from tests.workflows.vscodeclaude.conftest import make_sample_assessment, make_signals
 
 
 class TestTypes:
@@ -140,43 +139,6 @@ class TestTypeHints:
         assert "setup_commands_linux" not in config
 
 
-def _make_signals() -> DetectionSignals:
-    return DetectionSignals(
-        folder_exists=True,
-        title_match=True,
-        cmdline_match=False,
-        pid_alive=True,
-        found_pid=1234,
-        age_seconds=12.5,
-        within_grace=False,
-        directory_empty=False,
-    )
-
-
-def _make_assessment() -> SessionAssessment:
-    return SessionAssessment(
-        folder="/path/to/folder",
-        signals=_make_signals(),
-        verdict=LivenessVerdict(active=True, rule=LivenessRule.TITLE),
-        issue_state=IssueState(
-            is_open=True,
-            is_stale=False,
-            is_blocked=False,
-            is_unassigned=False,
-            is_eligible=True,
-            stale_target=None,
-        ),
-        transition=Transition(flipped_to_inactive=False),
-        decision=Decision(
-            action=SessionAction.KEEP_ACTIVE,
-            reason="vscode running",
-            destructive=False,
-        ),
-        pid_needs_refresh=False,
-        found_pid=1234,
-    )
-
-
 class TestAssessmentEnums:
     """Enums carry stable string values."""
 
@@ -200,7 +162,7 @@ class TestAssessmentFrozen:
     """Every assessment dataclass is frozen (apply() cannot mutate it)."""
 
     def test_detection_signals_frozen(self) -> None:
-        signals = _make_signals()
+        signals = make_signals(title_match=True)
         with pytest.raises(dataclasses.FrozenInstanceError):
             signals.title_match = False  # type: ignore[misc]
 
@@ -231,7 +193,7 @@ class TestAssessmentFrozen:
             decision.destructive = True  # type: ignore[misc]
 
     def test_session_assessment_frozen(self) -> None:
-        assessment = _make_assessment()
+        assessment = make_sample_assessment()
         with pytest.raises(dataclasses.FrozenInstanceError):
             assessment.folder = "other"  # type: ignore[misc]
 
@@ -240,7 +202,7 @@ class TestSessionAssessmentEmbedding:
     """SessionAssessment embeds the four typed sub-results, not flattened fields."""
 
     def test_embeds_sub_results(self) -> None:
-        assessment = _make_assessment()
+        assessment = make_sample_assessment()
         assert assessment.verdict.active is True
         assert assessment.verdict.rule is LivenessRule.TITLE
         assert assessment.decision.action is SessionAction.KEEP_ACTIVE
@@ -262,7 +224,7 @@ class TestSessionAssessmentSerializer:
     """The single serializer flattens signals + four sub-results."""
 
     def test_to_audit_record_includes_session_metadata(self) -> None:
-        assessment = _make_assessment()
+        assessment = make_sample_assessment()
         session: VSCodeClaudeSession = {
             "folder": "/path/to/folder",
             "repo": "owner/repo",
@@ -284,7 +246,7 @@ class TestSessionAssessmentSerializer:
         assert record["signals"]["title_match"] is True
 
     def test_to_explain_returns_string(self) -> None:
-        assessment = _make_assessment()
+        assessment = make_sample_assessment()
         text = assessment.to_explain()
         assert isinstance(text, str)
         assert "folder: /path/to/folder" in text
