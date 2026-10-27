@@ -64,6 +64,9 @@ def main(argv: list[str] | None = None) -> int:
     except JenkinsError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
+    except OSError as e:
+        print(f"Error writing logs to '{args.outdir}': {e}", file=sys.stderr)
+        return 1
     return 0
 
 

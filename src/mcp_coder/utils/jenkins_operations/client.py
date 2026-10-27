@@ -491,10 +491,13 @@ class JenkinsClient:
             BuildInfo list, newest first, at most ``limit`` entries.
 
         Raises:
-            ValueError: If a status is unknown (before any request is sent).
+            ValueError: If ``limit`` is below 1 or a status is unknown (before
+                any request is sent).
             JenkinsError: For any Jenkins or transport failure, including a
                 missing folder.
-        """  # noqa: DOC502 - ValueError raised by validate_statuses, part of the contract
+        """
+        if limit < 1:
+            raise ValueError(f"limit must be at least 1, got {limit}")
         validate_statuses(statuses)
         # Unencoded on purpose: get_info applies quote() to item itself.
         item = (

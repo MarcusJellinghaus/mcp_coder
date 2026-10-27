@@ -79,6 +79,16 @@ def test_parse_invalid_status_exits_2(capsys: pytest.CaptureFixture[str]) -> Non
         assert status in err
 
 
+@pytest.mark.parametrize("limit", ["0", "-5"])
+def test_parse_limit_below_one_exits_2(
+    limit: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        _parser().parse_args(["--limit", limit])
+    assert exc_info.value.code == 2
+    assert "--limit" in capsys.readouterr().err
+
+
 def test_help_lists_statuses_and_slow_warning(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

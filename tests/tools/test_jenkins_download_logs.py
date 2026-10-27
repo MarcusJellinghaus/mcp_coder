@@ -108,6 +108,17 @@ def test_console_output_error_returns_1(
     assert "build not found" in capsys.readouterr().err
 
 
+def test_outdir_is_existing_file_returns_1(
+    client: MagicMock, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    outdir = tmp_path / "not_a_dir"
+    outdir.write_text("x", encoding="utf-8")
+    client.get_recent_builds.return_value = [_build("A/B/job", 5)]
+    client.get_console_output.return_value = "log"
+    assert jenkins_download_logs.main(["--outdir", str(outdir)]) == 1
+    assert "not_a_dir" in capsys.readouterr().err
+
+
 def test_missing_config_returns_1(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

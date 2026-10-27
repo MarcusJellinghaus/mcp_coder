@@ -37,6 +37,27 @@ def parse_statuses(value: str) -> list[str]:
     return statuses
 
 
+def positive_int(value: str) -> int:
+    """Parse a positive integer for argparse.
+
+    Args:
+        value: Integer string
+
+    Returns:
+        The parsed integer
+
+    Raises:
+        argparse.ArgumentTypeError: If value is not an integer of at least 1
+    """
+    try:
+        number = int(value)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(f"invalid integer: '{value}'") from e
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {number}")
+    return number
+
+
 def add_selection_args(
     parser: argparse.ArgumentParser, default_status: str | None
 ) -> None:
@@ -48,7 +69,7 @@ def add_selection_args(
     """
     parser.add_argument(
         "--limit",
-        type=int,
+        type=positive_int,
         default=100,
         help=(
             "newest N builds across all jobs (default: 100); values above 100 "

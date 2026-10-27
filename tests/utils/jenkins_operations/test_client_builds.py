@@ -135,6 +135,20 @@ class TestGetRecentBuilds:
 
         mock_client.get_info.assert_not_called()
 
+    @pytest.mark.parametrize("limit", [0, -5])
+    @patch(_JENKINS)
+    def test_limit_below_one_raises_value_error_before_request(
+        self, mock_jenkins_class: MagicMock, limit: int
+    ) -> None:
+        """A limit below 1 is a caller error, not a JenkinsError."""
+        mock_client = _mock_jenkins(mock_jenkins_class)
+
+        client = JenkinsClient(BASE_URL, "user", "token")
+        with pytest.raises(ValueError, match="limit"):
+            client.get_recent_builds(limit=limit)
+
+        mock_client.get_info.assert_not_called()
+
     @patch(_JENKINS)
     def test_statuses_filter_after_truncation(
         self, mock_jenkins_class: MagicMock
