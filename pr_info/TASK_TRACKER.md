@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Move `TestGetStaleSessions` → `test_cleanup_get_stale_sessions.py`
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: baseline counts, move `TestGetStaleSessions` with `move_symbol`, fix imports to end state
+- [ ] Quality checks: pylint, pytest, mypy (plus ruff F401, collect counts 23/6/N, 30 passed) — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Move `TestSoftDeleteAndRetry` → `test_cleanup_retry.py`; drop the allowlist entry
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: move `TestSoftDeleteAndRetry` with `move_symbol` (keep method-local `helpers` imports), fix imports, remove `.large-files-allowlist` line
+- [ ] Quality checks: pylint, pytest, mypy (plus ruff, lint-imports, tach, vulture, check_file_size, collect counts 14/6/9/N) — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: compact `git diff` against base branch shows only import changes, new file headers, moved blocks, and the allowlist line
+- [ ] PR summary prepared
