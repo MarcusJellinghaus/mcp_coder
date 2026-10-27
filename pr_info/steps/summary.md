@@ -28,7 +28,9 @@ Documentation architecture:
   `github/codeql-action/*` prefix. Default setup itself is not detected.
 - **Keep fast-changing facts out:** no rule-code lists, no ignore lists, no copied CI
   commands or triggers, no source line numbers. Name rule groups by issue number, and CI jobs
-  by name (names are what required checks match).
+  by name (names are what required checks match). One exception: the File size row quotes the
+  exact CI gate command `mcp-coder check file-size --max-lines 750 --allowlist-file
+  .large-files-allowlist`, as the issue requires.
 - **Facts come from `ci.yml`, `pyproject.toml` and the live MCP tool list**, not from
   `python.md`/`github.md`/`repo.md`. Those docs hold stale CI facts (#1351). Not fixed here.
 - Issue references are plain `#NNNN`.
