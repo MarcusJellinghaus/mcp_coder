@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Integration tests for `get_recent_builds` / `get_console_output`
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: three integration tests in `test_integration.py`, module docstring updated
-- [ ] Quality checks: pylint, pytest (incl. `jenkins_integration`), mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: three integration tests in `test_integration.py`, module docstring updated
+- [x] Quality checks: pylint, pytest (incl. `jenkins_integration`), mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: `jenkins_builds` tool, wrappers and tests
 See [step_5.md](./steps/step_5.md)
