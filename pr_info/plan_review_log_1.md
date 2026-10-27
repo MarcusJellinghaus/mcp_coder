@@ -9,3 +9,11 @@ pr_info/steps/step_4.md:49 — low — When `test_job` is top-level, `folder=Non
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_5.md (~line 99), replace the static `import jenkins_builds` after `sys.path.insert` with `jenkins_builds = importlib.import_module("jenkins_builds")` after the path insert, and remove the incorrect claim that test_extract_permission_events.py uses a static import. This avoids pylint E0401 and ruff E402.', 'In pr_info/steps/step_6.md (~line 67), load both `jenkins_builds` and `jenkins_download_logs` in test_jenkins_download_logs.py with `importlib.import_module` after the sys.path insert, so both come from the same sys.modules entries and monkeypatching `jenkins_builds.*` still reaches the code under test.', 'In pr_info/steps/step_4.md (~line 49), when `parent is None` (top-level test_job, folder=None), pass an explicit larger limit such as 500 instead of the default 100, so the started build is still in the list on a busy server as the issue requires.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-10-27
+**Findings**:
+Plan files and the issue are read; now checking codebase facts the plan relies on (diagnostics, test layout, tools patterns).`pr_info/steps/step_4.md:38` — low — With a top-level `test_job`, `limit = 500` is above 100, so the request switches to `allBuilds{0,500}` for every job on the server. Under the client's fixed 30 s timeout this can make the integration test flaky. `limit=100` already covers any realistic number of concurrent builds started in the seconds between the build finishing and the query. The issue itself warns that values above 100 may be slow.
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
