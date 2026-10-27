@@ -11,14 +11,56 @@ from mcp_coder.workflows.vscodeclaude.assessment import (
     assess_session,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
+    Decision,
     DetectionSignals,
     IssueState,
     LivenessRule,
     LivenessVerdict,
+    SessionAction,
     SessionAssessment,
     Transition,
     VSCodeClaudeSession,
 )
+
+
+def _make_assessment(
+    folder: str,
+    *,
+    active: bool = False,
+    action: SessionAction = SessionAction.RESTART,
+) -> SessionAssessment:
+    """Build a minimal :class:`SessionAssessment` for restart consumer tests.
+
+    Restart reads ``verdict.active`` and ``decision.action``; the remaining typed
+    sub-results are filled with neutral defaults.
+    """
+    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
+    return SessionAssessment(
+        folder=folder,
+        signals=DetectionSignals(
+            folder_exists=True,
+            title_match=active,
+            cmdline_match=False,
+            pid_alive=False,
+            found_pid=None,
+            age_seconds=0.0,
+            within_grace=False,
+            directory_empty=False,
+        ),
+        verdict=LivenessVerdict(active=active, rule=rule),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(action=action, reason="", destructive=False),
+        pid_needs_refresh=False,
+        found_pid=None,
+    )
+
 
 # Mock vscodeclaude config data for tests
 MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
