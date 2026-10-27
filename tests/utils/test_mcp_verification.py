@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -78,16 +76,22 @@ class TestVerifyMcpServers:
             (bin_dir / name).touch()
         return bin_dir
 
+    def _patch_runner(
+        self, monkeypatch: pytest.MonkeyPatch, result: CommandResult
+    ) -> None:
+        monkeypatch.setattr(
+            "mcp_coder.utils.mcp_verification.execute_command",
+            lambda *_a, **_kw: result,
+        )
+
     def test_verify_mcp_servers_success(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         self._create_fake_executables(tmp_path, monkeypatch)
-
-        fake_proc = MagicMock()
-        fake_proc.returncode = 0
-        fake_proc.stdout = "1.0.0\n"
-        fake_proc.stderr = ""
-        monkeypatch.setattr(subprocess, "run", lambda *_a, **_kw: fake_proc)
+        self._patch_runner(
+            monkeypatch,
+            CommandResult(return_code=0, stdout="1.0.0\n", stderr="", timed_out=False),
+        )
 
         results = verify_mcp_servers(tmp_path)
 
@@ -111,42 +115,77 @@ class TestVerifyMcpServers:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         self._create_fake_executables(tmp_path, monkeypatch)
-
-        fake_proc = MagicMock()
-        fake_proc.returncode = 0
-        fake_proc.stdout = "2.3.1\n"
-        fake_proc.stderr = ""
-        monkeypatch.setattr(subprocess, "run", lambda *_a, **_kw: fake_proc)
+        self._patch_runner(
+            monkeypatch,
+            CommandResult(return_code=0, stdout="2.3.1\n", stderr="", timed_out=False),
+        )
 
         results = verify_mcp_servers(tmp_path)
 
         assert results[0].version == "2.3.1"
 
-    def test_verify_mcp_servers_version_nonzero_raises(
+    def test_verify_mcp_servers_passes_30s_timeout(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         self._create_fake_executables(tmp_path, monkeypatch)
+        captured_kwargs: dict[str, object] = {}
 
-        fake_proc = MagicMock()
-        fake_proc.returncode = 1
-        fake_proc.stdout = ""
-        fake_proc.stderr = "error occurred"
-        monkeypatch.setattr(subprocess, "run", lambda *_a, **_kw: fake_proc)
+        def _capture(*_a: object, **kwargs: object) -> CommandResult:
+            captured_kwargs.update(kwargs)
+            return CommandResult(
+                return_code=0, stdout="1.0.0\n", stderr="", timed_out=False
+            )
 
-        with pytest.raises(RuntimeError, match="exited with code 1"):
-            verify_mcp_servers(tmp_path)
+        monkeypatch.setattr(
+            "mcp_coder.utils.mcp_verification.execute_command", _capture
+        )
+        verify_mcp_servers(tmp_path)
+        assert captured_kwargs.get("timeout_seconds") == 30
 
-    def test_verify_mcp_servers_subprocess_oserror_raises(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize(
+        ("result", "match"),
+        [
+            pytest.param(
+                CommandResult(
+                    return_code=1,
+                    stdout="",
+                    stderr="",
+                    timed_out=True,
+                    execution_error="Process timed out after 30 seconds",
+                ),
+                "timed out after 30s",
+                id="timeout",
+            ),
+            pytest.param(
+                CommandResult(
+                    return_code=1,
+                    stdout="",
+                    stderr="",
+                    timed_out=False,
+                    execution_error="OSError: permission denied",
+                ),
+                "Failed to invoke",
+                id="launch_error",
+            ),
+            pytest.param(
+                CommandResult(
+                    return_code=1, stdout="", stderr="error occurred", timed_out=False
+                ),
+                "exited with code 1",
+                id="nonzero_exit",
+            ),
+        ],
+    )
+    def test_verify_mcp_servers_version_failure_raises(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        result: CommandResult,
+        match: str,
     ) -> None:
         self._create_fake_executables(tmp_path, monkeypatch)
-
-        def _raise_oserror(*_a: object, **_kw: object) -> None:
-            raise OSError("permission denied")
-
-        monkeypatch.setattr(subprocess, "run", _raise_oserror)
-
-        with pytest.raises(RuntimeError, match="Failed to invoke"):
+        self._patch_runner(monkeypatch, result)
+        with pytest.raises(RuntimeError, match=match):
             verify_mcp_servers(tmp_path)
 
 
