@@ -96,7 +96,7 @@ exit /b 1
 
 ## Tests (`tests/tools/test_jenkins_builds.py`)
 
-- Import the tool the way `tests/tools/mlflow/test_extract_permission_events.py` does: insert `tools/` on `sys.path`, then `import jenkins_builds`.
+- Insert `tools/` on `sys.path` (guarded by `if str(_TOOL_DIR) not in sys.path`), then load the tool with `jenkins_builds = importlib.import_module("jenkins_builds")`. Do not use a static `import jenkins_builds`: pylint (E0401) cannot resolve it and ruff flags it as E402.
 - Use `monkeypatch` on `jenkins_builds.get_jenkins_config` and `jenkins_builds.JenkinsClient` (a `MagicMock` class whose instance has `get_recent_builds`).
 
 Cases:

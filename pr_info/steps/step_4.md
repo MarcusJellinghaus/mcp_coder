@@ -38,7 +38,8 @@ started build test:
         if monotonic() > deadline: pytest.fail(f"Build did not finish within {POLL_TIMEOUT_S}s; last status: {status}")
         time.sleep(POLL_INTERVAL_S); status = client.get_job_status(queue_id)
     parent = test_job.rpartition("/")[0] or None
-    match = next((b for b in client.get_recent_builds(folder=parent) if b.job_path == test_job and b.number == status.build_number), None)
+    limit = 100 if parent else 500                                # top level scans the whole server
+    match = next((b for b in client.get_recent_builds(limit=limit, folder=parent) if b.job_path == test_job and b.number == status.build_number), None)
     assert match is not None; assert match.status not in ("running", "unknown")
     assert client.get_console_output(match.job_path, match.number).strip()
 
@@ -46,7 +47,7 @@ missing folder test:
     with pytest.raises(JenkinsError): client.get_recent_builds(folder=f"mcp-coder-missing-{uuid.uuid4().hex}")
 ```
 
-The match uses the default `limit=100`, which leaves room for builds that run concurrently in the same folder.
+The match uses `limit=100` when scoped to `test_job`'s folder, which leaves room for concurrent builds there. When `test_job` is top-level (`folder=None`, whole server), it uses `limit=500`, so the started build still makes the list on a busy server.
 
 ## DATA
 

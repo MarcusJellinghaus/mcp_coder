@@ -64,7 +64,7 @@ Writes one UTF-8 file per selected build to `<outdir>/<log_filename(job_path, nu
 
 ## Tests (`tests/tools/test_jenkins_download_logs.py`)
 
-Import the tool the same way as in step 5: put `tools/` on `sys.path`, then `import jenkins_builds` and `import jenkins_download_logs`. Patch `jenkins_builds.get_jenkins_config` and `jenkins_builds.JenkinsClient`; `make_client` resolves them in the `jenkins_builds` module.
+Load the tools the same way as in step 5: put `tools/` on `sys.path`, then `jenkins_builds = importlib.import_module("jenkins_builds")` and `jenkins_download_logs = importlib.import_module("jenkins_download_logs")` (no static imports). Both resolve to the same `sys.modules` entries the tool uses, so monkeypatching `jenkins_builds.*` reaches the code under test. Patch `jenkins_builds.get_jenkins_config` and `jenkins_builds.JenkinsClient`; `make_client` resolves them in the `jenkins_builds` module.
 
 Unit tests (client mocked):
 - Default `--status` → `get_recent_builds` receives `statuses=["failure", "aborted", "unstable"]`; `--status failed` → `SystemExit(2)`.
