@@ -38,8 +38,26 @@ def _patch_runner(
 
 - `test_verify_mcp_servers_success` and `test_verify_mcp_servers_version_capture`: replace the
   `MagicMock` + `monkeypatch.setattr(subprocess, "run", ...)` with
-  `self._patch_runner(monkeypatch, CommandResult(return_code=0, stdout="1.0.0\n", stderr=""))`
+  `self._patch_runner(monkeypatch, CommandResult(return_code=0, stdout="1.0.0\n", stderr="", timed_out=False))`
   (`"2.3.1\n"` for version capture). Assertions unchanged.
+  (`CommandResult.timed_out` has no default upstream, so every construction must pass it.)
+- Add one test that pins the explicit timeout:
+
+```python
+def test_verify_mcp_servers_passes_30s_timeout(
+    self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    self._create_fake_executables(tmp_path, monkeypatch)
+    captured_kwargs: dict[str, object] = {}
+
+    def _capture(*_a: object, **kwargs: object) -> CommandResult:
+        captured_kwargs.update(kwargs)
+        return CommandResult(return_code=0, stdout="1.0.0\n", stderr="", timed_out=False)
+
+    monkeypatch.setattr("mcp_coder.utils.mcp_verification.execute_command", _capture)
+    verify_mcp_servers(tmp_path)
+    assert captured_kwargs.get("timeout_seconds") == 30
+```
 - Replace `test_verify_mcp_servers_version_nonzero_raises` and
   `test_verify_mcp_servers_subprocess_oserror_raises` with one parametrized test:
 
@@ -63,13 +81,16 @@ def _patch_runner(
                 return_code=1,
                 stdout="",
                 stderr="",
+                timed_out=False,
                 execution_error="OSError: permission denied",
             ),
             "Failed to invoke",
             id="launch_error",
         ),
         pytest.param(
-            CommandResult(return_code=1, stdout="", stderr="error occurred"),
+            CommandResult(
+                return_code=1, stdout="", stderr="error occurred", timed_out=False
+            ),
             "exited with code 1",
             id="nonzero_exit",
         ),
