@@ -52,9 +52,9 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: Move dispatch classes → `test_core_dispatch.py`; final verification
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: dry-run then move `TestDispatchWorkflow`, `TestDispatchWorkflowSilentFallthroughGuard` in one call, verify parametrize decorators, set destination imports, reduce test_core.py to final state, ensure allowlist entry removed, verify all final collect counts
-- [ ] Quality checks: pylint, pytest, mypy (plus ruff, lint-imports, tach, vulture, file size, compact diff review) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: dry-run then move `TestDispatchWorkflow`, `TestDispatchWorkflowSilentFallthroughGuard` in one call, verify parametrize decorators, set destination imports, reduce test_core.py to final state, ensure allowlist entry removed, verify all final collect counts
+- [x] Quality checks: pylint, pytest, mypy (plus ruff, lint-imports, tach, vulture, file size, compact diff review) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
