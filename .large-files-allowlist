@@ -9,5 +9,4 @@ docs/configuration/config.md
 docs/processes-prompts/github_Issue_Workflow_Matrix.html
 tools/safe_delete_folder.py
 tests/cli/commands/coordinator/test_core.py
-tests/workflow_utils/test_task_tracker.py
 tests/workflows/vscodeclaude/test_cleanup.py
