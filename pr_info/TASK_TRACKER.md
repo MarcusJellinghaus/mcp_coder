@@ -21,6 +21,19 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Write `quality-and-security-checks.md` — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: create `docs/repository-setup/quality-and-security-checks.md` (facts re-verified on main; links and anchors checked by hand)
+- [ ] Quality checks: pylint, pytest, mypy, check_file_size — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Link the hub page from the existing docs — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: README *Detail Documentation* row + four pointer lines in `python.md` and `github.md` (5 hits for `quality-and-security-checks.md`)
+- [ ] Quality checks: pylint, pytest, mypy, check_file_size — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against base, address findings
+- [ ] PR summary prepared
