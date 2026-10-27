@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Rename the conftest builder to `make_assessment`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: rename `_make_assessment` → `make_assessment` in `conftest.py` (move to shared builders section); update imports/calls in `test_session_restart_lifecycle.py` and `test_session_restart_issue_status.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues (collect-only and pass counts unchanged)
-- [ ] Commit message prepared
+- [x] Implementation: rename `_make_assessment` → `make_assessment` in `conftest.py` (move to shared builders section); update imports/calls in `test_session_restart_lifecycle.py` and `test_session_restart_issue_status.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (collect-only and pass counts unchanged)
+- [x] Commit message prepared
 
 ### Step 2: Replace the four identical local copies with `make_assessment`
 See [step_2.md](./steps/step_2.md)

@@ -9,7 +9,7 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
     restart_closed_sessions,
 )
 from tests.github_factories import make_issue_data
-from tests.workflows.vscodeclaude.conftest import _make_assessment
+from tests.workflows.vscodeclaude.conftest import make_assessment
 
 
 class TestRestartClosedSessionsIssueStatus:
@@ -55,7 +55,7 @@ class TestRestartClosedSessionsIssueStatus:
         }
 
         result = restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))},
+            assessments={str(working_folder): make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -119,7 +119,7 @@ class TestRestartClosedSessionsIssueStatus:
         }
 
         restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))},
+            assessments={str(working_folder): make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -171,7 +171,7 @@ class TestRestartClosedSessionsIssueStatus:
         }
 
         result = restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))},
+            assessments={str(working_folder): make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -221,7 +221,7 @@ class TestRestartClosedSessionsIssueStatus:
         }
 
         result = restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))},
+            assessments={str(working_folder): make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -271,7 +271,7 @@ class TestRestartClosedSessionsIssueStatus:
         }
 
         result = restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))},
+            assessments={str(working_folder): make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -336,7 +336,7 @@ class TestRestartClosedSessionsIssueStatus:
         }
 
         result = restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))},
+            assessments={str(working_folder): make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
@@ -410,7 +410,7 @@ class TestRestartClosedSessionsIssueStatus:
         }
 
         result = restart_closed_sessions(
-            assessments={str(working_folder): _make_assessment(str(working_folder))},
+            assessments={str(working_folder): make_assessment(str(working_folder))},
             cached_issues_by_repo=cached_issues,
         )
 
