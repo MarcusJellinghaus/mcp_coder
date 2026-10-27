@@ -56,6 +56,8 @@ config file.
 
 ## Repo Security Configuration Checks
 
+> Overview: see [quality-and-security-checks.md](quality-and-security-checks.md).
+
 `mcp-coder verify` prints a `GITHUB SECURITY` section right after `GITHUB`, reporting
 — not changing — the repo's security configuration:
 
@@ -474,6 +476,8 @@ git push
 **Verify in GitHub:** Go to repository → Actions tab → Confirm workflows appear.
 
 ## Code Quality CI
+
+> Overview: see [quality-and-security-checks.md](quality-and-security-checks.md).
 
 > **Customize (`.github/workflows/ci.yml`):** Python version, package name, and test paths.
 

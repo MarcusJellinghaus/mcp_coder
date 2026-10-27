@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: Link the hub page from the existing docs — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: README *Detail Documentation* row + four pointer lines in `python.md` and `github.md` (5 hits for `quality-and-security-checks.md`)
-- [ ] Quality checks: pylint, pytest, mypy, check_file_size — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: README *Detail Documentation* row + four pointer lines in `python.md` and `github.md` (5 hits for `quality-and-security-checks.md`)
+- [x] Quality checks: pylint, pytest, mypy, check_file_size — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

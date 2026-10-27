@@ -78,6 +78,8 @@ Pins the Python version used for the repo. Tools like `pyenv` and `uv` read this
 
 ## Architecture Enforcement
 
+> Overview: see [quality-and-security-checks.md](quality-and-security-checks.md).
+
 Enforce module boundaries and prevent architectural drift with automated tools. These components help maintain code quality and keep files manageable for LLM context windows.
 
 ### Why Architecture Enforcement?
@@ -176,6 +178,8 @@ Runs against `src` only — over `tests/` it reports dev dependencies as product
 imports (`DEP004`) with no signal to show for it.
 
 ## CI Workflow for Python
+
+> Overview: see [quality-and-security-checks.md](quality-and-security-checks.md).
 
 The general CI workflow structure is documented in [github.md](github.md#code-quality-ci). The matrix items are Python-specific:
 
