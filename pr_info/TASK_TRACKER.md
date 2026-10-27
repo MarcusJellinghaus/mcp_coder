@@ -59,9 +59,9 @@ See [step_5.md](./steps/step_5.md)
 ### Step 6: `jenkins_download_logs` tool, wrappers and tests
 See [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: `tests/tools/test_jenkins_download_logs.py`, `tests/tools/conftest.py`, `tools/jenkins_download_logs.py`, `.bat`, `.sh` (replace placeholder)
-- [ ] Quality checks: pylint, pytest (incl. `jenkins_integration`), mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `tests/tools/test_jenkins_download_logs.py`, `tests/tools/conftest.py`, `tools/jenkins_download_logs.py`, `.bat`, `.sh` (replace placeholder)
+- [x] Quality checks: pylint, pytest (incl. `jenkins_integration`), mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Docs and agent setup
 See [step_7.md](./steps/step_7.md)
