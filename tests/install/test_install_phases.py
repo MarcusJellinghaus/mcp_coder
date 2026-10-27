@@ -6,15 +6,12 @@ assert on the emitted ``> uv pip install ...`` lines.
 
 Shell-quoting note: the installer uses ``subprocess.run([...])`` with an argv
 list (no shell), so shell injection is impossible by construction.
-
-Subprocess note: ``_env.subprocess`` is reached as a module attribute on
-purpose. The ``subprocess_isolation`` import-linter contract grants
-``tests.install`` no exemption, so a bare ``import subprocess`` here would
-break it.
 """
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -24,14 +21,6 @@ from mcp_coder.install import InstallConfig, _env, _phases, install
 from mcp_coder.install._env import REPORT_BINARIES, exe
 
 from .conftest import namespace as _namespace
-from .conftest import subprocess as _subprocess
-
-# Reached via attribute access with a type: ignore rather than a bare
-# `import shutil`: the latter would break the subprocess_isolation
-# contract's spirit for this module's sibling import, and mypy's
-# no-implicit-reexport flags the attribute form as attr-defined since
-# _env doesn't explicitly re-export this stdlib module.
-_shutil = _env.shutil  # type: ignore[attr-defined]
 
 # Stands in for a real uv binary wherever the installer looks one up.
 _STUB_UV = "/stub/bin/uv"
@@ -85,7 +74,7 @@ class TestPhaseOverridesDryRun:
         monkeypatch.setattr(
             "mcp_coder.install.ensure_system_uv", lambda: _STUB_UV, raising=True
         )
-        monkeypatch.setattr(_shutil, "which", lambda _: _STUB_UV)
+        monkeypatch.setattr(shutil, "which", lambda _: _STUB_UV)
 
     def test_with_deps_packages_emit_install_command(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -278,7 +267,7 @@ class TestBootstrapSkippedOnlyForLocalSync:
         monkeypatch.setattr(
             "mcp_coder.install.ensure_system_uv", lambda: _STUB_UV, raising=True
         )
-        monkeypatch.setattr(_shutil, "which", lambda _: _STUB_UV)
+        monkeypatch.setattr(shutil, "which", lambda _: _STUB_UV)
 
     def test_skipped_for_local_use_sync(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -331,12 +320,12 @@ class TestEnsureSystemUv:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Happy path: shutil.which finds uv, no subprocess attempted."""
-        monkeypatch.setattr(_shutil, "which", lambda _: "/fake/path/to/uv")
+        monkeypatch.setattr(shutil, "which", lambda _: "/fake/path/to/uv")
 
         def _no_subprocess(*args: object, **kwargs: object) -> None:
             raise AssertionError("subprocess.run should not be called")
 
-        monkeypatch.setattr(_subprocess, "run", _no_subprocess)
+        monkeypatch.setattr(subprocess, "run", _no_subprocess)
         assert _env.ensure_system_uv() == "/fake/path/to/uv"
 
     def test_auto_install_succeeds_and_uv_appears_on_path(
@@ -344,7 +333,7 @@ class TestEnsureSystemUv:
     ) -> None:
         """pip install succeeds, then shutil.which finds the new uv."""
         which_results = iter([None, "/home/user/.venv/bin/uv"])
-        monkeypatch.setattr(_shutil, "which", lambda _: next(which_results))
+        monkeypatch.setattr(shutil, "which", lambda _: next(which_results))
 
         called: list[list[str]] = []
 
@@ -352,7 +341,7 @@ class TestEnsureSystemUv:
             called.append(cmd)
             return type("R", (), {"returncode": 0})()
 
-        monkeypatch.setattr(_subprocess, "run", _fake_run)
+        monkeypatch.setattr(subprocess, "run", _fake_run)
 
         result = _env.ensure_system_uv()
         assert result == "/home/user/.venv/bin/uv"
@@ -362,12 +351,12 @@ class TestEnsureSystemUv:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """pip install raises CalledProcessError → SystemExit with the docs URL."""
-        monkeypatch.setattr(_shutil, "which", lambda _: None)
+        monkeypatch.setattr(shutil, "which", lambda _: None)
 
         def _fake_run(cmd: list[str], **_kwargs: object) -> object:
-            raise _subprocess.CalledProcessError(returncode=1, cmd=cmd)
+            raise subprocess.CalledProcessError(returncode=1, cmd=cmd)
 
-        monkeypatch.setattr(_subprocess, "run", _fake_run)
+        monkeypatch.setattr(subprocess, "run", _fake_run)
 
         with pytest.raises(SystemExit) as exc_info:
             _env.ensure_system_uv()
@@ -380,12 +369,12 @@ class TestEnsureSystemUv:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """FileNotFoundError (pip itself absent) is handled the same way."""
-        monkeypatch.setattr(_shutil, "which", lambda _: None)
+        monkeypatch.setattr(shutil, "which", lambda _: None)
 
         def _fake_run(cmd: list[str], **_kwargs: object) -> object:
             raise FileNotFoundError("pip not found")
 
-        monkeypatch.setattr(_subprocess, "run", _fake_run)
+        monkeypatch.setattr(subprocess, "run", _fake_run)
 
         with pytest.raises(SystemExit) as exc_info:
             _env.ensure_system_uv()

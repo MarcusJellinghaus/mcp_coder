@@ -12,17 +12,13 @@ Scope: confirms the local+use_sync optimization (skipping
 final venv in the same shape ``uv sync`` would leave it in anyway, while
 the local, non-sync (editable) path -- which nothing reconciles against a
 lockfile -- still needs and keeps the bootstrapped pip/uv.
-
-Subprocess note: ``_env.subprocess`` is reached as a module attribute on
-purpose. The ``subprocess_isolation`` import-linter contract grants
-``tests.install`` no exemption, so a bare ``import subprocess`` here would
-break it.
 """
 
 from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +27,6 @@ import pytest
 from mcp_coder.install import InstallConfig, _env, install
 
 from .conftest import namespace as _base_namespace
-from .conftest import subprocess as _subprocess
 
 pytestmark = pytest.mark.install_integration
 
@@ -74,7 +69,7 @@ def _write_fixture_project(path: Path) -> None:
 
 def _import_value(py_v: Path) -> str:
     """Run `<py_v> -c "import <fixture>; print(VALUE)"` and return the output."""
-    result = _subprocess.run(
+    result = subprocess.run(
         [str(py_v), "-c", "import install_integration_fixture as m; print(m.VALUE)"],
         capture_output=True,
         text=True,

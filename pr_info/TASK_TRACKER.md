@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: Remove `tests/install` `_env` bypass; document remaining `subprocess` exceptions — [step_2.md](./steps/step_2.md)
-- [ ] Implementation: plain `import subprocess` / `import shutil` in `tests/install/conftest.py`, `test_install_integration.py`, `test_install_phases.py`; add `tests.install.** -> subprocess` and the reason comment block to `.importlinter`
-- [ ] Quality checks: lint-imports, pylint, pytest (fast suite + `install_integration`), mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: plain `import subprocess` / `import shutil` in `tests/install/conftest.py`, `test_install_integration.py`, `test_install_phases.py`; add `tests.install.** -> subprocess` and the reason comment block to `.importlinter`
+- [x] Quality checks: lint-imports, pylint, pytest (fast suite + `install_integration`), mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 - [ ] PR review: review full branch diff against `main`, address findings
