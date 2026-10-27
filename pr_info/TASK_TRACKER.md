@@ -52,9 +52,9 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: SHA-pin the non-generated workflows
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: pin all `uses:` in `ci.yml`, `upstream-compat-check.yml`, `publish.yml`; self-check all 40 `uses:` lines are pinned
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: pin all `uses:` in `ci.yml`, `upstream-compat-check.yml`, `publish.yml`; self-check all 40 `uses:` lines are pinned
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Signed release assets job
 See [step_6.md](./steps/step_6.md)
