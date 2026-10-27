@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move `TestSoftDeleteAndRetry` → `test_cleanup_retry.py`; drop the allowlist entry
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: move `TestSoftDeleteAndRetry` with `move_symbol` (keep method-local `helpers` imports), fix imports, remove `.large-files-allowlist` line
-- [ ] Quality checks: pylint, pytest, mypy (plus ruff, lint-imports, tach, vulture, check_file_size, collect counts 14/6/9/N) — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: move `TestSoftDeleteAndRetry` with `move_symbol` (keep method-local `helpers` imports), fix imports, remove `.large-files-allowlist` line
+- [x] Quality checks: pylint, pytest, mypy (plus ruff, lint-imports, tach, vulture, check_file_size, collect counts 14/6/9/N) — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
