@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Move `TestGetCacheRefreshMinutes` → `tests/utils/test_user_config_cache_refresh.py`
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: dry-run then move class to new file, set destination imports, drop unused import + stale docstring bullet in test_core.py, verify collect counts (test_core.py 45, new file 4)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: dry-run then move class to new file, set destination imports, drop unused import + stale docstring bullet in test_core.py, verify collect counts (test_core.py 45, new file 4)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Move cache classes → `tests/test_mcp_workspace_github_cache.py`
 See [step_3.md](./steps/step_3.md)
