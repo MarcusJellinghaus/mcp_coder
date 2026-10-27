@@ -50,6 +50,10 @@ typecheck = ["mypy>=1.13.0", "mcp-coder[types]"]
 
 # Test utilities - for local development (execution env already has pytest/mypy)
 test = [
+    # <9.2: under pytest 9.2.0 + pytest-xdist 3.8.0 the CI workers report the
+    # undeselected collection and gw1 finishes with work pending (xdist
+    # INTERNALERROR `assert not crashitem`) before any test runs.
+    "pytest<9.2",
     "pytest-asyncio",
     "pytest-xdist",
     "pytest-textual-snapshot>=1.0.0",
