@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: Write `quality-and-security-checks.md` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: create `docs/repository-setup/quality-and-security-checks.md` (facts re-verified on main; links and anchors checked by hand)
-- [ ] Quality checks: pylint, pytest, mypy, check_file_size — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `docs/repository-setup/quality-and-security-checks.md` (facts re-verified on main; links and anchors checked by hand)
+- [x] Quality checks: pylint, pytest, mypy, check_file_size — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Link the hub page from the existing docs — [step_2.md](./steps/step_2.md)
 
