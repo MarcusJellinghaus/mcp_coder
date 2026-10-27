@@ -245,6 +245,7 @@ The section is honoured only when the issue body is trusted:
 - **Untrusted → ignored entirely**: no value, no error, no Review Gate block. Tool output does not mention it; only a log line records it.
 - **Ref-name rule**: the value must be a valid git ref name ([`git check-ref-format`](https://git-scm.com/docs/git-check-ref-format)): no spaces or control characters; no `..`, `~`, `^`, `:`, `?`, `*`, `[`, `\`, `@{` or `//`; no leading `-` or `.`; no trailing `.`, `/` or `.lock`.
 - **Malformed** (multiple lines or an invalid ref name) in a trusted issue: mcp_coder commands ignore it silently, as if it were untrusted. Only mcp-workspace tools report it: the `check_branch_status` MALFORMED line / Review Gate, and `get_base_branch`.
+- **Workflows**: GitHub Actions that change labels apply the same trusted set; see [Label-Changing Workflows Must Gate on Author Trust](#label-changing-workflows-must-gate-on-author-trust).
 
 **Fallback** when there is no usable section (missing, empty, untrusted or malformed):
 
@@ -447,6 +448,14 @@ jobs:
 ```
 
 **Purpose:** Handles `/approve` comments to promote issues through workflow stages.
+
+### Label-Changing Workflows Must Gate on Author Trust
+
+Any workflow that changes labels on behalf of a comment or event author must gate on `author_association` (`OWNER`, `MEMBER`, `COLLABORATOR`), e.g.:
+
+`if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)`
+
+**Why:** GitHub restricts label edits to users with triage access or higher, but a workflow runs with `GITHUB_TOKEN` write access and bypasses that restriction. Without the gate, any GitHub user could move an issue through the bot pipeline. The generated `approve-command.yml` applies this gate.
 
 ### Installing Actions
 

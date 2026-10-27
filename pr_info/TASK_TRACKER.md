@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Document the label-workflow rule
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: "Label-Changing Workflows Must Gate on Author Trust" subsection + Trust and Validation bullet in `docs/repository-setup/github.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: "Label-Changing Workflows Must Gate on Author Trust" subsection + Trust and Validation bullet in `docs/repository-setup/github.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: `SECURITY.md` and shared-files table row
 See [step_4.md](./steps/step_4.md)
