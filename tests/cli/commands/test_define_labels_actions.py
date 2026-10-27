@@ -139,6 +139,22 @@ class TestGenerateApproveCommandYml:
         assert "issue_comment" in parsed[True]
         assert "handle-approve" in parsed["jobs"]
 
+    def test_multiple_promotions_valid_yaml(self) -> None:
+        """Status list stays inside the script block with several promotions."""
+        content = generate_approve_command_yml(
+            [
+                ("status-01:created", "status-02:awaiting-planning"),
+                ("status-04:plan-review", "status-05:plan-ready"),
+                ("status-07:code-review", "status-08:ready-pr"),
+            ]
+        )
+        parsed = yaml.safe_load(content)
+        assert parsed["name"] == "Approve Command"
+        assert (
+            "statuses:\\n- \\`status-01:created\\`\\n- \\`status-04:plan-review\\`"
+            in content
+        )
+
     def test_empty_promotions(self) -> None:
         """Works with empty promotions list."""
         content = generate_approve_command_yml([])

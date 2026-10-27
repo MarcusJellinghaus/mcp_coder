@@ -72,7 +72,8 @@ def generate_approve_command_yml(
     promotions_block = "\n".join(promotion_lines)
 
     # Build the status list for the error message
-    status_list = "\n".join(f"- \\`{current}\\`" for current, _ in promotions)
+    # Join with a JS "\n" escape: a real newline would break the YAML block
+    status_list = "\\n".join(f"- \\`{current}\\`" for current, _ in promotions)
 
     return f"""name: Approve Command
 
