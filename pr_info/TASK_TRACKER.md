@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Move cache classes → `tests/test_mcp_workspace_github_cache.py`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: dry-run then move `TestCacheFilePath`, `TestCacheFileOperations`, `TestStalenessLogging` in one call, verify method-local `RepoIdentifier` imports, set destination imports, drop unused imports + 2 stale bullets in test_core.py, verify collect counts (test_core.py 37, new file 8)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: dry-run then move `TestCacheFilePath`, `TestCacheFileOperations`, `TestStalenessLogging` in one call, verify method-local `RepoIdentifier` imports, set destination imports, drop unused imports + 2 stale bullets in test_core.py, verify collect counts (test_core.py 37, new file 8)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Move eligibility classes → `test_core_eligibility.py`
 See [step_4.md](./steps/step_4.md)
