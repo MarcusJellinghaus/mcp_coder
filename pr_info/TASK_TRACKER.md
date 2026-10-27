@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: Add `make_sample_assessment` and use it in explain and types tests
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: add `make_sample_assessment` to `conftest.py`; replace local builders in `test_explain.py` and `test_types.py` (use `make_signals` / `make_sample_assessment`); ruff fix F401 and verify `types` imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues (collect-only and pass counts unchanged)
-- [ ] Commit message prepared
+- [x] Implementation: add `make_sample_assessment` to `conftest.py`; replace local builders in `test_explain.py` and `test_types.py` (use `make_signals` / `make_sample_assessment`); ruff fix F401 and verify `types` imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (collect-only and pass counts unchanged)
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -127,6 +127,33 @@ def make_assessment(
     )
 
 
+def make_sample_assessment(folder: str = "/path/to/folder") -> SessionAssessment:
+    """A rich, active sample assessment for serializer and explain output tests."""
+    return SessionAssessment(
+        folder=folder,
+        signals=make_signals(
+            title_match=True, pid_alive=True, found_pid=1234, age_seconds=12.5
+        ),
+        verdict=LivenessVerdict(active=True, rule=LivenessRule.TITLE),
+        issue_state=IssueState(
+            is_open=True,
+            is_stale=False,
+            is_blocked=False,
+            is_unassigned=False,
+            is_eligible=True,
+            stale_target=None,
+        ),
+        transition=Transition(flipped_to_inactive=False),
+        decision=Decision(
+            action=SessionAction.KEEP_ACTIVE,
+            reason="vscode running",
+            destructive=False,
+        ),
+        pid_needs_refresh=False,
+        found_pid=1234,
+    )
+
+
 def make_issue_facts(
     *,
     is_closed: bool = False,
