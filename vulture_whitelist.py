@@ -498,3 +498,8 @@ _._no_allowlist
 # tests/workflows/vscodeclaude/test_status_note.py - autouse fixture stubbing
 # get_trusted_commenters so tests never read the user's trusted_commenters config.
 _._empty_allowlist
+
+# tests/tools/test_jenkins_builds.py and test_jenkins_download_logs.py - fixtures
+# registered via @pytest.fixture(name="client") and injected by pytest, so
+# vulture sees no call site.
+_.fixture_client

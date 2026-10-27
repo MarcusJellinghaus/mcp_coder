@@ -38,6 +38,8 @@ See [`tools/mlflow/README.md`](../../tools/mlflow/README.md) for the full list.
 | `tools/reinstall_local.bat`, `tools/reinstall_local.sh` | Editable dev reinstall via `mcp-coder install` |
 | `tools/read_github_deps.py` | Read GitHub dependency info (still used by CI workflows) |
 | `tools/safe_delete_folder.py` | Safe folder deletion helper |
+| `tools/jenkins_builds.py` (+ `.bat` / `.sh`) | List recent Jenkins builds with time, status, folder, job and build number |
+| `tools/jenkins_download_logs.py` (+ `.bat` / `.sh`) | Download console logs of recent Jenkins builds (default: failure, aborted, unstable) |
 | `tools/__init__.py` | Makes `tools/` an importable Python package |
 
 ## Internal CI Workflows

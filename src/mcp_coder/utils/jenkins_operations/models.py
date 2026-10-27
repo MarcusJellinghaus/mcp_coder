@@ -1,7 +1,7 @@
 """Data models for Jenkins job operations.
 
-This module provides dataclasses for representing Jenkins job status
-and queue information.
+This module provides dataclasses for representing Jenkins job status,
+queue information and recent builds (BuildInfo).
 
 Example:
     >>> status = JobStatus(status="SUCCESS", build_number=42,
@@ -15,6 +15,7 @@ Example:
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass
@@ -106,3 +107,28 @@ class QueueSummary:
         running_text = f"{self.running} job{'s' if self.running != 1 else ''} running"
         queued_text = f"{self.queued} job{'s' if self.queued != 1 else ''} queued"
         return f"{running_text}, {queued_text}"
+
+
+@dataclass(frozen=True)
+class BuildInfo:
+    """A single Jenkins build, as listed across jobs.
+
+    Attributes:
+        job_path: Jenkins fullName, e.g. "Windows-Agents/CD/Rebuild-mcp-coder-dev"
+        folder: Full folder path from the root, "" at top level
+        job_name: Last path segment (multibranch branch names stay URL-encoded)
+        number: Build number
+        status: One of builds.VALID_STATUSES
+        timestamp: Build start time, timezone-aware UTC
+        duration_ms: Duration in milliseconds (None while running or unknown)
+        url: Jenkins build URL
+    """
+
+    job_path: str
+    folder: str
+    job_name: str
+    number: int
+    status: str
+    timestamp: datetime
+    duration_ms: int | None
+    url: str

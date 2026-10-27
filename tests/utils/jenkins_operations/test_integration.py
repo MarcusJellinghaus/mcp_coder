@@ -19,97 +19,21 @@ Configuration:
 
 Note:
     Tests will be skipped if configuration is missing.
-    Tests DO NOT wait for job completion (just verify API calls work).
+    The job lifecycle test does not wait for job completion. The started-build
+    test waits up to POLL_TIMEOUT_S (120 s) for the build to finish.
 """
 
-import os
-from collections.abc import Generator
-from typing import Any, cast
+import time
+import uuid
 
 import pytest
 
-from mcp_coder.utils.jenkins_operations.client import JenkinsClient
-from mcp_coder.utils.jenkins_operations.models import JobStatus
+from mcp_coder.utils.jenkins_operations.builds import VALID_STATUSES
+from mcp_coder.utils.jenkins_operations.client import JenkinsClient, JenkinsError
+from mcp_coder.utils.jenkins_operations.models import BuildInfo, JobStatus
 
-
-@pytest.fixture
-def jenkins_test_setup() -> Generator[dict[str, str], None, None]:
-    """Provide Jenkins test configuration.
-
-    Configuration sources (in priority order):
-    1. Environment variables
-    2. Config file
-    3. Skip test if neither configured
-
-    Yields:
-        Dict with server_url, username, api_token, test_job
-
-    Raises:
-        pytest.skip: If required configuration missing
-    """
-    from mcp_coder.utils.user_config import get_config_values
-
-    # Check environment variables first
-    server_url = os.getenv("JENKINS_URL")
-    username = os.getenv("JENKINS_USER")
-    api_token = os.getenv("JENKINS_TOKEN")
-    test_job = os.getenv("JENKINS_TEST_JOB")
-
-    # Get any missing values from config file in one batch
-    missing_keys: list[tuple[str, str, str | None]] = []
-    if not server_url:
-        missing_keys.append(("jenkins", "server_url", None))
-    if not username:
-        missing_keys.append(("jenkins", "username", None))
-    if not api_token:
-        missing_keys.append(("jenkins", "api_token", None))
-    if not test_job:
-        missing_keys.append(("jenkins", "test_job", None))
-
-    if missing_keys:
-        config: dict[tuple[str, str], str | bool | int | list[Any] | None] = (
-            get_config_values(missing_keys)
-        )
-        if not server_url:
-            server_url = cast("str | None", config[("jenkins", "server_url")])
-        if not username:
-            username = cast("str | None", config[("jenkins", "username")])
-        if not api_token:
-            api_token = cast("str | None", config[("jenkins", "api_token")])
-        if not test_job:
-            test_job = cast("str | None", config[("jenkins", "test_job")])
-
-    # Check required configuration and skip if missing
-    if not server_url or not username or not api_token or not test_job:
-        pytest.skip(
-            "Jenkins not configured. Set JENKINS_URL, JENKINS_USER, JENKINS_TOKEN, JENKINS_TEST_JOB "
-            "environment variables or configure in ~/.mcp_coder/config.toml [jenkins] section (including test_job)."
-        )
-
-    setup = {
-        "server_url": server_url,
-        "username": username,
-        "api_token": api_token,
-        "test_job": test_job,
-    }
-    yield setup
-
-
-@pytest.fixture
-def jenkins_client(jenkins_test_setup: dict[str, str]) -> JenkinsClient:
-    """Create JenkinsClient instance for testing.
-
-    Args:
-        jenkins_test_setup: Jenkins configuration from fixture
-
-    Returns:
-        Configured JenkinsClient instance
-    """
-    return JenkinsClient(
-        server_url=jenkins_test_setup["server_url"],
-        username=jenkins_test_setup["username"],
-        api_token=jenkins_test_setup["api_token"],
-    )
+POLL_INTERVAL_S = 2
+POLL_TIMEOUT_S = 120
 
 
 @pytest.mark.jenkins_integration
@@ -149,3 +73,58 @@ class TestJenkinsIntegration:
             "UNSTABLE",
         ], f"Unexpected status: {status.status}"
         print(f"[OK] Job status: {status}")
+
+    def test_get_recent_builds_returns_sorted_build_infos(
+        self, jenkins_client: JenkinsClient
+    ) -> None:
+        """Recent builds are BuildInfo objects with valid statuses, newest first."""
+        builds = jenkins_client.get_recent_builds(limit=5)
+
+        assert len(builds) <= 5
+        assert all(isinstance(b, BuildInfo) for b in builds)
+        assert all(b.status in VALID_STATUSES for b in builds)
+        timestamps = [b.timestamp for b in builds]
+        assert timestamps == sorted(timestamps, reverse=True)
+
+    def test_started_build_appears_with_console_output(
+        self, jenkins_client: JenkinsClient, jenkins_test_setup: dict[str, str]
+    ) -> None:
+        """A finished build is listed and its console output can be fetched."""
+        test_job = jenkins_test_setup["test_job"]
+
+        queue_id = jenkins_client.start_job(test_job)
+        deadline = time.monotonic() + POLL_TIMEOUT_S
+        status = jenkins_client.get_job_status(queue_id)
+        while status.status in ("queued", "running"):
+            if time.monotonic() > deadline:
+                pytest.fail(
+                    f"Build did not finish within {POLL_TIMEOUT_S}s; "
+                    f"last status: {status}"
+                )
+            time.sleep(POLL_INTERVAL_S)
+            status = jenkins_client.get_job_status(queue_id)
+
+        parent = test_job.rpartition("/")[0] or None
+        # Top level scans the whole server, so allow a wider window.
+        limit = 100 if parent else 500
+        match = next(
+            (
+                b
+                for b in jenkins_client.get_recent_builds(limit=limit, folder=parent)
+                if b.job_path == test_job and b.number == status.build_number
+            ),
+            None,
+        )
+
+        assert match is not None, f"Build {status} not found in recent builds"
+        assert match.status not in ("running", "unknown")
+        assert jenkins_client.get_console_output(match.job_path, match.number).strip()
+
+    def test_missing_folder_raises_jenkins_error(
+        self, jenkins_client: JenkinsClient
+    ) -> None:
+        """Listing builds in a folder that does not exist raises JenkinsError."""
+        with pytest.raises(JenkinsError):
+            jenkins_client.get_recent_builds(
+                folder=f"mcp-coder-missing-{uuid.uuid4().hex}"
+            )
