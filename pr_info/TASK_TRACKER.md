@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Move `TestCommandTemplates` → `test_command_templates.py`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: precondition + baseline counts, dry-run then move class, fix imports in both files, verify collect counts (test_core.py 49, test_command_templates.py 32)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: precondition + baseline counts, dry-run then move class, fix imports in both files, verify collect counts (test_core.py 49, test_command_templates.py 32)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Move `TestGetCacheRefreshMinutes` → `tests/utils/test_user_config_cache_refresh.py`
 See [step_2.md](./steps/step_2.md)
