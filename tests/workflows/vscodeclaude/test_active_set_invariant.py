@@ -22,16 +22,10 @@ from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
     execute_coordinator_vscodeclaude_status,
 )
 from mcp_coder.workflows.vscodeclaude.types import (
-    Decision,
-    DetectionSignals,
-    IssueState,
-    LivenessRule,
-    LivenessVerdict,
     SessionAction,
-    SessionAssessment,
-    Transition,
     VSCodeClaudeSession,
 )
+from tests.workflows.vscodeclaude.conftest import make_assessment
 
 
 def _build_sessions(tmp_path: Path, count: int) -> list[VSCodeClaudeSession]:
@@ -57,36 +51,6 @@ def _build_sessions(tmp_path: Path, count: int) -> list[VSCodeClaudeSession]:
     return sessions
 
 
-def _assessment(folder: str, *, active: bool = False) -> SessionAssessment:
-    """Build a minimal SessionAssessment for the active_set projection."""
-    rule = LivenessRule.TITLE if active else LivenessRule.NO_MATCH
-    return SessionAssessment(
-        folder=folder,
-        signals=DetectionSignals(
-            folder_exists=True,
-            title_match=active,
-            cmdline_match=False,
-            pid_alive=False,
-            found_pid=None,
-            age_seconds=0.0,
-            within_grace=False,
-            directory_empty=False,
-        ),
-        verdict=LivenessVerdict(active=active, rule=rule),
-        issue_state=IssueState(
-            is_open=True,
-            is_stale=False,
-            is_blocked=False,
-            is_unassigned=False,
-            is_eligible=True,
-        ),
-        transition=Transition(flipped_to_inactive=False),
-        decision=Decision(action=SessionAction.SKIP, reason="", destructive=False),
-        pid_needs_refresh=False,
-        found_pid=None,
-    )
-
-
 def _patch_common(
     monkeypatch: pytest.MonkeyPatch,
     sessions: list[VSCodeClaudeSession],
@@ -102,7 +66,8 @@ def _patch_common(
     # One assessment per session at command entry (the read-only build).
     build_mock = Mock(
         side_effect=lambda sess, cached=None: {
-            s["folder"]: _assessment(s["folder"]) for s in sess
+            s["folder"]: make_assessment(s["folder"], action=SessionAction.SKIP)
+            for s in sess
         }
     )
     monkeypatch.setattr(

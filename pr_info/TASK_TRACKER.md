@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Replace the SKIP-action copies with `make_assessment(..., action=SKIP)`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: delete local builders in `test_sessions.py` and `test_active_set_invariant.py`; call `make_assessment(..., action=SessionAction.SKIP)`; ruff fix F401 and verify `types` imports
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues (collect-only and pass counts unchanged)
-- [ ] Commit message prepared
+- [x] Implementation: delete local builders in `test_sessions.py` and `test_active_set_invariant.py`; call `make_assessment(..., action=SessionAction.SKIP)`; ruff fix F401 and verify `types` imports
+- [x] Quality checks: pylint, pytest, mypy — fix all issues (collect-only and pass counts unchanged)
+- [x] Commit message prepared
 
 ### Step 4: Add `make_sample_assessment` and use it in explain and types tests
 See [step_4.md](./steps/step_4.md)
