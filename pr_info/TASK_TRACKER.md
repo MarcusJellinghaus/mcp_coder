@@ -58,5 +58,5 @@ See [step_5.md](./steps/step_5.md)
 
 ## Pull Request
 
-- [ ] PR review: review full diff against base branch — only moved blocks, import changes, new-file headers, deleted docstring bullets, allowlist line
+- [x] PR review: review full diff against base branch — only moved blocks, import changes, new-file headers, deleted docstring bullets, allowlist line
 - [ ] PR summary prepared
