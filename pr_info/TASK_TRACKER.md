@@ -52,9 +52,9 @@ See [step_4.md](./steps/step_4.md)
 ### Step 5: `jenkins_builds` tool, wrappers and tests
 See [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: `tests/tools/test_jenkins_builds.py`, `tools/jenkins_builds.py`, `.bat`, `.sh` (replace placeholder)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `tests/tools/test_jenkins_builds.py`, `tools/jenkins_builds.py`, `.bat`, `.sh` (replace placeholder)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: `jenkins_download_logs` tool, wrappers and tests
 See [step_6.md](./steps/step_6.md)
