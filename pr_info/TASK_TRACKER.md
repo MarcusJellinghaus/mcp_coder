@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: `SECURITY.md` and shared-files table row
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: create `SECURITY.md`, add row to `docs/repository-setup/README.md` shared-files table
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: create `SECURITY.md`, add row to `docs/repository-setup/README.md` shared-files table
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: SHA-pin the non-generated workflows
 See [step_5.md](./steps/step_5.md)
