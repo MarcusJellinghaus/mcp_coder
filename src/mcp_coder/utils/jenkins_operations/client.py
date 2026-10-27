@@ -494,7 +494,7 @@ class JenkinsClient:
             ValueError: If a status is unknown (before any request is sent).
             JenkinsError: For any Jenkins or transport failure, including a
                 missing folder.
-        """
+        """  # noqa: DOC502 - ValueError raised by validate_statuses, part of the contract
         validate_statuses(statuses)
         # Unencoded on purpose: get_info applies quote() to item itself.
         item = (

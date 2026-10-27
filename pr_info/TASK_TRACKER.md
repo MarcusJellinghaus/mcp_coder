@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Move Jenkins integration fixtures to `integration_fixtures.py`
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: new `integration_fixtures.py`, fixtures removed from `test_integration.py`, re-exported in `conftest.py`
-- [ ] Quality checks: pylint, pytest (incl. `jenkins_integration`), mypy, ruff — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: new `integration_fixtures.py`, fixtures removed from `test_integration.py`, re-exported in `conftest.py`
+- [x] Quality checks: pylint, pytest (incl. `jenkins_integration`), mypy, ruff — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Integration tests for `get_recent_builds` / `get_console_output`
 See [step_4.md](./steps/step_4.md)

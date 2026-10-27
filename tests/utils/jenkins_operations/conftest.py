@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+from .integration_fixtures import jenkins_client as jenkins_client
+from .integration_fixtures import jenkins_test_setup as jenkins_test_setup
+
 # Add src directory to Python path to ensure jenkins_operations module can be imported
 # This is needed when the package editable install hasn't picked up new modules yet
 project_root = Path(__file__).parent.parent.parent.parent

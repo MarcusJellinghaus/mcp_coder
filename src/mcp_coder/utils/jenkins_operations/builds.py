@@ -10,7 +10,7 @@ MAX_DEPTH (counting folders and multibranch projects) are not reported.
 
 import re
 from collections.abc import Collection, Iterable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from .models import BuildInfo
@@ -98,9 +98,7 @@ def flatten_builds(tree: dict[str, Any]) -> list[BuildInfo]:
                     job_name=job_name,
                     number=build["number"],
                     status=status,
-                    timestamp=datetime.fromtimestamp(
-                        build["timestamp"] / 1000, tz=timezone.utc
-                    ),
+                    timestamp=datetime.fromtimestamp(build["timestamp"] / 1000, tz=UTC),
                     duration_ms=(
                         None
                         if status in ("running", "unknown")

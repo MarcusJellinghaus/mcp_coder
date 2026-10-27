@@ -1,6 +1,6 @@
 """Tests for the pure build functions in jenkins_operations.builds (no mocks)."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -50,7 +50,7 @@ def _info(job_path: str, number: int, status: str, ts_seconds: int) -> BuildInfo
         job_name=job_name,
         number=number,
         status=status,
-        timestamp=datetime.fromtimestamp(ts_seconds, tz=timezone.utc),
+        timestamp=datetime.fromtimestamp(ts_seconds, tz=UTC),
         duration_ms=1000,
         url=f"{BASE}/{job_path}/{number}/",
     )
@@ -220,7 +220,7 @@ class TestFlattenBuilds:
         ts = flatten_builds(tree)[0].timestamp
         assert ts.tzinfo is not None
         assert ts.utcoffset() is not None
-        assert ts == datetime.fromtimestamp(1_700_000_000, tz=timezone.utc)
+        assert ts == datetime.fromtimestamp(1_700_000_000, tz=UTC)
 
     def test_duration_none_for_running_and_unknown(self) -> None:
         tree = {
