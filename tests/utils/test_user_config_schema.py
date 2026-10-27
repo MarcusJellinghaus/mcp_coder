@@ -209,6 +209,12 @@ class TestConfigSchema:
         """github.token maps to GITHUB_TOKEN."""
         assert _CONFIG_SCHEMA["github"]["token"].env_var == "GITHUB_TOKEN"
 
+    def test_schema_github_trusted_commenters(self) -> None:
+        """github.trusted_commenters is a list with no env var override."""
+        field = _CONFIG_SCHEMA["github"]["trusted_commenters"]
+        assert field.field_type is list
+        assert field.env_var is None
+
     def test_schema_langchain_env_vars(self) -> None:
         """llm.langchain fields have correct env var mappings."""
         lc = _CONFIG_SCHEMA["llm.langchain"]

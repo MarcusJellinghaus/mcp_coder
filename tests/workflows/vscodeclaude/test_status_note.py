@@ -10,15 +10,30 @@ from mcp_coder.workflows.vscodeclaude.workspace import (
 )
 
 
-def _comment(body: str) -> CommentData:
+def _comment(
+    body: str, user: str | None = "owner", author_association: str | None = "OWNER"
+) -> CommentData:
     return CommentData(
         id=1,
         body=body,
-        user=None,
+        user=user,
         created_at=None,
         updated_at=None,
         url="",
-        author_association=None,
+        author_association=author_association,
+    )
+
+
+def _untrusted(body: str) -> CommentData:
+    return _comment(body, user="stranger", author_association="NONE")
+
+
+@pytest.fixture(autouse=True)
+def _empty_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep tests from reading the developer's trusted_commenters config."""
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.workspace.get_trusted_commenters",
+        frozenset,
     )
 
 
@@ -32,7 +47,10 @@ class TestFindMarkedComment:
             _comment("second"),
             _comment("## ❌ Implementation Failed\ndetails"),
         ]
-        assert _find_marked_comment(comments) == "## ❌ Implementation Failed\ndetails"
+        assert (
+            _find_marked_comment(comments, frozenset())
+            == "## ❌ Implementation Failed\ndetails"
+        )
 
     def test_scans_backwards_past_unmarked_comment(self) -> None:
         """An unmarked human reply after the marked comment is skipped."""
@@ -40,27 +58,57 @@ class TestFindMarkedComment:
             _comment("## ❌ Implementation Failed\ndetails"),
             _comment("human reply"),
         ]
-        assert _find_marked_comment(comments) == "## ❌ Implementation Failed\ndetails"
+        assert (
+            _find_marked_comment(comments, frozenset())
+            == "## ❌ Implementation Failed\ndetails"
+        )
 
     def test_none_marked_returns_none(self) -> None:
         """No marker in the window yields None."""
         comments = [_comment("first"), _comment("second"), _comment("third")]
-        assert _find_marked_comment(comments) is None
+        assert _find_marked_comment(comments, frozenset()) is None
 
     def test_fewer_than_window_comments_no_index_error(self) -> None:
         """A single comment is scanned without an index error."""
         comments = [_comment("## ❌ Implementation Failed\ndetails")]
-        assert _find_marked_comment(comments) == "## ❌ Implementation Failed\ndetails"
+        assert (
+            _find_marked_comment(comments, frozenset())
+            == "## ❌ Implementation Failed\ndetails"
+        )
 
     def test_marker_on_second_line_not_matched(self) -> None:
         """A marker outside the first line of the body is not matched."""
         comments = [_comment("Implementation Failed\n❌ details")]
-        assert _find_marked_comment(comments) is None
+        assert _find_marked_comment(comments, frozenset()) is None
 
     def test_empty_body_in_window_no_crash(self) -> None:
         """An empty body is treated as unmarked, not a crash."""
         comments = [_comment(""), _comment("second")]
-        assert _find_marked_comment(comments) is None
+        assert _find_marked_comment(comments, frozenset()) is None
+
+    def test_untrusted_marked_comment_ignored(self) -> None:
+        """A ❌ comment from an untrusted author is not returned."""
+        comments = [_untrusted("## ❌ Implementation Failed\nfake")]
+        assert _find_marked_comment(comments, frozenset()) is None
+
+    def test_owner_marked_comment_returned(self) -> None:
+        """A ❌ comment from the repo owner is returned."""
+        body = "## ❌ Implementation Failed\ndetails"
+        comments = [_comment(body, user="owner", author_association="OWNER")]
+        assert _find_marked_comment(comments, frozenset()) == body
+
+    def test_untrusted_comments_do_not_push_owner_note_out_of_window(
+        self,
+    ) -> None:
+        """Untrusted comments are dropped before the window is applied."""
+        body = "## ❌ Implementation Failed\ndetails"
+        comments = [
+            _comment(body),
+            _untrusted("spam 1"),
+            _untrusted("spam 2"),
+            _untrusted("spam 3"),
+        ]
+        assert _find_marked_comment(comments, frozenset()) == body
 
 
 class TestCreateStatusFileNote:
@@ -179,6 +227,37 @@ class TestCreateStatusFileNote:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.workspace.IssueManager",
             FakeIssueManager,
+        )
+
+        content = self._create(tmp_path)
+
+        assert "❌ Last automated note:" in content
+        assert marked_body in content
+
+    def test_allowlisted_commenter_passed_through(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_vscodeclaude_config: None,
+    ) -> None:
+        """_fetch_marked_comment passes the configured allowlist through."""
+        marked_body = "## ❌ Implementation Failed\nfrom friend"
+        comments = [_comment(marked_body, user="friend", author_association="NONE")]
+
+        class FakeIssueManager:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            def get_comments(self, issue_number: int) -> list[CommentData]:
+                return comments
+
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.IssueManager",
+            FakeIssueManager,
+        )
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.workspace.get_trusted_commenters",
+            lambda: frozenset({"friend"}),
         )
 
         content = self._create(tmp_path)

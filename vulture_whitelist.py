@@ -489,3 +489,12 @@ _._require_system_uv
 # tests/cli/commands/coordinator/test_vscodeclaude_cli.py - autouse fixture
 # stubbing check_pr_health so CLI handler tests never run real PR-health checks.
 _._no_pr_health
+
+# tests/workflows/vscodeclaude/test_checks_review_comments.py and
+# test_checks_review_comments_trust.py - autouse fixture stubbing
+# get_trusted_commenters so tests never read the user's trusted_commenters config.
+_._no_allowlist
+
+# tests/workflows/vscodeclaude/test_status_note.py - autouse fixture stubbing
+# get_trusted_commenters so tests never read the user's trusted_commenters config.
+_._empty_allowlist

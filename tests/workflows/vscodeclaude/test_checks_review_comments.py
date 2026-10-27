@@ -1,113 +1,36 @@
 """Tests for review-comment detection in checks.py."""
 
-from typing import Any, cast
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import (
-    ChangesRequestedData,
-    ConversationCommentData,
-    EventData,
-    IssueData,
-    PullRequestData,
-)
+from mcp_coder.mcp_workspace_github import EventData, IssueData, PullRequestData
 from mcp_coder.workflows.vscodeclaude.checks import (
     _check_review_comments,
     _review_comments_watermark,
 )
-from tests.github_factories import make_issue_data
-
-REVIEW_LABEL = "status-91:pr-review-comments"
-CREATED_LABEL = "status-10:pr-created"
-PR = cast(PullRequestData, {"number": 1})
-
-BEFORE_WATERMARK = "2024-01-15T00:00:00+00:00"
-AFTER_WATERMARK = "2024-07-01T00:00:00+00:00"
-
-
-def _labeled(label: str, created_at: str) -> EventData:
-    return {
-        "event": "labeled",
-        "label": label,
-        "created_at": created_at,
-        "actor": "someone",
-    }
-
-
-def _review(submitted_at: str | None, body: str = "please fix") -> ChangesRequestedData:
-    return {
-        "author": "reviewer",
-        "body": body,
-        "submitted_at": submitted_at,
-        "author_association": "MEMBER",
-    }
+from tests.workflows.vscodeclaude._review_comments_helpers import (
+    AFTER_WATERMARK,
+    BEFORE_WATERMARK,
+    CHECKS,
+    CREATED_LABEL,
+    MOCK_REVIEW_LABELS_CONFIG,
+    PR,
+    REVIEW_LABEL,
+    WATERMARK_EVENTS,
+    _comment,
+    _empty_pr_feedback,
+    _labeled,
+    _make_issue,
+    _review,
+    _thread,
+)
 
 
-def _comment(
-    created_at: str | None, body: str = "y", comment_id: int = 1
-) -> ConversationCommentData:
-    return {
-        "author": "reviewer",
-        "body": body,
-        "id": comment_id,
-        "created_at": created_at,
-        "author_association": "MEMBER",
-    }
-
-
-# Watermark = 2024-06-01 (status-10 relabel after the last status-91).
-WATERMARK_EVENTS: list[EventData] = [
-    _labeled(CREATED_LABEL, "2024-01-01T00:00:00+00:00"),
-    _labeled(REVIEW_LABEL, "2024-03-01T00:00:00+00:00"),
-    _labeled(CREATED_LABEL, "2024-06-01T00:00:00+00:00"),
-]
-
-
-def _empty_pr_feedback(**overrides: Any) -> dict[str, Any]:
-    feedback: dict[str, Any] = {
-        "unresolved_threads": [],
-        "resolved_thread_count": 0,
-        "changes_requested": [],
-        "conversation_comments": [],
-        "alerts": [],
-        "unavailable": {},
-    }
-    feedback.update(overrides)
-    return feedback
-
-
-def _make_issue(number: int) -> IssueData:
-    return make_issue_data(
-        number=number,
-        title="PR Created Issue",
-        labels=["status-10:pr-created"],
-        assignees=["testuser"],
-    )
-
-
-MOCK_REVIEW_LABELS_CONFIG: dict[str, Any] = {
-    "workflow_labels": [
-        {
-            "internal_id": "pr_created",
-            "name": "status-10:pr-created",
-            "color": "8b5cf6",
-            "description": "Pull request created, awaiting approval/merge",
-            "category": "human_action",
-        },
-        {
-            "internal_id": "pr_review_comments",
-            "name": "status-91:pr-review-comments",
-            "color": "b60205",
-            "description": (
-                "PR has new review comments, unresolved threads, or a "
-                "changes-requested review"
-            ),
-            "category": "human_action",
-        },
-    ],
-    "ignore_labels": [],
-}
+@pytest.fixture(autouse=True)
+def _no_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(f"{CHECKS}.get_trusted_commenters", frozenset)
 
 
 class TestReviewCommentsWatermark:
@@ -188,16 +111,22 @@ class TestCheckReviewComments:
         return pr_manager
 
     def _call(
-        self, issue: IssueData, pr_manager: MagicMock, issue_manager: MagicMock
+        self,
+        issue: IssueData,
+        pr_manager: MagicMock,
+        issue_manager: MagicMock,
+        trusted: frozenset[str] = frozenset(),
+        pr: PullRequestData | None = None,
     ) -> bool:
         return _check_review_comments(
             issue,
-            PR,
+            pr or PR,
             pr_manager,
             issue_manager,
             "test-repo",
             REVIEW_LABEL,
             CREATED_LABEL,
+            trusted,
         )
 
     def test_unresolved_thread_escalates(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -205,7 +134,7 @@ class TestCheckReviewComments:
         issue_manager = self._issue_manager(monkeypatch)
         pr_manager = self._pr_manager(
             _empty_pr_feedback(
-                unresolved_threads=[{"body": "fix this"}],
+                unresolved_threads=[_thread()],
                 conversation_comments=[_comment(BEFORE_WATERMARK)],
             )
         )

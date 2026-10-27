@@ -88,13 +88,13 @@ def _make_pr(number: int = 1, mergeable_state: str = "clean") -> PullRequestData
         "url": f"https://github.com/owner/repo/pull/{number}",
         "created_at": None,
         "updated_at": None,
-        "user": None,
+        "user": "owner",
         "mergeable": None,
         "mergeable_state": mergeable_state,
         "merged": False,
         "draft": False,
         "assignees": [],
-        "author_association": None,
+        "author_association": "OWNER",
     }
 
 
@@ -119,9 +119,7 @@ def _default_mocks() -> tuple[MagicMock, MagicMock, MagicMock, MagicMock]:
     ci_manager = MagicMock()
     ci_manager.get_latest_ci_status.return_value = {"run": {}, "jobs": []}
     pr_manager = MagicMock()
-    pr_manager.find_pull_request_by_head.return_value = [
-        {"number": 1, "mergeable_state": "clean"}
-    ]
+    pr_manager.find_pull_request_by_head.return_value = [_make_pr()]
     pr_manager.get_pr_feedback.return_value = _empty_feedback()
     return issue_manager, branch_manager, ci_manager, pr_manager
 
@@ -134,8 +132,15 @@ def _patch_env(
     ci_manager: MagicMock,
     pr_manager: MagicMock,
     labels_config: dict[str, Any] | None = None,
-) -> None:
+) -> MagicMock:
+    """Patch the managers and config lookups.
+
+    Returns:
+        The ``get_trusted_commenters`` mock (returns an empty allowlist).
+    """
     config = MOCK_CI_LABELS_CONFIG if labels_config is None else labels_config
+    get_trusted = MagicMock(return_value=frozenset())
+    monkeypatch.setattr(f"{CHECKS}.get_trusted_commenters", get_trusted)
     monkeypatch.setattr(f"{CHECKS}.IssueManager", lambda **kw: issue_manager)
     monkeypatch.setattr(f"{CHECKS}.IssueBranchManager", lambda **kw: branch_manager)
     monkeypatch.setattr(f"{CHECKS}.CIResultsManager", lambda **kw: ci_manager)
@@ -148,6 +153,7 @@ def _patch_env(
         "mcp_coder.workflow_utils.label_transitions.load_labels_config",
         lambda *a, **k: config,
     )
+    return get_trusted
 
 
 def _setup(
@@ -178,7 +184,7 @@ class TestCheckPrHealth:
         """A status-10 issue whose PR is dirty gets escalated to status-71."""
         issue_manager, _, _, pr_manager = _setup(monkeypatch)
         pr_manager.find_pull_request_by_head.return_value = [
-            {"number": 1, "mergeable_state": "dirty"}
+            _make_pr(mergeable_state="dirty")
         ]
 
         _run(_make_pr_issue(999))
@@ -254,7 +260,7 @@ class TestCheckPrHealth:
         """A dirty PR never reaches the CI check or the review-comments check."""
         _, _, ci_manager, pr_manager = _setup(monkeypatch)
         pr_manager.find_pull_request_by_head.return_value = [
-            {"number": 1, "mergeable_state": "dirty"}
+            _make_pr(mergeable_state="dirty")
         ]
 
         _run(_make_pr_issue(990))
@@ -349,6 +355,26 @@ class TestCheckPrHealth:
         branch_manager.get_branch_with_pr_fallback.assert_called_once()
         pr_manager.find_pull_request_by_head.assert_called_once()
 
+    def test_trusted_commenters_read_once_per_poll(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The allowlist is read once per check_pr_health call, not per issue."""
+        issue_manager, branch_manager, ci_manager, pr_manager = _default_mocks()
+        get_trusted = _patch_env(
+            monkeypatch,
+            issue_manager=issue_manager,
+            branch_manager=branch_manager,
+            ci_manager=ci_manager,
+            pr_manager=pr_manager,
+        )
+
+        check_pr_health(
+            "test-repo", REPO_CONFIG, [_make_pr_issue(984), _make_pr_issue(985)]
+        )
+
+        get_trusted.assert_called_once_with()
+        assert pr_manager.get_pr_feedback.call_count == 2
+
 
 class TestResolvePrTarget:
     """Tests for _resolve_pr_target()."""
@@ -418,11 +444,8 @@ class TestResolvePrTarget:
         branch_manager = MagicMock()
         branch_manager.get_branch_with_pr_fallback.return_value = "5-fix"
         pr_manager = MagicMock()
-        first = {"number": 7, "mergeable_state": "clean"}
-        pr_manager.find_pull_request_by_head.return_value = [
-            first,
-            {"number": 8, "mergeable_state": "clean"},
-        ]
+        first = _make_pr(7)
+        pr_manager.find_pull_request_by_head.return_value = [first, _make_pr(8)]
 
         result = _resolve_pr_target(
             _make_pr_issue(5), branch_manager, pr_manager, "owner", "repo"
@@ -525,7 +548,7 @@ class TestPrHealthOutput:
         """An escalation logs exactly one OUTPUT line naming repo, issue and label."""
         _, _, _, pr_manager = _setup(monkeypatch)
         pr_manager.find_pull_request_by_head.return_value = [
-            {"number": 1, "mergeable_state": "dirty"}
+            _make_pr(mergeable_state="dirty")
         ]
 
         with caplog.at_level(OUTPUT, logger=CHECKS):

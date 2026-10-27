@@ -35,6 +35,7 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
     "github": {
         "token": FieldDef(str, required=True, env_var="GITHUB_TOKEN"),
         "test_repo_url": FieldDef(str, env_var="GITHUB_TEST_REPO_URL"),
+        "trusted_commenters": FieldDef(list),
     },
     "jenkins": {
         "server_url": FieldDef(str, required=True, env_var="JENKINS_URL"),
@@ -291,6 +292,9 @@ def create_default_config() -> bool:
 # GitHub authentication
 # Environment variable (higher priority): GITHUB_TOKEN
 token = "ghp_your_github_personal_access_token_here"
+# Extra logins whose PR/issue comments are trusted, besides repo
+# owners, members and collaborators (e.g. a CI machine user)
+# trusted_commenters = ["your-ci-bot"]
 
 [jenkins]
 # Jenkins server configuration
