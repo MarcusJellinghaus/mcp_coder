@@ -7,6 +7,7 @@ Main Components:
     JenkinsClient: Main client for Jenkins operations
     JobStatus: Dataclass for job status information
     QueueSummary: Dataclass for queue statistics
+    BuildInfo: Dataclass for a single build in a recent-builds listing
     JenkinsError: Exception for all Jenkins operations
 
 Example:
@@ -25,12 +26,13 @@ Configuration:
 from .client import JenkinsClient, JenkinsError
 
 # Data models
-from .models import JobStatus, QueueSummary
+from .models import BuildInfo, JobStatus, QueueSummary
 
 __all__ = [
     # Client
     "JenkinsClient",
     # Models
+    "BuildInfo",
     "JobStatus",
     "QueueSummary",
     # Exception
