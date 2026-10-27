@@ -21,6 +21,16 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Migrate `verify_mcp_servers` to `execute_command` — [step_1.md](./steps/step_1.md)
+- [ ] Implementation: update `tests/utils/test_mcp_verification.py` (patch `execute_command`, 30s timeout test, parametrized failure test), migrate `src/mcp_coder/utils/mcp_verification.py`, remove the two `mcp_verification` entries from `.importlinter`
+- [ ] Quality checks: lint-imports, pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Remove `tests/install` `_env` bypass; document remaining `subprocess` exceptions — [step_2.md](./steps/step_2.md)
+- [ ] Implementation: plain `import subprocess` / `import shutil` in `tests/install/conftest.py`, `test_install_integration.py`, `test_install_phases.py`; add `tests.install.** -> subprocess` and the reason comment block to `.importlinter`
+- [ ] Quality checks: lint-imports, pylint, pytest (fast suite + `install_integration`), mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+- [ ] PR review: review full branch diff against `main`, address findings
+- [ ] PR summary prepared
