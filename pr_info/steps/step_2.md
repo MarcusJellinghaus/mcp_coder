@@ -80,6 +80,7 @@ For each condition below, write one line to `pr_info/.blocked.txt` and stop:
 - `git diff` against the base branch (compact) shows only these non-moved hunks:
   - the `get_stale_sessions` import removal
   - the headers and import blocks of the two new files
+  - moved-block preview/summary lines
   - blank-line-only hunks
   - the one allowlist line
 
