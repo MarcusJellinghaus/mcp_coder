@@ -17,7 +17,7 @@ from mcp_coder.icoder.permissions.resolver import resolve
 from mcp_coder.icoder.services.llm_service import FakeLLMService
 from mcp_coder.icoder.ui.app import ICoderApp
 from mcp_coder.icoder.ui.widgets.output_log import OutputLog
-from tests.icoder.test_app_pilot import (
+from tests.icoder._app_pilot_approval_helpers import (
     _APPROVAL_TOOL,
     _author_project_ask,
     _isolate_user_layer,
