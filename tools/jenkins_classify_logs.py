@@ -53,12 +53,6 @@ def load_patterns(path: Path) -> Patterns:
 
     Returns:
         Compiled patterns
-
-    Raises:
-        OSError: If the file cannot be read
-        tomllib.TOMLDecodeError: If the file is not valid TOML
-        KeyError: If a required key is missing
-        re.error: If a regex does not compile
     """
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     signatures = data["signature"]
@@ -176,9 +170,6 @@ def tag_rows(rows: list[dict[str, str]], logdir: Path, patterns: Patterns) -> No
         rows: index.csv rows (need "file" and "display_name")
         logdir: Directory holding the logs
         patterns: Compiled patterns
-
-    Raises:
-        OSError: If a log cannot be read
     """
     for row in rows:
         text = (logdir / row["file"]).read_text(encoding="utf-8", errors="replace")
