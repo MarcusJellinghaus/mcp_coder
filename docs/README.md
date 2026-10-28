@@ -38,6 +38,7 @@ Complete documentation for MCP Coder.
 ### Architecture & Design
 
 - **[Architecture Overview](architecture/architecture.md)** - System architecture and design decisions
+- **[Architecture Enforcement](architecture/enforcement.md)** - Why the architecture rules are enforced mechanically
 - **[Architecture Maintenance](architecture/architecture-maintenance.md)** - Guidelines for keeping architecture docs current
 - **[Dependencies](architecture/dependencies/readme.md)** - Dependency management and rationale
 

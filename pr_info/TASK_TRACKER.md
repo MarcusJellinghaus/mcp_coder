@@ -35,9 +35,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 3: Create `enforcement.md`, update README badge and docs index — [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: write `docs/architecture/enforcement.md`, update the `README.md` architecture badge and the `docs/README.md` entry; verify all relative links resolve
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: write `docs/architecture/enforcement.md`, update the `README.md` architecture badge and the `docs/README.md` entry; verify all relative links resolve
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Cut down `docs/architecture/dependencies/readme.md` — [step_4.md](./steps/step_4.md)
 
