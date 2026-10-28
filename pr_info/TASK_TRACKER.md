@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Exception summary helpers — `llm/error_summary.py` + `failure_handling.exception_summary`
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: tests (`tests/llm/test_error_summary.py`, `tests/workflow_utils/test_failure_handling.py`) + `summarize_exception`, `comment_safe`, `exception_summary`
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`tests/llm/test_error_summary.py`, `tests/workflow_utils/test_failure_handling.py`) + `summarize_exception`, `comment_safe`, `exception_summary`
+- [x] Quality checks: pylint, pytest, mypy, lint-imports, tach — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: `_fail(exc=)` and the three core.py catch sites
 See [step_2.md](./steps/step_2.md)
