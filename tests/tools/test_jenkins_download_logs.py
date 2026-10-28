@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import importlib
 import sys
 from datetime import UTC, datetime
@@ -27,7 +28,7 @@ _FULL_CONFIG: dict[str, str | None] = {
 }
 
 
-def _build(job_path: str, number: int) -> BuildInfo:
+def _build(job_path: str, number: int, display_name: str = "") -> BuildInfo:
     folder, _, job_name = job_path.rpartition("/")
     return BuildInfo(
         job_path=job_path,
@@ -38,6 +39,7 @@ def _build(job_path: str, number: int) -> BuildInfo:
         timestamp=datetime(2026, 10, 1, 12, 0, tzinfo=UTC),
         duration_ms=1000,
         url=f"https://jenkins.example.com/job/{job_path}/{number}/",
+        display_name=display_name,
     )
 
 
@@ -45,6 +47,7 @@ def _build(job_path: str, number: int) -> BuildInfo:
 def fixture_client(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Patch config and JenkinsClient; return the client instance mock."""
     monkeypatch.setattr(jenkins_builds, "get_jenkins_config", lambda: _FULL_CONFIG)
+    monkeypatch.setattr(jenkins_builds, "load_config", dict)
     client_cls = MagicMock()
     instance: MagicMock = client_cls.return_value
     instance.get_recent_builds.return_value = []
@@ -55,7 +58,10 @@ def fixture_client(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 def test_default_status(client: MagicMock, tmp_path: Path) -> None:
     assert jenkins_download_logs.main(["--outdir", str(tmp_path)]) == 0
     client.get_recent_builds.assert_called_once_with(
-        limit=100, folder=None, statuses=["failure", "aborted", "unstable"]
+        limit=100,
+        folder=None,
+        statuses=["failure", "aborted", "unstable"],
+        name_pattern=None,
     )
 
 
@@ -80,6 +86,53 @@ def test_writes_one_file_per_build(
     assert second.read_text(encoding="utf-8") == "log top #7"
     lines = capsys.readouterr().out.strip().splitlines()
     assert lines == [str(first), str(second)]
+
+
+def test_display_name_used_as_filename(client: MagicMock, tmp_path: Path) -> None:
+    client.get_recent_builds.return_value = [
+        _build("A/exec", 9, "proj - #12 - implement - #9")
+    ]
+    client.get_console_output.return_value = "log"
+    assert jenkins_download_logs.main(["--outdir", str(tmp_path)]) == 0
+    assert (tmp_path / "proj - #12 - implement - #9.txt").read_text(
+        encoding="utf-8"
+    ) == "log"
+
+
+def test_duplicate_display_names_fall_back(client: MagicMock, tmp_path: Path) -> None:
+    client.get_recent_builds.return_value = [
+        _build("A/one", 1, "same"),
+        _build("A/two", 2, "same"),
+        _build("A/three", 3, "unique"),
+    ]
+    client.get_console_output.return_value = "log"
+    assert jenkins_download_logs.main(["--outdir", str(tmp_path)]) == 0
+    names = sorted(p.name for p in tmp_path.glob("*.txt"))
+    assert names == ["A_one_1.txt", "A_two_2.txt", "unique.txt"]
+
+
+def test_writes_index_csv(client: MagicMock, tmp_path: Path) -> None:
+    client.get_recent_builds.return_value = [
+        _build("A/exec", 9, "proj - #12 - plan - #9"),
+        _build("top", 7),
+    ]
+    client.get_console_output.return_value = "log"
+    assert jenkins_download_logs.main(["--outdir", str(tmp_path)]) == 0
+    with (tmp_path / "index.csv").open(encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    assert [r["file"] for r in rows] == ["proj - #12 - plan - #9.txt", "top_7.txt"]
+    assert rows[0]["display_name"] == "proj - #12 - plan - #9"
+    assert rows[0]["job_path"] == "A/exec"
+    assert rows[0]["number"] == "9"
+    assert rows[0]["status"] == "failure"
+    assert rows[0]["url"] == "https://jenkins.example.com/job/A/exec/9/"
+
+
+def test_name_pattern_passed(client: MagicMock, tmp_path: Path) -> None:
+    argv = ["--name-pattern", "plan", "--outdir", str(tmp_path)]
+    assert jenkins_download_logs.main(argv) == 0
+    pattern = client.get_recent_builds.call_args.kwargs["name_pattern"]
+    assert pattern.pattern == "plan"
 
 
 def test_overwrites_existing_file(client: MagicMock, tmp_path: Path) -> None:
@@ -153,7 +206,7 @@ def test_end_to_end_downloads_log(
         ",".join(VALID_STATUSES),
         "--outdir",
         str(tmp_path),
-    ] + (["--folder", parent] if parent else [])
+    ] + (["--job", parent] if parent else ["--all-jobs"])
     assert jenkins_download_logs.main(argv) == 0
     files = list(tmp_path.glob("*.txt"))
     assert len(files) == 1

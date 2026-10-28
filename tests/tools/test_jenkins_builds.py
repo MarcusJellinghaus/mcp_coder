@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import sys
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -45,6 +46,7 @@ def _build(job_path: str, number: int, status: str, ts: datetime) -> BuildInfo:
 def fixture_client(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Patch config and JenkinsClient; return the client instance mock."""
     monkeypatch.setattr(jenkins_builds, "get_jenkins_config", lambda: _FULL_CONFIG)
+    monkeypatch.setattr(jenkins_builds, "load_config", dict)
     client_cls = MagicMock()
     instance: MagicMock = client_cls.return_value
     instance.get_recent_builds.return_value = []
@@ -61,8 +63,24 @@ def _parser() -> argparse.ArgumentParser:
 def test_parse_defaults() -> None:
     args = _parser().parse_args([])
     assert args.limit == 100
-    assert args.folder is None
+    assert args.job is None
+    assert args.all_jobs is False
     assert args.status is None
+    assert args.name_pattern is None
+
+
+def test_parse_name_pattern_compiled() -> None:
+    args = _parser().parse_args(["--name-pattern", r" - #\d+$"])
+    assert args.name_pattern.search("proj - #12 - plan - #9")
+
+
+def test_parse_invalid_name_pattern_exits_2(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        _parser().parse_args(["--name-pattern", "("])
+    assert exc_info.value.code == 2
+    assert "invalid regex" in capsys.readouterr().err
 
 
 def test_parse_status_list_lowercased() -> None:
@@ -102,11 +120,11 @@ def test_help_lists_statuses_and_slow_warning(
 
 def test_main_passes_arguments(client: MagicMock) -> None:
     rc = jenkins_builds.main(
-        ["--limit", "5", "--folder", "A/B", "--status", "failure,unstable"]
+        ["--limit", "5", "--job", "A/B", "--status", "failure,unstable"]
     )
     assert rc == 0
     client.get_recent_builds.assert_called_once_with(
-        limit=5, folder="A/B", statuses=["failure", "unstable"]
+        limit=5, folder="A/B", statuses=["failure", "unstable"], name_pattern=None
     )
 
 
@@ -123,7 +141,7 @@ def test_main_prints_table(
     assert rc == 0
     lines = capsys.readouterr().out.strip().splitlines()
     assert len(lines) == 3
-    assert lines[0].split() == ["TIME", "STATUS", "FOLDER", "JOB", "BUILD"]
+    assert lines[0].split() == ["TIME", "STATUS", "FOLDER", "JOB", "BUILD", "NAME"]
     assert lines[1].startswith(ts1.astimezone().strftime("%Y-%m-%d %H:%M"))
     assert "failure" in lines[1]
     assert "Windows-Agents/CD" in lines[1]
@@ -132,6 +150,65 @@ def test_main_prints_table(
     assert lines[2].startswith(ts2.astimezone().strftime("%Y-%m-%d %H:%M"))
     assert "top-job" in lines[2]
     assert lines[2].endswith("7")
+
+
+def _repos(*paths: str) -> dict[str, object]:
+    repos = {f"r{i}": {"executor_job_path": p} for i, p in enumerate(paths)}
+    return {"coordinator": {"repos": repos}}
+
+
+def test_job_and_all_jobs_exclusive() -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        _parser().parse_args(["--job", "A", "--all-jobs"])
+    assert exc_info.value.code == 2
+
+
+def test_default_job_from_config(
+    client: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config = _repos("W/Executor", "W/Executor")
+    monkeypatch.setattr(jenkins_builds, "load_config", lambda: config)
+    assert jenkins_builds.main([]) == 0
+    assert client.get_recent_builds.call_args.kwargs["folder"] == "W/Executor"
+    assert "W/Executor" in capsys.readouterr().err
+
+
+def test_several_configured_jobs_list_whole_server(
+    client: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    config = _repos("W/Executor", "T/Other")
+    monkeypatch.setattr(jenkins_builds, "load_config", lambda: config)
+    assert jenkins_builds.main([]) == 0
+    assert client.get_recent_builds.call_args.kwargs["folder"] is None
+    assert "T/Other, W/Executor" in capsys.readouterr().err
+
+
+def test_explicit_job_and_all_jobs_ignore_config(
+    client: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = _repos("W/Executor")
+    monkeypatch.setattr(jenkins_builds, "load_config", lambda: config)
+    assert jenkins_builds.main(["--job", "A/B"]) == 0
+    assert client.get_recent_builds.call_args.kwargs["folder"] == "A/B"
+    assert jenkins_builds.main(["--all-jobs"]) == 0
+    assert client.get_recent_builds.call_args.kwargs["folder"] is None
+
+
+def test_main_prints_display_name(
+    client: MagicMock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ts = datetime(2026, 10, 1, 12, 30, tzinfo=UTC)
+    build = replace(
+        _build("A/exec", 9, "failure", ts), display_name="proj - #12 - plan - #9"
+    )
+    client.get_recent_builds.return_value = [build]
+    assert jenkins_builds.main([]) == 0
+    lines = capsys.readouterr().out.strip().splitlines()
+    assert lines[1].endswith("proj - #12 - plan - #9")
 
 
 def test_main_no_builds(client: MagicMock, capsys: pytest.CaptureFixture[str]) -> None:

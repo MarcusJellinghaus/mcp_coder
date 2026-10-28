@@ -27,7 +27,7 @@ VALID_STATUSES: tuple[str, ...] = (
 MAX_DEPTH = 4
 BUILDS_CAP = 100  # Jenkins returns at most the newest 100 builds per job via `builds`
 
-_BUILD_FIELDS = "number,building,result,timestamp,duration,url"
+_BUILD_FIELDS = "number,building,result,timestamp,duration,url,displayName"
 _INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
@@ -66,30 +66,34 @@ def build_tree_query(limit: int) -> str:
         limit: Maximum number of builds requested per job
 
     Returns:
-        Query string starting with "?tree=jobs[", nested MAX_DEPTH levels deep
+        Query string starting with "?tree=", asking for the item's own builds
+        (Jenkins ignores them on the root and on folders) and its jobs,
+        nested MAX_DEPTH levels deep
     """
     field = "builds" if limit <= BUILDS_CAP else "allBuilds"
     level = f"fullName,url,{field}[{_BUILD_FIELDS}]{{0,{limit}}}"
     inner = level
     for _ in range(MAX_DEPTH - 1):
         inner = f"{level},jobs[{inner}]"
-    return f"?tree=jobs[{inner}]"
+    return f"?tree={level},jobs[{inner}]"
 
 
 def flatten_builds(tree: dict[str, Any]) -> list[BuildInfo]:
     """Flatten a ``tree=`` response into BuildInfo objects.
 
     Args:
-        tree: JSON response containing nested ``jobs`` lists
+        tree: JSON response: a job (own ``builds``) or a root/folder (nested
+            ``jobs`` lists)
 
     Returns:
-        Builds in tree order (unsorted); [] when the tree has no jobs
+        Builds in tree order (unsorted); [] when the tree has no builds
     """
     result: list[BuildInfo] = []
-    for job in tree.get("jobs") or []:
-        job_path = job["fullName"]
+    builds = tree.get("builds") or tree.get("allBuilds") or []
+    if builds:
+        job_path = tree["fullName"]
         folder, job_name = split_job_path(job_path)
-        for build in job.get("builds") or job.get("allBuilds") or []:
+        for build in builds:
             status = map_status(build)
             result.append(
                 BuildInfo(
@@ -105,8 +109,10 @@ def flatten_builds(tree: dict[str, Any]) -> list[BuildInfo]:
                         else build.get("duration")
                     ),
                     url=build["url"],
+                    display_name=build.get("displayName") or "",
                 )
             )
+    for job in tree.get("jobs") or []:
         result.extend(flatten_builds(job))
     return result
 
@@ -128,32 +134,43 @@ def validate_statuses(statuses: Iterable[str] | None) -> None:
 
 
 def select_builds(
-    builds: list[BuildInfo], limit: int, statuses: Collection[str] | None
+    builds: list[BuildInfo],
+    limit: int,
+    statuses: Collection[str] | None,
+    name_pattern: re.Pattern[str] | None = None,
 ) -> list[BuildInfo]:
-    """Keep the newest ``limit`` builds, then filter by status.
+    """Filter by display name, keep the newest ``limit``, then filter by status.
 
     Args:
         builds: Builds from all jobs, in any order
-        limit: Number of newest builds to keep before filtering
+        limit: Number of newest builds to keep before filtering by status
         statuses: Statuses to keep, or None/empty for all
+        name_pattern: Regex searched in the display name, applied before
+            ``limit``; None keeps all
 
     Returns:
         New list, newest first
     """
+    if name_pattern is not None:
+        builds = [b for b in builds if name_pattern.search(b.display_name)]
     newest = sorted(builds, key=lambda b: b.timestamp, reverse=True)[:limit]
     if not statuses:
         return newest
     return [b for b in newest if b.status in statuses]
 
 
-def log_filename(job_path: str, number: int) -> str:
+def log_filename(job_path: str, number: int, display_name: str = "") -> str:
     """Return a filesystem-safe filename for a build's console log.
 
     Args:
         job_path: Jenkins fullName (URL-encoded segments are kept as-is)
         number: Build number
+        display_name: Jenkins displayName; used instead of job path and number
+            when the build set its own (anything but "" or "#<number>")
 
     Returns:
-        Filename like "A_B_job_5.txt"
+        Filename like "A_B_job_5.txt" or "proj - #12 - implement - #5.txt"
     """
+    if display_name and display_name != f"#{number}":
+        return _INVALID_FILENAME_CHARS.sub("_", display_name) + ".txt"
     return _INVALID_FILENAME_CHARS.sub("_", job_path) + f"_{number}.txt"

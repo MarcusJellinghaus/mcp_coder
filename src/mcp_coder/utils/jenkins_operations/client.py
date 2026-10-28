@@ -469,6 +469,7 @@ class JenkinsClient:
         limit: int = 100,
         folder: str | None = None,
         statuses: Collection[str] | None = None,
+        name_pattern: re.Pattern[str] | None = None,
     ) -> list[BuildInfo]:
         """List the newest builds across all jobs, in one request.
 
@@ -477,15 +478,20 @@ class JenkinsClient:
 
         ``limit`` is a window over the newest builds across all jobs: builds are
         merged, sorted newest first and truncated to ``limit``, and only then
-        filtered by ``statuses``. A ``limit`` above 100 switches the query to
+        filtered by ``statuses``. ``name_pattern`` is applied before the
+        window, so ``limit`` counts matching builds only; it still caps the
+        builds fetched per job. A ``limit`` above 100 switches the query to
         ``allBuilds``, which may be slow on large servers.
 
         Args:
             limit: Number of newest builds to consider.
             folder: Full folder path from the root, e.g. "A/B". None lists the
-                whole server. A folder that points at a job returns [].
+                whole server. A path that points at a job lists that job's
+                builds.
             statuses: Statuses to keep (see builds.VALID_STATUSES), or None/empty
                 for all.
+            name_pattern: Regex searched in each build's display name, or
+                None for all.
 
         Returns:
             BuildInfo list, newest first, at most ``limit`` entries.
@@ -517,7 +523,7 @@ class JenkinsClient:
             raise self._wrap_jenkins_error(e, context, job_path=folder) from None
         except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             raise JenkinsError(f"{context}: {e}") from e
-        return select_builds(found, limit, statuses)
+        return select_builds(found, limit, statuses, name_pattern)
 
     # No @log_function_call: it would log the whole console log.
     def get_console_output(self, job_path: str, build_number: int) -> str:

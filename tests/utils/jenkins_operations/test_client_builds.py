@@ -4,6 +4,7 @@ python-jenkins is mocked; the pure tree/selection logic is covered by
 ``test_builds.py``.
 """
 
+import re
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -165,6 +166,22 @@ class TestGetRecentBuilds:
         # failure falls outside the window.
         builds = client.get_recent_builds(limit=1, statuses=["success"])
         assert builds == []
+
+    @patch(_JENKINS)
+    def test_name_pattern_filters_before_truncation(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """name_pattern runs before the window, so limit counts matches only."""
+        mock_client = _mock_jenkins(mock_jenkins_class)
+        tree = _tree()
+        tree["jobs"][1]["jobs"][0]["builds"][0]["displayName"] = "proj - #12 - plan"
+        mock_client.get_info.return_value = tree
+
+        client = JenkinsClient(BASE_URL, "user", "token")
+        builds = client.get_recent_builds(limit=1, name_pattern=re.compile(r"#\d+ -"))
+
+        assert [(b.job_path, b.number) for b in builds] == [("A/job", 5)]
+        assert builds[0].display_name == "proj - #12 - plan"
 
     @patch(_JENKINS)
     def test_missing_folder_runs_404_diagnosis(
