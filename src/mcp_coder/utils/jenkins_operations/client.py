@@ -49,6 +49,7 @@ from .diagnostics import (
     diagnose_404,
     diagnose_build_404,
     extract_jenkins_error,
+    job_path_from_build_url,
     job_url_path,
 )
 from .models import BuildInfo, JobStatus
@@ -400,25 +401,12 @@ class JenkinsClient:
                 build_number = executable["number"]
                 url = executable.get("url")
 
-                # Get build info for status and duration
-                # Extract full job path from the URL in the executable dict
-                # The URL format is: http://server/job/Folder/job/JobName/BUILD_NUMBER/
-                # We need to extract "Folder/JobName" from this URL
-                if (
-                    url
-                    and isinstance(url, str)
-                    and isinstance(self._client.server, str)
-                ):
-                    # Parse the job path from URL by removing base URL and build number
-                    # Example: "http://server/job/Folder/job/JobName/123/" -> "Folder/JobName"
-                    job_url_part = url.replace(self.base_url, "").rstrip("/")
-                    # Remove the build number suffix (e.g., "/123")
-                    job_url_part = job_url_part.rsplit("/", 1)[0]
-                    # Remove "/job/" prefixes to get the path format for get_build_info
-                    # "/job/Folder/job/JobName" -> "Folder/JobName"
-                    job_path = job_url_part.replace("/job/", "/").lstrip("/")
-                else:
-                    # Fallback to task name if URL not available or mocked
+                # Full job path (folders included) from the build URL; the
+                # task name is only the last segment
+                job_path = (
+                    job_path_from_build_url(url) if isinstance(url, str) else None
+                )
+                if not job_path:
                     task_dict: dict[str, Any] = item.get("task", {})
                     job_path = task_dict.get("name", "")
 

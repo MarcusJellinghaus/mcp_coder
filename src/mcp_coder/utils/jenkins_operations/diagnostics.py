@@ -29,7 +29,7 @@ Security:
 import html as html_lib
 import re
 from dataclasses import dataclass
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlsplit
 
 from requests import RequestException, Session
 
@@ -91,6 +91,29 @@ def job_url_path(job_path: str) -> str:
     """
     parts = [part for part in job_path.split("/") if part]
     return "/job/" + "/job/".join(quote(part, safe="") for part in parts)
+
+
+def job_path_from_build_url(url: str) -> str | None:
+    """Recover the job path from a Jenkins build or job URL.
+
+    The inverse of :func:`job_url_path`. Only the ``/job/<name>`` segments are
+    read, so the scheme, host and any context path are ignored: Jenkins builds
+    these URLs from its own root URL, which need not match the configured one.
+
+    Args:
+        url: e.g. "http://localhost:8080/job/Tests/job/my%20job/42/".
+
+    Returns:
+        The decoded job path, e.g. "Tests/my job", or None if the URL has no
+        ``/job/`` segment.
+    """
+    path = urlsplit(url).path
+    start = path.find("/job/")
+    if start == -1:
+        return None
+    # ["job", "Tests", "job", "my%20job", "42"]: names sit at the odd indices
+    segments = path[start:].strip("/").split("/")
+    return "/".join(unquote(name) for name in segments[1::2])
 
 
 def extract_jenkins_error(body: str) -> str | None:
