@@ -38,6 +38,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 | Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any downstream repo |
 | Generic repo conventions: `.gitattributes`, `.gitignore`, file size | [repo.md](repo.md) | Any downstream repo |
 | Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python downstream repos only |
+| Quality and security checks: which automated checks run, and why | [quality-and-security-checks.md](quality-and-security-checks.md) | Not for downstream use |
 | mcp-coder repo internals: design docs, mlflow tools, internal scripts | [internal.md](internal.md) | Not for downstream use |
 
 ## Files Shared With Other Projects
