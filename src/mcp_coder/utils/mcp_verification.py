@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 import re
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -51,30 +50,27 @@ def verify_mcp_servers(venv_root: str | Path) -> list[MCPServerInfo]:
 
     Raises:
         FileNotFoundError: If a binary is missing.
-        RuntimeError: If a binary exists but ``--version`` fails
-            (OSError/FileNotFoundError from subprocess, or non-zero returncode).
+        RuntimeError: If a binary exists but ``--version`` times out,
+            cannot be launched, or exits non-zero.
     """
+    timeout = 30
     bin_dir = get_bin_dir(venv_root)
     results: list[MCPServerInfo] = []
     for name in MCP_SERVER_NAMES:
         exe_path = bin_dir / _exe_name(name)
         if not exe_path.exists():
             raise FileNotFoundError(f"{_exe_name(name)} not found in {bin_dir}")
-        try:
-            proc = subprocess.run(
-                [str(exe_path), "--version"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-        except (FileNotFoundError, OSError) as e:
-            raise RuntimeError(f"Failed to invoke {exe_path}: {e}") from e
-        if proc.returncode != 0:
+        result = execute_command([str(exe_path), "--version"], timeout_seconds=timeout)
+        if result.timed_out:
+            raise RuntimeError(f"{exe_path} --version timed out after {timeout}s")
+        if result.execution_error:
+            raise RuntimeError(f"Failed to invoke {exe_path}: {result.execution_error}")
+        if result.return_code != 0:
             raise RuntimeError(
-                f"{exe_path} --version exited with code {proc.returncode}: "
-                f"{proc.stderr.strip()}"
+                f"{exe_path} --version exited with code {result.return_code}: "
+                f"{result.stderr.strip()}"
             )
-        version = proc.stdout.strip()
+        version = result.stdout.strip()
         results.append(MCPServerInfo(name=name, path=exe_path, version=version))
     return results
 

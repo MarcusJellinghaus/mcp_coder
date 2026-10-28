@@ -494,6 +494,15 @@ modules =
 # This is the first library isolation contract enforced in tests as well.
 # Running git through the allowed runner is caught by
 # `tools/check_forbidden_calls.py` (rule `git`).
+#
+# Permanent exceptions (need inherited TTY/stdio and no timeout, which
+# subprocess_runner cannot provide):
+#   - workflows.vscodeclaude.session_setup (+ its flow test): interactive
+#     `claude` / `mcp-coder install` sessions
+#   - install.** : uv/pip with live progress output
+#   - tests.install.** : patch/call subprocess to exercise install._env
+# tools/ is outside root_packages and unchecked: safe_delete_folder.py must
+# run standalone without importing mcp_coder; tach_docs.py is dev-only.
 # -----------------------------------------------------------------------------
 [importlinter:contract:subprocess_isolation]
 name = Subprocess Library Isolation
@@ -504,8 +513,7 @@ source_modules =
 forbidden_modules =
     subprocess
 ignore_imports =
-    mcp_coder.utils.mcp_verification -> subprocess
-    tests.utils.test_mcp_verification -> subprocess
     mcp_coder.workflows.vscodeclaude.session_setup -> subprocess
     tests.workflows.vscodeclaude.test_session_setup_flow -> subprocess
     mcp_coder.install.** -> subprocess
+    tests.install.** -> subprocess
