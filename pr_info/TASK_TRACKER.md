@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Docs, plus the final acceptance search
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: update `tests/README.md`, `architecture.md`, `runtime_statistics.md`, `runtime-statistics-review-process.md`; acceptance search finds hits only under `docs/tests/performance_data/`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `tests/README.md`, `architecture.md`, `runtime_statistics.md`, `runtime-statistics-review-process.md`; acceptance search finds hits only under `docs/tests/performance_data/`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

@@ -181,10 +181,9 @@ Compare against previous runs and classify:
 | Category | Warning | Critical | Context |
 |----------|---------|----------|---------|
 | Unit Tests | 0.5s | 1.0s | Fast feedback |
-| Claude CLI/API Integration | 5.0s/10.0s | 10.0s/30.0s | Network overhead |
+| Claude CLI Integration | 5.0s | 10.0s | Network overhead |
 | Git Integration | 5.0s | 10.0s | File I/O |
-| Formatter Integration | 3.0s | 8.0s | Code analysis |
-| GitHub Integration | 10.0s | 30.0s | External API |
+| Checker Integration | 3.0s | 8.0s | Code analysis |
 
 **Severity**: 🚨 EXTREME (>3x), ⚠️ CRITICAL (>1x, <3x), ⚠️ WARNING (above warning, below critical), ✅ ACCEPTABLE
 

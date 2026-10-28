@@ -17,25 +17,15 @@ This document tracks test performance baselines, known slow tests, and performan
 - **Critical**: ≥ 10.0 seconds
 - **Expected Range**: 1.0s - 8.0s
 
-### Claude API Integration Tests
-- **Warning**: ≥ 10.0 seconds
-- **Critical**: ≥ 30.0 seconds
-- **Expected Range**: 2.0s - 15.0s
-
 ### Git Integration Tests
 - **Warning**: ≥ 5.0 seconds
 - **Critical**: ≥ 10.0 seconds
 - **Expected Range**: 0.5s - 4.0s
 
-### Formatter Integration Tests
+### Checker Integration Tests (`checker_integration`)
 - **Warning**: ≥ 3.0 seconds
 - **Critical**: ≥ 8.0 seconds
 - **Expected Range**: 0.2s - 2.0s
-
-### GitHub Integration Tests
-- **Warning**: ≥ 10.0 seconds
-- **Critical**: ≥ 30.0 seconds
-- **Expected Range**: 2.0s - 15.0s
 
 ## Known Slow Tests Registry
 
@@ -47,22 +37,16 @@ This document tracks test performance baselines, known slow tests, and performan
 #### Claude CLI Integration Tests (Exceeding 10.0s threshold)
 ✅ **NO VIOLATIONS** - All Claude integration tests approved (see Approved Slow Tests section)
 
-#### Claude API Integration Tests (Exceeding 30.0s threshold)
-✅ **NO VIOLATIONS** - All Claude integration tests approved (see Approved Slow Tests section)
-
 #### Git Integration Tests (Exceeding 10.0s threshold)
 ✅ **NO VIOLATIONS** - All git integration tests approved (see Approved Slow Tests section)
 
 **Note**: All 20 tests in `test_git_workflows.py` and `test_git_error_cases.py` marked with `@pytest.mark.git_integration` are approved. They perform real git repository operations with file I/O, ranging from 30-70s.
 
-#### Formatter Integration Tests (Exceeding 8.0s threshold)
+#### Checker Integration Tests (Exceeding 8.0s threshold)
 ✅ **NO VIOLATIONS** - MyPy test approved (see Approved Slow Tests section)
 
-#### Formatter Integration Tests (Exceeding 3.0s WARNING threshold)
+#### Checker Integration Tests (Exceeding 3.0s WARNING threshold)
 - `tests/test_mcp_tools_py_integration.py::TestMypyIntegration::test_has_mypy_errors_convenience_function` - **3.38s** ⚠️ WARNING (improved from 4.61s on Oct 8, -27%)
-
-#### GitHub Integration Tests (Exceeding 30.0s threshold)
-✅ **NO VIOLATIONS** - All GitHub integration tests approved (see Approved Slow Tests section)
 
 ## Performance Trends
 
@@ -538,14 +522,9 @@ These tests are legitimately slow due to real git repository operations:
 
 **Note**: Full list of git integration tests omitted for brevity. All tests in `test_git_workflows.py` and `test_git_error_cases.py` marked with `@pytest.mark.git_integration` perform real file I/O and git operations. **Current performance**: 8-16s per test (significantly improved from Oct 5 baseline).
 
-### Claude Integration Tests (`@pytest.mark.claude_integration`)
+### Claude CLI Integration Tests (`@pytest.mark.claude_cli_integration`)
 
 These tests are legitimately slow due to real network calls to Claude API/CLI:
-
-- `tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_basic_cli_api_integration` - **80.72s** ✅
-  - **Justification**: Full CLI and API integration test with real network calls
-  - **Reference time**: 60-90s acceptable
-  - **Last verified**: 2025-10-07
 
 - `tests/llm/providers/claude/test_claude_integration.py::TestEnvironmentVariablePropagation::test_env_vars_propagation` - **76.90s** ✅
   - **Justification**: Environment variable propagation testing with real subprocess
@@ -555,46 +534,6 @@ These tests are legitimately slow due to real network calls to Claude API/CLI:
 - `tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity` - **70.63s** ✅
   - **Justification**: Session management across multiple API calls
   - **Reference time**: 60-75s acceptable
-  - **Last verified**: 2025-10-07
-
-- `tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_interface_contracts` - **79.57s** ✅
-  - **Justification**: Interface validation with real API interactions
-  - **Reference time**: 60-85s acceptable
-  - **Last verified**: 2025-10-07
-
-### Claude API Integration Tests (`@pytest.mark.claude_api_integration`)
-
-These tests are legitimately slow due to real network calls to Claude API:
-
-- `tests/llm/providers/claude/test_claude_integration.py::TestCriticalPathIntegration::test_session_continuity_api` - **39.10s** ✅
-  - **Justification**: Full API integration test with session management and real network calls
-  - **Reference time**: 30-45s acceptable
-  - **Last verified**: 2025-10-09
-
-### Formatter Integration Tests (`@pytest.mark.formatter_integration`)
-
-These tests are legitimately slow due to running mypy on actual codebase:
-
-- `tests/test_mcp_tools_py_integration.py::TestMypyIntegration::test_mypy_check_on_actual_codebase` - **17.62s** ✅
-  - **Justification**: Full mypy analysis of entire src/ codebase
-  - **Reference time**: 7-20s acceptable (varies with cache state)
-  - **Status**: ✅ **STABLE** - Performance varies 13-18s between runs
-  - **Last verified**: 2025-10-08 17:40
-  - **Note**: Within acceptable range for full codebase analysis
-
-### GitHub Integration Tests (`@pytest.mark.github_integration`)
-
-These tests are legitimately slow due to real GitHub API calls:
-
-- `tests/utils/github_operations/test_github_utils.py::TestPullRequestManagerIntegration::test_list_pull_requests_with_filters` - **197.57s** ✅
-  - **Justification**: Multiple GitHub API calls with pagination and filtering
-  - **Reference time**: 130-200s acceptable (API rate limiting, external API performance)
-  - **Last verified**: 2025-10-08 17:40
-  - **Note**: Performance varies with GitHub API responsiveness
-
-- `tests/utils/github_operations/test_issue_manager_integration.py::TestIssueManagerIntegration::test_complete_issue_workflow` - **37.20s** ✅
-  - **Justification**: Complete issue lifecycle with GitHub API
-  - **Reference time**: 30-45s acceptable
   - **Last verified**: 2025-10-07
 
 ---

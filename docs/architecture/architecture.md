@@ -296,25 +296,7 @@ Interactive terminal chat for LLM-assisted coding. Three-layer architecture maxi
   - `remotes.py` - Remote operations (fetch, push, GitHub URLs)
   - `repository.py` - Repository queries and status
   - `staging.py` - File staging operations
-- **GitHub integration**: `utils/github_operations/` - API interactions (tests: `utils/github_operations/test_*.py` 🏷️ github_integration)
-  - `base_manager.py` - Base class for GitHub managers
-  - `github_utils.py` - GitHub URL parsing and validation
-  - `issues/` - Modular issue management package (tests: `test_issue_manager*.py`, `test_issue_branch_manager*.py`, `test_issue_cache.py`)
-    - **Design Decision**: Refactored from monolithic `issue_manager.py` (1,604 lines) to modular package (Jan 2025)
-      - **Rationale**: Improve maintainability by organizing code using mixin pattern with focused modules
-      - **Benefits**: Enhanced LLM navigation, clearer responsibility boundaries, all files under 500 lines
-      - **Pattern**: Mixin composition - `IssueManager` inherits from `CommentsMixin`, `LabelsMixin`, `EventsMixin`, `BaseGitHubManager`
-    - `types.py` - Type definitions (IssueData, CommentData, EventData, IssueEventType)
-    - `base.py` - Validation helpers (validate_issue_number, validate_comment_id, parse_base_branch)
-    - `manager.py` - Core IssueManager class with CRUD operations
-    - `comments_mixin.py` - CommentsMixin class for comment operations
-    - `labels_mixin.py` - LabelsMixin class for label operations
-    - `events_mixin.py` - EventsMixin class for event operations
-    - `branch_manager.py` - IssueBranchManager for branch-issue linking via GraphQL
-    - `cache.py` - Issue caching functions (get_all_cached_issues, update_issue_labels_in_cache)
-  - `labels_manager.py` - Label management operations (tests: `test_labels_manager.py`)
-  - `pr_manager.py` - Pull request management via PyGithub API (tests: `test_pr_manager.py`)
-  - Smoke tests: `test_github_integration_smoke.py` - Basic GitHub API connectivity validation
+- **GitHub integration**: GitHub operations live in mcp-workspace (not in this repo)
 - **User configuration**: `utils/user_config.py` - TOML settings management (tests: `utils/test_user_config*.py`)
 - **Task tracking**: `workflow_utils/task_tracker.py` - Progress management (tests: `workflow_utils/test_task_tracker.py`)
 - **Commit operations**: `workflow_utils/commit_operations.py` - LLM-assisted commit message generation (tests: `workflow_utils/test_commit_operations.py`)
@@ -426,12 +408,6 @@ The scenarios show the default path. With `auto_review_plan` / `auto_review_impl
   - `claude_cli_integration`: Claude CLI tests (network, auth needed) in `llm_providers/claude/` + `cli/commands/`
     - **When to use**: Testing Claude Code CLI integration, executable detection
     - **Requirements**: Claude Code CLI installed, authentication configured
-  - `claude_api_integration`: Claude API tests (network, auth needed) in `llm_providers/claude/`
-    - **When to use**: Testing Claude Code API integration, SDK functionality
-    - **Requirements**: Claude Code API access, authentication configured
-  - `github_integration`: GitHub API access (network, auth needed) in `utils/github_operations/test_*.py`
-    - **When to use**: Testing GitHub operations, PR management, issue workflows
-    - **Requirements**: GitHub API tokens, network access
   - `install_integration`: Real-subprocess installer tests (uv venv/sync/pip) in `tests/install/test_install_integration.py`
     - **When to use**: Testing the installer against a real local fixture package
     - **Requirements**: `uv` on PATH
@@ -448,7 +424,7 @@ The scenarios show the default path. With `auto_review_plan` / `auto_review_impl
     - **Note**: Snapshot tests are Windows-only to avoid baseline drift
 - **Fast development**: Use exclusion pattern to skip slow integration tests
 - **Parallel execution**: Always use `extra_args: ["-n", "auto"]`
-- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration and not install_integration and not langchain_integration and not llm_integration and not textual_integration"`
+- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not copilot_cli_integration and not install_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"`
 - **Integration testing**: Use specific markers when developing integration features
 - **CI/CD**: Run all tests including integration tests in automated pipelines
 
@@ -544,7 +520,6 @@ For quick LLM navigation to core architectural components:
 **Workflow Engine:**
 - `src/mcp_coder/cli/main.py` - CLI entry and command routing
 - `src/mcp_coder/utils/git_operations/` - Git automation (modular package)
-- `src/mcp_coder/utils/github_operations/` - GitHub API integration
 
 **Configuration:**
 - `.claude/CLAUDE.md` - Project configuration and mandatory patterns
