@@ -15,6 +15,7 @@ under its line budget; the loop imports them back unchanged.
 import logging
 from pathlib import Path
 
+from mcp_coder.llm.error_summary import comment_safe
 from mcp_coder.mcp_workspace_git import (
     extract_issue_number_from_branch,
     get_current_branch_name,
@@ -23,7 +24,10 @@ from mcp_coder.mcp_workspace_git import (
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.rebase import RebaseOutcome, _attempt_rebase_and_push
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
-from mcp_coder.workflow_utils.failure_handling import llm_failure_reason
+from mcp_coder.workflow_utils.failure_handling import (
+    exception_summary,
+    llm_failure_reason,
+)
 
 from .config import ReviewConfig
 
@@ -63,7 +67,7 @@ def _after_steps(
     mcp_config: str | None,
     settings_file: str | None,
     is_dismiss: bool,
-) -> tuple[str | None, RebaseOutcome | None]:
+) -> tuple[str | None, RebaseOutcome | None, str | None]:
     """Run the after-steps (rebase + CI) for the implementation lane.
 
     ``review-plan`` has ``run_after_steps=False`` so this is a no-op there. For
@@ -93,17 +97,20 @@ def _after_steps(
             interpretation of a red CI result.
 
     Returns:
-        ``(reason, outcome)``. ``reason`` is a failure reason (``"rebase"`` /
-        ``"ci"`` / ``"timeout"`` / ``"mcp_unavailable"`` / ``"general"``) or
-        ``None`` when the after-steps are clean or there is nothing to do.
-        ``outcome`` is the :class:`RebaseOutcome` of the rebase gate, or
-        ``None`` when the lane has no after-steps. The broadened ``except``
-        scoped to the CI call categorizes a generic exception as
-        ``"general"`` rather than letting it escape — but it does **not** wrap
+        ``(reason, outcome, detail)``. ``reason`` is a failure reason
+        (``"rebase"`` / ``"ci"`` / ``"timeout"`` / ``"mcp_unavailable"`` /
+        ``"general"``) or ``None`` when the after-steps are clean or there is
+        nothing to do. ``outcome`` is the :class:`RebaseOutcome` of the rebase
+        gate, or ``None`` when the lane has no after-steps. ``detail`` is a
+        comment-ready summary of the exception the CI call raised, ``None``
+        otherwise; callers pass it only to the failure comment, never to the
+        committed round log. The broadened ``except`` scoped to the CI call
+        logs the traceback and categorizes the exception (``"general"`` when
+        unmapped) rather than letting it escape — but it does **not** wrap
         the rebase gate, so the ``"rebase"`` control-flow return is preserved.
     """
     if not config.run_after_steps:
-        return None, None
+        return None, None, None
 
     # --- rebase gate (mandated: never success on an unresolved rebase) ---
     outcome = _attempt_rebase_and_push(project_dir)
@@ -113,12 +120,12 @@ def _after_steps(
         logger.warning(
             "Rebase gate did not pass (%s); routing to needs-human", outcome.reason
         )
-        return "rebase", outcome
+        return "rebase", outcome, None
 
     # --- CI gate ---
     branch = get_current_branch_name(project_dir)
     if not branch:
-        return None, outcome
+        return None, outcome, None
     # The rebase step just pushed local HEAD - including the round-log commit
     # the loop lands at its entry, which on a dismiss round is the only thing
     # pushed. Correlate the CI poll with that SHA: the newest run on the branch
@@ -137,9 +144,11 @@ def _after_steps(
             expected_sha=pushed_sha,
         )
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        return llm_failure_reason(exc) or "general", outcome
+        logger.error("CI gate raised; failing the review", exc_info=True)
+        reason = llm_failure_reason(exc) or "general"
+        return reason, outcome, comment_safe(exception_summary(exc))
     if ci_ok:
-        return None, outcome
+        return None, outcome, None
     if not is_dismiss:
         logger.info("CI is red mid-loop; carrying it forward as a review finding")
-    return "ci", outcome
+    return "ci", outcome, None

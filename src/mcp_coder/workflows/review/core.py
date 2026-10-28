@@ -227,6 +227,7 @@ def run_review_workflow(
                         round_number=round_number,
                         verdict=last_verdict,
                         elapsed=time.time() - start_time,
+                        exc=exc,
                     )
                 reviewer_sid = report_response["session_id"]
                 report = report_response["text"]
@@ -242,6 +243,10 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    details=(
+                        f"Reviewer returned an empty report "
+                        f"{EMPTY_REPORT_RETRIES} times"
+                    ),
                 )
 
             # Supervisor: persistent session, verdict parsed with repair retries.
@@ -276,6 +281,7 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    exc=exc,
                 )
             if verdict is None:
                 return _fail(
@@ -287,6 +293,7 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    details="Supervisor verdict could not be parsed after repair retries",
                 )
             last_verdict = verdict
 
@@ -302,7 +309,7 @@ def run_review_workflow(
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
 
             if verdict.decision == "dismiss":
-                reason, rebase_outcome = _after_steps(
+                reason, rebase_outcome, ci_detail = _after_steps(
                     config,
                     project_dir,
                     provider,
@@ -358,7 +365,7 @@ def run_review_workflow(
                         post_issue_comments=post_issue_comments,
                         round_number=round_number,
                         verdict=last_verdict,
-                        details=details,
+                        details=details or ci_detail,
                         elapsed=time.time() - start_time,
                     )
                 write_round_log(
@@ -435,6 +442,7 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    details="Reviewer returned no session id",
                 )
 
             logger.info(
@@ -483,6 +491,7 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    exc=exc,
                 )
             run_formatters(project_dir)
             if not commit_changes(
@@ -542,7 +551,7 @@ def run_review_workflow(
                     elapsed=time.time() - start_time,
                 )
 
-            reason, rebase_outcome = _after_steps(
+            reason, rebase_outcome, ci_detail = _after_steps(
                 config,
                 project_dir,
                 provider,
@@ -600,6 +609,7 @@ def run_review_workflow(
                     post_issue_comments=post_issue_comments,
                     round_number=round_number,
                     verdict=last_verdict,
+                    details=ci_detail,
                     elapsed=time.time() - start_time,
                 )
             else:

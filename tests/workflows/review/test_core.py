@@ -341,6 +341,7 @@ def test_mcp_unavailable_maps_to_mcp_label(
     assert result == 1
     failure = env.handle_workflow_failure.call_args.args[0]
     assert failure.category == REVIEW_PLAN.failure_labels["mcp_unavailable"]
+    assert "MCP servers unavailable" in env.handle_workflow_failure.call_args.args[1]
 
 
 def test_commit_failure_fails_run_and_skips_push(
@@ -439,6 +440,7 @@ def test_generic_exception_at_reviewer_fails_general(
     env.handle_workflow_failure.assert_called_once()
     failure = env.handle_workflow_failure.call_args.args[0]
     assert failure.category == REVIEW_PLAN.failure_labels["general"]
+    assert "RuntimeError: kaboom" in env.handle_workflow_failure.call_args.args[1]
     # A generic exception is not retried — it fails on the first invocation.
     assert env.prompt_llm.call_count == 1
 

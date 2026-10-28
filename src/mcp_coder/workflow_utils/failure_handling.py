@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from mcp_coder.llm.error_summary import summarize_exception
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import (
@@ -116,6 +117,22 @@ def format_mcp_unavailable_message(error: McpServersUnavailableError) -> str:
         f"its configured tools and was aborted; check the MCP server logs and "
         f".mcp.json."
     )
+
+
+def exception_summary(exc: BaseException) -> str:
+    """Summarize an exception for a workflow failure log or comment.
+
+    Args:
+        exc: The exception to summarize.
+
+    Returns:
+        :func:`format_mcp_unavailable_message` for
+        :class:`McpServersUnavailableError`, else
+        :func:`~mcp_coder.llm.error_summary.summarize_exception`.
+    """
+    if isinstance(exc, McpServersUnavailableError):
+        return format_mcp_unavailable_message(exc)
+    return summarize_exception(exc)
 
 
 def get_diff_stat(project_dir: Path) -> str:

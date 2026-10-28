@@ -10,6 +10,7 @@ from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
+    exception_summary,
     format_elapsed_time,
     format_mcp_unavailable_message,
     get_diff_stat,
@@ -62,6 +63,19 @@ class TestFormatMcpUnavailableMessage:
 
         assert "unknown" in message
         assert message.startswith("MCP servers unavailable:")
+
+
+class TestExceptionSummary:
+    """Tests for exception_summary()."""
+
+    def test_mcp_unavailable_uses_server_naming_message(self) -> None:
+        """McpServersUnavailableError renders via format_mcp_unavailable_message."""
+        error = McpServersUnavailableError("down", {"a": "failed"})
+        assert exception_summary(error) == format_mcp_unavailable_message(error)
+
+    def test_other_exception_delegates_to_summarize_exception(self) -> None:
+        """Any other exception renders as "Type: message"."""
+        assert exception_summary(RuntimeError("boom")) == "RuntimeError: boom"
 
 
 class TestFormatElapsedTime:
