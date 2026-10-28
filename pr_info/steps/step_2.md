@@ -66,11 +66,17 @@ Comment body is `env.handle_workflow_failure.call_args.args[1]`; banner message 
 the helpers from `tests.workflows.review.conftest` (`_run`, `_resp`, `_reviewer`,
 `_DISMISS`, `_TASKS`); pass `config=REVIEW_PLAN` to `_run` for these core-site tests.
 
-`test_core_failure_detail.py` (new):
+`test_core_failure_detail.py` (new). Import `CalledProcessError` from
+`mcp_coder.utils.subprocess_runner` — never `import subprocess` (the
+`subprocess_isolation` import-linter contract forbids it under `tests` too).
 - reviewer raises `CalledProcessError(1, "claude", stderr="529 Overloaded " + "x"*400 + " Stream file: /agent/s.log")`:
   comment contains `"CalledProcessError: 529 Overloaded"`, does not contain
   `"Stream file"` or `"/agent/s.log"`; the `**Error:**` line value is ≤ 300 chars and
   ends with `"…"`; banner message contains `"529 Overloaded"`
+- reviewer raises `CalledProcessError(1, "claude", stderr="first line\nsecond line\r\n" + "y"*400 + "\nStream file: /agent/s.log")`:
+  exactly one comment line starts with `"**Error:** "`; its value contains
+  `"first line second line"`, is ≤ 300 chars, and the comment does not contain
+  `"Stream file"`
 - supervisor raises `RuntimeError("sup boom")` (`prompt_llm.side_effect = [_reviewer(), RuntimeError("sup boom")]`):
   comment contains `"RuntimeError: sup boom"`
 - fix-task reviewer raises `RuntimeError("fix boom")`

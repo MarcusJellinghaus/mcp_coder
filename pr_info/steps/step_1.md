@@ -53,7 +53,8 @@ summarize_exception(exc):
     return f"{name}: {exc}"
 
 comment_safe(text):
-    text = _STREAM_FILE_RE.sub("", text.strip())
+    text = " ".join(text.split())      # collapse line breaks/whitespace runs -> one line
+    text = _STREAM_FILE_RE.sub("", text)
     return text if len(text) <= _COMMENT_LIMIT else text[: _COMMENT_LIMIT - 1].rstrip() + "…"
 
 exception_summary(exc):
@@ -63,7 +64,8 @@ exception_summary(exc):
 
 ## DATA
 
-All three return `str`. `comment_safe` output length is ≤ `_COMMENT_LIMIT`.
+All three return `str`. `comment_safe` output is a single line (no `\n`/`\r`) of
+length ≤ `_COMMENT_LIMIT`.
 
 ## Tests
 
@@ -77,6 +79,7 @@ All three return `str`. `comment_safe` output length is ≤ `_COMMENT_LIMIT`.
 - `comment_safe` strips each shape:
   `"CLI failed with code 1. Stream file: /p"` → `"CLI failed with code 1."`;
   `"msg Stream file: None"` → `"msg"`; `"err\nStream file: /p"` → `"err"`
+- `comment_safe("line1\r\nline2\n\nline3")` → `"line1 line2 line3"`
 - `comment_safe("x" * 1000)` → length 300, ends with `"…"`; short text unchanged
 
 `tests/workflow_utils/test_failure_handling.py`:

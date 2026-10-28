@@ -76,7 +76,9 @@ only on the CI exception path, else `None`.
   - `caplog.at_level(logging.ERROR)` across both loggers: exactly one record with
     `exc_info` set, logged by `steps.__name__`
   - `CalledProcessError(1, "gh", stderr="ci err Stream file: /p")` from
-    `check_and_fix_ci`: comment contains `"ci err"`, not `"Stream file"`
+    `check_and_fix_ci`: comment contains `"ci err"`, not `"Stream file"`.
+    Import `CalledProcessError` from `mcp_coder.utils.subprocess_runner` — never
+    `import subprocess` (the `subprocess_isolation` contract covers `tests`).
 - `test_core_gates.py::test_after_steps_failure_falls_back_to_bare_reason` must keep
   passing unchanged (red CI → Changes `"ci"`).
 - Keep `test_core_after_steps.py` under 750 lines.

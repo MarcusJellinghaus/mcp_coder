@@ -23,10 +23,11 @@ exception and no detail at all.
    `workflow_utils` in import-linter (`layers` contract) and tach; #1362's
    `llm/mlflow_logger.py` will import it.
    - `summarize_exception(exc)` — `"Type: message"`; for `CalledProcessError` the
-     message is the decoded `.stderr` (fallback to `str(exc)` when stderr is empty
-     once the stream-file suffix is ignored). Full text — used for the console.
-   - `comment_safe(text)` — strip the trailing `Stream file: …` suffix and cap at
-     `_COMMENT_LIMIT = 300` with `…`. For public issue comments only.
+     message is the decoded `.stderr` (fallback to `f"{name}: {exc}"` when stderr is
+     empty once the stream-file suffix is ignored). Full text — used for the console.
+   - `comment_safe(text)` — collapse line breaks to single spaces (keeps the
+     `**Error:**` field on one line), strip the trailing `Stream file: …` suffix and
+     cap at `_COMMENT_LIMIT = 300` with `…`. For public issue comments only.
    - One module-level regex `_STREAM_FILE_RE = r"\s*Stream file: .*\Z"` covers all
      three suffix shapes (claude `"CLI failed with code N. Stream file: X"`, claude
      `"<msg> Stream file: X"`, copilot `"<stderr>\nStream file: X"` / `"Stream file: X"`).
