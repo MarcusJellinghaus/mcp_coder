@@ -17,6 +17,9 @@ mcp__mcp-tools-py__run_pytest_check(extra_args=["--collect-only", "-q", "-m", "c
 
 Expected: 0 tests selected (all deselected). This proves that removing the markers
 from any `-m` expression can't change CI selection.
+pytest exits with code 5 ("no tests ran") when every test is deselected. That is the
+expected passing result here, even if `run_pytest_check` reports it as a failure:
+don't write `.blocked.txt` and don't retry.
 If any test is selected: write one line to `pr_info/.blocked.txt` naming the selected test, and stop.
 
 ## WHERE / WHAT
