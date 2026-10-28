@@ -59,9 +59,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 7: Add `enforcement.md` links to the #1181 hub — [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation: add `enforcement.md` links to the overview table and the Architecture, File size, Dependencies and Repo hygiene sections of `quality-and-security-checks.md`; run the final path sweep
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: add `enforcement.md` links to the overview table and the Architecture, File size, Dependencies and Repo hygiene sections of `quality-and-security-checks.md`; run the final path sweep
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 
