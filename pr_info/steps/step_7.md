@@ -40,6 +40,24 @@
         log_rate_limit_stop(e)
         return 0
     ```
+  - The outer `except ValueError` and `except Exception` handlers also detect
+    rate limits (same pattern as Step 8's `_rate_limit_or_raise`), so a raw
+    rate-limit `GithubException` from code outside the re-raising `except`
+    blocks (the `get_eligible_issues` fallback at ~266, repo setup before ~255)
+    and a rate limit wrapped in a `ValueError` also exit 0:
+    ```python
+    except ValueError as e:
+        if (rl := as_rate_limit(e)) is not None:
+            log_rate_limit_stop(rl)
+            return 0
+        logger.error("%s", e)
+        return 1
+    except Exception as e:
+        if (rl := as_rate_limit(e)) is not None:
+            log_rate_limit_stop(rl)
+            return 0
+        <unchanged: log + raise>
+    ```
 - `core.py:347` (`get_cached_eligible_issues`) stays unchanged — it catches
   `(ValueError, KeyError, TypeError)`, which `GitHubRateLimitError` is not.
 - Branch lookup in `dispatch_workflow` (~line 416) stays live; a rate limit there
@@ -60,6 +78,13 @@ Tests (TDD):
   `GithubException` → `dispatch_workflow` returns `False`, one ERROR containing the
   issue number, old and intended label; `execute_coordinator_run` returns 1 and
   does not call `update_issue_labels_in_cache`.
+- outer handlers, one test each → returns 0, one "reset" log line:
+  - `get_cached_eligible_issues` raises a non-rate-limit error and the
+    `get_eligible_issues` fallback raises a raw rate-limit `GithubException`;
+  - repo setup before the cache call (e.g. `IssueManager` construction) raises a
+    raw rate-limit `GithubException`;
+  - a `ValueError` raised `from` a rate-limit `GithubException` reaches `except ValueError`.
+- non-rate-limit `ValueError` still → 1; non-rate-limit `RuntimeError` still re-raised.
 - Existing dispatch tests: assert `True` is returned on success.
 
 ## DATA

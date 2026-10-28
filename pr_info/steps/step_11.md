@@ -42,11 +42,14 @@ def _check_review_comments(issue, pr: OpenPullRequest, pr_cache, issue_manager, 
 ## ALGORITHM (`check_pr_health`)
 ```
 setup (unchanged) + pr_cache = PullRequestCache.load(PullRequestManager(repo_url=repo_url))
-for issue in pr_issues:
-    branch, pr = _resolve_pr_target(...)       # find_pr non-rate-limit error → (branch, None) → CI-only
-    if branch is None: continue
-    merge-conflict (pr) or CI (pr or live) or review comments (pr)
-pr_cache.save()                                 # skipped implicitly when a rate limit propagated
+try:
+    for issue in pr_issues:
+        branch, pr = _resolve_pr_target(...)   # find_pr non-rate-limit error → (branch, None) → CI-only
+        if branch is None: continue
+        merge-conflict (pr) or CI (pr or live) or review comments (pr)
+finally:
+    pr_cache.save()   # keeps fetched PR results when a rate limit came from elsewhere;
+                      # no-op after the cache's own rate limit
 ```
 
 ## HOW
@@ -59,7 +62,9 @@ pr_cache.save()                                 # skipped implicitly when a rate
   - no open PR → `ci_manager.get_latest_ci_status(branch)` called live;
   - `find_pr` raises `RuntimeError` → CI-only check, other issues still processed;
   - `label_events` not called when there are no feedback items;
-  - `save()` called once after the loop; rate limit from `find_pr` → propagates, `save` not called;
+  - `save()` called once after the loop; a rate limit raised outside the cache
+    (e.g. `_escalate`) → propagates, `save()` still called once (try/finally);
+    rate limit from `find_pr` → propagates (the real cache's `save()` is then a no-op);
   - update existing fixtures from `PullRequestData` dicts to `OpenPullRequest`
     (`number`, `head_branch`, `head_sha`, `head_label`, `base_branch`, `updated_at`,
     `user`, `author_association`, `draft`).

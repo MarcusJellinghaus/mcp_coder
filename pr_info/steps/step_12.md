@@ -38,15 +38,19 @@ def lookup_branch(cache: BranchLookupCache, issue: IssueData) -> str | None:
 (`lookup` already converts rate limits into `GitHubRateLimitError`, which none
 of these classes catch.)
 
-Call sites — one cache per repo per function, `save()` once at the end:
+Call sites — one cache per repo per function, `save()` once in a `try/finally`
+around the loop. Each cache's own `save()` decides whether to persist (no-op
+after its own rate limit), so a rate limit from elsewhere does not throw away
+lookups already resolved:
 - `build_eligible_issues_with_branch_check`: `branch_cache = BranchLookupCache.load(IssueBranchManager(repo_url=repo_url))`
   replaces `branch_manager`; inside the loop `branch = lookup_branch(branch_cache, issue)`;
-  `branch_cache.save()` after the loop (inside the repo `try`).
+  `branch_cache.save()` in a `finally` around the loop (inside the repo `try`).
 - `check_pr_health` / `_resolve_pr_target`: parameter `branch_cache: BranchLookupCache`
   replaces `branch_manager`, `repo_owner`, `repo_gh_name`; `branch = lookup_branch(branch_cache, issue)`;
-  `branch_cache.save()` next to `pr_cache.save()`.
+  `branch_cache.save()` in the same `finally` as `pr_cache.save()` (Step 11), each
+  save attempted even if the other raises (nested `try/finally`).
 - `process_eligible_issues`: cache replaces `branch_manager`; `branch_name = lookup_branch(branch_cache, issue)`;
-  `branch_cache.save()` after the loop.
+  `branch_cache.save()` in a `finally` around the loop.
 - `session_restart`:
   - `restart_closed_sessions`: `branch_caches: dict[str, BranchLookupCache] = {}` before the loop;
     per session (load lazily, so no manager is built per session):
@@ -57,7 +61,8 @@ Call sites — one cache per repo per function, `save()` once at the end:
         branch_caches[repo_full_name] = branch_cache
     ```
     replacing the per-session `IssueBranchManager(...)` (~386);
-    after the loop `for cache in branch_caches.values(): cache.save()`.
+    the loop runs inside `try`; `finally: for cache in branch_caches.values(): cache.save()`,
+    so a rate limit in one repo keeps the lookups already resolved for the others.
   - `_prepare_restart_branch(folder_path, current_status, branch_cache, issue)`:
     `linked_branch = lookup_branch(branch_cache, issue)`; `None` → `BranchPrepResult(False, "No branch", None)`.
     `repo_owner` / `repo_name` / `issue_number` parameters go away (`issue["number"]` where needed).
@@ -72,17 +77,20 @@ Call sites — one cache per repo per function, `save()` once at the end:
     `BranchLookupError` / `ValueError` / `GithubException(500)` → `None` + WARNING;
     `GitHubRateLimitError` → propagates.
   - per call site: a `BranchLookupError` for issue 1 → treated as "no branch",
-    issue 2 still processed (acceptance); a `GitHubRateLimitError` → propagates;
-    `save()` called once per repo.
+    issue 2 still processed (acceptance); a `GitHubRateLimitError` → propagates
+    and `save()` is still called (try/finally); `save()` called once per repo.
+  - restart: sessions of repo A then repo B, rate limit on repo B → repo A's
+    cache `save()` is called.
   - restart: one `BranchLookupCache.load` per repo for two sessions of the same repo.
   - **Call-count test** (acceptance, in `test_vscodeclaude_pr_health.py`):
     real `PullRequestCache` + `BranchLookupCache` on a `tmp_path` cache dir
     (patch the cache-dir location used by `cache_file_path`), a mocked
     `Repository`; warm caches from a run whose snapshot is older than 60 s;
-    all PRs open, CI final, issues unchanged → second `check_pr_health` makes
-    ≈ 2 `core` calls (open-PR list + base tip) and no branch-resolution or
-    label-event calls. A status-10 issue without an open PR still calls
-    `get_latest_ci_status` live.
+    all PRs open, CI final, issues unchanged → the second `check_pr_health`
+    makes exactly one open-PR list call plus one base-tip call per distinct
+    base branch, zero `resolve_branch_for_issue` calls and zero
+    `get_issue_events` calls (assert on the mocks). A status-10 issue without
+    an open PR still calls `get_latest_ci_status` live.
 
 ## DATA
 `lookup_branch -> str | None`; `BranchLookup(status, branch)` NamedTuple.

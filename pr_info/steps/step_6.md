@@ -48,7 +48,10 @@
      inside the existing `if update_issue_labels and cached_issue_number:`; keep the
      success log when `rc == 0`; `return rc` at the end.
    - fix_ci: `if update_issue_labels: return apply_final_label(project_dir, "fixing_ci", "pr_created")`.
-   - fix_conflict: `return apply_final_label(project_dir, "fixing_merge_conflict", "pr_created")` (always; labels are hard-coded on).
+   - fix_conflict: `return apply_final_label(project_dir, "fixing_merge_conflict", "pr_created")`
+     replaces only the `else` (no-verdict) branch at `fix_conflict/core.py:102`
+     (labels are hard-coded on, so no `update_issue_labels` check). The
+     `if verdict:` branch keeps calling `_fail` and returning 0.
    - review: `_set_label(...) -> int` returns 0 when `update_issue_labels` is False,
      else `apply_final_label(project_dir, config.busy_label_id, to_label_id)`;
      `core.py:381` → `return _set_label(...)`; `handoff.py:401` → `return _set_label(...)`
