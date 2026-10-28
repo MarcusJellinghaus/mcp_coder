@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Marker definitions and `-m` filters (config, CI, tooling)
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: precondition collect-only check (0 tests selected), then remove the three markers from `pyproject.toml`, `ci.yml`, `.claude/CLAUDE.md`, `.run/` config, `get_pytest_performance_stats.bat`, `ci_coverage_summary.py`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: precondition collect-only check (0 tests selected), then remove the three markers from `pyproject.toml`, `ci.yml`, `.claude/CLAUDE.md`, `.run/` config, `get_pytest_performance_stats.bat`, `ci_coverage_summary.py`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Dead test code and unused GitHub fixtures
 See [step_2.md](./steps/step_2.md)
