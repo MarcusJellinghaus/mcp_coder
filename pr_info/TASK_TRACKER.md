@@ -23,9 +23,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 1: `tach_docs.py` writes to `docs/architecture/dependencies/` — [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: update `tests/tools/test_tach_docs.py` first (watch it fail), then fix `tools/tach_docs.py` and the `tach_docs.sh` / `.bat` header comments
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `tests/tools/test_tach_docs.py` first (watch it fail), then fix `tools/tach_docs.py` and the `tach_docs.sh` / `.bat` header comments
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: pydeps scripts write to `docs/architecture/dependencies/` — [step_2.md](./steps/step_2.md)
 
