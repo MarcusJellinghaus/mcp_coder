@@ -9,7 +9,7 @@ Why the architecture rules are enforced, and which tools enforce them: see [Arch
 | Layer enforcement | ✅ | ✅ |
 | Third-party isolation | ✅ `forbidden` contracts | ❌ |
 | Submodule boundaries | ✅ `\|` siblings in the layers contract, `forbidden` contracts | ❌ (struggles with `__init__.py`) |
-| Circular dependency detection | ❌ | ✅ |
+| Circular dependency detection | ⚠️ targeted `forbidden` contracts only (e.g. `mlflow_logger_no_cycles`) | ✅ |
 | Explicit `depends_on` | ❌ | ✅ |
 
 **Summary**: Use both - tach for high-level layers, import-linter for fine-grained rules.
