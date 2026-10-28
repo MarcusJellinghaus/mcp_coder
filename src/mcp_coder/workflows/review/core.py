@@ -227,6 +227,7 @@ def run_review_workflow(
                         round_number=round_number,
                         verdict=last_verdict,
                         elapsed=time.time() - start_time,
+                        exc=exc,
                     )
                 reviewer_sid = report_response["session_id"]
                 report = report_response["text"]
@@ -276,6 +277,7 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    exc=exc,
                 )
             if verdict is None:
                 return _fail(
@@ -483,6 +485,7 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    exc=exc,
                 )
             run_formatters(project_dir)
             if not commit_changes(

@@ -11,6 +11,7 @@ import logging
 import time
 from pathlib import Path
 
+from mcp_coder.llm.error_summary import comment_safe
 from mcp_coder.mcp_workspace_git import (
     commit_all_changes,
     commit_paths,
@@ -24,6 +25,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     CommentField,
     WorkflowFailure,
     build_failure_comment,
+    exception_summary,
     handle_workflow_failure,
 )
 from mcp_coder.workflow_utils.label_transitions import update_workflow_label
@@ -127,6 +129,7 @@ def _fail(
     verdict: Verdict | None = None,
     elapsed: float | None = None,
     details: str | None = None,
+    exc: BaseException | None = None,
 ) -> int:
     """Route a terminal error through the shared failure handler; return ``1``.
 
@@ -147,12 +150,20 @@ def _fail(
         elapsed: Elapsed seconds since the run started, rendered when given.
         details: Human-readable cause; replaces the reason's default Error
             sentence when given.
+        exc: The exception that stopped the run. When given it is logged with
+            its traceback, its summary is appended to the banner message, and
+            its comment-safe summary replaces the default Error sentence unless
+            ``details`` is given.
 
     Returns:
         Always ``1``.
     """
     label = config.failure_labels.get(reason, config.failure_labels["general"])
     message = f"{config.name} review failed: {reason}"
+    summary = exception_summary(exc) if exc is not None else None
+    if summary is not None:
+        logger.error("%s: %s", message, summary, exc_info=exc)
+        message = f"{message}: {summary}"
     failure = WorkflowFailure(
         category=label,
         stage="Review",
@@ -160,6 +171,7 @@ def _fail(
         elapsed_time=elapsed,
     )
     category, sentence = _FAIL_REASONS.get(reason, _FAIL_REASONS["general"])
+    error_text = details or (comment_safe(summary) if summary is not None else sentence)
     stage = (
         f"{config.display_name}, round {round_number}"
         if round_number is not None
@@ -172,7 +184,7 @@ def _fail(
         fields=[
             ("Category", category),
             ("Stage", stage),
-            ("Error", details or sentence),
+            ("Error", error_text),
             ("Verdict", verdict.decision if verdict else None),
         ],
         elapsed=elapsed,

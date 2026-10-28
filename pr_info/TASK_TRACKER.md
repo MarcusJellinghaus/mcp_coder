@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: `_fail(exc=)` and the three core.py catch sites
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: tests (`test_core_failure_detail.py`, extend `test_core.py`) + `_fail(exc=)` in `handoff.py` + `exc=exc` at reviewer, supervisor and fix-task catch sites
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`test_core_failure_detail.py`, extend `test_core.py`) + `_fail(exc=)` in `handoff.py` + `exc=exc` at reviewer, supervisor and fix-task catch sites
+- [x] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Details for the three "general" failures without an exception
 See [step_3.md](./steps/step_3.md)
