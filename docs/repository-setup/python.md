@@ -80,102 +80,26 @@ Pins the Python version used for the repo. Tools like `pyenv` and `uv` read this
 
 > Overview: see [quality-and-security-checks.md](quality-and-security-checks.md).
 
-Enforce module boundaries and prevent architectural drift with automated tools. These components help maintain code quality and keep files manageable for LLM context windows.
-
-### Why Architecture Enforcement?
-
-Large files consume LLM context budget, and architecture rules with clear boundaries enable more focused analysis and prevent technical debt. CI matrix execution with fail-fast disabled gives complete feedback on all checks at once.
-
-### Running Architecture Tools
-
-**Recommended Approach: Use Tools Scripts**
-
-All architecture tools have corresponding scripts in the `tools/` directory that provide:
-
-- **Better UX**: Informative status messages and progress indicators
-- **Error handling**: Check if tools are installed and provide helpful installation guidance
-- **Consistency**: Standardized output format and argument handling
-- **Cross-platform**: Both `.sh` (Linux/macOS) and `.bat` (Windows) versions
-
-**Examples:**
-
-```bash
-# Use these (recommended)
-./tools/lint_imports.sh
-./tools/tach_check.sh
-./tools/pycycle_check.sh
-./tools/vulture_check.sh
-./tools/deptry_check.sh
-
-# Instead of direct commands
-lint-imports
-tach check
-pycycle --here
-vulture src tests vulture_whitelist.py --min-confidence 60
-deptry src
-```
-
-(For Claude Code MCP tool equivalents, see the Quality Check Tools section below.)
+Why the architecture is enforced, and which tool guards what: see
+[enforcement.md](../architecture/enforcement.md).
 
 ### Import Architecture Enforcement
 
 > **Customize (`.importlinter`):** Package names and contract definitions.
 
-**Tool: import-linter**
-
-- **Purpose:** Contract-based import validation
-- **Execution:** `./tools/lint_imports.sh` (Linux/macOS) or `tools\lint_imports.bat` (Windows)
-- **Direct:** `lint-imports`
-- **Documentation:** [import-linter docs](https://import-linter.readthedocs.io/en/stable/)
-- **Example config:** See `.importlinter` in this repository
-
 ### Dependency Architecture Validation
 
 > **Customize (`tach.toml`):** Module boundaries for your package.
 
-**Tool: tach**
-
-- **Purpose:** Architectural boundary enforcement
-- **Execution:** `./tools/tach_check.sh` (Linux/macOS) or `tools\tach_check.bat` (Windows)
-- **Direct:** `tach check`
-- **Documentation:** [tach docs](https://docs.gauge.sh/)
-- **Example config:** See `tach.toml` in this repository
-
-**Tool: pycycle**
-
-- **Purpose:** Circular dependency detection
-- **Execution:** `./tools/pycycle_check.sh` (Linux/macOS) or `tools\pycycle_check.bat` (Windows)
-- **Direct:** `pycycle --here`
-- **Documentation:** [pycycle PyPI](https://pypi.org/project/pycycle/)
-
 ### Dead Code Elimination
 
 > **Customize (`vulture_whitelist.py`):** Project-specific false positives.
-
-**Tool: vulture**
-
-- **Purpose:** Unused code detection
-- **Execution:** `./tools/vulture_check.sh` (Linux/macOS) or `tools\vulture_check.bat` (Windows)
-- **Direct:** `vulture src tests vulture_whitelist.py --min-confidence 60`
-- **Documentation:** [vulture docs](https://github.com/jendrikseipp/vulture)
-- **Example config:** See `vulture_whitelist.py` in this repository
 
 ### Dependency Declaration Hygiene
 
 > **Customize (`[tool.deptry]` in `pyproject.toml`):** The dev-only extras
 > (`optional_dependencies_dev_groups`), per-rule ignores and the
 > package-to-module name map.
-
-**Tool: deptry**
-
-- **Purpose:** Detects imports that are undeclared or reach the code only as a transitive dependency. No other tool in this stack checks the declaration direction — `_depcheck.py` checks the opposite one, that declared deps are installed.
-- **Execution:** `./tools/deptry_check.sh` (Linux/macOS) or `tools\deptry_check.bat` (Windows)
-- **Direct:** `deptry src`
-- **Documentation:** [deptry docs](https://deptry.com/)
-- **Example config:** See `[tool.deptry]` in `pyproject.toml`
-
-Runs against `src` only — over `tests/` it reports dev dependencies as production
-imports (`DEP004`) with no signal to show for it.
 
 ## CI Workflow for Python
 
@@ -217,8 +141,8 @@ Format via `mcp__mcp-tools-py__run_format_code` (formatter chosen by `[tool.mcp-
 | `pylint_check_for_errors.bat` | Run pylint errors only | Optional (CI runs it) |
 | `mypy.bat` | Run type checking | Optional (CI runs it) |
 
-> **For Claude Code:** Use MCP tools where available: `mcp__mcp-tools-py__run_lint_imports_check` (replaces `lint_imports.sh`), `mcp__mcp-tools-py__run_vulture_check` (replaces `vulture_check.sh`), `mcp__mcp-tools-py__run_pylint_check`, `mcp__mcp-tools-py__run_mypy_check`.
-> Shell scripts are for human developers and CI pipelines. `tach_check.sh` and `pycycle_check.sh` have no MCP equivalents — run them via Bash when needed.
+> **For Claude Code:** Use MCP tools where available: `mcp__mcp-tools-py__run_lint_imports_check`, `mcp__mcp-tools-py__run_tach_check`, `mcp__mcp-tools-py__run_vulture_check`, `mcp__mcp-tools-py__run_deptry_check`, `mcp__mcp-tools-py__run_pylint_check`, `mcp__mcp-tools-py__run_mypy_check`.
+> Shell scripts are for human developers and CI pipelines. `pycycle_check.sh` has no MCP equivalent — run it via Bash when needed.
 
 ### Performance Analysis Tools
 

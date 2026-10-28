@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 5: Cut down `python.md` *Architecture Enforcement*, fix the MCP note — [step_5.md](./steps/step_5.md)
 
-- [ ] Implementation: reduce `## Architecture Enforcement` to the link plus *Customize* notes (keep required headings), replace the *For Claude Code* MCP note
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: reduce `## Architecture Enforcement` to the link plus *Customize* notes (keep required headings), replace the *For Claude Code* MCP note
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Replace `architecture.md` §8 subsections with a pointer — [step_6.md](./steps/step_6.md)
 
