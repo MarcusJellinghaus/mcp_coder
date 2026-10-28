@@ -21,6 +21,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Marker definitions and `-m` filters (config, CI, tooling)
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: precondition collect-only check (0 tests selected), then remove the three markers from `pyproject.toml`, `ci.yml`, `.claude/CLAUDE.md`, `.run/` config, `get_pytest_performance_stats.bat`, `ci_coverage_summary.py`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Dead test code and unused GitHub fixtures
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: precondition search, then delete commented-out Claude API test code, GitHub fixtures in `tests/conftest.py` with their imports, and vulture whitelist entries
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Docs, plus the final acceptance search
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: update `tests/README.md`, `architecture.md`, `runtime_statistics.md`, `runtime-statistics-review-process.md`; acceptance search finds hits only under `docs/tests/performance_data/`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `main` and address findings
+- [ ] PR summary prepared
