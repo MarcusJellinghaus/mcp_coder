@@ -28,9 +28,9 @@ Large files (>750 lines) and poor code organization:
 # Changing logic while relocating - do this in a separate PR
 ```
 
-### 2. Only Adjust Imports
+### 2. Only Mechanical Edits
 
-The only code changes should be:
+The main code changes are:
 
 - Import statements in the moved file
 - Import statements in files that use the moved code
@@ -230,7 +230,7 @@ Before merging a refactoring PR:
 - [ ] File size check passes (`mcp-coder check file-size --max-lines 750` or `mcp__mcp-workspace__check_file_size`)
 - [ ] `.large-files-allowlist` updated (remove entries for split files)
 - [ ] `.importlinter` updated if modules were split (sub-layers)
-- [ ] Compact diff is short — otherwise split into more steps, as long as each step leaves the code working and the tests passing
+- [ ] Compact diff is short — otherwise split into more PRs (each step still leaves the code working and the tests passing)
 
 ## Related
 

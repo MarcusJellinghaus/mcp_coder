@@ -44,7 +44,7 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 4. Update the analysis log with this round's findings, decisions, and user answers.
 5. Accumulate all decisions, constraints, and refined requirements. Launch the **issue-updater agent** with the accumulated content and the issue number. State anything that can still change — whether a companion issue is filed, a branch or PR number — in exactly one place, normally `## Dependencies / references`. A fact restated in three sections goes stale in three. Issue content rules:
    - **Decisions and constraints, not a pre-computed implementation** — line ranges, per-file import lists and counts go stale and duplicate the planning step.
-   - Never cite line numbers in files that other open issues also edit; refer to the path or symbol.
+   - Refer to paths and symbols, not line numbers — they go stale, especially in files other open issues also edit.
    - Link shared rules (e.g. `.claude/knowledge_base/refactoring_principles.md`) instead of copying them.
    - Every prohibition needs an allowed fallback or an explicit "stop and report".
    - Every step or check must be doable with MCP tools — the implement workflow has no Bash.

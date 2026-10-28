@@ -7,7 +7,7 @@ Rules for moving code without changing it. Repo-specific details (size limits, a
 - **Move, don't change.** Logic changes belong in a separate PR.
 - **Use the refactoring tools** (`move_symbol`, `move_module`) — they update imports. Move by hand only as described in **How to move**.
 - **Clean deletion, no legacy artifacts.** No stubs, no re-exports for backward compatibility.
-- **Small steps.** A step is one commit or plan step; after each step the code works and the tests pass. Review the compact diff and keep it short enough to review in one pass.
+- **Small steps.** A step is one commit or plan step; after each step the code works and the tests pass. Keep each PR's compact diff short enough to review in one pass; if it isn't, split the PR.
 - **Merge two steps when the state between them is not solid** — if the code doesn't work or the tests can't pass after the first step.
 - **Tests mirror source structure.**
 
@@ -28,12 +28,12 @@ Anything else is a code change: stop and report.
 ## How to move
 
 1. Plan the tool calls so the tools produce the final result.
-2. If they can't, make the smallest hand edit: move whole top-level statements, change nothing inside them.
+2. If they can't, make the smallest hand edit: move whole top-level statements, change nothing inside them except the edits listed under **Allowed edits**.
 
 ## Plan the layout
 
 - **Map each test to the module it calls**, not the one it patches. Misplaced tests move to their module's test file.
-- **Check the hard constraints first:** a file that is one big class, a single unit larger than the size budget, file-local fixtures that tests depend on, definitions that must stay above their users.
+- **Check the hard constraints first:** a file that is one big class, a single unit larger than the size budget, file-local fixtures that tests depend on, definitions that must stay above their users. Choose a layout that respects them; if none can, stop and report.
 - **Prefer layouts that keep shared helpers in place and move only whole classes or functions.**
 
 ## Verify
