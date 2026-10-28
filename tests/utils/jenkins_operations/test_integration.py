@@ -86,6 +86,18 @@ class TestJenkinsIntegration:
         timestamps = [b.timestamp for b in builds]
         assert timestamps == sorted(timestamps, reverse=True)
 
+    def test_job_path_lists_that_jobs_builds(
+        self, jenkins_client: JenkinsClient, jenkins_test_setup: dict[str, str]
+    ) -> None:
+        """A job path lists only that job's builds, newest first."""
+        test_job = jenkins_test_setup["test_job"]
+        builds = jenkins_client.get_recent_builds(limit=5, path=test_job)
+
+        assert builds, f"No builds listed for job '{test_job}'"
+        assert all(b.job_path == test_job for b in builds)
+        timestamps = [b.timestamp for b in builds]
+        assert timestamps == sorted(timestamps, reverse=True)
+
     def test_started_build_appears_with_console_output(
         self, jenkins_client: JenkinsClient, jenkins_test_setup: dict[str, str]
     ) -> None:
@@ -104,17 +116,11 @@ class TestJenkinsIntegration:
             time.sleep(POLL_INTERVAL_S)
             status = jenkins_client.get_job_status(queue_id)
 
-        parent = test_job.rpartition("/")[0] or None
-        # Top level scans the whole server, so allow a wider window.
-        limit = 100 if parent else 500
-        match = next(
-            (
-                b
-                for b in jenkins_client.get_recent_builds(limit=limit, path=parent)
-                if b.job_path == test_job and b.number == status.build_number
-            ),
-            None,
-        )
+        builds = jenkins_client.get_recent_builds(limit=100, path=test_job)
+        timestamps = [b.timestamp for b in builds]
+        assert timestamps == sorted(timestamps, reverse=True)
+        assert all(b.job_path == test_job for b in builds)
+        match = next((b for b in builds if b.number == status.build_number), None)
 
         assert match is not None, f"Build {status} not found in recent builds"
         assert match.status not in ("running", "unknown")
