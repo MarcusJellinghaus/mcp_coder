@@ -10,7 +10,7 @@
 ## Precondition
 
 Search the project for `GitHubTestSetup|github_test_setup|create_github_manager`.
-Hits are expected only in `tests/conftest.py` and `vulture_whitelist.py`.
+Hits are expected only in `tests/conftest.py` and `vulture_whitelist.py` (the `pr_info/` plan files may mention the names too; ignore those).
 If any other file uses them: write one line to `pr_info/.blocked.txt` naming that file, and stop.
 
 ## WHERE / WHAT
