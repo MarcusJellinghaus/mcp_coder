@@ -53,9 +53,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 6: Replace `architecture.md` §8 subsections with a pointer — [step_6.md](./steps/step_6.md)
 
-- [ ] Implementation: replace *Architectural Boundary Enforcement* bullets with the pointer, delete *Dead Code Detection*, leave *Refactoring Guidelines* unchanged
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: replace *Architectural Boundary Enforcement* bullets with the pointer, delete *Dead Code Detection*, leave *Refactoring Guidelines* unchanged
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: Add `enforcement.md` links to the #1181 hub — [step_7.md](./steps/step_7.md)
 
