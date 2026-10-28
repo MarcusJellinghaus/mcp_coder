@@ -7,3 +7,11 @@ Still checking the plan against the actual files (conftest.py next, then vulture
 Verdict(decision='tasks', tasks=['In pr_info/steps/step_1.md around line 18, state that pytest exiting with code 5 ("no tests ran" / all tests deselected) is the expected passing result for the 0-selected-tests precondition, so the implementer should neither write .blocked.txt nor retry when run_pytest_check reports it.'], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-10-28
+**Findings**:
+Plan steps match the issue so far. Checking the remaining target files (architecture.md, README, pyproject, review-process doc) against the plan's line references.`pr_info/steps/step_2.md:13` — high — The precondition says hits for `GitHubTestSetup|github_test_setup|create_github_manager` are expected "only in `tests/conftest.py` and `vulture_whitelist.py`". A project-wide search will also hit `pr_info/steps/step_2.md` and `pr_info/steps/summary.md`. Read literally, that sets off the "write `.blocked.txt` and stop" rule and halts the step. Exclude `pr_info/` here, the same way `step_3.md:61` already does.
+**Decisions**:
+Verdict(decision='tasks', tasks=['In pr_info/steps/step_2.md around line 13, change the precondition search for `GitHubTestSetup|github_test_setup|create_github_manager` so it excludes `pr_info/`, matching how step_3.md:61 does it. Hits in the plan files themselves must not trigger the `.blocked.txt` stop rule.'], escalate_reason=None)
+**Changes**:
+applied
