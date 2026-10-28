@@ -41,9 +41,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 4: Cut down `docs/architecture/dependencies/readme.md` — [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: replace intro with pointer, delete covered sections, trim Vulture section, fix comparison-table row and Generated Files line
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: replace intro with pointer, delete covered sections, trim Vulture section, fix comparison-table row and Generated Files line
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Cut down `python.md` *Architecture Enforcement*, fix the MCP note — [step_5.md](./steps/step_5.md)
 

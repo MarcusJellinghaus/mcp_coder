@@ -1,23 +1,6 @@
 # Dependency Management
 
-Tools for enforcing architectural boundaries and detecting dependency issues.
-
-## Config Files
-
-| File | Purpose |
-|------|---------|
-| `.importlinter` | Import rules: layers, isolation, forbidden imports |
-| `tach.toml` | Module boundaries and layer definitions |
-
-## Tools
-
-| Tool | Purpose | Config | Script | MCP Tool |
-|------|---------|--------|--------|----------|
-| **import-linter** | Enforce import rules (layers, isolation, forbidden) | `.importlinter` | `tools/lint_imports.sh` / `.bat` | `mcp__mcp-tools-py__run_lint_imports_check` |
-| **tach** | Module boundaries & layer enforcement | `tach.toml` | `tools/tach_check.sh` / `.bat` | — |
-| **pycycle** | Detect circular imports | - | `tools/pycycle_check.sh` / `.bat` | — |
-| **pydeps** | Visualize dependencies | - | `tools/pydeps_graph.sh` / `.bat` | — |
-| **vulture** | Dead code detection | `vulture_whitelist.py` | `tools/vulture_check.sh` / `.bat` | `mcp__mcp-tools-py__run_vulture_check` |
+Why the architecture rules are enforced, and which tools enforce them: see [Architecture Enforcement](../enforcement.md). This page keeps the details that do not fit there.
 
 ## Why Both import-linter and tach?
 
@@ -25,60 +8,11 @@ Tools for enforcing architectural boundaries and detecting dependency issues.
 |---------|---------------|------|
 | Layer enforcement | ✅ | ✅ |
 | Third-party isolation | ✅ `forbidden` contracts | ❌ |
-| Submodule boundaries | ✅ `independence` contracts | ❌ (struggles with `__init__.py`) |
+| Submodule boundaries | ✅ `\|` siblings in the layers contract, `forbidden` contracts | ❌ (struggles with `__init__.py`) |
 | Circular dependency detection | ❌ | ✅ |
 | Explicit `depends_on` | ❌ | ✅ |
 
 **Summary**: Use both - tach for high-level layers, import-linter for fine-grained rules.
-
-## Running Checks
-
-```bash
-# All checks
-./tools/lint_imports.sh && ./tools/tach_check.sh && ./tools/pycycle_check.sh && ./tools/vulture_check.sh
-
-# Individual
-lint-imports          # 19 contracts
-tach check            # Layer violations
-pycycle --here        # Circular imports
-vulture src tests vulture_whitelist.py --min-confidence 60  # Dead code
-```
-
-**For Claude Code**, use MCP tools:
-- `mcp__mcp-tools-py__run_lint_imports_check` (replaces `lint_imports.sh`)
-- `mcp__mcp-tools-py__run_vulture_check` (replaces `vulture_check.sh`)
-- `mcp__mcp-tools-py__get_library_source` — inspect third-party library source to understand dependency APIs
-
-## Vulture - Dead Code Detection
-
-**Purpose**: Identifies unused code (imports, functions, variables, classes) that can be safely removed.
-
-**Command**: 
-```bash
-vulture src tests vulture_whitelist.py --min-confidence 60
-```
-
-**Whitelist**: `vulture_whitelist.py` contains items that appear unused but are intentionally kept:
-- API completeness methods (GitHub operations)
-- Enum values for API constants
-- Base class attributes for subclasses
-- TypedDict fields, pytest fixtures, argparse patterns (false positives)
-
-**Note**: The whitelist is intentionally liberal. Some items may be candidates for removal but were whitelisted to avoid blocking implementation. Review the whitelist periodically - items may become used or truly dead over time.
-
-## CI
-
-All checks run automatically on pull requests (see `.github/workflows/ci.yml`).
-
-## Current Contracts (import-linter)
-
-**Architecture (6)**: Layered architecture, domain independence, formatter independence, external services independence, git local isolation, jenkins isolation
-
-**Third-party (5)**: github, git, jenkins, mcp_tools_py, requests
-
-**Tests (2)**: No test imports in source, test module independence
-
-> Each rule includes comments explaining its rationale. See `.importlinter` and `tach.toml` for details.
 
 ## Best Practice: Submodule Imports
 
@@ -115,7 +49,18 @@ When restructuring code or splitting large files, see the [Safe Refactoring Guid
 - Moving or renaming modules
 - Intentionally allowing a previously forbidden import (add to `ignore_imports`)
 
+## Vulture Whitelist
+
+**Whitelist**: `vulture_whitelist.py` contains items that appear unused but are intentionally kept:
+- API completeness methods (GitHub operations)
+- Enum values for API constants
+- Base class attributes for subclasses
+- TypedDict fields, pytest fixtures, argparse patterns (false positives)
+
+**Note**: The whitelist is intentionally liberal. Some items may be candidates for removal but were whitelisted to avoid blocking implementation. Review the whitelist periodically - items may become used or truly dead over time.
+
 ## Generated Files
 
 - `dependency_graph.html` - Interactive dependency visualization (committed)
-- `pydeps_graph.svg` / `.dot` - Pydeps visualization (generate with `tools/pydeps_graph.sh`)
+- `pydeps_graph.dot` - Pydeps graph source (committed)
+- `pydeps_graph.svg` - Pydeps visualization (generate with `tools/pydeps_graph.sh`)
