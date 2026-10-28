@@ -43,7 +43,7 @@ None.
 None.
 
 ## Checks
-- `search_files(pattern="contracts|independence. contracts", glob="docs/architecture/dependencies/readme.md")`:
+- `search_files(pattern="\\d+ contracts|independence. contracts", glob="docs/architecture/dependencies/readme.md")`:
   no counts, no "`independence` contracts".
 - The links `../enforcement.md` and `../../processes-prompts/refactoring-guide.md` resolve.
 
