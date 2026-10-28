@@ -36,13 +36,13 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 
 **Workflow:**
 
-1. Launch a new engineer subagent → `/issue_analyse` with the issue number.
+1. Launch a new engineer subagent → `/issue_analyse` with the issue number. Tell the engineer to **verify every factual claim in the issue against the code** (symbol names, file paths, counts, ordering assumptions), not only to answer open questions. Pass the issue and linked issues — not your own conclusions from earlier rounds; a reviewer handed a hypothesis tends to confirm it.
 2. Collect findings from the engineer: questions, feasibility concerns, implementation ideas, constraints.
 3. Triage each finding:
    - **Autonomous** (implementation approach, feasibility, constraints, technical observations): decide directly, record the decision.
    - **Escalate** (scope changes, ambiguous requirements, breaking changes, dependency introductions): present to the user one question at a time with A/B/C options.
 4. Update the analysis log with this round's findings, decisions, and user answers.
-5. Accumulate all decisions, constraints, and refined requirements. Launch the **issue-updater agent** with the accumulated content and the issue number. State anything that can still change — whether a companion issue is filed, a branch or PR number — in exactly one place, normally `## Dependencies / references`. A fact restated in three sections goes stale in three.
+5. Accumulate all decisions, constraints, and refined requirements. Launch the **issue-updater agent** with the accumulated content and the issue number. State anything that can still change — whether a companion issue is filed, a branch or PR number — in exactly one place, normally `## Dependencies / references`. A fact restated in three sections goes stale in three. Keep the issue to **decisions and constraints, not a pre-computed implementation** — line ranges, per-file import lists and counts go stale and duplicate the planning step. Never cite line numbers in files that other open issues also edit. Link shared rules (e.g. `.claude/knowledge_base/refactoring_principles.md`) instead of copying them. Every prohibition needs an allowed fallback or an explicit "stop and report", and every step or check must be doable with MCP tools — the implement workflow has no Bash.
 6. **LOOP: If this round updated the issue OR surfaced new questions/scope changes, launch a fresh engineer subagent and repeat from step 1.** Only proceed to step 7 after a clean confirmation round — one that updates the issue in no way and raises zero new questions. Do NOT stop or wait for user input between rounds — the loop is automatic.
 7. **Safety valve:** If 5 rounds have been reached, stop. Your output here *is* the list of remaining open items plus a request for guidance — not a separate "done" message followed by issues.
 8. **Finalize:**
@@ -67,6 +67,8 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 
 **Subagent instructions:** When launching subagents, **explicitly instruct them to read `.claude/CLAUDE.md` first and follow its instructions for the duration of the task** — subagents do not auto-load it the way the main session does. Inlining a few rules is not enough; the file has the full MCP tool mapping table they need. Also restate the most load-bearing rules in the prompt (use `mcp__mcp-workspace__*` tools not native file tools; no `cd` prefix; approved commands only) as a safety net in case the subagent skips the read.
 
+Analysis is **read-only**: engineers do not change files. Engineers report scope gaps as findings but do not propose follow-up issues — splitting the scope is the user's call (see the triage table).
+
 **Triage Guidelines:**
 
 | Autonomous (decide directly) | Escalate to User |
@@ -76,5 +78,6 @@ You are a technical lead supervising a software engineer (subagent). You do not 
 | Feasibility assessment ("yes this is doable") | Breaking changes / API surface decisions |
 | Technical debt observations (flag, don't block) | Priority / ordering between alternatives |
 | Structure and formatting of issue text | Dependency introductions |
+| | Follow-up issues or splitting the scope |
 
 **Escalation:** If you are unsure whether something is autonomous or needs user input, default to asking. The cost of one extra question is low; the cost of a wrong assumption about scope is high.

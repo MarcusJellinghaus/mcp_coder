@@ -36,6 +36,8 @@ The only code changes should be:
 - Import statements in files that use the moved code
 - Re-exports in `__init__.py` files (if maintaining API compatibility)
 
+The few other mechanical edits a pure move may need are listed under **Allowed edits** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md). Anything else is a code change.
+
 ### 3. Clean Deletion, No Legacy Artifacts
 
 When moving code to a new location:
@@ -52,8 +54,9 @@ Clean code is preferred over gradual migration. If external packages depend on t
 LLMs struggle with large moves. Break refactoring into:
 
 - **One module per PR** when possible
-- **Keep PR diffs under 25,000 tokens**
+- **Review the [compact diff](#compact-diff) and keep it short** — go step by step
 - **Move related functions together** (e.g., all string utilities)
+- **Merge two steps when the state between them is not solid** — if code doesn't work or tests can't pass after the first step
 
 ## Process
 
@@ -70,11 +73,13 @@ Before moving anything:
 Use the MCP refactoring tools — they move code and update all imports automatically:
 
 1. `mcp__mcp-tools-py__list_symbols(file=...)` — inventory the source file
-2. `mcp__mcp-tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=..., dry_run=true)` — preview
-3. `mcp__mcp-tools-py__move_symbol(source_file=..., symbol_name=..., dest_file=...)` — execute
+2. `mcp__mcp-tools-py__move_symbol(source_file=..., symbol_names=[...], dest_file=..., dry_run=true)` — preview
+3. `mcp__mcp-tools-py__move_symbol(source_file=..., symbol_names=[...], dest_file=...)` — execute
 4. Repeat for each symbol/group
 5. Update `__init__.py` re-exports if needed
 6. Update `.importlinter` layering contracts if the split introduces sub-layers (see [Import Linter](#import-linter) below)
+
+If the tool can't produce the result, follow **How to move** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md).
 
 ### Step 3: Move Tests
 
@@ -97,7 +102,11 @@ After all moves, verify the refactoring:
 mcp-coder git-tool compact-diff
 ```
 
-Suppresses moved-code blocks from the diff output. After a pure refactoring, the remaining diff should contain **only import changes and new/deleted file headers**. If you see logic changes in the compact diff, something was modified during the move.
+**For LLM sessions (MCP tools):** `mcp__mcp-workspace__git` with command `"diff"` and `compact=true`.
+
+Suppresses moved-code blocks from the diff output. After a pure refactoring, the remaining diff should contain **only import changes, new/deleted file headers and the allowed edits**. If you see logic changes in the compact diff, something was modified during the move.
+
+A green test run doesn't prove a pure move — see **Verify** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md).
 
 #### File Size Check
 
@@ -143,14 +152,16 @@ When splitting a module into sub-modules, the new files may have internal depend
 
 ```
 mcp__mcp-tools-py__run_format_code
-mcp__mcp-tools-py__run_lint_imports_check
+mcp__mcp-tools-py__run_lint_imports_check   # = ./tools/lint_imports.sh
+mcp__mcp-tools-py__run_tach_check           # = ./tools/tach_check.sh
 mcp__mcp-tools-py__run_vulture_check
+mcp__mcp-tools-py__run_ruff_check
 mcp__mcp-tools-py__run_pytest_check
 mcp__mcp-tools-py__run_pylint_check
 mcp__mcp-tools-py__run_mypy_check
 ```
 
-> `tach_check.sh` and `pycycle_check.sh` have no MCP equivalents — run them via Bash when needed.
+> Only `pycycle_check.sh` has no MCP equivalent — run it via Bash when needed. The automated implement workflow has no Bash, so issues for it must name the MCP tools only.
 > Use `mcp__mcp-tools-py__get_library_source` to inspect third-party library APIs when planning refactors.
 
 ## Common Patterns
@@ -185,6 +196,8 @@ Build your inventory from this full list, not the filtered one — otherwise the
 3. Move functions one group at a time
 4. Delete the original file — update all consumers to use new locations directly
 
+Before choosing a layout, run the checks under **Plan the layout** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md).
+
 ### When tests are much larger than the source
 
 The `foo.py ↔ test_foo.py` rule mirrors **structure, not file count** — one source module maps to one test *namespace* that may hold several files.
@@ -203,12 +216,14 @@ How to run splitting issues (distinct from the code technique above):
 - **Definition of done / closure gating:** close a split issue only once the file is under **750** lines **and** its `.large-files-allowlist` entry is removed. Closing while still allowlisted is a silent regression — e.g. #310 was closed but stayed 949 lines & allowlisted, now refiled as #1025.
 - **No recycling:** if a split file grows back over the limit, open a **new** issue — do not reopen the closed one.
 - **Source-refactor exception:** when [tests dwarf the source](#when-tests-are-much-larger-than-the-source) and decomposing it is warranted, it's a `refactor`, not a mechanical split. The LLM **proposes** it and a **human confirms** before the split is paused; then re-scope the issue up front, or open a separate issue and mark the split `blocked` if found mid-split.
+- **Writing the issues:** see **Refactoring issues** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md).
 
 ## Checklist
 
 Before merging a refactoring PR:
 
-- [ ] No function/class logic was changed (only moved) — verify with `mcp-coder git-tool compact-diff`
+- [ ] No function/class logic was changed (only moved) — verify with `mcp-coder git-tool compact-diff` / `mcp__mcp-workspace__git` diff `compact=true`; only allowed edits remain
+- [ ] Nothing silently lost — markers, test count, patch targets, fixtures
 - [ ] All imports updated correctly (automatic when using `move_symbol`)
 - [ ] Tests moved to mirror source structure
 - [ ] `lint-imports` passes
@@ -217,7 +232,7 @@ Before merging a refactoring PR:
 - [ ] File size check passes (`mcp-coder check file-size --max-lines 750` or `mcp__mcp-workspace__check_file_size`)
 - [ ] `.large-files-allowlist` updated (remove entries for split files)
 - [ ] `.importlinter` updated if modules were split (sub-layers)
-- [ ] PR diff is under 25,000 tokens
+- [ ] Compact diff is short — otherwise split into more steps
 
 ## Related
 
