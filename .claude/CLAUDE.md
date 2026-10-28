@@ -133,6 +133,7 @@ mcp-coder gh-tool set-status <label>
 - Download console logs: `tools/jenkins_download_logs.sh [--status ...] [--name-pattern REGEX] [--outdir .scratch/jenkins_logs]` — writes an `index.csv` alongside; read them with `read_file`, delete `.scratch/` when done.
 - Without `--job`, both default to the `executor_job_path` shared by `[coordinator.repos.*]` in the user config. Avoid `--all-jobs` with `--limit` above 100: a whole-server `allBuilds` query times out on the Coordinator's history.
 - `--name-pattern` matches the build display name before `--limit` applies; workflow builds are labelled like `mcp_coder - #1346 - implement - #2559` (`" - #\d+$"`).
+- Analyse failures: `tools/jenkins_classify_logs.sh [--logdir .scratch/jenkins_logs]` tags the logs with issue ids from `tools/jenkins_issue_patterns.toml`. Follow `tools/jenkins_issue_analysis.md`.
 
 ## Shared Libraries
 

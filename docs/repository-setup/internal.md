@@ -40,6 +40,7 @@ See [`tools/mlflow/README.md`](../../tools/mlflow/README.md) for the full list.
 | `tools/safe_delete_folder.py` | Safe folder deletion helper |
 | `tools/jenkins_builds.py` (+ `.bat` / `.sh`) | List recent Jenkins builds with time, status, folder, job, build number and display name; defaults to the configured `executor_job_path` |
 | `tools/jenkins_download_logs.py` (+ `.bat` / `.sh`) | Download console logs of recent Jenkins builds (default: failure, aborted, unstable), named by display name, plus an `index.csv` |
+| `tools/jenkins_classify_logs.py` (+ `.bat` / `.sh`) | Tag downloaded logs with issue ids from `tools/jenkins_issue_patterns.toml` and add target repo and package versions to `index.csv`; workflow in `tools/jenkins_issue_analysis.md` |
 | `tools/__init__.py` | Makes `tools/` an importable Python package |
 
 ## Internal CI Workflows
