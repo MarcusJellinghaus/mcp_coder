@@ -243,6 +243,10 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    details=(
+                        f"Reviewer returned an empty report "
+                        f"{EMPTY_REPORT_RETRIES} times"
+                    ),
                 )
 
             # Supervisor: persistent session, verdict parsed with repair retries.
@@ -289,6 +293,7 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    details="Supervisor verdict could not be parsed after repair retries",
                 )
             last_verdict = verdict
 
@@ -437,6 +442,7 @@ def run_review_workflow(
                     round_number=round_number,
                     verdict=last_verdict,
                     elapsed=time.time() - start_time,
+                    details="Reviewer returned no session id",
                 )
 
             logger.info(

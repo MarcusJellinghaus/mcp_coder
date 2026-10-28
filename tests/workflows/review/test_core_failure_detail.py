@@ -14,6 +14,8 @@ import pytest
 from mcp_coder.utils.subprocess_runner import CalledProcessError
 from mcp_coder.workflows.review import handoff
 from mcp_coder.workflows.review.config import REVIEW_PLAN
+from mcp_coder.workflows.review.core import EMPTY_REPORT_RETRIES
+from mcp_coder.workflows.review.reviewer import VERDICT_REPAIR_RETRIES
 from tests.workflows.review.conftest import _TASKS, _resp, _reviewer, _run
 
 
@@ -96,6 +98,37 @@ def test_fix_task_exception_is_in_comment_not_round_log(
     log = (tmp_path / "pr_info" / "plan_review_log_1.md").read_text(encoding="utf-8")
     assert "**Changes**:\ngeneral\n" in log
     assert "fix boom" not in log
+
+
+@pytest.mark.parametrize(
+    ("side_effect", "expected"),
+    [
+        pytest.param(
+            [_reviewer("   ")] * EMPTY_REPORT_RETRIES,
+            f"Reviewer returned an empty report {EMPTY_REPORT_RETRIES} times",
+            id="empty-report",
+        ),
+        pytest.param(
+            [_reviewer()] + [_resp("no verdict here")] * (1 + VERDICT_REPAIR_RETRIES),
+            "Supervisor verdict could not be parsed after repair retries",
+            id="unparseable-verdict",
+        ),
+        pytest.param(
+            [_reviewer(session_id=None), _resp(_TASKS)],  # type: ignore[arg-type]
+            "Reviewer returned no session id",
+            id="no-session-id",
+        ),
+    ],
+)
+def test_general_failure_without_exception_names_cause(
+    env: SimpleNamespace, tmp_path: Path, side_effect: list[object], expected: str
+) -> None:
+    """A ``general`` failure with no exception still names its cause."""
+    env.prompt_llm.side_effect = side_effect
+
+    assert _run(tmp_path, config=REVIEW_PLAN) == 1
+
+    assert f"**Error:** {expected}" in _comment(env).splitlines()
 
 
 def test_exception_traceback_is_logged_once(

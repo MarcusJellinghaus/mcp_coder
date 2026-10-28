@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Details for the three "general" failures without an exception
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: parametrized test in `test_core_failure_detail.py` + `details=` for empty report, unparseable verdict, no session id
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: parametrized test in `test_core_failure_detail.py` + `details=` for empty report, unparseable verdict, no session id
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: CI gate — log the exception and return a comment-ready detail
 See [step_4.md](./steps/step_4.md)
