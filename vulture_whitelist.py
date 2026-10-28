@@ -384,10 +384,6 @@ _._freeze_dynamic_ui
 # datetime.now(tz=...) signature for monkeypatching; the param is unused.
 _.tz
 
-# conftest.py - Fixtures for GitHub integration test setup
-_.github_test_setup
-_.create_github_manager
-
 # workflows/vscodeclaude/types.py - TypedDict field
 _.started_at
 _.vscode_pid_create_time

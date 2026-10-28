@@ -66,45 +66,13 @@ class TestCriticalPathIntegration:
         assert "elephant" in result2["text"].lower()
         assert result2["session_id"] == session_id
 
-    # TODO: Commented out due to Claude Code SDK compatibility issues
-    # Will be removed when SDK usage is removed from the codebase
-    # @pytest.mark.claude_api_integration
-    # def test_session_continuity_api(self) -> None:
-    #     """Test session management through the full stack (API method)."""
-    #     # Skip API test if SDK is not working in this environment
-    #     if not claude_sdk_working():
-    #         pytest.skip("Claude Code SDK not working in this environment")
-    #
-    #     # Prepare environment variables for MCP servers
-    #     env_vars = prepare_llm_environment(Path.cwd())
-    #
-    #     # Use prompt_llm to test full response structure with API method
-    #     result1 = prompt_llm(
-    #         "Remember this: giraffe", method="api", timeout=60, env_vars=env_vars
-    #     )
-    #     assert "session_id" in result1
-    #     assert result1["session_id"] is not None
-    #     assert "text" in result1
-    #     session_id = result1["session_id"]
-    #
-    #     # Test session continuity with API method
-    #     result2 = prompt_llm(
-    #         "What animal did I tell you to remember?",
-    #         method="api",
-    #         session_id=session_id,
-    #         timeout=60,
-    #         env_vars=env_vars,
-    #     )
-    #     assert "giraffe" in result2["text"].lower()
-    #     assert result2["session_id"] == session_id
-
 
 # Session ID parameter handling is covered by the session continuity tests above
 # and the mocked tests remain as unit tests in other test files
 
 
-# API-specific features like cost tracking are business features, not critical path
-# Basic API functionality is covered by the critical path tests above
+# CLI features beyond the critical path (e.g. cost tracking) are not integration-tested here
+# Basic CLI functionality is covered by the critical path tests above
 
 
 class TestEnvironmentVariablePropagation:
@@ -112,15 +80,14 @@ class TestEnvironmentVariablePropagation:
 
     @pytest.mark.claude_cli_integration
     def test_env_vars_propagation(self) -> None:
-        """Verify env_vars propagate to Claude Code in both CLI and API methods.
+        """Verify env_vars propagate to Claude Code via the CLI method.
 
         This is a real integration test that makes actual API calls to verify
         environment variables are correctly set and accessible.
 
         The test verifies:
         1. CLI method: env_vars passed to subprocess work correctly
-        2. API method: env_vars passed to SDK work correctly
-        3. Both methods can successfully execute with MCP servers using env vars
+        2. The CLI can successfully execute with MCP servers using env vars
         """
         # Prepare environment variables for MCP servers
         env_vars = prepare_llm_environment(Path.cwd())
@@ -136,21 +103,3 @@ class TestEnvironmentVariablePropagation:
         assert isinstance(result_cli, dict)
         assert len(result_cli["text"]) > 0
         # Successful execution means env_vars were prepared and passed correctly
-
-        # Test API method - env_vars should be passed to SDK
-        # TODO: Commented out due to Claude Code SDK compatibility issues
-        # Will be removed when SDK usage is removed from the codebase
-        # Skip API test if SDK is not working in this environment
-        # if not claude_sdk_working():
-        #     pytest.skip("Claude Code SDK not working in this environment")
-        #
-        # result_api = ask_llm(
-        #     "Say hello",
-        #     provider="claude",
-        #     method="api",
-        #     timeout=60,  # Increased for real API calls
-        #     env_vars=env_vars,
-        # )
-        # assert isinstance(result_api, str)
-        # assert len(result_api) > 0
-        # # Successful execution means env_vars were prepared and passed correctly

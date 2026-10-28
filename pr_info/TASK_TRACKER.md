@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Dead test code and unused GitHub fixtures
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: precondition search, then delete commented-out Claude API test code, GitHub fixtures in `tests/conftest.py` with their imports, and vulture whitelist entries
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: precondition search, then delete commented-out Claude API test code, GitHub fixtures in `tests/conftest.py` with their imports, and vulture whitelist entries
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Docs, plus the final acceptance search
 See [step_3.md](./steps/step_3.md)
