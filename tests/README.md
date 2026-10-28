@@ -7,17 +7,13 @@
 pytest
 
 # Fast unit tests only
-pytest -m "not git_integration and not claude_cli_integration and not claude_api_integration and not formatter_integration and not github_integration"
+# See the marker filter in .claude/CLAUDE.md
 
 # Run specific test types
 pytest -m git_integration            # File system operations
 pytest -m claude_cli_integration     # Claude CLI tests (requires CLI installed)
-pytest -m claude_api_integration     # Claude API tests (requires auth)
-pytest -m formatter_integration      # Code formatter tests (ruff)
-pytest -m github_integration         # GitHub API (requires config)
 
 # Run specific subdirectories
-pytest tests/utils/github_operations/    # All GitHub operations tests
 pytest tests/utils/                      # All utils tests
 ```
 
@@ -32,10 +28,6 @@ tests/
 ├── llm_providers/         # LLM provider tests
 │   └── claude/           # Claude-specific tests
 ├── utils/                 # Utility tests
-│   ├── github_operations/ # GitHub API tests
-│   │   ├── test_github_utils.py
-│   │   ├── test_issue_manager.py
-│   │   └── test_issue_manager_integration.py
 │   ├── test_clipboard.py
 │   ├── test_data_files.py
 │   └── test_git_*.py
@@ -50,9 +42,6 @@ tests/
 | *(none)* | Unit tests | < 10s | None |
 | `git_integration` | File system + git ops | < 60s | Git |
 | `claude_cli_integration` | Claude CLI calls | Variable | CLI installed |
-| `claude_api_integration` | Claude API calls | Variable | Auth setup |
-| `formatter_integration` | Code formatting | < 30s | ruff |
-| `github_integration` | GitHub API operations | < 30s | GitHub config |
 
 ## Marking Tests
 
@@ -69,21 +58,6 @@ def test_git_workflow(git_repo):
 
 @pytest.mark.claude_cli_integration
 def test_claude_cli():
-    pass
-
-
-@pytest.mark.claude_api_integration
-def test_claude_api():
-    pass
-
-
-@pytest.mark.formatter_integration
-def test_formatter():
-    pass
-
-
-@pytest.mark.github_integration
-def test_github_operations(issue_manager):
     pass
 ```
 

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 MARKER_TRAP_CAVEAT = (
-    "_Markers excluded in CI (`claude_cli_integration`, `claude_api_integration`, "
+    "_Markers excluded in CI (`claude_cli_integration`, "
     "`copilot_cli_integration`, `jenkins_integration`, `llm_integration`, "
     "`textual_integration`) never run here, so lines only reachable under them "
     "show as uncovered._"
