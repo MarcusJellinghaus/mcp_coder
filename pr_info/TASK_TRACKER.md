@@ -29,9 +29,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ### Step 2: pydeps scripts write to `docs/architecture/dependencies/` — [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: path replacement in `tools/pydeps_graph.sh`, `tools/pydeps_graph.bat` and the `pydeps_graph.html` command snippet
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: path replacement in `tools/pydeps_graph.sh`, `tools/pydeps_graph.bat` and the `pydeps_graph.html` command snippet
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Create `enforcement.md`, update README badge and docs index — [step_3.md](./steps/step_3.md)
 
