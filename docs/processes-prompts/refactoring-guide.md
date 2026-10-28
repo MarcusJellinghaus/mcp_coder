@@ -34,7 +34,6 @@ The only code changes should be:
 
 - Import statements in the moved file
 - Import statements in files that use the moved code
-- Re-exports in `__init__.py` files (if maintaining API compatibility)
 
 The few other mechanical edits a pure move may need are listed under **Allowed edits** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md). Anything else is a code change.
 
@@ -54,9 +53,8 @@ Clean code is preferred over gradual migration. If external packages depend on t
 LLMs struggle with large moves. Break refactoring into:
 
 - **One module per PR** when possible
-- **Review the [compact diff](#compact-diff) and keep it short** — go step by step
 - **Move related functions together** (e.g., all string utilities)
-- **Merge two steps when the state between them is not solid** — if code doesn't work or tests can't pass after the first step
+- **Step size and merging steps:** see **Key Rules** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md)
 
 ## Process
 
@@ -76,7 +74,7 @@ Use the MCP refactoring tools — they move code and update all imports automati
 2. `mcp__mcp-tools-py__move_symbol(source_file=..., symbol_names=[...], dest_file=..., dry_run=true)` — preview
 3. `mcp__mcp-tools-py__move_symbol(source_file=..., symbol_names=[...], dest_file=...)` — execute
 4. Repeat for each symbol/group
-5. Update `__init__.py` re-exports if needed
+5. Update `__init__.py` exports of the package's public API if needed (no compatibility re-exports)
 6. Update `.importlinter` layering contracts if the split introduces sub-layers (see [Import Linter](#import-linter) below)
 
 If the tool can't produce the result, follow **How to move** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md).
@@ -102,7 +100,7 @@ After all moves, verify the refactoring:
 mcp-coder git-tool compact-diff
 ```
 
-**For LLM sessions (MCP tools):** `mcp__mcp-workspace__git` with command `"diff"` and `compact=true`.
+**For LLM sessions (MCP tools):** `mcp__mcp-workspace__git` with command `"diff"` and args `["<base>...HEAD"]` (compact is on by default).
 
 Suppresses moved-code blocks from the diff output. After a pure refactoring, the remaining diff should contain **only import changes, new/deleted file headers and the allowed edits**. If you see logic changes in the compact diff, something was modified during the move.
 
@@ -216,7 +214,7 @@ How to run splitting issues (distinct from the code technique above):
 - **Definition of done / closure gating:** close a split issue only once the file is under **750** lines **and** its `.large-files-allowlist` entry is removed. Closing while still allowlisted is a silent regression — e.g. #310 was closed but stayed 949 lines & allowlisted, now refiled as #1025.
 - **No recycling:** if a split file grows back over the limit, open a **new** issue — do not reopen the closed one.
 - **Source-refactor exception:** when [tests dwarf the source](#when-tests-are-much-larger-than-the-source) and decomposing it is warranted, it's a `refactor`, not a mechanical split. The LLM **proposes** it and a **human confirms** before the split is paused; then re-scope the issue up front, or open a separate issue and mark the split `blocked` if found mid-split.
-- **Writing the issues:** see **Refactoring issues** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md).
+- **Writing the issues:** see **Refactoring issues** in [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md); general issue-writing rules are in the `issue_analyse_supervisor` skill (step 5).
 
 ## Checklist
 
@@ -232,10 +230,10 @@ Before merging a refactoring PR:
 - [ ] File size check passes (`mcp-coder check file-size --max-lines 750` or `mcp__mcp-workspace__check_file_size`)
 - [ ] `.large-files-allowlist` updated (remove entries for split files)
 - [ ] `.importlinter` updated if modules were split (sub-layers)
-- [ ] Compact diff is short — otherwise split into more steps
+- [ ] Compact diff is short — otherwise split into more steps, as long as each step leaves the code working and the tests passing
 
 ## Related
 
-- [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md) — quick-reference rules and tool tables (loaded by slash commands)
+- [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md) — general rules for pure moves, shared across repos (read by the review supervisor skills)
 - [Architecture Documentation](../architecture/architecture.md)
 - [Dependency Management](../architecture/dependencies/readme.md)

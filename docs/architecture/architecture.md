@@ -520,7 +520,7 @@ The scenarios show the default path. With `auto_review_plan` / `auto_review_impl
 ### Refactoring Guidelines
 - **Documentation**: See [Safe Refactoring Guide](../processes-prompts/refactoring-guide.md) for moving code safely
 - **Principle**: Move functions/classes without modifying logic; only adjust imports
-- **Scope**: Keep PR diffs under 25,000 tokens; one module per PR when possible
+- **Scope**: Keep the compact diff short, step by step; one module per PR when possible — see the Safe Refactoring Guide
 
 ### Dead Code Detection
 - **Tool**: Vulture for identifying unused code

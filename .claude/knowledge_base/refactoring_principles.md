@@ -1,14 +1,14 @@
 # Refactoring Principles
 
-Rules for moving code without changing it. Repo-specific details (size limits, allowlists, import contracts) live in the repo's own docs, e.g. `docs/processes-prompts/refactoring-guide.md` where it exists.
+Rules for moving code without changing it. Repo-specific details (size limits, allowlists, import contracts) live in the repo's own docs.
 
 ## Key Rules
 
 - **Move, don't change.** Logic changes belong in a separate PR.
-- **Use the refactoring tools** (`move_symbol`, `move_module`) — they update imports. Don't move code by hand.
+- **Use the refactoring tools** (`move_symbol`, `move_module`) — they update imports. Move by hand only as described in **How to move**.
 - **Clean deletion, no legacy artifacts.** No stubs, no re-exports for backward compatibility.
-- **Small steps.** Review the compact diff and keep it short — go step by step.
-- **Merge two steps when the state between them is not solid** — if code doesn't work or tests can't pass after the first step.
+- **Small steps.** A step is one commit or plan step; after each step the code works and the tests pass. Review the compact diff and keep it short enough to review in one pass.
+- **Merge two steps when the state between them is not solid** — if the code doesn't work or the tests can't pass after the first step.
 - **Tests mirror source structure.**
 
 ## Allowed edits
@@ -18,7 +18,7 @@ Besides moved code, a pure move may only contain:
 - Import statements, including optional-import `try/except ImportError` blocks
 - Mock/patch target strings that must follow a moved symbol
 - Module-level boilerplate a new file needs: a logger, a module docstring, a copy of the source's module-level test markers
-- Package files (`__init__.py`, `conftest.py`) needed by the move
+- Package files (`__init__.py`, `conftest.py`) needed by the move — no re-exports kept for backward compatibility
 - Stale names in comments and docstrings — replace the names only
 - Removing comments left with nothing under them
 - Size-check allowlist entries
@@ -27,9 +27,8 @@ Anything else is a code change: stop and report.
 
 ## How to move
 
-1. Plan each tool call so the tool produces the final result itself.
-2. If it doesn't, try other tool options first (different grouping or order).
-3. Only then make the smallest hand edit: move whole top-level statements, change nothing inside them.
+1. Plan the tool calls so the tools produce the final result.
+2. If they can't, make the smallest hand edit: move whole top-level statements, change nothing inside them.
 
 ## Plan the layout
 
@@ -45,8 +44,5 @@ Anything else is a code change: stop and report.
 
 ## Refactoring issues
 
-- **Decisions and constraints, not a pre-computed implementation.** Keep the target layout, ordering constraints, exceptions and checks. Line ranges, import lists and counts go stale and duplicate the planning step.
 - **Link to these rules;** don't copy them into each issue.
-- **No line numbers in files that other open issues also edit.** Refer to the path or symbol.
-- **Every prohibition needs a way out:** an allowed fallback or an explicit "stop and report".
-- **Every step and check must be doable with the implementer's tools.**
+- **Name any extra allowed edits explicitly** — anything beyond **Allowed edits** that the issue permits.
