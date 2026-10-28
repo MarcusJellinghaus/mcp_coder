@@ -17,7 +17,7 @@ from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION
 def test_failed_rebase_gate_returns_outcome_and_warns(
     env: SimpleNamespace, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A non-ok outcome returns ``("rebase", outcome)`` and logs its reason."""
+    """A non-ok outcome returns ``("rebase", outcome, None)`` and logs its reason."""
     outcome = RebaseOutcome("dirty_tree", files=("a.py",))
     env.attempt_rebase_and_push.return_value = outcome
 
@@ -31,7 +31,7 @@ def test_failed_rebase_gate_returns_outcome_and_warns(
             is_dismiss=True,
         )
 
-    assert result == ("rebase", outcome)
+    assert result == ("rebase", outcome, None)
     env.check_and_fix_ci.assert_not_called()
     warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
     assert any("dirty_tree" in message for message in warnings)

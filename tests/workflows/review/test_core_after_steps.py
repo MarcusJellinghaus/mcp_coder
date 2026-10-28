@@ -301,6 +301,7 @@ def test_dismiss_ci_generic_exception_fails_general(
     env.handle_workflow_failure.assert_called_once()
     failure = env.handle_workflow_failure.call_args.args[0]
     assert failure.category == REVIEW_IMPLEMENTATION.failure_labels["general"]
+    assert "RuntimeError: ci boom" in env.handle_workflow_failure.call_args.args[1]
 
 
 def test_broadened_ci_except_does_not_swallow_rebase(
@@ -597,6 +598,7 @@ def test_tasks_after_steps_general_writes_and_flushes_round_log(
         encoding="utf-8"
     )
     assert "general" in log
+    assert "RuntimeError: ci boom" in env.handle_workflow_failure.call_args.args[1]
     env.commit_all_changes.assert_called()
 
 

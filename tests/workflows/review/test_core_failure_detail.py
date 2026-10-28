@@ -2,7 +2,8 @@
 
 Drives :func:`run_review_workflow` against ``REVIEW_PLAN`` with a mocked
 ``prompt_llm`` raising at the fresh reviewer, the supervisor and the fix-task
-reviewer, and checks what ``_fail`` hands to ``handle_workflow_failure``.
+reviewer, and against ``REVIEW_IMPLEMENTATION`` with the CI gate raising, and
+checks what ``_fail`` hands to ``handle_workflow_failure``.
 """
 
 import logging
@@ -12,11 +13,17 @@ from types import SimpleNamespace
 import pytest
 
 from mcp_coder.utils.subprocess_runner import CalledProcessError
-from mcp_coder.workflows.review import handoff
+from mcp_coder.workflows.review import handoff, steps
 from mcp_coder.workflows.review.config import REVIEW_PLAN
 from mcp_coder.workflows.review.core import EMPTY_REPORT_RETRIES
 from mcp_coder.workflows.review.reviewer import VERDICT_REPAIR_RETRIES
-from tests.workflows.review.conftest import _TASKS, _resp, _reviewer, _run
+from tests.workflows.review.conftest import (
+    _DISMISS,
+    _TASKS,
+    _resp,
+    _reviewer,
+    _run,
+)
 
 
 def _comment(env: SimpleNamespace) -> str:
@@ -146,3 +153,51 @@ def test_exception_traceback_is_logged_once(
     exc_info = records[0].exc_info
     assert exc_info is not None
     assert exc_info[1] is error
+
+
+def test_dismiss_ci_exception_keeps_bare_reason_in_round_log(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A CI-gate crash names the exception in the comment, not the round log."""
+    env.check_and_fix_ci.side_effect = RuntimeError("ci boom")
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    assert _run(tmp_path) == 1
+
+    assert "RuntimeError: ci boom" in _comment(env)
+    log = (tmp_path / "pr_info" / "implementation_review_log_1.md").read_text(
+        encoding="utf-8"
+    )
+    assert "**Changes**:\ngeneral\n" in log
+    assert "ci boom" not in log
+
+
+def test_ci_exception_traceback_is_logged_once_by_steps(
+    env: SimpleNamespace, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The CI-gate traceback is logged once, by ``steps``, not again by ``_fail``."""
+    env.check_and_fix_ci.side_effect = RuntimeError("ci boom")
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    with caplog.at_level(logging.ERROR):
+        assert _run(tmp_path) == 1
+
+    records = [r for r in caplog.records if r.exc_info]
+    assert len(records) == 1
+    assert records[0].name == steps.__name__
+
+
+def test_ci_called_process_error_shows_stderr_without_stream_file(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A CLI failure in the CI gate shows its stderr, minus the stream-file path."""
+    env.check_and_fix_ci.side_effect = CalledProcessError(
+        1, "gh", stderr="ci err Stream file: /p"
+    )
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    assert _run(tmp_path) == 1
+
+    comment = _comment(env)
+    assert "ci err" in comment
+    assert "Stream file" not in comment

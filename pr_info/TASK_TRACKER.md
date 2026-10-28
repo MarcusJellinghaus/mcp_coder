@@ -45,9 +45,9 @@ See [step_3.md](./steps/step_3.md)
 ### Step 4: CI gate — log the exception and return a comment-ready detail
 See [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation: tests (`test_steps.py`, `test_core_after_steps.py`, `test_core_failure_detail.py`) + `_after_steps` 3-tuple with logging + both core.py callers
-- [ ] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests (`test_steps.py`, `test_core_after_steps.py`, `test_core_failure_detail.py`) + `_after_steps` 3-tuple with logging + both core.py callers
+- [x] Quality checks: pylint, pytest, mypy, lint-imports — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

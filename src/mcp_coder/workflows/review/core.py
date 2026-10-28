@@ -309,7 +309,7 @@ def run_review_workflow(
             logger.info("Round %d: verdict '%s'", round_number, verdict.decision)
 
             if verdict.decision == "dismiss":
-                reason, rebase_outcome = _after_steps(
+                reason, rebase_outcome, ci_detail = _after_steps(
                     config,
                     project_dir,
                     provider,
@@ -365,7 +365,7 @@ def run_review_workflow(
                         post_issue_comments=post_issue_comments,
                         round_number=round_number,
                         verdict=last_verdict,
-                        details=details,
+                        details=details or ci_detail,
                         elapsed=time.time() - start_time,
                     )
                 write_round_log(
@@ -551,7 +551,7 @@ def run_review_workflow(
                     elapsed=time.time() - start_time,
                 )
 
-            reason, rebase_outcome = _after_steps(
+            reason, rebase_outcome, ci_detail = _after_steps(
                 config,
                 project_dir,
                 provider,
@@ -609,6 +609,7 @@ def run_review_workflow(
                     post_issue_comments=post_issue_comments,
                     round_number=round_number,
                     verdict=last_verdict,
+                    details=ci_detail,
                     elapsed=time.time() - start_time,
                 )
             else:
