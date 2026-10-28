@@ -37,7 +37,13 @@ from requests.exceptions import HTTPError
 
 from ..log_utils import log_function_call
 from ..user_config import get_config_values
-from .builds import build_tree_query, flatten_builds, select_builds, validate_statuses
+from .builds import (
+    BUILDS_CAP,
+    build_tree_query,
+    flatten_builds,
+    select_builds,
+    validate_statuses,
+)
 from .diagnostics import (
     diagnose_403,
     diagnose_404,
@@ -467,7 +473,7 @@ class JenkinsClient:
     def get_recent_builds(
         self,
         limit: int = 100,
-        folder: str | None = None,
+        path: str | None = None,
         statuses: Collection[str] | None = None,
         name_pattern: re.Pattern[str] | None = None,
     ) -> list[BuildInfo]:
@@ -479,15 +485,14 @@ class JenkinsClient:
         ``limit`` is a window over the newest builds across all jobs: builds are
         merged, sorted newest first and truncated to ``limit``, and only then
         filtered by ``statuses``. ``name_pattern`` is applied before the
-        window, so ``limit`` counts matching builds only; it still caps the
-        builds fetched per job. A ``limit`` above 100 switches the query to
-        ``allBuilds``, which may be slow on large servers.
+        window, so ``limit`` counts matching builds only; with a pattern, up to
+        ``max(limit, 100)`` builds per job are scanned. A ``limit`` above 100
+        switches the query to ``allBuilds``, which may be slow on large servers.
 
         Args:
             limit: Number of newest builds to consider.
-            folder: Full folder path from the root, e.g. "A/B". None lists the
-                whole server. A path that points at a job lists that job's
-                builds.
+            path: Full job or folder path from the root, e.g. "A/B". None
+                lists the whole server. A job path lists that job's builds.
             statuses: Statuses to keep (see builds.VALID_STATUSES), or None/empty
                 for all.
             name_pattern: Regex searched in each build's display name, or
@@ -500,27 +505,24 @@ class JenkinsClient:
             ValueError: If ``limit`` is below 1 or a status is unknown (before
                 any request is sent).
             JenkinsError: For any Jenkins or transport failure, including a
-                missing folder.
+                missing job or folder.
         """
         if limit < 1:
             raise ValueError(f"limit must be at least 1, got {limit}")
         validate_statuses(statuses)
         # Unencoded on purpose: get_info applies quote() to item itself.
         item = (
-            "/".join(f"job/{part}" for part in folder.split("/") if part)
-            if folder
-            else ""
+            "/".join(f"job/{part}" for part in path.split("/") if part) if path else ""
         )
         context = (
-            f"Failed to list builds in folder '{folder}'"
-            if folder
-            else "Failed to list builds"
+            f"Failed to list builds under '{path}'" if path else "Failed to list builds"
         )
+        fetch = max(limit, BUILDS_CAP) if name_pattern is not None else limit
         try:
-            tree = self._client.get_info(item=item, query=build_tree_query(limit))
+            tree = self._client.get_info(item=item, query=build_tree_query(fetch))
             found = flatten_builds(tree)
         except JenkinsException as e:
-            raise self._wrap_jenkins_error(e, context, job_path=folder) from None
+            raise self._wrap_jenkins_error(e, context, job_path=path) from None
         except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             raise JenkinsError(f"{context}: {e}") from e
         return select_builds(found, limit, statuses, name_pattern)

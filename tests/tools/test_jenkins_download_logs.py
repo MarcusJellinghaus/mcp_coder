@@ -59,7 +59,7 @@ def test_default_status(client: MagicMock, tmp_path: Path) -> None:
     assert jenkins_download_logs.main(["--outdir", str(tmp_path)]) == 0
     client.get_recent_builds.assert_called_once_with(
         limit=100,
-        folder=None,
+        path=None,
         statuses=["failure", "aborted", "unstable"],
         name_pattern=None,
     )
@@ -197,7 +197,7 @@ def test_end_to_end_downloads_log(
 ) -> None:
     test_job = jenkins_test_setup["test_job"]
     parent = test_job.rpartition("/")[0] or None
-    if not jenkins_client.get_recent_builds(limit=1, folder=parent):
+    if not jenkins_client.get_recent_builds(limit=1, path=parent):
         pytest.skip("no builds in test_job's folder")
     argv = [
         "--limit",

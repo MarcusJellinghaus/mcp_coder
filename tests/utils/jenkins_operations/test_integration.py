@@ -110,7 +110,7 @@ class TestJenkinsIntegration:
         match = next(
             (
                 b
-                for b in jenkins_client.get_recent_builds(limit=limit, folder=parent)
+                for b in jenkins_client.get_recent_builds(limit=limit, path=parent)
                 if b.job_path == test_job and b.number == status.build_number
             ),
             None,
@@ -126,5 +126,5 @@ class TestJenkinsIntegration:
         """Listing builds in a folder that does not exist raises JenkinsError."""
         with pytest.raises(JenkinsError):
             jenkins_client.get_recent_builds(
-                folder=f"mcp-coder-missing-{uuid.uuid4().hex}"
+                path=f"mcp-coder-missing-{uuid.uuid4().hex}"
             )

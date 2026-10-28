@@ -124,7 +124,7 @@ def test_main_passes_arguments(client: MagicMock) -> None:
     )
     assert rc == 0
     client.get_recent_builds.assert_called_once_with(
-        limit=5, folder="A/B", statuses=["failure", "unstable"], name_pattern=None
+        limit=5, path="A/B", statuses=["failure", "unstable"], name_pattern=None
     )
 
 
@@ -171,7 +171,7 @@ def test_default_job_from_config(
     config = _repos("W/Executor", "W/Executor")
     monkeypatch.setattr(jenkins_builds, "load_config", lambda: config)
     assert jenkins_builds.main([]) == 0
-    assert client.get_recent_builds.call_args.kwargs["folder"] == "W/Executor"
+    assert client.get_recent_builds.call_args.kwargs["path"] == "W/Executor"
     assert "W/Executor" in capsys.readouterr().err
 
 
@@ -183,7 +183,7 @@ def test_several_configured_jobs_list_whole_server(
     config = _repos("W/Executor", "T/Other")
     monkeypatch.setattr(jenkins_builds, "load_config", lambda: config)
     assert jenkins_builds.main([]) == 0
-    assert client.get_recent_builds.call_args.kwargs["folder"] is None
+    assert client.get_recent_builds.call_args.kwargs["path"] is None
     assert "T/Other, W/Executor" in capsys.readouterr().err
 
 
@@ -193,9 +193,9 @@ def test_explicit_job_and_all_jobs_ignore_config(
     config = _repos("W/Executor")
     monkeypatch.setattr(jenkins_builds, "load_config", lambda: config)
     assert jenkins_builds.main(["--job", "A/B"]) == 0
-    assert client.get_recent_builds.call_args.kwargs["folder"] == "A/B"
+    assert client.get_recent_builds.call_args.kwargs["path"] == "A/B"
     assert jenkins_builds.main(["--all-jobs"]) == 0
-    assert client.get_recent_builds.call_args.kwargs["folder"] is None
+    assert client.get_recent_builds.call_args.kwargs["path"] is None
 
 
 def test_main_prints_display_name(

@@ -114,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         builds = client.get_recent_builds(
             limit=args.limit,
-            folder=resolve_job(args),
+            path=resolve_job(args),
             statuses=args.status,
             name_pattern=args.name_pattern,
         )

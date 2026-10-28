@@ -125,8 +125,8 @@ def add_selection_args(
         type=parse_pattern,
         default=None,
         help=(
-            "regex searched in the build display name, applied before --limit "
-            "(default: all builds)"
+            "regex searched in the build display name, applied before --limit; "
+            "scans up to max(limit, 100) builds per job (default: all builds)"
         ),
     )
 
@@ -245,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         builds = client.get_recent_builds(
             limit=args.limit,
-            folder=resolve_job(args),
+            path=resolve_job(args),
             statuses=args.status,
             name_pattern=args.name_pattern,
         )
