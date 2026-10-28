@@ -487,22 +487,13 @@ The scenarios show the default path. With `auto_review_plan` / `auto_review_impl
 - **Enforcement**: Documented in `CLAUDE.md` as mandatory requirements
 
 ### Architectural Boundary Enforcement
-- **Tools**: import-linter, tach, pycycle for static analysis of module dependencies; vulture for dead code detection
-- **Configuration**: `.importlinter` (20 contracts), `tach.toml` (layer definitions)
-- **CI Integration**: Architecture checks run automatically on pull requests
-- **Documentation**: See `docs/architecture/dependencies/readme.md` for detailed tool comparison, current contracts, and guidelines for adding new rules
-- **Visualization**: `docs/architecture/dependencies/dependency_graph.html` for interactive dependency graph
+Why and how module boundaries, cycles, dead code, dependencies and file size are enforced:
+see [enforcement.md](enforcement.md).
 
 ### Refactoring Guidelines
 - **Documentation**: See [Safe Refactoring Guide](../processes-prompts/refactoring-guide.md) for moving code safely
 - **Principle**: Move functions/classes without modifying logic; only adjust imports and the allowed edits in Refactoring Principles
 - **Scope**: Keep each PR's compact diff short, step by step; one module per PR when possible — see the Safe Refactoring Guide
-
-### Dead Code Detection
-- **Tool**: Vulture for identifying unused code
-- **Configuration**: `vulture_whitelist.py` at project root for false positives and API completeness items
-- **CI Integration**: Runs in architecture job on PRs with 60% confidence threshold
-- **Note**: The whitelist is intentionally liberal - review periodically for items that may become truly dead
 
 ### Command Pattern (CLI)
 - **File organization**: `cli/commands/` - One command per file

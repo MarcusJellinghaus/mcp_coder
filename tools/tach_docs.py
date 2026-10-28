@@ -2,8 +2,8 @@
 """Generate architecture documentation from tach analysis.
 
 Creates:
-- docs/architecture/dependency_graph.html - Interactive visual diagram
-- docs/architecture/dependency_report.html - Detailed dependency report
+- docs/architecture/dependencies/dependency_graph.html - Interactive visual diagram
+- docs/architecture/dependencies/dependency_report.html - Detailed dependency report
 """
 
 import subprocess
@@ -371,7 +371,7 @@ def main() -> int:
     print("Generating architecture documentation...")
 
     # Ensure output directory exists
-    output_dir = Path(__file__).parent.parent / "docs" / "architecture"
+    output_dir = Path(__file__).parent.parent / "docs" / "architecture" / "dependencies"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate dependency graph
@@ -403,7 +403,7 @@ def main() -> int:
     _write_lf(report_path, report_html)
     print(f"    Created: {report_path}")
 
-    print("\nDone! Open docs/architecture/dependency_graph.html to view.")
+    print("\nDone! Open docs/architecture/dependencies/dependency_graph.html to view.")
     return 0
 
 

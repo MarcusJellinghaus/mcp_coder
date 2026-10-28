@@ -2,8 +2,8 @@
 # Generate architecture documentation (dependency graph and report)
 #
 # Creates:
-#   - docs/architecture/dependency_graph.html
-#   - docs/architecture/dependency_report.html
+#   - docs/architecture/dependencies/dependency_graph.html
+#   - docs/architecture/dependencies/dependency_report.html
 
 set -e
 

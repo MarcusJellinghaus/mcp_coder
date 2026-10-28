@@ -11,9 +11,9 @@ stay in the linked config files, docs and issues.
 | [Formatting](#formatting) | ruff format, ruff `I` | One tool for layout and import order | `run_format_code` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml), #1175 |
 | [Types](#types) | mypy strict | Catch type errors, including breaks from upstream packages | `run_mypy_check` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml), [`upstream-compat-check.yml`](../../.github/workflows/upstream-compat-check.yml) |
 | [Pylint](#pylint) | pylint | Errors and warnings ruff does not cover | `run_pylint_check` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml) |
-| [Architecture](#architecture) | import-linter, tach, pycycle, vulture, pylint `R0401` | Keep module boundaries, no cycles, no dead code | `run_lint_imports_check`, `run_tach_check`, `run_vulture_check`; pycycle — | [`.importlinter`](../../.importlinter), [`tach.toml`](../../tach.toml), [`ci.yml`](../../.github/workflows/ci.yml), [`python.md`](python.md#architecture-enforcement) |
-| [File size](#file-size) | `mcp-coder check file-size` | Small files fit an LLM's context window | `check_file_size` | [`.large-files-allowlist`](../../.large-files-allowlist), [`ci.yml`](../../.github/workflows/ci.yml), [`repo.md`](repo.md#file-size-management) |
-| [Dependencies](#dependencies) | deptry, Dependabot | Declared dependencies match imports; stay current | `run_deptry_check`; Dependabot — | [`pyproject.toml`](../../pyproject.toml), [`dependabot.yml`](../../.github/dependabot.yml), [`python.md`](python.md#dependency-declaration-hygiene), #1176 |
+| [Architecture](#architecture) | import-linter, tach, pycycle, vulture, pylint `R0401` | Keep module boundaries, no cycles, no dead code | `run_lint_imports_check`, `run_tach_check`, `run_vulture_check`; pycycle — | [`.importlinter`](../../.importlinter), [`tach.toml`](../../tach.toml), [`ci.yml`](../../.github/workflows/ci.yml), [`python.md`](python.md#architecture-enforcement), [`enforcement.md`](../architecture/enforcement.md) |
+| [File size](#file-size) | `mcp-coder check file-size` | Small files fit an LLM's context window | `check_file_size` | [`.large-files-allowlist`](../../.large-files-allowlist), [`ci.yml`](../../.github/workflows/ci.yml), [`repo.md`](repo.md#file-size-management), [`enforcement.md`](../architecture/enforcement.md) |
+| [Dependencies](#dependencies) | deptry, Dependabot | Declared dependencies match imports; stay current | `run_deptry_check`; Dependabot — | [`pyproject.toml`](../../pyproject.toml), [`dependabot.yml`](../../.github/dependabot.yml), [`python.md`](python.md#dependency-declaration-hygiene), [`enforcement.md`](../architecture/enforcement.md), #1176 |
 | [Coverage](#coverage) | pytest-cov, diff-cover | Show what tests reach, without gating | `run_pytest_check` | [`ci.yml`](../../.github/workflows/ci.yml), [`github.md`](github.md#coverage-badge), #1178 |
 | [Security scanning](#security-scanning) | ruff `S`, `PLE2502`, CodeQL, OpenSSF Scorecard | Find insecure code and supply-chain risks | `run_ruff_check`; CodeQL/Scorecard — | [`pyproject.toml`](../../pyproject.toml), [`scorecard.yml`](../../.github/workflows/scorecard.yml), #1170, #1177 |
 | [Tests](#tests) | pytest | Behaviour stays correct | `run_pytest_check` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml) |
@@ -68,20 +68,21 @@ ruff because ruff does not fully cover pylint. CI job `pylint`. See
 import-linter ([`.importlinter`](../../.importlinter)), tach ([`tach.toml`](../../tach.toml)),
 pycycle and vulture run in the PR-only `architecture` matrix (deptry too, see
 [Dependencies](#dependencies)). Pylint `R0401` catches cyclic imports on every push. See
-[`python.md`](python.md#architecture-enforcement).
+[`python.md`](python.md#architecture-enforcement). Why: [`enforcement.md`](../architecture/enforcement.md).
 
 ## File size
 
 Small files suit an LLM's limited context window. CI job `file-size` runs
 `mcp-coder check file-size --max-lines 750 --allowlist-file .large-files-allowlist`. Locally
 `check_file_size` is equivalent: it applies `.large-files-allowlist`, and `.mcp.json` sets
-`--file-size-limit 750`. See [`repo.md`](repo.md#file-size-management).
+`--file-size-limit 750`. See [`repo.md`](repo.md#file-size-management). Why:
+[`enforcement.md`](../architecture/enforcement.md).
 
 ## Dependencies
 
 deptry (#1176, `[tool.deptry]`) checks that declared dependencies match the imports in `src`;
 PR-only CI job `deptry`. Dependabot updates `pip` and `github-actions` dependencies. See
-[`dependabot.yml`](../../.github/dependabot.yml).
+[`dependabot.yml`](../../.github/dependabot.yml). Why: [`enforcement.md`](../architecture/enforcement.md).
 
 ## Coverage
 
@@ -113,7 +114,8 @@ See [`pyproject.toml`](../../pyproject.toml) `[tool.pytest.ini_options]`.
   dependencies in `[project]` dependencies or extras; PyPI rejects them.
 - `forbidden-calls` ([`check_forbidden_calls.py`](../../tools/check_forbidden_calls.py)):
   text scan of `src/` for literal `["git", …]` argv lists, and for direct
-  `mcp_workspace.git_operations` / `github_operations` imports outside their shims.
+  `mcp_workspace.git_operations` / `github_operations` imports outside their shims. Why:
+  [`enforcement.md`](../architecture/enforcement.md#shim-boundary).
 
 ## Repo settings
 

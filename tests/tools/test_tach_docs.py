@@ -42,6 +42,6 @@ def test_main_writes_no_crlf_bytes(
 
     assert tach_docs.main() == 0
 
-    out = tmp_path / "docs" / "architecture"
+    out = tmp_path / "docs" / "architecture" / "dependencies"
     for name in ("dependency_graph.html", "dependency_report.html"):
         assert b"\r" not in (out / name).read_bytes()
