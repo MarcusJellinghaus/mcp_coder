@@ -25,8 +25,7 @@ from mcp_coder.mcp_workspace_github import (
     IssueManager,
     PullRequestManager,
     get_all_cached_issues,
-    get_cache_file_path,
-    load_cache_file,
+    get_issue_cache_last_checked,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,15 +62,6 @@ def _pick_status_label(labels: list[str]) -> str | None:
     return None
 
 
-def _parse_iso(value: object) -> datetime | None:
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-
-
 def get_branch_info(project_dir: Path) -> BranchInfo:
     """Build a ``BranchInfo`` snapshot for ``project_dir``.
 
@@ -98,9 +88,7 @@ def get_branch_info(project_dir: Path) -> BranchInfo:
         try:
             repo_id = get_repository_identifier(project_dir)
             if repo_id is not None:
-                cache_path = get_cache_file_path(repo_id)
-                cache_data = load_cache_file(cache_path)
-                last_checked = _parse_iso(cache_data.get("last_checked"))
+                last_checked = get_issue_cache_last_checked(repo_id)
 
                 issue_mgr = IssueManager(project_dir=project_dir)
                 for issue in get_all_cached_issues(repo_id, issue_manager=issue_mgr):

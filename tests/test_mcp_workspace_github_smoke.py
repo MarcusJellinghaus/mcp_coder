@@ -12,7 +12,7 @@ def test_all_exports_defined() -> None:
     """__all__ has expected count."""
     from mcp_coder.mcp_workspace_github import __all__
 
-    assert len(__all__) == 35
+    assert len(__all__) == 32
 
 
 def test_get_github_token_importable() -> None:

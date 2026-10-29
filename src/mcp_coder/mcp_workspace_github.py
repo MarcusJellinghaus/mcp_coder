@@ -44,16 +44,9 @@ from mcp_workspace.github_operations.issues import (
     IssueManager,
     create_empty_issue_data,
     get_all_cached_issues,
+    get_issue_cache_last_checked,
     update_issue_labels_in_cache,
 )
-from mcp_workspace.github_operations.issues import (
-    _get_cache_file_path as get_cache_file_path,
-)
-from mcp_workspace.github_operations.issues import _load_cache_file as load_cache_file
-from mcp_workspace.github_operations.issues import (
-    _log_stale_cache_entries as log_stale_cache_entries,
-)
-from mcp_workspace.github_operations.issues import _save_cache_file as save_cache_file
 from mcp_workspace.github_operations.issues.linked_branches_mixin import ClosingPRRef
 
 # PR submodule (TypedDicts)
@@ -103,12 +96,8 @@ __all__: list[str] = [
     "EventData",
     "create_empty_issue_data",
     "get_all_cached_issues",
+    "get_issue_cache_last_checked",
     "update_issue_labels_in_cache",
-    # Cache helpers (public re-exports drop the underscore)
-    "get_cache_file_path",
-    "load_cache_file",
-    "save_cache_file",
-    "log_stale_cache_entries",
     # Token resolver (sourced from mcp_workspace.config)
     "get_github_token",
 ]
