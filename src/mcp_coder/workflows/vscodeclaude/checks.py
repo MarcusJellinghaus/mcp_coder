@@ -8,6 +8,7 @@ from ...config.label_config import (
     load_labels_config,
 )
 from ...mcp_workspace_github import (
+    BranchLookupCache,
     CIResultsManager,
     EventData,
     IssueBranchManager,
@@ -24,7 +25,7 @@ from ...workflow_utils.label_transitions import update_workflow_label
 from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import get_github_username, get_repo_full_name
 from .helpers import get_issue_status, is_marked
-from .issues import _filter_eligible_vscodeclaude_issues
+from .issues import _filter_eligible_vscodeclaude_issues, lookup_branch
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +79,8 @@ def _escalate(
 
 def _resolve_pr_target(
     issue: IssueData,
-    branch_manager: IssueBranchManager,
+    branch_cache: BranchLookupCache,
     pr_cache: PullRequestCache,
-    repo_owner: str,
-    repo_gh_name: str,
 ) -> tuple[str | None, OpenPullRequest | None]:
     """Resolve an issue's branch and open PR once.
 
@@ -94,16 +93,7 @@ def _resolve_pr_target(
         ``(branch, None)`` when no PR was found (CI check only), otherwise
         ``(branch, pr)``.
     """
-    try:
-        branch = branch_manager.get_branch_with_pr_fallback(
-            issue["number"], repo_owner, repo_gh_name
-        )
-    except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
-        raise_if_rate_limited(exc)
-        logger.warning(
-            "Failed to resolve branch for issue #%d: %s", issue["number"], exc
-        )
-        return None, None
+    branch = lookup_branch(branch_cache, issue)
     if branch is None:
         return None, None
     try:
@@ -309,8 +299,8 @@ def check_pr_health(
     Checks run in a fixed order — merge conflict, failing CI, review
     comments — and stop at the first hit, so each issue gets at most one
     label change per poll. All PR queries go through one run-scoped
-    ``PullRequestCache``, saved once after the loop (also when a rate limit
-    ends it early).
+    ``PullRequestCache`` and branch lookups through one ``BranchLookupCache``,
+    each saved once after the loop (also when a rate limit ends it early).
 
     Args:
         repo_name: Repository config name, used only in the OUTPUT line.
@@ -329,11 +319,10 @@ def check_pr_health(
         if not pr_issues:
             return
         repo_full_name = get_repo_full_name(repo_config)
-        repo_owner, repo_gh_name = repo_full_name.split("/", 1)
         repo_url = f"https://github.com/{repo_full_name}"
         issue_manager = IssueManager(repo_url=repo_url)
-        branch_manager = IssueBranchManager(repo_url=repo_url)
         ci_manager = CIResultsManager(repo_url=repo_url)
+        branch_cache = BranchLookupCache.load(IssueBranchManager(repo_url=repo_url))
         pr_cache = PullRequestCache.load(PullRequestManager(repo_url=repo_url))
         label_names = build_label_lookups(
             load_labels_config(get_labels_config_path(None))
@@ -346,9 +335,7 @@ def check_pr_health(
 
     try:
         for issue in pr_issues:
-            branch, pr = _resolve_pr_target(
-                issue, branch_manager, pr_cache, repo_owner, repo_gh_name
-            )
+            branch, pr = _resolve_pr_target(issue, branch_cache, pr_cache)
             if branch is None:
                 continue
             _ = (
@@ -388,6 +375,9 @@ def check_pr_health(
                 )
             )
     finally:
-        # Keeps fetched results when a rate limit came from elsewhere; the
-        # cache's own rate limit makes this a no-op.
-        pr_cache.save()
+        # Keeps fetched results when a rate limit came from elsewhere; a
+        # cache's own rate limit makes its save a no-op.
+        try:
+            pr_cache.save()
+        finally:
+            branch_cache.save()

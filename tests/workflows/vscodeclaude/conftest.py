@@ -2,9 +2,11 @@
 
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
+from mcp_coder.mcp_workspace_github import BranchLookup
 from mcp_coder.workflows.vscodeclaude.assessment import (
     IssueFacts,
     assess_issue_state,
@@ -51,6 +53,35 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
         "stage_short": "pr",
     },
 }
+
+
+def patch_branch_cache(
+    monkeypatch: pytest.MonkeyPatch,
+    module: str,
+    branch: str | None = None,
+    side_effect: Any = None,
+) -> MagicMock:
+    """Patch ``<module>.BranchLookupCache`` and ``IssueBranchManager``.
+
+    Every ``BranchLookupCache.load(...)`` in ``module`` returns the same mock
+    cache, whose ``lookup`` finds ``branch`` (``not_found`` when None) or
+    raises / yields ``side_effect``.
+
+    Returns:
+        The mock cache; ``cache_cls`` attribute holds the patched class mock.
+    """
+    cache = MagicMock()
+    cache.lookup.return_value = (
+        BranchLookup("found", branch) if branch else BranchLookup("not_found")
+    )
+    if side_effect is not None:
+        cache.lookup.side_effect = side_effect
+    cache_cls = MagicMock()
+    cache_cls.load.return_value = cache
+    cache.cache_cls = cache_cls
+    monkeypatch.setattr(f"{module}.BranchLookupCache", cache_cls)
+    monkeypatch.setattr(f"{module}.IssueBranchManager", MagicMock())
+    return cache
 
 
 def _mock_get_vscodeclaude_config(status: str) -> dict[str, Any] | None:

@@ -6,7 +6,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData, OpenPullRequest
+from mcp_coder.mcp_workspace_github import (
+    BranchLookup,
+    BranchLookupError,
+    IssueData,
+    OpenPullRequest,
+)
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflows.vscodeclaude.checks import (
     _check_ci,
@@ -17,6 +22,7 @@ from mcp_coder.workflows.vscodeclaude.checks import (
 from tests.github_factories import make_issue_data
 
 CHECKS = "mcp_coder.workflows.vscodeclaude.checks"
+ISSUES = "mcp_coder.workflows.vscodeclaude.issues"
 REPO_CONFIG = {"repo_url": "https://github.com/owner/repo"}
 
 MOCK_MERGE_CONFLICT_LABELS_CONFIG: dict[str, Any] = {
@@ -106,8 +112,8 @@ def _default_mocks() -> tuple[MagicMock, MagicMock, MagicMock, MagicMock]:
     issue_manager = MagicMock()
     issue_manager.project_dir = None
     issue_manager.transition_issue_label.return_value = True
-    branch_manager = MagicMock()
-    branch_manager.get_branch_with_pr_fallback.return_value = "999-fix"
+    branch_cache = MagicMock()
+    branch_cache.lookup.return_value = BranchLookup("found", "999-fix")
     ci_manager = MagicMock()
     ci_manager.get_latest_ci_status.return_value = {"run": {}, "jobs": []}
     pr_cache = MagicMock()
@@ -116,19 +122,19 @@ def _default_mocks() -> tuple[MagicMock, MagicMock, MagicMock, MagicMock]:
     pr_cache.ci_status.return_value = {"run": {}, "jobs": []}
     pr_cache.feedback.return_value = _empty_feedback()
     pr_cache.label_events.return_value = []
-    return issue_manager, branch_manager, ci_manager, pr_cache
+    return issue_manager, branch_cache, ci_manager, pr_cache
 
 
 def _patch_env(
     monkeypatch: pytest.MonkeyPatch,
     *,
     issue_manager: MagicMock,
-    branch_manager: MagicMock,
+    branch_cache: MagicMock,
     ci_manager: MagicMock,
     pr_cache: MagicMock,
     labels_config: dict[str, Any] | None = None,
 ) -> MagicMock:
-    """Patch the managers, the PR cache and config lookups.
+    """Patch the managers, the PR and branch caches and config lookups.
 
     Returns:
         The ``get_trusted_commenters`` mock (returns an empty allowlist).
@@ -137,12 +143,15 @@ def _patch_env(
     get_trusted = MagicMock(return_value=frozenset())
     monkeypatch.setattr(f"{CHECKS}.get_trusted_commenters", get_trusted)
     monkeypatch.setattr(f"{CHECKS}.IssueManager", lambda **kw: issue_manager)
-    monkeypatch.setattr(f"{CHECKS}.IssueBranchManager", lambda **kw: branch_manager)
+    monkeypatch.setattr(f"{CHECKS}.IssueBranchManager", lambda **kw: MagicMock())
     monkeypatch.setattr(f"{CHECKS}.CIResultsManager", lambda **kw: ci_manager)
     monkeypatch.setattr(f"{CHECKS}.PullRequestManager", lambda **kw: MagicMock())
     cache_cls = MagicMock()
     cache_cls.load.return_value = pr_cache
     monkeypatch.setattr(f"{CHECKS}.PullRequestCache", cache_cls)
+    branch_cache_cls = MagicMock()
+    branch_cache_cls.load.return_value = branch_cache
+    monkeypatch.setattr(f"{CHECKS}.BranchLookupCache", branch_cache_cls)
     monkeypatch.setattr(f"{CHECKS}.get_github_username", lambda: "testuser")
     monkeypatch.setattr(
         f"{CHECKS}._filter_eligible_vscodeclaude_issues", lambda issues, user: issues
@@ -160,14 +169,14 @@ def _setup(
     """Patch the environment with default mocks.
 
     Returns:
-        ``(issue_manager, branch_manager, ci_manager, pr_cache)``.
+        ``(issue_manager, branch_cache, ci_manager, pr_cache)``.
     """
     mocks = _default_mocks()
-    issue_manager, branch_manager, ci_manager, pr_cache = mocks
+    issue_manager, branch_cache, ci_manager, pr_cache = mocks
     _patch_env(
         monkeypatch,
         issue_manager=issue_manager,
-        branch_manager=branch_manager,
+        branch_cache=branch_cache,
         ci_manager=ci_manager,
         pr_cache=pr_cache,
     )
@@ -286,8 +295,8 @@ class TestCheckPrHealth:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """An issue with no resolvable branch calls neither the PR nor the CI API."""
-        issue_manager, branch_manager, ci_manager, pr_cache = _setup(monkeypatch)
-        branch_manager.get_branch_with_pr_fallback.return_value = None
+        issue_manager, branch_cache, ci_manager, pr_cache = _setup(monkeypatch)
+        branch_cache.lookup.return_value = BranchLookup("not_found")
 
         _run(_make_pr_issue(997))
 
@@ -319,11 +328,13 @@ class TestCheckPrHealth:
         mock_ci_manager_cls = MagicMock()
         mock_pr_manager_cls = MagicMock()
         mock_cache_cls = MagicMock()
+        mock_branch_cache_cls = MagicMock()
         monkeypatch.setattr(f"{CHECKS}.IssueManager", mock_issue_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.IssueBranchManager", mock_branch_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.CIResultsManager", mock_ci_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.PullRequestManager", mock_pr_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.PullRequestCache", mock_cache_cls)
+        monkeypatch.setattr(f"{CHECKS}.BranchLookupCache", mock_branch_cache_cls)
 
         _run(_make_pr_issue(123, labels=["status-01:created"]))
 
@@ -332,6 +343,7 @@ class TestCheckPrHealth:
         mock_ci_manager_cls.assert_not_called()
         mock_pr_manager_cls.assert_not_called()
         mock_cache_cls.load.assert_not_called()
+        mock_branch_cache_cls.load.assert_not_called()
 
     def test_setup_failure_logs_warning_and_does_not_raise(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
@@ -354,22 +366,22 @@ class TestCheckPrHealth:
 
     def test_one_lookup_per_issue(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Branch and PR are each looked up exactly once per issue."""
-        _, branch_manager, _, pr_cache = _setup(monkeypatch)
+        _, branch_cache, _, pr_cache = _setup(monkeypatch)
 
         _run(_make_pr_issue(986))
 
-        branch_manager.get_branch_with_pr_fallback.assert_called_once()
+        branch_cache.lookup.assert_called_once()
         pr_cache.find_pr.assert_called_once_with("999-fix")
 
     def test_trusted_commenters_read_once_per_poll(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The allowlist is read once per check_pr_health call, not per issue."""
-        issue_manager, branch_manager, ci_manager, pr_cache = _default_mocks()
+        issue_manager, branch_cache, ci_manager, pr_cache = _default_mocks()
         get_trusted = _patch_env(
             monkeypatch,
             issue_manager=issue_manager,
-            branch_manager=branch_manager,
+            branch_cache=branch_cache,
             ci_manager=ci_manager,
             pr_cache=pr_cache,
         )
@@ -389,14 +401,12 @@ class TestResolvePrTarget:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """A branch-lookup exception yields (None, None) and a warning."""
-        branch_manager = MagicMock()
-        branch_manager.get_branch_with_pr_fallback.side_effect = ValueError("boom")
+        branch_cache = MagicMock()
+        branch_cache.lookup.side_effect = BranchLookupError("boom")
         pr_cache = MagicMock()
 
-        with caplog.at_level(logging.WARNING, logger=CHECKS):
-            result = _resolve_pr_target(
-                _make_pr_issue(1), branch_manager, pr_cache, "owner", "repo"
-            )
+        with caplog.at_level(logging.WARNING, logger=ISSUES):
+            result = _resolve_pr_target(_make_pr_issue(1), branch_cache, pr_cache)
 
         assert result == (None, None)
         assert any(r.levelno == logging.WARNING for r in caplog.records)
@@ -404,13 +414,11 @@ class TestResolvePrTarget:
 
     def test_no_branch_returns_none_none(self) -> None:
         """No resolvable branch yields (None, None) without a PR lookup."""
-        branch_manager = MagicMock()
-        branch_manager.get_branch_with_pr_fallback.return_value = None
+        branch_cache = MagicMock()
+        branch_cache.lookup.return_value = BranchLookup("ambiguous")
         pr_cache = MagicMock()
 
-        result = _resolve_pr_target(
-            _make_pr_issue(2), branch_manager, pr_cache, "owner", "repo"
-        )
+        result = _resolve_pr_target(_make_pr_issue(2), branch_cache, pr_cache)
 
         assert result == (None, None)
         pr_cache.find_pr.assert_not_called()
@@ -419,43 +427,37 @@ class TestResolvePrTarget:
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
         """A PR-lookup exception yields (branch, None) and a warning."""
-        branch_manager = MagicMock()
-        branch_manager.get_branch_with_pr_fallback.return_value = "3-fix"
+        branch_cache = MagicMock()
+        branch_cache.lookup.return_value = BranchLookup("found", "3-fix")
         pr_cache = MagicMock()
         pr_cache.find_pr.side_effect = RuntimeError("boom")
 
         with caplog.at_level(logging.WARNING, logger=CHECKS):
-            result = _resolve_pr_target(
-                _make_pr_issue(3), branch_manager, pr_cache, "owner", "repo"
-            )
+            result = _resolve_pr_target(_make_pr_issue(3), branch_cache, pr_cache)
 
         assert result == ("3-fix", None)
         assert any(r.levelno == logging.WARNING for r in caplog.records)
 
     def test_no_pr_returns_branch_none(self) -> None:
         """No PR for the branch yields (branch, None)."""
-        branch_manager = MagicMock()
-        branch_manager.get_branch_with_pr_fallback.return_value = "4-fix"
+        branch_cache = MagicMock()
+        branch_cache.lookup.return_value = BranchLookup("found", "4-fix")
         pr_cache = MagicMock()
         pr_cache.find_pr.return_value = None
 
-        result = _resolve_pr_target(
-            _make_pr_issue(4), branch_manager, pr_cache, "owner", "repo"
-        )
+        result = _resolve_pr_target(_make_pr_issue(4), branch_cache, pr_cache)
 
         assert result == ("4-fix", None)
 
     def test_pr_found_returns_branch_and_pr(self) -> None:
         """A found PR yields (branch, pr)."""
-        branch_manager = MagicMock()
-        branch_manager.get_branch_with_pr_fallback.return_value = "5-fix"
+        branch_cache = MagicMock()
+        branch_cache.lookup.return_value = BranchLookup("found", "5-fix")
         pr_cache = MagicMock()
         pr = _make_pr(7)
         pr_cache.find_pr.return_value = pr
 
-        result = _resolve_pr_target(
-            _make_pr_issue(5), branch_manager, pr_cache, "owner", "repo"
-        )
+        result = _resolve_pr_target(_make_pr_issue(5), branch_cache, pr_cache)
 
         assert result == ("5-fix", pr)
         pr_cache.find_pr.assert_called_once_with("5-fix")

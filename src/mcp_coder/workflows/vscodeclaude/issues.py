@@ -6,6 +6,9 @@ from typing import Any
 
 from ...config.label_config import load_labels_config
 from ...mcp_workspace_github import (
+    BranchLookupCache,
+    BranchLookupError,
+    GithubException,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -135,6 +138,19 @@ def status_requires_linked_branch(status: str) -> bool:
     if config is None:
         return False
     return bool(config.get("requires_branch", False))
+
+
+def lookup_branch(cache: BranchLookupCache, issue: IssueData) -> str | None:
+    """Return the issue's single branch, or None for not_found/ambiguous/lookup errors.
+
+    Raises:
+        GitHubRateLimitError: On a rate limit (propagates).
+    """  # noqa: DOC502  # raised by cache.lookup, not caught here
+    try:
+        return cache.lookup(issue).branch
+    except (BranchLookupError, ValueError, GithubException) as exc:
+        logger.warning("Branch lookup failed for issue #%d: %s", issue["number"], exc)
+        return None
 
 
 def _is_issue_eligible(
@@ -386,22 +402,22 @@ def build_eligible_issues_with_branch_check(
                     cache_refresh_minutes=get_cache_refresh_minutes(),
                 )
 
-            # Create branch manager for linked branch checks
-            branch_manager = IssueBranchManager(repo_url=repo_url)
+            # Run-scoped branch cache for linked branch checks
+            branch_cache = BranchLookupCache.load(IssueBranchManager(repo_url=repo_url))
 
             # Add to result list and check branch requirements
-            for issue in eligible_issues:
-                eligible_issues_list.append((repo_full_name, issue))
+            try:
+                for issue in eligible_issues:
+                    eligible_issues_list.append((repo_full_name, issue))
 
-                # Check if this issue needs branch but doesn't have one
-                status = get_issue_status(issue)
-                if status_requires_linked_branch(status):
-                    repo_owner, repo_name_str = repo_full_name.split("/", 1)
-                    branch = branch_manager.get_branch_with_pr_fallback(
-                        issue["number"], repo_owner, repo_name_str
-                    )
-                    if branch is None:
-                        issues_without_branch.add((repo_full_name, issue["number"]))
+                    # Check if this issue needs branch but doesn't have one
+                    status = get_issue_status(issue)
+                    if status_requires_linked_branch(status):
+                        branch = lookup_branch(branch_cache, issue)
+                        if branch is None:
+                            issues_without_branch.add((repo_full_name, issue["number"]))
+            finally:
+                branch_cache.save()
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
             raise_if_rate_limited(e)

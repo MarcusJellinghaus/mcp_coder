@@ -29,6 +29,9 @@ from mcp_workspace.github_operations import (
     verify_github_security,
 )
 
+# Caching: run-scoped issue → branch lookup cache
+from mcp_workspace.github_operations.caching.branches import BranchLookupCache
+
 # Caching: recognise rate-limit exceptions raised by managers
 from mcp_workspace.github_operations.caching.errors import to_rate_limit_error
 
@@ -45,6 +48,8 @@ from mcp_workspace.github_operations.ci_results_manager import (
 
 # Issues subpackage
 from mcp_workspace.github_operations.issues import (
+    BranchLookup,
+    BranchLookupError,
     CacheData,
     CommentData,
     EventData,
@@ -108,6 +113,9 @@ __all__: list[str] = [
     # Issues
     "IssueManager",
     "IssueBranchManager",
+    "BranchLookup",
+    "BranchLookupError",
+    "BranchLookupCache",
     "ClosingPRRef",
     "IssueEventType",
     "IssueData",

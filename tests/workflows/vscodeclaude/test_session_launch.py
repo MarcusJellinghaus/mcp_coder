@@ -14,6 +14,7 @@ from mcp_coder.workflows.vscodeclaude.session_launch import (
 )
 from mcp_coder.workflows.vscodeclaude.workspace import create_status_file
 from tests.github_factories import make_issue_data
+from tests.workflows.vscodeclaude.conftest import patch_branch_cache
 
 
 class TestLaunch:
@@ -318,16 +319,12 @@ class TestSkipGithubInstallThreading:
         )
 
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_launch"
         )
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",

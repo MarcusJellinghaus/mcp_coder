@@ -12,7 +12,7 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
 from mcp_coder.workflows.vscodeclaude.sessions import load_sessions
 from mcp_coder.workflows.vscodeclaude.types import SessionAction
 from tests.github_factories import make_issue_data
-from tests.workflows.vscodeclaude.conftest import make_assessment
+from tests.workflows.vscodeclaude.conftest import make_assessment, patch_branch_cache
 
 
 class TestRestartClosedSessionsLifecycle:
@@ -125,6 +125,9 @@ class TestRestartClosedSessionsLifecycle:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda *args, **kwargs: BranchPrepResult(True, None, None),
+        )
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         # Create working folder and workspace file

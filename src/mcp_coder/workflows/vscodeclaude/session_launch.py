@@ -8,6 +8,7 @@ from typing import cast
 
 from ...mcp_workspace_git import get_current_branch_name
 from ...mcp_workspace_github import (
+    BranchLookupCache,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -36,6 +37,7 @@ from .helpers import (
 from .issues import (
     _filter_eligible_vscodeclaude_issues,
     is_status_eligible_for_session,
+    lookup_branch,
     status_requires_linked_branch,
 )
 from .sessions import (
@@ -389,7 +391,6 @@ def process_eligible_issues(
         repo_url,
     )
     issue_manager = IssueManager(repo_url=repo_url)
-    branch_manager = IssueBranchManager(repo_url=repo_url)
 
     # Get all cached issues and filter for vscodeclaude eligibility
     if all_cached_issues is None:
@@ -431,45 +432,46 @@ def process_eligible_issues(
     started_sessions: list[VSCodeClaudeSession] = []
     available_slots = max_sessions - current_count
 
-    for issue in issues_to_start[:available_slots]:
-        try:
-            # Get issue status
-            status = get_issue_status(issue)
+    branch_cache = BranchLookupCache.load(IssueBranchManager(repo_url=repo_url))
+    try:
+        for issue in issues_to_start[:available_slots]:
+            try:
+                # Get issue status
+                status = get_issue_status(issue)
 
-            # Get linked branch
-            repo_owner, repo_name_str = repo_full_name.split("/", 1)
-            branch_name = branch_manager.get_branch_with_pr_fallback(
-                issue["number"], repo_owner, repo_name_str
-            )
+                # Get linked branch
+                branch_name = lookup_branch(branch_cache, issue)
 
-            # Check if status requires linked branch
-            if status_requires_linked_branch(status) and branch_name is None:
-                logger.error(
-                    "Issue #%d at %s has no linked branch - skipping",
-                    issue["number"],
-                    status,
+                # Check if status requires linked branch
+                if status_requires_linked_branch(status) and branch_name is None:
+                    logger.error(
+                        "Issue #%d at %s has no linked branch - skipping",
+                        issue["number"],
+                        status,
+                    )
+                    continue
+
+                # Prepare and launch session
+                session = prepare_and_launch_session(
+                    issue=issue,
+                    repo_config=repo_config,
+                    vscodeclaude_config=vscodeclaude_config,
+                    repo_vscodeclaude_config=repo_vscodeclaude_config,
+                    branch_name=branch_name,
+                    is_intervention=False,
+                    skip_github_install=skip_github_install,
                 )
-                continue
+                started_sessions.append(session)
 
-            # Prepare and launch session
-            session = prepare_and_launch_session(
-                issue=issue,
-                repo_config=repo_config,
-                vscodeclaude_config=vscodeclaude_config,
-                repo_vscodeclaude_config=repo_vscodeclaude_config,
-                branch_name=branch_name,
-                is_intervention=False,
-                skip_github_install=skip_github_install,
-            )
-            started_sessions.append(session)
-
-        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            raise_if_rate_limited(e)
-            logger.error(
-                "Failed to start session for issue #%d: %s",
-                issue["number"],
-                str(e),
-            )
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                raise_if_rate_limited(e)
+                logger.error(
+                    "Failed to start session for issue #%d: %s",
+                    issue["number"],
+                    str(e),
+                )
+    finally:
+        branch_cache.save()
 
     return started_sessions
 

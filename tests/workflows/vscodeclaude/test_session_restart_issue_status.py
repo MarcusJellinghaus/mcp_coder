@@ -9,7 +9,7 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
     restart_closed_sessions,
 )
 from tests.github_factories import make_issue_data
-from tests.workflows.vscodeclaude.conftest import make_assessment
+from tests.workflows.vscodeclaude.conftest import make_assessment, patch_branch_cache
 
 
 class TestRestartClosedSessionsIssueStatus:
@@ -305,6 +305,9 @@ class TestRestartClosedSessionsIssueStatus:
             "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda *args, **kwargs: BranchPrepResult(True, None, None),
         )
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_restart"
+        )
 
         # Create working folder and workspace file
         working_folder = tmp_path / "repo_101"
@@ -377,6 +380,9 @@ class TestRestartClosedSessionsIssueStatus:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda *args, **kwargs: BranchPrepResult(True, None, None),
+        )
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         # Create working folder and workspace file

@@ -7,6 +7,7 @@ from typing import NamedTuple
 
 from ...mcp_workspace_git import checkout_branch, fetch_remote, pull
 from ...mcp_workspace_github import (
+    BranchLookupCache,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -21,6 +22,7 @@ from .issues import (
     get_ignore_labels,
     get_matching_ignore_label,
     is_status_eligible_for_session,
+    lookup_branch,
     status_requires_linked_branch,
 )
 from .session_launch import (
@@ -56,10 +58,8 @@ __all__ = [
 def _prepare_restart_branch(
     folder_path: Path,
     current_status: str,
-    branch_manager: IssueBranchManager,
-    issue_number: int,
-    repo_owner: str,
-    repo_name: str,
+    branch_cache: BranchLookupCache,
+    issue: IssueData,
 ) -> BranchPrepResult:
     """Prepare branch for session restart.
 
@@ -68,10 +68,8 @@ def _prepare_restart_branch(
     Args:
         folder_path: Path to the git repository
         current_status: Current issue status label
-        branch_manager: IssueBranchManager for GitHub API calls
-        issue_number: GitHub issue number
-        repo_owner: GitHub repository owner
-        repo_name: GitHub repository name
+        branch_cache: Run-scoped branch lookup cache of the issue's repo
+        issue: The session's issue
 
     Returns:
         BranchPrepResult with:
@@ -89,9 +87,7 @@ def _prepare_restart_branch(
         return BranchPrepResult(True, None, None)
 
     # 3. Get linked branch from GitHub
-    linked_branch = branch_manager.get_branch_with_pr_fallback(
-        issue_number, repo_owner, repo_name
-    )
+    linked_branch = lookup_branch(branch_cache, issue)
 
     if not linked_branch:
         return BranchPrepResult(False, "No branch", None)
@@ -256,204 +252,219 @@ def restart_closed_sessions(
     # Load ignore labels once for all sessions
     ignore_labels = get_ignore_labels()
 
-    for session in store["sessions"]:
-        folder_path = Path(session["folder"])
+    # One run-scoped branch cache per repo, loaded on first use and saved once
+    # at the end, so a rate limit in one repo keeps the others' lookups.
+    branch_caches: dict[str, BranchLookupCache] = {}
 
-        assessment = assessments.get(session["folder"])
-        if assessment is None:
-            continue
+    try:
+        for session in store["sessions"]:
+            folder_path = Path(session["folder"])
 
-        # Skip active sessions. KEEP_ACTIVE and the zombie INVESTIGATE_ZOMBIE both
-        # report verdict.active; a zombie (process alive, folder gone) is kept
-        # tracked and warned, never restarted (it self-resolves to REMOVE_MISSING
-        # once the process exits).
-        if assessment.verdict.active:
-            if assessment.decision.action == SessionAction.INVESTIGATE_ZOMBIE:
-                logger.warning(
-                    "Zombie session for issue #%d: process alive but folder "
-                    "missing; keeping tracked, not restarting",
+            assessment = assessments.get(session["folder"])
+            if assessment is None:
+                continue
+
+            # Skip active sessions. KEEP_ACTIVE and the zombie INVESTIGATE_ZOMBIE
+            # both report verdict.active; a zombie (process alive, folder gone) is
+            # kept tracked and warned, never restarted (it self-resolves to
+            # REMOVE_MISSING once the process exits).
+            if assessment.verdict.active:
+                if assessment.decision.action == SessionAction.INVESTIGATE_ZOMBIE:
+                    logger.warning(
+                        "Zombie session for issue #%d: process alive but folder "
+                        "missing; keeping tracked, not restarting",
+                        session["issue_number"],
+                    )
+                continue
+
+            # Folder missing -> remove the orphaned session (the existing
+            # orphan-cleanup path, now gated by the assessment instead of a local
+            # folder-existence check).
+            if assessment.decision.action == SessionAction.REMOVE_MISSING:
+                remove_session(session["folder"])
+                logger.info(
+                    "Removed orphaned session for issue #%d (folder missing)",
                     session["issue_number"],
                 )
-            continue
+                continue
 
-        # Folder missing -> remove the orphaned session (the existing
-        # orphan-cleanup path, now gated by the assessment instead of a local
-        # folder-existence check).
-        if assessment.decision.action == SessionAction.REMOVE_MISSING:
-            remove_session(session["folder"])
-            logger.info(
-                "Removed orphaned session for issue #%d (folder missing)",
-                session["issue_number"],
-            )
-            continue
+            # Only RESTART candidates proceed; SKIP / DELETE are cleanup's job.
+            if assessment.decision.action != SessionAction.RESTART:
+                continue
 
-        # Only RESTART candidates proceed; SKIP / DELETE are cleanup's job.
-        if assessment.decision.action != SessionAction.RESTART:
-            continue
-
-        # Check if repo is still configured (skip sessions for unconfigured repos)
-        repo_full_name = session["repo"]
-        if repo_full_name not in configured_repos:
-            logger.info(
-                "Skipping session for issue #%d: repo %s not in config",
-                session["issue_number"],
-                repo_full_name,
-            )
-            continue
-
-        # Get cached issues for this repo (if available)
-        repo_cached_issues: dict[int, IssueData] | None = None
-        if cached_issues_by_repo is not None:
-            repo_cached_issues = cached_issues_by_repo.get(repo_full_name)
-
-        # Get issue data from cache or fetch through caching layer
-        issue_number = session["issue_number"]
-        repo_url = f"https://github.com/{repo_full_name}"
-
-        try:
-            if repo_cached_issues and issue_number in repo_cached_issues:
-                issue = repo_cached_issues[issue_number]
-            else:
-                # Issue missing from cache — unexpected, since _build_cached_issues_by_repo
-                # uses additional_issues to include all session issues.
-                # Fetch through the caching layer to populate and avoid double API calls.
-                logger.warning(
-                    "Issue #%d missing from cache for %s, fetching individually",
-                    issue_number,
+            # Check if repo is still configured (skip sessions for unconfigured repos)
+            repo_full_name = session["repo"]
+            if repo_full_name not in configured_repos:
+                logger.info(
+                    "Skipping session for issue #%d: repo %s not in config",
+                    session["issue_number"],
                     repo_full_name,
                 )
-                issue_manager = IssueManager(repo_url=repo_url)
-                fetched = get_all_cached_issues(
-                    RepoIdentifier.from_full_name(repo_full_name),
-                    issue_manager=issue_manager,
-                    additional_issues=[issue_number],
-                )
-                fetched_dict: dict[int, IssueData] = {i["number"]: i for i in fetched}
-                if cached_issues_by_repo is not None:
-                    cached_issues_by_repo[repo_full_name] = fetched_dict
-                repo_cached_issues = fetched_dict
-                if issue_number not in fetched_dict:
+                continue
+
+            # Get cached issues for this repo (if available)
+            repo_cached_issues: dict[int, IssueData] | None = None
+            if cached_issues_by_repo is not None:
+                repo_cached_issues = cached_issues_by_repo.get(repo_full_name)
+
+            # Get issue data from cache or fetch through caching layer
+            issue_number = session["issue_number"]
+            repo_url = f"https://github.com/{repo_full_name}"
+
+            try:
+                if repo_cached_issues and issue_number in repo_cached_issues:
+                    issue = repo_cached_issues[issue_number]
+                else:
+                    # Issue missing from cache — unexpected, since
+                    # _build_cached_issues_by_repo uses additional_issues to include
+                    # all session issues. Fetch through the caching layer to
+                    # populate and avoid double API calls.
                     logger.warning(
-                        "Failed to fetch issue #%d, skipping restart",
+                        "Issue #%d missing from cache for %s, fetching individually",
+                        issue_number,
+                        repo_full_name,
+                    )
+                    issue_manager = IssueManager(repo_url=repo_url)
+                    fetched = get_all_cached_issues(
+                        RepoIdentifier.from_full_name(repo_full_name),
+                        issue_manager=issue_manager,
+                        additional_issues=[issue_number],
+                    )
+                    fetched_dict: dict[int, IssueData] = {
+                        i["number"]: i for i in fetched
+                    }
+                    if cached_issues_by_repo is not None:
+                        cached_issues_by_repo[repo_full_name] = fetched_dict
+                    repo_cached_issues = fetched_dict
+                    if issue_number not in fetched_dict:
+                        logger.warning(
+                            "Failed to fetch issue #%d, skipping restart",
+                            issue_number,
+                        )
+                        continue
+                    issue = fetched_dict[issue_number]
+
+                if issue["number"] == 0:
+                    logger.warning(
+                        "Failed to fetch issue #%d, skipping file regeneration",
                         issue_number,
                     )
                     continue
-                issue = fetched_dict[issue_number]
 
-            if issue["number"] == 0:
+                # Skip closed issues for restart (they shouldn't be restarted)
+                # but they should still appear in status display with (Closed) marker
+                if issue["state"] != "open":
+                    logger.info("Skipping closed issue #%d for restart", issue_number)
+                    continue
+
+                # Check if status is eligible for session
+                current_status = get_issue_status(issue)
+                if not is_status_eligible_for_session(current_status):
+                    logger.info(
+                        "Skipping issue #%d: status %s doesn't need session",
+                        issue_number,
+                        current_status,
+                    )
+                    continue
+
+                # Check if issue has ignore label (blocked/wait)
+                blocked_label = get_matching_ignore_label(
+                    issue["labels"], ignore_labels
+                )
+                if blocked_label:
+                    logger.info(
+                        "Skipping blocked session for issue #%d (label: %s)",
+                        issue_number,
+                        blocked_label,
+                    )
+                    continue
+
+                # Update session status if changed (current_status computed above)
+                if current_status != session["status"]:
+                    update_session_status(session["folder"], current_status)
+                    logger.debug(
+                        "Updated session status for #%d: %s -> %s",
+                        issue_number,
+                        session["status"],
+                        current_status,
+                    )
+
+                # Branch preparation: fetch, check, switch if needed
+                branch_cache = branch_caches.get(repo_full_name)
+                if branch_cache is None:
+                    branch_cache = BranchLookupCache.load(
+                        IssueBranchManager(repo_url=repo_url)
+                    )
+                    branch_caches[repo_full_name] = branch_cache
+                branch_result = _prepare_restart_branch(
+                    folder_path=folder_path,
+                    current_status=current_status,
+                    branch_cache=branch_cache,
+                    issue=issue,
+                )
+
+                if not branch_result.should_proceed:
+                    logger.warning(
+                        "Skipping restart for issue #%d: %s",
+                        issue_number,
+                        branch_result.skip_reason,
+                    )
+                    continue
+
+                # Regenerate all session files with fresh data
+                regenerate_session_files(session, issue)
+
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                raise_if_rate_limited(e)
                 logger.warning(
-                    "Failed to fetch issue #%d, skipping file regeneration",
+                    "Failed to regenerate files for issue #%d: %s",
                     issue_number,
+                    str(e),
+                )
+
+            # Find the workspace file
+            workspace_base = folder_path.parent
+            folder_name = folder_path.name
+            workspace_file = get_workspace_file_path(str(workspace_base), folder_name)
+
+            if not workspace_file.exists():
+                logger.warning(
+                    "Workspace file missing for session #%d: %s",
+                    session["issue_number"],
+                    workspace_file,
                 )
                 continue
 
-            # Skip closed issues for restart (they shouldn't be restarted)
-            # but they should still appear in status display with (Closed) marker
-            if issue["state"] != "open":
-                logger.info("Skipping closed issue #%d for restart", issue_number)
-                continue
-
-            # Check if status is eligible for session
-            current_status = get_issue_status(issue)
-            if not is_status_eligible_for_session(current_status):
-                logger.info(
-                    "Skipping issue #%d: status %s doesn't need session",
-                    issue_number,
-                    current_status,
-                )
-                continue
-
-            # Check if issue has ignore label (blocked/wait)
-            blocked_label = get_matching_ignore_label(issue["labels"], ignore_labels)
-            if blocked_label:
-                logger.info(
-                    "Skipping blocked session for issue #%d (label: %s)",
-                    issue_number,
-                    blocked_label,
-                )
-                continue
-
-            # Update session status if changed (current_status already computed above)
-            if current_status != session["status"]:
-                update_session_status(session["folder"], current_status)
+            # Relaunch VSCode
+            try:
+                new_pid = launch_vscode(workspace_file, folder_path)
+                update_session_pid(session["folder"], new_pid)
                 logger.debug(
-                    "Updated session status for #%d: %s -> %s",
-                    issue_number,
-                    session["status"],
-                    current_status,
+                    "Restarted VSCode for issue #%d (PID: %d)",
+                    session["issue_number"],
+                    new_pid,
                 )
 
-            # Branch preparation: fetch, check, switch if needed
-            branch_manager = IssueBranchManager(repo_url=repo_url)
-            repo_owner, repo_name_str = repo_full_name.split("/", 1)
-            branch_result = _prepare_restart_branch(
-                folder_path=folder_path,
-                current_status=current_status,
-                branch_manager=branch_manager,
-                issue_number=issue_number,
-                repo_owner=repo_owner,
-                repo_name=repo_name_str,
-            )
-
-            if not branch_result.should_proceed:
-                logger.warning(
-                    "Skipping restart for issue #%d: %s",
-                    issue_number,
-                    branch_result.skip_reason,
+                # Update session with new PID for return value.
+                # update_session_pid() already wrote vscode_pid_create_time
+                # atomically; re-loading ensures the returned dict matches the
+                # persisted store.
+                refreshed_store = load_sessions()
+                updated_session = next(
+                    s
+                    for s in refreshed_store["sessions"]
+                    if s["folder"] == session["folder"]
                 )
-                continue
+                restarted.append(updated_session)
 
-            # Regenerate all session files with fresh data
-            regenerate_session_files(session, issue)
-
-        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            raise_if_rate_limited(e)
-            logger.warning(
-                "Failed to regenerate files for issue #%d: %s",
-                issue_number,
-                str(e),
-            )
-
-        # Find the workspace file
-        workspace_base = folder_path.parent
-        folder_name = folder_path.name
-        workspace_file = get_workspace_file_path(str(workspace_base), folder_name)
-
-        if not workspace_file.exists():
-            logger.warning(
-                "Workspace file missing for session #%d: %s",
-                session["issue_number"],
-                workspace_file,
-            )
-            continue
-
-        # Relaunch VSCode
-        try:
-            new_pid = launch_vscode(workspace_file, folder_path)
-            update_session_pid(session["folder"], new_pid)
-            logger.debug(
-                "Restarted VSCode for issue #%d (PID: %d)",
-                session["issue_number"],
-                new_pid,
-            )
-
-            # Update session with new PID for return value.
-            # update_session_pid() already wrote vscode_pid_create_time
-            # atomically; re-loading ensures the returned dict matches the
-            # persisted store.
-            refreshed_store = load_sessions()
-            updated_session = next(
-                s
-                for s in refreshed_store["sessions"]
-                if s["folder"] == session["folder"]
-            )
-            restarted.append(updated_session)
-
-        except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-            logger.error(
-                "Failed to restart session for issue #%d: %s",
-                session["issue_number"],
-                str(e),
-            )
+            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+                logger.error(
+                    "Failed to restart session for issue #%d: %s",
+                    session["issue_number"],
+                    str(e),
+                )
+    finally:
+        for cache in branch_caches.values():
+            cache.save()
 
     return restarted

@@ -6,11 +6,19 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.mcp_workspace_github import (
+    BranchLookup,
+    BranchLookupError,
+    GitHubRateLimitError,
+    IssueData,
+)
 from mcp_coder.workflows.vscodeclaude.session_launch import (
     process_eligible_issues,
 )
 from tests.github_factories import make_issue_data
+from tests.workflows.vscodeclaude.conftest import patch_branch_cache
+
+LAUNCH = "mcp_coder.workflows.vscodeclaude.session_launch"
 
 
 class TestProcessEligibleIssuesMaxSessions:
@@ -49,17 +57,11 @@ class TestProcessEligibleIssuesBranchRequirement:
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, LAUNCH)
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
@@ -113,17 +115,11 @@ class TestProcessEligibleIssuesBranchRequirement:
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, LAUNCH)
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
@@ -181,17 +177,11 @@ class TestProcessEligibleIssuesBranchRequirement:
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, LAUNCH)
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
@@ -244,17 +234,11 @@ class TestProcessEligibleIssuesBranchRequirement:
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-        mock_branch_manager.get_branch_with_pr_fallback.return_value = "feat-456"
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, LAUNCH, branch="feat-456")
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
@@ -307,17 +291,12 @@ class TestProcessEligibleIssuesBranchRequirement:
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-        mock_branch_manager.get_branch_with_pr_fallback.return_value = None
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        branch_cache = patch_branch_cache(monkeypatch, LAUNCH)
+        branch_cache.lookup.return_value = BranchLookup("ambiguous")
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.get_all_cached_issues",
@@ -380,16 +359,11 @@ class TestProcessEligibleIssuesPrefetchedIssues:
 
         # Mock IssueManager and IssueBranchManager to avoid token validation
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_launch.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, LAUNCH)
 
         # get_all_cached_issues must NOT be called — raises AssertionError if invoked
         def _should_not_be_called(*args: Any, **kwargs: Any) -> list[IssueData]:
@@ -433,3 +407,80 @@ class TestProcessEligibleIssuesPrefetchedIssues:
 
         # The pre-fetched issue was used: session was launched once
         mock_launch.assert_called_once()
+
+
+class TestProcessEligibleIssuesBranchCache:
+    """process_eligible_issues resolves branches through one BranchLookupCache."""
+
+    @staticmethod
+    def _patch(monkeypatch: pytest.MonkeyPatch) -> tuple[MagicMock, MagicMock]:
+        branch_cache = patch_branch_cache(monkeypatch, LAUNCH, branch="feat")
+        launch = MagicMock()
+        monkeypatch.setattr(f"{LAUNCH}.IssueManager", lambda **kw: MagicMock())
+        monkeypatch.setattr(f"{LAUNCH}.get_github_username", lambda: "testuser")
+        monkeypatch.setattr(
+            f"{LAUNCH}._filter_eligible_vscodeclaude_issues", lambda i, u: i
+        )
+        monkeypatch.setattr(f"{LAUNCH}.get_session_for_issue", lambda *a, **kw: None)
+        monkeypatch.setattr(
+            f"{LAUNCH}.load_repo_vscodeclaude_config", lambda *a, **kw: {}
+        )
+        monkeypatch.setattr(f"{LAUNCH}.prepare_and_launch_session", launch)
+        return branch_cache, launch
+
+    @staticmethod
+    def _run(issues: list[IssueData]) -> None:
+        process_eligible_issues(
+            repo_name="test-repo",
+            repo_config={"repo_url": "https://github.com/owner/repo"},
+            vscodeclaude_config={"workspace_base": "/tmp", "max_sessions": 3},
+            max_sessions=3,
+            current_count=0,
+            all_cached_issues=issues,
+        )
+
+    @staticmethod
+    def _issues() -> list[IssueData]:
+        return [
+            make_issue_data(
+                number=n, labels=["status-04:plan-review"], assignees=["testuser"]
+            )
+            for n in (1, 2)
+        ]
+
+    def test_lookup_error_skips_issue_and_continues(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        branch_cache, launch = self._patch(monkeypatch)
+        branch_cache.lookup.side_effect = [
+            BranchLookupError("boom"),
+            BranchLookup("found", "2-fix"),
+        ]
+
+        self._run(self._issues())
+
+        launch.assert_called_once()
+        assert launch.call_args.kwargs["branch_name"] == "2-fix"
+
+    def test_one_load_and_one_save(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        branch_cache, launch = self._patch(monkeypatch)
+
+        self._run(self._issues())
+
+        branch_cache.cache_cls.load.assert_called_once()
+        assert branch_cache.lookup.call_count == 2
+        branch_cache.save.assert_called_once_with()
+        assert launch.call_count == 2
+
+    def test_rate_limit_propagates_and_saves(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        branch_cache, launch = self._patch(monkeypatch)
+        branch_cache.lookup.side_effect = GitHubRateLimitError("limited")
+
+        with pytest.raises(GitHubRateLimitError):
+            self._run(self._issues())
+
+        assert branch_cache.lookup.call_count == 1
+        branch_cache.save.assert_called_once_with()
+        launch.assert_not_called()

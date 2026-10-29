@@ -24,7 +24,11 @@ from mcp_coder.workflows.vscodeclaude.session_launch import process_eligible_iss
 from mcp_coder.workflows.vscodeclaude.session_restart import restart_closed_sessions
 from mcp_coder.workflows.vscodeclaude.workspace import _fetch_marked_comment
 from tests.github_factories import make_issue_data
-from tests.workflows.vscodeclaude.conftest import make_assessment, make_session_at
+from tests.workflows.vscodeclaude.conftest import (
+    make_assessment,
+    make_session_at,
+    patch_branch_cache,
+)
 from tests.workflows.vscodeclaude.test_checks import (
     REPO_CONFIG,
     _make_pr_issue,
@@ -64,7 +68,7 @@ class TestCheckPrHealthRateLimit:
     @pytest.mark.parametrize(
         "manager_index, method",
         [
-            (1, "get_branch_with_pr_fallback"),
+            (1, "lookup"),
             (3, "find_pr"),
             (3, "mergeable_state"),
             (3, "ci_status"),
@@ -78,20 +82,22 @@ class TestCheckPrHealthRateLimit:
         mocks = _setup(monkeypatch)
         if method == "get_latest_ci_status":
             mocks[3].find_pr.return_value = None  # no open PR → live CI lookup
-        getattr(mocks[manager_index], method).side_effect = _rate_limit()
-        branch_manager = mocks[1]
+        # BranchLookupCache.lookup converts rate limits itself.
+        limit = GitHubRateLimitError("limited") if method == "lookup" else _rate_limit()
+        getattr(mocks[manager_index], method).side_effect = limit
+        branch_cache = mocks[1]
 
         with pytest.raises(GitHubRateLimitError):
             check_pr_health(
                 "test-repo", REPO_CONFIG, [_make_pr_issue(1), _make_pr_issue(2)]
             )
 
-        assert branch_manager.get_branch_with_pr_fallback.call_count == 1
+        assert branch_cache.lookup.call_count == 1
 
     def test_escalate_label_limit_propagates(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _, branch_manager, _, pr_cache = _setup(monkeypatch)
+        _, branch_cache, _, pr_cache = _setup(monkeypatch)
         pr_cache.mergeable_state.return_value = "dirty"
         monkeypatch.setattr(
             f"{CHECKS}.update_workflow_label",
@@ -103,7 +109,7 @@ class TestCheckPrHealthRateLimit:
                 "test-repo", REPO_CONFIG, [_make_pr_issue(1), _make_pr_issue(2)]
             )
 
-        assert branch_manager.get_branch_with_pr_fallback.call_count == 1
+        assert branch_cache.lookup.call_count == 1
 
     def test_username_limit_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _setup(monkeypatch)
@@ -118,7 +124,7 @@ class TestCheckPrHealthRateLimit:
 class TestBuildEligibleIssuesRateLimit:
     """build_eligible_issues_with_branch_check stops on the first rate limit."""
 
-    def _patch(self, monkeypatch: pytest.MonkeyPatch) -> Mock:
+    def _patch(self, monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         config = {
             "coordinator": {
                 "repos": {
@@ -130,13 +136,13 @@ class TestBuildEligibleIssuesRateLimit:
         monkeypatch.setattr(f"{ISSUES}.load_config", lambda: config)
         monkeypatch.setattr(f"{ISSUES}.get_github_username", lambda: "testuser")
         monkeypatch.setattr(f"{ISSUES}.IssueManager", lambda **kw: Mock())
-        branch_manager = Mock()
-        branch_manager.get_branch_with_pr_fallback.side_effect = _rate_limit()
-        monkeypatch.setattr(f"{ISSUES}.IssueBranchManager", lambda **kw: branch_manager)
+        branch_cache = patch_branch_cache(
+            monkeypatch, ISSUES, side_effect=GitHubRateLimitError("limited")
+        )
         monkeypatch.setattr(
             f"{ISSUES}.get_issue_status", lambda issue: "status-04:plan-review"
         )
-        return branch_manager
+        return branch_cache
 
     def _cached(self) -> dict[str, dict[int, IssueData]]:
         def issue(number: int) -> IssueData:
@@ -149,17 +155,18 @@ class TestBuildEligibleIssuesRateLimit:
     def test_branch_lookup_limit_stops_before_repo_2(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        branch_manager = self._patch(monkeypatch)
+        branch_cache = self._patch(monkeypatch)
 
         with pytest.raises(GitHubRateLimitError):
             build_eligible_issues_with_branch_check(
                 ["repo-1", "repo-2"], cached_issues_by_repo=self._cached()
             )
 
-        assert branch_manager.get_branch_with_pr_fallback.call_count == 1
+        assert branch_cache.lookup.call_count == 1
+        branch_cache.save.assert_called_once_with()
 
     def test_username_limit_propagates(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        branch_manager = self._patch(monkeypatch)
+        branch_cache = self._patch(monkeypatch)
         username = Mock(side_effect=_wrapped_rate_limit())
         monkeypatch.setattr(f"{ISSUES}.get_github_username", username)
 
@@ -169,7 +176,7 @@ class TestBuildEligibleIssuesRateLimit:
             )
 
         assert username.call_count == 1
-        branch_manager.get_branch_with_pr_fallback.assert_not_called()
+        branch_cache.lookup.assert_not_called()
 
 
 class TestProcessEligibleIssuesRateLimit:
@@ -184,11 +191,11 @@ class TestProcessEligibleIssuesRateLimit:
             )
             for n in (1, 2)
         ]
-        branch_manager = MagicMock()
-        branch_manager.get_branch_with_pr_fallback.side_effect = _rate_limit()
+        branch_cache = patch_branch_cache(
+            monkeypatch, LAUNCH, side_effect=GitHubRateLimitError("limited")
+        )
         launch = MagicMock()
         monkeypatch.setattr(f"{LAUNCH}.IssueManager", lambda **kw: MagicMock())
-        monkeypatch.setattr(f"{LAUNCH}.IssueBranchManager", lambda **kw: branch_manager)
         monkeypatch.setattr(f"{LAUNCH}.get_github_username", lambda: "testuser")
         monkeypatch.setattr(
             f"{LAUNCH}._filter_eligible_vscodeclaude_issues", lambda i, u: i
@@ -209,7 +216,8 @@ class TestProcessEligibleIssuesRateLimit:
                 all_cached_issues=issues,
             )
 
-        assert branch_manager.get_branch_with_pr_fallback.call_count == 1
+        assert branch_cache.lookup.call_count == 1
+        branch_cache.save.assert_called_once_with()
         launch.assert_not_called()
 
 
@@ -241,7 +249,7 @@ class TestRestartClosedSessionsRateLimit:
         )
         monkeypatch.setattr(f"{RESTART}._get_configured_repos", lambda: {"owner/repo"})
         monkeypatch.setattr(f"{RESTART}.IssueManager", lambda **kw: MagicMock())
-        monkeypatch.setattr(f"{RESTART}.IssueBranchManager", lambda **kw: MagicMock())
+        branch_cache = patch_branch_cache(monkeypatch, RESTART)
         monkeypatch.setattr(
             f"{RESTART}._prepare_restart_branch", Mock(side_effect=_rate_limit())
         )
@@ -260,6 +268,7 @@ class TestRestartClosedSessionsRateLimit:
             )
 
         launch.assert_not_called()
+        branch_cache.save.assert_called_once_with()
 
 
 class TestAssessmentRateLimit:
