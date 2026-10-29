@@ -16,3 +16,11 @@ Reviewed coordinator, shim, rate-limit helper, checks/issues/status/assessment d
 Verdict(decision='tasks', tasks=["In src/mcp_coder/cli/commands/coordinator/commands_vscodeclaude.py:318, when a rate limit interrupts _launch_for_repos in a later repo, still print the 'Started N new session(s)' summary for sessions already launched in earlier repos. Follow the same approach used in round 1 for restarted sessions, carrying total_started (:354) through the rate-limit exit. Add a test where a rate limit hits after at least one repo has already launched a session."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 3 — 2026-10-29
+**Findings**:
+Reviewing round-2 fix in `commands_vscodeclaude.py`, then spot-checking high-risk paths (label helper, dispatch, checks).Checks/dispatch/label paths look correct; now verifying `issues.py` lookup helper and `session_restart` cache lifetime.Code paths verified; running fast unit tests and mypy to confirm the branch is green.NO FINDINGS
+**Decisions**:
+Verdict(decision='dismiss', tasks=[], escalate_reason=None)
+**Changes**:
+dismiss
