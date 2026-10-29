@@ -159,7 +159,7 @@ mcp__mcp-tools-py__run_pylint_check
 mcp__mcp-tools-py__run_mypy_check
 ```
 
-> Only `pycycle_check.sh` has no MCP equivalent — run it via Bash when needed. The automated implement workflow has no Bash, so issues for it must name the MCP tools only.
+> The automated implement workflow has no Bash, so issues for it must name the MCP tools only.
 > Use `mcp__mcp-tools-py__get_library_source` to inspect third-party library APIs when planning refactors.
 
 ## Common Patterns

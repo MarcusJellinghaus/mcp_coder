@@ -116,7 +116,6 @@ The general CI workflow structure is documented in [github.md](github.md#code-qu
 | `mypy` | Static type checker (strict mode) |
 | `import-linter` | Import contract validator |
 | `tach` | Architectural boundary check |
-| `pycycle` | Circular dependency detection |
 | `vulture` | Dead code detection |
 | `deptry` | Dependency declaration check |
 
@@ -135,14 +134,13 @@ Format via `mcp__mcp-tools-py__run_format_code` (formatter chosen by `[tool.mcp-
 | `ruff_check.sh/bat` | Run ruff lint on src/tests/tools | Optional (CI runs it) |
 | `lint_imports.sh/bat` | Run import-linter | Optional (CI runs it) |
 | `tach_check.sh/bat` | Run tach architecture check | Optional (CI runs it) |
-| `pycycle_check.sh/bat` | Check circular dependencies | Optional (CI runs it) |
 | `vulture_check.sh/bat` | Check dead code | Optional (CI runs it) |
 | `deptry_check.sh/bat` | Check dependency declarations | Optional (CI runs it) |
 | `pylint_check_for_errors.bat` | Run pylint errors only | Optional (CI runs it) |
 | `mypy.bat` | Run type checking | Optional (CI runs it) |
 
 > **For Claude Code:** Use MCP tools where available: `mcp__mcp-tools-py__run_lint_imports_check`, `mcp__mcp-tools-py__run_tach_check`, `mcp__mcp-tools-py__run_vulture_check`, `mcp__mcp-tools-py__run_deptry_check`, `mcp__mcp-tools-py__run_pylint_check`, `mcp__mcp-tools-py__run_mypy_check`.
-> Shell scripts are for human developers and CI pipelines. `pycycle_check.sh` has no MCP equivalent — run it via Bash when needed.
+> Shell scripts are for human developers and CI pipelines.
 
 ### Performance Analysis Tools
 

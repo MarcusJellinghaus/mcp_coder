@@ -22,7 +22,7 @@ Git and the `mcp_workspace` package are reached only through the shims `mcp_code
 
 ## No import cycles
 
-Cycles make import order fragile and the layering meaningless. Four guards catch them: the `mlflow_logger_no_cycles` contract in [`.importlinter`](../../.importlinter), [pycycle](https://pypi.org/project/pycycle/) ([`tools/pycycle_check.sh`](../../tools/pycycle_check.sh)), [pylint `R0401`](https://pylint.readthedocs.io/en/stable/user_guide/messages/refactor/cyclic-import.html) ([`pyproject.toml`](../../pyproject.toml)) and tach `forbid_circular_dependencies` ([`tach.toml`](../../tach.toml)).
+Cycles make import order fragile and the layering meaningless. Two guards catch them, at different grain: [pylint `R0401`](https://pylint.readthedocs.io/en/stable/user_guide/messages/refactor/cyclic-import.html) ([`pyproject.toml`](../../pyproject.toml)) finds any cyclic import between modules and also runs locally, and tach `forbid_circular_dependencies` ([`tach.toml`](../../tach.toml)) catches cycles between the declared top-level modules. The `mlflow_logger_no_cycles` contract in [`.importlinter`](../../.importlinter) is not a general guard but a specific boundary: the MLflow logger must not import the modules that call it.
 
 ## No dead code
 
