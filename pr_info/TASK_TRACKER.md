@@ -87,9 +87,9 @@ See [step_9.md](./steps/step_9.md)
 ### Step 10: `status.py` — a failed live issue fetch is "unknown", never "closed"
 See [step_10.md](./steps/step_10.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 11: `check_pr_health` uses `PullRequestCache`
 See [step_11.md](./steps/step_11.md)
