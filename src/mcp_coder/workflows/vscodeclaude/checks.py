@@ -21,6 +21,7 @@ from ...mcp_workspace_github import (
 )
 from ...utils.log_utils import OUTPUT
 from ...workflow_utils.label_transitions import update_workflow_label
+from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import get_github_username, get_repo_full_name
 from .helpers import get_issue_status, is_marked
 from .issues import _filter_eligible_vscodeclaude_issues
@@ -82,7 +83,9 @@ def _resolve_pr_target(
     repo_owner: str,
     repo_gh_name: str,
 ) -> tuple[str | None, PullRequestData | None]:
-    """Resolve an issue's branch and open PR once. Never raises.
+    """Resolve an issue's branch and open PR once.
+
+    Never raises, except ``GitHubRateLimitError``.
 
     Returns:
         ``(None, None)`` when no branch could be resolved (skip the issue),
@@ -94,6 +97,7 @@ def _resolve_pr_target(
             issue["number"], repo_owner, repo_gh_name
         )
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        raise_if_rate_limited(exc)
         logger.warning(
             "Failed to resolve branch for issue #%d: %s", issue["number"], exc
         )
@@ -103,6 +107,7 @@ def _resolve_pr_target(
     try:
         prs = pr_manager.find_pull_request_by_head(branch)
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        raise_if_rate_limited(exc)
         logger.warning("Failed to look up PR for issue #%d: %s", issue["number"], exc)
         return branch, None
     return branch, (prs[0] if prs else None)
@@ -117,8 +122,9 @@ def _check_merge_conflict(
 ) -> bool:
     """Escalate a status-10 PR to status-71 if GitHub reports it as "dirty".
 
-    Never raises: any failure is logged and swallowed so one bad issue
-    can't block the rest of the batch this poll.
+    Never raises, except ``GitHubRateLimitError``: any other failure is
+    logged and swallowed so one bad issue can't block the rest of the batch
+    this poll.
 
     Returns:
         True iff a merge conflict was detected (label update attempted).
@@ -131,6 +137,7 @@ def _check_merge_conflict(
             return True
         return False
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        raise_if_rate_limited(exc)
         logger.warning(
             "Failed to check merge conflict for issue #%d: %s",
             issue["number"],
@@ -149,8 +156,9 @@ def _check_ci(
 ) -> bool:
     """Escalate a status-10 PR to status-81 if its latest CI run failed.
 
-    Never raises: any failure is logged and swallowed so one bad issue
-    can't block the rest of the batch this poll.
+    Never raises, except ``GitHubRateLimitError``: any other failure is
+    logged and swallowed so one bad issue can't block the rest of the batch
+    this poll.
 
     Returns:
         True iff a failed CI run was detected (label update attempted).
@@ -163,6 +171,7 @@ def _check_ci(
             return True
         return False
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        raise_if_rate_limited(exc)
         logger.warning(
             "Failed to check CI status for issue #%d: %s",
             issue["number"],
@@ -191,8 +200,9 @@ def _check_review_comments(
     mcp-coder notes) never count. Untrusted items that would otherwise
     count produce at most one OUTPUT line and no label change.
 
-    Never raises: any failure is logged and swallowed so one bad issue
-    can't block the rest of the batch this poll.
+    Never raises, except ``GitHubRateLimitError``: any other failure is
+    logged and swallowed so one bad issue can't block the rest of the batch
+    this poll.
 
     Returns:
         True iff outstanding trusted review feedback was detected (label
@@ -266,6 +276,7 @@ def _check_review_comments(
             )
         return False
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        raise_if_rate_limited(exc)
         logger.warning(
             "Failed to check review comments for issue #%d: %s",
             issue["number"],
@@ -279,7 +290,9 @@ def check_pr_health(
     repo_config: dict[str, str],
     all_cached_issues: list[IssueData],
 ) -> None:
-    """Run PR-health checks on the repo's status-10 issues. Never raises.
+    """Run PR-health checks on the repo's status-10 issues.
+
+    Never raises, except ``GitHubRateLimitError``.
 
     Checks run in a fixed order — merge conflict, failing CI, review
     comments — and stop at the first hit, so each issue gets at most one
@@ -313,6 +326,7 @@ def check_pr_health(
         )["id_to_name"]
         trusted = get_trusted_commenters()
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        raise_if_rate_limited(exc)
         logger.warning("PR-health: skipping repo %s: %s", repo_name, exc)
         return
 

@@ -14,6 +14,7 @@ from ...mcp_workspace_github import (
     get_all_cached_issues,
 )
 from ...utils.user_config import get_cache_refresh_minutes
+from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import _get_configured_repos
 from .helpers import get_issue_status
 from .issues import (
@@ -406,6 +407,7 @@ def restart_closed_sessions(
             regenerate_session_files(session, issue)
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            raise_if_rate_limited(e)
             logger.warning(
                 "Failed to regenerate files for issue #%d: %s",
                 issue_number,

@@ -13,6 +13,7 @@ from ...mcp_workspace_github import (
     get_all_cached_issues,
 )
 from ...utils.user_config import get_cache_refresh_minutes, load_config
+from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import (
     get_github_username,
     get_vscodeclaude_config,
@@ -361,6 +362,7 @@ def build_eligible_issues_with_branch_check(
             try:
                 github_username = get_github_username()
             except ValueError as e:
+                raise_if_rate_limited(e)
                 logger.warning(f"Failed to get GitHub username for {repo_name}: {e}")
                 continue
 
@@ -402,6 +404,7 @@ def build_eligible_issues_with_branch_check(
                         issues_without_branch.add((repo_full_name, issue["number"]))
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            raise_if_rate_limited(e)
             logger.warning(f"Failed to process repo {repo_name}: {e}")
             continue
 

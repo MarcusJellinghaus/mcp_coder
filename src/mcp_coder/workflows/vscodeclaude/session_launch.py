@@ -21,6 +21,7 @@ from ...utils.pyproject_config import (
 )
 from ...utils.subprocess_runner import launch_process
 from ...utils.user_config import get_cache_refresh_minutes
+from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import (
     get_github_username,
     get_repo_full_name,
@@ -463,6 +464,7 @@ def process_eligible_issues(
             started_sessions.append(session)
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+            raise_if_rate_limited(e)
             logger.error(
                 "Failed to start session for issue #%d: %s",
                 issue["number"],
