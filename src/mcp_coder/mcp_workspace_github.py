@@ -56,6 +56,11 @@ from mcp_workspace.github_operations.pr_types import (
     ReviewThreadData,
 )
 
+# Sourced from mcp_workspace.traffic_log (not github_operations): registers the
+# command name written on every traffic-log line. Re-exported for the same reason
+# as get_github_token.
+from mcp_workspace.traffic_log import set_traffic_log_context
+
 __all__: list[str] = [
     # Base manager
     "BaseGitHubManager",
@@ -100,4 +105,6 @@ __all__: list[str] = [
     "update_issue_labels_in_cache",
     # Token resolver (sourced from mcp_workspace.config)
     "get_github_token",
+    # Traffic log context (sourced from mcp_workspace.traffic_log)
+    "set_traffic_log_context",
 ]

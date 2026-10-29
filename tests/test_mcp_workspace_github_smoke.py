@@ -12,7 +12,15 @@ def test_all_exports_defined() -> None:
     """__all__ has expected count."""
     from mcp_coder.mcp_workspace_github import __all__
 
-    assert len(__all__) == 32
+    assert len(__all__) == 33
+
+
+def test_set_traffic_log_context_importable() -> None:
+    """set_traffic_log_context is re-exported from the shim and callable."""
+    from mcp_coder.mcp_workspace_github import __all__, set_traffic_log_context
+
+    assert callable(set_traffic_log_context)
+    assert "set_traffic_log_context" in __all__
 
 
 def test_get_github_token_importable() -> None:
