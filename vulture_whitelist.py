@@ -499,3 +499,7 @@ _._empty_allowlist
 # registered via @pytest.fixture(name="client") and injected by pytest, so
 # vulture sees no call site.
 _.fixture_client
+
+# tests/tools/test_jenkins_classify_logs.py - fixture registered via
+# @pytest.fixture(name="patterns") and injected by pytest.
+_.fixture_patterns

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Download console logs of recent Jenkins builds. Usage: tools/jenkins_download_logs.sh [--limit N] [--folder PATH] [--status a,b] [--outdir DIR]
+# Download console logs of recent Jenkins builds. Usage: tools/jenkins_download_logs.sh [--limit N] [--job PATH | --all-jobs] [--status a,b] [--name-pattern REGEX] [--outdir DIR]
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON="$SCRIPT_DIR/../.venv/Scripts/python.exe"

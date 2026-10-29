@@ -447,6 +447,31 @@ class TestJenkinsClientGetJobStatus:
         assert status.url == "http://jenkins:8080/job/test/42/"
 
     @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
+    def test_get_job_status_build_url_on_other_host(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """The job path comes from the URL's /job/ segments, not base_url.
+
+        Jenkins builds executable URLs from its own root URL, which can differ
+        from the configured server URL (e.g. localhost vs. an IP address).
+        """
+        mock_client = MagicMock()
+        mock_jenkins_class.return_value = mock_client
+        mock_client.get_queue_item.return_value = {
+            "executable": {
+                "number": 3131,
+                "url": "http://localhost:8080/job/Tests/job/simple%20test/3131/",
+            }
+        }
+        mock_client.get_build_info.return_value = {"result": "SUCCESS", "duration": 5}
+
+        client = JenkinsClient("http://192.168.178.23:8080", "user", "token")
+        status = client.get_job_status(12345)
+
+        mock_client.get_build_info.assert_called_once_with("Tests/simple test", 3131)
+        assert status.status == "SUCCESS"
+
+    @patch("mcp_coder.utils.jenkins_operations.client.Jenkins")
     def test_get_job_status_success(self, mock_jenkins_class: MagicMock) -> None:
         """Test job status when completed successfully."""
         # Setup

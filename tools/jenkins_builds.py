@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """List recent Jenkins builds across all jobs.
 
-Prints time, status, folder, job and build number for the newest builds.
-All Jenkins logic lives in ``mcp_coder.utils.jenkins_operations``; this
-script only parses arguments, formats output and sets the exit code.
+Prints time, status, folder, job, build number and display name for the
+newest builds. All Jenkins logic lives in ``mcp_coder.utils.jenkins_operations``;
+this script only parses arguments, formats output and sets the exit code.
 
 Usage:
-    python tools/jenkins_builds.py [--limit N] [--folder PATH] [--status a,b]
+    python tools/jenkins_builds.py [--limit N] [--job PATH | --all-jobs] [--status a,b] [--name-pattern REGEX]
 """
 
 import argparse
+import re
 import sys
 
 from mcp_coder.utils.jenkins_operations import BuildInfo, JenkinsClient, JenkinsError
 from mcp_coder.utils.jenkins_operations.builds import VALID_STATUSES, validate_statuses
 from mcp_coder.utils.jenkins_operations.client import get_jenkins_config
+from mcp_coder.utils.user_config import load_config
 
 
 def parse_statuses(value: str) -> list[str]:
@@ -35,6 +37,24 @@ def parse_statuses(value: str) -> list[str]:
     except ValueError as e:
         raise argparse.ArgumentTypeError(str(e)) from e
     return statuses
+
+
+def parse_pattern(value: str) -> re.Pattern[str]:
+    """Compile a regex for argparse.
+
+    Args:
+        value: Regular expression
+
+    Returns:
+        The compiled pattern
+
+    Raises:
+        argparse.ArgumentTypeError: If value is not a valid regex
+    """
+    try:
+        return re.compile(value)
+    except re.error as e:
+        raise argparse.ArgumentTypeError(f"invalid regex '{value}': {e}") from e
 
 
 def positive_int(value: str) -> int:
@@ -61,7 +81,7 @@ def positive_int(value: str) -> int:
 def add_selection_args(
     parser: argparse.ArgumentParser, default_status: str | None
 ) -> None:
-    """Add the --limit, --folder and --status arguments.
+    """Add the --limit, --job, --all-jobs, --status and --name-pattern arguments.
 
     Args:
         parser: Parser to extend
@@ -76,10 +96,20 @@ def add_selection_args(
             "use allBuilds and may be slow on large servers"
         ),
     )
-    parser.add_argument(
-        "--folder",
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument(
+        "--job",
         default=None,
-        help="full folder path from the Jenkins root (default: whole server)",
+        help=(
+            "full job or folder path from the Jenkins root (default: the "
+            "executor_job_path shared by all [coordinator.repos.*] in the config, "
+            "else the whole server)"
+        ),
+    )
+    scope.add_argument(
+        "--all-jobs",
+        action="store_true",
+        help="list the whole server, ignoring the configured executor job",
     )
     parser.add_argument(
         "--status",
@@ -90,6 +120,57 @@ def add_selection_args(
             f"(default: {default_status or 'all statuses'})"
         ),
     )
+    parser.add_argument(
+        "--name-pattern",
+        type=parse_pattern,
+        default=None,
+        help=(
+            "regex searched in the build display name, applied before --limit; "
+            "scans up to max(limit, 100) builds per job (default: all builds)"
+        ),
+    )
+
+
+def configured_executor_jobs() -> list[str]:
+    """Return the distinct executor_job_path values of all coordinator repos.
+
+    Returns:
+        Sorted job paths; [] when none are configured
+    """
+    repos = load_config().get("coordinator", {}).get("repos", {})
+    paths = {
+        repo.get("executor_job_path")
+        for repo in repos.values()
+        if isinstance(repo, dict)
+    }
+    return sorted(p for p in paths if isinstance(p, str) and p.strip())
+
+
+def resolve_job(args: argparse.Namespace) -> str | None:
+    """Pick the job or folder to list from the parsed arguments.
+
+    Args:
+        args: Parsed arguments from add_selection_args
+
+    Returns:
+        --job if given; None for --all-jobs; else the configured executor job
+        when all repos share one, else None (whole server)
+    """
+    if args.all_jobs:
+        return None
+    if args.job:
+        return str(args.job)
+    jobs = configured_executor_jobs()
+    if len(jobs) == 1:
+        print(f"Using executor job from config: {jobs[0]}", file=sys.stderr)
+        return jobs[0]
+    if jobs:
+        print(
+            f"Several executor jobs configured ({', '.join(jobs)}); "
+            "listing the whole server. Pass --job to pick one.",
+            file=sys.stderr,
+        )
+    return None
 
 
 def make_client() -> JenkinsClient | None:
@@ -126,7 +207,7 @@ def format_table(builds: list[BuildInfo]) -> str:
     Returns:
         Header line plus one line per build
     """
-    rows = [("TIME", "STATUS", "FOLDER", "JOB", "BUILD")]
+    rows = [("TIME", "STATUS", "FOLDER", "JOB", "BUILD", "NAME")]
     rows += [
         (
             b.timestamp.astimezone().strftime("%Y-%m-%d %H:%M"),
@@ -134,6 +215,7 @@ def format_table(builds: list[BuildInfo]) -> str:
             b.folder,
             b.job_name,
             str(b.number),
+            b.display_name,
         )
         for b in builds
     ]
@@ -141,7 +223,7 @@ def format_table(builds: list[BuildInfo]) -> str:
     lines = []
     for row in rows:
         cells = [cell.ljust(w) for cell, w in zip(row[:-1], widths, strict=True)]
-        lines.append("  ".join([*cells, row[-1]]))
+        lines.append("  ".join([*cells, row[-1]]).rstrip())
     return "\n".join(lines)
 
 
@@ -162,7 +244,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     try:
         builds = client.get_recent_builds(
-            limit=args.limit, folder=args.folder, statuses=args.status
+            limit=args.limit,
+            path=resolve_job(args),
+            statuses=args.status,
+            name_pattern=args.name_pattern,
         )
     except JenkinsError as e:
         print(f"Error: {e}", file=sys.stderr)

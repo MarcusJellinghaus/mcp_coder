@@ -1,0 +1,114 @@
+# Issue signatures for tools/jenkins_classify_logs.py.
+# How to add or change one: tools/jenkins_issue_analysis.md.
+# Regexes use Python `re` syntax in TOML literal strings ('...': no escaping).
+#
+# Id prefixes:
+#   PIPE-    Jenkins pipeline (AutoRunner Jenkinsfile / bat scripts)
+#   ENV-     build machine, network, package index
+#   MC-      mcp-coder code
+#   PROMPT-  plan or prompt content
+
+[classifier]
+# Target repos mcp-coder doesn't fully support; their logs are reported separately.
+unsupported_repos = ["AutoRunner"]
+# Added when any signature with pre_workflow = true matches: the workflow never
+# ran, so nothing set a *-failed label on the issue.
+no_status_id = "PIPE-NO-STATUS-ON-PRE-WORKFLOW-FAILURE"
+
+[versions]
+packages = ["mcp-coder", "mcp-workspace", "mcp-tools-py"]
+# Version lines after this marker come from the tool env that runs the workflow;
+# lines before it (install output, post-install checks) from the repo's .venv.
+tool_env_marker = 'run-mcp-command.bat'
+
+# Searched in the whole log, in this order; every match is reported.
+[[signature]]
+id = "PIPE-LOCKED-VENV-BLOCKS-CHECKOUT"
+regex = 'Maximum checkout retry attempts reached'
+pre_workflow = true
+
+[[signature]]
+id = "ENV-UV-ACCESS-DENIED"
+regex = 'Access is denied\. \(os error 5\)'
+pre_workflow = true
+
+[[signature]]
+id = "ENV-UV-ACCESS-DENIED-CACHE"
+regex = 'uv\\cache\\.*Access is denied'
+
+[[signature]]
+id = "ENV-UV-ACCESS-DENIED-SITE-PACKAGES"
+regex = 'failed to rename file .*Access is denied'
+
+[[signature]]
+id = "ENV-UV-ACCESS-DENIED-UV-EXE"
+regex = 'Scripts\\uv\.exe.: Access is denied'
+
+[[signature]]
+id = "ENV-PYPI-NETWORK"
+regex = 'error: Failed to fetch: .https://pypi\.org'
+pre_workflow = true
+
+[[signature]]
+id = "PIPE-UV-SYNC-NON-PROJECT"
+regex = 'No .project. table found in'
+pre_workflow = true
+
+[[signature]]
+id = "ENV-MCP-SERVER-START-FAILED"
+regex = 'MCP servers not available: '
+
+[[signature]]
+id = "PIPE-CONCURRENT-BUILDS-SAME-ISSUE"
+regex = '\[rejected\].*\(fetch first\)'
+
+[[signature]]
+id = "MC-REVIEW-OPEN-TASKS"
+regex = 'Category: code_review_open_tasks'
+
+[[signature]]
+id = "MC-REVIEW-GENERAL-UNLOGGED"
+regex = 'review failed: general'
+
+[[signature]]
+id = "MC-IMPL-BLOCKED"
+regex = 'Category: implementation_blocked'
+
+# When the trigger id matched, the first `text` match is checked against the
+# reasons below (case-insensitive). First match wins: specific before broad.
+[blocked]
+trigger = "MC-IMPL-BLOCKED"
+text = 'Blocked marker found: (.*)'
+other = "MC-BLOCKED-OTHER"
+
+[[blocked.reason]]
+id = "MC-BLOCKED-STALE-DEP"
+regex = 'verify_github_security|installed mcp.workspace is stale'
+
+[[blocked.reason]]
+id = "MC-BLOCKED-MOVE-SYMBOL"
+regex = 'move_symbol'
+
+[[blocked.reason]]
+id = "MC-BLOCKED-FORMATTER-CHURN"
+regex = 'run_format_code\b.*\b(?:reformatted|rewrote) \d+'
+
+[[blocked.reason]]
+id = "PROMPT-BLOCKED-EXTERNAL-PREREQ"
+regex = 'MarcusJellinghaus/[\w-]+#\d+|not yet reported|not merged into this branch'
+
+[[blocked.reason]]
+id = "PROMPT-BLOCKED-PLAN-GAP"
+regex = 'not covered by step_\d+\.md|beyond the spec|baseline mismatch|\(step \d+ scope\) needed|postcondition fails'
+
+[[blocked.reason]]
+id = "MC-BLOCKED-PERMISSION-DENIED"
+regex = 'permission was not granted'
+
+[[blocked.reason]]
+id = "MC-BLOCKED-NO-SHELL"
+regex = 'Bash (tool )?is disabled|Bash \(.*\) is disabled|git add -N|chmod|exec bit|reinstall|not installed'
+
+[[blocked.reason]]
+id = "MC-BLOCKED-UNRELATED-TEST-FAIL"
+regex = 'unrelated|test_server_startup_under_two_seconds|time out|flak|host load'

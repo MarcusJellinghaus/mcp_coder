@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# List recent Jenkins builds. Usage: tools/jenkins_builds.sh [--limit N] [--folder PATH] [--status a,b]
+# List recent Jenkins builds. Usage: tools/jenkins_builds.sh [--limit N] [--job PATH | --all-jobs] [--status a,b] [--name-pattern REGEX]
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON="$SCRIPT_DIR/../.venv/Scripts/python.exe"

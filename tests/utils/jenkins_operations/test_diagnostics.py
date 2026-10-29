@@ -18,6 +18,7 @@ from mcp_coder.utils.jenkins_operations.diagnostics import (
     diagnose_404,
     diagnose_build_404,
     extract_jenkins_error,
+    job_path_from_build_url,
     job_url_path,
     probe,
 )
@@ -129,6 +130,38 @@ class TestJobUrlPath:
     def test_leading_and_trailing_slashes_tolerated(self) -> None:
         """Surrounding slashes produce no empty segments."""
         assert job_url_path("/Tests/mcp-coder-test/") == "/job/Tests/job/mcp-coder-test"
+
+
+class TestJobPathFromBuildUrl:
+    """Tests for job_path_from_build_url."""
+
+    def test_build_url(self) -> None:
+        url = "http://jenkins:8080/job/Windows-Agents/job/Executor/42/"
+        assert job_path_from_build_url(url) == "Windows-Agents/Executor"
+
+    def test_host_differs_from_configured_url(self) -> None:
+        """Jenkins' own root URL is used, whatever the client was configured with."""
+        url = "http://localhost:8080/job/Tests/job/mcp-coder-simple-test/3131/"
+        assert job_path_from_build_url(url) == "Tests/mcp-coder-simple-test"
+
+    def test_context_path_ignored(self) -> None:
+        url = "https://ci.example.com/jenkins/job/A/job/B/7/"
+        assert job_path_from_build_url(url) == "A/B"
+
+    def test_job_url_without_build_number(self) -> None:
+        assert job_path_from_build_url("http://jenkins:8080/job/A/job/B/") == "A/B"
+
+    def test_segments_decoded_once(self) -> None:
+        """Spaces decode; a multibranch '%2F' stays encoded as in fullName."""
+        url = "http://jenkins:8080/job/my%20job/job/feature%252Fx/3/"
+        assert job_path_from_build_url(url) == "my job/feature%2Fx"
+
+    def test_round_trips_job_url_path(self) -> None:
+        url = "http://jenkins:8080" + job_url_path("Tests/my job#2") + "/5/"
+        assert job_path_from_build_url(url) == "Tests/my job#2"
+
+    def test_no_job_segment(self) -> None:
+        assert job_path_from_build_url("http://jenkins:8080/queue/item/5/") is None
 
 
 class TestProbe:

@@ -122,6 +122,7 @@ class BuildInfo:
         timestamp: Build start time, timezone-aware UTC
         duration_ms: Duration in milliseconds (None while running or unknown)
         url: Jenkins build URL
+        display_name: Jenkins displayName ("#<number>" unless the build set one)
     """
 
     job_path: str
@@ -132,3 +133,4 @@ class BuildInfo:
     timestamp: datetime
     duration_ms: int | None
     url: str
+    display_name: str = ""

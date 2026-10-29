@@ -1,5 +1,6 @@
 """Tests for the pure build functions in jenkins_operations.builds (no mocks)."""
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -41,7 +42,9 @@ def _build(
     }
 
 
-def _info(job_path: str, number: int, status: str, ts_seconds: int) -> BuildInfo:
+def _info(
+    job_path: str, number: int, status: str, ts_seconds: int, display_name: str = ""
+) -> BuildInfo:
     """Create a BuildInfo for select_builds tests."""
     folder, job_name = split_job_path(job_path)
     return BuildInfo(
@@ -53,6 +56,7 @@ def _info(job_path: str, number: int, status: str, ts_seconds: int) -> BuildInfo
         timestamp=datetime.fromtimestamp(ts_seconds, tz=UTC),
         duration_ms=1000,
         url=f"{BASE}/{job_path}/{number}/",
+        display_name=display_name,
     )
 
 
@@ -104,10 +108,13 @@ class TestBuildTreeQuery:
 
     def test_range_follows_field_list(self) -> None:
         query = build_tree_query(5)
-        assert "builds[number,building,result,timestamp,duration,url]{0,5}" in query
+        assert (
+            "builds[number,building,result,timestamp,duration,url,displayName]{0,5}"
+            in query
+        )
 
     def test_starts_with_tree(self) -> None:
-        assert build_tree_query(5).startswith("?tree=jobs[")
+        assert build_tree_query(5).startswith("?tree=fullName,url,builds[")
 
     def test_jobs_depth(self) -> None:
         assert build_tree_query(5).count("jobs[") == MAX_DEPTH
@@ -134,6 +141,15 @@ class TestFlattenBuilds:
         assert result[0].status == "success"
         assert result[0].duration_ms == 1000
         assert result[0].url == f"{BASE}/build/2/"
+        assert result[0].display_name == ""
+
+    def test_display_name(self) -> None:
+        build = {**_build(9, 9000), "displayName": "proj - #12 - implement - #9"}
+        tree = {
+            "jobs": [{"fullName": "job", "url": f"{BASE}/job/job/", "builds": [build]}]
+        }
+        result = flatten_builds(tree)
+        assert result[0].display_name == "proj - #12 - implement - #9"
 
     def test_folder_containing_job(self) -> None:
         tree = {
@@ -183,6 +199,20 @@ class TestFlattenBuilds:
         assert [b.job_path for b in result] == ["A/mb/feature%2Fx", "A/mb/main"]
         assert result[0].folder == "A/mb"
         assert result[0].job_name == "feature%2Fx"
+
+    def test_tree_is_job(self) -> None:
+        tree = {
+            "fullName": "A/exec",
+            "url": f"{BASE}/job/A/job/exec/",
+            "allBuilds": [_build(2, 2000), _build(1, 1000)],
+        }
+        result = flatten_builds(tree)
+        assert [(b.job_path, b.number) for b in result] == [
+            ("A/exec", 2),
+            ("A/exec", 1),
+        ]
+        assert result[0].folder == "A"
+        assert result[0].job_name == "exec"
 
     def test_job_without_builds(self) -> None:
         tree = {
@@ -283,6 +313,23 @@ class TestSelectBuilds:
         result = select_builds(builds, 10, None)
         assert result is not builds
 
+    def test_name_pattern_applied_before_limit(self) -> None:
+        builds = [
+            _info("exec", 1, "failure", 100, "proj - #5 - implement - #1"),
+            _info("coord", 1, "success", 200, "#1"),
+            _info("coord", 2, "success", 300, "#2"),
+        ]
+        result = select_builds(builds, 1, None, re.compile(r" - #\d+$"))
+        assert [(b.job_path, b.number) for b in result] == [("exec", 1)]
+
+    def test_name_pattern_combined_with_statuses(self) -> None:
+        builds = [
+            _info("exec", 1, "failure", 100, "proj - #5 - plan - #1"),
+            _info("exec", 2, "success", 200, "proj - #5 - plan - #2"),
+        ]
+        result = select_builds(builds, 10, ["failure"], re.compile("plan"))
+        assert [b.number for b in result] == [1]
+
 
 class TestValidateStatuses:
     """Tests for validate_statuses."""
@@ -313,3 +360,15 @@ class TestLogFilename:
 
     def test_encoded_slash_kept(self) -> None:
         assert log_filename("A/mb/feature%2Fx", 2) == "A_mb_feature%2Fx_2.txt"
+
+    def test_custom_display_name_used(self) -> None:
+        assert (
+            log_filename("A/exec", 9, "proj - #12 - implement - #9")
+            == "proj - #12 - implement - #9.txt"
+        )
+
+    def test_display_name_invalid_chars_replaced(self) -> None:
+        assert log_filename("A/exec", 9, "a/b:c") == "a_b_c.txt"
+
+    def test_default_display_name_ignored(self) -> None:
+        assert log_filename("A/exec", 9, "#9") == "A_exec_9.txt"

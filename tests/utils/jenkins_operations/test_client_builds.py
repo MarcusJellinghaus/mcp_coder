@@ -4,6 +4,7 @@ python-jenkins is mocked; the pure tree/selection logic is covered by
 ``test_builds.py``.
 """
 
+import re
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -112,13 +113,13 @@ class TestGetRecentBuilds:
             assert "allBuilds[" not in query
 
     @patch(_JENKINS)
-    def test_folder_becomes_item_path(self, mock_jenkins_class: MagicMock) -> None:
-        """folder segments are passed unencoded as job/<a>/job/<b>."""
+    def test_path_becomes_item_path(self, mock_jenkins_class: MagicMock) -> None:
+        """path segments are passed unencoded as job/<a>/job/<b>."""
         mock_client = _mock_jenkins(mock_jenkins_class)
         mock_client.get_info.return_value = {"jobs": []}
 
         client = JenkinsClient(BASE_URL, "user", "token")
-        client.get_recent_builds(folder="A/B")
+        client.get_recent_builds(path="A/B")
 
         assert mock_client.get_info.call_args.kwargs["item"] == "job/A/job/B"
 
@@ -167,6 +168,42 @@ class TestGetRecentBuilds:
         assert builds == []
 
     @patch(_JENKINS)
+    def test_name_pattern_filters_before_truncation(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """name_pattern runs before the window, so limit counts matches only."""
+        mock_client = _mock_jenkins(mock_jenkins_class)
+        tree = _tree()
+        tree["jobs"][1]["jobs"][0]["builds"][0]["displayName"] = "proj - #12 - plan"
+        mock_client.get_info.return_value = tree
+
+        client = JenkinsClient(BASE_URL, "user", "token")
+        builds = client.get_recent_builds(limit=1, name_pattern=re.compile(r"#\d+ -"))
+
+        assert [(b.job_path, b.number) for b in builds] == [("A/job", 5)]
+        assert builds[0].display_name == "proj - #12 - plan"
+
+    @patch(_JENKINS)
+    def test_name_pattern_scans_builds_cap_per_job(
+        self, mock_jenkins_class: MagicMock
+    ) -> None:
+        """A pattern fetches max(limit, 100) builds per job; without, limit."""
+        mock_client = _mock_jenkins(mock_jenkins_class)
+        mock_client.get_info.return_value = {"jobs": []}
+
+        client = JenkinsClient(BASE_URL, "user", "token")
+        client.get_recent_builds(limit=1, name_pattern=re.compile("plan"))
+        query = mock_client.get_info.call_args.kwargs["query"]
+        assert "{0,100}" in query
+        assert "builds[" in query
+        assert "allBuilds[" not in query
+
+        client.get_recent_builds(limit=1)
+        query = mock_client.get_info.call_args.kwargs["query"]
+        assert "{0,1}" in query
+        assert "{0,100}" not in query
+
+    @patch(_JENKINS)
     def test_missing_folder_runs_404_diagnosis(
         self, mock_jenkins_class: MagicMock
     ) -> None:
@@ -181,10 +218,10 @@ class TestGetRecentBuilds:
 
         client = JenkinsClient(BASE_URL, "user", "token")
         with pytest.raises(JenkinsError) as excinfo:
-            client.get_recent_builds(folder="A/Missing")
+            client.get_recent_builds(path="A/Missing")
 
         message = str(excinfo.value)
-        assert "Failed to list builds in folder 'A/Missing'" in message
+        assert "Failed to list builds under 'A/Missing'" in message
         assert "'A' is readable" in message
         assert excinfo.value.__cause__ is None
 
