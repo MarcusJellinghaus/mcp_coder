@@ -1,518 +1,149 @@
-# MCP Coder Architecture Documentation
+# MCP Coder Architecture
 
-## Document Metadata
-
-**Framework**: Arc42 Template  
-**Version**: 1.8  
-**Last Updated**: 2025-02-05  
-**Status**: Complete (Sections 1-8)  
-**Maintainer**: Marcus Jellinghaus  
-**Review Frequency**: Quarterly or on major changes  
+Overview following the [arc42](https://arc42.org) structure. It holds what stays true while the code changes: purpose, structure, rules, and the reasons behind them. For module and function detail, read the code and its docstrings. Rules are enforced by tooling, see [enforcement.md](enforcement.md).
 
 ---
 
-## 1. Introduction & Goals
+## 1. Introduction and Goals
 
-### System Purpose
-AI-powered software development automation toolkit that orchestrates end-to-end GitHub issue workflows from planning through implementation to pull request creation.
+`mcp-coder` is a CLI and workflow orchestrator for LLM sessions. It drives a GitHub issue from planning through implementation and review to a pull request. The LLM does the creative work; mcp-coder owns the process around it. The label-driven workflow itself is language-agnostic, but Python is the supported ecosystem for now: `implement` calls Python tools directly (mypy, the formatter), and the installer and architecture enforcement assume a Python target repo. GitHub is the only supported forge.
 
-### Key Features
-- **LLM Integration**: Multi-provider interface — Claude Code CLI, GitHub Copilot CLI,
-  and LangChain backends (OpenAI, Azure OpenAI, Gemini, Anthropic API, Ollama)
-- **GitHub Automation**: Issue-driven workflow automation with status label transitions
-- **Git Operations**: Automated repository management and version control
-- **Code Quality**: Integrated testing with pylint, pytest, mypy via MCP servers
-- **MCP Architecture**: Leverages specialized MCP servers for file operations and quality checks
+**Quality goals**
 
-### Quality Goals
-- **Reliability**: Consistent automation workflows with error handling
-- **Extensibility**: Support for multiple LLM providers and MCP servers
-- **Ease of Use**: Simple CLI interface with clear workflow stages
+1. **Safe to change with partial context.** An LLM (or human) editing one module cannot break the architecture by accident; boundaries fail in CI.
+2. **Open to other LLMs.** Claude Code is the primary backend and the one the workflows are exercised with. Copilot CLI and LangChain providers (OpenAI, Gemini, Anthropic API, Ollama) sit behind the same interface so that others can be adopted without touching callers.
+3. **Reproducible automation.** Workflows run the same locally, on a build server and in headless sessions.
+4. **Humans decide at the gates.** Plan and code review are explicit approval points. Automated review is optional and config-gated.
 
-### Stakeholders
-- **Developers**: Primary users for AI-assisted development workflows
-- **AI Systems**: Claude Code as the main AI worker component
-- **Automation Users**: Teams implementing GitHub issue automation
+**Stakeholders:** developers using the workflow, the LLM acting as worker, and teams automating issue handling.
 
 ---
 
-## 2. Architecture Constraints
+## 2. Constraints
 
-### Technical Constraints
-- **Python 3.11+**: Minimum required Python version
-- **Claude Code CLI or GitHub Copilot CLI**: External dependency for AI functionality
-- **MCP Server Dependencies**:
-  - `mcp-tools-py`: Quality checks (pylint, pytest, mypy)
-  - `mcp-workspace`: File operations and management
-  - `mcp-shared-utils`: Common components (future)
-- **Python Library Dependencies**:
-  - `PyGithub>=1.59.0`: GitHub API integration for PR management and issue workflows
-
-### Organizational Constraints
-- **Single Developer Project**: Individual development and maintenance
-- **GitHub-Based Development**: Issue tracking and PR workflows
-- **Integration Testing**: Separate repository at `mcpy_coder_integration_test`
-
-### Conventions
-- **Mandatory MCP Tool Usage**: No direct bash commands for code quality
-- **Code Quality Gates**: All three checks (pylint, pytest, mypy) must pass
-- **Documentation as Code**: Version-controlled architecture documentation
+- Python 3.11+; Claude Code CLI is the expected backend. Copilot CLI or a LangChain backend can replace it.
+- GitHub only. Issues, labels, PRs and CI status are GitHub concepts reached through `mcp-workspace`; GitLab and others are not supported, and there is no forge abstraction beyond the shim.
+- Target repos are Python projects for now. The `implement` workflow calls mypy and the formatter directly; Pylint, pytest and the import-layer checks come from `mcp-tools-py` via the LLM; and `mcp-coder install` provisions a Python venv. The setup guides separate general files from Python-only ones ([repository-setup](../repository-setup/README.md)), which is where other languages would plug in.
+- Git and GitHub access goes through the external `mcp-workspace` package; code-quality tools come from `mcp-tools-py`. Shared subprocess, logging and redaction helpers come from `mcp-coder-utils`. All three are reached only through local shim modules.
+- GitHub labels are the workflow state machine, so the label set is a hard dependency. See [Development Process](../processes-prompts/development-process.md).
+- Dependency versions and tool configuration live in `pyproject.toml`.
 
 ---
 
-## 3. Context & Scope
-
-### System Boundary
+## 3. Context and Scope
 
 ```
-┌─────────┐    ┌─────────────┐    ┌─────────────┐    ┌───────────────────┐
-│ GitHub  │◄──►│  mcp_coder  │◄──►│ Claude Code │◄──►│   MCP Servers     │
-│         │    │             │    │             │    │                   │
-│ Issues  │    │ (orchestr.) │    │ (AI worker) │    │ • mcp-tools-py    │
-│ Labels  │    │             │    │             │    │ • mcp-workspace   │
-│ PRs     │    │             │    │             │    │                   │
-│ Comments│    │             │    │             │    │                   │
-└─────────┘    └─────────────┘    └─────────────┘    └───────────────────┘
+┌────────┐   ┌────────────┐   ┌──────────────────┐   ┌─────────────────┐
+│ GitHub │◄─►│ mcp-coder  │◄─►│ LLM backend      │◄─►│ MCP servers     │
+│ issues │   │ orchestra- │   │ Claude Code      │   │ mcp-workspace   │
+│ labels │   │ tion       │   │ (+ other LLMs)   │   │ mcp-tools-py    │
+│ PRs    │   │            │   │                  │   │                 │
+└────────┘   └────────────┘   └──────────────────┘   └─────────────────┘
 ```
 
-***Related tools, not runtime dependencies**: mcp-config (configuration helper), mcp-shared-utils (common components)*
-
-### External Systems
-- **GitHub Issues API**: Source of workflow triggers and status updates
-- **Claude Code CLI / Copilot CLI**: AI reasoning and content generation
-- **Git Repositories**: Version control and code management
-- **Integration Test Repository**: External testing environment
-
-### Data Flow
-1. **GitHub → mcp_coder**: Issue status changes, requirements
-2. **mcp_coder → LLM CLI**: Orchestration commands, structured prompts
-3. **LLM CLI → MCP Servers**: File operations, quality checks, configuration
-4. **LLM CLI → mcp_coder**: Project plans, code, PR reviews, PR summaries
-5. **mcp_coder → GitHub**: Comments, label updates, PR creation
-
-### Component Outputs
-- **Claude Code**: Project plans, code implementations, PR reviews, PR summaries
-- **MCP Servers**: Quality check results, file operation confirmations
-- **mcp_coder**: GitHub interactions (comments, labels, PRs)
+- **GitHub** triggers work (status labels) and receives results (comments, labels, PRs).
+- **mcp-coder** decides what runs next, prepares context and records results.
+- **The LLM backend** reasons and writes: plans, code, reviews, PR text. Today that is Claude Code; other providers are supported through the same interface.
+- **MCP servers** give the LLM file access and quality checks. The LLM talks to them directly; mcp-coder configures them and, for a few steps (mypy, formatting), calls the same Python tools itself.
+- **Target repos** are the (currently Python) repositories mcp-coder works on. mcp-coder is installed once and pointed at them with `--project-dir`; it is not part of their code. A target repo supplies its own `.mcp.json` and `.claude/`, declares install extras and sibling pins in its `pyproject.toml`, and carries the status labels. `mcp-coder init` deploys skills, agents and the knowledge base into it. The contract is checked at launch; see [repository-setup](../repository-setup/README.md#target-repo-contracts). This file doubles as a model: `/implementation_review` expects each target repo to have its own `docs/architecture/architecture.md`.
 
 ---
 
 ## 4. Solution Strategy
 
-### Component Responsibilities
-- **mcp_coder**: GitHub orchestrator + workflow logic
-  - Event-driven automation based on GitHub status labels, see [Development Process](../processes-prompts/development-process.md)
-  - Workflow state management and transitions
-  - GitHub API integration and content posting
-- **Claude Code**: AI reasoning + content creation
-  - Implementation planning and code generation
-  - Code review and PR summary creation
-  - MCP server coordination for specialized tasks
+- **Label-driven state machine.** The issue's `status-NN:*` label is the only workflow state. It selects the workflow to run; the workflow moves the label on success or failure, so no local state decides what happens next. Labels are defined in `src/mcp_coder/config/labels.json` (overridable per repo) and synced with `mcp-coder gh-tool define-labels`. That file also marks which labels are promotable by `/approve` and which are failures. Three families:
+  - **Main flow (01-10):** created → planning → implementing → PR created, with in-progress labels (03, 06, 09) and `f` failure variants.
+  - **Optional bot review (14, 17):** used only when automated review is enabled.
+  - **PR health (71-74, 81-84, 91):** the coordinator checks open PRs on every poll and routes conflicts, failing CI and review comments back to a workflow or a human.
 
-### Key Strategies
-- **Orchestration Pattern**: Event-driven automation with human decision points
-- **AI Delegation**: mcp_coder provides context, Claude Code creates content
-- **Tool Abstraction**: Claude Code handles all MCP server interactions
-- **Human-AI Collaboration**: Strategic review points (plan review, code review)
-- **Execution Context Anchoring**: The Claude subprocess runs in the project directory, so the rules and settings it discovers belong to the code being changed
-
-### Architecture Patterns
-- **Provider Abstraction**: Extensible LLM interface supporting multiple providers
-- **Command Pattern**: CLI subcommand structure with consistent interfaces
-- **MCP Integration**: Specialized servers for file operations and quality checks
-
-### Execution Context Management
-
-**Design Decision**: Anchor the Claude subprocess to the project directory
-
-**Why the default is `project_dir`**:
-
-Claude Code discovers `CLAUDE.md` by walking up from **its own working directory**, and there
-is no flag that points it elsewhere — cwd is the only lever. The same walk finds project-level
-`.claude/settings.json` and `settings.local.json`. So whichever directory the subprocess starts
-in decides whose coding rules the agent obeys.
-
-That is what went wrong in #1113: on a build server the shell sits in the tool environment
-while the checkout lives in a separate tree, so every headless run loaded a stale predecessor
-project's `CLAUDE.md` and the driven project's own rules never arrived. Locally it worked only
-by coincidence — developers stand in the repo, so cwd happened to equal `project_dir`.
-
-**Example**:
-```bash
-cd /anywhere  # the shell's location is irrelevant
-mcp-coder implement --project-dir /path/to/project
-# Claude runs with cwd=/path/to/project and discovers that project's CLAUDE.md
-```
-
-**Reporting**: each run names the Claude working directory and every project instructions file
-found by the cwd-upward walk, and **warns when none of them lies inside `project_dir`** — the
-drift this fix exists to catch. A single file outside `project_dir` is normal: the walk reaches
-every ancestor, and every ancestor is outside by definition. `mcp-coder verify` reports the same
-in its PROMPTS section, annotating each row with whether it lies inside the project. Scope of the
-walk is `<dir>/CLAUDE.md` and `<dir>/.claude/CLAUDE.md` up to the filesystem root, so it includes
-user-level `~/.claude/CLAUDE.md` whenever the directory sits under the home directory — matching
-what Claude loads. It does **not** expand `@import` directives, so it is still not a complete
-account of Claude's memory chain.
-
-**Benefits**:
-- Project instructions, MCP config and Claude settings all resolve against the same anchor
-- Headless and CI runs behave like a developer standing in the repo; the shell's working
-  directory can no longer change which rules the agent obeys
-- Separate checkout and execution contexts remain supported, but explicitly — via
-  `--project-dir`, `--mcp-config` and `--settings` rather than implicitly via cwd
-
-**Trade-off — one behaviour is genuinely lost**: a project with no `.mcp.json` of its own could
-previously pick one up from a shared workspace through Claude's cwd discovery. It no longer
-can. Pass the file with `--mcp-config`, pin settings with `--settings`, and select the tree
-with `--project-dir`; together these cover the CI/CD case that motivated shared workspaces.
-
-**Pattern family**: this is the third cwd-anchored input moved to `project_dir` — **#977**
-(`--mcp-config` resolved against cwd), **#981** (Claude settings discovered via cwd), **#1113**
-(`CLAUDE.md` discovered via cwd). All three are now project-anchored.
+  Diagram and per-label behaviour: [Development Process](../processes-prompts/development-process.md). Setup: [Label Setup](../getting-started/label-setup.md).
+- **Orchestrator vs. worker.** mcp-coder supplies context and consumes results; the LLM creates content and uses tools. The orchestrator also verifies the LLM's work itself instead of trusting it. Today `implement` runs mypy after each task and the commit step runs the formatter, both Python tools called through the `mcp_tools_py` shim.
+- **One LLM interface, Claude Code first.** Callers use `llm.interface`; provider specifics stay in `llm/providers/`. Claude Code is the primary provider and drives the design (project-dir anchoring, session logs, MCP configuration). Other providers are kept working behind the same interface but are less exercised.
+- **Thin top, reusable bottom.** Workflows only sequence; composed steps and primitives sit below and are shared (see section 5).
+- **Architecture is enforced, not just described.** Layers, sibling independence and library wrappers are CI checks.
+- **Optional features degrade silently.** LangChain, MLflow and the TUI work without their extras installed.
+- **Anchor the LLM subprocess to `project_dir`.** Claude Code finds `CLAUDE.md` and settings by walking up from its working directory, and no flag overrides that. So the working directory decides whose rules the agent obeys. On a build server the shell sits in the tool environment, not the checkout, and runs picked up a stale project's rules (#1113). The subprocess therefore starts in `project_dir`; other layouts are supported explicitly through `--project-dir`, `--mcp-config` and `--settings`. Same pattern as #977 and #981. Trade-off: a project can no longer inherit a `.mcp.json` from a shared workspace through cwd discovery. Each run reports which instruction files it found and warns when none lies inside `project_dir`.
 
 ---
 
 ## 5. Building Block View
 
-### Core System (`src/mcp_coder/`)
-- **Prompt management**: `prompt_manager.py` - Template and validation system (tests: `test_prompt_manager.py`)
-- **Code quality**: `mcp_tools_py.py` - Quality check integration (tests: `test_mcp_tools_py_integration.py`)
-- **Constants**: `constants.py` - Project-wide constants and paths (tests: ❌ missing)
+Dependencies point downward only: a band may import the bands below it, never above.
 
-### LLM System (`src/mcp_coder/llm/`)
-- **Interface**: `llm/interface.py` - Multi-provider LLM abstraction (tests: `llm/test_interface.py`)
-- **Environment**: `llm/env.py` - Runner environment detection and environment variable preparation for LLM subprocess (tests: `llm/test_env.py`)
-  - **Design Decision**: Simplified from filesystem detection to environment variables (Oct 2025)
-    - **Rationale**: Use Python's built-in environment information (`VIRTUAL_ENV`, `CONDA_PREFIX`, `sys.prefix`) instead of complex filesystem searches
-    - **Benefits**: Universal compatibility (venv/conda/system Python), simpler code (~90% less complexity), more reliable
-    - **Key Change**: `MCP_CODER_VENV_DIR` now points to runner environment (where mcp-coder executes), not project directory
-- **Formatting**: `llm/formatting/` - Response formatters
-  - `formatters.py` - Streaming output via `print_stream_event` (tests: `llm/formatting/test_formatters.py`)
-- **Storage**: `llm/storage/` - Session persistence
-  - `session_storage.py` - Store/load session data (tests: `llm/storage/test_session_storage.py`)
-  - **LangChain session history**: `store_langchain_history()` / `load_langchain_history()`
-    in `session_storage.py` persist message lists as JSON to
-    `~/.mcp_coder/sessions/langchain/{session_id}.json`.
-    Unlike Claude (server-side history), LangChain history is managed by mcp-coder locally.
-  - `session_finder.py` - Find latest session files (tests: `llm/storage/test_session_finder.py`)
-- **Session**: `llm/session/` - Session management
-  - `resolver.py` - LLM method parsing and session resolution (tests: `llm/session/test_resolver.py`)
-- **Providers**: `llm/providers/` - Provider implementations (claude, copilot, langchain)
-  - `claude/` - Claude Code CLI integration (tests: `llm/providers/claude/test_*.py`)
-    - `claude_code_cli_streaming.py` - The single streaming core: `ask_claude_code_cli_stream()`
-      drives `stream_subprocess` with an **inactivity** watchdog and yields `StreamEvent`s
-      (`stream_file`, `text_delta`, tool events, `done`, and `error` events tagged with a
-      machine-readable `reason` discriminator)
-    - `claude_code_cli.py` - Command building + the blocking entrypoint `ask_claude_code_cli()`,
-      now a thin **drain-wrapper** over the streaming core: it consumes the generator to
-      completion, assembles the result via `ResponseAssembler` (`raw_response` is the `events`
-      shape, carrying `stream_file`), translates the `error` events back into `TimeoutExpired`
-      (on `reason == "inactivity_timeout"`) / `CalledProcessError`, lets
-      `McpServersUnavailableError` propagate, and runs the `log_llm_*` side-effects
-      - **Design Decision**: Unified blocking + streaming onto one streaming core (issue #1004)
-        - **Rationale**: A single execution path removes the duplicated MCP guard, stream parser,
-          and write-once NDJSON dump; the blocking `timeout` becomes an inactivity budget
-        - **Benefits**: One place to fix the MCP guard, per-line NDJSON flush for free, no
-          wall-clock/watchdog SIGKILL race
-    - `logging_utils.py` - Logging utilities for LLM requests/responses/errors (tests: `test_logging_utils.py`)
-      - **Design Decision**: Added structured logging for LLM operations (Nov 2025)
-        - **Rationale**: Centralized logging functions for request, response, and error tracking in Claude provider integrations
-        - **Benefits**: Consistent logging patterns, easier debugging, structured debug output
-        - **Functions**: `log_llm_request()`, `log_llm_response()`, `log_llm_error()`
-  - `copilot/` - GitHub Copilot CLI integration (tests: `llm/providers/copilot/test_*.py`)
-    - `copilot_cli.py` - JSONL parser, tool permission converter, command builder
-    - `copilot_cli_streaming.py` - Streaming variant
-  - `langchain/` - LangChain multi-backend integration (tests: `llm/providers/langchain/test_*.py`)
-    - `__init__.py` - Entry point `ask_langchain()`, config loading, backend dispatch
-    - `agent.py` - LangGraph ReAct agent; `run_agent_stream` is the single execution and storage site (and the single decision point for whether the turn's session id is resumable), `run_agent` drains it
-    - `_messages.py` - Shared assemble/serialize helpers used by both the text and agent paths
-    - `openai_backend.py` - OpenAI / Azure / Ollama backend via `ChatOpenAI`
-    - `gemini_backend.py` - Google Gemini backend via `ChatGoogleGenerativeAI`
-    - `anthropic_backend.py` - Anthropic backend via `ChatAnthropic`
-    - `_config_diagnostics.py` - per-backend config contract, resolved-target probe, effective-config echo
-    - **Optional install**: `pip install 'mcp-coder[langchain]'`
-    - See [`docs/configuration/optional-dependencies.md`](../configuration/optional-dependencies.md) for per-provider extras (smaller footprints if you only need one backend).
-    - **Session storage**: history persisted to `~/.mcp_coder/sessions/langchain/`
-      - Stored history is **system-free**: system + project prompts are merged into one `SystemMessage` and applied fresh each turn, never persisted. Otherwise they accumulate per turn and single-system providers (LiteLLM/Qwen-class) reject the conversation.
-      - Resuming is **guarded**: an explicitly requested `session_id` with no history file raises `ValueError` instead of starting a blank conversation. Both `ask_langchain` and `ask_langchain_stream` check at id resolution; a new session (no id passed) is unaffected.
-      - Because of that guard, the agent path only hands an id back once it is resumable: `run_agent_stream`'s `done` event carries `session_id` only when a history file exists for it, and omits the key for a turn that stored nothing (cancelled, or no terminal graph event). `LLMResponseDict["session_id"]` is therefore `None` for such a turn in langchain agent mode.
-      - Callers that chain the id into a following turn must handle that `None` rather than pass it on, or the next turn either hits the resume guard or silently continues a blank conversation. The treatment depends on what the following turn needs from the missing conversation:
-        - `workflows/rebase.py` keeps the previous id and logs a warning — its steps share one long-running session, so the earlier context is still resumable.
-        - `workflows/create_plan/core.py` logs an error and aborts with a `WorkflowFailure` — prompt 2 reviews prompt 1's answer, and there is no earlier id to fall back to.
-        - `workflows/review/core.py` logs an error, writes a round log and fails the round when the *reviewer* turn left no session — the fix tasks would otherwise be applied to a conversation that never saw the diff.
-        - `workflows/review/reviewer.py` logs an error and returns no verdict when the *supervisor* turn left no session and none was carried in — the verdict-repair retry would otherwise land in a blank conversation.
+```mermaid
+flowchart TD
+    A["<b>Entry points</b><br/>cli, icoder"]
+    B["<b>Orchestration</b><br/>workflows, workflow_steps, workflow_utils, checks, services"]
+    C["<b>LLM and prompts</b><br/>llm, prompt_manager, prompts, install"]
+    D["<b>Infrastructure</b><br/>utils and the shims to external packages"]
+    E["<b>Foundation</b><br/>config, constants"]
 
-### CLI System (`src/mcp_coder/cli/`)
-- **CLI entry point**: `cli/main.py` - Command routing and parsing (tests: `cli/test_main.py`)
-- **Commands**: `cli/commands/` - Command implementations
-  - `prompt.py` - Interactive LLM prompting (tests: `cli/commands/test_prompt.py`)
-  - `implement.py` - Implementation workflow executor (tests: `cli/commands/test_implement.py`)
-  - `commit.py` - Git commit operations (tests: `cli/commands/test_commit.py`)
-  - `help.py` - Documentation and usage (tests: `cli/commands/test_help.py`)
-  - `verify.py` - System verification (tests: `cli/commands/test_verify.py`)
-  - `icoder.py` - iCoder TUI launcher (tests: `cli/commands/test_cli_icoder.py`)
+    A --> B --> C --> D --> E
+```
 
-### Installer (`src/mcp_coder/install/`)
-Provisions a target environment: `<target>/.venv` plus mcp-coder from git, PyPI or a local checkout. Backs the `mcp-coder install` subcommand and, through it, `tools/reinstall_local.*`, CI provisioning, and VSCodeClaude session setup. Installs Python packages only — staging `.mcp.json` / `.claude/` is the caller's job. Target-project policy (extras, sibling pinning) is read from the target's own `pyproject.toml`, never hardcoded here.
+Inside the orchestration band the order is also fixed: `workflows` on top, then `workflow_steps`, then the primitives (`workflow_utils`, `checks`, `services`). The exact layer order is the `layered_architecture` contract in [`.importlinter`](../../.importlinter), with the layers in [`tach.toml`](../../tach.toml).
 
-- `__init__.py` - `install(config)` sequences the phases; re-exports `InstallConfig` and the module constants
-- `_env.py` - `InstallConfig` (resolved from the parsed CLI namespace) and the subprocess / venv / filesystem helpers, including the module constants `_phases` consumes
-- `_phases.py` - the six phases: venv, pip+uv bootstrap, main install, GitHub overrides, version report, post-install checks
-- Tests: `tests/install/test_install_env.py`, `tests/install/test_install_phases.py`, `tests/install/test_install_post_checks.py`, `tests/install/test_install_integration.py`
-- Boundary: tach layer `domain` with `depends_on = [utils]`, and one import-linter `subprocess` exemption — raw `subprocess.run` with inherited stdio is deliberate, since the shared helpers either capture output and time out or mangle `uv`'s progress display
+| Block | Responsibility |
+|-------|----------------|
+| `cli` | Argument parsing and command routing. Commands are thin and one per file. |
+| `icoder` | Interactive terminal chat. Logic lives in a Textual-free core; the UI is a thin shell, which keeps it testable. |
+| `workflows` | `implement`, `create_plan`, `create_pr`, `fix_ci`, `fix_conflict`, `review`, `vscodeclaude`. Each owns its labels, config and failure categories. |
+| `workflow_steps`, `workflow_utils`, `checks`, `services` | Reusable pieces under the workflows. Primitives never import upward. |
+| `llm` | One interface over Claude Code CLI (primary), Copilot CLI and LangChain. Owns streaming, session storage and logging of LLM calls. |
+| `prompts`, `prompt_manager` | Prompt templates and the system and project prompts layered on them. |
+| `install` | Provisions a target environment for `mcp-coder install`. Reads policy from the target's `pyproject.toml`. |
+| `utils` | Technical helpers and shims for shared libraries. |
+| shims | Single entry points to external packages: `mcp_workspace_git`, `mcp_workspace_github`, `mcp_tools_py`. |
+| `config`, `constants` | Foundation. No internal dependencies. |
 
-### iCoder Interactive TUI (`src/mcp_coder/icoder/`)
-Interactive terminal chat for LLM-assisted coding. Three-layer architecture maximizes testability by keeping all logic outside the UI layer.
-
-- **Core layer** (`icoder/core/`): Plain Python, no Textual dependency. Owns command registry, input routing, event log. Exposes `handle_input(text) → Response`. Directly testable with pytest.
-  - `types.py` - Response, Command, EventEntry dataclasses
-  - `event_log.py` - Structured event log (in-memory + JSONL file output)
-  - `command_registry.py` - Slash command registry with decorator-based registration
-  - `app_core.py` - Central input router: commands or LLM
-  - `commands/` - Built-in slash command handlers (`/help`, `/clear`, `/quit`)
-- **Services layer** (`icoder/services/`): IO abstractions. `LLMService` Protocol wraps `prompt_llm_stream()`. `FakeLLMService` provides deterministic test doubles.
-  - `llm_service.py` - LLMService Protocol, RealLLMService, FakeLLMService
-- **UI layer** (`icoder/ui/`): Thin Textual shell. Translates UI events to `core.handle_input()` calls and renders responses. Uses `run_worker(thread=True)` + `call_from_thread()` to bridge the sync LLM iterator into the async event loop.
-  - `app.py` - ICoderApp(App) wiring UI events to AppCore
-  - `styles.py` - CSS / theming
-  - `widgets/output_log.py` - RichLog-based scrollable output
-  - `widgets/input_area.py` - TextArea with Enter=submit, Shift-Enter=newline
-- **Tests** (`tests/icoder/`): Unit tests for each layer + Textual pilot integration tests + SVG snapshot tests (🏷️ textual_integration)
-
-
-
-### Automation & Operations (`src/mcp_coder/utils/`)
-- **Git operations**: `utils/git_operations/` - Modular git automation (tests: `utils/git_operations/test_*.py` 🏷️ git_integration)
-  - **Design Decision**: Refactored from single `git_operations.py` file to modular package (Oct 2025)
-    - **Rationale**: Improve maintainability by separating concerns into focused modules
-    - **Benefits**: Enhanced LLM navigation, isolated testing, clearer responsibility boundaries
-    - **Added functionality**: `delete_branch()` for complete branch lifecycle management
-  - `branches.py` - Branch management (create, delete, checkout, exists, get current/default/parent)
-  - `commits.py` - Commit automation
-  - `compact_diffs.py` - Two-pass compact diff pipeline; internal module used by the `git-tool compact-diff` CLI command. Not exported from `__init__.py`.
-  - `core.py` - Core types (CommitResult, PushResult) and context utilities
-  - `diffs.py` - Diff generation for commits and branches
-  - `file_tracking.py` - File status tracking
-  - `remotes.py` - Remote operations (fetch, push, GitHub URLs)
-  - `repository.py` - Repository queries and status
-  - `staging.py` - File staging operations
-- **GitHub integration**: GitHub operations live in mcp-workspace (not in this repo)
-- **User configuration**: `utils/user_config.py` - TOML settings management (tests: `utils/test_user_config*.py`)
-- **Task tracking**: `workflow_utils/task_tracker.py` - Progress management (tests: `workflow_utils/test_task_tracker.py`)
-- **Commit operations**: `workflow_utils/commit_operations.py` - LLM-assisted commit message generation (tests: `workflow_utils/test_commit_operations.py`)
-- **Base branch detection**: `workflow_utils/base_branch.py` - Unified base branch detection (tests: `workflow_utils/test_base_branch.py`)
-- **Data file utilities**: `utils/data_files.py` - Package data file location (tests: `utils/test_data_files.py`)
-- **Subprocess execution**: `utils/subprocess_runner.py` - MCP STDIO isolation support (tests: `utils/test_subprocess_runner.py`)
-- **Git utilities**: `utils/git_utils.py` - Branch name utilities for LLM log correlation (tests: `utils/test_git_utils.py`)
-
-### Workflow Automation (`src/mcp_coder/workflows/`)
-- **Implementation workflow**: `workflows/implement/` - Modular task automation (tests: `workflows/implement/test_*.py`)
-  - **Design Decision**: Converted from standalone script to integrated CLI command (Oct 2025)
-    - **Rationale**: Enable direct CLI access via `mcp-coder implement` command
-    - **Benefits**: Better integration, shared utilities, consistent error handling
-  - `core.py` - Main workflow orchestration and task loop
-  - `prerequisites.py` - Git status and prerequisite validation
-  - `task_processing.py` - Individual task processing, mypy checks, formatting
-  - **Blocked channel**: an agent that cannot verify its work writes one line to `pr_info/.blocked.txt`; the workflow reads it before the files-changed check, fails the run with `status-06f-blocked` and surfaces the text. Task results travel as `TaskOutcome(success, reason, detail)`.
-  - **CLI Integration**: Accessible via `cli/commands/implement.py`
-- **Other label-triggered workflows**: each runs for one label in `WORKFLOW_MAPPING` (`cli/commands/coordinator/workflow_constants.py`); per-label flow and failure labels are in the [process docs](../processes-prompts/development-process.md)
-  - `workflows/create_plan/` - `create-plan`: `status-02` → `status-03` → `status-04` (or `status-14`)
-  - `workflows/create_pr/` - `create-pr`: `status-08` → `status-09` → `status-10` (or `status-74` / `status-81` from the post-creation checks)
-  - `workflows/fix_conflict/` - `fix-conflict`: `status-71` → `status-72` → `status-10` (or `status-74` / `status-73`)
-  - `workflows/fix_ci/` - `fix-ci`: `status-81` → `status-82` → `status-10` (or `status-84` / `status-83`)
-  - `workflows/vscodeclaude/` - Interactive session launcher for human-action labels; it also detects the PR follow-up cases (merge conflict, failing CI, review comments → `status-91`)
-- **Automated review workflows**: `workflows/review/` - Shared engine behind `mcp-coder review-plan` and `review-implementation` (tests: `workflows/review/test_*.py`)
-  - `core.py` - Multi-round review loop (fresh reviewer session per round + persistent supervisor session, rounds cap 5), 3-way outcome routing
-  - `config.py` - `ReviewConfig` (`REVIEW_PLAN` / `REVIEW_IMPLEMENTATION`) parameterizing the shared engine
-  - `verdict.py` - Strict fenced-JSON supervisor verdict parser (`dismiss` / `tasks` / `escalate`)
-  - `review_log.py` - Per-round `pr_info/*_review_log_{n}.md` logging
-  - **Optional & config-gated**: dispatched only when `auto_review_plan` / `auto_review_implementation` are enabled (default off)
-
-#### Three-tier workflow architecture
-
-The workflow code is layered into three tiers, enforced by the import-linter `Layered Architecture` contract and `tach.toml`:
-
-- **`workflows/`** (top) - Thin orchestrators. Each owns its labels, config, and `FailureCategory`, and sequences steps.
-- **`workflow_steps/`** (middle) - Workflow-agnostic composed steps (commit/push, rebase, CI check-and-fix, prerequisite checks) shared across `implement` and the review workflows. Sits **above** `checks` so a step may compose a `check` (e.g. CI summary).
-- **`workflow_utils/`** + **`checks/`** (primitives) - Single-purpose capabilities (`task_tracker`, `commit_operations`, `base_branch`, `label_transitions`, `branch_linkage`, `failure_handling`) and branch/CI assessments. `workflow_utils` stays a pure primitive layer with only downward imports.
+For module and function detail, read the module docstrings and the code. Each module's first docstring line states its responsibility.
 
 ---
 
 ## 6. Runtime View
 
-The scenarios show the default path. With `auto_review_plan` / `auto_review_implementation` on, an automated review runs between the steps; see [Development Process](../processes-prompts/development-process.md).
+The default path through the issue lifecycle. Each step is one workflow run, triggered by a label. With `auto_review_plan` / `auto_review_implementation` on, an automated review runs between steps. Label names and failure branches: [Development Process](../processes-prompts/development-process.md).
 
-### Scenario 1: GitHub Issue → Implementation Planning
-1. **mcp_coder** detects the `status-02:awaiting-planning` label (the coordinator dispatches `create-plan`; the label moves to `status-03:planning`)
-2. **mcp_coder** → **Claude Code**: "Create implementation plan for issue X"
-3. **Claude Code** → **MCP servers**: Read issue content, analyze codebase
-4. **Claude Code** → **mcp_coder**: Returns structured implementation plan
-5. **mcp_coder** → **GitHub**: Posts plan as comment, changes label to `status-04:plan-review` (`status-14:plan-review-bot` with `auto_review_plan` on)
+1. **Plan.** `create-plan` reads the issue and codebase through the LLM, posts the plan, and moves to plan review.
+2. **Implement.** After plan approval, `implement` loops over plan tasks: the LLM edits and runs checks, mcp-coder runs mypy, formats, commits and pushes. An agent that cannot verify its work writes `pr_info/.blocked.txt` and the run fails to a blocked label.
+3. **Pull request.** After code approval, `create-pr` writes the PR, checks mergeability and waits for CI. `fix-conflict` and `fix-ci` handle the failure branches.
+4. **Review feedback.** PR comments, conflicts and failing CI route back to an interactive or automated session.
 
-### Scenario 2: Code Implementation Execution
-1. The plan is approved (`/plan_approve`, or the automated plan review) → label `status-05:plan-ready`; the label moves to `status-06:implementing`
-2. **mcp_coder** → **Claude Code**: "Implement according to approved plan"
-3. **Claude Code** → **MCP servers**: File operations, code writing, quality checks
-4. **Claude Code** → **mcp_coder**: Implementation complete notification
-5. **mcp_coder** → **GitHub**: Update status to `status-07:code-review` (`status-17:code-review-bot` with `auto_review_implementation` on)
-
-### Scenario 3: Pull Request Creation
-1. The code is approved (`/implementation_approve`, or the automated code review) → label `status-08:ready-pr`; the label moves to `status-09:pr-creating`
-2. **mcp_coder** → **Claude Code**: "Create pull request with summary"
-3. **Claude Code** → **MCP servers**: Generate PR description, final quality checks
-4. **Claude Code** → **mcp_coder**: PR content and metadata
-5. **mcp_coder** → **GitHub**: Create PR, check mergeability and wait for CI, update label to `status-10:pr-created` (`status-74` / `status-81` on conflict / failing CI)
-
-### Scenario 4: Driving a Project from Another Directory
-1. The shell sits anywhere — typically the tool environment on a build server, not the checkout
-2. Runs `mcp-coder implement --project-dir /project`
-3. mcp_coder prepares environment:
-   - Sets `MCP_CODER_PROJECT_DIR=/project`
-   - Executes Claude with `cwd=/project` (the default; the shell's directory is not consulted)
-4. Claude discovers `/project/.claude/CLAUDE.md`, `.mcp.json` and `.claude/settings*.json` by walking up from its cwd
-5. Claude modifies files in project directory
-6. Git operations target project directory
+A project can be driven from any directory with `--project-dir`; see the execution-context decision in section 4.
 
 ---
 
 ## 7. Deployment View
 
-### Local Development Environment
-- **Runtime**: Python 3.11+ with pip package installation
-- **Dependencies**: Claude Code CLI installation required
-- **MCP Servers**: Deployed as separate services
-- **Configuration**: User config in `~/.mcp_coder/config.toml`
-- **Project Configuration**: `.claude/CLAUDE.md` for project-specific instructions
-- **Skills**: `.claude/skills/` contains workflow skills for Claude Code interactive sessions (e.g., `/plan_review`, `/plan_review_supervisor`, `/implementation_review`, `/implementation_review_supervisor`, `/pr_comment_triage`, `/commit_push`). See [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for quick reference.
+- **Developer machine.** `mcp-coder` runs in its own tool environment; the target project has its own `.venv`, `.claude/` and `.mcp.json`. User settings are in `~/.mcp_coder/config.toml`.
+- **Automated runs (coordinator + Jenkins).** Jenkins is an executor, not a build server. The infrastructure lives in the separate [AutoRunner](https://github.com/MarcusJellinghaus/AutoRunner) repo (Jenkins master, agents, job definitions as a shared library). The two repos meet at the job parameters.
+  - A coordinator job runs `mcp-coder coordinator --all` every minute. It finds issues in a trigger label and starts the executor job once per issue, passing a `COMMAND` script generated from a template in mcp-coder.
+  - The executor job checks out the repo, provisions the project's venv with `mcp-coder install`, and runs the `COMMAND`, which is one workflow call such as `mcp-coder implement --project-dir <checkout>`. A watchdog step in the template moves the issue to a failure label if the run died without setting one, so issues cannot sit at an in-progress label.
+  - **Two environments.** A shared *tool* environment holds mcp-coder and the MCP servers. Each job also gets a *project* environment inside the checkout. The shell sits in the tool environment, the checkout elsewhere, so `--project-dir` is always explicit. See [environments](../environments/environments.md).
+  - A separate job rebuilds the tool environment. Jenkins lockable resources keep it from running while executors use that environment.
+  - Agents are Windows or container-based. Jenkins-side permissions and credentials: [jenkins.md](../repository-setup/jenkins.md).
+- **Interactive sessions (VSCodeClaude).** `mcp-coder vscodeclaude launch` opens VS Code with a Claude session for issues that need human action. `mcp-coder install` provisions the session environment.
+- **Provisioning.** `mcp-coder install` creates `<target>/.venv` and installs mcp-coder from git, PyPI or a local checkout. Staging `.mcp.json` and `.claude/` is the caller's job.
+- **Release to other users.** Publishing a GitHub release triggers a workflow that builds the package (version from git tags via setuptools-scm) and publishes it to PyPI through trusted publishing, then attaches signed artifacts to the release. Users install with `pip` or `uv`; extras such as `langchain` are optional.
 
-### Integration Testing
-- **Separate Repository**: `mcpy_coder_integration_test` for external testing
-- **External Dependencies**: Git repositories, GitHub API access
-- **Authentication**: Claude Code CLI authentication, GitHub API tokens
-
----
-
-## 8. Cross-cutting Concepts
-
-### CI Pipeline
-- **Matrix-based execution**: Each check (ruff, ruff-format, pylint, tests, mypy) runs as independent job with individual pass/fail status
-- **Parallel execution**: All checks run simultaneously with `fail-fast: false`
-
-### Testing Strategy & Markers
-**Legend**: 🏷️ = pytest integration marker, ❌ = missing test coverage
-
-- **Test categories**: Defined in `pyproject.toml` with specific markers
-  - `git_integration`: File system git operations (repos, commits) in `utils/git_operations/test_*.py`
-    - **When to use**: Testing git workflow automation, repository operations
-    - **Requirements**: Local git environment, test repositories
-  - `claude_cli_integration`: Claude CLI tests (network, auth needed) in `llm_providers/claude/` + `cli/commands/`
-    - **When to use**: Testing Claude Code CLI integration, executable detection
-    - **Requirements**: Claude Code CLI installed, authentication configured
-  - `install_integration`: Real-subprocess installer tests (uv venv/sync/pip) in `tests/install/test_install_integration.py`
-    - **When to use**: Testing the installer against a real local fixture package
-    - **Requirements**: `uv` on PATH
-  - `langchain_integration`: LangChain API tests (network, auth needed)
-    in `llm/providers/langchain/test_*.py`
-    - **When to use**: Testing LangChain provider integrations, real API calls
-    - **Requirements**: LangChain packages installed, API keys configured
-  - `llm_integration`: End-to-end LLM prompt tests (network, auth needed)
-    - **When to use**: Testing real LLM round-trips across any provider
-    - **Requirements**: Valid API keys or CLI auth for the active provider
-  - `textual_integration`: Textual TUI tests (headless app, pilot, snapshots) in `tests/icoder/`
-    - **When to use**: Testing iCoder TUI behavior, widget interactions, visual snapshots
-    - **Requirements**: Textual package (included by default)
-    - **Note**: Snapshot tests are Windows-only to avoid baseline drift
-- **Fast development**: Use exclusion pattern to skip slow integration tests
-- **Parallel execution**: Always use `extra_args: ["-n", "auto"]`
-- **Recommended**: `"-m", "not git_integration and not claude_cli_integration and not copilot_cli_integration and not install_integration and not jenkins_integration and not langchain_integration and not llm_integration and not textual_integration"`
-- **Integration testing**: Use specific markers when developing integration features
-- **CI/CD**: Run all tests including integration tests in automated pipelines
-
-### Test Performance & Profiling
-**Tools for test optimization and performance tracking**
-
-- **Performance Statistics**: `tools/get_pytest_performance_stats.bat` - Collects runtime statistics for all tests
-- **Test Profiler**: `tools/test_profiler_plugin/` - pytest plugin for detailed profiling
-  - `test_profiler.bat` - Run tests with profiling enabled
-  - `test_profiler_generate_only.bat` - Generate reports from existing profile data
-  - `generate_report.py` - Report generation engine
-  - Documentation: `tools/test_profiler.md` - Usage and analysis guide
-- **Performance Documentation**: `docs/tests/` - Performance analysis and tracking
-  - `runtime_statistics.md` - Current runtime statistics and historical data
-  - `runtime_statistics_review_process.md` - Process for reviewing test performance
-  - `slow_test_review_methodology.md` - Methodology for identifying and optimizing slow tests
-  - `performance_data/` - Historical performance data and profiling reports
-- **Purpose**: Identify slow tests, track performance regressions, optimize test suite execution time
-
-### Logging Strategy
-- **Centralized configuration**: `utils/log_utils.py` - Single point for logging setup
-- **Log level reservation**: INFO level reserved for workflow status and progress
-- **CLI integration**: `--log-level` parameter in `cli/main.py` for user control
-- **LLM operation logging**: `llm/providers/claude/logging_utils.py` - Structured logging for LLM operations
-  - `log_llm_request()` - Log request details with prompt preview, timeout, environment
-  - `log_llm_response()` - Log response metadata (duration, cost, usage, turns)
-  - `log_llm_error()` - Log error details with type, message, and duration
-  - **Level**: DEBUG level for detailed operation tracking
-  - **Use cases**: Provider implementations for both CLI and API integration
-- **Claude CLI session logging**: Full session capture to `logs/claude-sessions/` as NDJSON files
-  - **Filename format**: `session_{timestamp}_{branch_id}.ndjson`
-  - **Real-time monitoring**: Use `tail -f logs/claude-sessions/*.ndjson` during execution
-  - **Content**: Full message history, cost/usage statistics, error diagnostics
-  - **Purpose**: Debugging, cost tracking, and post-mortem analysis of LLM interactions
-
-### Configuration Management
-- **User config**: TOML files in `~/.mcp_coder/config.toml`
-- **Project config**: `.claude/CLAUDE.md` for project-specific instructions
-- **File**: `utils/user_config.py` - Configuration access patterns
-- **Security**: Never commit tokens, use environment variables for CI/CD
-
-### MLflow Integration (Optional Feature)
-- **Purpose**: Optional LLM conversation tracking and analytics
-- **Configuration**: `config/mlflow_config.py` - Loads from config.toml with env var overrides
-- **Core Components**:
-  - `llm/mlflow_logger.py` - Main logger with graceful fallback (singleton pattern)
-  - `llm/mlflow_metrics.py` - Complexity scoring, performance metrics, topic classification
-- **Integration Points**: `prompt.py` (full conversations), `logging_utils.py` (LLM metrics)
-- **Logged Data**: Model/provider/branch params, duration/cost/token metrics, prompt/conversation artifacts
-- **Graceful Degradation**: Try/except pattern ensures system works without MLflow (silent fallback, no errors)
-- **Backend Support**: SQLite (recommended), filesystem (deprecated), remote server
-- **Tools**: `tools/mlflow/` (`start_mlflow.sh/.bat`, `get_latest_mlflow_db_entries.py`, `inspect_mlflow_run.py`, permission-event extract/analyze, ...); see `tools/mlflow/README.md`
-- **Import Cycle Prevention**: import-linter enforces mlflow_logger cannot import logging_utils or prompt
-- **Documentation**: `docs/configuration/mlflow-integration.md`
-
-### Quality Gates (Mandatory Pattern)
-- **Always run**: pylint, pytest, mypy after code changes
-- **MCP integration**: Use `mcp__mcp-tools-py__*` tools exclusively
-- **Architecture access**: `mcp_tools_py.py` - Quality check orchestration with direct API access for mcp_coder workflows
-- **Enforcement**: Documented in `CLAUDE.md` as mandatory requirements
-
-### Architectural Boundary Enforcement
-Why and how module boundaries, cycles, dead code, dependencies and file size are enforced:
-see [enforcement.md](enforcement.md).
-
-### Refactoring Guidelines
-- **Documentation**: See [Safe Refactoring Guide](../processes-prompts/refactoring-guide.md) for moving code safely
-- **Principle**: Move functions/classes without modifying logic; only adjust imports and the allowed edits in Refactoring Principles
-- **Scope**: Keep each PR's compact diff short, step by step; one module per PR when possible — see the Safe Refactoring Guide
-
-### Command Pattern (CLI)
-- **File organization**: `cli/commands/` - One command per file
+Setup details: [repository-setup](../repository-setup/README.md), [environments](../environments/environments.md), [coordinator and VSCodeClaude](../coordinator-vscodeclaude.md).
 
 ---
 
-## Appendix
+## 8. Crosscutting Concepts
 
-### Key Files Reference
-For quick LLM navigation to core architectural components:
+- **Boundaries and shims.** One module owns each external library, and git and GitHub are reached only through shims. Why and how: [enforcement.md](enforcement.md).
+- **Logging.** Set up centrally. INFO is reserved for workflow status; LLM request, response and error detail is DEBUG. Each Claude run is also captured as an NDJSON session log for post-mortems.
+- **Configuration.** User settings in `~/.mcp_coder/config.toml`, project rules in `.claude/CLAUDE.md`. Secrets come from the environment, never from committed files. See [config](../configuration/config.md).
+- **Sessions.** Claude keeps conversation history server-side. LangChain history is stored locally by mcp-coder and guarded: resuming an unknown session id is an error, never a silent blank conversation. A turn that stored nothing returns no session id, and callers must handle that.
+- **Optional features.** LangChain, MLflow and the TUI are extras. Absent extras must not break import or the default path. See [optional dependencies](../configuration/optional-dependencies.md).
+- **MLflow tracking.** When enabled in `config.toml`, every LLM call made through `llm.interface` is logged to MLflow (duration, tokens, cost, model, branch, full conversation). Because the hook sits in the interface, it covers all providers. The logger falls back silently if MLflow is missing. `mcp-coder verify` reports its state. Details: [MLflow integration](../configuration/mlflow-integration.md).
+- **Quality gates.** pylint, pytest and mypy must pass after every change, run through the MCP tools. The CI matrix runs each check as an independent job. What runs where: [Quality and Security Checks](../repository-setup/quality-and-security-checks.md).
+- **Testing.** Fast unit tests are the default. Tests that need real git, network, auth or a TUI carry a pytest marker and are excluded locally. Markers and their meaning are defined in `pyproject.toml`. Test performance tracking: [docs/tests](../tests/runtime_statistics.md).
+- **Refactoring.** Move code without changing logic, in small steps: [Safe Refactoring Guide](../processes-prompts/refactoring-guide.md).
 
-**Core Interfaces:**
-- `src/mcp_coder/llm/interface.py` - Main LLM abstraction
+---
 
-**Workflow Engine:**
-- `src/mcp_coder/cli/main.py` - CLI entry and command routing
-- `src/mcp_coder/utils/git_operations/` - Git automation (modular package)
+## 9. Dependency Graphs
 
-**Configuration:**
-- `.claude/CLAUDE.md` - Project configuration and mandatory patterns
-- `src/mcp_coder/utils/user_config.py` - User configuration management
-- `pyproject.toml` - Testing markers and tool configuration
+The diagram in section 5 shows the allowed layering. The actual imports are drawn from the code by [pydeps](https://github.com/thebjorn/pydeps) (`tools/pydeps_graph.sh`), as an interactive HTML graph and a Graphviz source file in [dependencies/](dependencies/). These are visualisations only; the rules are enforced as described in [enforcement.md](enforcement.md). Notes on the tooling: [dependencies/readme.md](dependencies/readme.md).
