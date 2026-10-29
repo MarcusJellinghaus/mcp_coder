@@ -176,6 +176,27 @@ class TestLaunchRateLimit:
         assert launch_mocks.process_eligible_issues.call_count == 1
         assert len(_stop_lines(caplog)) == 1
 
+    def test_later_repo_limit_still_reports_started_sessions(
+        self, launch_mocks: SimpleNamespace, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        started = {
+            "repo": "owner/repo1",
+            "issue_number": 9,
+            "status": "status-07:code-review",
+        }
+        launch_mocks.process_eligible_issues.side_effect = [[started]]
+        launch_mocks.check_pr_health.side_effect = [None, _rest_rate_limit()]
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_vscodeclaude(_launch_args())
+
+        assert result == 0
+        assert launch_mocks.check_pr_health.call_count == 2
+        assert launch_mocks.process_eligible_issues.call_count == 1
+        assert "Started 1 new session(s):" in caplog.text
+        assert "repo1 - #9: status-07:code-review" in caplog.text
+        assert len(_stop_lines(caplog)) == 1
+
     def test_other_error_is_reraised(self, launch_mocks: SimpleNamespace) -> None:
         launch_mocks.check_pr_health.side_effect = RuntimeError("boom")
 

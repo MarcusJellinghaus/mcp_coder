@@ -303,6 +303,8 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         current_count = sum(1 for a in assessments.values() if a.verdict.active) + len(
             restarted
         )
+        # Filled as sessions launch, so a rate limit in a later repo keeps them.
+        total_started: list[VSCodeClaudeSession] = []
         try:
             _launch_for_repos(
                 args,
@@ -313,9 +315,12 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
                 cached_issues_by_repo,
                 active_set,
                 restarted,
+                total_started,
             )
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            log_rate_limit_stop(_rate_limit_or_raise(exc))
+            rate_limit = _rate_limit_or_raise(exc)
+            _log_started_sessions(total_started)
+            log_rate_limit_stop(rate_limit)
         return 0
 
     except ValueError as e:
@@ -328,6 +333,22 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         raise
 
 
+def _log_started_sessions(started: list[VSCodeClaudeSession]) -> None:
+    """Log the "Started N new session(s)" summary; no-op when nothing started."""
+    if not started:
+        return
+    logger.log(OUTPUT, "Started %d new session(s):", len(started))
+    for session in started:
+        repo_short = session["repo"].split("/")[-1]
+        logger.log(
+            OUTPUT,
+            "  %s - #%s: %s",
+            repo_short,
+            session["issue_number"],
+            session["status"],
+        )
+
+
 def _launch_for_repos(
     args: argparse.Namespace,
     repo_names: list[str],
@@ -337,6 +358,7 @@ def _launch_for_repos(
     cached_issues_by_repo: dict[str, dict[int, IssueData]],
     active_set: dict[str, bool],
     restarted: list[VSCodeClaudeSession],
+    total_started: list[VSCodeClaudeSession],
 ) -> None:
     """Run PR-health checks and launch eligible issues per repo, then summarise.
 
@@ -349,9 +371,10 @@ def _launch_for_repos(
         cached_issues_by_repo: Cached issues keyed by repo full name.
         active_set: Folder → active flag, for the capacity message.
         restarted: Sessions restarted in this run, for the capacity message.
+        total_started: List that launched sessions are appended to per repo,
+            so the caller keeps them when a rate limit raises partway through.
     """
     skip_github_install = getattr(args, "no_install_from_github", False)
-    total_started: list[VSCodeClaudeSession] = []
     for repo_name in repo_names:
         # Apply repo filter if specified
         if args.repo and repo_name != args.repo:
@@ -400,16 +423,7 @@ def _launch_for_repos(
 
     # Print summary
     if total_started:
-        logger.log(OUTPUT, "Started %d new session(s):", len(total_started))
-        for session in total_started:
-            repo_short = session["repo"].split("/")[-1]
-            logger.log(
-                OUTPUT,
-                "  %s - #%s: %s",
-                repo_short,
-                session["issue_number"],
-                session["status"],
-            )
+        _log_started_sessions(total_started)
     elif current_count >= max_sessions:
         active_folders = [Path(f).name for f, alive in active_set.items() if alive]
         restarted_folders = [Path(s["folder"]).name for s in restarted]
