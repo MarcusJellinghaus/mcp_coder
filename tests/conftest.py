@@ -44,6 +44,23 @@ def git_repo(tmp_path: Path) -> tuple[git.Repo, Path]:
     return repo, project_dir
 
 
+@pytest.fixture
+def github_remote_repo(
+    git_repo: tuple[git.Repo, Path], monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Git repository with a GitHub ``origin`` remote and a dummy token.
+
+    Lets real GitHub manager constructors run without network access.
+
+    Returns:
+        Path to the project directory.
+    """
+    repo, project_dir = git_repo
+    repo.create_remote("origin", "https://github.com/owner/repo.git")
+    monkeypatch.setenv("GITHUB_TOKEN", "x")
+    return project_dir
+
+
 def setup_git_config(repo: git.Repo) -> None:
     """Configure git user for repository.
 

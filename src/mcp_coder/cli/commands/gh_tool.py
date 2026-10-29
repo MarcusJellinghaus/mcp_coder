@@ -151,9 +151,7 @@ def execute_checkout_issue_branch(args: argparse.Namespace) -> int:
             return 2
 
         # Find existing branch (linked, PR head, or name pattern)
-        branch_manager = IssueBranchManager(
-            project_dir=project_dir, repo_url=repo_id.https_url
-        )
+        branch_manager = IssueBranchManager(project_dir=project_dir)
         found = branch_manager.get_branch_with_pr_fallback(
             issue_number, repo_id.owner, repo_id.repo_name
         )

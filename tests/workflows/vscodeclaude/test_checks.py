@@ -144,7 +144,7 @@ def _patch_env(
     monkeypatch.setattr(f"{CHECKS}.IssueManager", lambda **kw: issue_manager)
     monkeypatch.setattr(f"{CHECKS}.IssueBranchManager", lambda **kw: branch_manager)
     monkeypatch.setattr(f"{CHECKS}.CIResultsManager", lambda **kw: ci_manager)
-    monkeypatch.setattr(f"{CHECKS}._build_pr_manager", lambda repo_url: pr_manager)
+    monkeypatch.setattr(f"{CHECKS}.PullRequestManager", lambda **kw: pr_manager)
     monkeypatch.setattr(f"{CHECKS}.get_github_username", lambda: "testuser")
     monkeypatch.setattr(
         f"{CHECKS}._filter_eligible_vscodeclaude_issues", lambda issues, user: issues
@@ -314,18 +314,18 @@ class TestCheckPrHealth:
         mock_issue_manager_cls = MagicMock()
         mock_branch_manager_cls = MagicMock()
         mock_ci_manager_cls = MagicMock()
-        mock_build_pr_manager = MagicMock()
+        mock_pr_manager_cls = MagicMock()
         monkeypatch.setattr(f"{CHECKS}.IssueManager", mock_issue_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.IssueBranchManager", mock_branch_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.CIResultsManager", mock_ci_manager_cls)
-        monkeypatch.setattr(f"{CHECKS}._build_pr_manager", mock_build_pr_manager)
+        monkeypatch.setattr(f"{CHECKS}.PullRequestManager", mock_pr_manager_cls)
 
         _run(_make_pr_issue(123, labels=["status-01:created"]))
 
         mock_issue_manager_cls.assert_not_called()
         mock_branch_manager_cls.assert_not_called()
         mock_ci_manager_cls.assert_not_called()
-        mock_build_pr_manager.assert_not_called()
+        mock_pr_manager_cls.assert_not_called()
 
     def test_setup_failure_logs_warning_and_does_not_raise(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture

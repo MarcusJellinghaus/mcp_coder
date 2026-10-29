@@ -153,7 +153,7 @@ def get_pr_for_issue(project_dir: Path, issue_number: int) -> int | None:
     if repo_id is None:
         return None
 
-    branch_mgr = IssueBranchManager(project_dir=project_dir, repo_url=repo_id.https_url)
+    branch_mgr = IssueBranchManager(project_dir=project_dir)
     branch_name = branch_mgr.get_branch_with_pr_fallback(
         issue_number, repo_id.owner, repo_id.repo_name
     )

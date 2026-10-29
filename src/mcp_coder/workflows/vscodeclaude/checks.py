@@ -8,7 +8,6 @@ from ...config.label_config import (
     load_labels_config,
 )
 from ...mcp_workspace_github import (
-    BaseGitHubManager,
     CIResultsManager,
     EventData,
     IssueBranchManager,
@@ -27,20 +26,6 @@ from .helpers import get_issue_status, is_marked
 from .issues import _filter_eligible_vscodeclaude_issues
 
 logger = logging.getLogger(__name__)
-
-
-def _build_pr_manager(repo_url: str) -> PullRequestManager:
-    """Build a PullRequestManager from a repo URL only, no local checkout.
-
-    Bypasses PullRequestManager.__init__ (which requires project_dir) the
-    same way label_transitions.py already does for IssueBranchManager.
-
-    Returns:
-        A PullRequestManager instance backed by the given repo URL.
-    """
-    manager = PullRequestManager.__new__(PullRequestManager)
-    BaseGitHubManager.__init__(manager, repo_url=repo_url)
-    return manager
 
 
 def _review_comments_watermark(
@@ -322,7 +307,7 @@ def check_pr_health(
         issue_manager = IssueManager(repo_url=repo_url)
         branch_manager = IssueBranchManager(repo_url=repo_url)
         ci_manager = CIResultsManager(repo_url=repo_url)
-        pr_manager = _build_pr_manager(repo_url)
+        pr_manager = PullRequestManager(repo_url=repo_url)
         label_names = build_label_lookups(
             load_labels_config(get_labels_config_path(None))
         )["id_to_name"]

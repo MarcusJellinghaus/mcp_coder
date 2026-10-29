@@ -428,9 +428,7 @@ def test_get_pr_for_issue_two_step_lookup() -> None:
         result = get_pr_for_issue(PROJECT_DIR, 42)
 
     assert result == 42
-    branch_cls.assert_called_once_with(
-        project_dir=PROJECT_DIR, repo_url=repo_id.https_url
-    )
+    branch_cls.assert_called_once_with(project_dir=PROJECT_DIR)
     branch_mgr.get_branch_with_pr_fallback.assert_called_once_with(
         42, repo_id.owner, repo_id.repo_name
     )
@@ -499,3 +497,17 @@ def test_get_pr_for_issue_no_repo_remote() -> None:
         result = get_pr_for_issue(PROJECT_DIR, 42)
 
     assert result is None
+
+
+def test_get_pr_for_issue_constructs_real_branch_manager(
+    github_remote_repo: Path,
+) -> None:
+    """The real IssueBranchManager constructor accepts the arguments passed."""
+    with patch(
+        "mcp_coder.mcp_workspace_github.IssueBranchManager.get_branch_with_pr_fallback",
+        return_value=None,
+    ) as fallback:
+        result = get_pr_for_issue(github_remote_repo, 1)
+
+    assert result is None
+    fallback.assert_called_once_with(1, "owner", "repo")

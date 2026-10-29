@@ -16,7 +16,6 @@ from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
 )
 from mcp_coder.mcp_workspace_github import (
-    BaseGitHubManager,
     IssueBranchManager,
     IssueManager,
 )
@@ -91,19 +90,16 @@ def update_workflow_label(
             issue_number = extracted_issue_number
 
             # Step 3: Verify branch is linked to the issue
-            repo_url = None
-            if issue_manager._cached_repo_identifier is not None:
-                repo_url = issue_manager._cached_repo_identifier.https_url
-
-            # IssueBranchManager.__init__ doesn't accept github_token,
-            # so init via BaseGitHubManager to reuse the existing token.
-            branch_manager = IssueBranchManager.__new__(IssueBranchManager)
-            BaseGitHubManager.__init__(
-                branch_manager,
-                project_dir=issue_manager.project_dir,
-                repo_url=repo_url,
-                github_token=issue_manager.github_token,
-            )
+            if issue_manager.project_dir is not None:
+                branch_manager = IssueBranchManager(
+                    project_dir=issue_manager.project_dir,
+                    github_token=issue_manager.github_token,
+                )
+            else:
+                branch_manager = IssueBranchManager(
+                    repo_url=issue_manager.repo_identifier.https_url,
+                    github_token=issue_manager.github_token,
+                )
             if not is_branch_linked_to_issue(
                 branch_manager, issue_number, actual_branch_name
             ):
