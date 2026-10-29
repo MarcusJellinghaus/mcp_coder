@@ -215,6 +215,14 @@ class TestConfigSchema:
         assert field.field_type is list
         assert field.env_var is None
 
+    def test_schema_github_traffic_log(self) -> None:
+        """github.traffic_log is a bool and traffic_log_dir a str, no env vars."""
+        github = _CONFIG_SCHEMA["github"]
+        assert github["traffic_log"].field_type is bool
+        assert github["traffic_log"].env_var is None
+        assert github["traffic_log_dir"].field_type is str
+        assert github["traffic_log_dir"].env_var is None
+
     def test_schema_langchain_env_vars(self) -> None:
         """llm.langchain fields have correct env var mappings."""
         lc = _CONFIG_SCHEMA["llm.langchain"]
