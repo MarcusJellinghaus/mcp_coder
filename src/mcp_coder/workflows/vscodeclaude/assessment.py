@@ -247,6 +247,15 @@ def assess_session(
     )
 
 
+def _github_username() -> str | None:
+    """Return the GitHub username, or None if it is not configured."""
+    try:
+        return get_github_username()
+    except ValueError:
+        logger.debug("GitHub username not configured, skipping assignment checks")
+        return None
+
+
 def build_assessments(
     sessions: list[VSCodeClaudeSession],
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
@@ -272,11 +281,8 @@ def build_assessments(
     snapshot = capture_detection_snapshot()
 
     ignore_labels = get_ignore_labels()
-    try:
-        github_username: str | None = get_github_username()
-    except ValueError:
-        logger.debug("GitHub username not configured, skipping assignment checks")
-        github_username = None
+    # Without a cache, issue facts are not derived, so skip the GET /user call.
+    github_username = _github_username() if cached_issues_by_repo else None
 
     assessments: dict[str, SessionAssessment] = {}
     for session in sessions:
