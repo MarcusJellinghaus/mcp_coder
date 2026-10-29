@@ -50,7 +50,6 @@ from mcp_workspace.github_operations.ci_results_manager import (
 from mcp_workspace.github_operations.issues import (
     BranchLookup,
     BranchLookupError,
-    CacheData,
     CommentData,
     EventData,
     IssueBranchManager,
@@ -120,7 +119,6 @@ __all__: list[str] = [
     "IssueEventType",
     "IssueData",
     "CommentData",
-    "CacheData",
     "EventData",
     "create_empty_issue_data",
     "get_all_cached_issues",
