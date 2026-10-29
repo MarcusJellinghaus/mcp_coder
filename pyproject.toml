@@ -347,7 +347,6 @@ select = [
     "I",
 ]
 ignore = [
-    "D104",  # missing docstring in __init__.py (low value)
     "D107",  # missing docstring in __init__ method (redundant with class docstring)
     "ANN401",  # Any is correct at library/CLI boundaries; mypy strict covers the rest
     "E501",  # line length is owned by the formatter (ruff format); not re-checked here
