@@ -24,3 +24,9 @@ def test_get_issue_cache_last_checked_is_exported() -> None:
 def test_underscore_cache_aliases_removed(name: str) -> None:
     assert not hasattr(shim, name)
     assert name not in shim.__all__
+
+
+@pytest.mark.parametrize("name", ["GitHubRateLimitError", "to_rate_limit_error"])
+def test_rate_limit_names_exported(name: str) -> None:
+    assert hasattr(shim, name)
+    assert name in shim.__all__

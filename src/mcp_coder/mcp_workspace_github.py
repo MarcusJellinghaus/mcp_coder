@@ -16,6 +16,7 @@ from mcp_workspace.github_operations import (
     CIResultsManager,
     CIStatusData,
     GithubException,
+    GitHubRateLimitError,
     LabelData,
     LabelsManager,
     PullRequestData,
@@ -27,6 +28,9 @@ from mcp_workspace.github_operations import (
     verify_github,
     verify_github_security,
 )
+
+# Caching: recognise rate-limit exceptions raised by managers
+from mcp_workspace.github_operations.caching.errors import to_rate_limit_error
 
 # CI results submodule (TypedDicts + helpers)
 from mcp_workspace.github_operations.ci_results_manager import (
@@ -76,6 +80,9 @@ __all__: list[str] = [
     # Re-exported so ci.py can classify raised exceptions without a direct
     # `github` import, which the github_library_isolation contract forbids.
     "GithubException",
+    # Rate limits
+    "GitHubRateLimitError",
+    "to_rate_limit_error",
     # Labels
     "LabelData",
     "LabelsManager",
