@@ -200,6 +200,7 @@ def _build_cached_issues_by_repo(
 def restart_closed_sessions(
     assessments: dict[str, SessionAssessment],
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
+    restarted: list[VSCodeClaudeSession] | None = None,
 ) -> list[VSCodeClaudeSession]:
     """Restart sessions where VSCode was closed.
 
@@ -226,24 +227,28 @@ def restart_closed_sessions(
         cached_issues_by_repo: Dict mapping repo_full_name to issues dict.
                                If provided, avoids API calls for staleness checks
                                and file regeneration.
+        restarted: Optional list that relaunched sessions are appended to as
+            they restart, so the caller keeps them when a rate limit raises
+            ``GitHubRateLimitError`` partway through.
 
     Before restarting, regenerates all session files with fresh issue data.
 
     Returns:
-        List of restarted sessions
+        List of restarted sessions (``restarted`` itself when given)
     """
+    if restarted is None:
+        restarted = []
+
     store = load_sessions()
 
     # Early return if no sessions
     if not store["sessions"]:
         logger.debug("No sessions to restart")
-        return []
+        return restarted
 
     # Build cache with session issues if not provided
     if cached_issues_by_repo is None:
         cached_issues_by_repo = _build_cached_issues_by_repo(store["sessions"])
-
-    restarted: list[VSCodeClaudeSession] = []
 
     # Load configured repos from config file (fresh read on each start)
     configured_repos = _get_configured_repos()

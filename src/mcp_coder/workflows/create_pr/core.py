@@ -694,7 +694,9 @@ def run_create_pr_workflow(
                 )
             logger.log(OUTPUT, "Post-creation outcome: %s (label not updated)", label)
 
-        if update_issue_labels and cached_issue_number is None:
+        if rc != 0:
+            logger.error("Create PR workflow failed: final issue label not applied")
+        elif update_issue_labels and cached_issue_number is None:
             logger.log(OUTPUT, "Create PR workflow completed with warnings")
         else:
             logger.log(OUTPUT, "Create PR workflow completed successfully!")

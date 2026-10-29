@@ -124,6 +124,33 @@ class TestLaunchRateLimit:
         launch_mocks.process_eligible_issues.assert_not_called()
         assert len(_stop_lines(caplog)) == 1
 
+    def test_restart_limit_still_reports_restarted_sessions(
+        self, launch_mocks: SimpleNamespace, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        def restart_one_then_limit(**kwargs: object) -> None:
+            restarted = kwargs["restarted"]
+            assert isinstance(restarted, list)
+            restarted.append(
+                {
+                    "repo": "owner/repo1",
+                    "issue_number": 7,
+                    "status": "status-04:plan-review",
+                    "vscode_pid": 4242,
+                }
+            )
+            raise _rest_rate_limit()
+
+        launch_mocks.restart_closed_sessions.side_effect = restart_one_then_limit
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_vscodeclaude(_launch_args())
+
+        assert result == 0
+        assert "Restarted: repo1 #7 (status-04:plan-review) PID:4242" in caplog.text
+        launch_mocks.apply_assessments.assert_called_once()
+        launch_mocks.check_pr_health.assert_not_called()
+        assert len(_stop_lines(caplog)) == 1
+
     def test_pr_health_limit_stops_before_next_repo(
         self, launch_mocks: SimpleNamespace, caplog: pytest.LogCaptureFixture
     ) -> None:

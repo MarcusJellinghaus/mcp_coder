@@ -487,17 +487,21 @@ class TestPhaseB:
         mock_workflow_failure: MagicMock,
         phase_a_ok: dict[str, MagicMock],
         mock_post_creation: MagicMock,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """A failed final label → exit 1, run_guarded's net stays silent."""
         phase_a_ok["apply_label"].return_value = 1
 
-        result = run_create_pr_workflow(
-            Path("/test"), "claude", update_issue_labels=True
-        )
+        with caplog.at_level(logging.DEBUG):
+            result = run_create_pr_workflow(
+                Path("/test"), "claude", update_issue_labels=True
+            )
 
         assert result == 1
         mock_post_creation.assert_called_once()
         mock_workflow_failure.assert_not_called()
+        assert "completed successfully!" not in caplog.text
+        assert "final issue label not applied" in caplog.text
 
     @patch(f"{_CORE}._handle_create_pr_failure")
     def test_phase_a_failure_skips_phase_b(

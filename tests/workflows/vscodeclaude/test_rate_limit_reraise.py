@@ -21,7 +21,11 @@ from mcp_coder.workflows.vscodeclaude.issues import (
     build_eligible_issues_with_branch_check,
 )
 from mcp_coder.workflows.vscodeclaude.session_launch import process_eligible_issues
-from mcp_coder.workflows.vscodeclaude.session_restart import restart_closed_sessions
+from mcp_coder.workflows.vscodeclaude.session_restart import (
+    BranchPrepResult,
+    restart_closed_sessions,
+)
+from mcp_coder.workflows.vscodeclaude.types import VSCodeClaudeSession
 from mcp_coder.workflows.vscodeclaude.workspace import _fetch_marked_comment
 from tests.github_factories import make_issue_data
 from tests.workflows.vscodeclaude.conftest import (
@@ -269,6 +273,60 @@ class TestRestartClosedSessionsRateLimit:
 
         launch.assert_not_called()
         branch_cache.save.assert_called_once_with()
+
+    def test_limit_after_restart_keeps_restarted_session(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sessions_file = tmp_path / "sessions.json"
+        monkeypatch.setattr(
+            "mcp_coder.workflows.vscodeclaude.sessions.get_sessions_file_path",
+            lambda: sessions_file,
+        )
+        folders = [str(tmp_path / f"repo_{number}") for number in (100, 101)]
+        sessions = []
+        for number, folder in zip((100, 101), folders, strict=True):
+            Path(folder).mkdir()
+            (tmp_path / f"repo_{number}.code-workspace").write_text("{}")
+            sessions.append(
+                {
+                    "folder": folder,
+                    "repo": "owner/repo",
+                    "issue_number": number,
+                    "status": "status-04:plan-review",
+                    "vscode_pid": None,
+                    "started_at": "2024-01-01T00:00:00Z",
+                    "is_intervention": False,
+                }
+            )
+        sessions_file.write_text(json.dumps({"sessions": sessions, "last_updated": ""}))
+        monkeypatch.setattr(f"{RESTART}._get_configured_repos", lambda: {"owner/repo"})
+        monkeypatch.setattr(f"{RESTART}.IssueManager", lambda **kw: MagicMock())
+        monkeypatch.setattr(f"{RESTART}.regenerate_session_files", MagicMock())
+        patch_branch_cache(monkeypatch, RESTART)
+        monkeypatch.setattr(
+            f"{RESTART}._prepare_restart_branch",
+            Mock(side_effect=[BranchPrepResult(True, None, None), _rate_limit()]),
+        )
+        launch = MagicMock(return_value=9999)
+        monkeypatch.setattr(f"{RESTART}.launch_vscode", launch)
+        cached: dict[str, dict[int, IssueData]] = {
+            "owner/repo": {
+                n: make_issue_data(number=n, labels=["status-04:plan-review"])
+                for n in (100, 101)
+            }
+        }
+        restarted: list[VSCodeClaudeSession] = []
+
+        with pytest.raises(GitHubRateLimitError):
+            restart_closed_sessions(
+                assessments={f: make_assessment(f) for f in folders},
+                cached_issues_by_repo=cached,
+                restarted=restarted,
+            )
+
+        launch.assert_called_once()
+        assert [s["issue_number"] for s in restarted] == [100]
+        assert restarted[0]["vscode_pid"] == 9999
 
 
 class TestAssessmentRateLimit:

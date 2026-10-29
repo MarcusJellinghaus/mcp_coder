@@ -258,12 +258,14 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # Restart now consumes the prebuilt assessments directly (verdict +
         # decision); the active_set shim survives only for the launch-capacity
         # message and the not-yet-migrated status table (Step 8).
+        # Filled as sessions relaunch, so a rate limit partway keeps them.
         restarted: list[VSCodeClaudeSession] = []
         if rate_limited is None:
             try:
-                restarted = restart_closed_sessions(
+                restart_closed_sessions(
                     assessments=assessments,
                     cached_issues_by_repo=cached_issues_by_repo,
+                    restarted=restarted,
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 rate_limited = _rate_limit_or_raise(exc)
