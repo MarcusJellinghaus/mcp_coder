@@ -146,4 +146,4 @@ Setup details: [repository-setup](../repository-setup/README.md), [environments]
 
 ## 9. Dependency Graphs
 
-The diagram in section 5 shows the allowed layering. The actual imports are drawn from the code by [pydeps](https://github.com/thebjorn/pydeps) (`tools/pydeps_graph.sh`), as an interactive HTML graph and a Graphviz source file in [dependencies/](dependencies/). These are visualisations only; the rules are enforced as described in [enforcement.md](enforcement.md). Notes on the tooling: [dependencies/readme.md](dependencies/readme.md).
+The diagram in section 5 shows the allowed layering. Generated graphs live in [dependencies/](dependencies/readme.md): a tach diagram of the declared dependencies and a pydeps graph of the actual imports. They are visualisations only; the rules are enforced as described in [enforcement.md](enforcement.md).

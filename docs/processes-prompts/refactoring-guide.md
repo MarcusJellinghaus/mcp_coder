@@ -236,4 +236,4 @@ Before merging a refactoring PR:
 
 - [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md) — general rules for pure moves, shared across repos (read by the review supervisor skills)
 - [Architecture Documentation](../architecture/architecture.md)
-- [Dependency Management](../architecture/dependencies/readme.md)
+- [Architecture Enforcement](../architecture/enforcement.md)
