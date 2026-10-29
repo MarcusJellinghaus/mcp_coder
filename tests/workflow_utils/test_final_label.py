@@ -1,8 +1,8 @@
 """Tests for apply_final_label (retry once, then exit code 1)."""
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 from unittest.mock import MagicMock, patch
 
 import pytest

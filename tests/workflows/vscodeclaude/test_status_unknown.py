@@ -1,6 +1,6 @@
 """A failed live issue fetch is "unknown", never "closed"."""
 
-from typing import Callable
+from collections.abc import Callable
 from unittest.mock import MagicMock, Mock
 
 import pytest

@@ -63,7 +63,7 @@ def update_workflow_label(
 
     Raises:
         GitHubRateLimitError: If a GitHub rate limit is hit.
-    """
+    """  # noqa: DOC502 - raised via raise_if_rate_limited
     try:
         # Check for pre-validated issue number
         if validated_issue_number is not None:

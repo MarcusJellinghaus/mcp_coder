@@ -44,7 +44,7 @@ def raise_if_rate_limited(exc: BaseException) -> None:
 
     Raises:
         GitHubRateLimitError: If exc is or wraps a GitHub rate limit.
-    """
+    """  # noqa: DOC502 - raised as a variable, type not visible to ruff
     rate_limit = as_rate_limit(exc)
     if rate_limit is exc:
         raise exc

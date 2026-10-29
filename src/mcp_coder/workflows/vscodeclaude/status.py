@@ -47,7 +47,7 @@ def get_issue_current_status(
     Raises:
         ValueError: If neither cached_issues nor issue_manager is provided.
         GitHubRateLimitError: If the live fetch hits a GitHub rate limit.
-    """
+    """  # noqa: DOC502 - raised via raise_if_rate_limited
     # Try cache first
     if cached_issues is not None and issue_number in cached_issues:
         issue = cached_issues[issue_number]

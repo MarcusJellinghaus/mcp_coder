@@ -1,7 +1,7 @@
 """Tests for the rate-limit helpers in workflow_utils.rate_limit."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -47,7 +47,7 @@ class TestAsRateLimit:
     def test_rest_rate_limit_has_reset_at(self) -> None:
         result = as_rate_limit(_rest_rate_limit())
         assert isinstance(result, GitHubRateLimitError)
-        assert result.reset_at == datetime.fromtimestamp(RESET_EPOCH, tz=timezone.utc)
+        assert result.reset_at == datetime.fromtimestamp(RESET_EPOCH, tz=UTC)
 
     def test_graphql_rate_limit_without_reset_at(self) -> None:
         result = as_rate_limit(_graphql_rate_limit())
@@ -88,7 +88,7 @@ class TestLogRateLimitStop:
     """log_rate_limit_stop writes one line with or without the reset time."""
 
     def test_with_reset_at(self, caplog: pytest.LogCaptureFixture) -> None:
-        reset_at = datetime.fromtimestamp(RESET_EPOCH, tz=timezone.utc)
+        reset_at = datetime.fromtimestamp(RESET_EPOCH, tz=UTC)
         with caplog.at_level(logging.DEBUG):
             log_rate_limit_stop(GitHubRateLimitError("limited", reset_at))
         assert "GitHub rate limit hit" in caplog.text
