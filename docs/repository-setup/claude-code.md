@@ -258,7 +258,7 @@ docs/
 ├── README.md                              (optional)
 ├── architecture/
 │   ├── architecture.md                    (mandatory - used by /implementation_review)
-│   ├── architecture-maintenance.md
+│   ├── architecture-maintenance.md        (optional - when to update architecture.md)
 │   └── dependencies/
 │       ├── readme.md
 │       ├── dependency_graph.html          (generated)
