@@ -12,9 +12,9 @@ from ...mcp_workspace_github import (
     EventData,
     IssueBranchManager,
     IssueData,
-    IssueEventType,
     IssueManager,
-    PullRequestData,
+    OpenPullRequest,
+    PullRequestCache,
     PullRequestManager,
     get_trusted_commenters,
     is_trusted_author,
@@ -79,13 +79,15 @@ def _escalate(
 def _resolve_pr_target(
     issue: IssueData,
     branch_manager: IssueBranchManager,
-    pr_manager: PullRequestManager,
+    pr_cache: PullRequestCache,
     repo_owner: str,
     repo_gh_name: str,
-) -> tuple[str | None, PullRequestData | None]:
+) -> tuple[str | None, OpenPullRequest | None]:
     """Resolve an issue's branch and open PR once.
 
-    Never raises, except ``GitHubRateLimitError``.
+    Never raises, except ``GitHubRateLimitError``: any other branch-lookup
+    failure skips the issue, any other PR-lookup failure degrades to the
+    CI-only check.
 
     Returns:
         ``(None, None)`` when no branch could be resolved (skip the issue),
@@ -105,17 +107,18 @@ def _resolve_pr_target(
     if branch is None:
         return None, None
     try:
-        prs = pr_manager.find_pull_request_by_head(branch)
+        pr = pr_cache.find_pr(branch)
     except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
         raise_if_rate_limited(exc)
         logger.warning("Failed to look up PR for issue #%d: %s", issue["number"], exc)
         return branch, None
-    return branch, (prs[0] if prs else None)
+    return branch, pr
 
 
 def _check_merge_conflict(
     issue: IssueData,
-    pr: PullRequestData,
+    pr: OpenPullRequest,
+    pr_cache: PullRequestCache,
     issue_manager: IssueManager,
     repo_name: str,
     target_label_name: str,
@@ -130,7 +133,7 @@ def _check_merge_conflict(
         True iff a merge conflict was detected (label update attempted).
     """
     try:
-        if pr["mergeable_state"] == "dirty":
+        if pr_cache.mergeable_state(pr, issue) == "dirty":
             _escalate(
                 issue, issue_manager, "merge_conflict", target_label_name, repo_name
             )
@@ -149,12 +152,17 @@ def _check_merge_conflict(
 def _check_ci(
     issue: IssueData,
     branch: str,
+    pr: OpenPullRequest | None,
+    pr_cache: PullRequestCache,
     ci_manager: CIResultsManager,
     issue_manager: IssueManager,
     repo_name: str,
     target_label_name: str,
 ) -> bool:
     """Escalate a status-10 PR to status-81 if its latest CI run failed.
+
+    With an open PR the status comes from ``pr_cache``; without one it is
+    fetched live for ``branch``.
 
     Never raises, except ``GitHubRateLimitError``: any other failure is
     logged and swallowed so one bad issue can't block the rest of the batch
@@ -164,7 +172,11 @@ def _check_ci(
         True iff a failed CI run was detected (label update attempted).
     """
     try:
-        status = ci_manager.get_latest_ci_status(branch)
+        status = (
+            pr_cache.ci_status(pr, issue)
+            if pr is not None
+            else ci_manager.get_latest_ci_status(branch)
+        )
         run = status.get("run", {})
         if run.get("status") == "completed" and run.get("conclusion") != "success":
             _escalate(issue, issue_manager, "failing_ci", target_label_name, repo_name)
@@ -182,8 +194,8 @@ def _check_ci(
 
 def _check_review_comments(
     issue: IssueData,
-    pr: PullRequestData,
-    pr_manager: PullRequestManager,
+    pr: OpenPullRequest,
+    pr_cache: PullRequestCache,
     issue_manager: IssueManager,
     repo_name: str,
     review_label_name: str,
@@ -222,7 +234,7 @@ def _check_review_comments(
         def ok(login: str | None, association: str | None) -> bool:
             return is_trusted_author(login, association, trusted)
 
-        feedback = pr_manager.get_pr_feedback(pr["number"])
+        feedback = pr_cache.feedback(pr, issue)
         threads = feedback["unresolved_threads"]
         if any(ok(t["author"], t["author_association"]) for t in threads):
             _escalate(
@@ -240,7 +252,7 @@ def _check_review_comments(
         ]
         watermark = (
             _review_comments_watermark(
-                issue_manager.get_issue_events(issue["number"], IssueEventType.LABELED),
+                pr_cache.label_events(pr, issue),
                 review_label_name,
                 created_label_name,
             )
@@ -292,11 +304,13 @@ def check_pr_health(
 ) -> None:
     """Run PR-health checks on the repo's status-10 issues.
 
-    Never raises, except ``GitHubRateLimitError``.
+    Never raises, except ``GitHubRateLimitError``, which propagates.
 
     Checks run in a fixed order — merge conflict, failing CI, review
     comments — and stop at the first hit, so each issue gets at most one
-    label change per poll.
+    label change per poll. All PR queries go through one run-scoped
+    ``PullRequestCache``, saved once after the loop (also when a rate limit
+    ends it early).
 
     Args:
         repo_name: Repository config name, used only in the OUTPUT line.
@@ -320,7 +334,7 @@ def check_pr_health(
         issue_manager = IssueManager(repo_url=repo_url)
         branch_manager = IssueBranchManager(repo_url=repo_url)
         ci_manager = CIResultsManager(repo_url=repo_url)
-        pr_manager = PullRequestManager(repo_url=repo_url)
+        pr_cache = PullRequestCache.load(PullRequestManager(repo_url=repo_url))
         label_names = build_label_lookups(
             load_labels_config(get_labels_config_path(None))
         )["id_to_name"]
@@ -330,38 +344,50 @@ def check_pr_health(
         logger.warning("PR-health: skipping repo %s: %s", repo_name, exc)
         return
 
-    for issue in pr_issues:
-        branch, pr = _resolve_pr_target(
-            issue, branch_manager, pr_manager, repo_owner, repo_gh_name
-        )
-        if branch is None:
-            continue
-        _ = (
-            (
-                pr is not None
-                and _check_merge_conflict(
-                    issue, pr, issue_manager, repo_name, label_names["merge_conflict"]
+    try:
+        for issue in pr_issues:
+            branch, pr = _resolve_pr_target(
+                issue, branch_manager, pr_cache, repo_owner, repo_gh_name
+            )
+            if branch is None:
+                continue
+            _ = (
+                (
+                    pr is not None
+                    and _check_merge_conflict(
+                        issue,
+                        pr,
+                        pr_cache,
+                        issue_manager,
+                        repo_name,
+                        label_names["merge_conflict"],
+                    )
                 )
-            )
-            or _check_ci(
-                issue,
-                branch,
-                ci_manager,
-                issue_manager,
-                repo_name,
-                label_names["failing_ci"],
-            )
-            or (
-                pr is not None
-                and _check_review_comments(
+                or _check_ci(
                     issue,
+                    branch,
                     pr,
-                    pr_manager,
+                    pr_cache,
+                    ci_manager,
                     issue_manager,
                     repo_name,
-                    label_names["pr_review_comments"],
-                    label_names["pr_created"],
-                    trusted,
+                    label_names["failing_ci"],
+                )
+                or (
+                    pr is not None
+                    and _check_review_comments(
+                        issue,
+                        pr,
+                        pr_cache,
+                        issue_manager,
+                        repo_name,
+                        label_names["pr_review_comments"],
+                        label_names["pr_created"],
+                        trusted,
+                    )
                 )
             )
-        )
+    finally:
+        # Keeps fetched results when a rate limit came from elsewhere; the
+        # cache's own rate limit makes this a no-op.
+        pr_cache.save()

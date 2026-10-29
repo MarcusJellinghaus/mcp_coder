@@ -30,3 +30,9 @@ def test_underscore_cache_aliases_removed(name: str) -> None:
 def test_rate_limit_names_exported(name: str) -> None:
     assert hasattr(shim, name)
     assert name in shim.__all__
+
+
+@pytest.mark.parametrize("name", ["PullRequestCache", "OpenPullRequest"])
+def test_pull_request_cache_names_exported(name: str) -> None:
+    assert hasattr(shim, name)
+    assert name in shim.__all__

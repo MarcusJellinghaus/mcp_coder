@@ -27,7 +27,6 @@ from tests.github_factories import make_issue_data
 from tests.workflows.vscodeclaude.conftest import make_assessment, make_session_at
 from tests.workflows.vscodeclaude.test_checks import (
     REPO_CONFIG,
-    _make_pr,
     _make_pr_issue,
     _setup,
 )
@@ -66,15 +65,19 @@ class TestCheckPrHealthRateLimit:
         "manager_index, method",
         [
             (1, "get_branch_with_pr_fallback"),
-            (3, "find_pull_request_by_head"),
+            (3, "find_pr"),
+            (3, "mergeable_state"),
+            (3, "ci_status"),
             (2, "get_latest_ci_status"),
-            (3, "get_pr_feedback"),
+            (3, "feedback"),
         ],
     )
     def test_limit_in_first_issue_propagates(
         self, monkeypatch: pytest.MonkeyPatch, manager_index: int, method: str
     ) -> None:
         mocks = _setup(monkeypatch)
+        if method == "get_latest_ci_status":
+            mocks[3].find_pr.return_value = None  # no open PR → live CI lookup
         getattr(mocks[manager_index], method).side_effect = _rate_limit()
         branch_manager = mocks[1]
 
@@ -88,10 +91,8 @@ class TestCheckPrHealthRateLimit:
     def test_escalate_label_limit_propagates(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _, branch_manager, _, pr_manager = _setup(monkeypatch)
-        pr_manager.find_pull_request_by_head.return_value = [
-            _make_pr(mergeable_state="dirty")
-        ]
+        _, branch_manager, _, pr_cache = _setup(monkeypatch)
+        pr_cache.mergeable_state.return_value = "dirty"
         monkeypatch.setattr(
             f"{CHECKS}.update_workflow_label",
             Mock(side_effect=GitHubRateLimitError("limited")),

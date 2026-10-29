@@ -32,6 +32,12 @@ from mcp_workspace.github_operations import (
 # Caching: recognise rate-limit exceptions raised by managers
 from mcp_workspace.github_operations.caching.errors import to_rate_limit_error
 
+# Caching: run-scoped open-PR cache (caching/__init__.py is import-free)
+from mcp_workspace.github_operations.caching.pull_requests import (
+    OpenPullRequest,
+    PullRequestCache,
+)
+
 # CI results submodule (TypedDicts + helpers)
 from mcp_workspace.github_operations.ci_results_manager import (
     JobData,
@@ -89,6 +95,8 @@ __all__: list[str] = [
     # PR
     "PullRequestManager",
     "PullRequestData",
+    "PullRequestCache",
+    "OpenPullRequest",
     "ChangesRequestedData",
     "ConversationCommentData",
     "ReviewThreadData",

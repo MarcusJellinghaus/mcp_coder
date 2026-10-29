@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import PullRequestData
+from mcp_coder.mcp_workspace_github import EventData, OpenPullRequest
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflows.vscodeclaude.checks import _check_review_comments
 from tests.workflows.vscodeclaude._review_comments_helpers import (
@@ -39,7 +39,6 @@ class TestCheckReviewCommentsTrust:
         issue_manager = MagicMock()
         issue_manager.project_dir = None
         issue_manager.transition_issue_label.return_value = True
-        issue_manager.get_issue_events.return_value = []
         monkeypatch.setattr(
             "mcp_coder.workflow_utils.label_transitions.load_labels_config",
             lambda *a, **k: MOCK_REVIEW_LABELS_CONFIG,
@@ -52,22 +51,24 @@ class TestCheckReviewCommentsTrust:
         issue_manager: MagicMock,
         caplog: pytest.LogCaptureFixture,
         trusted: frozenset[str] = frozenset(),
-        pr: PullRequestData | None = None,
+        pr: OpenPullRequest | None = None,
+        events: list[EventData] | None = None,
     ) -> tuple[bool, MagicMock]:
-        pr_manager = MagicMock()
-        pr_manager.get_pr_feedback.return_value = feedback
+        pr_cache = MagicMock()
+        pr_cache.feedback.return_value = feedback
+        pr_cache.label_events.return_value = [] if events is None else events
         with caplog.at_level(OUTPUT, logger=CHECKS):
             result = _check_review_comments(
                 _make_issue(20),
                 pr or PR,
-                pr_manager,
+                pr_cache,
                 issue_manager,
                 "test-repo",
                 REVIEW_LABEL,
                 CREATED_LABEL,
                 trusted,
             )
-        return result, pr_manager
+        return result, pr_cache
 
     def test_untrusted_thread_only(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
@@ -75,7 +76,7 @@ class TestCheckReviewCommentsTrust:
         """An untrusted thread alone logs one line, no label, no events fetch."""
         issue_manager = self._issue_manager(monkeypatch)
 
-        result, _ = self._call(
+        result, pr_cache = self._call(
             _empty_pr_feedback(unresolved_threads=[_thread("stranger", "NONE")]),
             issue_manager,
             caplog,
@@ -86,7 +87,7 @@ class TestCheckReviewCommentsTrust:
             "PR-health: test-repo #20: untrusted PR feedback from @stranger"
             " — review manually"
         ]
-        issue_manager.get_issue_events.assert_not_called()
+        pr_cache.label_events.assert_not_called()
         issue_manager.transition_issue_label.assert_not_called()
 
     def test_untrusted_review_only(
@@ -213,7 +214,7 @@ class TestCheckReviewCommentsTrust:
         """An untrusted PR author: no feedback fetch, one OUTPUT line."""
         issue_manager = self._issue_manager(monkeypatch)
 
-        result, pr_manager = self._call(
+        result, pr_cache = self._call(
             _empty_pr_feedback(conversation_comments=[_comment(AFTER_WATERMARK)]),
             issue_manager,
             caplog,
@@ -221,7 +222,7 @@ class TestCheckReviewCommentsTrust:
         )
 
         assert result is False
-        pr_manager.get_pr_feedback.assert_not_called()
+        pr_cache.feedback.assert_not_called()
         issue_manager.transition_issue_label.assert_not_called()
         assert _output_messages(caplog) == [
             "PR-health: test-repo #20: untrusted PR author @stranger"
@@ -231,11 +232,10 @@ class TestCheckReviewCommentsTrust:
     def test_events_fetched_at_most_once(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Several reviews and comments share one get_issue_events call."""
+        """Several reviews and comments share one label_events call."""
         issue_manager = self._issue_manager(monkeypatch)
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
-        self._call(
+        _, pr_cache = self._call(
             _empty_pr_feedback(
                 changes_requested=[
                     _review(BEFORE_WATERMARK, author="a", association="NONE"),
@@ -248,16 +248,16 @@ class TestCheckReviewCommentsTrust:
             ),
             issue_manager,
             caplog,
+            events=WATERMARK_EVENTS,
         )
 
-        issue_manager.get_issue_events.assert_called_once()
+        pr_cache.label_events.assert_called_once()
 
     def test_old_untrusted_items_log_nothing(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Untrusted reviews/comments older than the watermark log no line."""
         issue_manager = self._issue_manager(monkeypatch)
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
         result, _ = self._call(
             _empty_pr_feedback(
@@ -270,6 +270,7 @@ class TestCheckReviewCommentsTrust:
             ),
             issue_manager,
             caplog,
+            events=WATERMARK_EVENTS,
         )
 
         assert result is False
@@ -280,9 +281,8 @@ class TestCheckReviewCommentsTrust:
     ) -> None:
         """An untrusted thread is reported even when other items are old."""
         issue_manager = self._issue_manager(monkeypatch)
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
-        result, _ = self._call(
+        result, pr_cache = self._call(
             _empty_pr_feedback(
                 unresolved_threads=[_thread("stranger", "NONE")],
                 conversation_comments=[
@@ -291,10 +291,11 @@ class TestCheckReviewCommentsTrust:
             ),
             issue_manager,
             caplog,
+            events=WATERMARK_EVENTS,
         )
 
         assert result is False
-        issue_manager.get_issue_events.assert_called_once()
+        pr_cache.label_events.assert_called_once()
         assert _output_messages(caplog) == [
             "PR-health: test-repo #20: untrusted PR feedback from @stranger"
             " — review manually"

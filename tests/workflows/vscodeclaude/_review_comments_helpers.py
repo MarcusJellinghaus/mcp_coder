@@ -9,7 +9,7 @@ from mcp_coder.mcp_workspace_github import (
     ConversationCommentData,
     EventData,
     IssueData,
-    PullRequestData,
+    OpenPullRequest,
     ReviewThreadData,
 )
 from mcp_coder.utils.log_utils import OUTPUT
@@ -23,27 +23,17 @@ BEFORE_WATERMARK = "2024-01-15T00:00:00+00:00"
 AFTER_WATERMARK = "2024-07-01T00:00:00+00:00"
 
 
-def _make_pr(
-    user: str | None = "owner", association: str | None = "OWNER"
-) -> PullRequestData:
+def _make_pr(user: str | None = "owner", association: str = "OWNER") -> OpenPullRequest:
     return {
         "number": 1,
-        "title": "PR",
-        "body": "",
-        "state": "open",
         "head_branch": "1-fix",
-        "head_sha": None,
+        "head_sha": "abc123",
+        "head_label": "owner:1-fix",
         "base_branch": "main",
-        "url": "https://github.com/owner/repo/pull/1",
-        "created_at": None,
         "updated_at": None,
         "user": user,
-        "mergeable": None,
-        "mergeable_state": "clean",
-        "merged": False,
-        "draft": False,
-        "assignees": [],
         "author_association": association,
+        "draft": False,
     }
 
 

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData, PullRequestData
+from mcp_coder.mcp_workspace_github import IssueData, OpenPullRequest
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflows.vscodeclaude.checks import (
     _check_ci,
@@ -76,25 +76,17 @@ def _make_pr_issue(number: int, labels: list[str] | None = None) -> IssueData:
     )
 
 
-def _make_pr(number: int = 1, mergeable_state: str = "clean") -> PullRequestData:
+def _make_pr(number: int = 1) -> OpenPullRequest:
     return {
         "number": number,
-        "title": "PR",
-        "body": "",
-        "state": "open",
         "head_branch": f"{number}-fix",
-        "head_sha": None,
+        "head_sha": "abc123",
+        "head_label": f"owner:{number}-fix",
         "base_branch": "main",
-        "url": f"https://github.com/owner/repo/pull/{number}",
-        "created_at": None,
         "updated_at": None,
         "user": "owner",
-        "mergeable": None,
-        "mergeable_state": mergeable_state,
-        "merged": False,
-        "draft": False,
-        "assignees": [],
         "author_association": "OWNER",
+        "draft": False,
     }
 
 
@@ -110,18 +102,21 @@ def _empty_feedback() -> dict[str, Any]:
 
 
 def _default_mocks() -> tuple[MagicMock, MagicMock, MagicMock, MagicMock]:
+    """Build the issue/branch/CI manager mocks and the ``PullRequestCache`` mock."""
     issue_manager = MagicMock()
     issue_manager.project_dir = None
     issue_manager.transition_issue_label.return_value = True
-    issue_manager.get_issue_events.return_value = []
     branch_manager = MagicMock()
     branch_manager.get_branch_with_pr_fallback.return_value = "999-fix"
     ci_manager = MagicMock()
     ci_manager.get_latest_ci_status.return_value = {"run": {}, "jobs": []}
-    pr_manager = MagicMock()
-    pr_manager.find_pull_request_by_head.return_value = [_make_pr()]
-    pr_manager.get_pr_feedback.return_value = _empty_feedback()
-    return issue_manager, branch_manager, ci_manager, pr_manager
+    pr_cache = MagicMock()
+    pr_cache.find_pr.return_value = _make_pr()
+    pr_cache.mergeable_state.return_value = "clean"
+    pr_cache.ci_status.return_value = {"run": {}, "jobs": []}
+    pr_cache.feedback.return_value = _empty_feedback()
+    pr_cache.label_events.return_value = []
+    return issue_manager, branch_manager, ci_manager, pr_cache
 
 
 def _patch_env(
@@ -130,10 +125,10 @@ def _patch_env(
     issue_manager: MagicMock,
     branch_manager: MagicMock,
     ci_manager: MagicMock,
-    pr_manager: MagicMock,
+    pr_cache: MagicMock,
     labels_config: dict[str, Any] | None = None,
 ) -> MagicMock:
-    """Patch the managers and config lookups.
+    """Patch the managers, the PR cache and config lookups.
 
     Returns:
         The ``get_trusted_commenters`` mock (returns an empty allowlist).
@@ -144,7 +139,10 @@ def _patch_env(
     monkeypatch.setattr(f"{CHECKS}.IssueManager", lambda **kw: issue_manager)
     monkeypatch.setattr(f"{CHECKS}.IssueBranchManager", lambda **kw: branch_manager)
     monkeypatch.setattr(f"{CHECKS}.CIResultsManager", lambda **kw: ci_manager)
-    monkeypatch.setattr(f"{CHECKS}.PullRequestManager", lambda **kw: pr_manager)
+    monkeypatch.setattr(f"{CHECKS}.PullRequestManager", lambda **kw: MagicMock())
+    cache_cls = MagicMock()
+    cache_cls.load.return_value = pr_cache
+    monkeypatch.setattr(f"{CHECKS}.PullRequestCache", cache_cls)
     monkeypatch.setattr(f"{CHECKS}.get_github_username", lambda: "testuser")
     monkeypatch.setattr(
         f"{CHECKS}._filter_eligible_vscodeclaude_issues", lambda issues, user: issues
@@ -159,14 +157,19 @@ def _patch_env(
 def _setup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock]:
+    """Patch the environment with default mocks.
+
+    Returns:
+        ``(issue_manager, branch_manager, ci_manager, pr_cache)``.
+    """
     mocks = _default_mocks()
-    issue_manager, branch_manager, ci_manager, pr_manager = mocks
+    issue_manager, branch_manager, ci_manager, pr_cache = mocks
     _patch_env(
         monkeypatch,
         issue_manager=issue_manager,
         branch_manager=branch_manager,
         ci_manager=ci_manager,
-        pr_manager=pr_manager,
+        pr_cache=pr_cache,
     )
     return mocks
 
@@ -182,10 +185,8 @@ class TestCheckPrHealth:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A status-10 issue whose PR is dirty gets escalated to status-71."""
-        issue_manager, _, _, pr_manager = _setup(monkeypatch)
-        pr_manager.find_pull_request_by_head.return_value = [
-            _make_pr(mergeable_state="dirty")
-        ]
+        issue_manager, _, _, pr_cache = _setup(monkeypatch)
+        pr_cache.mergeable_state.return_value = "dirty"
 
         _run(_make_pr_issue(999))
 
@@ -198,8 +199,8 @@ class TestCheckPrHealth:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A clean PR with green CI and no feedback is left untouched."""
-        issue_manager, _, ci_manager, _ = _setup(monkeypatch)
-        ci_manager.get_latest_ci_status.return_value = {
+        issue_manager, _, _, pr_cache = _setup(monkeypatch)
+        pr_cache.ci_status.return_value = {
             "run": {"status": "completed", "conclusion": "success"},
             "jobs": [],
         }
@@ -212,8 +213,8 @@ class TestCheckPrHealth:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A status-10 issue whose latest CI run failed gets escalated to status-81."""
-        issue_manager, _, ci_manager, _ = _setup(monkeypatch)
-        ci_manager.get_latest_ci_status.return_value = {
+        issue_manager, _, _, pr_cache = _setup(monkeypatch)
+        pr_cache.ci_status.return_value = {
             "run": {"status": "completed", "conclusion": "failure"},
             "jobs": [],
         }
@@ -236,19 +237,19 @@ class TestCheckPrHealth:
         self, monkeypatch: pytest.MonkeyPatch, run: dict[str, Any]
     ) -> None:
         """A successful or still-running CI run is left untouched."""
-        issue_manager, _, ci_manager, _ = _setup(monkeypatch)
-        ci_manager.get_latest_ci_status.return_value = {"run": run, "jobs": []}
+        issue_manager, _, _, pr_cache = _setup(monkeypatch)
+        pr_cache.ci_status.return_value = {"run": run, "jobs": []}
 
         _run(_make_pr_issue(994))
 
         issue_manager.transition_issue_label.assert_not_called()
 
-    def test_ci_manager_exception_is_swallowed(
+    def test_ci_status_exception_is_swallowed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A CIResultsManager exception is swallowed; it does not raise."""
-        issue_manager, _, ci_manager, _ = _setup(monkeypatch)
-        ci_manager.get_latest_ci_status.side_effect = RuntimeError("GitHub API boom")
+        """A CI status exception is swallowed; it does not raise."""
+        issue_manager, _, _, pr_cache = _setup(monkeypatch)
+        pr_cache.ci_status.side_effect = RuntimeError("GitHub API boom")
 
         _run(_make_pr_issue(991))
 
@@ -258,67 +259,71 @@ class TestCheckPrHealth:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A dirty PR never reaches the CI check or the review-comments check."""
-        _, _, ci_manager, pr_manager = _setup(monkeypatch)
-        pr_manager.find_pull_request_by_head.return_value = [
-            _make_pr(mergeable_state="dirty")
-        ]
+        _, _, ci_manager, pr_cache = _setup(monkeypatch)
+        pr_cache.mergeable_state.return_value = "dirty"
 
         _run(_make_pr_issue(990))
 
+        pr_cache.ci_status.assert_not_called()
         ci_manager.get_latest_ci_status.assert_not_called()
-        pr_manager.get_pr_feedback.assert_not_called()
+        pr_cache.feedback.assert_not_called()
 
     def test_failed_ci_skips_review_check(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A failing CI run never reaches the review-comments check."""
-        _, _, ci_manager, pr_manager = _setup(monkeypatch)
-        ci_manager.get_latest_ci_status.return_value = {
+        _, _, _, pr_cache = _setup(monkeypatch)
+        pr_cache.ci_status.return_value = {
             "run": {"status": "completed", "conclusion": "failure"},
             "jobs": [],
         }
 
         _run(_make_pr_issue(989))
 
-        pr_manager.get_pr_feedback.assert_not_called()
+        pr_cache.feedback.assert_not_called()
 
     def test_no_branch_skips_pr_and_ci_lookups(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """An issue with no resolvable branch calls neither the PR nor the CI API."""
-        issue_manager, branch_manager, ci_manager, pr_manager = _setup(monkeypatch)
+        issue_manager, branch_manager, ci_manager, pr_cache = _setup(monkeypatch)
         branch_manager.get_branch_with_pr_fallback.return_value = None
 
         _run(_make_pr_issue(997))
 
-        pr_manager.find_pull_request_by_head.assert_not_called()
+        pr_cache.find_pr.assert_not_called()
+        pr_cache.ci_status.assert_not_called()
         ci_manager.get_latest_ci_status.assert_not_called()
         issue_manager.transition_issue_label.assert_not_called()
 
-    def test_no_pr_found_still_checks_ci(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """No PR for the branch: CI is checked, conflict and review are not."""
-        issue_manager, _, ci_manager, pr_manager = _setup(monkeypatch)
-        pr_manager.find_pull_request_by_head.return_value = []
+    def test_no_pr_found_checks_ci_live(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """No open PR: CI is checked live, conflict and review are not."""
+        issue_manager, _, ci_manager, pr_cache = _setup(monkeypatch)
+        pr_cache.find_pr.return_value = None
 
         _run(_make_pr_issue(988))
 
         ci_manager.get_latest_ci_status.assert_called_once_with("999-fix")
-        pr_manager.get_pr_feedback.assert_not_called()
+        pr_cache.ci_status.assert_not_called()
+        pr_cache.mergeable_state.assert_not_called()
+        pr_cache.feedback.assert_not_called()
         issue_manager.transition_issue_label.assert_not_called()
 
     def test_non_status_10_issues_build_no_managers(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Without status-10 issues no manager is built."""
+        """Without status-10 issues no manager or cache is built."""
         _setup(monkeypatch)
         mock_issue_manager_cls = MagicMock()
         mock_branch_manager_cls = MagicMock()
         mock_ci_manager_cls = MagicMock()
         mock_pr_manager_cls = MagicMock()
+        mock_cache_cls = MagicMock()
         monkeypatch.setattr(f"{CHECKS}.IssueManager", mock_issue_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.IssueBranchManager", mock_branch_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.CIResultsManager", mock_ci_manager_cls)
         monkeypatch.setattr(f"{CHECKS}.PullRequestManager", mock_pr_manager_cls)
+        monkeypatch.setattr(f"{CHECKS}.PullRequestCache", mock_cache_cls)
 
         _run(_make_pr_issue(123, labels=["status-01:created"]))
 
@@ -326,6 +331,7 @@ class TestCheckPrHealth:
         mock_branch_manager_cls.assert_not_called()
         mock_ci_manager_cls.assert_not_called()
         mock_pr_manager_cls.assert_not_called()
+        mock_cache_cls.load.assert_not_called()
 
     def test_setup_failure_logs_warning_and_does_not_raise(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
@@ -348,24 +354,24 @@ class TestCheckPrHealth:
 
     def test_one_lookup_per_issue(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Branch and PR are each looked up exactly once per issue."""
-        _, branch_manager, _, pr_manager = _setup(monkeypatch)
+        _, branch_manager, _, pr_cache = _setup(monkeypatch)
 
         _run(_make_pr_issue(986))
 
         branch_manager.get_branch_with_pr_fallback.assert_called_once()
-        pr_manager.find_pull_request_by_head.assert_called_once()
+        pr_cache.find_pr.assert_called_once_with("999-fix")
 
     def test_trusted_commenters_read_once_per_poll(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The allowlist is read once per check_pr_health call, not per issue."""
-        issue_manager, branch_manager, ci_manager, pr_manager = _default_mocks()
+        issue_manager, branch_manager, ci_manager, pr_cache = _default_mocks()
         get_trusted = _patch_env(
             monkeypatch,
             issue_manager=issue_manager,
             branch_manager=branch_manager,
             ci_manager=ci_manager,
-            pr_manager=pr_manager,
+            pr_cache=pr_cache,
         )
 
         check_pr_health(
@@ -373,7 +379,7 @@ class TestCheckPrHealth:
         )
 
         get_trusted.assert_called_once_with()
-        assert pr_manager.get_pr_feedback.call_count == 2
+        assert pr_cache.feedback.call_count == 2
 
 
 class TestResolvePrTarget:
@@ -385,29 +391,29 @@ class TestResolvePrTarget:
         """A branch-lookup exception yields (None, None) and a warning."""
         branch_manager = MagicMock()
         branch_manager.get_branch_with_pr_fallback.side_effect = ValueError("boom")
-        pr_manager = MagicMock()
+        pr_cache = MagicMock()
 
         with caplog.at_level(logging.WARNING, logger=CHECKS):
             result = _resolve_pr_target(
-                _make_pr_issue(1), branch_manager, pr_manager, "owner", "repo"
+                _make_pr_issue(1), branch_manager, pr_cache, "owner", "repo"
             )
 
         assert result == (None, None)
         assert any(r.levelno == logging.WARNING for r in caplog.records)
-        pr_manager.find_pull_request_by_head.assert_not_called()
+        pr_cache.find_pr.assert_not_called()
 
     def test_no_branch_returns_none_none(self) -> None:
         """No resolvable branch yields (None, None) without a PR lookup."""
         branch_manager = MagicMock()
         branch_manager.get_branch_with_pr_fallback.return_value = None
-        pr_manager = MagicMock()
+        pr_cache = MagicMock()
 
         result = _resolve_pr_target(
-            _make_pr_issue(2), branch_manager, pr_manager, "owner", "repo"
+            _make_pr_issue(2), branch_manager, pr_cache, "owner", "repo"
         )
 
         assert result == (None, None)
-        pr_manager.find_pull_request_by_head.assert_not_called()
+        pr_cache.find_pr.assert_not_called()
 
     def test_pr_lookup_raises_returns_branch_none(
         self, caplog: pytest.LogCaptureFixture
@@ -415,12 +421,12 @@ class TestResolvePrTarget:
         """A PR-lookup exception yields (branch, None) and a warning."""
         branch_manager = MagicMock()
         branch_manager.get_branch_with_pr_fallback.return_value = "3-fix"
-        pr_manager = MagicMock()
-        pr_manager.find_pull_request_by_head.side_effect = RuntimeError("boom")
+        pr_cache = MagicMock()
+        pr_cache.find_pr.side_effect = RuntimeError("boom")
 
         with caplog.at_level(logging.WARNING, logger=CHECKS):
             result = _resolve_pr_target(
-                _make_pr_issue(3), branch_manager, pr_manager, "owner", "repo"
+                _make_pr_issue(3), branch_manager, pr_cache, "owner", "repo"
             )
 
         assert result == ("3-fix", None)
@@ -430,40 +436,41 @@ class TestResolvePrTarget:
         """No PR for the branch yields (branch, None)."""
         branch_manager = MagicMock()
         branch_manager.get_branch_with_pr_fallback.return_value = "4-fix"
-        pr_manager = MagicMock()
-        pr_manager.find_pull_request_by_head.return_value = []
+        pr_cache = MagicMock()
+        pr_cache.find_pr.return_value = None
 
         result = _resolve_pr_target(
-            _make_pr_issue(4), branch_manager, pr_manager, "owner", "repo"
+            _make_pr_issue(4), branch_manager, pr_cache, "owner", "repo"
         )
 
         assert result == ("4-fix", None)
 
-    def test_pr_found_returns_branch_and_first_pr(self) -> None:
-        """A found PR yields (branch, prs[0])."""
+    def test_pr_found_returns_branch_and_pr(self) -> None:
+        """A found PR yields (branch, pr)."""
         branch_manager = MagicMock()
         branch_manager.get_branch_with_pr_fallback.return_value = "5-fix"
-        pr_manager = MagicMock()
-        first = _make_pr(7)
-        pr_manager.find_pull_request_by_head.return_value = [first, _make_pr(8)]
+        pr_cache = MagicMock()
+        pr = _make_pr(7)
+        pr_cache.find_pr.return_value = pr
 
         result = _resolve_pr_target(
-            _make_pr_issue(5), branch_manager, pr_manager, "owner", "repo"
+            _make_pr_issue(5), branch_manager, pr_cache, "owner", "repo"
         )
 
-        assert result == ("5-fix", first)
+        assert result == ("5-fix", pr)
+        pr_cache.find_pr.assert_called_once_with("5-fix")
 
     def test_pr_lookup_raises_still_checks_ci_via_check_pr_health(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A PR-lookup failure still runs the CI check, but no PR-based check."""
-        issue_manager, _, ci_manager, pr_manager = _setup(monkeypatch)
-        pr_manager.find_pull_request_by_head.side_effect = RuntimeError("boom")
+        """A PR-lookup failure still runs the live CI check, but no PR-based check."""
+        issue_manager, _, ci_manager, pr_cache = _setup(monkeypatch)
+        pr_cache.find_pr.side_effect = RuntimeError("boom")
 
         _run(_make_pr_issue(6))
 
         ci_manager.get_latest_ci_status.assert_called_once_with("999-fix")
-        pr_manager.get_pr_feedback.assert_not_called()
+        pr_cache.feedback.assert_not_called()
         issue_manager.transition_issue_label.assert_not_called()
 
 
@@ -472,9 +479,11 @@ class TestCheckCi:
 
     def _mocks(
         self, monkeypatch: pytest.MonkeyPatch, run_status: dict[str, Any]
-    ) -> tuple[MagicMock, MagicMock]:
+    ) -> tuple[MagicMock, MagicMock, MagicMock]:
         ci_manager = MagicMock()
         ci_manager.get_latest_ci_status.return_value = run_status
+        pr_cache = MagicMock()
+        pr_cache.ci_status.return_value = run_status
         issue_manager = MagicMock()
         issue_manager.project_dir = None
         issue_manager.transition_issue_label.return_value = True
@@ -482,12 +491,21 @@ class TestCheckCi:
             "mcp_coder.workflow_utils.label_transitions.load_labels_config",
             lambda *a, **k: MOCK_CI_LABELS_CONFIG,
         )
-        return ci_manager, issue_manager
+        return ci_manager, pr_cache, issue_manager
 
-    def _call(self, ci_manager: MagicMock, issue_manager: MagicMock) -> bool:
+    def _call(
+        self,
+        ci_manager: MagicMock,
+        pr_cache: MagicMock,
+        issue_manager: MagicMock,
+        pr: OpenPullRequest | None = None,
+        issue: IssueData | None = None,
+    ) -> bool:
         return _check_ci(
-            _make_pr_issue(123),
+            issue or _make_pr_issue(123),
             "123-fix",
+            pr,
+            pr_cache,
             ci_manager,
             issue_manager,
             "test-repo",
@@ -496,42 +514,55 @@ class TestCheckCi:
 
     def test_returns_true_when_ci_failed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A failed CI run returns True."""
-        ci_manager, issue_manager = self._mocks(
+        ci_manager, pr_cache, issue_manager = self._mocks(
             monkeypatch,
             {"run": {"status": "completed", "conclusion": "failure"}, "jobs": []},
         )
 
-        assert self._call(ci_manager, issue_manager) is True
+        assert self._call(ci_manager, pr_cache, issue_manager) is True
         ci_manager.get_latest_ci_status.assert_called_once_with("123-fix")
+
+    def test_with_pr_uses_cache(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """With an open PR the status comes from the cache, not the live API."""
+        ci_manager, pr_cache, issue_manager = self._mocks(
+            monkeypatch,
+            {"run": {"status": "completed", "conclusion": "failure"}, "jobs": []},
+        )
+        pr = _make_pr(123)
+        issue = _make_pr_issue(123)
+
+        assert self._call(ci_manager, pr_cache, issue_manager, pr, issue) is True
+        pr_cache.ci_status.assert_called_once_with(pr, issue)
+        ci_manager.get_latest_ci_status.assert_not_called()
 
     def test_returns_false_when_ci_successful(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A successful CI run returns False."""
-        ci_manager, issue_manager = self._mocks(
+        ci_manager, pr_cache, issue_manager = self._mocks(
             monkeypatch,
             {"run": {"status": "completed", "conclusion": "success"}, "jobs": []},
         )
 
-        assert self._call(ci_manager, issue_manager) is False
+        assert self._call(ci_manager, pr_cache, issue_manager) is False
 
     def test_returns_false_when_ci_pending(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A still-running CI run returns False."""
-        ci_manager, issue_manager = self._mocks(
+        ci_manager, pr_cache, issue_manager = self._mocks(
             monkeypatch,
             {"run": {"status": "in_progress", "conclusion": None}, "jobs": []},
         )
 
-        assert self._call(ci_manager, issue_manager) is False
+        assert self._call(ci_manager, pr_cache, issue_manager) is False
 
     def test_returns_false_on_exception(self) -> None:
         """A CIResultsManager exception is swallowed and returns False."""
         ci_manager = MagicMock()
         ci_manager.get_latest_ci_status.side_effect = RuntimeError("boom")
 
-        assert self._call(ci_manager, MagicMock()) is False
+        assert self._call(ci_manager, MagicMock(), MagicMock()) is False
 
 
 class TestPrHealthOutput:
@@ -546,10 +577,8 @@ class TestPrHealthOutput:
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
         """An escalation logs exactly one OUTPUT line naming repo, issue and label."""
-        _, _, _, pr_manager = _setup(monkeypatch)
-        pr_manager.find_pull_request_by_head.return_value = [
-            _make_pr(mergeable_state="dirty")
-        ]
+        _, _, _, pr_cache = _setup(monkeypatch)
+        pr_cache.mergeable_state.return_value = "dirty"
 
         with caplog.at_level(OUTPUT, logger=CHECKS):
             _run(_make_pr_issue(999))
@@ -579,6 +608,8 @@ class TestPrHealthOutput:
         issue_manager = MagicMock()
         issue_manager.project_dir = None
         issue_manager.transition_issue_label.return_value = False
+        pr_cache = MagicMock()
+        pr_cache.mergeable_state.return_value = "dirty"
         monkeypatch.setattr(
             "mcp_coder.workflow_utils.label_transitions.load_labels_config",
             lambda *a, **k: MOCK_MERGE_CONFLICT_LABELS_CONFIG,
@@ -587,7 +618,8 @@ class TestPrHealthOutput:
         with caplog.at_level(OUTPUT, logger=CHECKS):
             result = _check_merge_conflict(
                 _make_pr_issue(999),
-                _make_pr(mergeable_state="dirty"),
+                _make_pr(),
+                pr_cache,
                 issue_manager,
                 "test-repo",
                 "status-71:merge-conflict",
