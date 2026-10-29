@@ -66,9 +66,9 @@ See [step_6.md](./steps/step_6.md)
 ### Step 7: Coordinator — stop on rate limit, partial-dispatch exit code
 See [step_7.md](./steps/step_7.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: vscodeclaude entry points — `launch` and `status` under a rate limit
 See [step_8.md](./steps/step_8.md)

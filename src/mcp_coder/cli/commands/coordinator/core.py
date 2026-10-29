@@ -19,6 +19,7 @@ from ....mcp_workspace_github import (
 from ....utils.jenkins_operations.client import JenkinsClient
 from ....utils.jenkins_operations.diagnostics import job_url_path
 from ....utils.user_config import get_config_file_path, get_config_values
+from ....workflow_utils.rate_limit import as_rate_limit
 from .command_templates import PRIORITY_ORDER, WORKFLOW_TEMPLATES
 from .workflow_constants import WORKFLOW_MAPPING
 
@@ -369,7 +370,7 @@ def dispatch_workflow(
     issue_manager: IssueManager,
     branch_manager: IssueBranchManager,
     log_level: str,
-) -> None:
+) -> bool:
     """Trigger Jenkins job for workflow and update issue label.
 
     Args:
@@ -381,6 +382,10 @@ def dispatch_workflow(
         issue_manager: IssueManager for label updates
         branch_manager: IssueBranchManager for branch resolution
         log_level: Log level to pass to workflow command
+
+    Returns:
+        True unless the Jenkins job started but the label swap hit a GitHub
+        rate limit.
 
     Raises:
         ValueError: If linked branch missing for implement/create-pr
@@ -408,7 +413,7 @@ def dispatch_workflow(
             logger.error(
                 f"Invalid GitHub URL in repo config: {repo_config['repo_url']}"
             )
-            return
+            return True
 
         repo_owner, issue_repo_name = repo_id.owner, repo_id.repo_name
 
@@ -426,7 +431,7 @@ def dispatch_workflow(
                 f"  Issue URL: {issue['url']}\n"
                 f"  Requirement: Issue must have linked branch or draft/open PR"
             )
-            return
+            return True
 
         branch_name = resolved_branch
 
@@ -470,8 +475,21 @@ def dispatch_workflow(
         jenkins_link = f"Pipeline: {pipeline_url}"
 
     # Step 7: Update issue labels (remove old, add new)
-    issue_manager.remove_labels(issue["number"], current_label)
-    issue_manager.add_labels(issue["number"], workflow_config["next_label"])
+    try:
+        issue_manager.remove_labels(issue["number"], current_label)
+        issue_manager.add_labels(issue["number"], workflow_config["next_label"])
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        if as_rate_limit(exc) is None:
+            raise
+        logger.error(
+            "Issue #%d: Jenkins job started, label not updated "
+            "(old label '%s', intended label '%s'): %s",
+            issue["number"],
+            current_label,
+            workflow_config["next_label"],
+            exc,
+        )
+        return False
 
     # Step 8: Log success with issue and Jenkins links
     issue_url = issue["url"]
@@ -480,3 +498,4 @@ def dispatch_workflow(
         f"removed '{current_label}', added '{workflow_config['next_label']}' | "
         f"Issue: {issue_url} | {jenkins_link}",
     )
+    return True

@@ -8,6 +8,7 @@ This module contains tests for:
 
 import argparse
 import logging
+from collections.abc import Iterator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,6 +19,7 @@ from mcp_coder.cli.commands.coordinator import (
     execute_coordinator_test,
     format_job_output,
 )
+from mcp_coder.mcp_workspace_github import GithubException, GitHubRateLimitError
 from mcp_coder.utils.jenkins_operations.client import JenkinsError
 from mcp_coder.utils.jenkins_operations.models import JobStatus
 from tests.github_factories import make_issue_data
@@ -259,7 +261,7 @@ class TestExecuteCoordinatorRun:
         ]
 
         # Setup - Mock dispatch_workflow succeeds (no exception)
-        mock_dispatch_workflow.return_value = None
+        mock_dispatch_workflow.return_value = True
 
         # Execute
         result = execute_coordinator_run(args)
@@ -367,3 +369,191 @@ class TestExecuteCoordinatorRun:
 
         # Verify message logged
         assert "Created default config file" in caplog.text
+
+
+def _rest_rate_limit() -> GithubException:
+    return GithubException(
+        403,
+        {"message": "API rate limit exceeded"},
+        headers={"x-ratelimit-remaining": "0", "x-ratelimit-reset": "1900000000"},
+    )
+
+
+def _reset_lines(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [r.getMessage() for r in caplog.records if "reset" in r.getMessage()]
+
+
+_COMMANDS = "mcp_coder.cli.commands.coordinator.commands"
+
+
+class TestExecuteCoordinatorRunRateLimit:
+    """A GitHub rate limit stops the coordinator run with exit 0 (one log line)."""
+
+    @pytest.fixture
+    def mocks(self) -> Iterator[dict[str, MagicMock]]:
+        """Patch everything around execute_coordinator_run for two repos.
+
+        Yields:
+            The patched callables keyed by name.
+        """
+        repo_config = {
+            "repo_url": "https://github.com/user/mcp_coder.git",
+            "executor_job_path": "MCP_Coder/executor-test",
+            "github_credentials_id": "github-pat-123",
+            "executor_os": "linux",
+        }
+        with (
+            patch(f"{_COMMANDS}.create_default_config", return_value=False),
+            patch(
+                f"{_COMMANDS}.load_config",
+                return_value={"coordinator": {"repos": {"repo_a": {}, "repo_b": {}}}},
+            ),
+            patch(
+                f"{_COMMANDS}.get_jenkins_credentials",
+                return_value=("https://jenkins.example.com", "u", "t"),
+            ),
+            patch(f"{_COMMANDS}.JenkinsClient") as jenkins_cls,
+            patch(
+                f"{_COMMANDS}.load_repo_config", return_value=repo_config
+            ) as load_repo,
+            patch(f"{_COMMANDS}.IssueManager") as issue_mgr_cls,
+            patch(f"{_COMMANDS}.IssueBranchManager") as branch_mgr_cls,
+            patch(f"{_COMMANDS}.get_cached_eligible_issues") as get_cached,
+            patch(f"{_COMMANDS}.get_eligible_issues") as get_eligible,
+            patch(f"{_COMMANDS}.update_issue_labels_in_cache") as update_cache,
+        ):
+            jenkins = jenkins_cls.return_value
+            jenkins.base_url = "https://jenkins.example.com"
+            jenkins.get_job_status.return_value = MagicMock(url=None)
+            branch_mgr_cls.return_value.get_branch_with_pr_fallback.return_value = (
+                "feature/issue-123"
+            )
+            get_cached.return_value = [
+                make_issue_data(
+                    number=123,
+                    title="Implement feature",
+                    labels=["status-05:plan-ready"],
+                    url="https://github.com/user/mcp_coder/issues/123",
+                )
+            ]
+            yield {
+                "jenkins": jenkins,
+                "load_repo": load_repo,
+                "issue_mgr_cls": issue_mgr_cls,
+                "branch_mgr": branch_mgr_cls.return_value,
+                "get_cached": get_cached,
+                "get_eligible": get_eligible,
+                "update_cache": update_cache,
+            }
+
+    @staticmethod
+    def _args() -> argparse.Namespace:
+        return argparse.Namespace(
+            command="coordinator",
+            repo=None,
+            all=True,
+            log_level="INFO",
+            force_refresh=False,
+        )
+
+    def test_cached_issues_rate_limit_stops_run(
+        self, mocks: dict[str, MagicMock], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mocks["get_cached"].side_effect = GitHubRateLimitError("limited")
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_run(self._args())
+
+        assert result == 0
+        mocks["get_eligible"].assert_not_called()
+        assert mocks["load_repo"].call_count == 1  # second repo not processed
+        assert len(_reset_lines(caplog)) == 1
+
+    def test_branch_lookup_rate_limit_skips_start_job(
+        self, mocks: dict[str, MagicMock], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mocks["branch_mgr"].get_branch_with_pr_fallback.side_effect = _rest_rate_limit()
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_run(self._args())
+
+        assert result == 0
+        mocks["jenkins"].start_job.assert_not_called()
+        assert len(_reset_lines(caplog)) == 1
+
+    def test_partial_dispatch_returns_1_without_cache_update(
+        self, mocks: dict[str, MagicMock], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mocks["issue_mgr_cls"].return_value.add_labels.side_effect = _rest_rate_limit()
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_run(self._args())
+
+        assert result == 1
+        mocks["jenkins"].start_job.assert_called_once()
+        mocks["update_cache"].assert_not_called()
+        errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1
+        assert "#123" in errors[0]
+        assert "status-05:plan-ready" in errors[0]
+        assert "status-06:implementing" in errors[0]
+
+    def test_fallback_fetch_raw_rate_limit_exits_0(
+        self, mocks: dict[str, MagicMock], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mocks["get_cached"].side_effect = RuntimeError("cache broken")
+        mocks["get_eligible"].side_effect = _rest_rate_limit()
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_run(self._args())
+
+        assert result == 0
+        assert len(_reset_lines(caplog)) == 1
+
+    def test_repo_setup_raw_rate_limit_exits_0(
+        self, mocks: dict[str, MagicMock], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mocks["issue_mgr_cls"].side_effect = _rest_rate_limit()
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_run(self._args())
+
+        assert result == 0
+        mocks["get_cached"].assert_not_called()
+        assert len(_reset_lines(caplog)) == 1
+
+    def test_value_error_wrapping_rate_limit_exits_0(
+        self, mocks: dict[str, MagicMock], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        def _raise_wrapped(*_args: object, **_kwargs: object) -> None:
+            try:
+                raise _rest_rate_limit()
+            except GithubException as e:
+                raise ValueError("could not get user") from e
+
+        mocks["issue_mgr_cls"].side_effect = _raise_wrapped
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_run(self._args())
+
+        assert result == 0
+        assert len(_reset_lines(caplog)) == 1
+
+    def test_plain_value_error_still_exits_1(
+        self, mocks: dict[str, MagicMock], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mocks["issue_mgr_cls"].side_effect = ValueError("bad config")
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_run(self._args())
+
+        assert result == 1
+        assert not _reset_lines(caplog)
+
+    def test_plain_runtime_error_still_raised(
+        self, mocks: dict[str, MagicMock]
+    ) -> None:
+        mocks["issue_mgr_cls"].side_effect = RuntimeError("boom")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            execute_coordinator_run(self._args())

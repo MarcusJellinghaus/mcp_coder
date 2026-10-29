@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_coder.cli.commands.coordinator import WORKFLOW_MAPPING, dispatch_workflow
-from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.mcp_workspace_github import GithubException, IssueData
 from tests.github_factories import make_issue_data
 
 
@@ -47,7 +47,7 @@ class TestDispatchWorkflow:
         mock_jenkins.get_job_status.return_value = MagicMock(status="queued")
 
         # Execute
-        dispatch_workflow(
+        result = dispatch_workflow(
             issue=issue,
             workflow_name="create-plan",
             repo_config=repo_config,
@@ -57,6 +57,7 @@ class TestDispatchWorkflow:
             branch_manager=mock_branch_mgr,
             log_level="INFO",
         )
+        assert result is True
 
         # Verify - Jenkins job started with correct parameters
         mock_jenkins.start_job.assert_called_once()
@@ -167,7 +168,7 @@ class TestDispatchWorkflow:
         caplog.set_level(logging.ERROR, logger="mcp_coder.cli.commands.coordinator")
 
         # Execute - should complete gracefully without raising exception
-        dispatch_workflow(
+        result = dispatch_workflow(
             issue=issue,
             workflow_name="create-pr",
             repo_config=repo_config,
@@ -177,6 +178,7 @@ class TestDispatchWorkflow:
             branch_manager=mock_branch_mgr,
             log_level="INFO",
         )
+        assert result is True
 
         # Verify RepoIdentifier.from_repo_url was called
         mock_repo_id_cls.from_repo_url.assert_called_once_with(
@@ -241,7 +243,7 @@ class TestDispatchWorkflow:
         mock_jenkins.base_url = "https://jenkins.test.com"
 
         # Execute - should complete successfully
-        dispatch_workflow(
+        result = dispatch_workflow(
             issue=issue,
             workflow_name="implement",
             repo_config=repo_config,
@@ -251,6 +253,7 @@ class TestDispatchWorkflow:
             branch_manager=mock_branch_mgr,
             log_level="INFO",
         )
+        assert result is True
 
         # Verify RepoIdentifier.from_repo_url was called
         mock_repo_id_cls.from_repo_url.assert_called_once_with(
@@ -273,6 +276,109 @@ class TestDispatchWorkflow:
             123, "status-05:plan-ready"
         )
         mock_issue_mgr.add_labels.assert_called_once_with(123, "status-06:implementing")
+
+
+def _rest_rate_limit() -> GithubException:
+    return GithubException(
+        403,
+        {"message": "API rate limit exceeded"},
+        headers={"x-ratelimit-remaining": "0", "x-ratelimit-reset": "1900000000"},
+    )
+
+
+class TestDispatchWorkflowRateLimit:
+    """Rate limits during dispatch: before start_job propagate, after it return False."""
+
+    REPO_CONFIG = {
+        "repo_url": "https://github.com/test/repo.git",
+        "executor_job_path": "Tests/executor",
+        "github_credentials_id": "github-pat",
+        "executor_os": "linux",
+    }
+
+    @staticmethod
+    def _issue() -> IssueData:
+        return make_issue_data(
+            number=123,
+            title="Implement feature",
+            labels=["status-05:plan-ready"],
+            url="https://github.com/test/repo/issues/123",
+        )
+
+    def test_branch_lookup_rate_limit_propagates_before_start_job(self) -> None:
+        mock_jenkins = MagicMock()
+        mock_issue_mgr = MagicMock()
+        mock_branch_mgr = MagicMock()
+        mock_branch_mgr.get_branch_with_pr_fallback.side_effect = _rest_rate_limit()
+
+        with pytest.raises(GithubException):
+            dispatch_workflow(
+                issue=self._issue(),
+                workflow_name="implement",
+                repo_config=self.REPO_CONFIG,
+                repo_name="mcp_coder",
+                jenkins_client=mock_jenkins,
+                issue_manager=mock_issue_mgr,
+                branch_manager=mock_branch_mgr,
+                log_level="INFO",
+            )
+
+        mock_jenkins.start_job.assert_not_called()
+
+    def test_label_swap_rate_limit_returns_false(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mock_jenkins = MagicMock()
+        mock_jenkins.base_url = "https://jenkins.test.com"
+        mock_jenkins.get_job_status.return_value = MagicMock(url=None)
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr.add_labels.side_effect = _rest_rate_limit()
+        mock_branch_mgr = MagicMock()
+        mock_branch_mgr.get_branch_with_pr_fallback.return_value = "feature/issue-123"
+
+        with caplog.at_level(logging.ERROR):
+            result = dispatch_workflow(
+                issue=self._issue(),
+                workflow_name="implement",
+                repo_config=self.REPO_CONFIG,
+                repo_name="mcp_coder",
+                jenkins_client=mock_jenkins,
+                issue_manager=mock_issue_mgr,
+                branch_manager=mock_branch_mgr,
+                log_level="INFO",
+            )
+
+        assert result is False
+        mock_jenkins.start_job.assert_called_once()
+        errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1
+        message = errors[0].getMessage()
+        assert "#123" in message
+        assert "status-05:plan-ready" in message
+        assert "status-06:implementing" in message
+
+    def test_label_swap_other_error_propagates(self) -> None:
+        mock_jenkins = MagicMock()
+        mock_jenkins.base_url = "https://jenkins.test.com"
+        mock_jenkins.get_job_status.return_value = MagicMock(url=None)
+        mock_issue_mgr = MagicMock()
+        mock_issue_mgr.add_labels.side_effect = GithubException(
+            404, {"message": "Not Found"}
+        )
+        mock_branch_mgr = MagicMock()
+        mock_branch_mgr.get_branch_with_pr_fallback.return_value = "feature/issue-123"
+
+        with pytest.raises(GithubException):
+            dispatch_workflow(
+                issue=self._issue(),
+                workflow_name="implement",
+                repo_config=self.REPO_CONFIG,
+                repo_name="mcp_coder",
+                jenkins_client=mock_jenkins,
+                issue_manager=mock_issue_mgr,
+                branch_manager=mock_branch_mgr,
+                log_level="INFO",
+            )
 
 
 class TestDispatchWorkflowSilentFallthroughGuard:
