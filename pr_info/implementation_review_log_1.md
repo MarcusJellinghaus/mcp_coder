@@ -8,3 +8,11 @@ src/mcp_coder/workflows/create_pr/core.py:700 — low — `phase_b` still logs "
 Verdict(decision='tasks', tasks=["In src/mcp_coder/cli/commands/coordinator/commands_vscodeclaude.py:269, when a rate limit interrupts restart_closed_sessions partway, still print the 'Restarted …' OUTPUT lines for sessions already relaunched. Either have restart_closed_sessions return or expose the partial list, for example on the raised exception, or collect results incrementally so the caller can report them. Add a test that covers a rate limit after at least one successful restart.", "In src/mcp_coder/workflows/create_pr/core.py:700, log the 'Create PR workflow completed successfully!' message in phase_b only when apply_final_label returns 0. Otherwise log a warning or error that matches the non-zero exit code. Add or adjust a test that covers the apply_final_label failure path."], escalate_reason=None)
 **Changes**:
 applied
+
+## Round 2 — 2026-10-29
+**Findings**:
+Reviewed coordinator, shim, rate-limit helper, checks/issues/status/assessment diffs; now checking session_launch/restart and library behaviour of `BranchLookupCache.lookup`.Source reviewed; verifying whether `GitHubRateLimitError` subclasses `GithubException` (would make `lookup_branch` swallow rate limits).Checking the coordinator parser's subcommand naming for the traffic-log command name, then writing the report.src/mcp_coder/cli/commands/coordinator/commands_vscodeclaude.py:318 — low — a rate limit in a later repo inside `_launch_for_repos` drops the "Started N new session(s)" summary (`total_started`, `:354`) for sessions already launched in earlier repos. This is the same gap that round 1 fixed for restarted sessions.
+**Decisions**:
+Verdict(decision='tasks', tasks=["In src/mcp_coder/cli/commands/coordinator/commands_vscodeclaude.py:318, when a rate limit interrupts _launch_for_repos in a later repo, still print the 'Started N new session(s)' summary for sessions already launched in earlier repos. Follow the same approach used in round 1 for restarted sessions, carrying total_started (:354) through the rate-limit exit. Add a test where a rate limit hits after at least one repo has already launched a session."], escalate_reason=None)
+**Changes**:
+applied
