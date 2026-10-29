@@ -161,6 +161,26 @@ Sessions are tracked in:
 - **Windows**: `%USERPROFILE%\.mcp_coder\coordinator_cache\vscodeclaude_sessions.json`
 - **Linux**: `~/.mcp_coder/coordinator_cache/vscodeclaude_sessions.json`
 
+### GitHub rate limits and caches
+
+`coordinator`, `vscodeclaude launch` and `vscodeclaude status` share one GitHub API budget. On the first rate-limit error they stop all remaining GitHub work, log one line with the reset time (`reset time unknown` for GraphQL and retry errors) and exit 0.
+
+- **Coordinator partial dispatch** is the exception: if the Jenkins job was started but the label update hit the limit, one ERROR names the issue and the command exits non-zero.
+- **`vscodeclaude launch`**: cleanup and session bookkeeping still run; restart, PR-health checks and new launches are skipped until the next run.
+- **`vscodeclaude status`** (also with `--explain`) prints only the rate-limit line, no table.
+- A session whose issue state cannot be fetched is never treated as closed or stale.
+
+Cache files live next to `.issues.json` (same directory, same repo prefix) and are shared by all processes:
+
+| File | Contents |
+|------|----------|
+| `<repo>.prs.json` | Open PRs and PR-health results |
+| `<repo>.branches.json` | Issue → branch lookups |
+
+Workflows that update the final label (`--update-labels`, and always for `fix-conflict`) retry a failed update once after ~30 s, then exit non-zero.
+
+To log every GitHub request, enable `traffic_log` in the [`[github]` config section](configuration/config.md#github).
+
 ## Troubleshooting
 
 ### Sessions showing "-> Remove"
