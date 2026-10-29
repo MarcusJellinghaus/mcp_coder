@@ -13,6 +13,8 @@ import pytest
 
 from mcp_coder.mcp_workspace_github import (
     ClosingPRRef,
+    GithubException,
+    GitHubRateLimitError,
     IssueBranchManager,
     IssueManager,
 )
@@ -366,6 +368,31 @@ class TestLabelTransitions:
 
             assert result is False
             assert "ERROR" in caplog.text or "failed" in caplog.text.lower()
+
+    def test_update_workflow_label_rate_limit_raises(
+        self, mock_github: Mock, _mock_git_repo: Any, tmp_path: Path
+    ) -> None:
+        """A rate-limit GithubException raises GitHubRateLimitError."""
+        rate_limit = GithubException(
+            403,
+            {"message": "API rate limit exceeded"},
+            headers={"x-ratelimit-remaining": "0", "x-ratelimit-reset": "1900000000"},
+        )
+        with (
+            patch.object(IssueManager, "_get_repository", return_value=mock_github),
+            patch(
+                "mcp_coder.workflow_utils.label_transitions.load_labels_config",
+                return_value=MOCK_LABELS_CONFIG,
+            ),
+            patch.object(
+                IssueManager, "transition_issue_label", side_effect=rate_limit
+            ),
+        ):
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
+            with pytest.raises(GitHubRateLimitError):
+                update_workflow_label(
+                    manager, "implementing", "code_review", validated_issue_number=123
+                )
 
     def test_update_workflow_label_no_branch_provided(
         self,

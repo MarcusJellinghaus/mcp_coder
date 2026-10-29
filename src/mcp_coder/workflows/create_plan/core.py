@@ -693,7 +693,9 @@ def run_create_plan_workflow(
 
         # Update GitHub issue label if requested
         if update_issue_labels:
-            update_success_label(project_dir, issue_number)
+            rc = update_success_label(project_dir, issue_number)
+            if rc:
+                return rc
 
         logger.info("Create plan workflow completed successfully!")
         return 0

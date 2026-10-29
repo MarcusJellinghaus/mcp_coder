@@ -11,7 +11,6 @@ from pathlib import Path
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_latest_commit_sha
-from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import check_formatter_config
 from mcp_coder.workflow_steps.pr_description import refresh_pr_description
@@ -22,7 +21,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     llm_failure_reason,
     run_guarded,
 )
-from mcp_coder.workflow_utils.label_transitions import update_workflow_label
+from mcp_coder.workflow_utils.label_transitions import apply_final_label
 
 logger = logging.getLogger(__name__)
 
@@ -126,9 +125,7 @@ def run_fix_ci_workflow(
         _refresh_if_pushed()
         if ci_ok:
             if update_issue_labels:
-                update_workflow_label(
-                    IssueManager(project_dir), "fixing_ci", "pr_created"
-                )
+                return apply_final_label(project_dir, "fixing_ci", "pr_created")
             return 0
 
         return _fail(

@@ -40,22 +40,34 @@ def test_ci_passes_transitions_to_pr_created() -> None:
     with (
         patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
         patch(f"{MODULE}.check_and_fix_ci", return_value=True),
-        patch(f"{MODULE}.IssueManager") as mock_issue_cls,
-        patch(f"{MODULE}.update_workflow_label") as mock_update,
+        patch(f"{MODULE}.apply_final_label", return_value=0) as mock_update,
     ):
         result = run_fix_ci_workflow(PROJECT_DIR, "claude", update_issue_labels=True)
 
     assert result == 0
-    mock_update.assert_called_once_with(
-        mock_issue_cls.return_value, "fixing_ci", "pr_created"
-    )
+    mock_update.assert_called_once_with(PROJECT_DIR, "fixing_ci", "pr_created")
+
+
+def test_final_label_failure_returns_1_without_net() -> None:
+    with (
+        patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+        patch(f"{MODULE}.check_and_fix_ci", return_value=True),
+        patch(f"{MODULE}.apply_final_label", return_value=1),
+        patch(
+            "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure"
+        ) as mock_net,
+    ):
+        result = run_fix_ci_workflow(PROJECT_DIR, "claude", update_issue_labels=True)
+
+    assert result == 1
+    mock_net.assert_not_called()
 
 
 def test_ci_passes_no_label_update_when_disabled() -> None:
     with (
         patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
         patch(f"{MODULE}.check_and_fix_ci", return_value=True),
-        patch(f"{MODULE}.update_workflow_label") as mock_update,
+        patch(f"{MODULE}.apply_final_label") as mock_update,
     ):
         result = run_fix_ci_workflow(PROJECT_DIR, "claude", update_issue_labels=False)
 
@@ -268,8 +280,7 @@ class TestRefreshPrDescription:
         with (
             patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
             patch(f"{MODULE}.check_and_fix_ci", **check_kwargs),
-            patch(f"{MODULE}.IssueManager"),
-            patch(f"{MODULE}.update_workflow_label") as mock_update,
+            patch(f"{MODULE}.apply_final_label", return_value=0) as mock_update,
             patch(f"{MODULE}.handle_workflow_failure") as mock_handle,
             patch(BRANCH_HEAD, return_value=("feat", "abc1234")),
         ):

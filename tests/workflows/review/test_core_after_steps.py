@@ -93,7 +93,7 @@ def test_dismiss_rebase_clean_ci_green_succeeds(
         == REVIEW_IMPLEMENTATION.session_dir_name
     )
     env.handle_workflow_failure.assert_not_called()
-    from_id, to_id = _label_transition(env.update_workflow_label)
+    from_id, to_id = _label_transition(env.apply_final_label)
     assert from_id == REVIEW_IMPLEMENTATION.busy_label_id
     assert to_id == REVIEW_IMPLEMENTATION.success_label_id
 
@@ -113,7 +113,7 @@ def test_dismiss_rebase_conflict_routes_to_needs_human(
     # Rebase gate short-circuits: CI is never reached, no failure is raised.
     env.check_and_fix_ci.assert_not_called()
     env.handle_workflow_failure.assert_not_called()
-    from_id, to_id = _label_transition(env.update_workflow_label)
+    from_id, to_id = _label_transition(env.apply_final_label)
     assert from_id == REVIEW_IMPLEMENTATION.busy_label_id
     assert to_id == REVIEW_IMPLEMENTATION.escalate_label_id  # never success
     assert to_id != REVIEW_IMPLEMENTATION.success_label_id
@@ -210,7 +210,7 @@ def test_tasks_ci_red_carries_note_into_next_reviewer(
     assert "open CI finding" in round2_reviewer_prompt
     # Round 1's fresh reviewer (call index 0) did not (nothing pending yet).
     assert "open CI finding" not in env.prompt_llm.call_args_list[0].args[0]
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_IMPLEMENTATION.success_label_id
 
 
@@ -274,7 +274,7 @@ def test_tasks_rebase_conflict_routes_to_needs_human(
 
     assert result == 0  # needs-human handoff
     env.handle_workflow_failure.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_IMPLEMENTATION.escalate_label_id
     lines = env.issue_manager.return_value.add_comment.call_args.args[1].splitlines()
     assert "**Category:** Rebase conflict" in lines
@@ -323,7 +323,7 @@ def test_broadened_ci_except_does_not_swallow_rebase(
     assert result == 0  # needs-human handoff, never a failure label
     env.check_and_fix_ci.assert_not_called()
     env.handle_workflow_failure.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_IMPLEMENTATION.escalate_label_id
     lines = env.issue_manager.return_value.add_comment.call_args.args[1].splitlines()
     assert "**Category:** Rebase conflict" in lines
@@ -544,7 +544,7 @@ def test_pending_ci_note_exempts_round_from_severity_floor(
     apply_call = env.prompt_llm.call_args_list[8]
     assert apply_call.kwargs["session_id"] == "rev-1"
     assert "Fix the bug at foo.py:1" in apply_call.args[0]
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_IMPLEMENTATION.success_label_id
 
 

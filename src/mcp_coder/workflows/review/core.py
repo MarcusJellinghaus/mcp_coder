@@ -378,10 +378,9 @@ def run_review_workflow(
                     changes="dismiss",
                 )
                 _flush_round_log(project_dir)
-                _set_label(
+                return _set_label(
                     config, project_dir, config.success_label_id, update_issue_labels
                 )
-                return 0
 
             if verdict.decision == "escalate":
                 log_path = write_round_log(

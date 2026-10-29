@@ -72,9 +72,9 @@ def _run(project_dir: Path, **kwargs: Any) -> int:
 
 
 def _label_transition(mock: MagicMock) -> tuple[str, str]:
-    """Return the (from_label_id, to_label_id) of the last label update."""
-    kwargs = mock.call_args.kwargs
-    return kwargs["from_label_id"], kwargs["to_label_id"]
+    """Return the (from_label_id, to_label_id) of the last final-label call."""
+    _, from_id, to_id = mock.call_args.args
+    return from_id, to_id
 
 
 def test_dismiss_round_one_succeeds(env: SimpleNamespace, tmp_path: Path) -> None:
@@ -85,10 +85,33 @@ def test_dismiss_round_one_succeeds(env: SimpleNamespace, tmp_path: Path) -> Non
 
     assert result == 0
     env.handle_workflow_failure.assert_not_called()
-    env.update_workflow_label.assert_called_once()
-    from_id, to_id = _label_transition(env.update_workflow_label)
+    env.apply_final_label.assert_called_once()
+    from_id, to_id = _label_transition(env.apply_final_label)
     assert from_id == REVIEW_PLAN.busy_label_id
     assert to_id == REVIEW_PLAN.success_label_id
+
+
+@pytest.mark.parametrize("verdict", [_DISMISS, _ESCALATE])
+def test_final_label_failure_returns_1_without_net(
+    env: SimpleNamespace,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    verdict: str,
+) -> None:
+    """A failed final label (success or escalate) → exit 1, net stays silent."""
+    net = MagicMock()
+    monkeypatch.setattr(
+        "mcp_coder.workflow_utils.failure_handling.handle_workflow_failure", net
+    )
+    env.apply_final_label.return_value = 1
+    env.prompt_llm.side_effect = [_reviewer(), _resp(verdict)]
+
+    result = _run(tmp_path)
+
+    assert result == 1
+    env.apply_final_label.assert_called_once()
+    env.handle_workflow_failure.assert_not_called()
+    net.assert_not_called()
 
 
 def test_escalate_sets_escalate_label_and_logs_reason(
@@ -105,7 +128,7 @@ def test_escalate_sets_escalate_label_and_logs_reason(
 
     assert result == 0
     env.handle_workflow_failure.assert_not_called()
-    from_id, to_id = _label_transition(env.update_workflow_label)
+    from_id, to_id = _label_transition(env.apply_final_label)
     assert from_id == REVIEW_PLAN.busy_label_id
     assert to_id == REVIEW_PLAN.escalate_label_id
     # Handoff path: the last round's log is flushed (scoped to that file, never
@@ -154,7 +177,7 @@ def test_tasks_then_dismiss_resumes_reviewer(
         settings_file="s.json",
     )
     env.push_changes.assert_called_once()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_PLAN.success_label_id
 
 
@@ -292,7 +315,7 @@ def test_rounds_cap_exhausted_hands_off(env: SimpleNamespace, tmp_path: Path) ->
 
     assert result == 0
     env.handle_workflow_failure.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_PLAN.escalate_label_id
     # The last round's log is flushed to the committed review log, scoped.
     env.commit_paths.assert_called()
@@ -418,7 +441,7 @@ def test_labels_not_touched_when_gating_off(
     result = _run(tmp_path, update_issue_labels=False)
 
     assert result == 0
-    env.update_workflow_label.assert_not_called()
+    env.apply_final_label.assert_not_called()
 
 
 # --- Step 5: broadened excepts + empty-report retry + enriched comment ------
@@ -573,7 +596,7 @@ def test_low_severity_at_strict_round_downgrades_to_dismiss(
 
     assert result == 0
     env.handle_workflow_failure.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_PLAN.success_label_id
     # The loop stopped at round 3: no round-3 apply-tasks resume was issued.
     assert env.prompt_llm.call_count == 8
@@ -590,7 +613,7 @@ def test_high_severity_at_strict_round_stays_tasks(
 
     assert result == 0  # never downgraded -> hits the cap -> handoff (RC=0)
     env.handle_workflow_failure.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_PLAN.escalate_label_id
 
 
@@ -609,7 +632,7 @@ def test_unparseable_severity_fails_open_stays_tasks(
 
     assert result == 0  # fail open -> stays tasks -> cap -> handoff (RC=0)
     env.handle_workflow_failure.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_PLAN.escalate_label_id
 
 
@@ -635,5 +658,5 @@ def test_low_severity_below_strict_round_stays_tasks(
     # only round 3 was downgraded. 3 + 3 + 2 = 8 calls proves the loop was not
     # cut short at round 2.
     assert env.prompt_llm.call_count == 8
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_PLAN.success_label_id

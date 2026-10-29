@@ -24,7 +24,6 @@ from mcp_coder.mcp_workspace_git import (
 )
 from mcp_coder.mcp_workspace_github import (
     IssueBranchManager,
-    IssueManager,
     PullRequestData,
     PullRequestManager,
     get_authenticated_username,
@@ -44,7 +43,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     llm_failure_reason,
     run_guarded,
 )
-from mcp_coder.workflow_utils.label_transitions import update_workflow_label
+from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     get_incomplete_tasks,
@@ -680,21 +679,14 @@ def run_create_pr_workflow(
                 project_dir, branch, provider, mcp_config, settings_file
             )
 
+        rc = 0
         if update_issue_labels and cached_issue_number:
             logger.log(OUTPUT, "Updating GitHub issue label...")
-            try:
-                success = update_workflow_label(
-                    IssueManager(project_dir),
-                    from_label_id="pr_creating",
-                    to_label_id=label,
-                    validated_issue_number=cached_issue_number,
-                )
-                if success:
-                    logger.log(OUTPUT, "✓ Issue label updated: pr_creating → %s", label)
-                else:
-                    logger.warning("✗ Failed to update issue label (non-blocking)")
-            except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-                logger.error(f"Error updating issue label (non-blocking): {e}")
+            rc = apply_final_label(
+                project_dir, "pr_creating", label, cached_issue_number
+            )
+            if rc == 0:
+                logger.log(OUTPUT, "✓ Issue label updated: pr_creating → %s", label)
         else:
             if update_issue_labels:
                 logger.warning(
@@ -706,7 +698,7 @@ def run_create_pr_workflow(
             logger.log(OUTPUT, "Create PR workflow completed with warnings")
         else:
             logger.log(OUTPUT, "Create PR workflow completed successfully!")
-        return 0
+        return rc
 
     rc = run_guarded(
         phase_a,

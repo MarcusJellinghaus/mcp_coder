@@ -41,8 +41,8 @@ def routed(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(handoff, "_flush_round_log", mocks.flush)
     mocks.issue_manager = MagicMock(name="IssueManager")
     monkeypatch.setattr(handoff, "IssueManager", mocks.issue_manager)
-    mocks.update_workflow_label = MagicMock(return_value=True)
-    monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
+    mocks.apply_final_label = MagicMock(return_value=0)
+    monkeypatch.setattr(handoff, "apply_final_label", mocks.apply_final_label)
     return mocks
 
 
@@ -74,10 +74,31 @@ def test_route_flushes_comments_labels_returns_zero(
     assert "**Category:** X" in lines
     assert "**Reason:** Y" in lines
     assert "**Stage:** Plan Review, round 1" in lines
-    routed.update_workflow_label.assert_called_once()
-    kwargs = routed.update_workflow_label.call_args.kwargs
-    assert kwargs["from_label_id"] == REVIEW_PLAN.busy_label_id
-    assert kwargs["to_label_id"] == REVIEW_PLAN.escalate_label_id
+    routed.apply_final_label.assert_called_once_with(
+        tmp_path, REVIEW_PLAN.busy_label_id, REVIEW_PLAN.escalate_label_id
+    )
+
+
+def test_route_returns_1_when_escalate_label_fails(
+    routed: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A failed escalate label is the hand-off's exit code."""
+    routed.apply_final_label.return_value = 1
+
+    result = handoff._route_to_human(
+        REVIEW_PLAN,
+        tmp_path,
+        issue_number=42,
+        update_issue_labels=True,
+        post_issue_comments=True,
+        round_number=1,
+        start_time=time.time(),
+        category="X",
+        reason="Y",
+        log_path=None,
+    )
+
+    assert result == 1
 
 
 def test_route_flushes_before_posting_the_comment(
@@ -180,7 +201,7 @@ def test_rebase_handoff_fields_follow_the_table(
     assert f"**Reason:** {reason_text}" in lines
     assert f"**Next step:** {next_step}" in lines
     assert "**Stage:** Implementation Review, round 2" in lines
-    assert routed.update_workflow_label.call_args.kwargs["to_label_id"] == (
+    assert routed.apply_final_label.call_args.args[2] == (
         REVIEW_IMPLEMENTATION.escalate_label_id
     )
 
@@ -281,7 +302,7 @@ def test_route_skips_comment_when_gated_off(
     assert result == 0
     routed.flush.assert_called_once_with(tmp_path, only=log_path)
     routed.issue_manager.return_value.add_comment.assert_not_called()
-    routed.update_workflow_label.assert_called_once()
+    routed.apply_final_label.assert_called_once()
 
 
 def test_route_skips_comment_when_no_issue_number(
@@ -303,7 +324,7 @@ def test_route_skips_comment_when_no_issue_number(
 
     assert result == 0
     routed.issue_manager.return_value.add_comment.assert_not_called()
-    routed.update_workflow_label.assert_called_once()
+    routed.apply_final_label.assert_called_once()
 
 
 def test_route_comment_failure_is_best_effort(
@@ -326,7 +347,7 @@ def test_route_comment_failure_is_best_effort(
     )
 
     assert result == 0
-    routed.update_workflow_label.assert_called_once()
+    routed.apply_final_label.assert_called_once()
 
 
 def test_route_transitions_to_escalate_label_gated(
@@ -347,7 +368,7 @@ def test_route_transitions_to_escalate_label_gated(
     )
 
     assert result == 0
-    routed.update_workflow_label.assert_not_called()
+    routed.apply_final_label.assert_not_called()
 
 
 def test_route_without_a_round_log_commits_nothing(
@@ -369,7 +390,7 @@ def test_route_without_a_round_log_commits_nothing(
 
     assert result == 0
     routed.flush.assert_not_called()
-    routed.update_workflow_label.assert_called_once()
+    routed.apply_final_label.assert_called_once()
 
 
 def test_route_leaves_unrelated_dirty_files_uncommitted(
@@ -399,7 +420,7 @@ def test_route_leaves_unrelated_dirty_files_uncommitted(
     monkeypatch.setattr(handoff, "commit_all_changes", commit_all)
     monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
     monkeypatch.setattr(handoff, "IssueManager", MagicMock())
-    monkeypatch.setattr(handoff, "update_workflow_label", MagicMock(return_value=True))
+    monkeypatch.setattr(handoff, "apply_final_label", MagicMock(return_value=0))
 
     assert (
         handoff._route_to_human(
@@ -458,7 +479,7 @@ def test_route_lands_the_round_log_over_an_unrelated_staged_file(
 
     monkeypatch.setattr(handoff, "push_changes", MagicMock(return_value=True))
     monkeypatch.setattr(handoff, "IssueManager", MagicMock())
-    monkeypatch.setattr(handoff, "update_workflow_label", MagicMock(return_value=True))
+    monkeypatch.setattr(handoff, "apply_final_label", MagicMock(return_value=0))
 
     assert (
         handoff._route_to_human(
