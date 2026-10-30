@@ -17,7 +17,7 @@ A major restart from a later stage lands back on `status-01:created` (`mcp-coder
 
 Tier: interactive LLM session — you, or a supervisor skill.
 
-- vscodeclaude auto-launches `/issue_analyse`, then `/discuss` (from `labels.json`).
+- vscodeclaude auto-launches `/issue_analyse`, then `/discuss` (from `labels.json`). It only does so for issues assigned to you, so assign the issue to yourself first.
 - `/issue_analyse_supervisor` runs the analysis through subagents and approves (→ `status-02`). It escalates scope and requirements questions to you.
 
 ## Slash commands

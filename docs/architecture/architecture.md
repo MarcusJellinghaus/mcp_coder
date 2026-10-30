@@ -57,7 +57,7 @@ Overview following the [arc42](https://arc42.org) structure. It holds what stays
   - **PR health (71-74, 81-84, 91):** the coordinator checks open PRs on every poll and routes conflicts, failing CI and review comments back to a workflow or a human.
 
   Diagram and per-label behaviour: [Development Process](../processes-prompts/development-process.md). Setup: [Label Setup](../getting-started/label-setup.md).
-- **Orchestrator vs. worker.** mcp-coder supplies context and consumes results; the LLM creates content and uses tools. The orchestrator also verifies the LLM's work itself instead of trusting it. Today `implement` runs mypy after each task and the commit step runs the formatter, both Python tools called through the `mcp_tools_py` shim.
+- **Orchestrator vs. worker.** mcp-coder supplies context and consumes results; the LLM creates content and uses tools. The orchestrator also verifies the LLM's work itself instead of trusting it. Today `implement` re-runs mypy itself once after all tasks, with LLM fix attempts (`[tool.mcp-coder.implement] check_type_hints`, on by default), and the commit step runs the formatter (`format_code`, on by default), both Python tools called through the `mcp_tools_py` shim. The LLM also runs pylint, pytest and mypy during each task, as its prompt tells it to.
 - **One LLM interface, Claude Code first.** Callers use `llm.interface`; provider specifics stay in `llm/providers/`. Claude Code is the primary provider and drives the design (project-dir anchoring, session logs, MCP configuration). Other providers are kept working behind the same interface but are less exercised.
 - **Thin top, reusable bottom.** Workflows only sequence; composed steps and primitives sit below and are shared (see section 5).
 - **Architecture is enforced, not just described.** Layers, sibling independence and library wrappers are CI checks.
@@ -105,7 +105,7 @@ For module and function detail, read the module docstrings and the code. Each mo
 The default path through the issue lifecycle. Each step is one workflow run, triggered by a label. With `auto_review_plan` / `auto_review_implementation` on, an automated review runs between steps. Label names and failure branches: [Development Process](../processes-prompts/development-process.md).
 
 1. **Plan.** `create-plan` reads the issue and codebase through the LLM, posts the plan, and moves to plan review.
-2. **Implement.** After plan approval, `implement` loops over plan tasks: the LLM edits and runs checks, mcp-coder runs mypy, formats, commits and pushes. An agent that cannot verify its work writes `pr_info/.blocked.txt` and the run fails to a blocked label.
+2. **Implement.** After plan approval, `implement` loops over plan tasks: the LLM edits and runs checks, mcp-coder formats, commits and pushes, and after the last task runs a final mypy pass. An agent that cannot verify its work writes `pr_info/.blocked.txt` and the run fails to a blocked label.
 3. **Pull request.** After code approval, `create-pr` writes the PR, checks mergeability and waits for CI. `fix-conflict` and `fix-ci` handle the failure branches.
 4. **Review feedback.** PR comments, conflicts and failing CI route back to an interactive or automated session.
 
@@ -116,7 +116,7 @@ A project can be driven from any directory with `--project-dir`; see the executi
 ## 7. Deployment View
 
 - **Developer machine.** `mcp-coder` runs in its own tool environment; the target project has its own `.venv`, `.claude/` and `.mcp.json`. User settings are in `~/.mcp_coder/config.toml`.
-- **Automated runs (coordinator + Jenkins).** Jenkins is an executor, not a build server. The infrastructure lives in the separate [AutoRunner](https://github.com/MarcusJellinghaus/AutoRunner) repo (Jenkins master, agents, job definitions as a shared library). The two repos meet at the job parameters.
+- **Automated runs (coordinator + Jenkins).** Jenkins is an executor, not a build server. The infrastructure (Jenkins master, agents, job definitions as a shared library) lives outside this repository. The two meet at the job parameters.
   - A coordinator job runs `mcp-coder coordinator --all` every minute. It finds issues in a trigger label and starts the executor job once per issue, passing a `COMMAND` script generated from a template in mcp-coder.
   - The executor job checks out the repo, provisions the project's venv with `mcp-coder install`, and runs the `COMMAND`, which is one workflow call such as `mcp-coder implement --project-dir <checkout>`. A watchdog step in the template moves the issue to a failure label if the run died without setting one, so issues cannot sit at an in-progress label.
   - **Two environments.** A shared *tool* environment holds mcp-coder and the MCP servers. Each job also gets a *project* environment inside the checkout. The shell sits in the tool environment, the checkout elsewhere, so `--project-dir` is always explicit. See [environments](../environments/environments.md).

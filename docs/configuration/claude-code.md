@@ -1,252 +1,30 @@
 # Claude Code Configuration
 
-Configuration guide for Claude Code CLI to work with MCP Coder workflows.
+Installing Claude Code for MCP Coder workflows. The files inside a repository (`.claude/`, `.mcp.json`, permissions): [Claude Code Setup](../repository-setup/claude-code.md).
 
-## Overview
+## Prerequisites
 
-Claude Code CLI is the primary LLM interface for MCP Coder's automated workflows. This guide covers:
+- **Anthropic API key** (or a Claude subscription) for Claude access
+- **Python 3.11+** and **Git**
+- **GitHub token** for issue and PR workflows, configured in `~/.mcp_coder/config.toml` ([GitHub token](../repository-setup/github.md#github-token-configuration))
 
-- Claude Code CLI installation and verification
-- Project configuration files (`.claude/` folder)
-- Integration with mcp-coder commands
+## Install and verify
 
-> **Note:** For MCP server configuration (`.mcp.json`), see [Repository Setup Guide](../repository-setup/claude-code.md#mcpjson---mcp-server-configuration).
-
-## Installation
-
-### Prerequisites
-
-- **Anthropic API Key**: Required for Claude API access
-- **Python 3.11+**: For MCP server compatibility
-- **Git**: For repository operations
-- **GitHub Token**: Required for issue/PR workflows - configure in `~/.mcp_coder/config.toml` (see [Repository Setup](../repository-setup/github.md#github-token-configuration))
-
-### Claude Code CLI Installation
-
-Follow the installation guide at [Anthropic's documentation](https://code.claude.com/docs).
-
-### Windows Setup with `claude.bat`
-
-For Windows users, create a `claude.bat` launcher script in your project root. This approach is **recommended** over manual PATH configuration because it:
-
-- **Auto-activates** the virtual environment
-- **Sets environment variables** (`MCP_CODER_PROJECT_DIR`, `MCP_CODER_VENV_DIR`) required by MCP servers
-- **Disables auto-updater** for consistent behavior
-- **Clears screen** for clean startup
-
-**Example `claude.bat`:**
-
-```batch
-@echo off
-cls
-setlocal enabledelayedexpansion
-REM Simple launcher for Claude Code with MCP servers
-
-REM Check if virtual environment is activated
-if "!VIRTUAL_ENV!"=="" (
-    if not exist ".venv\Scripts\activate.bat" (
-        echo ERROR: Virtual environment not found at .venv
-        exit /b 1
-    )
-    echo Activating virtual environment...
-    call .venv\Scripts\activate.bat
-)
-
-REM Set project directories for MCP servers
-set "MCP_CODER_PROJECT_DIR=%CD%"
-set "MCP_CODER_VENV_DIR=%CD%\.venv"
-set "DISABLE_AUTOUPDATER=1"
-
-REM Start Claude Code
-echo Starting Claude Code with:
-echo MCP_CODER_PROJECT_DIR=!MCP_CODER_PROJECT_DIR!
-echo MCP_CODER_VENV_DIR=!MCP_CODER_VENV_DIR!
-C:\Users\%USERNAME%\.local\bin\claude.exe %*
-```
-
-**Usage:**
-```cmd
-cd your-project
-claude.bat
-```
-
-### Verification
+Install the CLI as described in [Anthropic's documentation](https://code.claude.com/docs), then:
 
 ```bash
-# Verify installation
 claude --version
-
-# Test basic functionality
 claude -p "Hello, Claude!"
 ```
 
-## Project Configuration Files
+## Launcher (Windows)
 
-Claude Code uses a `.claude/` folder in your project root for configuration.
+Start Claude through the `claude.bat` or `claude_local.bat` launchers from this repository rather than configuring PATH by hand. They activate the venv, set the MCP environment variables and disable the auto-updater: [Launcher Scripts](../repository-setup/claude-code.md#launcher-scripts). How the tool and project environments interact: [Environments](../environments/environments.md).
 
-### Directory Structure
+## Related documentation
 
-```
-your-project/
-├── .claude/
-│   ├── CLAUDE.md              # Project instructions (mandatory)
-│   ├── settings.local.json    # Local settings (optional)
-│   └── skills/                # Skills (optional)
-│       ├── commit_push/
-│       │   └── SKILL.md
-│       ├── plan_review/
-│       │   └── SKILL.md
-│       └── ...
-├── .mcp.json                  # MCP server config (see repository-setup/README.md)
-└── ...
-```
-
-### `.claude/CLAUDE.md` - Project Instructions
-
-This file contains **mandatory instructions** that Claude follows when working on your project. Claude reads this file at the start of every session. The file included with MCP Coder gives a strong preference to the related MCP servers. Adjust the instructions for your purposes. The MCP-Coder `implement` assumes to have access to the files and to be able to run pylint, pytest and mypy, prefereably via MCP-Coder.
-
-**Purpose:**
-
-- Define code quality requirements
-- Set project-specific conventions
-- Specify mandatory tool usage (e.g., MCP tools for quality checks: `run_pylint_check`, `run_pytest_check`, `run_mypy_check`, `run_lint_imports_check`, `run_vulture_check`, `run_format_code`)
-- Configure workflow behaviors
-
-**See mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example.**
-
-### `.claude/settings.local.json` - Local Settings
-
-This file configures Claude Code permissions and MCP server settings for your local environment. It should be gitignored since it may contain user-specific paths.
-
-**See mcp-coder's own [settings.local.json](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/settings.local.json) for a reference.**
-
-> **Pinning the settings file:** mcp-coder commands that drive Claude Code
-> accept `--settings <path>` to forward this file explicitly via Claude's
-> native `--settings` flag, overriding Claude's cwd-based discovery. Claude
-> runs in `--project-dir`, so discovery normally finds this repo's
-> file anyway; pinning still matters because Claude merges the pinned file
-> with whatever its own cwd walk finds. See
-> [Repository Setup — Pinning the settings file](../repository-setup/claude-code.md#pinning-the-settings-file-with---settings)
-> and [Configuration Guide](config.md#claude).
-
-**Key sections:**
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "mcp__mcp-workspace__*",
-      "mcp__mcp-tools-py__run_format_code",
-      "mcp__mcp-tools-py__run_lint_imports_check",
-      "mcp__mcp-tools-py__run_vulture_check",
-      "mcp__mcp-tools-py__get_library_source",
-      "Bash(git diff:*)",
-      "Bash(git status:*)",
-      "Skill(commit_push)",
-      "Skill(plan_review)"
-    ]
-  },
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "mcp-tools-py",
-    "mcp-workspace"
-  ]
-}
-```
-
-**Explanation:**
-
-| Setting | Purpose |
-|---------|---------|
-| `permissions.allow` | Pre-approved tools (avoids confirmation prompts) |
-| `enableAllProjectMcpServers` | Enable MCP servers defined in `.mcp.json` |
-| `enabledMcpjsonServers` | Specific MCP servers to enable |
-
-**Security considerations:**
-
-- **Allow MCP servers**: Enable `mcp__mcp-workspace__*` and specific `mcp__mcp-tools-py__` tools for development workflows
-- **Allow read-only commands**: `Bash(git diff:*)`, `Bash(git status:*)` are safe
-- **Allow formatting tools**: `mcp__mcp-tools-py__run_format_code` for code formatting via MCP
-- **Restrict dangerous commands**: Do NOT allow unrestricted `Bash(*)` - this could modify files outside the project or execute arbitrary commands
-
-**Gitignore:** For your own projects, add to `.gitignore`:
-
-```gitignore
-.claude/settings.local.json
-```
-
-> **Note:** In the mcp-coder repository itself, this file is tracked as a reference template for users.
-
-### `.claude/skills/` - Skills
-
-Skills provide structured workflows for common tasks. They appear as `/skill_name` in Claude Code.
-
-For the MCP Coder and its processes, a number of skills have been defined.
-
-**Available commands** (see [Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md) for full list):
-
-| Command | Purpose |
-|---------|---------|
-| `/issue_analyse` | Analyze GitHub issue requirements |
-| `/plan_review` | Review implementation plan |
-| `/plan_approve` | Approve plan for implementation |
-| `/implementation_review` | Code review (human-supervised: Claude presents findings, you decide) |
-| `/implementation_review_supervisor` | Code review (autonomous: Claude supervisor delegates to subagents, decides based on knowledge base, escalates only when unsure) |
-| `/pr_comment_triage` | Triage new PR comments and review threads (opened by `status-91:pr-review-comments`) |
-| `/commit_push` | Format, commit, and push changes |
-| `/rebase` | Rebase branch onto base branch |
-
-## Integration with mcp-coder Commands
-
-### Environment Variables
-
-mcp-coder sets these environment variables for MCP servers:
-
-| Variable | Description |
-|----------|-------------|
-| `MCP_CODER_PROJECT_DIR` | Absolute path to project directory |
-| `MCP_CODER_VENV_DIR` | Path to Python virtual environment |
-
-These are used in `.mcp.json` to configure MCP servers with correct paths:
-
-```json
-{
-  "mcpServers": {
-    "mcp-tools-py": {
-      "type": "stdio",
-      "command": "${MCP_CODER_VENV_DIR}\\Scripts\\mcp-tools-py.exe",
-      "args": [
-        "--project-dir", "${MCP_CODER_PROJECT_DIR}",
-        "--python-executable", "${MCP_CODER_VENV_DIR}\\Scripts\\python.exe",
-        "--venv-path", "${MCP_CODER_VENV_DIR}",
-        "--test-folder", "tests",
-        "--log-level", "INFO"
-      ],
-      "env": {
-        "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"
-      }
-    },
-    "mcp-workspace": {
-      "type": "stdio",
-      "command": "${MCP_CODER_VENV_DIR}/Scripts/mcp-workspace.exe",
-      "args": [
-        "--project-dir", "${MCP_CODER_PROJECT_DIR}",
-        "--log-level", "INFO"
-      ]
-    }
-  }
-}
-```
-
-## Related Documentation
-
-- **[Repository Setup](../repository-setup/README.md)** - Complete project setup including MCP configuration
-- **[Copilot CLI Setup](../repository-setup/copilot.md)** - GitHub Copilot CLI file compatibility
-- **[Configuration Guide](config.md)** - General mcp-coder configuration
-- **[Claude Code Cheat Sheet](../processes-prompts/claude_cheat_sheet.md)** - Slash command reference
-- **[Development Process](../processes-prompts/development-process.md)** - Workflow methodology
-
-## External Resources
-
-- **[Claude Code Documentation](https://code.claude.com/docs)** - Official Anthropic documentation
-- **[MCP Protocol](https://modelcontextprotocol.io/specification)** - Model Context Protocol specification
+- [Repository Setup](../repository-setup/README.md)
+- [Configuration Guide](config.md), including the [`[claude]` section](config.md#claude)
+- [Copilot CLI Setup](../repository-setup/copilot.md)
+- [Slash command cheat sheet](../processes-prompts/claude_cheat_sheet.md)
+- [Claude Code documentation](https://code.claude.com/docs) and [MCP specification](https://modelcontextprotocol.io/specification)

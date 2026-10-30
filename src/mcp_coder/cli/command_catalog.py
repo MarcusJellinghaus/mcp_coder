@@ -16,7 +16,7 @@ from __future__ import annotations
 COMMAND_DESCRIPTIONS: dict[str, str] = {
     "init": "Initialize project: create config and deploy Claude skills",
     "install": "Install mcp-coder into a target environment",
-    "verify": "Verify CLI installation, LLM provider, and MLflow configuration",
+    "verify": "Check config, git, GitHub, Jenkins, Claude CLI, LLM provider and MCP servers",
     "create-plan": "Generate implementation plan for a GitHub issue",
     "review-plan": "Run automated review of an implementation plan",
     "implement": "Execute implementation workflow",

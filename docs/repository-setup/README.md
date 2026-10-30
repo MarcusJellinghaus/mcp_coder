@@ -19,13 +19,16 @@ This guide covers the **mandatory** and **optional** components for integrating 
 
 ## Quick Setup Checklist
 
-- [ ] Configure GitHub token in user config (`~/.mcp_coder/config.toml` — see [Configuration Guide](../configuration/config.md))
-- [ ] Set up workflow labels with `mcp-coder gh-tool define-labels`
-- [ ] Install GitHub Actions workflows (or generate with `mcp-coder gh-tool define-labels --generate-github-actions`)
-- [ ] Deploy Claude skills with `mcp-coder init`
-- [ ] Configure Claude Code files (`.claude/CLAUDE.md`, `.mcp.json`)
-- [ ] Test workflow with a sample issue
-- [ ] Create `docs/architecture/architecture.md` (required by `/implementation_review` and `/implementation_review_supervisor`)
+- [ ] Configure a GitHub token in `~/.mcp_coder/config.toml` ([Configuration Guide](../configuration/config.md)). The token's GitHub user is "you" for `vscodeclaude`: it only opens issues assigned to that user
+- [ ] Set up workflow labels with `mcp-coder gh-tool define-labels` ([Label Setup](../getting-started/label-setup.md))
+- [ ] Install the GitHub Actions workflows that label new issues and handle `/approve` (generate them with `mcp-coder gh-tool define-labels --generate-github-actions`)
+- [ ] Deploy Claude skills and agents with `mcp-coder init`
+- [ ] Add `.claude/CLAUDE.md`, `.mcp.json` and `docs/architecture/architecture.md` to the repository (the architecture document is required by `/implementation_review` and `/implementation_review_supervisor`)
+- [ ] For interactive sessions: add a `[vscodeclaude]` section (`workspace_base`, `max_sessions`) to `config.toml` and trust the workspace folder once in VS Code ([VSCodeClaude guide](../coordinator-vscodeclaude.md))
+- [ ] For unattended runs: add a `[jenkins]` section and a `[coordinator.repos.<name>]` section (`repo_url`, `executor_job_path`, `github_credentials_id`), and set up the Jenkins executor job ([Jenkins setup](jenkins.md)). Without Jenkins, run the stages by hand
+  - Labels advance and failures are commented on the issue by default. Set `update_issue_labels = false` or `post_issue_comments = false` for the repo to opt out
+  - Optional: `auto_review_plan` and `auto_review_implementation` (default `false`) replace the interactive review with an automated one that hands over to you when it needs a human
+- [ ] Run `mcp-coder verify` in the repository, then test the workflow with a sample issue (see [Testing Your Setup](#testing-your-setup))
 
 ## Detail Documentation
 
@@ -38,8 +41,8 @@ This guide covers the **mandatory** and **optional** components for integrating 
 | Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any target repo |
 | Generic repo conventions: `.gitattributes`, `.gitignore`, file size | [repo.md](repo.md) | Any target repo |
 | Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python target repos only |
-| Quality and security checks: which automated checks run, and why | [quality-and-security-checks.md](quality-and-security-checks.md) | Not for target repos |
-| mcp-coder repo internals: design docs, mlflow tools, internal scripts | [internal.md](internal.md) | Not for target repos |
+| Quality and security checks: which automated checks run, and why | [quality-and-security-checks.md](quality-and-security-checks.md) | Reference setup for Python repos: the MCP tools work anywhere, the CI jobs and config are mcp-coder's |
+| mcp-coder maintainer tools: design docs, mlflow tools, internal scripts | [internal.md](internal.md) | mcp-coder repo only |
 
 ## Files Shared With Other Projects
 
@@ -81,7 +84,6 @@ The following files in this repository serve as references/templates for other p
 | `tools/lint_imports.{sh,bat}`, `tach_check.*`, `vulture_check.*` | P | No | Yes | — |
 | `tools/ruff_check.{sh,bat}` | P | No | Yes | — |
 | `icoder_local.bat` | I | — | — | mcp-coder repo only |
-| `mlflow_implementation.md` / `project_idea.md` | I | — | — | mcp-coder repo only |
 | `tools/mlflow/*` (start_mlflow, get_*mlflow*, inspect/search, extract/analyze permission events) | I | — | — | mcp-coder repo only |
 | `tools/reinstall_local.*`, `tools/read_github_deps.py`, `tools/safe_delete_folder.py` | I | — | — | mcp-coder repo only |
 | `.run/` | I | — | — | IDE configs, mcp-coder repo only |
@@ -112,6 +114,12 @@ A `uv.lock` is **not** required — mcp_coder itself tracks none, so `uv sync` r
 
 ### Verification Steps
 
+**0. Check the whole setup:**
+```bash
+mcp-coder verify
+```
+It checks your `config.toml` (including unknown keys), git, GitHub, Jenkins, the Claude CLI, the LLM provider and the MCP servers. For the Jenkins side, `mcp-coder coordinator --dry-run --repo <name> --branch-name main` triggers a real build but changes no issues or labels.
+
 **1. Test label creation:**
 ```bash
 mcp-coder gh-tool define-labels --dry-run
@@ -134,7 +142,7 @@ mcp-coder prompt "List files in src/" --mcp-config .mcp.json --settings .claude/
 
 ## Related Documentation
 
-- **[Claude Code Configuration](../configuration/claude-code.md)** - Detailed Claude Code setup, CLI commands, troubleshooting
+- **[Claude Code Configuration](../configuration/claude-code.md)** - Installing Claude Code and the Windows launcher
 - **[Copilot CLI Setup](copilot.md)** - GitHub Copilot CLI file compatibility and configuration
 - **[CLI Reference](../cli-reference.md)** - Complete mcp-coder command documentation
 - **[Configuration Guide](../configuration/config.md)** - User and system configuration

@@ -1,4 +1,4 @@
-Ple# Slow Test Review Methodology
+# Slow Test Review Methodology
 
 **Quick Reference:**
 - **Performance data**: `docs/tests/performance_data/performance_stats_*.txt`

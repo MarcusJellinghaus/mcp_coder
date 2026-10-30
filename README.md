@@ -12,8 +12,10 @@ Every change to MCP Coder itself passes these checks ([details](docs/repository-
 
 - **Minimal input.** You write and refine issues, approve at the review gates and merge. Everything else can run unattended; failures come back to you as labelled issues.
 - **Control and visibility.** Each stage ends in a written hand-over document: the refined issue, the plan, step files, commits, review comments. You can inspect or correct at every point.
-- **Quality gates on every step.** pylint, mypy and pytest run after each implementation step, and each step is followed by a dedicated unit-test step. Tests are part of the review.
+- **Quality gates on every step.** pylint, mypy and pytest run after each implementation step, mcp-coder re-checks mypy itself once all steps are done, and every plan step carries its own tests, planned before the code. Tests are part of the review.
 - **Fewer tokens, shorter conversations.** Instead of one large implementation conversation, the work is split into small steps, each starting with a fresh context and only the hand-over documents it needs. This should reduce token consumption.
+- **Follow-up after the PR.** The coordinator watches open PRs: merge conflicts and failing CI are fixed automatically, review comments are routed to you.
+- **Trust boundaries.** `/approve` and PR feedback only count from trusted authors (owner, member, collaborator). A watchdog moves crashed jobs to a failure label, so no issue silently sits at "in progress".
 
 ## Why a structured process
 
@@ -24,7 +26,9 @@ Spec-driven development, applied to GitHub issues:
 - A GitHub status label on the issue is the only workflow state. It decides what runs next.
 - Plan and code review are explicit approval points. You can do them interactively, or enable an optional automated review that hands over to you when it needs a human.
 - The LLM does the creative work; MCP Coder owns the process around it and verifies the result itself instead of trusting it.
-- Unattended runs are driven by `mcp-coder coordinator`, which polls issues and starts workflows, typically on Jenkins.
+- The LLM reaches files, git, GitHub and the quality checks only through [MCP](https://modelcontextprotocol.io) servers ([`mcp-workspace`](https://github.com/MarcusJellinghaus/mcp-workspace), [`mcp-tools-py`](https://github.com/MarcusJellinghaus/mcp-tools-py)), configured per repository in `.mcp.json` ([details](docs/repository-setup/claude-code.md)).
+- Unattended runs are driven by `mcp-coder coordinator`, which polls issues and dispatches workflows, typically as Jenkins jobs.
+- Interactive stages are driven by `mcp-coder vscodeclaude`, which opens a VS Code Claude session for each issue that needs you.
 
 ```mermaid
 flowchart LR
@@ -42,7 +46,7 @@ flowchart LR
     class P,M,PUB auto
 ```
 
-Yellow: you, usually in an interactive LLM session. Green: automated by `mcp-coder`. Full state machine, labels and failure handling: [Development Process](docs/processes-prompts/development-process.md).
+Yellow: you, in an interactive Claude session opened by `vscodeclaude` (or approving on GitHub). Green: automated by the coordinator. Full state machine, labels and failure handling: [Development Process](docs/processes-prompts/development-process.md).
 
 ## Status and scope
 
@@ -50,12 +54,12 @@ Yellow: you, usually in an interactive LLM session. Green: automated by `mcp-cod
 |---|---|
 | Works well | Python projects, GitHub, Claude Code |
 | Experimental | GitHub Copilot CLI, LangChain backends (OpenAI, Gemini, Anthropic API, Ollama, …) |
-| Prototype | `iCoder`, an alternative interactive terminal interface |
+| Prototype | [`iCoder`](docs/iCoder.md), an alternative interactive terminal interface |
 | Planned | Other programming languages, general LLM support |
 
 The label-driven process itself is language-agnostic. Python is the supported target for now because `implement`, the installer and the architecture checks call Python tools. GitHub is the only supported forge.
 
-## Quick start
+## Getting started
 
 Requirements: Python 3.11+, Git, a GitHub-hosted repository and [Claude Code CLI](https://code.claude.com/docs) (recommended; [Copilot CLI](https://docs.github.com/copilot/how-tos/use-copilot-agents/use-copilot-cli) is experimental).
 
@@ -63,30 +67,45 @@ Requirements: Python 3.11+, Git, a GitHub-hosted repository and [Claude Code CLI
 pip install mcp-coder
 ```
 
-Set up your repository once ([Repository Setup](docs/repository-setup/README.md), [Label Setup](docs/getting-started/label-setup.md)), then run the stages against it:
+Other install paths (editable dev install, pinned GitHub ref, separate environment): [Installation Guide](docs/getting-started/installation.md).
 
-```bash
-mcp-coder create-plan --project-dir <repo> <issue-number>
-mcp-coder implement   --project-dir <repo>
-mcp-coder create-pr   --project-dir <repo>
-```
+### Set up a repository (once)
 
-In practice the [coordinator](docs/coordinator-vscodeclaude.md) runs these stages for you as the issue's status label advances. Other install paths (editable dev install, pinned GitHub ref, separate environment): [Installation Guide](docs/getting-started/installation.md). All commands: [CLI Reference](docs/cli-reference.md).
+The full checklist, with every config key, is in [Repository Setup](docs/repository-setup/README.md). In short:
+
+1. Put a GitHub token in `~/.mcp_coder/config.toml` ([Configuration](docs/configuration/config.md)).
+2. Create the status labels with `mcp-coder gh-tool define-labels`, and the GitHub Actions that label new issues and handle `/approve` with `--generate-github-actions` ([Label Setup](docs/getting-started/label-setup.md)).
+3. Deploy the Claude skills and agents with `mcp-coder init`, and add `.claude/CLAUDE.md`, `.mcp.json` and `docs/architecture/architecture.md` to the repository.
+4. Configure how stages run: `[vscodeclaude]` for interactive sessions ([guide](docs/coordinator-vscodeclaude.md)), `[jenkins]` and `[coordinator.repos.<name>]` for unattended runs ([Jenkins setup](docs/repository-setup/jenkins.md)). Without Jenkins, run the stages by hand.
+5. Check it all with `mcp-coder verify`.
+
+### Work with it
+
+1. **Write an issue.** It gets `status-01:created` automatically.
+2. **Assign it to yourself and refine it.** `mcp-coder vscodeclaude launch` opens a VS Code Claude session for every issue that is assigned to you (the GitHub user of your token) and has a status that needs a human. It starts the right slash command: `/issue_analyse` then `/discuss` for a new issue. Approve in the session (`/issue_approve`) or comment `/approve` on GitHub.
+3. **Let the coordinator run the next stage.** `mcp-coder coordinator --all` dispatches planning, implementation and PR creation as the label advances.
+4. **Review the plan and the code.** `vscodeclaude` opens sessions again for `status-04:plan-review` and `status-07:code-review`, again only for issues assigned to you. Use `/plan_review` and `/implementation_review`, or the `_supervisor` variants that run the review through subagents, then approve.
+5. **Merge.** Conflicts, failing CI and review comments come back as labelled issues.
+
+Slash commands per stage: [Development Process](docs/processes-prompts/development-process.md) and the [cheat sheet](docs/processes-prompts/claude_cheat_sheet.md). Running a single stage by hand (`create-plan`, `implement`, `create-pr`): [CLI Reference](docs/cli-reference.md). Details on sessions and the coordinator: [Coordinator and VSCodeClaude](docs/coordinator-vscodeclaude.md).
 
 ## Documentation
 
 - [Development Process](docs/processes-prompts/development-process.md): stages, labels, slash commands, failure handling
 - [Repository Setup](docs/repository-setup/README.md): labels, GitHub Actions, MCP configuration, Jenkins
+- [Label Setup](docs/getting-started/label-setup.md): the status labels and the `/approve` workflow
+- [Coordinator and VSCodeClaude](docs/coordinator-vscodeclaude.md): unattended runs and interactive sessions
+- [Slash command cheat sheet](docs/processes-prompts/claude_cheat_sheet.md)
 - [CLI Reference](docs/cli-reference.md) and [Configuration](docs/configuration/config.md)
 - [Architecture](docs/architecture/architecture.md) and [why it is enforced](docs/architecture/enforcement.md)
+- [Contributing](docs/CONTRIBUTING.md): developing MCP Coder itself
 - [Full documentation index](docs/README.md)
 
 ## Related projects
 
-- [mcp-tools-py](https://github.com/MarcusJellinghaus/mcp-tools-py): code quality MCP server
-- [mcp-workspace](https://github.com/MarcusJellinghaus/mcp-workspace): file system and GitHub MCP server
+- [mcp-tools-py](https://github.com/MarcusJellinghaus/mcp-tools-py): MCP server for code quality checks (pylint, mypy, pytest, formatting)
+- [mcp-workspace](https://github.com/MarcusJellinghaus/mcp-workspace): MCP server for file operations, git and GitHub
 - [mcp-coder-utils](https://github.com/MarcusJellinghaus/mcp-coder-utils): shared subprocess, logging and redaction helpers
-- [AutoRunner](https://github.com/MarcusJellinghaus/AutoRunner): Jenkins infrastructure for unattended runs
 
 ## Security and license
 
