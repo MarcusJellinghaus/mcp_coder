@@ -420,7 +420,7 @@ def _print_project_section(project_dir: Path, symbols: dict[str, str]) -> bool:
             _format_row(
                 "check_type_hints",
                 symbols["warning"],
-                "not configured (default: disabled)",
+                "disabled (set in pyproject.toml)",
                 indent=4,
             )
         )

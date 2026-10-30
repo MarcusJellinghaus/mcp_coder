@@ -136,10 +136,10 @@ class TestLoadRepoConfig:
         assert config["post_issue_comments"] is True
 
     @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
-    def test_load_repo_config_defaults_flags_when_missing(
+    def test_load_repo_config_defaults_flags_to_true_when_missing(
         self, mock_get_config: MagicMock
     ) -> None:
-        """Test flags default to False when not present in config."""
+        """Test flags default to True when not present in config."""
         section = "coordinator.repos.test_repo"
         mock_get_config.return_value = {
             (section, "repo_url"): "https://github.com/test/repo.git",
@@ -148,6 +148,26 @@ class TestLoadRepoConfig:
             (section, "executor_os"): None,
             (section, "update_issue_labels"): None,
             (section, "post_issue_comments"): None,
+        }
+
+        config = load_repo_config("test_repo")
+
+        assert config["update_issue_labels"] is True
+        assert config["post_issue_comments"] is True
+
+    @patch("mcp_coder.cli.commands.coordinator.core.get_config_values")
+    def test_load_repo_config_respects_explicit_false(
+        self, mock_get_config: MagicMock
+    ) -> None:
+        """Test an explicit false in config disables the flags."""
+        section = "coordinator.repos.test_repo"
+        mock_get_config.return_value = {
+            (section, "repo_url"): "https://github.com/test/repo.git",
+            (section, "executor_job_path"): "Tests/test",
+            (section, "github_credentials_id"): "cred-id",
+            (section, "executor_os"): None,
+            (section, "update_issue_labels"): False,
+            (section, "post_issue_comments"): False,
         }
 
         config = load_repo_config("test_repo")

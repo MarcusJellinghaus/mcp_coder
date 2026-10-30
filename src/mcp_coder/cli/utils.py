@@ -70,10 +70,13 @@ def resolve_issue_interaction_flags(
 ) -> tuple[bool, bool]:
     """Resolve update_issue_labels and post_issue_comments settings.
 
-    Priority: CLI flag (if not None) > config.toml repo section > default (False).
+    Priority: CLI flag (if not None) > config.toml repo section > default.
 
     Looks up the local git remote URL, finds matching [coordinator.repos.*]
-    section in config.toml, and merges with CLI flags.
+    section in config.toml, and merges with CLI flags. A repository with a
+    matching section has both settings enabled unless the section sets one to
+    false; a repository without one has both disabled, so a manual run in an
+    unconfigured checkout never touches GitHub labels or comments.
 
     Args:
         args: Parsed CLI args with update_issue_labels and post_issue_comments
@@ -100,8 +103,9 @@ def resolve_issue_interaction_flags(
                     (section, "post_issue_comments", None),
                 ]
             )
-            cfg_labels = config[(section, "update_issue_labels")] is True
-            cfg_comments = config[(section, "post_issue_comments")] is True
+            # Absent key in a configured repository means enabled.
+            cfg_labels = config[(section, "update_issue_labels")] is not False
+            cfg_comments = config[(section, "post_issue_comments")] is not False
 
     # Merge: CLI wins if not None, else config, else False
     return (
