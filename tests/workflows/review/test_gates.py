@@ -158,7 +158,7 @@ class TestGateWiredIntoCore:
         monkeypatch.setattr(reviewer, "_run_reviewer", reviewer_run)
         monkeypatch.setattr(handoff, "handle_workflow_failure", MagicMock())
         monkeypatch.setattr(handoff, "IssueManager", MagicMock())
-        monkeypatch.setattr(handoff, "update_workflow_label", MagicMock())
+        monkeypatch.setattr(handoff, "apply_final_label", MagicMock(return_value=0))
 
         result = core.run_review_workflow(
             config=REVIEW_IMPLEMENTATION,

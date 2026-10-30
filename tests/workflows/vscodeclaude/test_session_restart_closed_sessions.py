@@ -12,7 +12,7 @@ from mcp_coder.workflows.vscodeclaude.session_restart import (
     restart_closed_sessions,
 )
 from tests.github_factories import make_issue_data
-from tests.workflows.vscodeclaude.conftest import make_assessment
+from tests.workflows.vscodeclaude.conftest import make_assessment, patch_branch_cache
 
 
 class TestRestartClosedSessionsBranchHandling:
@@ -36,15 +36,12 @@ class TestRestartClosedSessionsBranchHandling:
         from unittest.mock import MagicMock
 
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         # Track calls to _prepare_restart_branch
@@ -53,16 +50,14 @@ class TestRestartClosedSessionsBranchHandling:
         def mock_prepare(
             folder_path: Path,
             current_status: str,
-            branch_manager: Any,
-            issue_number: int,
-            repo_owner: str,
-            repo_name: str,
+            branch_cache: Any,
+            issue: IssueData,
         ) -> BranchPrepResult:
             prepare_calls.append(
                 {
                     "folder": folder_path,
                     "status": current_status,
-                    "issue": issue_number,
+                    "issue": issue["number"],
                 }
             )
             return BranchPrepResult(True, None, None)
@@ -141,15 +136,12 @@ class TestRestartClosedSessionsBranchHandling:
         from unittest.mock import MagicMock
 
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         monkeypatch.setattr(
@@ -215,15 +207,12 @@ class TestRestartClosedSessionsBranchHandling:
         from unittest.mock import MagicMock
 
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         monkeypatch.setattr(
@@ -286,15 +275,12 @@ class TestRestartClosedSessionsBranchHandling:
         from unittest.mock import MagicMock
 
         mock_issue_manager = MagicMock()
-        mock_branch_manager = MagicMock()
-
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.session_restart.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         monkeypatch.setattr(
@@ -400,6 +386,9 @@ class TestRestartClosedSessionsBranchHandling:
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.session_restart._prepare_restart_branch",
             lambda **kwargs: BranchPrepResult(False, "No branch", None),
+        )
+        patch_branch_cache(
+            monkeypatch, "mcp_coder.workflows.vscodeclaude.session_restart"
         )
 
         working_folder = tmp_path / "repo_999"

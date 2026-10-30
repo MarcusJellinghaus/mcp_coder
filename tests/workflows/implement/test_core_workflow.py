@@ -167,8 +167,7 @@ class TestRunImplementWorkflowLabelTransitions:
     """Test that labels always transition on success/failure."""
 
     @patch("mcp_coder.workflows.implement.core.get_repo_flag")
-    @patch("mcp_coder.workflows.implement.core.update_workflow_label")
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core.apply_final_label", return_value=0)
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
@@ -191,7 +190,6 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_progress: MagicMock,
         mock_finalise: MagicMock,
         mock_ci: MagicMock,
-        mock_issue_cls: MagicMock,
         mock_update_label: MagicMock,
         mock_get_repo_flag: MagicMock,
     ) -> None:
@@ -206,8 +204,6 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_branch.return_value = "189-feature"
         mock_ci.return_value = True
         mock_get_repo_flag.return_value = False
-        mock_manager = MagicMock()
-        mock_issue_cls.return_value = mock_manager
 
         result = run_implement_workflow(
             Path("/project"), "claude", update_issue_labels=True
@@ -215,14 +211,57 @@ class TestRunImplementWorkflowLabelTransitions:
 
         assert result == 0
         mock_update_label.assert_called_once_with(
-            mock_manager,
-            from_label_id="implementing",
-            to_label_id="code_review",
+            Path("/project"), "implementing", "code_review"
         )
 
+    @patch(_NET_HANDLER)
+    @patch("mcp_coder.workflows.implement.core.get_repo_flag", return_value=False)
+    @patch("mcp_coder.workflows.implement.core.apply_final_label", return_value=1)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core._attempt_rebase_and_push",
+        return_value=True,
+    )
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="189-feature",
+    )
+    def test_final_label_failure_returns_1_without_net(
+        self,
+        _mock_branch: MagicMock,
+        _mock_git_clean: MagicMock,
+        _mock_main_branch: MagicMock,
+        _mock_prereq: MagicMock,
+        _mock_rebase: MagicMock,
+        _mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        _mock_progress: MagicMock,
+        _mock_finalise: MagicMock,
+        _mock_ci: MagicMock,
+        mock_update_label: MagicMock,
+        _mock_get_repo_flag: MagicMock,
+        mock_net: MagicMock,
+    ) -> None:
+        """A failed final label → exit 1, run_guarded's net stays silent."""
+        mock_process.return_value = TaskOutcome(False, "no_tasks")
+
+        result = run_implement_workflow(
+            Path("/project"), "claude", update_issue_labels=True
+        )
+
+        assert result == 1
+        mock_update_label.assert_called_once()
+        mock_net.assert_not_called()
+
     @patch("mcp_coder.workflows.implement.core.get_repo_flag")
-    @patch("mcp_coder.workflows.implement.core.update_workflow_label")
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core.apply_final_label", return_value=0)
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
@@ -245,7 +284,6 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_progress: MagicMock,
         mock_finalise: MagicMock,
         mock_ci: MagicMock,
-        mock_issue_cls: MagicMock,
         mock_update_label: MagicMock,
         mock_get_repo_flag: MagicMock,
     ) -> None:
@@ -260,8 +298,6 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_branch.return_value = "189-feature"
         mock_ci.return_value = True
         mock_get_repo_flag.return_value = True
-        mock_manager = MagicMock()
-        mock_issue_cls.return_value = mock_manager
 
         result = run_implement_workflow(
             Path("/project"), "claude", update_issue_labels=True
@@ -272,12 +308,10 @@ class TestRunImplementWorkflowLabelTransitions:
             Path("/project"), "auto_review_implementation"
         )
         mock_update_label.assert_called_once_with(
-            mock_manager,
-            from_label_id="implementing",
-            to_label_id="code_review_bot",
+            Path("/project"), "implementing", "code_review_bot"
         )
 
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core.apply_final_label")
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci")
     @patch("mcp_coder.workflows.implement.core.run_finalisation")
     @patch("mcp_coder.workflows.implement.core.log_progress_summary")
@@ -300,7 +334,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_progress: MagicMock,
         mock_finalise: MagicMock,
         mock_ci: MagicMock,
-        mock_issue_cls: MagicMock,
+        mock_apply_label: MagicMock,
     ) -> None:
         """On success with update_issue_labels=False, label is not updated."""
         mock_git_clean.return_value = True
@@ -318,7 +352,7 @@ class TestRunImplementWorkflowLabelTransitions:
         )
 
         assert result == 0
-        mock_issue_cls.assert_not_called()
+        mock_apply_label.assert_not_called()
 
     @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -408,7 +442,7 @@ class TestWorkflowSafetyNet:
         assert mock_handle.call_args[0][0].category == "implementing_failed"
 
     @patch(_NET_HANDLER)
-    @patch("mcp_coder.workflows.implement.core.IssueManager")
+    @patch("mcp_coder.workflows.implement.core.apply_final_label", return_value=0)
     @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
     @patch(
         "mcp_coder.workflows.implement.core.get_current_branch_name",
@@ -439,7 +473,7 @@ class TestWorkflowSafetyNet:
         _mock_finalisation: MagicMock,
         mock_branch: MagicMock,
         mock_ci: MagicMock,
-        mock_issue_mgr: MagicMock,
+        _mock_apply_label: MagicMock,
         mock_handle: MagicMock,
     ) -> None:
         """Safety net does NOT fire when workflow completes successfully."""

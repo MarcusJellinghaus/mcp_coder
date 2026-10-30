@@ -23,7 +23,7 @@ def mock_post_creation() -> Iterator[MagicMock]:
 class TestIssueLabelLinkage:
     """Issue linkage, closing-references fallback and the final label."""
 
-    @patch("mcp_coder.workflows.create_pr.core.update_workflow_label")
+    @patch("mcp_coder.workflows.create_pr.core.apply_final_label")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
@@ -32,7 +32,6 @@ class TestIssueLabelLinkage:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
@@ -41,7 +40,6 @@ class TestIssueLabelLinkage:
         _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
-        mock_issue_manager_class: MagicMock,
         mock_commit: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
@@ -50,7 +48,7 @@ class TestIssueLabelLinkage:
         mock_generate: MagicMock,
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
-        mock_update_label: MagicMock,
+        mock_apply_label: MagicMock,
     ) -> None:
         """Tests that workflow caches issue number before PR creation."""
         # Setup: Mock validate_branch_issue_linkage to return 123
@@ -66,27 +64,21 @@ class TestIssueLabelLinkage:
         mock_clean.return_value = True  # Clean directory, no commit needed
         mock_get_branch.return_value = "feature-branch"
         mock_detect_base.return_value = "main"
-
-        # Setup IssueManager mock
-        mock_issue_manager = MagicMock()
-        mock_issue_manager_class.return_value = mock_issue_manager
-        mock_update_label.return_value = True
+        mock_apply_label.return_value = 0
 
         # Call: run_create_pr_workflow(..., update_issue_labels=True)
         result = run_create_pr_workflow(
             Path("/test"), "claude", update_issue_labels=True
         )
 
-        # Assert: update_workflow_label called with validated_issue_number=123
+        # Assert: apply_final_label called with the cached issue number 123
         assert result == 0
         mock_validate.assert_called_once_with(Path("/test"))
-        mock_update_label.assert_called_once_with(
-            mock_issue_manager,
-            from_label_id="pr_creating",
-            to_label_id="pr_created",
-            validated_issue_number=123,
+        mock_apply_label.assert_called_once_with(
+            Path("/test"), "pr_creating", "pr_created", 123
         )
 
+    @patch("mcp_coder.workflows.create_pr.core.apply_final_label")
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -96,7 +88,6 @@ class TestIssueLabelLinkage:
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
     @patch("mcp_coder.workflows.create_pr.core.commit_all_changes")
-    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
@@ -105,7 +96,6 @@ class TestIssueLabelLinkage:
         _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
-        mock_issue_manager_class: MagicMock,
         mock_commit: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
@@ -115,6 +105,7 @@ class TestIssueLabelLinkage:
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_pr_manager_class: MagicMock,
+        mock_apply_label: MagicMock,
     ) -> None:
         """Tests that workflow skips label update when branch not linked."""
         # Setup: Mock validate_branch_issue_linkage to return None
@@ -135,21 +126,17 @@ class TestIssueLabelLinkage:
         mock_get_branch.return_value = "feature-branch"
         mock_detect_base.return_value = "main"
 
-        # Setup IssueManager mock
-        mock_issue_manager = MagicMock()
-        mock_issue_manager_class.return_value = mock_issue_manager
-
         # Call: run_create_pr_workflow(..., update_issue_labels=True)
         result = run_create_pr_workflow(
             Path("/test"), "claude", update_issue_labels=True
         )
 
-        # Assert: update_workflow_label NOT called
+        # Assert: apply_final_label NOT called
         assert result == 0
         mock_validate.assert_called_once_with(Path("/test"))
-        mock_issue_manager.update_workflow_label.assert_not_called()
+        mock_apply_label.assert_not_called()
 
-    @patch("mcp_coder.workflows.create_pr.core.update_workflow_label")
+    @patch("mcp_coder.workflows.create_pr.core.apply_final_label")
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -158,7 +145,6 @@ class TestIssueLabelLinkage:
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
@@ -167,7 +153,6 @@ class TestIssueLabelLinkage:
         _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
-        mock_issue_manager_class: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
         mock_create_pr: MagicMock,
@@ -176,7 +161,7 @@ class TestIssueLabelLinkage:
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_pr_manager_class: MagicMock,
-        mock_update_label: MagicMock,
+        mock_apply_label: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Tests fallback queries closingIssuesReferences and finds issue."""
@@ -197,9 +182,7 @@ class TestIssueLabelLinkage:
         mock_pr_manager_class.return_value = mock_pr_mgr
         mock_pr_mgr.get_closing_issue_numbers.return_value = [92]
 
-        mock_issue_manager = MagicMock()
-        mock_issue_manager_class.return_value = mock_issue_manager
-        mock_update_label.return_value = True
+        mock_apply_label.return_value = 0
 
         with caplog.at_level(logging.DEBUG):
             result = run_create_pr_workflow(
@@ -208,15 +191,12 @@ class TestIssueLabelLinkage:
 
         assert result == 0
         mock_pr_mgr.get_closing_issue_numbers.assert_called_once_with(42)
-        mock_update_label.assert_called_once_with(
-            mock_issue_manager,
-            from_label_id="pr_creating",
-            to_label_id="pr_created",
-            validated_issue_number=92,
+        mock_apply_label.assert_called_once_with(
+            Path("/test"), "pr_creating", "pr_created", 92
         )
         assert "completed successfully!" in caplog.text
 
-    @patch("mcp_coder.workflows.create_pr.core.update_workflow_label")
+    @patch("mcp_coder.workflows.create_pr.core.apply_final_label")
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -225,7 +205,6 @@ class TestIssueLabelLinkage:
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
@@ -234,7 +213,6 @@ class TestIssueLabelLinkage:
         _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
-        mock_issue_manager_class: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
         mock_create_pr: MagicMock,
@@ -243,7 +221,7 @@ class TestIssueLabelLinkage:
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_pr_manager_class: MagicMock,
-        mock_update_label: MagicMock,
+        mock_apply_label: MagicMock,
     ) -> None:
         """Tests fallback with multiple closing issues uses first."""
         mock_validate.return_value = None
@@ -263,20 +241,15 @@ class TestIssueLabelLinkage:
         mock_pr_manager_class.return_value = mock_pr_mgr
         mock_pr_mgr.get_closing_issue_numbers.return_value = [92, 55]
 
-        mock_issue_manager = MagicMock()
-        mock_issue_manager_class.return_value = mock_issue_manager
-        mock_update_label.return_value = True
+        mock_apply_label.return_value = 0
 
         result = run_create_pr_workflow(
             Path("/test"), "claude", update_issue_labels=True
         )
 
         assert result == 0
-        mock_update_label.assert_called_once_with(
-            mock_issue_manager,
-            from_label_id="pr_creating",
-            to_label_id="pr_created",
-            validated_issue_number=92,
+        mock_apply_label.assert_called_once_with(
+            Path("/test"), "pr_creating", "pr_created", 92
         )
 
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
@@ -384,6 +357,7 @@ class TestIssueLabelLinkage:
         assert "completed with warnings" in caplog.text
         assert "completed successfully!" not in caplog.text
 
+    @patch("mcp_coder.workflows.create_pr.core.apply_final_label", return_value=0)
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -392,7 +366,6 @@ class TestIssueLabelLinkage:
     @patch("mcp_coder.workflows.create_pr.core.create_pull_request")
     @patch("mcp_coder.workflows.create_pr.core.cleanup_repository")
     @patch("mcp_coder.workflows.create_pr.core.is_working_directory_clean")
-    @patch("mcp_coder.workflows.create_pr.core.IssueManager")
     @patch("mcp_coder.workflows.create_pr.core.get_current_branch_name")
     @patch("mcp_coder.workflows.create_pr.core.detect_base_branch")
     @patch("mcp_coder.workflows.create_pr.core._rebase_if_needed")
@@ -401,7 +374,6 @@ class TestIssueLabelLinkage:
         _mock_rebase: MagicMock,
         mock_detect_base: MagicMock,
         mock_get_branch: MagicMock,
-        mock_issue_manager_class: MagicMock,
         mock_clean: MagicMock,
         mock_cleanup: MagicMock,
         mock_create_pr: MagicMock,
@@ -410,12 +382,10 @@ class TestIssueLabelLinkage:
         mock_prereqs: MagicMock,
         mock_validate: MagicMock,
         mock_pr_manager_class: MagicMock,
+        _mock_apply_label: MagicMock,
     ) -> None:
         """Tests that fallback is skipped when issue already found from branch."""
         mock_validate.return_value = 123
-        mock_issue_manager = MagicMock()
-        mock_issue_manager_class.return_value = mock_issue_manager
-        mock_issue_manager.update_workflow_label.return_value = True
         mock_prereqs.return_value = True
         mock_generate.return_value = ("Test Title", "Test Body")
         mock_push.return_value = {"success": True}
@@ -458,8 +428,7 @@ def phase_a_ok() -> Iterator[dict[str, MagicMock]]:
         "base": ("detect_base_branch", "main"),
         "assignee": ("_add_pr_assignee_best_effort", None),
         "pr_manager": ("PullRequestManager", None),
-        "issue_manager": ("IssueManager", None),
-        "update_label": ("update_workflow_label", True),
+        "apply_label": ("apply_final_label", 0),
     }
     patchers = {
         key: patch(f"{_CORE}.{name}", return_value=value)
@@ -494,11 +463,8 @@ class TestPhaseB:
         mock_post_creation.assert_called_once_with(
             Path("/test"), "feature-branch", "claude", None, None
         )
-        phase_a_ok["update_label"].assert_called_once_with(
-            phase_a_ok["issue_manager"].return_value,
-            from_label_id="pr_creating",
-            to_label_id=label,
-            validated_issue_number=123,
+        phase_a_ok["apply_label"].assert_called_once_with(
+            Path("/test"), "pr_creating", label, 123
         )
 
     def test_labels_off_still_runs_phase_b(
@@ -513,22 +479,29 @@ class TestPhaseB:
 
         assert result == 0
         mock_post_creation.assert_called_once()
-        phase_a_ok["update_label"].assert_not_called()
+        phase_a_ok["apply_label"].assert_not_called()
 
-    def test_label_update_failure_is_non_blocking(
+    @patch("mcp_coder.workflow_utils.failure_handling.handle_workflow_failure")
+    def test_final_label_failure_returns_1_without_net(
         self,
+        mock_workflow_failure: MagicMock,
         phase_a_ok: dict[str, MagicMock],
         mock_post_creation: MagicMock,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """A failing label update is logged and the workflow still exits 0."""
-        phase_a_ok["update_label"].side_effect = RuntimeError("API down")
+        """A failed final label → exit 1, run_guarded's net stays silent."""
+        phase_a_ok["apply_label"].return_value = 1
 
-        result = run_create_pr_workflow(
-            Path("/test"), "claude", update_issue_labels=True
-        )
+        with caplog.at_level(logging.DEBUG):
+            result = run_create_pr_workflow(
+                Path("/test"), "claude", update_issue_labels=True
+            )
 
-        assert result == 0
+        assert result == 1
         mock_post_creation.assert_called_once()
+        mock_workflow_failure.assert_not_called()
+        assert "completed successfully!" not in caplog.text
+        assert "final issue label not applied" in caplog.text
 
     @patch(f"{_CORE}._handle_create_pr_failure")
     def test_phase_a_failure_skips_phase_b(
@@ -546,7 +519,7 @@ class TestPhaseB:
 
         assert result == 1
         mock_post_creation.assert_not_called()
-        phase_a_ok["update_label"].assert_not_called()
+        phase_a_ok["apply_label"].assert_not_called()
 
     @patch(
         "mcp_coder.workflow_utils.failure_handling._branch_head",
@@ -592,7 +565,7 @@ class TestPhaseB:
         )
 
         assert result == 1
-        phase_a_ok["update_label"].assert_not_called()
+        phase_a_ok["apply_label"].assert_not_called()
         mock_workflow_failure.assert_called_once()
         failure = mock_workflow_failure.call_args.args[0]
         assert failure.category == "pr_created"
@@ -620,10 +593,7 @@ class TestPhaseB:
                 Path("/test"), "claude", update_issue_labels=True
             )
             assert result == 0
-            assert (
-                phase_a_ok["update_label"].call_args.kwargs["validated_issue_number"]
-                == 9
-            )
+            assert phase_a_ok["apply_label"].call_args.args[3] == 9
 
             mock_post_creation.side_effect = RuntimeError("poll exploded")
             result = run_create_pr_workflow(
@@ -648,6 +618,4 @@ class TestPhaseB:
 
         assert result == 0
         mock_post_creation.assert_not_called()
-        assert phase_a_ok["update_label"].call_args.kwargs["to_label_id"] == (
-            "pr_created"
-        )
+        assert phase_a_ok["apply_label"].call_args.args[2] == "pr_created"

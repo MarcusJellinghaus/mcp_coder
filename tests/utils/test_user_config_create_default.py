@@ -185,6 +185,28 @@ class TestCreateDefaultConfig:
             config = tomllib.load(f)
         assert "trusted_commenters" not in config["github"]
 
+    def test_create_default_config_has_traffic_log(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that config template has commented-out traffic log keys."""
+        # Setup
+        config_file = tmp_path / ".mcp_coder" / "config.toml"
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        # Execute
+        create_default_config()
+
+        # Verify
+        content = config_file.read_text(encoding="utf-8")
+        assert "# traffic_log = true" in content
+        assert "# traffic_log_dir" in content
+        with open(config_file, "rb") as f:
+            config = tomllib.load(f)
+        assert "traffic_log" not in config["github"]
+        assert "traffic_log_dir" not in config["github"]
+
     def test_create_default_config_has_mcp_section(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

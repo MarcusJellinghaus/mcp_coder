@@ -34,8 +34,8 @@ def _patch_all(
         patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
         patch(f"{MODULE}._attempt_rebase_and_push", return_value=outcome),
         patch(f"{_REBASE_MODULE}.PullRequestManager", return_value=pr_manager),
-        patch(f"{MODULE}.IssueManager"),
-        patch(f"{MODULE}.update_workflow_label"),
+        patch(_SHARED_HANDLER),
+        patch(f"{MODULE}.apply_final_label", return_value=0),
         patch(f"{_REBASE_MODULE}.time.sleep"),
         patch(f"{MODULE}.handle_workflow_failure"),
     ), pr_manager
@@ -140,7 +140,7 @@ def test_settled_or_self_healing_outcomes_go_to_pr_created(
         patches[0],
         patches[1],
         patches[2],
-        patches[3] as mock_issue_cls,
+        patches[3],
         patches[4] as mock_update,
         patches[5] as mock_sleep,
         patches[6] as mock_fail,
@@ -149,10 +149,30 @@ def test_settled_or_self_healing_outcomes_go_to_pr_created(
 
     assert result == 0
     mock_update.assert_called_once_with(
-        mock_issue_cls.return_value, "fixing_merge_conflict", "pr_created"
+        PROJECT_DIR, "fixing_merge_conflict", "pr_created"
     )
     mock_fail.assert_not_called()
     assert mock_sleep.call_count == expected_sleeps
+
+
+def test_final_label_failure_returns_1_without_net() -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "clean"}]])
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3] as mock_net,
+        patches[4] as mock_update,
+        patches[5] as _mock_sleep,
+        patches[6] as mock_fail,
+    ):
+        mock_update.return_value = 1
+        result = run_fix_conflict_workflow(PROJECT_DIR)
+
+    assert result == 1
+    mock_update.assert_called_once()
+    mock_fail.assert_not_called()
+    mock_net.assert_not_called()
 
 
 def test_no_current_branch_returns_1_without_rebase() -> None:

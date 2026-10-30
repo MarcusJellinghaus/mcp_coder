@@ -86,6 +86,51 @@ class TestBuildAssessments:
         assert mock_gather.call_count == len(sessions)
         assert set(result) == {"C:/work/a", "C:/work/b", "C:/work/c"}
 
+    @patch(_GIT_STATUS, return_value="Clean")
+    @patch(_GATHER)
+    @patch(_SNAP)
+    @patch(_USERNAME, return_value="testuser")
+    @patch(_IGNORE, return_value=set())
+    def test_no_cache_makes_no_username_call(
+        self,
+        mock_ignore: object,
+        mock_username: Mock,
+        mock_snap: object,
+        mock_gather: Mock,
+        mock_git: object,
+    ) -> None:
+        """Without a cache (offline, after a rate limit) GET /user is skipped."""
+        mock_gather.return_value = make_signals()
+
+        build_assessments([make_session_at("C:/work/a", 1)], None)
+
+        mock_username.assert_not_called()
+
+    @patch(_GIT_STATUS, return_value="Clean")
+    @patch(_GATHER)
+    @patch(_SNAP)
+    @patch(_USERNAME, return_value="testuser")
+    @patch(_IGNORE, return_value=set())
+    def test_with_cache_username_fetched_once(
+        self,
+        mock_ignore: object,
+        mock_username: Mock,
+        mock_snap: object,
+        mock_gather: Mock,
+        mock_git: object,
+    ) -> None:
+        """With a cache the username is fetched once for all sessions."""
+        mock_gather.return_value = make_signals()
+        sessions = [make_session_at("C:/work/a", 1), make_session_at("C:/work/b", 2)]
+
+        with patch(
+            "mcp_coder.workflows.vscodeclaude.assessment._issue_facts",
+            return_value=make_issue_facts(),
+        ):
+            build_assessments(sessions, {"owner/repo": {}})
+
+        mock_username.assert_called_once()
+
 
 class TestApplyAssessments:
     """Apply-only mutation point: PID refresh + last_active advance, single save."""

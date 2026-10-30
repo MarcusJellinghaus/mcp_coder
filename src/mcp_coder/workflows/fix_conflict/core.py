@@ -10,7 +10,6 @@ import logging
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import get_current_branch_name
-from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.workflow_steps.rebase import (
     RebaseOutcome,
     _attempt_rebase_and_push,
@@ -22,7 +21,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     handle_workflow_failure,
     run_guarded,
 )
-from mcp_coder.workflow_utils.label_transitions import update_workflow_label
+from mcp_coder.workflow_utils.label_transitions import apply_final_label
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +63,8 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
         0 on every handled outcome: a settled non-dirty state, or "unknown"
         after a successful rebase, goes to status-10; "dirty", no open PR,
         or "unknown" after a failed rebase goes to status-74 with a comment.
-        1 when the current branch cannot be determined or on a netted
+        1 when the current branch cannot be determined, when the status-10
+        label could not be applied after one retry, or on a netted
         crash - the Jenkins shell template's watchdog line is a further
         safety net for a silent crash, this is just the reported exit code.
     """
@@ -92,17 +92,14 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
 
         if verdict:
             _fail(project_dir, verdict, outcome)
-        else:
-            if state == "unknown":
-                # Safe: status-10 detection re-checks "dirty" on every poll.
-                logger.info(
-                    "mergeable_state still unknown after poll cap but rebase "
-                    "succeeded - returning to status-10"
-                )
-            update_workflow_label(
-                IssueManager(project_dir), "fixing_merge_conflict", "pr_created"
+            return 0
+        if state == "unknown":
+            # Safe: status-10 detection re-checks "dirty" on every poll.
+            logger.info(
+                "mergeable_state still unknown after poll cap but rebase "
+                "succeeded - returning to status-10"
             )
-        return 0
+        return apply_final_label(project_dir, "fixing_merge_conflict", "pr_created")
 
     return run_guarded(
         body,

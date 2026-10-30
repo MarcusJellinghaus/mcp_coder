@@ -13,6 +13,7 @@ import sys
 faulthandler.enable(file=sys.stderr, all_threads=True)
 
 from .. import __version__
+from ..mcp_workspace_github import set_traffic_log_context
 from ..utils.log_utils import OUTPUT, setup_logging
 from .commands.check_file_sizes import execute_check_file_sizes
 from .commands.commit import execute_commit_auto
@@ -84,6 +85,19 @@ def _resolve_log_level(args: argparse.Namespace) -> str:
     if args.command in _INFO_COMMANDS:
         return "INFO"
     return "OUTPUT"
+
+
+def _command_name(args: argparse.Namespace) -> str:
+    """Return the catalog name of the parsed command, e.g. "vscodeclaude launch".
+
+    Returns:
+        The command name, followed by its subcommand or commit mode if any.
+    """
+    cmd = str(args.command)
+    sub = getattr(args, f"{cmd.replace('-', '_')}_subcommand", None) or getattr(
+        args, "commit_mode", None
+    )
+    return f"{cmd} {sub}" if sub else cmd
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -320,6 +334,8 @@ def main() -> int:
     # Parse arguments first to get log level
     parser = create_parser()
     args = parser.parse_args()
+    if args.command:
+        set_traffic_log_context(_command_name(args))
 
     # Initialize logging with resolved level
     log_level = _resolve_log_level(args)

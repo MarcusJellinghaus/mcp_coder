@@ -6,7 +6,11 @@ from mcp_coder.cli.commands.coordinator import (
     get_cached_eligible_issues,
     get_eligible_issues,
 )
-from mcp_coder.mcp_workspace_github import IssueData, RepoIdentifier
+from mcp_coder.mcp_workspace_github import (
+    GitHubRateLimitError,
+    IssueData,
+    RepoIdentifier,
+)
 from tests.github_factories import make_issue_data
 
 
@@ -203,3 +207,21 @@ class TestGetCachedEligibleIssues:
             # Should fall back to get_eligible_issues
             assert result == []
             mock_fallback.assert_called_once_with(mock_issue_manager)
+
+    def test_get_cached_eligible_issues_rate_limit_propagates(
+        self, mock_issue_manager: Mock
+    ) -> None:
+        """A rate limit is not swallowed by the cache-error fallback."""
+        with (
+            patch(
+                "mcp_coder.cli.commands.coordinator.core.get_all_cached_issues",
+                side_effect=GitHubRateLimitError("limited"),
+            ),
+            patch(
+                "mcp_coder.cli.commands.coordinator.core.get_eligible_issues"
+            ) as mock_fallback,
+        ):
+            with pytest.raises(GitHubRateLimitError):
+                get_cached_eligible_issues("owner/repo", mock_issue_manager)
+
+            mock_fallback.assert_not_called()

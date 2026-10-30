@@ -151,8 +151,8 @@ def env(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     )
     monkeypatch.setattr(handoff, "unstage_paths", mocks.unstage_paths)
 
-    mocks.update_workflow_label = MagicMock(return_value=True)
-    monkeypatch.setattr(handoff, "update_workflow_label", mocks.update_workflow_label)
+    mocks.apply_final_label = MagicMock(return_value=0)
+    monkeypatch.setattr(handoff, "apply_final_label", mocks.apply_final_label)
     mocks.handle_workflow_failure = MagicMock()
     monkeypatch.setattr(
         handoff, "handle_workflow_failure", mocks.handle_workflow_failure
@@ -202,6 +202,6 @@ def _run(project_dir: Path, **kwargs: Any) -> int:
 
 
 def _label_transition(mock: MagicMock) -> tuple[str, str]:
-    """Return the (from_label_id, to_label_id) of the last label update."""
-    kwargs = mock.call_args.kwargs
-    return kwargs["from_label_id"], kwargs["to_label_id"]
+    """Return the (from_label_id, to_label_id) of the last final-label call."""
+    _, from_id, to_id = mock.call_args.args
+    return from_id, to_id

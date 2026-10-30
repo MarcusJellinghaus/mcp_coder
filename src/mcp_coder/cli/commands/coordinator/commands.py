@@ -8,6 +8,7 @@ import argparse
 import logging
 
 from ....mcp_workspace_github import (
+    GitHubRateLimitError,
     IssueBranchManager,
     IssueManager,
     RepoIdentifier,
@@ -20,6 +21,11 @@ from ....utils.user_config import (
     get_cache_refresh_minutes,
     get_config_file_path,
     load_config,
+)
+from ....workflow_utils.rate_limit import (
+    as_rate_limit,
+    log_rate_limit_stop,
+    raise_if_rate_limited,
 )
 from ...utils import log_command_startup
 from .command_templates import TEST_COMMAND_TEMPLATES
@@ -260,6 +266,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                     cache_refresh_minutes=get_cache_refresh_minutes(),
                 )
             except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+                raise_if_rate_limited(e)
                 logger.warning(
                     f"Cache failed for {repo_full_name}: {e}, using direct fetch"
                 )
@@ -291,7 +298,7 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 workflow_name = workflow_config["workflow"]
 
                 try:
-                    dispatch_workflow(
+                    if not dispatch_workflow(
                         issue=issue,
                         workflow_name=workflow_name,
                         repo_config=validated_config,
@@ -300,7 +307,9 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                         issue_manager=issue_manager,
                         branch_manager=branch_manager,
                         log_level=args.log_level,
-                    )
+                    ):
+                        # Job started, label swap hit a rate limit
+                        return 1
 
                     # Update cache with new labels immediately after successful dispatch
                     try:
@@ -311,11 +320,13 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                             new_label=workflow_config["next_label"],
                         )
                     except Exception as cache_error:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+                        raise_if_rate_limited(cache_error)
                         logger.warning(
                             f"Cache update failed for issue #{issue['number']}: {cache_error}"
                         )
 
                 except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+                    raise_if_rate_limited(e)
                     # Fail-fast: log error and exit immediately
                     logger.error(f"Failed processing issue #{issue['number']}: {e}")
                     return 1
@@ -325,11 +336,21 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
         # Step 5: Success - all repos processed
         return 0
 
+    except GitHubRateLimitError as e:
+        log_rate_limit_stop(e)
+        return 0
+
     except ValueError as e:
+        if (rl := as_rate_limit(e)) is not None:
+            log_rate_limit_stop(rl)
+            return 0
         logger.error("%s", e)
         return 1
 
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+        if (rl := as_rate_limit(e)) is not None:
+            log_rate_limit_stop(rl)
+            return 0
         # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise

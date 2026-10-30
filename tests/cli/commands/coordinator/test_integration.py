@@ -336,7 +336,7 @@ class TestCacheUpdateIntegration:
         mock_get_cached_issues.return_value = [test_issue]
 
         # Setup - dispatch_workflow succeeds (no exception)
-        mock_dispatch_workflow.return_value = None
+        mock_dispatch_workflow.return_value = True
 
         # Execute
         result = execute_coordinator_run(args)
@@ -423,7 +423,7 @@ class TestCacheUpdateIntegration:
         mock_get_cached_issues.return_value = [test_issue]
 
         # Setup - dispatch_workflow succeeds, but cache update fails
-        mock_dispatch_workflow.return_value = None
+        mock_dispatch_workflow.return_value = True
         mock_update_cache.side_effect = Exception("Cache update error")
 
         # Execute
@@ -535,7 +535,7 @@ class TestCacheUpdateIntegration:
         mock_get_cached_issues.return_value = test_issues
 
         # Setup - All dispatches succeed
-        mock_dispatch_workflow.return_value = None
+        mock_dispatch_workflow.return_value = True
 
         # Execute
         result = execute_coordinator_run(args)

@@ -7,6 +7,7 @@ from tabulate import tabulate
 
 from ...mcp_workspace_git import get_working_tree_status, is_git_repository
 from ...mcp_workspace_github import IssueData, IssueManager
+from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .helpers import get_issue_status, load_to_be_deleted
 from .issues import is_status_eligible_for_session, status_requires_linked_branch
 from .types import SessionAction, SessionAssessment, VSCodeClaudeSession
@@ -29,7 +30,7 @@ def get_issue_current_status(
     issue_number: int,
     cached_issues: dict[int, IssueData] | None = None,
     issue_manager: IssueManager | None = None,
-) -> tuple[str | None, bool]:
+) -> tuple[str | None, bool | None]:
     """Get current status label and open/closed state for an issue.
 
     Args:
@@ -40,11 +41,13 @@ def get_issue_current_status(
     Returns:
         Tuple of (status_label, is_open) where:
         - status_label: Current status label or None if no status found
-        - is_open: True if issue is open, False if closed
+        - is_open: True if issue is open, False if closed, None if unknown
+          (the live fetch failed)
 
     Raises:
         ValueError: If neither cached_issues nor issue_manager is provided.
-    """
+        GitHubRateLimitError: If the live fetch hits a GitHub rate limit.
+    """  # noqa: DOC502 - raised via raise_if_rate_limited
     # Try cache first
     if cached_issues is not None and issue_number in cached_issues:
         issue = cached_issues[issue_number]
@@ -60,14 +63,20 @@ def get_issue_current_status(
 
     try:
         issue = issue_manager.get_issue(issue_number)
-        is_open = issue["state"] == "open"
-        for label in issue["labels"]:
-            if label.startswith("status-"):
-                return label, is_open
-        return None, is_open
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        raise_if_rate_limited(e)
         logger.warning("Failed to get issue #%d status: %s", issue_number, e)
-        return None, False  # Assume closed on error (conservative)
+        return None, None
+    if issue["number"] == 0:
+        # get_issue returns empty IssueData when the fetch failed
+        logger.warning("Could not fetch issue #%d", issue_number)
+        return None, None
+
+    is_open = issue["state"] == "open"
+    for label in issue["labels"]:
+        if label.startswith("status-"):
+            return label, is_open
+    return None, is_open
 
 
 def is_issue_closed(
@@ -100,6 +109,11 @@ def is_issue_closed(
         issue_manager = IssueManager(repo_url=repo_url)
         _, is_open = get_issue_current_status(issue_number, issue_manager=issue_manager)
 
+    if is_open is None:
+        logger.warning(
+            "State of issue #%d unknown, not treating it as closed", issue_number
+        )
+        return False
     return not is_open
 
 
@@ -141,6 +155,10 @@ def is_session_stale(
         current_status, is_open = get_issue_current_status(
             issue_number, issue_manager=issue_manager
         )
+
+    if is_open is None:
+        logger.warning("State of issue #%d unknown, not marking stale", issue_number)
+        return False
 
     # Closed issues should be filtered out before this function is called
     if not is_open:

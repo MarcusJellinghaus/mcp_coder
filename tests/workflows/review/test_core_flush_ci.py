@@ -109,5 +109,5 @@ def test_dismiss_round_waits_for_the_flush_commit_s_own_ci_run(
 
     assert _run(tmp_path) == 0
     env.handle_workflow_failure.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_IMPLEMENTATION.success_label_id

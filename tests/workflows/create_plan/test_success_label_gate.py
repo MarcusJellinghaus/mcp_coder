@@ -12,6 +12,7 @@ from tests.github_factories import make_issue_data
 # Common patch prefixes
 _CORE = "mcp_coder.workflows.create_plan.core"
 _PREREQ = "mcp_coder.workflows.create_plan.prerequisites"
+_GUARD = "mcp_coder.workflow_utils.failure_handling"
 
 
 class TestSuccessLabelGate:
@@ -38,8 +39,13 @@ class TestSuccessLabelGate:
         tmp_path: Path,
         *,
         flag: bool,
-    ) -> tuple[int, MagicMock]:
-        """Drive the workflow to the label transition and return (result, mock)."""
+        label_rc: int = 0,
+    ) -> tuple[int, MagicMock, MagicMock]:
+        """Drive the workflow to the label transition.
+
+        Returns:
+            (result, apply_final_label mock, run_guarded net mock).
+        """
         (tmp_path / ".git").mkdir()
 
         with (
@@ -58,39 +64,45 @@ class TestSuccessLabelGate:
                 return_value={"success": True, "commit_hash": "abc123"},
             ),
             patch(f"{_CORE}.git_push", return_value={"success": True}),
-            patch(f"{_PREREQ}.IssueManager"),
             patch(f"{_PREREQ}.get_repo_flag", return_value=flag),
-            patch(f"{_PREREQ}.update_workflow_label", return_value=True) as mock_update,
+            patch(f"{_PREREQ}.apply_final_label", return_value=label_rc) as mock_apply,
+            patch(f"{_GUARD}.handle_workflow_failure") as mock_net,
         ):
             result = run_create_plan_workflow(
                 123, tmp_path, "claude", update_issue_labels=True
             )
-        return result, mock_update
+        return result, mock_apply, mock_net
 
     def test_flag_off_uses_plan_review(
         self, mock_issue_data: IssueData, tmp_path: Path
     ) -> None:
         """Flag off → success label transitions to plan_review."""
-        result, mock_update = self._run_success_path(
+        result, mock_apply, _ = self._run_success_path(
             mock_issue_data, tmp_path, flag=False
         )
 
         assert result == 0
-        mock_update.assert_called_once()
-        assert mock_update.call_args.kwargs["from_label_id"] == "planning"
-        assert mock_update.call_args.kwargs["to_label_id"] == "plan_review"
-        assert mock_update.call_args.kwargs["validated_issue_number"] == 123
+        mock_apply.assert_called_once_with(tmp_path, "planning", "plan_review", 123)
 
     def test_flag_on_uses_plan_review_bot(
         self, mock_issue_data: IssueData, tmp_path: Path
     ) -> None:
         """Flag on → success label transitions to plan_review_bot."""
-        result, mock_update = self._run_success_path(
+        result, mock_apply, _ = self._run_success_path(
             mock_issue_data, tmp_path, flag=True
         )
 
         assert result == 0
-        mock_update.assert_called_once()
-        assert mock_update.call_args.kwargs["from_label_id"] == "planning"
-        assert mock_update.call_args.kwargs["to_label_id"] == "plan_review_bot"
-        assert mock_update.call_args.kwargs["validated_issue_number"] == 123
+        mock_apply.assert_called_once_with(tmp_path, "planning", "plan_review_bot", 123)
+
+    def test_final_label_failure_returns_1_without_net(
+        self, mock_issue_data: IssueData, tmp_path: Path
+    ) -> None:
+        """A failed final label → exit 1, run_guarded's net stays silent."""
+        result, mock_apply, mock_net = self._run_success_path(
+            mock_issue_data, tmp_path, flag=False, label_rc=1
+        )
+
+        assert result == 1
+        mock_apply.assert_called_once()
+        mock_net.assert_not_called()

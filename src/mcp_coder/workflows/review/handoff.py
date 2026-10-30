@@ -28,7 +28,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     exception_summary,
     handle_workflow_failure,
 )
-from mcp_coder.workflow_utils.label_transitions import update_workflow_label
+from mcp_coder.workflow_utils.label_transitions import apply_final_label
 
 from .config import ReviewConfig
 from .verdict import Verdict
@@ -92,30 +92,24 @@ def _set_label(
     project_dir: Path,
     to_label_id: str,
     update_issue_labels: bool,
-) -> None:
-    """Apply a workflow label transition from the busy label, if gating allows.
+) -> int:
+    """Apply the final label transition from the busy label, if gating allows.
 
-    Mirrors ``implement/core.py``: gated on ``update_issue_labels`` and given a
-    fresh ``IssueManager`` as its first arg, wrapped so a label failure never
-    breaks the workflow.
+    Mirrors ``implement/core.py``: gated on ``update_issue_labels`` and applied
+    via ``apply_final_label`` (one retry, never raises).
 
     Args:
         config: The review workflow config (provides ``busy_label_id``).
         project_dir: Repository root.
         to_label_id: Terminal label id to transition to.
         update_issue_labels: When False, this is a no-op.
+
+    Returns:
+        0 when applied or skipped, 1 if the label could not be applied.
     """
     if not update_issue_labels:
-        return
-    try:
-        issue_manager = IssueManager(project_dir)
-        update_workflow_label(
-            issue_manager,
-            from_label_id=config.busy_label_id,
-            to_label_id=to_label_id,
-        )
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.warning("Failed to update issue label to '%s': %s", to_label_id, exc)
+        return 0
+    return apply_final_label(project_dir, config.busy_label_id, to_label_id)
 
 
 def _fail(
@@ -358,7 +352,7 @@ def _route_to_human(
             ``reason`` when its reason is in ``_REBASE_HANDOFF``.
 
     Returns:
-        Always ``0``.
+        ``0``, or ``1`` if the escalate label could not be applied.
     """
     if log_path is not None:
         _flush_round_log(project_dir, only=log_path)
@@ -398,8 +392,9 @@ def _route_to_human(
             IssueManager(project_dir).add_comment(issue_number, comment_body)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("Failed to post handoff comment: %s", exc)
-    _set_label(config, project_dir, config.escalate_label_id, update_issue_labels)
-    return 0
+    return _set_label(
+        config, project_dir, config.escalate_label_id, update_issue_labels
+    )
 
 
 def _base_value(rebase: RebaseOutcome | None) -> str | None:

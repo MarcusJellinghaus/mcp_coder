@@ -37,8 +37,7 @@ def mocks() -> Iterator[_Mocks]:
         patch(f"{_CORE}._cleanup_commit_push", return_value=None) as cleanup,
         patch(f"{_CORE}._resolve_issue_from_pr", return_value=None) as resolve,
         patch(f"{_CORE}.run_post_creation", return_value="pr_created") as post,
-        patch(f"{_CORE}.update_workflow_label", return_value=True) as update_label,
-        patch(f"{_CORE}.IssueManager"),
+        patch(f"{_CORE}.apply_final_label", return_value=0) as update_label,
         patch(f"{_CORE}._handle_create_pr_failure") as handle_failure,
         patch(f"{_CORE}.get_current_branch_name", return_value="5-feat"),
         patch(f"{_CORE}.check_prerequisites") as prereqs,
@@ -79,10 +78,9 @@ class TestResumePath:
         mocks.post_creation.assert_called_once_with(
             tmp_path, "5-feat", "claude", None, None
         )
-        mocks.update_label.assert_called_once()
-        kwargs = mocks.update_label.call_args.kwargs
-        assert kwargs["to_label_id"] == "pr_created"
-        assert kwargs["validated_issue_number"] == 5
+        mocks.update_label.assert_called_once_with(
+            tmp_path, "pr_creating", "pr_created", 5
+        )
 
     def test_pr_info_clean_runs_cleanup_then_phase_b(
         self, mocks: _Mocks, tmp_path: Path
@@ -147,8 +145,7 @@ class TestResumePath:
 
         assert result == 0
         mocks.handle_failure.assert_not_called()
-        kwargs = mocks.update_label.call_args.kwargs
-        assert kwargs["validated_issue_number"] == 5
+        assert mocks.update_label.call_args.args[3] == 5
 
     def test_no_resolve_without_label_updates(
         self, mocks: _Mocks, tmp_path: Path

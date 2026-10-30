@@ -5,6 +5,8 @@ state-machine logic from the GitHub manager class.
 """
 
 import logging
+import time
+from pathlib import Path
 
 from mcp_coder.config.label_config import (
     build_label_lookups,
@@ -16,15 +18,21 @@ from mcp_coder.mcp_workspace_git import (
     get_current_branch_name,
 )
 from mcp_coder.mcp_workspace_github import (
-    BaseGitHubManager,
     IssueBranchManager,
     IssueManager,
 )
 from mcp_coder.workflow_utils.branch_linkage import is_branch_linked_to_issue
+from mcp_coder.workflow_utils.rate_limit import raise_if_rate_limited
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["update_workflow_label"]
+__all__ = [
+    "FINAL_LABEL_RETRY_DELAY_SECONDS",
+    "apply_final_label",
+    "update_workflow_label",
+]
+
+FINAL_LABEL_RETRY_DELAY_SECONDS = 30
 
 
 def update_workflow_label(
@@ -39,8 +47,8 @@ def update_workflow_label(
     Reads labels.json via label_config, resolves internal_ids to label names,
     then delegates to issue_manager.transition_issue_label().
 
-    Non-blocking: All errors are caught, logged, and return False.
-    Workflow success is never affected by label update failures.
+    Non-blocking except for rate limits, which raise ``GitHubRateLimitError``.
+    All other errors are caught, logged, and return False.
 
     Args:
         issue_manager: IssueManager instance to delegate label operations to.
@@ -52,7 +60,10 @@ def update_workflow_label(
 
     Returns:
         True if label updated successfully, False otherwise.
-    """
+
+    Raises:
+        GitHubRateLimitError: If a GitHub rate limit is hit.
+    """  # noqa: DOC502 - raised via raise_if_rate_limited
     try:
         # Check for pre-validated issue number
         if validated_issue_number is not None:
@@ -91,19 +102,16 @@ def update_workflow_label(
             issue_number = extracted_issue_number
 
             # Step 3: Verify branch is linked to the issue
-            repo_url = None
-            if issue_manager._cached_repo_identifier is not None:
-                repo_url = issue_manager._cached_repo_identifier.https_url
-
-            # IssueBranchManager.__init__ doesn't accept github_token,
-            # so init via BaseGitHubManager to reuse the existing token.
-            branch_manager = IssueBranchManager.__new__(IssueBranchManager)
-            BaseGitHubManager.__init__(
-                branch_manager,
-                project_dir=issue_manager.project_dir,
-                repo_url=repo_url,
-                github_token=issue_manager.github_token,
-            )
+            if issue_manager.project_dir is not None:
+                branch_manager = IssueBranchManager(
+                    project_dir=issue_manager.project_dir,
+                    github_token=issue_manager.github_token,
+                )
+            else:
+                branch_manager = IssueBranchManager(
+                    repo_url=issue_manager.repo_identifier.https_url,
+                    github_token=issue_manager.github_token,
+                )
             if not is_branch_linked_to_issue(
                 branch_manager, issue_number, actual_branch_name
             ):
@@ -145,5 +153,56 @@ def update_workflow_label(
         return success
 
     except Exception as e:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        raise_if_rate_limited(e)
         logger.error(f"Unexpected error updating workflow label: {e}")
         return False
+
+
+def apply_final_label(
+    project_dir: Path,
+    from_label_id: str,
+    to_label_id: str,
+    issue_number: int | None = None,
+) -> int:
+    """Apply the workflow's final label; retry once after ~30 s.
+
+    Returns 0 on success, 1 after the retry failed. Never raises or exits,
+    so run_guarded's safety net is not triggered.
+
+    Args:
+        project_dir: Project directory (used for the manager and branch lookup).
+        from_label_id: Internal ID of the workflow's busy label.
+        to_label_id: Internal ID of the intended final label.
+        issue_number: Optional pre-validated issue number.
+
+    Returns:
+        0 if the label was applied, 1 if both attempts failed.
+    """
+    for attempt in (1, 2):
+        if attempt == 2:
+            time.sleep(FINAL_LABEL_RETRY_DELAY_SECONDS)
+        try:
+            if update_workflow_label(
+                IssueManager(project_dir=project_dir),
+                from_label_id,
+                to_label_id,
+                validated_issue_number=issue_number,
+            ):
+                return 0
+        except Exception as exc:  # pylint: disable=broad-exception-caught  # retried, then reported via exit code
+            logger.warning("Final label update failed (attempt %d): %s", attempt, exc)
+
+    number = issue_number
+    if number is None:
+        try:
+            number = extract_issue_number_from_branch(
+                get_current_branch_name(project_dir) or ""
+            )
+        except Exception:  # pylint: disable=broad-exception-caught  # only for the error message
+            number = None
+    logger.error(
+        "Final label update failed for issue #%s: intended label '%s'",
+        number or "?",
+        to_label_id,
+    )
+    return 1

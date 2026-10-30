@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from ....mcp_workspace_github import (
+    GitHubRateLimitError,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -22,6 +23,11 @@ from ....utils.user_config import (
     get_cache_refresh_minutes,
     get_config_file_path,
     load_config,
+)
+from ....workflow_utils.rate_limit import (
+    as_rate_limit,
+    log_rate_limit_stop,
+    raise_if_rate_limited,
 )
 from ....workflows.vscodeclaude import (
     VSCodeClaudeConfig,
@@ -144,11 +150,20 @@ def _build_cached_issues_by_repo(
             cached_issues_by_repo[repo_full_name] = issues_by_number
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+            raise_if_rate_limited(e)
             logger.warning(f"Failed to build cache for {repo_name}: {e}")
             if repo_full_name:
                 failed_repos.add(repo_full_name)
 
     return cached_issues_by_repo, failed_repos
+
+
+def _rate_limit_or_raise(exc: Exception) -> GitHubRateLimitError:
+    """Return the rate limit behind exc; re-raise exc if it is not one."""
+    rate_limit = as_rate_limit(exc)
+    if rate_limit is None:
+        raise exc
+    return rate_limit
 
 
 def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
@@ -198,17 +213,26 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         store = load_sessions()
         sessions_list = store["sessions"]
 
+        # Set on the first GitHub rate limit: later GitHub phases are skipped,
+        # disk-only phases (cleanup, apply_assessments) still run.
+        rate_limited: GitHubRateLimitError | None = None
+
         # Build cached issues for all repos (used for staleness checks)
         # Pass sessions so closed session issues are included (mirrors status command)
-        cached_issues_by_repo, _ = _build_cached_issues_by_repo(
-            repo_names, sessions_list
-        )
-
         # Build the full assessment for every session once at command entry
         # (read-only: snapshot taken once, no disk writes here). Cleanup now
         # consumes the assessments directly; restart still reads the legacy
         # active_set shape, so project the verdicts onto it until it is migrated.
-        assessments = build_assessments(sessions_list, cached_issues_by_repo)
+        try:
+            cached_issues_by_repo, _ = _build_cached_issues_by_repo(
+                repo_names, sessions_list
+            )
+            assessments = build_assessments(sessions_list, cached_issues_by_repo)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            rate_limited = _rate_limit_or_raise(exc)
+            cached_issues_by_repo = {}
+            # Offline assessments: no cache, so no GitHub calls.
+            assessments = build_assessments(sessions_list, None)
         active_set = {
             folder: assessment.verdict.active
             for folder, assessment in assessments.items()
@@ -234,9 +258,17 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # Restart now consumes the prebuilt assessments directly (verdict +
         # decision); the active_set shim survives only for the launch-capacity
         # message and the not-yet-migrated status table (Step 8).
-        restarted = restart_closed_sessions(
-            assessments=assessments, cached_issues_by_repo=cached_issues_by_repo
-        )
+        # Filled as sessions relaunch, so a rate limit partway keeps them.
+        restarted: list[VSCodeClaudeSession] = []
+        if rate_limited is None:
+            try:
+                restart_closed_sessions(
+                    assessments=assessments,
+                    cached_issues_by_repo=cached_issues_by_repo,
+                    restarted=restarted,
+                )
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                rate_limited = _rate_limit_or_raise(exc)
         for session in restarted:
             repo_short = session["repo"].split("/")[-1]
             logger.log(
@@ -255,6 +287,10 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # records the destructive deletes that cleanup persisted out of the store.
         apply_assessments(assessments, sessions_list, write_audit=True)
 
+        if rate_limited is not None:
+            log_rate_limit_stop(rate_limited)
+            return 0
+
         # Step 3: Check repo list (already loaded above)
         if not repo_names:
             logger.error("No repositories configured in config file")
@@ -267,88 +303,24 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         current_count = sum(1 for a in assessments.values() if a.verdict.active) + len(
             restarted
         )
-        skip_github_install = getattr(args, "no_install_from_github", False)
+        # Filled as sessions launch, so a rate limit in a later repo keeps them.
         total_started: list[VSCodeClaudeSession] = []
-        for repo_name in repo_names:
-            # Apply repo filter if specified
-            if args.repo and repo_name != args.repo:
-                continue
-
-            repo_config = load_repo_config(repo_name)
-
-            # Build validated config dict - use empty string fallback for optional repo_url
-            repo_url_val = repo_config.get("repo_url")
-            repo_url = repo_url_val if isinstance(repo_url_val, str) else ""
-            validated_config: dict[str, str] = {
-                "repo_url": repo_url,
-            }
-
-            if not repo_url:
-                logger.error(
-                    "No repo_url configured for repo %s — skipping",
-                    repo_name,
-                )
-                continue
-
-            repo_full_name = _get_repo_full_name_from_url(repo_url)
-            if not repo_full_name or repo_full_name not in cached_issues_by_repo:
-                logger.error(
-                    "No cached issues available for repo %s (cache build may have failed) — skipping",
-                    repo_name,
-                )
-                continue
-
-            all_cached_issues = list(
-                cached_issues_by_repo.get(repo_full_name, {}).values()
-            )
-
-            # PR-health checks run for every repo, independent of capacity
-            check_pr_health(repo_name, validated_config, all_cached_issues)
-
-            started = process_eligible_issues(
-                repo_name=repo_name,
-                repo_config=validated_config,
-                vscodeclaude_config=vscodeclaude_config,
-                max_sessions=max_sessions,
-                current_count=current_count,
-                all_cached_issues=all_cached_issues,
-                skip_github_install=skip_github_install,
-            )
-            total_started.extend(started)
-            current_count += len(started)
-
-        # Print summary
-        if total_started:
-            logger.log(OUTPUT, "Started %d new session(s):", len(total_started))
-            for session in total_started:
-                repo_short = session["repo"].split("/")[-1]
-                logger.log(
-                    OUTPUT,
-                    "  %s - #%s: %s",
-                    repo_short,
-                    session["issue_number"],
-                    session["status"],
-                )
-        elif current_count >= max_sessions:
-            active_folders = [Path(f).name for f, alive in active_set.items() if alive]
-            restarted_folders = [Path(s["folder"]).name for s in restarted]
-            logger.log(
-                OUTPUT,
-                "No new sessions started — at capacity (%d/%d). "
-                "Counted: active=%s restarted=%s",
-                current_count,
+        try:
+            _launch_for_repos(
+                args,
+                repo_names,
+                vscodeclaude_config,
                 max_sessions,
-                active_folders,
-                restarted_folders,
-            )
-        else:
-            logger.log(
-                OUTPUT,
-                "No new sessions started (active: %d/%d)",
                 current_count,
-                max_sessions,
+                cached_issues_by_repo,
+                active_set,
+                restarted,
+                total_started,
             )
-
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            rate_limit = _rate_limit_or_raise(exc)
+            _log_started_sessions(total_started)
+            log_rate_limit_stop(rate_limit)
         return 0
 
     except ValueError as e:
@@ -359,6 +331,118 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
         # Let all other exceptions bubble up with full traceback
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise
+
+
+def _log_started_sessions(started: list[VSCodeClaudeSession]) -> None:
+    """Log the "Started N new session(s)" summary; no-op when nothing started."""
+    if not started:
+        return
+    logger.log(OUTPUT, "Started %d new session(s):", len(started))
+    for session in started:
+        repo_short = session["repo"].split("/")[-1]
+        logger.log(
+            OUTPUT,
+            "  %s - #%s: %s",
+            repo_short,
+            session["issue_number"],
+            session["status"],
+        )
+
+
+def _launch_for_repos(
+    args: argparse.Namespace,
+    repo_names: list[str],
+    vscodeclaude_config: VSCodeClaudeConfig,
+    max_sessions: int,
+    current_count: int,
+    cached_issues_by_repo: dict[str, dict[int, IssueData]],
+    active_set: dict[str, bool],
+    restarted: list[VSCodeClaudeSession],
+    total_started: list[VSCodeClaudeSession],
+) -> None:
+    """Run PR-health checks and launch eligible issues per repo, then summarise.
+
+    Args:
+        args: Parsed launch arguments (``repo``, ``no_install_from_github``).
+        repo_names: Configured repository names.
+        vscodeclaude_config: VSCodeClaude config.
+        max_sessions: Session capacity.
+        current_count: Active plus restarted sessions before launching.
+        cached_issues_by_repo: Cached issues keyed by repo full name.
+        active_set: Folder → active flag, for the capacity message.
+        restarted: Sessions restarted in this run, for the capacity message.
+        total_started: List that launched sessions are appended to per repo,
+            so the caller keeps them when a rate limit raises partway through.
+    """
+    skip_github_install = getattr(args, "no_install_from_github", False)
+    for repo_name in repo_names:
+        # Apply repo filter if specified
+        if args.repo and repo_name != args.repo:
+            continue
+
+        repo_config = load_repo_config(repo_name)
+
+        # Build validated config dict - use empty string fallback for optional repo_url
+        repo_url_val = repo_config.get("repo_url")
+        repo_url = repo_url_val if isinstance(repo_url_val, str) else ""
+        validated_config: dict[str, str] = {
+            "repo_url": repo_url,
+        }
+
+        if not repo_url:
+            logger.error(
+                "No repo_url configured for repo %s — skipping",
+                repo_name,
+            )
+            continue
+
+        repo_full_name = _get_repo_full_name_from_url(repo_url)
+        if not repo_full_name or repo_full_name not in cached_issues_by_repo:
+            logger.error(
+                "No cached issues available for repo %s (cache build may have failed) — skipping",
+                repo_name,
+            )
+            continue
+
+        all_cached_issues = list(cached_issues_by_repo.get(repo_full_name, {}).values())
+
+        # PR-health checks run for every repo, independent of capacity
+        check_pr_health(repo_name, validated_config, all_cached_issues)
+
+        started = process_eligible_issues(
+            repo_name=repo_name,
+            repo_config=validated_config,
+            vscodeclaude_config=vscodeclaude_config,
+            max_sessions=max_sessions,
+            current_count=current_count,
+            all_cached_issues=all_cached_issues,
+            skip_github_install=skip_github_install,
+        )
+        total_started.extend(started)
+        current_count += len(started)
+
+    # Print summary
+    if total_started:
+        _log_started_sessions(total_started)
+    elif current_count >= max_sessions:
+        active_folders = [Path(f).name for f, alive in active_set.items() if alive]
+        restarted_folders = [Path(s["folder"]).name for s in restarted]
+        logger.log(
+            OUTPUT,
+            "No new sessions started — at capacity (%d/%d). "
+            "Counted: active=%s restarted=%s",
+            current_count,
+            max_sessions,
+            active_folders,
+            restarted_folders,
+        )
+    else:
+        logger.log(
+            OUTPUT,
+            "No new sessions started (active: %d/%d)",
+            current_count,
+            max_sessions,
+        )
 
 
 def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
@@ -390,29 +474,37 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
 
     # Build cached issues for staleness checks, including session issues
     # to ensure closed issues from existing sessions are properly detected
-    cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names, sessions)
+    # The whole GitHub part runs in one try: on a rate limit, print only the
+    # rate-limit line (no table, no explain text) and exit 0.
+    try:
+        cached_issues_by_repo, _ = _build_cached_issues_by_repo(repo_names, sessions)
 
-    # Build the assessment for every session once at command entry. Status is
-    # WRITE-FREE: it never calls apply_assessments, so no PID refresh or
-    # last_active advance happens here. The display consumes the assessments
-    # directly now, so the legacy active_set shim is no longer built here.
-    assessments = build_assessments(sessions, cached_issues_by_repo)
+        # Build the assessment for every session once at command entry. Status is
+        # WRITE-FREE: it never calls apply_assessments, so no PID refresh or
+        # last_active advance happens here. The display consumes the assessments
+        # directly now, so the legacy active_set shim is no longer built here.
+        assessments = build_assessments(sessions, cached_issues_by_repo)
 
-    # --explain: on-demand transparency. Render the already-built assessments via
-    # the shared SessionAssessment.to_explain() serializer and return. This stays
-    # WRITE-FREE (no apply_assessments, no audit) and skips the branch-check
-    # network traversal needed only for the status table.
-    if getattr(args, "explain", False):
-        logger.log(OUTPUT, "%s", render_explain(assessments))
+        # --explain: on-demand transparency. Render the already-built assessments
+        # via the shared SessionAssessment.to_explain() serializer and return. This
+        # stays WRITE-FREE (no apply_assessments, no audit) and skips the
+        # branch-check network traversal needed only for the status table.
+        if getattr(args, "explain", False):
+            logger.log(OUTPUT, "%s", render_explain(assessments))
+            return 0
+
+        # Build eligible issues list and issues_without_branch set.
+        # Pass the pre-fetched cached_issues_by_repo so
+        # build_eligible_issues_with_branch_check does not re-traverse the cache
+        # via get_cached_eligible_vscodeclaude_issues() (issue #701 Fix #3).
+        eligible_issues, issues_without_branch = (
+            build_eligible_issues_with_branch_check(
+                repo_names, cached_issues_by_repo=cached_issues_by_repo
+            )
+        )
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        log_rate_limit_stop(_rate_limit_or_raise(exc))
         return 0
-
-    # Build eligible issues list and issues_without_branch set.
-    # Pass the pre-fetched cached_issues_by_repo so build_eligible_issues_with_branch_check
-    # does not re-traverse the cache via get_cached_eligible_vscodeclaude_issues()
-    # (issue #701 Fix #3).
-    eligible_issues, issues_without_branch = build_eligible_issues_with_branch_check(
-        repo_names, cached_issues_by_repo=cached_issues_by_repo
-    )
 
     # Use display_status_table from status.py
     display_status_table(

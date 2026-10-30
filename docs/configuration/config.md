@@ -81,6 +81,9 @@ token = "ghp_your_github_personal_access_token_here"
 # Extra logins whose PR/issue comments are trusted, besides repo
 # owners, members and collaborators (e.g. a CI machine user)
 # trusted_commenters = ["your-ci-bot"]
+# GitHub traffic log (read by mcp-workspace; opt-in, only `true` enables it)
+# traffic_log = true
+# traffic_log_dir = "~/.mcp_coder/logs/github_traffic"
 
 [jenkins]
 # Jenkins server configuration
@@ -138,15 +141,19 @@ post_issue_comments = true
 
 ### [github]
 
-GitHub authentication and comment-trust settings.
+GitHub authentication, comment-trust and traffic-log settings.
 
 | Field | Type | Description |
 | ------- | ------ | ------------- |
 | `token` | string | GitHub personal access token. Env override: `GITHUB_TOKEN` |
 | `test_repo_url` | string | Repository used by GitHub integration tests. Env override: `GITHUB_TEST_REPO_URL` |
 | `trusted_commenters` | list of strings | Extra logins whose PR/issue comments are trusted, besides repo owners, members and collaborators (e.g. a CI machine user). See [mcp-workspace GitHub configuration](https://github.com/MarcusJellinghaus/mcp-workspace#github-configuration) |
+| `traffic_log` | boolean | Opt-in log of GitHub API requests. Only boolean `true` enables it |
+| `traffic_log_dir` | string | Directory for the traffic log. Default: `~/.mcp_coder/logs/github_traffic/`. One file per day: `github_requests_YYYY-MM-DD.log` |
 
-`trusted_commenters` has no environment-variable override; it is read from the config file only.
+`trusted_commenters`, `traffic_log` and `traffic_log_dir` have no environment-variable override; they are read from the config file only.
+
+The traffic-log keys are read by mcp-workspace, not by mcp-coder, once per process. For the line format see [mcp-workspace GitHub traffic log](https://github.com/MarcusJellinghaus/mcp-workspace#github-traffic-log).
 
 **Example:**
 
@@ -154,6 +161,8 @@ GitHub authentication and comment-trust settings.
 [github]
 token = "ghp_your_github_personal_access_token_here"
 trusted_commenters = ["your-ci-bot"]
+# traffic_log = true
+# traffic_log_dir = "~/.mcp_coder/logs/github_traffic"
 ```
 
 ### [coordinator]

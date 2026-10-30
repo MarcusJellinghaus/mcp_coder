@@ -110,15 +110,8 @@ def test_branch_with_issue_populates_from_cache() -> None:
             return_value=repo_id,
         ),
         patch(
-            f"{BRANCH_INFO_MODULE}.get_cache_file_path",
-            return_value=Path("/fake/cache.json"),
-        ),
-        patch(
-            f"{BRANCH_INFO_MODULE}.load_cache_file",
-            return_value={
-                "last_checked": "2026-04-30T10:00:00+00:00",
-                "issues": {},
-            },
+            f"{BRANCH_INFO_MODULE}.get_issue_cache_last_checked",
+            return_value=datetime(2026, 4, 30, 10, 0, tzinfo=UTC),
         ),
         patch(f"{BRANCH_INFO_MODULE}.IssueManager"),
         patch(
@@ -151,11 +144,7 @@ def test_gh_failure_keeps_branch_fields_returns_none_for_issue() -> None:
             return_value=_fake_repo_id(),
         ),
         patch(
-            f"{BRANCH_INFO_MODULE}.get_cache_file_path",
-            return_value=Path("/fake/cache.json"),
-        ),
-        patch(
-            f"{BRANCH_INFO_MODULE}.load_cache_file",
+            f"{BRANCH_INFO_MODULE}.get_issue_cache_last_checked",
             side_effect=RuntimeError("boom"),
         ),
     ):
@@ -187,12 +176,8 @@ def test_cache_miss_returns_branchinfo_with_none_issue_fields() -> None:
             return_value=_fake_repo_id(),
         ),
         patch(
-            f"{BRANCH_INFO_MODULE}.get_cache_file_path",
-            return_value=Path("/fake/cache.json"),
-        ),
-        patch(
-            f"{BRANCH_INFO_MODULE}.load_cache_file",
-            return_value={"last_checked": None, "issues": {}},
+            f"{BRANCH_INFO_MODULE}.get_issue_cache_last_checked",
+            return_value=None,
         ),
         patch(f"{BRANCH_INFO_MODULE}.IssueManager"),
         patch(f"{BRANCH_INFO_MODULE}.get_all_cached_issues", return_value=[]),
@@ -244,8 +229,9 @@ def test_no_repo_remote_skips_gh_lookups() -> None:
         ),
         patch(f"{BRANCH_INFO_MODULE}.get_repository_identifier", return_value=None),
         patch(f"{BRANCH_INFO_MODULE}.get_all_cached_issues", side_effect=sentinel),
-        patch(f"{BRANCH_INFO_MODULE}.get_cache_file_path", side_effect=sentinel),
-        patch(f"{BRANCH_INFO_MODULE}.load_cache_file", side_effect=sentinel),
+        patch(
+            f"{BRANCH_INFO_MODULE}.get_issue_cache_last_checked", side_effect=sentinel
+        ),
     ):
         info = get_branch_info(PROJECT_DIR)
 
@@ -289,12 +275,8 @@ def test_status_label_picks_first_status_prefix(
             return_value=repo_id,
         ),
         patch(
-            f"{BRANCH_INFO_MODULE}.get_cache_file_path",
-            return_value=Path("/fake/cache.json"),
-        ),
-        patch(
-            f"{BRANCH_INFO_MODULE}.load_cache_file",
-            return_value={"last_checked": None, "issues": {}},
+            f"{BRANCH_INFO_MODULE}.get_issue_cache_last_checked",
+            return_value=None,
         ),
         patch(f"{BRANCH_INFO_MODULE}.IssueManager"),
         patch(
@@ -385,8 +367,9 @@ def test_get_branch_only_skips_github_and_cache_io() -> None:
             return_value=42,
         ),
         patch(f"{BRANCH_INFO_MODULE}.get_repository_identifier", side_effect=sentinel),
-        patch(f"{BRANCH_INFO_MODULE}.get_cache_file_path", side_effect=sentinel),
-        patch(f"{BRANCH_INFO_MODULE}.load_cache_file", side_effect=sentinel),
+        patch(
+            f"{BRANCH_INFO_MODULE}.get_issue_cache_last_checked", side_effect=sentinel
+        ),
         patch(f"{BRANCH_INFO_MODULE}.IssueManager", side_effect=sentinel),
         patch(f"{BRANCH_INFO_MODULE}.get_all_cached_issues", side_effect=sentinel),
     ):
@@ -445,9 +428,7 @@ def test_get_pr_for_issue_two_step_lookup() -> None:
         result = get_pr_for_issue(PROJECT_DIR, 42)
 
     assert result == 42
-    branch_cls.assert_called_once_with(
-        project_dir=PROJECT_DIR, repo_url=repo_id.https_url
-    )
+    branch_cls.assert_called_once_with(project_dir=PROJECT_DIR)
     branch_mgr.get_branch_with_pr_fallback.assert_called_once_with(
         42, repo_id.owner, repo_id.repo_name
     )
@@ -516,3 +497,17 @@ def test_get_pr_for_issue_no_repo_remote() -> None:
         result = get_pr_for_issue(PROJECT_DIR, 42)
 
     assert result is None
+
+
+def test_get_pr_for_issue_constructs_real_branch_manager(
+    github_remote_repo: Path,
+) -> None:
+    """The real IssueBranchManager constructor accepts the arguments passed."""
+    with patch(
+        "mcp_coder.mcp_workspace_github.IssueBranchManager.get_branch_with_pr_fallback",
+        return_value=None,
+    ) as fallback:
+        result = get_pr_for_issue(github_remote_repo, 1)
+
+    assert result is None
+    fallback.assert_called_once_with(1, "owner", "repo")

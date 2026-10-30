@@ -36,6 +36,8 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
         "token": FieldDef(str, required=True, env_var="GITHUB_TOKEN"),
         "test_repo_url": FieldDef(str, env_var="GITHUB_TEST_REPO_URL"),
         "trusted_commenters": FieldDef(list),
+        "traffic_log": FieldDef(bool),
+        "traffic_log_dir": FieldDef(str),
     },
     "jenkins": {
         "server_url": FieldDef(str, required=True, env_var="JENKINS_URL"),
@@ -295,6 +297,9 @@ token = "ghp_your_github_personal_access_token_here"
 # Extra logins whose PR/issue comments are trusted, besides repo
 # owners, members and collaborators (e.g. a CI machine user)
 # trusted_commenters = ["your-ci-bot"]
+# GitHub traffic log (read by mcp-workspace; opt-in, only `true` enables it)
+# traffic_log = true
+# traffic_log_dir = "~/.mcp_coder/logs/github_traffic"
 
 [jenkins]
 # Jenkins server configuration

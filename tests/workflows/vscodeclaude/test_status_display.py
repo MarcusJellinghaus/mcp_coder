@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.mcp_workspace_github import IssueData, create_empty_issue_data
 from mcp_coder.workflows.vscodeclaude.status import (
     check_folder_dirty,
     display_status_table,
@@ -27,10 +27,9 @@ class TestStatusDisplay:
     def test_get_issue_current_status_returns_status(self) -> None:
         """Returns status label and open state when found."""
         mock_manager = Mock()
-        mock_manager.get_issue.return_value = {
-            "state": "open",
-            "labels": ["status-07:code-review", "other-label"],
-        }
+        mock_manager.get_issue.return_value = make_issue_data(
+            number=123, state="open", labels=["status-07:code-review", "other-label"]
+        )
 
         status, is_open = get_issue_current_status(123, issue_manager=mock_manager)
 
@@ -41,10 +40,9 @@ class TestStatusDisplay:
     def test_get_issue_current_status_returns_closed_state(self) -> None:
         """Returns correct closed state."""
         mock_manager = Mock()
-        mock_manager.get_issue.return_value = {
-            "state": "closed",
-            "labels": ["status-07:code-review"],
-        }
+        mock_manager.get_issue.return_value = make_issue_data(
+            number=123, state="closed", labels=["status-07:code-review"]
+        )
 
         status, is_open = get_issue_current_status(123, issue_manager=mock_manager)
 
@@ -54,10 +52,9 @@ class TestStatusDisplay:
     def test_get_issue_current_status_returns_none_no_status(self) -> None:
         """Returns None status when no status label found."""
         mock_manager = Mock()
-        mock_manager.get_issue.return_value = {
-            "state": "open",
-            "labels": ["other-label"],
-        }
+        mock_manager.get_issue.return_value = make_issue_data(
+            number=123, state="open", labels=["other-label"]
+        )
 
         status, is_open = get_issue_current_status(123, issue_manager=mock_manager)
 
@@ -65,24 +62,24 @@ class TestStatusDisplay:
         assert is_open is True
 
     def test_get_issue_current_status_returns_none_on_error(self) -> None:
-        """Returns None and False on API error."""
+        """Returns None status and unknown state on API error."""
         mock_manager = Mock()
         mock_manager.get_issue.side_effect = Exception("API error")
 
         status, is_open = get_issue_current_status(123, issue_manager=mock_manager)
 
         assert status is None
-        assert is_open is False
+        assert is_open is None
 
     def test_get_issue_current_status_returns_none_issue_not_found(self) -> None:
-        """Returns None and False when issue not found."""
+        """Returns None status and unknown state when issue not found."""
         mock_manager = Mock()
-        mock_manager.get_issue.return_value = None
+        mock_manager.get_issue.return_value = create_empty_issue_data()
 
         status, is_open = get_issue_current_status(123, issue_manager=mock_manager)
 
         assert status is None
-        assert is_open is False
+        assert is_open is None
 
     def test_is_session_stale_same_status(self) -> None:
         """Returns False when status unchanged."""
@@ -166,13 +163,13 @@ class TestStatusDisplay:
         # Open issue without status label - should NOT be stale
         assert is_session_stale(session, cached_issues=cached_issues) is False
 
-    def test_is_session_stale_returns_true_on_error(
+    def test_is_session_stale_returns_false_on_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Returns True (conservative) when status cannot be retrieved."""
-        # Mock IssueManager to return None (issue not found)
+        """Returns False when status cannot be retrieved (state unknown)."""
+        # Mock IssueManager to return empty IssueData (issue not found)
         mock_manager = Mock()
-        mock_manager.get_issue.return_value = None
+        mock_manager.get_issue.return_value = create_empty_issue_data()
 
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.status.IssueManager",
@@ -192,8 +189,8 @@ class TestStatusDisplay:
             "is_intervention": False,
         }
 
-        # Without cached_issues, falls back to IssueManager which returns None
-        assert is_session_stale(session) is True
+        # Without cached_issues, falls back to IssueManager; unknown is not stale
+        assert is_session_stale(session) is False
 
     def test_is_issue_closed_returns_true_when_closed(self) -> None:
         """Returns True when issue is closed."""

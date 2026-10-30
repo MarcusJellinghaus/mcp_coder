@@ -1,13 +1,24 @@
+import logging
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import IssueData
+from mcp_coder.mcp_workspace_github import (
+    BranchLookup,
+    BranchLookupError,
+    GithubException,
+    GitHubRateLimitError,
+    IssueData,
+)
 from mcp_coder.workflows.vscodeclaude.issues import (
     build_eligible_issues_with_branch_check,
+    lookup_branch,
 )
 from tests.github_factories import make_issue_data
+from tests.workflows.vscodeclaude.conftest import patch_branch_cache
+
+ISSUES = "mcp_coder.workflows.vscodeclaude.issues"
 
 
 class TestBuildEligibleIssuesPrefetched:
@@ -50,12 +61,7 @@ class TestBuildEligibleIssuesPrefetched:
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: Mock(),
         )
-        mock_branch_manager = Mock()
-        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value="main")
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, ISSUES, branch="main")
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
             lambda issue: "status-01:created",
@@ -114,12 +120,7 @@ class TestBuildEligibleIssuesPrefetched:
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: Mock(),
         )
-        mock_branch_manager = Mock()
-        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value="main")
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, ISSUES, branch="main")
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.get_issue_status",
             lambda issue: "status-01:created",
@@ -180,15 +181,11 @@ class TestBuildEligibleIssuesWithBranchCheck:
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
-        mock_branch_manager = Mock()
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, ISSUES)
 
         # Mock eligible issues
         mock_issue = make_issue_data(
@@ -240,16 +237,11 @@ class TestBuildEligibleIssuesWithBranchCheck:
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
-        mock_branch_manager = Mock()
-        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value=None)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, ISSUES)
 
         # Mock issue at status-04
         mock_issue = make_issue_data(
@@ -299,16 +291,11 @@ class TestBuildEligibleIssuesWithBranchCheck:
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
-        mock_branch_manager = Mock()
-        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value=None)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, ISSUES)
 
         # Mock issue at status-07
         mock_issue = make_issue_data(
@@ -336,7 +323,7 @@ class TestBuildEligibleIssuesWithBranchCheck:
         assert ("owner/repo", 2) in issues_without_branch
 
     def test_handles_multiple_branches(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Issues with multiple linked branches (returns None) added to set."""
+        """Issues with multiple linked branches (ambiguous lookup) added to set."""
         # Mock config
         mock_config = {
             "coordinator": {
@@ -359,16 +346,12 @@ class TestBuildEligibleIssuesWithBranchCheck:
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
-        mock_branch_manager = Mock()
-        mock_branch_manager.get_branch_with_pr_fallback = Mock(return_value=None)
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        branch_cache = patch_branch_cache(monkeypatch, ISSUES)
+        branch_cache.lookup.return_value = BranchLookup("ambiguous")
 
         # Mock issue at status-04
         mock_issue = make_issue_data(
@@ -421,15 +404,11 @@ class TestBuildEligibleIssuesWithBranchCheck:
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
-        mock_branch_manager = Mock()
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, ISSUES)
 
         # Mock issue at status-01
         mock_issue = make_issue_data(
@@ -482,15 +461,11 @@ class TestBuildEligibleIssuesWithBranchCheck:
 
         # Mock IssueManager and IssueBranchManager to avoid needing GitHub token
         mock_issue_manager = Mock()
-        mock_branch_manager = Mock()
         monkeypatch.setattr(
             "mcp_coder.workflows.vscodeclaude.issues.IssueManager",
             lambda **kwargs: mock_issue_manager,
         )
-        monkeypatch.setattr(
-            "mcp_coder.workflows.vscodeclaude.issues.IssueBranchManager",
-            lambda **kwargs: mock_branch_manager,
-        )
+        patch_branch_cache(monkeypatch, ISSUES)
 
         # Mock get_cached_eligible_vscodeclaude_issues to fail for bad-repo
         def mock_get_cached(repo_full_name: str, **kwargs: Any) -> list[IssueData]:
@@ -525,3 +500,117 @@ class TestBuildEligibleIssuesWithBranchCheck:
         assert len(eligible_issues) == 1
         assert eligible_issues[0][0] == "owner/good"
         assert eligible_issues[0][1]["number"] == 5
+
+
+class TestLookupBranch:
+    """Tests for lookup_branch()."""
+
+    def test_found_returns_branch(self) -> None:
+        cache = Mock()
+        cache.lookup.return_value = BranchLookup("found", "12-fix")
+
+        assert lookup_branch(cache, make_issue_data(number=12)) == "12-fix"
+
+    @pytest.mark.parametrize(
+        "result", [BranchLookup("not_found"), BranchLookup("ambiguous")]
+    )
+    def test_not_found_or_ambiguous_returns_none(self, result: BranchLookup) -> None:
+        cache = Mock()
+        cache.lookup.return_value = result
+
+        assert lookup_branch(cache, make_issue_data(number=12)) is None
+
+    @pytest.mark.parametrize(
+        "exc",
+        [
+            BranchLookupError("graphql incomplete"),
+            ValueError("bad"),
+            GithubException(500, {"message": "server error"}),
+        ],
+    )
+    def test_lookup_errors_return_none_with_warning(
+        self, exc: Exception, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        cache = Mock()
+        cache.lookup.side_effect = exc
+
+        with caplog.at_level(logging.WARNING, logger=ISSUES):
+            assert lookup_branch(cache, make_issue_data(number=12)) is None
+
+        assert any(
+            r.levelno == logging.WARNING and "#12" in r.getMessage()
+            for r in caplog.records
+        )
+
+    def test_rate_limit_propagates(self) -> None:
+        cache = Mock()
+        cache.lookup.side_effect = GitHubRateLimitError("limited")
+
+        with pytest.raises(GitHubRateLimitError):
+            lookup_branch(cache, make_issue_data(number=12))
+
+
+class TestBuildEligibleIssuesBranchCache:
+    """build_eligible_issues_with_branch_check uses one BranchLookupCache per repo."""
+
+    def _patch(self, monkeypatch: pytest.MonkeyPatch, repos: list[str]) -> Mock:
+        config = {
+            "coordinator": {
+                "repos": {
+                    name: {"repo_url": f"https://github.com/owner/{name}.git"}
+                    for name in repos
+                }
+            }
+        }
+        monkeypatch.setattr(f"{ISSUES}.load_config", lambda: config)
+        monkeypatch.setattr(f"{ISSUES}.get_github_username", lambda: "testuser")
+        monkeypatch.setattr(f"{ISSUES}.IssueManager", lambda **kw: Mock())
+        monkeypatch.setattr(
+            f"{ISSUES}.get_issue_status", lambda issue: "status-04:plan-review"
+        )
+        return patch_branch_cache(monkeypatch, ISSUES, branch="1-fix")
+
+    @staticmethod
+    def _cached(
+        repo_issues: dict[str, list[int]],
+    ) -> dict[str, dict[int, IssueData]]:
+        return {
+            f"owner/{repo}": {
+                n: make_issue_data(
+                    number=n, labels=["status-04:plan-review"], assignees=["testuser"]
+                )
+                for n in numbers
+            }
+            for repo, numbers in repo_issues.items()
+        }
+
+    def test_lookup_error_treated_as_no_branch_and_continues(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        branch_cache = self._patch(monkeypatch, ["one"])
+        branch_cache.lookup.side_effect = [
+            BranchLookupError("boom"),
+            BranchLookup("found", "2-fix"),
+        ]
+
+        eligible, without_branch = build_eligible_issues_with_branch_check(
+            ["one"], cached_issues_by_repo=self._cached({"one": [1, 2]})
+        )
+
+        assert [issue["number"] for _, issue in eligible] == [1, 2]
+        assert without_branch == {("owner/one", 1)}
+        branch_cache.save.assert_called_once_with()
+
+    def test_one_cache_and_one_save_per_repo(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        branch_cache = self._patch(monkeypatch, ["one", "two"])
+
+        build_eligible_issues_with_branch_check(
+            ["one", "two"],
+            cached_issues_by_repo=self._cached({"one": [1, 2], "two": [3]}),
+        )
+
+        assert branch_cache.cache_cls.load.call_count == 2
+        assert branch_cache.lookup.call_count == 3
+        assert branch_cache.save.call_count == 2

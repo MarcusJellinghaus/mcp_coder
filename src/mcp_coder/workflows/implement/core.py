@@ -13,7 +13,6 @@ from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_full_status
-from mcp_coder.mcp_workspace_github import IssueManager
 from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
@@ -30,7 +29,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     llm_failure_reason,
     run_guarded,
 )
-from mcp_coder.workflow_utils.label_transitions import update_workflow_label
+from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
 
 from .constants import (
@@ -367,21 +366,14 @@ def run_implement_workflow(
             logger.error("Could not determine current branch - skipping CI check")
 
         # Step 6: Success label transition
+        rc = 0
         if update_issue_labels:
-            try:
-                to_label_id = (
-                    "code_review_bot"
-                    if get_repo_flag(project_dir, "auto_review_implementation")
-                    else "code_review"
-                )
-                issue_manager = IssueManager(project_dir)
-                update_workflow_label(
-                    issue_manager,
-                    from_label_id="implementing",
-                    to_label_id=to_label_id,
-                )
-            except Exception as exc:  # pylint: disable=broad-exception-caught
-                logger.warning("Failed to update issue label on success: %s", exc)
+            to_label_id = (
+                "code_review_bot"
+                if get_repo_flag(project_dir, "auto_review_implementation")
+                else "code_review"
+            )
+            rc = apply_final_label(project_dir, "implementing", to_label_id)
 
         # Step 7: Show final progress summary with appropriate messaging
         if progress.completed > 0:
@@ -394,7 +386,7 @@ def run_implement_workflow(
         else:
             logger.info("No incomplete implementation tasks found - workflow complete")
 
-        return 0
+        return rc
 
     def build_comment(
         _outcome: GuardOutcome,

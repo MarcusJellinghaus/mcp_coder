@@ -147,10 +147,34 @@ class TestCheckoutIssueBranchExitCodes:
         captured = capsys.readouterr()
         assert captured.out.strip() == "123-test-issue"
         mgr.get_branch_with_pr_fallback.assert_called_once_with(123, "owner", "repo")
-        checkout_mocks["branch"].assert_called_once_with(
-            project_dir=Path("/test/project"),
-            repo_url="https://github.com/owner/repo",
-        )
+
+    def test_checkout_constructs_real_branch_manager(
+        self,
+        github_remote_repo: Path,
+        mock_fetch_remote: MagicMock,
+        mock_checkout_branch: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """The real IssueBranchManager constructor accepts the arguments passed."""
+        with (
+            patch(
+                "mcp_coder.mcp_workspace_github.IssueManager.get_issue",
+                return_value={"number": 123, "title": "T", "base_branch": "main"},
+            ),
+            patch(
+                "mcp_coder.mcp_workspace_github.IssueBranchManager"
+                ".get_branch_with_pr_fallback",
+                return_value="123-test-issue",
+            ) as fallback,
+        ):
+            args = argparse.Namespace(
+                issue_number=123, project_dir=str(github_remote_repo)
+            )
+            result = execute_checkout_issue_branch(args)
+
+        assert result == 0
+        assert capsys.readouterr().out.strip() == "123-test-issue"
+        fallback.assert_called_once_with(123, "owner", "repo")
 
     def test_checkout_creates_new_branch_success(
         self,

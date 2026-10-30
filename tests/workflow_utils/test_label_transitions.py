@@ -13,6 +13,8 @@ import pytest
 
 from mcp_coder.mcp_workspace_github import (
     ClosingPRRef,
+    GithubException,
+    GitHubRateLimitError,
     IssueBranchManager,
     IssueManager,
 )
@@ -367,6 +369,31 @@ class TestLabelTransitions:
             assert result is False
             assert "ERROR" in caplog.text or "failed" in caplog.text.lower()
 
+    def test_update_workflow_label_rate_limit_raises(
+        self, mock_github: Mock, _mock_git_repo: Any, tmp_path: Path
+    ) -> None:
+        """A rate-limit GithubException raises GitHubRateLimitError."""
+        rate_limit = GithubException(
+            403,
+            {"message": "API rate limit exceeded"},
+            headers={"x-ratelimit-remaining": "0", "x-ratelimit-reset": "1900000000"},
+        )
+        with (
+            patch.object(IssueManager, "_get_repository", return_value=mock_github),
+            patch(
+                "mcp_coder.workflow_utils.label_transitions.load_labels_config",
+                return_value=MOCK_LABELS_CONFIG,
+            ),
+            patch.object(
+                IssueManager, "transition_issue_label", side_effect=rate_limit
+            ),
+        ):
+            manager = IssueManager(project_dir=tmp_path, github_token="dummy-token")
+            with pytest.raises(GitHubRateLimitError):
+                update_workflow_label(
+                    manager, "implementing", "code_review", validated_issue_number=123
+                )
+
     def test_update_workflow_label_no_branch_provided(
         self,
         mock_github: Mock,
@@ -572,3 +599,45 @@ class TestLabelTransitions:
             labels_to_clear = call_args[0][2]
             assert "status-06:implementing" in labels_to_clear
             assert "status-07:code-review" not in labels_to_clear
+
+
+class TestBranchManagerConstruction:
+    """The real IssueBranchManager constructor is reached without ValueError."""
+
+    def test_project_dir_manager_with_resolved_repo_identifier(
+        self, github_remote_repo: Path
+    ) -> None:
+        """Resolved repo identifier must not lead to both-arguments construction."""
+        manager = IssueManager(project_dir=github_remote_repo)
+        _ = manager.repo_identifier  # resolves _cached_repo_identifier
+        with patch(
+            "mcp_coder.workflow_utils.label_transitions.is_branch_linked_to_issue",
+            return_value=False,
+        ) as mock_linked:
+            result = update_workflow_label(
+                manager, "implementing", "code_review", branch_name="123-feature"
+            )
+
+        assert result is False
+        mock_linked.assert_called_once()
+        branch_manager = mock_linked.call_args[0][0]
+        assert isinstance(branch_manager, IssueBranchManager)
+        assert branch_manager.project_dir == github_remote_repo
+        assert branch_manager.github_token == "x"
+
+    def test_repo_url_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A repo-URL IssueManager yields a repo-URL IssueBranchManager."""
+        monkeypatch.setenv("GITHUB_TOKEN", "x")
+        manager = IssueManager(repo_url="https://github.com/owner/repo")
+        with patch(
+            "mcp_coder.workflow_utils.label_transitions.is_branch_linked_to_issue",
+            return_value=False,
+        ) as mock_linked:
+            result = update_workflow_label(
+                manager, "implementing", "code_review", branch_name="123-feature"
+            )
+
+        assert result is False
+        branch_manager = mock_linked.call_args[0][0]
+        assert branch_manager.project_dir is None
+        assert branch_manager.repo_identifier.full_name == "owner/repo"

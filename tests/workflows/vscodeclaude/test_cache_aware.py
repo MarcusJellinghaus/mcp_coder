@@ -34,10 +34,9 @@ class TestCacheAwareFunctions:
         """Verify fallback to API when issue not in cache."""
         cached_issues: dict[int, IssueData] = {}  # Empty cache
         mock_manager = Mock()
-        mock_manager.get_issue.return_value = {
-            "state": "open",
-            "labels": ["status-07:code-review"],
-        }
+        mock_manager.get_issue.return_value = make_issue_data(
+            number=123, state="open", labels=["status-07:code-review"]
+        )
 
         status, is_open = get_issue_current_status(
             123, cached_issues=cached_issues, issue_manager=mock_manager

@@ -16,6 +16,7 @@ from mcp_workspace.github_operations import (
     CIResultsManager,
     CIStatusData,
     GithubException,
+    GitHubRateLimitError,
     LabelData,
     LabelsManager,
     PullRequestData,
@@ -28,6 +29,18 @@ from mcp_workspace.github_operations import (
     verify_github_security,
 )
 
+# Caching: run-scoped issue → branch lookup cache
+from mcp_workspace.github_operations.caching.branches import BranchLookupCache
+
+# Caching: recognise rate-limit exceptions raised by managers
+from mcp_workspace.github_operations.caching.errors import to_rate_limit_error
+
+# Caching: run-scoped open-PR cache (caching/__init__.py is import-free)
+from mcp_workspace.github_operations.caching.pull_requests import (
+    OpenPullRequest,
+    PullRequestCache,
+)
+
 # CI results submodule (TypedDicts + helpers)
 from mcp_workspace.github_operations.ci_results_manager import (
     JobData,
@@ -35,7 +48,8 @@ from mcp_workspace.github_operations.ci_results_manager import (
 
 # Issues subpackage
 from mcp_workspace.github_operations.issues import (
-    CacheData,
+    BranchLookup,
+    BranchLookupError,
     CommentData,
     EventData,
     IssueBranchManager,
@@ -44,16 +58,9 @@ from mcp_workspace.github_operations.issues import (
     IssueManager,
     create_empty_issue_data,
     get_all_cached_issues,
+    get_issue_cache_last_checked,
     update_issue_labels_in_cache,
 )
-from mcp_workspace.github_operations.issues import (
-    _get_cache_file_path as get_cache_file_path,
-)
-from mcp_workspace.github_operations.issues import _load_cache_file as load_cache_file
-from mcp_workspace.github_operations.issues import (
-    _log_stale_cache_entries as log_stale_cache_entries,
-)
-from mcp_workspace.github_operations.issues import _save_cache_file as save_cache_file
 from mcp_workspace.github_operations.issues.linked_branches_mixin import ClosingPRRef
 
 # PR submodule (TypedDicts)
@@ -62,6 +69,11 @@ from mcp_workspace.github_operations.pr_types import (
     ConversationCommentData,
     ReviewThreadData,
 )
+
+# Sourced from mcp_workspace.traffic_log (not github_operations): registers the
+# command name written on every traffic-log line. Re-exported for the same reason
+# as get_github_token.
+from mcp_workspace.traffic_log import set_traffic_log_context
 
 __all__: list[str] = [
     # Base manager
@@ -78,12 +90,17 @@ __all__: list[str] = [
     # Re-exported so ci.py can classify raised exceptions without a direct
     # `github` import, which the github_library_isolation contract forbids.
     "GithubException",
+    # Rate limits
+    "GitHubRateLimitError",
+    "to_rate_limit_error",
     # Labels
     "LabelData",
     "LabelsManager",
     # PR
     "PullRequestManager",
     "PullRequestData",
+    "PullRequestCache",
+    "OpenPullRequest",
     "ChangesRequestedData",
     "ConversationCommentData",
     "ReviewThreadData",
@@ -95,20 +112,20 @@ __all__: list[str] = [
     # Issues
     "IssueManager",
     "IssueBranchManager",
+    "BranchLookup",
+    "BranchLookupError",
+    "BranchLookupCache",
     "ClosingPRRef",
     "IssueEventType",
     "IssueData",
     "CommentData",
-    "CacheData",
     "EventData",
     "create_empty_issue_data",
     "get_all_cached_issues",
+    "get_issue_cache_last_checked",
     "update_issue_labels_in_cache",
-    # Cache helpers (public re-exports drop the underscore)
-    "get_cache_file_path",
-    "load_cache_file",
-    "save_cache_file",
-    "log_stale_cache_entries",
     # Token resolver (sourced from mcp_workspace.config)
     "get_github_token",
+    # Traffic log context (sourced from mcp_workspace.traffic_log)
+    "set_traffic_log_context",
 ]

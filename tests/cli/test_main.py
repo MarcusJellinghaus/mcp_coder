@@ -5,11 +5,13 @@ import ast
 import inspect
 import logging
 import sys
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 
+from mcp_coder.cli.command_catalog import COMMAND_DESCRIPTIONS
 from mcp_coder.cli.main import (
+    _command_name,
     _resolve_log_level,
     create_parser,
     main,
@@ -312,6 +314,52 @@ class TestMain:
             rc = main()
         assert rc == 0
         mock_ts.assert_called_once()
+
+
+class TestTrafficLogContext:
+    """Tests for registering the command name with the traffic log."""
+
+    @pytest.mark.parametrize(
+        ("namespace", "expected"),
+        [
+            (
+                argparse.Namespace(
+                    command="vscodeclaude", vscodeclaude_subcommand="launch"
+                ),
+                "vscodeclaude launch",
+            ),
+            (
+                argparse.Namespace(command="gh-tool", gh_tool_subcommand="set-status"),
+                "gh-tool set-status",
+            ),
+            (argparse.Namespace(command="commit", commit_mode="auto"), "commit auto"),
+            (argparse.Namespace(command="coordinator"), "coordinator"),
+        ],
+    )
+    def test_command_name(self, namespace: argparse.Namespace, expected: str) -> None:
+        """_command_name returns the catalog name of the parsed command."""
+        result = _command_name(namespace)
+        assert result == expected
+        assert result in COMMAND_DESCRIPTIONS
+
+    def test_main_sets_context_before_dispatch(self) -> None:
+        """main() registers the command name before running the command."""
+        parent = MagicMock()
+        parent.execute.return_value = 0
+        with (
+            patch("mcp_coder.cli.main.set_traffic_log_context", parent.set_context),
+            patch(
+                "mcp_coder.cli.main.execute_coordinator_vscodeclaude_status",
+                parent.execute,
+            ),
+            patch("mcp_coder.utils.ssl_setup.ensure_truststore"),
+            patch("sys.argv", ["mcp-coder", "vscodeclaude", "status"]),
+        ):
+            rc = main()
+
+        assert rc == 0
+        assert parent.mock_calls[0] == call.set_context("vscodeclaude status")
+        assert parent.execute.call_count == 1
 
 
 class TestCLIEntryPoint:

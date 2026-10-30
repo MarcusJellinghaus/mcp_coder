@@ -23,6 +23,7 @@ from ...mcp_workspace_github import (
     RepoIdentifier,
     get_all_cached_issues,
 )
+from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .audit import append_run, assessment_to_record
 from .config import get_github_username
 from .detection import capture_detection_snapshot, gather_signals, get_pid_create_time
@@ -247,6 +248,16 @@ def assess_session(
     )
 
 
+def _github_username() -> str | None:
+    """Return the GitHub username, or None if it is not configured."""
+    try:
+        return get_github_username()
+    except ValueError as exc:
+        raise_if_rate_limited(exc)
+        logger.debug("GitHub username not configured, skipping assignment checks")
+        return None
+
+
 def build_assessments(
     sessions: list[VSCodeClaudeSession],
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
@@ -272,11 +283,8 @@ def build_assessments(
     snapshot = capture_detection_snapshot()
 
     ignore_labels = get_ignore_labels()
-    try:
-        github_username: str | None = get_github_username()
-    except ValueError:
-        logger.debug("GitHub username not configured, skipping assignment checks")
-        github_username = None
+    # Without a cache, issue facts are not derived, so skip the GET /user call.
+    github_username = _github_username() if cached_issues_by_repo else None
 
     assessments: dict[str, SessionAssessment] = {}
     for session in sessions:
@@ -487,7 +495,8 @@ def _fetch_issue_individually(
             additional_issues=[issue_number],
         )
         return {issue["number"]: issue for issue in fetched}
-    except Exception:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+    except Exception as exc:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
+        raise_if_rate_limited(exc)
         logger.debug(
             "Failed to fetch issue #%d individually; skipping eligibility checks",
             issue_number,

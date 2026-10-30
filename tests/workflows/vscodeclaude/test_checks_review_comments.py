@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import EventData, IssueData, PullRequestData
+from mcp_coder.mcp_workspace_github import EventData, IssueData, OpenPullRequest
 from mcp_coder.workflows.vscodeclaude.checks import (
     _check_review_comments,
     _review_comments_watermark,
@@ -105,23 +105,26 @@ class TestCheckReviewComments:
         )
         return issue_manager
 
-    def _pr_manager(self, feedback: dict[str, Any]) -> MagicMock:
-        pr_manager = MagicMock()
-        pr_manager.get_pr_feedback.return_value = feedback
-        return pr_manager
+    def _pr_cache(
+        self, feedback: dict[str, Any], events: list[EventData] | None = None
+    ) -> MagicMock:
+        pr_cache = MagicMock()
+        pr_cache.feedback.return_value = feedback
+        pr_cache.label_events.return_value = [] if events is None else events
+        return pr_cache
 
     def _call(
         self,
         issue: IssueData,
-        pr_manager: MagicMock,
+        pr_cache: MagicMock,
         issue_manager: MagicMock,
         trusted: frozenset[str] = frozenset(),
-        pr: PullRequestData | None = None,
+        pr: OpenPullRequest | None = None,
     ) -> bool:
         return _check_review_comments(
             issue,
             pr or PR,
-            pr_manager,
+            pr_cache,
             issue_manager,
             "test-repo",
             REVIEW_LABEL,
@@ -132,20 +135,21 @@ class TestCheckReviewComments:
     def test_unresolved_thread_escalates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An unresolved review thread escalates even with a watermark present."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
+        pr_cache = self._pr_cache(
             _empty_pr_feedback(
                 unresolved_threads=[_thread()],
                 conversation_comments=[_comment(BEFORE_WATERMARK)],
-            )
+            ),
+            WATERMARK_EVENTS,
         )
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
+        issue = _make_issue(1)
 
-        result = self._call(_make_issue(1), pr_manager, issue_manager)
+        result = self._call(issue, pr_cache, issue_manager)
 
         assert result is True
-        pr_manager.get_pr_feedback.assert_called_once_with(1)
+        pr_cache.feedback.assert_called_once_with(PR, issue)
         issue_manager.transition_issue_label.assert_called_once()
-        issue_manager.get_issue_events.assert_not_called()
+        pr_cache.label_events.assert_not_called()
 
     @pytest.mark.parametrize(
         ("submitted_at", "events", "expected"),
@@ -165,27 +169,27 @@ class TestCheckReviewComments:
     ) -> None:
         """A CHANGES_REQUESTED review counts only if newer than the watermark."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
-            _empty_pr_feedback(changes_requested=[_review(submitted_at)])
+        pr_cache = self._pr_cache(
+            _empty_pr_feedback(changes_requested=[_review(submitted_at)]), events
         )
-        issue_manager.get_issue_events.return_value = events
+        issue = _make_issue(2)
 
-        result = self._call(_make_issue(2), pr_manager, issue_manager)
+        result = self._call(issue, pr_cache, issue_manager)
 
         assert result is expected
-        issue_manager.get_issue_events.assert_called_once()
+        pr_cache.label_events.assert_called_once_with(PR, issue)
 
     def test_no_feedback_does_not_escalate(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """No threads, reviews or comments: no escalation, no events fetch."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(_empty_pr_feedback())
+        pr_cache = self._pr_cache(_empty_pr_feedback())
 
-        result = self._call(_make_issue(8), pr_manager, issue_manager)
+        result = self._call(_make_issue(8), pr_cache, issue_manager)
 
         assert result is False
-        issue_manager.get_issue_events.assert_not_called()
+        pr_cache.label_events.assert_not_called()
         issue_manager.transition_issue_label.assert_not_called()
 
     def test_marked_comment_only_does_not_escalate(
@@ -193,35 +197,35 @@ class TestCheckReviewComments:
     ) -> None:
         """An automated ❌ note alone never escalates, and skips the events fetch."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
+        pr_cache = self._pr_cache(
             _empty_pr_feedback(
                 conversation_comments=[
                     _comment(AFTER_WATERMARK, "## ❌ Implementation Failed\ndetails")
                 ]
-            )
+            ),
+            WATERMARK_EVENTS,
         )
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
-        result = self._call(_make_issue(9), pr_manager, issue_manager)
+        result = self._call(_make_issue(9), pr_cache, issue_manager)
 
         assert result is False
-        issue_manager.get_issue_events.assert_not_called()
+        pr_cache.label_events.assert_not_called()
 
     def test_marker_on_later_line_escalates(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A ❌ outside the first line does not mark the comment as automated."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
+        pr_cache = self._pr_cache(
             _empty_pr_feedback(
                 conversation_comments=[
                     _comment(AFTER_WATERMARK, "Please check\n❌ this fails")
                 ]
-            )
+            ),
+            WATERMARK_EVENTS,
         )
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
-        result = self._call(_make_issue(12), pr_manager, issue_manager)
+        result = self._call(_make_issue(12), pr_cache, issue_manager)
 
         assert result is True
 
@@ -230,17 +234,17 @@ class TestCheckReviewComments:
     ) -> None:
         """A new human comment escalates even alongside a ❌ note."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
+        pr_cache = self._pr_cache(
             _empty_pr_feedback(
                 conversation_comments=[
                     _comment(AFTER_WATERMARK, "## ❌ Implementation Failed", 1),
                     _comment(AFTER_WATERMARK, "please rename this", 2),
                 ]
-            )
+            ),
+            WATERMARK_EVENTS,
         )
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
-        result = self._call(_make_issue(13), pr_manager, issue_manager)
+        result = self._call(_make_issue(13), pr_cache, issue_manager)
 
         assert result is True
 
@@ -249,12 +253,11 @@ class TestCheckReviewComments:
     ) -> None:
         """Code-scanning alerts alone never trigger escalation."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
+        pr_cache = self._pr_cache(
             _empty_pr_feedback(alerts=[{"message": "sql injection"}])
         )
-        issue_manager.get_issue_events.return_value = []
 
-        result = self._call(_make_issue(3), pr_manager, issue_manager)
+        result = self._call(_make_issue(3), pr_cache, issue_manager)
 
         assert result is False
         issue_manager.transition_issue_label.assert_not_called()
@@ -264,12 +267,11 @@ class TestCheckReviewComments:
     ) -> None:
         """A conversation comment with no prior status-91 event escalates."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
+        pr_cache = self._pr_cache(
             _empty_pr_feedback(conversation_comments=[_comment(BEFORE_WATERMARK)])
         )
-        issue_manager.get_issue_events.return_value = []
 
-        result = self._call(_make_issue(4), pr_manager, issue_manager)
+        result = self._call(_make_issue(4), pr_cache, issue_manager)
 
         assert result is True
 
@@ -278,12 +280,12 @@ class TestCheckReviewComments:
     ) -> None:
         """A comment older than the watermark does not escalate."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
-            _empty_pr_feedback(conversation_comments=[_comment(BEFORE_WATERMARK)])
+        pr_cache = self._pr_cache(
+            _empty_pr_feedback(conversation_comments=[_comment(BEFORE_WATERMARK)]),
+            WATERMARK_EVENTS,
         )
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
-        result = self._call(_make_issue(5), pr_manager, issue_manager)
+        result = self._call(_make_issue(5), pr_cache, issue_manager)
 
         assert result is False
 
@@ -292,12 +294,12 @@ class TestCheckReviewComments:
     ) -> None:
         """A comment newer than the watermark escalates."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
-            _empty_pr_feedback(conversation_comments=[_comment(AFTER_WATERMARK)])
+        pr_cache = self._pr_cache(
+            _empty_pr_feedback(conversation_comments=[_comment(AFTER_WATERMARK)]),
+            WATERMARK_EVENTS,
         )
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
-        result = self._call(_make_issue(6), pr_manager, issue_manager)
+        result = self._call(_make_issue(6), pr_cache, issue_manager)
 
         assert result is True
 
@@ -306,34 +308,34 @@ class TestCheckReviewComments:
     ) -> None:
         """A comment with a missing created_at escalates without raising."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
-            _empty_pr_feedback(conversation_comments=[_comment(None)])
+        pr_cache = self._pr_cache(
+            _empty_pr_feedback(conversation_comments=[_comment(None)]),
+            WATERMARK_EVENTS,
         )
-        issue_manager.get_issue_events.return_value = WATERMARK_EVENTS
 
-        result = self._call(_make_issue(7), pr_manager, issue_manager)
+        result = self._call(_make_issue(7), pr_cache, issue_manager)
 
         assert result is True
 
-    def test_get_pr_feedback_exception_swallowed(self) -> None:
-        """A get_pr_feedback exception is swallowed and returns False."""
-        pr_manager = MagicMock()
-        pr_manager.get_pr_feedback.side_effect = RuntimeError("boom")
+    def test_feedback_exception_swallowed(self) -> None:
+        """A feedback exception is swallowed and returns False."""
+        pr_cache = MagicMock()
+        pr_cache.feedback.side_effect = RuntimeError("boom")
 
-        result = self._call(_make_issue(10), pr_manager, MagicMock())
+        result = self._call(_make_issue(10), pr_cache, MagicMock())
 
         assert result is False
 
-    def test_get_issue_events_exception_swallowed(
+    def test_label_events_exception_swallowed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A get_issue_events exception is swallowed and returns False."""
+        """A label_events exception is swallowed and returns False."""
         issue_manager = self._issue_manager(monkeypatch)
-        pr_manager = self._pr_manager(
+        pr_cache = self._pr_cache(
             _empty_pr_feedback(conversation_comments=[_comment(BEFORE_WATERMARK)])
         )
-        issue_manager.get_issue_events.side_effect = RuntimeError("boom")
+        pr_cache.label_events.side_effect = RuntimeError("boom")
 
-        result = self._call(_make_issue(11), pr_manager, issue_manager)
+        result = self._call(_make_issue(11), pr_cache, issue_manager)
 
         assert result is False

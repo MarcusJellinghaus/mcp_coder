@@ -38,7 +38,7 @@ def test_gate2_dismiss_ci_passed_succeeds(env: SimpleNamespace, tmp_path: Path) 
     # Gate 2 makes exactly one fresh branch-status call — no retry loop.
     env.gate_collect_branch_status.assert_called_once_with(tmp_path)
     env.handle_workflow_failure.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_IMPLEMENTATION.success_label_id
 
 
@@ -104,7 +104,7 @@ def test_gate2_skipped_on_plan_lane(env: SimpleNamespace, tmp_path: Path) -> Non
 
     assert result == 0
     env.gate_collect_branch_status.assert_not_called()
-    _, to_id = _label_transition(env.update_workflow_label)
+    _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_PLAN.success_label_id
 
 
