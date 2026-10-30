@@ -1,6 +1,6 @@
 # Internal (mcp-coder repo only)
 
-Files used in the mcp-coder repository itself but not relevant to downstream users.
+Files used in the mcp-coder repository itself but not relevant to target repos.
 
 ## Design Documents
 

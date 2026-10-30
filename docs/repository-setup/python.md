@@ -1,6 +1,6 @@
 # Python Setup
 
-Python-specific configuration and tooling. Only relevant if your downstream project is a Python project.
+Python-specific configuration and tooling. Only relevant if your target repo is a Python project.
 
 ## `pyproject.toml`
 
