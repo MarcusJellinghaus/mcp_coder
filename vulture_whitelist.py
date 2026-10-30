@@ -503,3 +503,7 @@ _.fixture_client
 # tests/tools/test_jenkins_classify_logs.py - fixture registered via
 # @pytest.fixture(name="patterns") and injected by pytest.
 _.fixture_patterns
+
+# tests/workflows/implement/test_core_failure_routing.py - autouse fixture
+# stubbing the final mypy pass so the round-cap tests never run real checks.
+_._stub_final_mypy_pass
