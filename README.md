@@ -1,203 +1,93 @@
 # MCP Coder
 
+**Turn GitHub issues into reviewed pull requests with a staged, LLM-driven process: full control and visibility, and you only write the issues.**
+
 [![CI](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/mcp-coder)](https://pypi.org/project/mcp-coder/) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/MarcusJellinghaus/mcp_coder/main/pyproject.toml)](https://pypi.org/project/mcp-coder/) [![License](https://img.shields.io/github/license/MarcusJellinghaus/mcp_coder)](LICENSE)
 
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![mypy](https://img.shields.io/badge/mypy-strict-blue)](https://mypy.readthedocs.io/) [![pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint) [![architecture](https://img.shields.io/badge/architecture-enforced-blue)](docs/architecture/enforcement.md) [![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/MarcusJellinghaus/9a7892066964f11765a07d74285ad104/raw/mcp_coder-coverage.json)](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/ci.yml)
+Every change to MCP Coder itself passes these checks ([details](docs/repository-setup/quality-and-security-checks.md)):
 
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MarcusJellinghaus/mcp_coder/badge)](https://scorecard.dev/viewer/?uri=github.com/MarcusJellinghaus/mcp_coder) [![CodeQL](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/github-code-scanning/codeql)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![mypy](https://img.shields.io/badge/mypy-strict-blue)](https://mypy.readthedocs.io/) [![pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint) [![architecture](https://img.shields.io/badge/architecture-enforced-blue)](docs/architecture/enforcement.md) [![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/MarcusJellinghaus/9a7892066964f11765a07d74285ad104/raw/mcp_coder-coverage.json)](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/ci.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MarcusJellinghaus/mcp_coder/badge)](https://scorecard.dev/viewer/?uri=github.com/MarcusJellinghaus/mcp_coder) [![CodeQL](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/MarcusJellinghaus/mcp_coder/actions/workflows/github-code-scanning/codeql)
 
-**What is MCP Coder?**
+## What it does
 
-MCP coder enhances source code with a structured development process that turns GitHub issues into working code automatically. AI supported discussions allow to specify and review the relevant items of the specification, implementation plan and resulting code. Code quality is also ensured by rigorous usage of classical code quality assurance.
-
-**The Complete Development Workflow:**
-
-- **Interactive Planning**: Human-guided requirement analysis and architectural decisions using AI-powered discussions
-- **Automated Implementation**: Full feature development with integrated testing, code quality checks, and git operations  
-- **Quality Assurance**: Built-in pylint, pytest, and mypy validation ensures production-ready code
-- **Intelligent Orchestration**: Process automation across multiple repositories with Jenkins integration
-
-MCP Coder combines the efficiency of AI automation with the reliability of human oversight, creating a development experience that's both faster and more robust than traditional approaches.
+- **Minimal input.** You write and refine issues, approve at the review gates and merge. Everything else can run unattended; failures come back to you as labelled issues.
+- **Control and visibility.** Each stage ends in a written hand-over document: the refined issue, the plan, step files, commits, review comments. You can inspect or correct at every point.
+- **Quality gates on every step.** pylint, mypy and pytest run after each implementation step, and each step is followed by a dedicated unit-test step. Tests are part of the review.
+- **Fewer tokens, shorter conversations.** Instead of one large implementation conversation, the work is split into small steps, each starting with a fresh context and only the hand-over documents it needs. This should reduce token consumption.
 
 ## Why a structured process
 
 Spec-driven development, applied to GitHub issues:
 
-- Issue → refined spec → reviewed plan → implementation in small verified steps → reviewed code → PR.
-- Each step leaves an artifact: issue text, `pr_info/steps/`, commits, review logs.
-- Quality gates (pylint, pytest, mypy, CI) run on every step.
-- You decide scope and merge; the rest can run unattended; failures come back as labelled issues.
+`issue → refined spec → reviewed plan → implementation in small verified steps → reviewed code → PR`
 
-Details: [Development Process](docs/processes-prompts/development-process.md).
-
-## 🎯 Vision & Architecture
-
-MCP Coder implements a structured 3-layer development approach that separates human decision-making from AI implementation:
-
-### Three-Layer Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       🤖 Process Automation                            │
-│   mcp-coder coordinate command • Jenkins scheduling                     │
-└─────────────────────────────┬───────────────────────────────────────────┘
-                              │
-                              │        orchestrates
-                              │             │
-                              ▼             ▼
-┌─────────────────────────────────────────┐     ┌─────────────────────────────────────────┐
-│  👤 Human Input & LLM Facilitated       │     │          🤖 LLM Work                   │
-│           Discussions                   │     │        (MCP-supported)                  │
-├─────────────────────────────────────────┤     ├─────────────────────────────────────────┤
-│ • Issue analysis                        │     │ • Implementation planning               │
-│ • Implementation planning               │     │ • Implementation (code writing &        │
-│ • Code reviews                          │     │   automated testing)                    │
-│                                         │     │ • Complex project support (multiple     │
-│                                         │     │   steps & sessions)                     │
-│                                         │     │ • Pull request generation               │
-│                                         │     │                                         │
-│ Using Claude Code or                    │     │                calls                    │
-│ Copilot CLI interactively               │     │                ▼                       │
-│                                         │     │         ┌─────────────────┐             │
-│                                         │     │         │  MCP Servers    │             │
-│                                         │     │         │ • tools-py      │             │
-│                                         │     │         │ • workspace     │             │
-│                                         │     │         └─────────────────┘             │
-└─────────────────────────────────────────┘     └─────────────────────────────────────────┘
-              │                                       │               
-              └───────────────────────────┬───────────────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     📂 GitHub Foundation                               │
-│         Source code repositories • Issue tracking with status labels   │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Alternative View: Mermaid Diagram
+- A GitHub status label on the issue is the only workflow state. It decides what runs next.
+- Plan and code review are explicit approval points. You can do them interactively, or enable an optional automated review that hands over to you when it needs a human.
+- The LLM does the creative work; MCP Coder owns the process around it and verifies the result itself instead of trusting it.
+- Unattended runs are driven by `mcp-coder coordinator`, which polls issues and starts workflows, typically on Jenkins.
 
 ```mermaid
-flowchart TD
-    PA["🤖 Process Automation<br/>mcp-coder coordinate command<br/>Jenkins scheduling"]
-    
-    HI["👤 Human Input & LLM Facilitated<br/>Discussions<br/><br/>• Issue analysis<br/>• Implementation planning<br/>• Code reviews<br/><br/>Using Claude Code or<br/>Copilot CLI interactively"]
-    
-    LW["🤖 LLM Work<br/>(MCP-supported)<br/><br/>• Implementation planning<br/>• Implementation (code writing &<br/>  automated testing)<br/> (multiple steps & sessions)<br/>• Pull request generation"]
-    
-    MCP["MCP Servers<br/>• tools-py<br/>• workspace"]
-    
-    GH["📂 GitHub Foundation<br/>Source code repositories<br/>Issue tracking with status labels"]
-    
-    PA -.->|orchestrates| LW
-    PA --> HI
-    PA --> LW
-    LW -->|calls| MCP
-    HI --> GH
-    LW --> GH
-    
-    classDef automation fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    classDef human fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef llm fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    classDef foundation fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    classDef mcp fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    
-    class PA automation
-    class HI human
-    class LW llm
-    class GH foundation
-    class MCP mcp
+flowchart LR
+    I([Issue]) --> A[Analyse and approve]
+    A --> P[Create plan]
+    P --> PR{Plan review}
+    PR --> M[Implement step by step<br/>checks + tests per step]
+    M --> CR{Code review}
+    CR --> PUB[Create PR]
+    PUB --> MG([Merge])
+
+    classDef human fill:#fbbf24,stroke:#b45309,color:#111
+    classDef auto fill:#4ade80,stroke:#15803d,color:#111
+    class A,PR,CR,MG human
+    class P,M,PUB auto
 ```
 
-**Key Separation of Concerns:**
+Yellow: you, usually in an interactive LLM session. Green: automated by `mcp-coder`. Full state machine, labels and failure handling: [Development Process](docs/processes-prompts/development-process.md).
 
-- **🤖 Automated LLM Work**: Automated implementation calling specialized MCP servers for reliable code operations
-- **🤖 Process Automation**: `mcp-coder coordinate` command orchestrates LLM work, with Jenkins scheduling for mass execution
-- **👤 Human Input & LLM Discussions**: Issue analysis, implementation planning and code review based on LLM-based analysis and interactive discussion using Claude Code or Copilot CLI
-- **📂  Foundation: GitHub**: Centralized source code storage and issue management with status labels
+## Status and scope
 
-## ✨ Current Features
+| Level | What |
+|---|---|
+| Works well | Python projects, GitHub, Claude Code |
+| Experimental | GitHub Copilot CLI, LangChain backends (OpenAI, Gemini, Anthropic API, Ollama, …) |
+| Prototype | `iCoder`, an alternative interactive terminal interface |
+| Planned | Other programming languages, general LLM support |
 
-### 🤖 Development Automation
+The label-driven process itself is language-agnostic. Python is the supported target for now because `implement`, the installer and the architecture checks call Python tools. GitHub is the only supported forge.
 
-- **Integrated LLMs**: Claude Code CLI, GitHub Copilot CLI, and LangChain backends (OpenAI, Azure OpenAI, Gemini, Anthropic API, Ollama)
-- **Automated Implementation**: Complete feature development via `mcp-coder implement`
+## Quick start
 
-### 🔄 Interactive Planning & Quality Assurance
-
-- **AI-Driven Feature Planning**: Automated analysis and planning from GitHub issues
-- **Test-Driven Development**: Automated TDD with test-first development workflows
-- **Comprehensive Quality Gates**: Integration with pylint, pytest, and mypy via MCP servers
-- **Human-AI Collaboration**: Structured discussion prompts for requirement refinement
-
-### 🚀 Automated Workflows & GitHub Status Tracking
-
-- **GitHub Integration**: Automated issue labeling, status progression, and PR management
-- **Git Operations**: Automated branch creation, staging, committing, pushing, and rebasing
-- **Compact diff** (`mcp-coder git-tool compact-diff`): reduces large refactoring diffs for LLM review by replacing moved code blocks with summary comments
-- **Workflow Orchestration**: Automated coordination using `mcp-coder coordinate`, using issue status tracking and calling Jenkins
-- **Mass Execution**: Jenkins integration enables orchestrated automated software development across issues and repositories
-- **Separation of Concerns**: Distinct automation layer separate from human discussions
-- **Status Tracking**: Development status progression through GitHub issue labels
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **LLM CLI** (at least one): [Claude Code CLI](https://code.claude.com/docs) or [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/use-copilot-agents/use-copilot-cli)
-- **Python 3.11+**
-- **Git** (for repository operations)
-- **Code base hosted on GitHub**
-
-### Installation
-
-**Developer install** (editable + dev tooling):
-
-```bash
-git clone https://github.com/MarcusJellinghaus/mcp_coder.git
-cd mcp_coder
-pip install -e ".[dev]"
-```
-
-**Separate environment, latest GitHub HEAD** (pulls mcp-coder plus the
-three sibling MCP packages `mcp-tools-py`, `mcp-workspace`,
-`mcp-coder-utils` straight from GitHub):
+Requirements: Python 3.11+, Git, a GitHub-hosted repository and [Claude Code CLI](https://code.claude.com/docs) (recommended; [Copilot CLI](https://docs.github.com/copilot/how-tos/use-copilot-agents/use-copilot-cli) is experimental).
 
 ```bash
 pip install mcp-coder
-git clone https://github.com/MarcusJellinghaus/mcp_coder.git
-mcp-coder install ~/mcp-coder-env --source git --local-path mcp_coder
 ```
 
-Installs everything into `~/mcp-coder-env/.venv`; auto-installs `uv` if
-missing. `--local-path` is what makes the sibling pinning work: it names
-the checkout whose `[tool.mcp-coder.install-from-github]` is read.
-Without it the siblings come from PyPI. See the
-[Installation Guide](docs/getting-started/installation.md) for that
-no-checkout variant, the PyPI release, pinning a specific ref, and other
-install paths.
+Set up your repository once ([Repository Setup](docs/repository-setup/README.md), [Label Setup](docs/getting-started/label-setup.md)), then run the stages against it:
 
-#### Optional features
+```bash
+mcp-coder create-plan --project-dir <repo> <issue-number>
+mcp-coder implement   --project-dir <repo>
+mcp-coder create-pr   --project-dir <repo>
+```
 
-mcp-coder publishes several pip extras for optional integrations
-(LangChain providers, MLflow logging, Textual dev tooling, …). See
-[Optional Dependencies](docs/configuration/optional-dependencies.md) for
-the full list and when to install each.
+In practice the [coordinator](docs/coordinator-vscodeclaude.md) runs these stages for you as the issue's status label advances. Other install paths (editable dev install, pinned GitHub ref, separate environment): [Installation Guide](docs/getting-started/installation.md). All commands: [CLI Reference](docs/cli-reference.md).
 
-## 📚 Documentation
+## Documentation
 
-**[Full Documentation Index](docs/README.md)** - Complete list of all documentation
+- [Development Process](docs/processes-prompts/development-process.md): stages, labels, slash commands, failure handling
+- [Repository Setup](docs/repository-setup/README.md): labels, GitHub Actions, MCP configuration, Jenkins
+- [CLI Reference](docs/cli-reference.md) and [Configuration](docs/configuration/config.md)
+- [Architecture](docs/architecture/architecture.md) and [why it is enforced](docs/architecture/enforcement.md)
+- [Full documentation index](docs/README.md)
 
-### Quick Links
+## Related projects
 
-- **[CLI Reference](docs/cli-reference.md)** - Complete command documentation and usage examples
-- **[Repository Setup](docs/repository-setup/README.md)** - GitHub Actions, labels, and repository configuration
-- **[Configuration Guide](docs/configuration/config.md)** - User config files, environment variables, and platform setup
-- **[Development Process](docs/processes-prompts/development-process.md)** - Detailed methodology and workflow documentation
+- [mcp-tools-py](https://github.com/MarcusJellinghaus/mcp-tools-py): code quality MCP server
+- [mcp-workspace](https://github.com/MarcusJellinghaus/mcp-workspace): file system and GitHub MCP server
+- [mcp-coder-utils](https://github.com/MarcusJellinghaus/mcp-coder-utils): shared subprocess, logging and redaction helpers
+- [AutoRunner](https://github.com/MarcusJellinghaus/AutoRunner): Jenkins infrastructure for unattended runs
 
-## 🔗 Related Projects
+## Security and license
 
-- [mcp-tools-py](https://github.com/MarcusJellinghaus/mcp-tools-py) - Code quality MCP server
-- [mcp-workspace](https://github.com/MarcusJellinghaus/mcp-workspace) - File system MCP server
-
----
-
-*Built with ❤️ and AI by [Marcus Jellinghaus](https://github.com/MarcusJellinghaus)*
+Report vulnerabilities as described in [SECURITY.md](SECURITY.md). Released under the terms in [LICENSE](LICENSE).
