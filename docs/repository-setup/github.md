@@ -529,7 +529,6 @@ jobs:
         check:
           - {name: "import-linter", cmd: "lint-imports"}
           - {name: "tach", cmd: "tach check"}
-          - {name: "pycycle", cmd: "pycycle --here"}
           - {name: "vulture", cmd: "vulture src tests --min-confidence 60"}
           - {name: "deptry", cmd: "deptry src"}
     name: ${{ matrix.check.name }}

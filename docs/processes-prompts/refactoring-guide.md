@@ -159,7 +159,7 @@ mcp__mcp-tools-py__run_pylint_check
 mcp__mcp-tools-py__run_mypy_check
 ```
 
-> Only `pycycle_check.sh` has no MCP equivalent — run it via Bash when needed. The automated implement workflow has no Bash, so issues for it must name the MCP tools only.
+> The automated implement workflow has no Bash, so issues for it must name the MCP tools only.
 > Use `mcp__mcp-tools-py__get_library_source` to inspect third-party library APIs when planning refactors.
 
 ## Common Patterns
@@ -236,4 +236,4 @@ Before merging a refactoring PR:
 
 - [Refactoring Principles](../../.claude/knowledge_base/refactoring_principles.md) — general rules for pure moves, shared across repos (read by the review supervisor skills)
 - [Architecture Documentation](../architecture/architecture.md)
-- [Dependency Management](../architecture/dependencies/readme.md)
+- [Architecture Enforcement](../architecture/enforcement.md)

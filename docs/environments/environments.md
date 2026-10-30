@@ -147,7 +147,7 @@ Every run now reports the Claude working directory and the project instructions 
 that upward walk, warning only when **none** of them lies inside `project_dir`. Individual files
 outside it are normal: the walk reaches every ancestor, so every ancestor hit — including
 user-level `~/.claude/CLAUDE.md` — is outside by definition. See
-[Execution Context Management](../architecture/architecture.md#execution-context-management).
+the execution-context decision in [Solution Strategy](../architecture/architecture.md#4-solution-strategy).
 
 ## Calling mcp-coder Explicitly
 

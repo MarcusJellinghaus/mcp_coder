@@ -189,7 +189,7 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 ## Enhanced Claude Permissions
 
-> **Customize:** Permissions list (`.claude/settings.local.json`) — gitignore this file in downstream repos.
+> **Customize:** Permissions list (`.claude/settings.local.json`) — gitignore this file in target repos.
 
 - **Purpose:** Pre-approve safe tools while maintaining security
 - **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
@@ -258,7 +258,7 @@ docs/
 ├── README.md                              (optional)
 ├── architecture/
 │   ├── architecture.md                    (mandatory - used by /implementation_review)
-│   ├── architecture-maintenance.md
+│   ├── architecture-maintenance.md        (optional - when to update architecture.md)
 │   └── dependencies/
 │       ├── readme.md
 │       ├── dependency_graph.html          (generated)

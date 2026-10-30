@@ -369,7 +369,6 @@ jobs:
         check:
           - {name: "import-linter", cmd: "uv pip show import-linter | grep Version && ./tools/lint_imports.sh"}
           - {name: "tach", cmd: "tach --version && ./tools/tach_check.sh"}
-          - {name: "pycycle", cmd: "pycycle --version && ./tools/pycycle_check.sh"}
           - {name: "vulture", cmd: "vulture --version && ./tools/vulture_check.sh"}
           - {name: "deptry", cmd: "deptry --version && ./tools/deptry_check.sh"}
     name: ${{ matrix.check.name }}

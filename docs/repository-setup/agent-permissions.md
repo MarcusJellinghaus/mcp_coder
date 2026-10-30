@@ -43,7 +43,7 @@ validation.
 `mcp-coder init` deploys `skills/`, `knowledge_base/` and `agents/` — not `docs/`. An
 adopting repo gets the agents and the skills they read, but not this file, so the agents name
 this document by path rather than linking to it; a relative link would be dead in every
-downstream repo.
+target repo.
 
 ## What `permissionMode: bypassPermissions` does
 

@@ -110,7 +110,6 @@ tui = [
 dev = [
     "mcp-coder[types,test,langchain,mlflow,tui]",
     "import-linter>=2.0",
-    "pycycle>=0.0.8",
     "pydeps>=3.0.0",
     "tach>=0.6.0",
     "vulture>=2.14",
@@ -348,7 +347,6 @@ select = [
     "I",
 ]
 ignore = [
-    "D104",  # missing docstring in __init__.py (low value)
     "D107",  # missing docstring in __init__ method (redundant with class docstring)
     "ANN401",  # Any is correct at library/CLI boundaries; mypy strict covers the rest
     "E501",  # line length is owned by the formatter (ruff format); not re-checked here

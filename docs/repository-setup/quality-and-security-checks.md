@@ -11,7 +11,7 @@ stay in the linked config files, docs and issues.
 | [Formatting](#formatting) | ruff format, ruff `I` | One tool for layout and import order | `run_format_code` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml), #1175 |
 | [Types](#types) | mypy strict | Catch type errors, including breaks from upstream packages | `run_mypy_check` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml), [`upstream-compat-check.yml`](../../.github/workflows/upstream-compat-check.yml) |
 | [Pylint](#pylint) | pylint | Errors and warnings ruff does not cover | `run_pylint_check` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml) |
-| [Architecture](#architecture) | import-linter, tach, pycycle, vulture, pylint `R0401` | Keep module boundaries, no cycles, no dead code | `run_lint_imports_check`, `run_tach_check`, `run_vulture_check`; pycycle — | [`.importlinter`](../../.importlinter), [`tach.toml`](../../tach.toml), [`ci.yml`](../../.github/workflows/ci.yml), [`python.md`](python.md#architecture-enforcement), [`enforcement.md`](../architecture/enforcement.md) |
+| [Architecture](#architecture) | import-linter, tach, vulture, pylint `R0401` | Keep module boundaries, no cycles, no dead code | `run_lint_imports_check`, `run_tach_check`, `run_vulture_check` | [`.importlinter`](../../.importlinter), [`tach.toml`](../../tach.toml), [`ci.yml`](../../.github/workflows/ci.yml), [`python.md`](python.md#architecture-enforcement), [`enforcement.md`](../architecture/enforcement.md) |
 | [File size](#file-size) | `mcp-coder check file-size` | Small files fit an LLM's context window | `check_file_size` | [`.large-files-allowlist`](../../.large-files-allowlist), [`ci.yml`](../../.github/workflows/ci.yml), [`repo.md`](repo.md#file-size-management), [`enforcement.md`](../architecture/enforcement.md) |
 | [Dependencies](#dependencies) | deptry, Dependabot | Declared dependencies match imports; stay current | `run_deptry_check`; Dependabot — | [`pyproject.toml`](../../pyproject.toml), [`dependabot.yml`](../../.github/dependabot.yml), [`python.md`](python.md#dependency-declaration-hygiene), [`enforcement.md`](../architecture/enforcement.md), #1176 |
 | [Coverage](#coverage) | pytest-cov, diff-cover | Show what tests reach, without gating | `run_pytest_check` | [`ci.yml`](../../.github/workflows/ci.yml), [`github.md`](github.md#coverage-badge), #1178 |
@@ -34,7 +34,7 @@ stay in the linked config files, docs and issues.
   `run_lint_imports_check`, `run_tach_check`, `run_deptry_check`, `run_format_code`.
 - **mcp-workspace** reads CI and PR status (`check_branch_status`, `github_pr_view`), so the
   LLM can review CI results and failure logs after a push. It also provides `check_file_size`.
-- **Gaps** (bash, mcp-coder CLI or CI only): pycycle, the [Repo hygiene](#repo-hygiene)
+- **Gaps** (bash, mcp-coder CLI or CI only): the [Repo hygiene](#repo-hygiene)
   scripts, CodeQL, Scorecard, Dependabot, `mcp-coder verify`.
 
 ## Lint
@@ -66,7 +66,7 @@ ruff because ruff does not fully cover pylint. CI job `pylint`. See
 ## Architecture
 
 import-linter ([`.importlinter`](../../.importlinter)), tach ([`tach.toml`](../../tach.toml)),
-pycycle and vulture run in the PR-only `architecture` matrix (deptry too, see
+and vulture run in the PR-only `architecture` matrix (deptry too, see
 [Dependencies](#dependencies)). Pylint `R0401` catches cyclic imports on every push. See
 [`python.md`](python.md#architecture-enforcement). Why: [`enforcement.md`](../architecture/enforcement.md).
 

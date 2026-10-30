@@ -31,24 +31,24 @@ This guide covers the **mandatory** and **optional** components for integrating 
 
 | Topic | File | Applies to |
 |---|---|---|
-| GitHub-side: tokens, labels, actions, CI, badges, dependabot | [github.md](github.md) | Any downstream repo |
+| GitHub-side: tokens, labels, actions, CI, badges, dependabot | [github.md](github.md) | Any target repo |
 | Jenkins: API user permissions, credentials, coordinator job setup | [jenkins.md](jenkins.md) | Repos dispatched by the coordinator |
-| Claude Code: `.claude/`, `.mcp.json`, launchers, architecture docs | [claude-code.md](claude-code.md) | Any downstream repo |
-| Agent permissions: how `.claude/agents/*.md` are wired, and what `bypassPermissions` does and does not enforce | [agent-permissions.md](agent-permissions.md) | Any downstream repo — reference only, `mcp-coder init` does not deploy `docs/` |
-| Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any downstream repo |
-| Generic repo conventions: `.gitattributes`, `.gitignore`, file size | [repo.md](repo.md) | Any downstream repo |
-| Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python downstream repos only |
-| Quality and security checks: which automated checks run, and why | [quality-and-security-checks.md](quality-and-security-checks.md) | Not for downstream use |
-| mcp-coder repo internals: design docs, mlflow tools, internal scripts | [internal.md](internal.md) | Not for downstream use |
+| Claude Code: `.claude/`, `.mcp.json`, launchers, architecture docs | [claude-code.md](claude-code.md) | Any target repo |
+| Agent permissions: how `.claude/agents/*.md` are wired, and what `bypassPermissions` does and does not enforce | [agent-permissions.md](agent-permissions.md) | Any target repo — reference only, `mcp-coder init` does not deploy `docs/` |
+| Copilot CLI: file compatibility, Copilot-specific flags | [copilot.md](copilot.md) | Any target repo |
+| Generic repo conventions: `.gitattributes`, `.gitignore`, file size | [repo.md](repo.md) | Any target repo |
+| Python-specific: `pyproject.toml`, linters, formatters, architecture enforcement | [python.md](python.md) | Python target repos only |
+| Quality and security checks: which automated checks run, and why | [quality-and-security-checks.md](quality-and-security-checks.md) | Not for target repos |
+| mcp-coder repo internals: design docs, mlflow tools, internal scripts | [internal.md](internal.md) | Not for target repos |
 
 ## Files Shared With Other Projects
 
 The following files in this repository serve as references/templates for other projects adopting MCP Coder workflows. The **Category** column tells you whether a file applies to your project.
 
 **Categories:**
-- **G** = General — applies to any downstream repo using mcp-coder
-- **P** = Python — only applies to Python downstream projects
-- **I** = Internal — used in mcp-coder repo only, not for downstream use
+- **G** = General — applies to any target repo using mcp-coder
+- **P** = Python — only applies to Python target repos
+- **I** = Internal — used in mcp-coder repo only, not for target repos
 
 | File / Folder | Cat | Mandatory? | Copy as-is? | What to adjust |
 |---|---|---|---|---|
@@ -61,7 +61,7 @@ The following files in this repository serve as references/templates for other p
 | `.claude/knowledge_base/refactoring_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/software_engineering_principles.md` | G | No | Yes | — |
 | `.claude/knowledge_base/python.md` | P | No | Yes | — |
-| `.claude/settings.local.json` | G | No | Mostly | Permissions list — tracked downstream; the permission entries differ per repo |
+| `.claude/settings.local.json` | G | No | Mostly | Permissions list — tracked in the target repo; the permission entries differ per repo |
 | `.mcp.json` (+ `.mcp.{linux,windows,macos}.json`) | G | Yes | No | Server paths, project name, `--test-folder`, reference projects |
 | `.github/workflows/label-new-issues.yml` | G | Yes | Yes | — |
 | `.github/workflows/approve-command.yml` | G | Yes | Yes | — |
@@ -78,7 +78,7 @@ The following files in this repository serve as references/templates for other p
 | `.importlinter` | P | No | No | Package names, contract definitions |
 | `tach.toml` | P | No | No | Module boundaries for your package |
 | `vulture_whitelist.py` | P | No | No | Project-specific false positives |
-| `tools/lint_imports.{sh,bat}`, `tach_check.*`, `pycycle_check.*`, `vulture_check.*` | P | No | Yes | — |
+| `tools/lint_imports.{sh,bat}`, `tach_check.*`, `vulture_check.*` | P | No | Yes | — |
 | `tools/ruff_check.{sh,bat}` | P | No | Yes | — |
 | `icoder_local.bat` | I | — | — | mcp-coder repo only |
 | `mlflow_implementation.md` / `project_idea.md` | I | — | — | mcp-coder repo only |
