@@ -2,13 +2,6 @@
 
 Files used in the mcp-coder repository itself but not relevant to target repos.
 
-## Design Documents
-
-| File | Purpose |
-|---|---|
-| `project_idea.md` | Design notes for mcp-coder itself |
-| `mlflow_implementation.md` | Implementation notes for mcp-coder's mlflow integration |
-
 ## icoder Launchers
 
 | File | Purpose |

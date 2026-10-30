@@ -56,11 +56,13 @@ experiment_name = "mcp-coder-conversations"
     - SQLite URIs: Use 3 slashes for relative (`sqlite:///`), 4 slashes for absolute (`sqlite:////`)
     - Filesystem paths are automatically converted to proper file URIs but generate deprecation warnings
 - `experiment_name` (string): Name for your experiment group (default: "mcp-coder-conversations")
+- `artifact_location` (string): Where run artifacts are stored, e.g. `"~/mlflow_data/artifacts"`
 
 ### Environment Variables (Higher Priority)
 
 - `MLFLOW_TRACKING_URI`: Override tracking_uri setting
 - `MLFLOW_EXPERIMENT_NAME`: Override experiment_name setting
+- `MLFLOW_DEFAULT_ARTIFACT_ROOT`: Override artifact_location setting
 
 ### Migrating from Filesystem to SQLite
 

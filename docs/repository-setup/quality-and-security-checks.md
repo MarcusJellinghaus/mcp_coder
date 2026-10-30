@@ -1,7 +1,9 @@
 # Quality and Security Checks
 
-Which automated checks run on mcp-coder, and why. This page covers mcp-coder only; details
-stay in the linked config files, docs and issues.
+Which automated checks run on mcp-coder itself, and why. It doubles as a reference setup for
+your own Python repository: the MCP tools in the table come from mcp-tools-py and work on any
+repo, while the config files, CI jobs and issue numbers are mcp-coder's. Details stay in the
+linked config files, docs and issues.
 
 ## Overview
 

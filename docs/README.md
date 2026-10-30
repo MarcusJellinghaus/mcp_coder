@@ -19,7 +19,7 @@ Complete documentation for MCP Coder.
 - **[Installation Guide](getting-started/installation.md)** - Install paths (PyPI, editable dev, pinned GitHub ref, CI / worker provisioning)
 - **[Repository Setup](repository-setup/README.md)** - Complete guide for setting up repositories with MCP Coder workflows
 - **[Configuration Guide](configuration/config.md)** - User configuration, environment variables, platform setup
-- **[Claude Code Configuration](configuration/claude-code.md)** - Claude Code CLI setup and project configuration
+- **[Claude Code Configuration](configuration/claude-code.md)** - Installing Claude Code and the Windows launcher
 - **[Copilot CLI Setup](repository-setup/copilot.md)** - GitHub Copilot CLI file compatibility and configuration
 - **[Label Setup](getting-started/label-setup.md)** - Detailed GitHub workflow label configuration
 - **[Optional Dependencies](configuration/optional-dependencies.md)** - Available pip extras for optional features
@@ -35,6 +35,8 @@ Complete documentation for MCP Coder.
 
 ## Technical Documentation
 
+Developing MCP Coder itself: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ### Architecture & Design
 
 - **[Architecture Overview](architecture/architecture.md)** - System architecture and design decisions
@@ -48,6 +50,11 @@ Complete documentation for MCP Coder.
 - **[Runtime Statistics](tests/runtime_statistics.md)** - Test performance data
 - **[Runtime Statistics Review](tests/runtime-statistics-review-process.md)** - Process for reviewing test performance
 - **[Slow Test Review](tests/slow-test-review-methodology.md)** - Methodology for optimizing slow tests
+
+### iCoder (prototype)
+
+- **[iCoder User Guide](iCoder.md)** - Interactive terminal chat: startup, slash commands, input
+- **[iCoder TUI Reference](icoder/icoder.md)** - Status line, branch info and other interface details
 
 ### LLM Providers
 

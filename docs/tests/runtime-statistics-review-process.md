@@ -1,4 +1,4 @@
-read f# Runtime Statistics Review Process
+# Runtime Statistics Review Process
 
 ## Quick Start
 ```bash
@@ -9,38 +9,7 @@ claude -p "Please execute the runtime statistics review process based on the lat
 
 ## Generating Profiler Data
 
-Before analyzing performance issues, you may want to generate detailed profiler data to understand where time is being spent in slow tests.
-
-### Running the Test Profiler
-
-**Full profiling run** (profiles all tests, generates reports for tests >1s):
-```batch
-tools\test_profiler.bat
-```
-
-This will:
-1. Clean the profiling output directory
-2. Run all tests with profiling enabled (serial execution, no `-n auto`)
-3. Generate detailed text reports for tests taking >1 second
-4. Create a summary of all slow tests
-
-**Regenerate reports only** (if pytest already ran but you want new reports):
-```batch
-tools\test_profiler_generate_only.bat
-```
-
-### Profiler Output Location
-
-All profiler data is saved to:
-```
-docs\tests\performance_data\prof\
-```
-
-**Files generated:**
-- `*.prof` - Binary profile data for ALL tests (can be analyzed with Python profiler tools)
-- `*_report.txt` - Human-readable text reports for tests >1 second only
-- `summary.txt` - Overview of all slow tests with durations
-- `durations.json` - Machine-readable JSON with all test timings
+To see where time goes in slow tests, generate profiler data first: how to run the profiler, where the output lands and how to change the threshold are in [`tools/test_profiler.md`](../../tools/test_profiler.md).
 
 ### Analyzing Profiler Reports
 
@@ -81,16 +50,6 @@ For the slowest test (175 seconds), the profiler shows:
 - **6 seconds** - actual processing
 
 This indicates the test is slow due to real API calls and rate limiting, not code inefficiency.
-
-### Configuration
-
-To change the threshold for "slow" tests (default: 1 second), edit:
-```python
-# In tools\test_profiler_plugin\__init__.py
-DURATION_THRESHOLD_SECONDS = 1.0  # Change this value
-```
-
-Then run `tools\test_profiler_generate_only.bat` to regenerate reports with the new threshold.
 
 ## Process Overview
 

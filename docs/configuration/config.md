@@ -10,6 +10,8 @@ Complete configuration documentation for MCP Coder, covering user configuration 
 | **Environment Variables** | `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN` |
 | **LLM Provider** | `[llm]` section in `config.toml` |
 | **MCP Config** | `[mcp]` section in `config.toml` |
+| **MLflow Logging** | `[mlflow]` section in `config.toml`, see [MLflow integration](mlflow-integration.md) |
+| **Check your config** | `mcp-coder verify` reports unknown keys, with a "did you mean" hint (e.g. `provider` instead of `default_provider`) |
 | **Repository Setup** | [Repository Setup Guide](../repository-setup/README.md) |
 | **CLI Commands** | [CLI Reference](../cli-reference.md) |
 
@@ -20,7 +22,7 @@ MCP Coder uses two separate configuration files for different purposes:
 | File | Scope | Module | Contents |
 |------|-------|--------|----------|
 | `config.toml` | Per-user | `utils/user_config.py` | API tokens, Jenkins credentials, coordinator settings, LLM provider |
-| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`) |
+| `pyproject.toml` | Per-project | `utils/pyproject_config.py` | Formatting switch (`[tool.mcp-coder] format_code`, default `true`), implement settings (`[tool.mcp-coder.implement]`: `check_type_hints`, default `true`), GitHub dependency overrides (`[tool.mcp-coder.install-from-github]`), post-install checks (`[tool.mcp-coder.install]`), prompt configuration (`[tool.mcp-coder.prompts]`) |
 
 The formatter itself is selected by `[tool.mcp-tools-py] formatter` (or `[tool.ruff.format]` / `[tool.black]` detection), read by mcp-tools-py, not mcp-coder — see [Python Setup](../repository-setup/python.md#key-sections).
 
@@ -130,6 +132,8 @@ post_issue_comments = true
 # executor_job_path = "Tests/your-repo-coordinator-test"
 # github_credentials_id = "github-credentials-id"
 # executor_os = "linux"
+# update_issue_labels = false  # default true: set false to stop status labels advancing
+# post_issue_comments = false  # default true: set false to stop failure comments
 
 [vscodeclaude]
 # VSCodeClaude session configuration
@@ -559,6 +563,27 @@ an *event log* rather than a history file, so loading a log whose
 `~/.mcp_coder/sessions/langchain/` entry has been cleaned now errors on every
 turn until `/clear` starts a fresh conversation.
 
+### [mlflow]
+
+Optional logging of every LLM call to MLflow (duration, tokens, cost, model, branch, conversation). Requires the `mlflow` extra. Full guide: [MLflow integration](mlflow-integration.md).
+
+| Field | Type | Description | Required | Env override |
+| ------- | ------ | ------------- | ---------- | -------------- |
+| `enabled` | boolean | Turn MLflow logging on or off | No | — |
+| `tracking_uri` | string | Where MLflow stores data, e.g. `sqlite:///~/mlflow_data/mlflow.db` (`~` is expanded) | No | `MLFLOW_TRACKING_URI` |
+| `experiment_name` | string | Experiment that groups the runs | No | `MLFLOW_EXPERIMENT_NAME` |
+| `artifact_location` | string | Where run artifacts are stored, e.g. `~/mlflow_data/artifacts` | No | `MLFLOW_DEFAULT_ARTIFACT_ROOT` |
+
+**Example:**
+
+```toml
+[mlflow]
+enabled = true
+tracking_uri = "sqlite:///~/mlflow_data/mlflow.db"
+artifact_location = "~/mlflow_data/artifacts"
+experiment_name = "mcp-coder-log"
+```
+
 ### [jenkins]
 
 Jenkins server credentials for job automation.
@@ -568,6 +593,8 @@ Jenkins server credentials for job automation.
 | `server_url` | string | Jenkins server URL with port | Yes |
 | `username` | string | Jenkins username | Yes |
 | `api_token` | string | Jenkins API token (not password) | Yes |
+| `test_job` | string | Job used by the Jenkins integration tests, e.g. `Tests/mcp-coder-simple-test` | No |
+| `test_job_coordination` | string | Job used by the coordinator integration tests, e.g. `Tests/mcp-coder-coordinator-test` | No |
 
 **Example:**
 
@@ -587,9 +614,25 @@ api_token = "11a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5"
 
 ### [coordinator.repos.*]
 
-Repository configurations for integration testing.
+Per-repository settings for the coordinator and `vscodeclaude`: which repositories they process, which Jenkins executor job runs the workflows, and which workflow behaviours are enabled.
 
 Each repository needs its own nested section: `[coordinator.repos.repo_name]`
+
+`update_issue_labels` and `post_issue_comments` are **on by default** for every repository that has a section. The status label advances after each workflow, and failures are reported as a comment on the issue. Set one to `false` to opt out of label updates or failure comments for that repository.
+
+The workflow commands (`implement`, `create-plan`, `create-pr`, `fix-ci`, the reviews) read these two settings from the section whose `repo_url` matches the checkout's git remote, in the `config.toml` of the machine they run on (the Jenkins executor for coordinator runs). A checkout with no matching section has both **off**, so a manual run in an unconfigured repository never touches GitHub labels or comments. The `--update-issue-labels` / `--no-update-issue-labels` and `--post-issue-comments` / `--no-post-issue-comments` flags override the config. The coordinator itself does not pass them.
+
+> **Upgrading:** before this default changed, both settings were `false` unless set. A section that omitted them now enables them. Add `update_issue_labels = false` and `post_issue_comments = false` to keep the old behaviour.
+
+**Minimal section for a repository** (all other fields are optional):
+
+```toml
+[coordinator.repos.my_project]
+repo_url = "https://github.com/myorg/my_project.git"
+executor_job_path = "Windows-Agents/Executor"
+github_credentials_id = "github-general-pat"
+executor_os = "windows"
+```
 
 **Note:** These are nested TOML sections using dot notation. The configuration system supports accessing nested sections like `coordinator.repos.mcp_coder` to retrieve values from the `[coordinator.repos.mcp_coder]` section
 
@@ -599,8 +642,8 @@ Each repository needs its own nested section: `[coordinator.repos.repo_name]`
 | `executor_job_path` | string | Jenkins job path (folder/job-name) | Yes | — |
 | `github_credentials_id` | string | Jenkins GitHub credentials ID (see setup below) | Yes | — |
 | `executor_os` | string | Executor platform: `"windows"` or `"linux"` (case-insensitive) | No | `"linux"` |
-| `update_issue_labels` | boolean | Update GitHub issue labels on workflow success/failure | No | `false` |
-| `post_issue_comments` | boolean | Post GitHub comments on workflow failure | No | `false` |
+| `update_issue_labels` | boolean | Update GitHub issue labels on workflow success/failure | No | `true` |
+| `post_issue_comments` | boolean | Post GitHub comments on workflow failure | No | `true` |
 | `auto_review_plan` | boolean | Gate automated plan review (routes create-plan success to `status-14:plan-review-bot` for coordinator pickup). | No | `false` |
 | `auto_review_implementation` | boolean | Gate automated implementation review (routes implement success to `status-17:code-review-bot` for coordinator pickup). | No | `false` |
 | `setup_commands_windows` | list | Shell commands run during environment setup on Windows executors | No | — |
@@ -621,9 +664,9 @@ auto_review_implementation = true
 
 **Repository naming:**
 
-- Use lowercase with underscores (e.g., `mcp_coder`, `my_project`)
-- Must match the repo_name used in CLI commands
-- Can be different from actual GitHub repo name
+- The section name is the `NAME` you pass to `--repo`. Any TOML key works, including hyphens (`[coordinator.repos.mcp-workspace]`); underscores (`mcp_coder`) are the convention.
+- It can differ from the GitHub repository name.
+- Workflow commands find the section by `repo_url`, not by name, so the URL must match the checkout's git remote.
 
 ### GitHub Credentials Setup
 
@@ -675,7 +718,20 @@ Environment variables take **highest priority** over config file values.
 | `JENKINS_URL` | `[jenkins] server_url` | `https://jenkins.local:8080` |
 | `JENKINS_USER` | `[jenkins] username` | `automation-user` |
 | `JENKINS_TOKEN` | `[jenkins] api_token` | `abc123def456...` |
+| `GITHUB_TOKEN` | `[github] token` | `ghp_...` |
+| `GITHUB_TEST_REPO_URL` | `[github] test_repo_url` | `https://github.com/org/test-repo` |
 | `MCP_CODER_LLM_PROVIDER` | `[llm] default_provider` | `claude` |
+| `MCP_CODER_LLM_LANGCHAIN_BACKEND` | `[llm.langchain] backend` | `anthropic` |
+| `MCP_CODER_LLM_LANGCHAIN_MODEL` | `[llm.langchain] model` | `claude-sonnet-4-6` |
+| `MCP_CODER_LLM_LANGCHAIN_BASE_URL` | `[llm.langchain] base_url` | `http://localhost:11434` |
+| `MCP_CODER_LLM_LANGCHAIN_API_VERSION` | `[llm.langchain] api_version` | `2024-02-01` |
+| `MCP_CODER_MCP_CONFIG` | `[mcp] default_config_path` | `.mcp.json` |
+| `MCP_CODER_CLAUDE_SETTINGS` | `[claude] default_settings_path` | `.claude/settings.local.json` |
+| `MLFLOW_TRACKING_URI` | `[mlflow] tracking_uri` | `sqlite:///~/mlflow_data/mlflow.db` |
+| `MLFLOW_EXPERIMENT_NAME` | `[mlflow] experiment_name` | `mcp-coder-log` |
+| `MLFLOW_DEFAULT_ARTIFACT_ROOT` | `[mlflow] artifact_location` | `~/mlflow_data/artifacts` |
+
+The LLM API key (`[llm.langchain] api_key`) has no environment override defined here.
 
 **Usage:**
 

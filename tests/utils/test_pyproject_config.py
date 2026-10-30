@@ -141,16 +141,28 @@ check_type_hints = true
         config = get_implement_config(tmp_path)
         assert config.check_type_hints is True
 
-    def test_defaults_to_false_when_section_missing(self, tmp_path: Path) -> None:
-        """Missing [tool.mcp-coder.implement] returns False."""
-        (tmp_path / "pyproject.toml").write_text("[tool.mcp-coder]\n", encoding="utf-8")
+    def test_returns_false_when_explicitly_disabled(self, tmp_path: Path) -> None:
+        """check_type_hints set to false opts out."""
+        (tmp_path / "pyproject.toml").write_text(
+            """\
+[tool.mcp-coder.implement]
+check_type_hints = false
+""",
+            encoding="utf-8",
+        )
         config = get_implement_config(tmp_path)
         assert config.check_type_hints is False
 
-    def test_defaults_to_false_when_file_missing(self, tmp_path: Path) -> None:
-        """No pyproject.toml returns False."""
+    def test_defaults_to_true_when_section_missing(self, tmp_path: Path) -> None:
+        """Missing [tool.mcp-coder.implement] returns True."""
+        (tmp_path / "pyproject.toml").write_text("[tool.mcp-coder]\n", encoding="utf-8")
         config = get_implement_config(tmp_path)
-        assert config.check_type_hints is False
+        assert config.check_type_hints is True
+
+    def test_defaults_to_true_when_file_missing(self, tmp_path: Path) -> None:
+        """No pyproject.toml returns True."""
+        config = get_implement_config(tmp_path)
+        assert config.check_type_hints is True
 
     def test_legacy_format_code_key_is_ignored(self, tmp_path: Path) -> None:
         """A leftover format_code key does not affect the config."""
@@ -162,7 +174,7 @@ format_code = true
             encoding="utf-8",
         )
         config = get_implement_config(tmp_path)
-        assert config == ImplementConfig(check_type_hints=False)
+        assert config == ImplementConfig(check_type_hints=True)
 
     def test_handles_invalid_toml(self, tmp_path: Path) -> None:
         """Malformed TOML file returns defaults."""
@@ -170,7 +182,7 @@ format_code = true
             "this is not valid toml {{{", encoding="utf-8"
         )
         config = get_implement_config(tmp_path)
-        assert config.check_type_hints is False
+        assert config.check_type_hints is True
 
 
 class TestGetFormatCode:
@@ -473,4 +485,4 @@ class TestMalformedTomlRegression:
         """get_implement_config does not raise on malformed TOML."""
         (tmp_path / "pyproject.toml").write_text(MALFORMED_TOML, encoding="utf-8")
         config = get_implement_config(tmp_path)
-        assert config.check_type_hints is False
+        assert config.check_type_hints is True

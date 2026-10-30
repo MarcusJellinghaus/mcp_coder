@@ -10,7 +10,7 @@ mcp-coder vscodeclaude launch
 
 This will:
 
-1. Scan configured repositories for issues requiring human action
+1. Scan configured repositories for issues requiring human action that are assigned to you (see [Issue Selection](#issue-selection))
 2. Clone/update repositories into workspace folders
 3. Launch VS Code with automated Claude Code sessions
 
@@ -102,7 +102,7 @@ The coordinator looks for issues with these status labels (in priority order):
 
 Issues must also:
 
-- Be assigned to the configured GitHub user
+- Be assigned to the GitHub user that your token authenticates as (`[github] token` or `GITHUB_TOKEN`). Nothing else is configured: assign the issue to yourself, or no session opens.
 - Not already have an active session
 
 ### PR-health checks for `status-10:pr-created`

@@ -77,7 +77,7 @@ After `create-plan` and `implement`, the review runs in one of two ways:
 - **Interactive** (default): you work in an LLM session.
 - **Automated** (dashed): `review-plan` / `review-implementation`, only if `auto_review_plan` / `auto_review_implementation` is on. If it needs a human, it hands over to the interactive review.
 
-**Interactive LLM sessions** are you working with the LLM, step by step or through a supervisor skill:
+**Interactive LLM sessions** are you working with the LLM, step by step or through a supervisor skill. `mcp-coder vscodeclaude launch` opens them, but only for issues **assigned to you** (the GitHub user your token authenticates as) and sitting at a human-action label. An unassigned issue gets no session ([details](../coordinator-vscodeclaude.md#issue-selection)).
 
 `/plan_review` and `/implementation_review` start a step-by-step session with the LLM (with `/discuss` and the update commands).
 

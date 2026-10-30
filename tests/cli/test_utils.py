@@ -323,10 +323,10 @@ class TestResolveIssueInteractionFlags:
         mock_find: MagicMock,
         mock_config: MagicMock,
     ) -> None:
-        """Config has update_issue_labels=true, CLI is None -> (True, False)."""
+        """Config has update_issue_labels=true, post_issue_comments=false, CLI None."""
         mock_config.return_value = {
             ("coordinator.repos.myrepo", "update_issue_labels"): True,
-            ("coordinator.repos.myrepo", "post_issue_comments"): None,
+            ("coordinator.repos.myrepo", "post_issue_comments"): False,
         }
         args = MagicMock(
             spec=["update_issue_labels", "post_issue_comments"],
@@ -335,6 +335,62 @@ class TestResolveIssueInteractionFlags:
         )
         result = resolve_issue_interaction_flags(args, Path("/tmp/project"))
         assert result == (True, False)
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    @patch(
+        "mcp_coder.cli.utils.find_repo_section_by_url",
+        return_value="coordinator.repos.myrepo",
+    )
+    @patch(
+        "mcp_coder.cli.utils.get_repository_identifier",
+        return_value=MagicMock(https_url="https://github.com/org/repo"),
+    )
+    def test_matching_section_without_keys_defaults_to_true(
+        self,
+        _mock_git_url: MagicMock,
+        mock_find: MagicMock,
+        mock_config: MagicMock,
+    ) -> None:
+        """Configured repo, keys absent, CLI None -> (True, True)."""
+        mock_config.return_value = {
+            ("coordinator.repos.myrepo", "update_issue_labels"): None,
+            ("coordinator.repos.myrepo", "post_issue_comments"): None,
+        }
+        args = MagicMock(
+            spec=["update_issue_labels", "post_issue_comments"],
+            update_issue_labels=None,
+            post_issue_comments=None,
+        )
+        result = resolve_issue_interaction_flags(args, Path("/tmp/project"))
+        assert result == (True, True)
+
+    @patch("mcp_coder.cli.utils.get_config_values")
+    @patch(
+        "mcp_coder.cli.utils.find_repo_section_by_url",
+        return_value="coordinator.repos.myrepo",
+    )
+    @patch(
+        "mcp_coder.cli.utils.get_repository_identifier",
+        return_value=MagicMock(https_url="https://github.com/org/repo"),
+    )
+    def test_explicit_false_in_config_disables(
+        self,
+        _mock_git_url: MagicMock,
+        mock_find: MagicMock,
+        mock_config: MagicMock,
+    ) -> None:
+        """Configured repo with both keys false, CLI None -> (False, False)."""
+        mock_config.return_value = {
+            ("coordinator.repos.myrepo", "update_issue_labels"): False,
+            ("coordinator.repos.myrepo", "post_issue_comments"): False,
+        }
+        args = MagicMock(
+            spec=["update_issue_labels", "post_issue_comments"],
+            update_issue_labels=None,
+            post_issue_comments=None,
+        )
+        result = resolve_issue_interaction_flags(args, Path("/tmp/project"))
+        assert result == (False, False)
 
     @patch("mcp_coder.cli.utils.get_config_values")
     @patch(

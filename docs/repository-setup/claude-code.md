@@ -2,7 +2,7 @@
 
 MCP Coder currently uses Claude Code as the primary LLM backend, with optional langchain support for connecting to other LLM providers. This file covers the required configuration files and Claude-related repo conventions.
 
-**See [Claude Code Configuration Guide](../configuration/claude-code.md)** for detailed setup including installation, CLI commands, and troubleshooting.
+Installing Claude Code itself: [Claude Code Configuration](../configuration/claude-code.md).
 
 ## Required Files
 
@@ -18,12 +18,9 @@ In the future, these files will also be used by iCoder.
 
 > **Customize:** Tool list, project conventions, and allowed bash commands.
 
-This file contains mandatory instructions that Claude follows when working on your project. Create `.claude/CLAUDE.md` with project-specific rules.
+This file contains mandatory instructions that Claude reads at the start of every session. Use it for code quality requirements, project conventions and mandatory tool use (for example the MCP tools `run_pylint_check`, `run_pytest_check`, `run_mypy_check`). `implement` assumes Claude can read files and run pylint, pytest and mypy, preferably through these MCP tools.
 
-**See:**
-
-- [Claude Code Configuration Guide](../configuration/claude-code.md#claudeclaudemd---project-instructions) for detailed examples
-- mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md) for a comprehensive example
+Example: mcp-coder's own [CLAUDE.md](https://github.com/MarcusJellinghaus/mcp_coder/blob/main/.claude/CLAUDE.md).
 
 ## `.claude/skills/` - Skills
 
@@ -193,8 +190,20 @@ Two launcher scripts are provided. Both auto-activate the venv and set the MCP e
 
 - **Purpose:** Pre-approve safe tools while maintaining security
 - **Principles:** Only allow tools that change project folder (git-tracked) or read-only commands
-- **Security:** No system-wide edits, no file deletion outside project
-- **Reference:** See `.claude/settings.local.json` in this repository
+- **Security:** No system-wide edits, no file deletion outside project. Never allow unrestricted `Bash(*)`; read-only commands such as `Bash(git diff:*)` are safe
+- **Reference:** See `.claude/settings.local.json` in this repository (tracked there as a template; gitignore it in your own repos)
+
+```json
+{
+  "permissions": {
+    "allow": ["mcp__mcp-workspace__*", "mcp__mcp-tools-py__run_format_code", "Bash(git status:*)", "Skill(commit_push)"]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": ["mcp-tools-py", "mcp-workspace"]
+}
+```
+
+`permissions.allow` pre-approves tools. `enableAllProjectMcpServers` and `enabledMcpjsonServers` enable the servers defined in `.mcp.json`.
 
 ### Pinning the settings file with `--settings`
 

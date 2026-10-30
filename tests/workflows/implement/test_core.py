@@ -74,7 +74,7 @@ class TestRunImplementWorkflow:
         # Verify config booleans passed (defaults from missing pyproject.toml)
         first_call_kwargs = mock_process_task.call_args_list[0][1]
         assert "format_code" not in first_call_kwargs
-        assert first_call_kwargs["check_type_hints"] is False
+        assert first_call_kwargs["check_type_hints"] is True
         assert mock_log_progress.call_count >= 2  # Initial + final progress
 
     @patch("mcp_coder.workflows.implement.core.check_git_clean")

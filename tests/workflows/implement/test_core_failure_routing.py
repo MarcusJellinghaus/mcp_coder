@@ -5,6 +5,7 @@ Split out of test_core_workflow.py, which sits close to the CI file-size gate
 """
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -392,6 +393,25 @@ class TestBlockedRouting:
 
 class TestRoundCap:
     """Test that the task loop is bounded by max(progress.total + 10, 20)."""
+
+    @pytest.fixture(autouse=True)
+    def _stub_final_mypy_pass(self) -> Iterator[None]:
+        """Stub the final mypy pass (on by default); these tests cover the round cap."""
+        with (
+            patch(
+                "mcp_coder.workflows.implement.core.prepare_llm_environment",
+                return_value={},
+            ),
+            patch(
+                "mcp_coder.workflows.implement.core.check_and_fix_mypy",
+                return_value=True,
+            ),
+            patch(
+                "mcp_coder.workflows.implement.core.run_formatters",
+                return_value=True,
+            ),
+        ):
+            yield
 
     @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.get_step_progress", return_value={})

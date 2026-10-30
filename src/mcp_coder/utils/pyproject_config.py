@@ -207,13 +207,14 @@ def get_implement_config(project_dir: Path) -> ImplementConfig:
         project_dir: Path to directory containing pyproject.toml.
 
     Returns:
-        ImplementConfig with the check_type_hints boolean. Formatting is
+        ImplementConfig with the check_type_hints boolean, True when the key,
+        section or file is absent (or the file is malformed). Formatting is
         governed by [tool.mcp-coder] format_code (see get_format_code).
     """
     data = _load_pyproject(project_dir)
     section = data.get("tool", {}).get("mcp-coder", {}).get("implement", {})
     return ImplementConfig(
-        check_type_hints=section.get("check_type_hints", False),
+        check_type_hints=section.get("check_type_hints", True),
     )
 
 

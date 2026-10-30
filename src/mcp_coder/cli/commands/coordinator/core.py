@@ -35,6 +35,8 @@ def load_repo_config(repo_name: str) -> dict[str, str | bool | int | list[str] |
     Returns:
         Dictionary with repo_url, executor_job_path, github_credentials_id, executor_os
         Values may be None except executor_os which defaults to "linux" (normalized to lowercase)
+        and update_issue_labels / post_issue_comments, which default to True unless
+        the section sets them to false.
     """
     section = f"coordinator.repos.{repo_name}"
 
@@ -67,8 +69,8 @@ def load_repo_config(repo_name: str) -> dict[str, str | bool | int | list[str] |
         "executor_job_path": executor_job_path,
         "github_credentials_id": github_credentials_id,
         "executor_os": executor_os,
-        "update_issue_labels": config[(section, "update_issue_labels")] is True,
-        "post_issue_comments": config[(section, "post_issue_comments")] is True,
+        "update_issue_labels": config[(section, "update_issue_labels")] is not False,
+        "post_issue_comments": config[(section, "post_issue_comments")] is not False,
     }
 
 

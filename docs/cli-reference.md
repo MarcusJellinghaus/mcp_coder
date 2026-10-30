@@ -1,92 +1,115 @@
 # CLI Reference
 
-Complete command documentation for all MCP Coder CLI commands.
+What each `mcp-coder` command is for, when to run it by hand, and what it does to your repository and issues.
+
+For the complete option list of any command, run `mcp-coder <command> --help`. This page documents only what `--help` cannot say: purpose, prerequisites, behaviour, label effects and examples. A test (`tests/docs/test_cli_reference.py`) fails when a command is missing here, a table description drifts from the CLI, or a flag mentioned on this page does not exist.
+
+`mcp-coder help` prints the same command overview grouped by category.
 
 ## Command List
 
-### Basics
-Core commands for help, verification, and interactive prompts.
+### Setup
 
 | Command | Description |
 |---------|-------------|
 | [`init`](#init) | Initialize project: create config and deploy Claude skills |
 | [`install`](#install) | Install mcp-coder into a target environment |
-| [`help`](#help) | Show comprehensive help information with examples |
-| [`verify`](#verify) | Verify Claude CLI installation and configuration |
-| [`prompt`](#prompt) | Execute prompt via Claude API with configurable debug output |
+| [`verify`](#verify) | Check config, git, GitHub, Jenkins, Claude CLI, LLM provider and MCP servers |
 
-### Git Operations
-Commit operations with AI assistance.
+### Background development
 
-| Command | Description |
-|---------|-------------|
-| [`commit auto`](#commit-auto) | Auto-generate commit message using LLM |
-
-### Automated Development Workflow
-End-to-end development automation from planning to pull requests.
+Automated stages, normally dispatched by the coordinator. See the [Development Process](processes-prompts/development-process.md).
 
 | Command | Description |
 |---------|-------------|
 | [`create-plan`](#create-plan) | Generate implementation plan for a GitHub issue |
 | [`review-plan`](#review-plan) | Run automated review of an implementation plan |
-| [`implement`](#implement) | Execute implementation workflow from task tracker |
+| [`implement`](#implement) | Execute implementation workflow |
 | [`rebase`](#rebase) | Automatically rebase the current branch onto its base branch |
 | [`review-implementation`](#review-implementation) | Run automated review of an implementation |
 | [`create-pr`](#create-pr) | Create pull request with AI-generated summary |
-| [`fix-conflict`](#fix-conflict) | Rebase a PR onto its base branch to resolve a merge conflict |
-| [`fix-ci`](#fix-ci) | Run the CI auto-fix loop on a PR with failing CI |
+| [`fix-conflict`](#fix-conflict) | Rebase onto base branch to resolve a merge conflict |
+| [`fix-ci`](#fix-ci) | Run the CI auto-fix loop to resolve a failing PR |
+| [`coordinator`](#coordinator) | Monitor GitHub issues and dispatch automated workflows |
 
-### Interactive Development
-Interactive coding tools and local workspace management.
+### Interactive development
 
 | Command | Description |
 |---------|-------------|
 | [`icoder`](#icoder) | Interactive terminal chat for LLM-assisted coding |
-| [`vscodeclaude launch`](#vscodeclaude-launch) | Launch VS Code sessions for issues needing human review |
-| [`vscodeclaude status`](#vscodeclaude-status) | Show current VS Code session status |
+| [`vscodeclaude launch`](#vscodeclaude-launch) | Launch VSCode/Claude session for issues |
+| [`vscodeclaude status`](#vscodeclaude-status) | Show current VSCode/Claude sessions |
 
-### Coordinating Automated Development
-Orchestration and monitoring of automated development across repositories.
-
-| Command | Description |
-|---------|-------------|
-| [`coordinator --dry-run`](#coordinator) | Trigger Jenkins test instead of dispatching workflows |
-| [`coordinator`](#coordinator) | Monitor and dispatch workflows for GitHub issues |
-
-### Quality Checks
-Branch readiness verification and code quality tools.
+### Tools
 
 | Command | Description |
 |---------|-------------|
-| [`check branch-status`](#check-branch-status) | Check branch readiness and optionally apply fixes |
+| [`prompt`](#prompt) | Send prompt to configured LLM |
+| [`commit auto`](#commit-auto) | Auto-generate commit message using LLM |
+| [`check branch-status`](#check-branch-status) | Check branch readiness status and optionally apply fixes |
 | [`check file-size`](#check-file-size) | Check file sizes against maximum line count |
-
-### GitHub Tools
-GitHub repository utilities for branch detection and workflow automation.
-
-| Command | Description |
-|---------|-------------|
 | [`gh-tool checkout-issue-branch`](#gh-tool-checkout-issue-branch) | Checkout or create a branch linked to a GitHub issue |
+| [`gh-tool set-status`](#gh-tool-set-status) | Update GitHub issue workflow status label |
 | [`gh-tool get-base-branch`](#gh-tool-get-base-branch) | Detect base branch for current feature branch |
-| [`gh-tool define-labels`](#gh-tool-define-labels) | Sync workflow status labels to GitHub repository |
-| [`gh-tool issue-stats`](#gh-tool-issue-stats) | Display issue statistics grouped by workflow status category |
-| [`gh-tool set-status`](#gh-tool-set-status) | Set workflow status label on a GitHub issue |
-
-### Git Tools
-Git utility commands.
-
-| Command | Description |
-|---------|-------------|
-| [`git-tool compact-diff`](#git-tool-compact-diff) | Generate compact diff replacing moved code blocks with summary comments |
+| [`gh-tool define-labels`](#gh-tool-define-labels) | Sync workflow status labels to GitHub |
+| [`gh-tool issue-stats`](#gh-tool-issue-stats) | Display issue statistics by workflow status |
+| [`git-tool compact-diff`](#git-tool-compact-diff) | Generate compact git diff suppressing moved-code blocks |
 
 ## Global Options
 
 ```bash
 mcp-coder --version                    # Show version information
-mcp-coder --log-level LEVEL            # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-mcp-coder --help                       # Show basic argparse help
-mcp-coder help                         # Show comprehensive help with examples (recommended)
+mcp-coder --log-level LEVEL            # DEBUG, INFO, OUTPUT, WARNING, ERROR or CRITICAL; default OUTPUT, INFO for coordinator
+mcp-coder help                         # Categorized command overview
 ```
+
+## Common Options
+
+Most commands share a few options. Their exact spelling is in each command's `--help`; this section explains how they behave.
+
+- **`--project-dir PATH`**: the repository to act on (default: current directory). Always pass it when the shell is not inside the checkout, for example on a build server.
+- **`--llm-method METHOD`**: `claude`, `copilot` or `langchain`. Without it, the `MCP_CODER_LLM_PROVIDER` environment variable, then `[llm] default_provider` in `config.toml`, then `claude` apply.
+- **`--mcp-config PATH`** and **`--settings PATH`**: on the commands that run an agent session, such as `prompt`, `implement` and the reviews (check a command's `--help`). See below.
+
+### Issue label and comment flags
+
+The workflow commands `implement`, `create-plan`, `review-plan`, `review-implementation`, `create-pr` and `fix-ci` accept `--update-issue-labels` / `--no-update-issue-labels` (move the issue's status label on success or failure) and `--post-issue-comments` / `--no-post-issue-comments` (comment on the issue when the workflow fails).
+
+Resolution order: the flag, then `update_issue_labels` / `post_issue_comments` in the matching `[coordinator.repos.*]` section of `config.toml` (matched by the checkout's git remote URL; both are `true` unless the section sets them to `false`), then `false` for a checkout with no matching section. The coordinator does not pass the flags; the executor reads them from its own `config.toml`. See [Configuration](configuration/config.md#coordinatorrepos).
+
+### MCP Configuration
+
+`--mcp-config` points to the MCP servers' config file. Platform-specific files by convention:
+
+```bash
+.mcp.linux.json    # Linux environments
+.mcp.windows.json  # Windows environments
+.mcp.macos.json    # macOS environments
+```
+
+The flag is optional when a default is configured via the `MCP_CODER_MCP_CONFIG` environment variable or `[mcp] default_config_path` in `config.toml`. See the [Configuration Guide](configuration/config.md).
+
+### Claude Code Settings
+
+`--settings` pins the Claude Code settings file (`.claude/settings.local.json` or `.claude/settings.json`). The path is forwarded to Claude via its native `--settings` flag and overrides cwd-based settings discovery. The file controls permissions, `enabledMcpjsonServers`, hooks, env, model and the rest of the Claude Code settings schema.
+
+It is optional when a default is set via `MCP_CODER_CLAUDE_SETTINGS` or `[claude] default_settings_path` in `config.toml`. With no override, mcp-coder auto-detects `<project_dir>/.claude/settings.local.json`, then `<project_dir>/.claude/settings.json`. See the [Configuration Guide](configuration/config.md#claude).
+
+### First Time Setup
+
+```bash
+# Create the user config and deploy skills, agents and the knowledge base into the project
+mcp-coder init
+
+# Coordinator commands also auto-create the config template
+mcp-coder coordinator --dry-run --repo repo_name --branch-name main
+# Output: Created default config file at ~/.mcp_coder/config.toml
+
+# After editing config.toml and setting up the repository: check everything
+mcp-coder verify
+```
+
+Full setup checklist: [Repository Setup](repository-setup/README.md).
 
 ---
 
@@ -94,29 +117,19 @@ mcp-coder help                         # Show comprehensive help with examples (
 
 ### init
 
-Initialize a project for MCP Coder: create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base, and agents) into the project, and add the VSCodeClaude entries to the project's `.gitignore`.
+Create the user config file (if missing), deploy the bundled Claude Code resources (skills, knowledge base and agents) into `.claude/` of the project, and add the VSCodeClaude entries to the project's `.gitignore`.
 
 ```bash
-mcp-coder init [OPTIONS]
+mcp-coder init [--project-dir PATH] [--just-skills]
 ```
 
-**Options:**
-- `--project-dir PATH` - Target project directory (default: current directory)
-- `--just-skills` - Deploy the bundled resources only (skills, knowledge base, and agents, despite the name), skip config creation
+`--just-skills` deploys only the bundled resources (all three sets, despite the name) and skips config creation. Use it to refresh them after upgrading mcp-coder. Existing files are never overwritten; delete a file first to refresh it.
 
-**Description:** Bootstraps a project so the automated workflows and interactive tools can run: writes a starter user configuration and installs the bundled Claude Code resources into `.claude/` — `.claude/skills/`, `.claude/knowledge_base/`, and `.claude/agents/`. Use `--just-skills` to refresh only the deployed resources (all three sets, despite the name) without touching config.
+The `.gitignore` step runs in both modes and is idempotent. If the file cannot be read or written it is logged as a warning, the remaining steps still run, and the command fails.
 
-Init also appends any missing VSCodeClaude session-file entries to `<project_dir>/.gitignore` so they can be committed once instead of dirtying every session folder. This runs in both modes — `--just-skills` skips only the user config, not the project-scoped `.gitignore` — and is idempotent: entries already present are left alone. If the file cannot be read or written the step is logged as a warning and the remaining steps still run, but the command exits with code 1.
-
-**Examples:**
 ```bash
-# Initialize the current project (config + bundled resources)
-mcp-coder init
-
-# Refresh deployed resources only (skills, knowledge base, agents)
-mcp-coder init --just-skills
-
-# Initialize a specific project directory
+mcp-coder init                                   # config + bundled resources
+mcp-coder init --just-skills                     # refresh deployed resources only
 mcp-coder init --project-dir /path/to/project
 ```
 
@@ -124,31 +137,22 @@ mcp-coder init --project-dir /path/to/project
 
 ### install
 
-Install mcp-coder into a target environment: create `<target>/.venv`, install mcp-coder from git, PyPI or a local checkout, apply the sibling-package overrides, and report the installed versions. Python packages only — staging `.mcp.json` or `.claude/` is the caller's job.
+Install mcp-coder into a target environment: create `<target>/.venv`, install mcp-coder from git, PyPI or a local checkout, apply the sibling-package overrides and report the installed versions. Python packages only; staging `.mcp.json` or `.claude/` is the caller's job.
 
 ```bash
 mcp-coder install TARGET [OPTIONS]
 ```
 
-**Arguments:**
-- `target` - Directory that will hold `<target>/.venv` (required)
+Options that need explaining:
 
-**Options:**
-- `--source {git,pypi,local}` - Where to install mcp-coder from (default: `git`)
-- `--ref REF` - Git ref (branch/tag/sha) for `--source git` (default: `main`)
-- `--local-path PATH` - Local checkout; required for `--source local`. Also selects the `pyproject.toml` read for the extras policy and the GitHub overrides (default: `<target>`)
-- `--extras EXTRAS` - Extras to install, e.g. `dev` or `dev,mlflow`; `""` for none. Default: the `[tool.mcp-coder.install] extras` from the pyproject.toml at `--local-path`, else `dev`
-- `--extra-packages PKGS` - Space-separated packages installed after the main install
-- `--use-sync` - For `--source local`: use the `uv.lock`-honoring sequence instead of one `uv pip install`. Requires `target == --local-path`
-- `--skip-overrides` - Skip `[tool.mcp-coder.install-from-github]` entirely
-- `--refresh` - Pass `--refresh` to uv, bypassing cached git clones
-- `--clean` - Delete an existing `.venv` before creating a fresh one
-- `--python PATH` - Base interpreter for `python -m venv` (default: current)
-- `--check` - Dry run: print every command without executing it
+- `--source {git,pypi,local}`: where to install mcp-coder from (default `git`; `--ref` picks the branch, tag or sha).
+- `--local-path PATH`: local checkout; required for `--source local`. It also selects which `pyproject.toml` is read for the extras policy and the GitHub overrides (default: `<target>`).
+- `--extras EXTRAS`: for example `dev` or `dev,mlflow`; `""` for none. Default: `[tool.mcp-coder.install] extras` from the pyproject.toml at `--local-path`, else `dev`.
+- `--use-sync`: for `--source local`, use the `uv.lock`-honoring sequence. Requires `target == --local-path`.
+- `--check`: dry run, prints every command without executing it.
 
-After the version report, install runs the `[tool.mcp-coder.install] post_install_checks` declared in the pyproject.toml at `--local-path`. Any failing check exits 1; `--check` only prints them.
+After the version report, install runs the `[tool.mcp-coder.install] post_install_checks` declared in the pyproject.toml at `--local-path`. Any failing check fails the install; `--check` only prints them.
 
-**Examples:**
 ```bash
 # GitHub HEAD, siblings pinned from a checkout
 mcp-coder install ~/mcp-coder-env --source git --local-path ~/src/mcp_coder
@@ -161,226 +165,35 @@ See the [Installation Guide](getting-started/installation.md) for which form to 
 
 ---
 
-### help
-
-Show comprehensive help information with examples.
-
-```bash
-mcp-coder help
-```
-
-**Description:** Display detailed help information about all MCP Coder commands with usage examples and workflow patterns. More comprehensive than the standard `--help` flag.
-
-**Note:** This provides much more detailed information than `mcp-coder --help`, including examples and common usage patterns.
-
----
-
 ### verify
 
-Verify Claude CLI installation and configuration.
+Check the whole local setup in one report. Run it after editing `config.toml` and after setting up a repository.
 
 ```bash
 mcp-coder verify [OPTIONS]
 ```
 
-**Description:** Check if Claude CLI is properly installed and configured for use with MCP Coder.
+The report has these sections: environment, `CONFIG` (the `config.toml` location, parse errors, missing required fields and unknown keys with a "did you mean" hint), `PROMPTS`, project configuration, `GIT` (including commit signing), `GITHUB` (token and security checks), `JENKINS` and `JENKINS JOBS` (only when `[jenkins]` is set), the Claude CLI, the active LLM provider and where it came from, LangChain (when it is the provider), the MCP servers (smoke test) and MLflow. Exits 1 when a check fails.
 
-**Options:**
-- `--mcp-config PATH` - Path to `.mcp.json` for MCP agent smoke test
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-
----
-
-### prompt
-
-Execute prompt via Claude API with configurable debug output.
-
-```bash
-mcp-coder prompt "Your prompt here" [OPTIONS]
-```
-
-**Arguments:**
-- `prompt` - The prompt to send to Claude (required)
-
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--verbosity LEVEL` - Output detail: `just-text` (response only), `verbose` (+ metrics), `raw` (+ full JSON)
-- `--store-response` - Save session to `.mcp-coder/responses/` for later continuation
-- `--continue-session-from FILE` - Resume conversation from specific stored session file. With `--llm-method langchain` the session ID is taken from the file *name*, so this works only for a langchain history file (`~/.mcp_coder/sessions/langchain/<id>.json`, whose stem is the session ID). A `--store-response` file (`response_<timestamp>.json`) has no matching history and the command exits 1 - use `--continue-session` or `--session-id` instead.
-- `--continue-session` - Resume from most recent session (auto-discovers latest file)
-- `--session-id ID` - Direct session ID for continuation (overrides file-based options). With `--llm-method langchain` the ID must already have a stored history file; an unknown ID is an error, not a new conversation.
-- `--timeout SECONDS` - API request timeout in seconds (default: 60)
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--output-format FORMAT` - Output format: `text` (default) or `json` (includes session_id). Under `--llm-method langchain` in agent mode, a turn whose history was not recorded reports `"session_id": null` - that id is not resumable, so do not chain it into a later `--session-id`.
-- `--mcp-config PATH` - Path to MCP configuration file (e.g., `.mcp.linux.json`)
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--add-system-prompts` - Inject system and project prompts into the LLM request. Loads prompts from `[tool.mcp-coder.prompts]` in `pyproject.toml` (or shipped defaults). See [Prompt Configuration](repository-setup/python.md#prompt-configuration).
-
-**Examples:**
-```bash
-# Basic prompt
-mcp-coder prompt "Analyze this code structure"
-
-# Store response for later continuation
-mcp-coder prompt "Start project planning" --store-response
-
-# Continue from specific session
-mcp-coder prompt "What's next?" --continue-session-from response_2025-01-18T14-30-22.json
-
-# Continue from most recent session
-mcp-coder prompt "What's next?" --continue-session
-
-# Use verbose output with MCP config
-mcp-coder prompt "Review my implementation" --verbosity verbose --mcp-config .mcp.linux.json
-
-# Pin a Claude Code settings file explicitly
-mcp-coder prompt "Audit deps" --mcp-config .mcp.json --settings .claude/settings.local.json
-
-# Inject system and project prompts (useful for langchain provider)
-mcp-coder prompt "Analyze code" --add-system-prompts --llm-method langchain
-```
-
----
-
-### icoder
-
-Interactive terminal chat for LLM-assisted coding.
-
-```bash
-mcp-coder icoder [OPTIONS]
-```
-
-**Description:** Launch an interactive Textual TUI for conversational coding with LLMs. Provides a terminal-based chat interface with streaming responses, slash commands, and session persistence across restarts.
-
-**Options:**
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--initial-color COLOR` - Set prompt border color at startup (named color or hex code)
-
-**Built-in commands:**
-- `/help` - Show available commands
-- `/clear` - Clear the output area
-- `/quit` - Exit the application
-
-**Features:**
-- Streaming LLM responses displayed progressively
-- Automatic session resumption (picks up last session on restart)
-- Structured event log written to `logs/icoder_<timestamp>.jsonl`
-- MCP tool calls shown in compact format
-- Shift+Enter for multi-line input, Enter to submit
-
-**Examples:**
-```bash
-# Launch with default settings
-mcp-coder icoder
-
-# Use LangChain provider
-mcp-coder icoder --llm-method langchain
-
-# Specify project and MCP config
-mcp-coder icoder --project-dir /path/to/project --mcp-config .mcp.linux.json
-
-# Pin a Claude Code settings file explicitly
-mcp-coder icoder --mcp-config .mcp.json --settings .claude/settings.local.json
-```
-
----
-
-### commit auto
-
-Auto-generate commit message using LLM.
-
-```bash
-mcp-coder commit auto [OPTIONS]
-```
-
-**Options:**
-- `--preview` - Show generated message and ask for confirmation before committing
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--mcp-config PATH` - Path to MCP configuration file
-
-**Examples:**
-```bash
-# Auto-generate and commit
-mcp-coder commit auto
-
-# Preview before committing
-mcp-coder commit auto --preview
-
-# Use langchain provider
-mcp-coder commit auto --llm-method langchain
-```
-
----
-
-### implement
-
-Execute implementation workflow from task tracker.
-
-```bash
-mcp-coder implement [OPTIONS]
-```
-
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
-- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
-
-**Description:** Execute the implementation workflow based on the task tracker. Reads tasks from `pr_info/TASK_TRACKER.md` and implements them step by step.
-
-**Examples:**
-```bash
-# Run implementation workflow
-mcp-coder implement
-
-# Update GitHub labels and post comments on failure
-mcp-coder implement --update-issue-labels --post-issue-comments
-
-# Use langchain provider with MCP config
-mcp-coder implement --llm-method langchain --mcp-config .mcp.linux.json
-
-# Pin both MCP config and Claude settings explicitly
-mcp-coder implement --mcp-config .mcp.json --settings .claude/settings.local.json
-```
+- `--llm-method METHOD` checks that provider instead of the configured one.
+- `--check-models` lists the models available to the configured LangChain backend (needs network).
+- `--list-mcp-tools` lists the MCP tools, grouped by server.
 
 ---
 
 ### create-plan
 
-Generate implementation plan for a GitHub issue.
+Generate an implementation plan for a GitHub issue: a summary and step files in `pr_info/`.
 
 ```bash
 mcp-coder create-plan ISSUE_NUMBER [OPTIONS]
 ```
 
-**Arguments:**
-- `issue_number` - GitHub issue number to create plan for (required)
+Normally dispatched by the coordinator for `status-02:awaiting-planning`. See [Plan creation](processes-prompts/processes/02-plan-creation.md).
 
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
-- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
-
-**Description:** Generate a detailed implementation plan for a GitHub issue, including step-by-step tasks and technical approach.
-
-**Examples:**
 ```bash
-# Create plan for issue #123
 mcp-coder create-plan 123
-
-# Create plan with label updates and comments
 mcp-coder create-plan 456 --update-issue-labels --post-issue-comments
-
-# Use specific project directory
 mcp-coder create-plan 789 --project-dir /path/to/project
 ```
 
@@ -388,334 +201,380 @@ mcp-coder create-plan 789 --project-dir /path/to/project
 
 ### review-plan
 
-Run automated review of an implementation plan.
+Run an automated review of the implementation plan on the current branch. The issue number is derived from the branch (no positional argument).
 
 ```bash
 mcp-coder review-plan [OPTIONS]
 ```
 
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
-- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
+A multi-round loop pairs a fresh reviewer session each round with a persistent supervisor session (rounds cap: 5) and ends in a 3-way decision: **success** advances the issue to `status-05:plan-ready`; **needs-human** routes to `status-04:plan-review` for the interactive supervisor; **error** sets a `status-14f-*` failure label. Each round appends to `pr_info/plan_review_log_{n}.md`. The coordinator dispatches it only with `auto_review_plan = true`; otherwise run it manually.
 
-**Description:** Automatically review the implementation plan on the current branch. The issue number is derived from the branch (no positional argument). A multi-round loop pairs a fresh reviewer session each round with a persistent supervisor session (rounds cap: 5) and ends in a 3-way decision: **success** advances the issue to `status-05:plan-ready`; **needs-human** routes to `status-04:plan-review` for the interactive supervisor; **error** sets a `status-14f-*` failure label. Each round appends to `pr_info/plan_review_log_{n}.md`. Requires `auto_review_plan = true` for the coordinator to dispatch it; otherwise run manually.
-
-**Examples:**
 ```bash
-# Review the plan on the current branch
 mcp-coder review-plan
-
-# Update labels and post comments on the outcome
 mcp-coder review-plan --update-issue-labels --post-issue-comments
+```
+
+---
+
+### implement
+
+Execute the implementation workflow: read the tasks from `pr_info/TASK_TRACKER.md` and implement them step by step, running the quality checks and committing after each step.
+
+```bash
+mcp-coder implement [OPTIONS]
+```
+
+Normally dispatched by the coordinator for `status-05:plan-ready`. See [Implementation](processes-prompts/processes/05-implementation.md).
+
+```bash
+mcp-coder implement
+mcp-coder implement --update-issue-labels --post-issue-comments
+mcp-coder implement --llm-method langchain --mcp-config .mcp.linux.json
+mcp-coder implement --mcp-config .mcp.json --settings .claude/settings.local.json
 ```
 
 ---
 
 ### rebase
 
-Automatically rebase the current branch onto its base branch.
+Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. This is the same rebase step the `review-implementation` workflow runs between rounds.
 
 ```bash
 mcp-coder rebase [OPTIONS]
 ```
 
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--base-branch BRANCH` - Base branch to rebase onto (default: auto-detect). Needed only when the detected base is not `main`/`master` and was not named in the issue's `### Base Branch` section (an issue-named base is used only when the issue body is trusted — see [Trust and Validation](repository-setup/github.md#trust-and-validation)).
+The base branch is auto-detected. A base named in the issue's `### Base Branch` section is used as-is, but only when the issue body is trusted (see [Trust and Validation](repository-setup/github.md#trust-and-validation)); otherwise detection falls back. A base found from an open PR, git merge-base or the default branch is accepted automatically only when it is `main` or `master`; otherwise pass `--base-branch`. The command fails if the base does not exist on origin.
 
-**Description:** Rebase the current feature branch onto its base branch, resolving conflicts with LLM assistance where needed. The base branch is auto-detected: a base named in the issue's `### Base Branch` section is used as-is, but only when the issue body is trusted (see [Trust and Validation](repository-setup/github.md#trust-and-validation)) — otherwise detection falls back; a base found from an open PR, git merge-base or the default branch is accepted automatically only when it is `main`/`master` — otherwise pass `--base-branch`. The command fails (exit 2) if the base does not exist on origin. This is the same rebase step the `review-implementation` workflow runs between rounds.
-
-**Exit codes:** `0` = success or no-op (already current); `1` = aborted / needs human; `2` = error (bad repo/args, push rejected).
-
-**Examples:**
 ```bash
-# Rebase onto the auto-detected base branch
 mcp-coder rebase
-
-# Rebase onto an explicit base branch
 mcp-coder rebase --base-branch develop
-```
-
----
-
-### create-pr
-
-Create pull request with AI-generated summary.
-
-```bash
-mcp-coder create-pr [OPTIONS]
-```
-
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
-- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
-
-**Description:** Create a pull request with AI-generated summary based on the changes made. Requires clean working directory and completed tasks. Rebases first when the branch is behind its base.
-
-**Post-creation checks:** once the PR exists, `create-pr` polls its `mergeable_state` (one rebase-and-push on `dirty`), then waits for the CI run of the pushed HEAD without fixing anything. The outcome sets the final label: `status-10:pr-created`, `status-74:pr-merge-conflict` (still conflicting) or `status-81:failing-ci`. The checks also run with `--no-update-issue-labels`; the outcome is then only logged. If the branch already has an open PR, `create-pr` resumes at these checks instead of creating a new one.
-
-**Description refresh:** if the post-creation rebase pushed new commits, the PR title/body is regenerated from the full branch diff (closing references kept). Best-effort — it never changes the label or exit code. `fix-ci` refreshes the same way when its fixes pushed commits.
-
-**Exit codes:** `0` = PR exists and every post-creation outcome was handled (including conflict and failing CI); `1` = failure before the PR exists, or a crash.
-
-**Prerequisites:**
-- Clean working directory (no uncommitted changes)
-- All tasks complete in `pr_info/TASK_TRACKER.md`
-- On feature branch (not main)
-- GitHub credentials configured
-
-**Examples:**
-```bash
-# Create PR with auto-generated summary
-mcp-coder create-pr
-
-# Update labels and post comments after PR creation
-mcp-coder create-pr --update-issue-labels --post-issue-comments
 ```
 
 ---
 
 ### review-implementation
 
-Run automated review of an implementation.
+Run an automated review of the implemented code on the current branch. The issue number is derived from the branch (no positional argument).
 
 ```bash
 mcp-coder review-implementation [OPTIONS]
 ```
 
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
-- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
+A multi-round loop pairs a fresh reviewer session each round with a persistent supervisor session (rounds cap: 5), applies fixes via MCP edit tools, and re-runs the shared rebase and CI steps between rounds. It ends in a 3-way decision: **success** advances the issue to `status-08:ready-pr`; **needs-human** routes to `status-07:code-review` for the interactive supervisor; **error** sets a `status-17f-*` failure label (`status-17f-ci:code-review-ci-fix-needed` when CI is still red at the rounds cap).
 
-**Description:** Automatically review the implemented code on the current branch. The issue number is derived from the branch (no positional argument). A multi-round loop pairs a fresh reviewer session each round with a persistent supervisor session (rounds cap: 5), applies fixes via MCP edit tools, and re-runs the shared rebase/CI steps between rounds. It ends in a 3-way decision: **success** advances the issue to `status-08:ready-pr`; **needs-human** routes to `status-07:code-review` for the interactive supervisor; **error** sets a `status-17f-*` failure label (`status-17f-ci:code-review-ci-fix-needed` when CI is still red at the rounds cap). Two implementation-lane gates can also fail the run before it advances: `status-17f-tasks:code-review-open-tasks` when `## Tasks` in `pr_info/TASK_TRACKER.md` still has unchecked items at the entry gate (recover with `/implementation_finalise`), and `status-17f-ci-unknown:code-review-ci-unknown` when the final dismiss gate cannot prove CI green — status pending, not configured, unknown, or unavailable (recover with `/check_branch_status`). Each round appends to `pr_info/implementation_review_log_{n}.md`. Requires `auto_review_implementation = true` for the coordinator to dispatch it; otherwise run manually.
+Two gates can also fail the run before it advances: `status-17f-tasks:code-review-open-tasks` when `## Tasks` in `pr_info/TASK_TRACKER.md` still has unchecked items (recover with `/implementation_finalise`), and `status-17f-ci-unknown:code-review-ci-unknown` when the final gate cannot prove CI green because the status is pending, not configured, unknown or unavailable (recover with `/check_branch_status`). Each round appends to `pr_info/implementation_review_log_{n}.md`. The coordinator dispatches it only with `auto_review_implementation = true`; otherwise run it manually.
 
-**Examples:**
 ```bash
-# Review the implementation on the current branch
 mcp-coder review-implementation
-
-# Update labels and post comments on the outcome
 mcp-coder review-implementation --update-issue-labels --post-issue-comments
+```
+
+---
+
+### create-pr
+
+Create a pull request with an AI-generated summary of the changes. Rebases first when the branch is behind its base.
+
+```bash
+mcp-coder create-pr [OPTIONS]
+```
+
+**Prerequisites:** clean working directory; all tasks complete in `pr_info/TASK_TRACKER.md`; on a feature branch (not main); GitHub credentials configured.
+
+**Post-creation checks.** Once the PR exists, `create-pr` polls its `mergeable_state` (one rebase-and-push on `dirty`), then waits for the CI run of the pushed HEAD without fixing anything. The outcome sets the final label: `status-10:pr-created`, `status-74:pr-merge-conflict` (still conflicting) or `status-81:failing-ci`. The checks also run with `--no-update-issue-labels`; the outcome is then only logged. If the branch already has an open PR, `create-pr` resumes at these checks instead of creating a new one.
+
+**Description refresh.** If the post-creation rebase pushed new commits, the PR title and body are regenerated from the full branch diff (closing references kept). This is best-effort and never changes the label or exit code. `fix-ci` refreshes the same way when its fixes pushed commits.
+
+```bash
+mcp-coder create-pr
+mcp-coder create-pr --update-issue-labels --post-issue-comments
 ```
 
 ---
 
 ### fix-conflict
 
-Rebase a PR onto its base branch to resolve a merge conflict.
+Rebase a PR onto its base branch to resolve a merge conflict. Jenkins-dispatched for `status-71:merge-conflict` (see [PR follow-up](processes-prompts/processes/71-pr-follow-up.md)); normally run by the coordinator, not by hand.
 
 ```bash
-mcp-coder fix-conflict [OPTIONS]
+mcp-coder fix-conflict [--project-dir PATH]
 ```
 
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-
-**Description:** Jenkins-dispatched workflow for `status-71:merge-conflict` (see [PR-health](processes-prompts/processes/71-pr-follow-up.md)). Runs the mechanical rebase only — no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself:
+Runs the mechanical rebase only, with no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself:
 
 - settled and not `dirty`, or still `unknown` after a successful rebase → `status-10:pr-created`;
-- still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase/push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, base, conflicting/uncommitted files).
+- still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase or push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, base, conflicting and uncommitted files).
 
-Crashes are caught by `run_guarded()`, which comments and sets `status-73:merge-conflict-failed`. Normally run by the coordinator, not by hand.
-
-**Examples:**
-```bash
-mcp-coder fix-conflict --project-dir /path/to/repo
-```
+Crashes are caught by `run_guarded()`, which comments and sets `status-73:merge-conflict-failed`.
 
 ---
 
 ### fix-ci
 
-Run the CI auto-fix loop on a PR with failing CI.
+Run the CI auto-fix loop on a PR with failing CI. Jenkins-dispatched for `status-81:failing-ci` (see [PR follow-up](processes-prompts/processes/71-pr-follow-up.md)); normally run by the coordinator, not by hand.
 
 ```bash
 mcp-coder fix-ci [OPTIONS]
 ```
 
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--llm-method METHOD` - LLM provider: `claude` (default), `copilot`, or `langchain`
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file. Forwarded to Claude via its `--settings` flag; auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--update-issue-labels` / `--no-update-issue-labels` - Update GitHub issue labels on success/failure (default: from config.toml, or false)
-- `--post-issue-comments` / `--no-post-issue-comments` - Post GitHub comments on workflow failure (default: from config.toml, or false)
-
-**Description:** Jenkins-dispatched workflow for `status-81:failing-ci` (see [PR-health](processes-prompts/processes/71-pr-follow-up.md)). Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the issue to `status-10:pr-created`. Exhausted fix attempts, an LLM timeout or an unavailable MCP server post a comment (the Category line gives the reason) and set `status-84:pr-ci-failed`. Unexpected crashes are caught by `run_guarded()`, which comments and sets `status-83:ci-fix-failed`. Normally run by the coordinator, not by hand.
-
-**Examples:**
-```bash
-mcp-coder fix-ci --update-issue-labels --post-issue-comments
-```
+Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the issue to `status-10:pr-created`. Exhausted fix attempts, an LLM timeout or an unavailable MCP server post a comment (the Category line gives the reason) and set `status-84:pr-ci-failed`. Unexpected crashes are caught by `run_guarded()`, which comments and sets `status-83:ci-fix-failed`.
 
 ---
 
 ### coordinator
 
-Monitor and dispatch workflows for GitHub issues.
+Monitor GitHub issues and dispatch workflows (create-plan, implement, create-pr, and the optional review-plan and review-implementation) as Jenkins jobs, based on each issue's status label. It also checks open PRs and routes merge conflicts, failing CI and review comments. Repositories come from `[coordinator.repos.*]` in `config.toml`; Jenkins access from `[jenkins]`.
 
 ```bash
 mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]
 ```
 
-**Options (mutually exclusive):**
-- `--all` - Process all repositories from config (required if --repo not specified)
-- `--repo NAME` - Process single repository (required if --all not specified)
+- `--all` processes every configured repository; `--repo NAME` one (the section name under `[coordinator.repos.*]`). They are mutually exclusive.
+- `--dry-run` runs a real Jenkins build of the executor job against `--branch-name`, without touching GitHub issues or labels. It needs `--repo` and `--branch-name`, and is the recommended first-run check for a newly configured repository. `--log-level-coordinator` sets the log level of the `mcp-coder` commands in that test script (default `DEBUG`).
+- `--force-refresh` bypasses the GitHub cache. See `cache_refresh_minutes` in the [Configuration Guide](configuration/config.md).
 
-**Additional Options:**
-- `--dry-run` - Trigger Jenkins test instead of dispatching workflows (requires `--repo` and `--branch-name`)
-- `--branch-name BRANCH` - Git branch to test (required with `--dry-run`)
-- `--force-refresh` - Force full cache refresh, bypass all caching
+See [Jenkins Setup](repository-setup/jenkins.md) for the required permissions and credentials, and [Coordinator and VSCodeClaude](coordinator-vscodeclaude.md).
 
-**Description:** Monitor GitHub issues and automatically dispatch workflows (create-plan, implement, create-pr, and the optional review-plan / review-implementation) based on issue labels and status.
-
-`--dry-run` runs a real Jenkins build of the executor job against the given branch, without touching GitHub issues or labels — it is the recommended first-run check for a newly configured repository. See [Jenkins Setup](repository-setup/jenkins.md) for the required permissions and credentials.
-
-**Examples:**
 ```bash
-# Process all configured repositories
 mcp-coder coordinator --all
-
-# Process single repository
 mcp-coder coordinator --repo mcp_coder
-
-# Smoke-test one repo on Jenkins (triggers a real build; changes no issues or labels)
 mcp-coder coordinator --dry-run --repo mcp_coder --branch-name main
-
-# Force cache refresh
 mcp-coder coordinator --all --force-refresh
+```
+
+---
+
+### icoder
+
+Interactive terminal chat (a Textual TUI) for LLM-assisted coding, with streaming responses, slash commands and session persistence. **Prototype.** See the [iCoder User Guide](iCoder.md) and [TUI Reference](icoder/icoder.md).
+
+```bash
+mcp-coder icoder [OPTIONS]
+```
+
+- Session options `--continue-session-from FILE` (a `.jsonl` event log), `--continue-session` (a session picker over prior iCoder logs in the project) and `--session-id ID` are mutually exclusive.
+- `--initial-color COLOR` sets the prompt border colour at startup (named colour or hex code).
+- A structured event log is written to `logs/icoder_<timestamp>.jsonl`.
+- Built-in commands: `/help`, `/clear`, `/quit`. Shift+Enter inserts a newline, Enter submits.
+
+```bash
+mcp-coder icoder
+mcp-coder icoder --llm-method langchain
+mcp-coder icoder --project-dir /path/to/project --mcp-config .mcp.linux.json
 ```
 
 ---
 
 ### vscodeclaude launch
 
-Launch VS Code sessions for GitHub issues needing human review.
+Launch VS Code sessions with Claude Code for the issues that need you: `status-01:created`, `status-04:plan-review`, `status-07:code-review`, and the review-comment and failure labels. **Only issues assigned to you** (the GitHub user your token authenticates as) get a session.
 
 ```bash
 mcp-coder vscodeclaude launch [OPTIONS]
 ```
 
-**Options:**
-- `--repo NAME` - Process only the specified repository
-- `--max-sessions N` - Override max concurrent sessions (default: from config or 3)
-- `--cleanup` - Delete stale clean folders (without this, only lists them)
-- `--intervene` - Force open a bot_busy issue for debugging
-- `--issue NUMBER` - Issue number for intervention mode (requires `--intervene`)
+**Prerequisites:** trust the workspace base folder once in VS Code (File → Open Folder, select it, "Yes, I trust the authors"); a `[vscodeclaude]` section in `~/.mcp_coder/config.toml`; a `.mcp.json` in each repository.
 
-**Description:** Automatically launch VS Code sessions for issues requiring human action (code review, plan review, issue analysis). Each session includes automated Claude Code integration.
+- `--repo NAME` limits it to one repository; `--max-sessions N` overrides the concurrent session limit (default from config, or 3).
+- `--cleanup` deletes stale clean session folders; without it they are only listed.
+- `--intervene --issue NUMBER` force-opens a `bot_busy` issue for debugging.
+- `--no-install-from-github` skips installing packages from GitHub even when configured in `pyproject.toml`.
 
-**Prerequisites:**
-1. **Trust workspace folder (one-time):** Open VS Code, go to File → Open Folder, select your workspace base folder (e.g., `C:\Users\YourName\Documents\VSCC`), and click "Yes, I trust the authors"
-2. **Configuration:** Ensure `[vscodeclaude]` section exists in `~/.mcp_coder/config.toml`
-3. **Repository setup:** Each repository needs a `.mcp.json` file
+Details, session states and troubleshooting: [Coordinator and VSCodeClaude](coordinator-vscodeclaude.md).
 
-**Examples:**
 ```bash
-# Process all configured repositories
 mcp-coder vscodeclaude launch
-
-# Process specific repository only
 mcp-coder vscodeclaude launch --repo mcp_coder
-
-# Clean up stale sessions
 mcp-coder vscodeclaude launch --cleanup
-
-# With debug logging
 mcp-coder --log-level debug vscodeclaude launch
 ```
-
-**See Also:** [Coordinator VSCodeClaude Guide](coordinator-vscodeclaude.md) for detailed setup and troubleshooting.
 
 ---
 
 ### vscodeclaude status
 
-Show current VS Code session status.
+Show a table of all tracked VS Code Claude sessions with their state (active, closed, stale, dirty, orphaned).
 
 ```bash
-mcp-coder vscodeclaude status
+mcp-coder vscodeclaude status [OPTIONS]
 ```
 
-**Description:** Display a status table of all tracked VS Code Claude sessions, showing their current state (active, closed, stale, dirty, orphaned).
+`--repo NAME` filters to one repository. `--explain` dumps the detection signals and the decision per session (read-only).
 
-**Examples:**
+---
+
+### prompt
+
+Send a prompt to the configured LLM.
+
 ```bash
-# Show session status
-mcp-coder vscodeclaude status
+mcp-coder prompt "Your prompt here" [OPTIONS]
 ```
+
+- `--output-format FORMAT`: `rendered` (default, human-friendly streaming), `text` (plain streaming), `ndjson` (streaming NDJSON events), `json-raw` (streaming raw events), `json` (blocking, complete response including `session_id`) or `session-id` (blocking, only the session ID). Under `--llm-method langchain` in agent mode, a turn whose history was not recorded reports `"session_id": null`; that id is not resumable, so do not chain it into a later `--session-id`.
+- `--store-response` saves the session to `.mcp-coder/responses/` for later continuation.
+- `--continue-session-from FILE` resumes from a specific stored session file, `--continue-session` from the most recent one (the two are mutually exclusive), and `--session-id ID` from a direct session ID (overrides the file-based options). With `--llm-method langchain` the session ID is taken from the file *name*, so `--continue-session-from` works only for a langchain history file (`~/.mcp_coder/sessions/langchain/<id>.json`). A `--store-response` file (`response_<timestamp>.json`) has no matching history and the command exits 1; use `--continue-session` or `--session-id` instead. With langchain, an unknown session ID is an error, not a new conversation.
+- `--add-system-prompts` injects the system and project prompts from `[tool.mcp-coder.prompts]` in `pyproject.toml` (or the shipped defaults). See [Prompt Configuration](repository-setup/python.md#prompt-configuration).
+
+```bash
+mcp-coder prompt "Analyze this code structure"
+mcp-coder prompt "Start project planning" --store-response
+mcp-coder prompt "What's next?" --continue-session
+mcp-coder prompt "Review my implementation" --output-format json --mcp-config .mcp.linux.json
+mcp-coder prompt "Analyze code" --add-system-prompts --llm-method langchain
+```
+
+---
+
+### commit auto
+
+Generate a commit message with the LLM and commit.
+
+```bash
+mcp-coder commit auto [OPTIONS]
+```
+
+`--preview` shows the generated message and asks for confirmation before committing. `--push` pushes to origin after a successful commit.
+
+```bash
+mcp-coder commit auto
+mcp-coder commit auto --preview
+mcp-coder commit auto --push
+```
+
+---
+
+### check branch-status
+
+Check comprehensive branch readiness: CI status, rebase requirements, task completion and GitHub labels.
+
+```bash
+mcp-coder check branch-status [OPTIONS]
+```
+
+- `--ci-timeout SECONDS` polls CI every 15 seconds until it completes or the timeout passes (default 0: a single snapshot). It exits early when CI completes and returns the current status on timeout. Progress dots show in human mode; `--llm-truncate` makes the output LLM-friendly and the polling silent.
+- `--fix [N]` attempts to fix CI failures up to N times (`--fix` alone = 1; default 0 = read-only). With N above 1 it waits for CI after each attempt and stops early when CI passes. `--llm-method`, `--mcp-config` and `--settings` apply to the fixes.
+- `--wait-for-pr` waits for PR creation (up to `--pr-timeout` seconds, default 600), then runs the normal check.
+- `--fail-on-reviews` exits non-zero unless PR reviews are proven clean and renders the Review Gate header (default: informational).
+
+**Failure conditions.** The command exits non-zero when CI failed, `--wait-for-pr` expired without a PR, fix attempts failed, or (with `--fail-on-reviews`) PR reviews block merge or cannot be determined. API errors and a repository with no CI configured are treated as a graceful exit so they do not block workflows.
+
+> **Note:** the linked-branch check is **not** gated on `--fail-on-reviews`: it applies whenever the branch name yields an issue number, so a default run can fail on a stale linked branch. GitHub's linked-branches list (the Development panel's "Create a branch" link) always wins. Only when it is empty are open PRs that close the issue (`Closes #N`) considered: one whose head is the current branch counts as `LINKED_VIA_PR` and does not block; if closing PRs exist but none matches, the state is `MISMATCH` and blocks; with no closing PR either, it is `NOT_LINKED` and blocks.
+
+> **Known limitation:** neither `--fail-on-reviews` nor the linked-branch check is evaluated when `--fix` resolves CI. The `--fix` success path returns before that gate.
+
+```bash
+mcp-coder check branch-status
+mcp-coder check branch-status --ci-timeout 300 --llm-truncate
+mcp-coder check branch-status --ci-timeout 180 --fix 3
+
+# In a script
+if mcp-coder check branch-status --ci-timeout 300; then echo "ready"; else echo "not ready"; fi
+```
+
+---
+
+### check file-size
+
+Scan a project and report files that exceed the maximum line count. Binary files are skipped. Files listed in an allowlist are excluded.
+
+```bash
+mcp-coder check file-size [OPTIONS]
+```
+
+`--max-lines` sets the limit (default 600). `--allowlist-file` names the allowlist (default `.large-files-allowlist`): one path per line relative to the project directory, `#` starts a comment. `--generate-allowlist` prints the violating paths for piping into the allowlist, which makes gradual adoption easy: allow today's large files, enforce the limit on new ones.
+
+```bash
+mcp-coder check file-size --max-lines 400
+mcp-coder check file-size --generate-allowlist > .large-files-allowlist
+```
+
+---
+
+### gh-tool checkout-issue-branch
+
+Check out the branch for a GitHub issue, creating a linked branch only when none exists. Used by the automated workflows to land on the right branch before running.
+
+```bash
+mcp-coder gh-tool checkout-issue-branch ISSUE_NUMBER [--project-dir PATH]
+```
+
+Resolution order: linked branch, open PR referencing the issue, closed PR whose branch still exists, then branch-name pattern (`N-...` / `.../N_...`). Otherwise it collects linked branches, open closing-PR heads and matching remote branches and checks out the single candidate; only when none exist is a new linked branch created. An existing PR's head branch is checked out rather than a duplicate branch created.
+
+If two or more candidate branches are found, the command stops and lists them in the log instead of choosing.
+
+```bash
+mcp-coder gh-tool checkout-issue-branch 123
+```
+
+---
+
+### gh-tool set-status
+
+Set the workflow status label on a GitHub issue. Removes any existing status labels before applying the new one.
+
+```bash
+mcp-coder gh-tool set-status [LABEL] [OPTIONS]
+```
+
+Without `--issue NUMBER`, the issue number is extracted from the branch name, which must follow `{issue_number}-title` (for example `123-feature-name`). `--from-status LABEL` is a precondition guard: it only updates when the issue's current status matches. `--force` bypasses the clean working directory check. `mcp-coder gh-tool set-status --help` lists the available labels.
+
+Used by the slash commands (`/plan_approve`, `/implementation_approve`, `/implementation_needs_rework`) and for failure recovery (see [Failure Handling](processes-prompts/processes/failure-handling.md)).
+
+```bash
+mcp-coder gh-tool set-status status-05:plan-ready
+mcp-coder gh-tool set-status status-05:plan-ready --force
+mcp-coder gh-tool set-status status-05:plan-ready --issue 123 --from-status status-04:plan-review
+```
+
+---
+
+### gh-tool get-base-branch
+
+Detect the base branch for the current feature branch, for diffs and rebases.
+
+```bash
+mcp-coder gh-tool get-base-branch [--project-dir PATH]
+```
+
+Priority order:
+
+1. **Linked issue's base branch**: the issue number is taken from the branch name and the `### Base Branch` section of the issue body is used, if the body is trusted (see [Trust and Validation](repository-setup/github.md#trust-and-validation)).
+2. **GitHub PR base branch**: if an open PR exists for the current branch.
+3. **Git merge-base**: the branch point found via `git merge-base`.
+4. **Default branch**: the repository's default branch (main or master).
+
+```bash
+BASE_BRANCH=$(mcp-coder gh-tool get-base-branch)
+git diff ${BASE_BRANCH}...HEAD
+```
+
+Also available as an MCP tool in mcp-workspace.
 
 ---
 
 ### gh-tool define-labels
 
-Sync workflow status labels to GitHub repository.
+Sync the workflow status labels to the GitHub repository: validate the label config, then create, update and delete `status-*` label definitions. The optional operations are opt-in.
 
 ```bash
 mcp-coder gh-tool define-labels [OPTIONS]
 ```
 
-**Description:** Validate label config, then create, update, and delete `status-*` label definitions from config. Optional operations (init, validate, generate GitHub Actions) are opt-in via flags.
+- `--dry-run` previews the changes without applying them.
+- `--init` assigns the default label to open issues without a status label.
+- `--validate` checks all open issues for errors (multiple status labels) and warnings (stale bot processes).
+- `--generate-github-actions` writes `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/`.
+- `--all` enables all three optional operations.
+- `--config PATH` selects the labels config. Resolution order: `--config`, then `[tool.mcp-coder] labels-config` in `pyproject.toml`, then the bundled defaults.
 
-Config resolution order:
-1. `--config PATH` (explicit, highest priority)
-2. `[tool.mcp-coder] labels-config` in `pyproject.toml`
-3. Bundled package defaults
+See [Label Setup](getting-started/label-setup.md).
 
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--dry-run` - Preview changes without applying them
-- `--init` - Assign the default label to open issues without a status label
-- `--validate` - Check all open issues for errors and warnings
-- `--config PATH` - Path to labels config file (overrides pyproject.toml and bundled defaults)
-- `--generate-github-actions` - Write `label-new-issues.yml` and `approve-command.yml` to `.github/workflows/`
-- `--all` - Enable all optional operations (`--init --validate --generate-github-actions`)
-
-**Exit Codes:**
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success - no errors or warnings |
-| 1 | Errors found - issues with multiple status labels |
-| 2 | Warnings only - stale bot processes detected |
-
-**Examples:**
 ```bash
-# Preview label changes
 mcp-coder gh-tool define-labels --dry-run
-
-# Sync labels only (no issue operations)
 mcp-coder gh-tool define-labels
-
-# Initialize issues without status and validate
 mcp-coder gh-tool define-labels --init --validate
-
-# Use custom config file
-mcp-coder gh-tool define-labels --config config/labels.json
-
-# Generate GitHub Actions workflow files
-mcp-coder gh-tool define-labels --generate-github-actions
-
-# Run all optional operations
 mcp-coder gh-tool define-labels --all
-
-# Apply to specific project
-mcp-coder gh-tool define-labels --project-dir /path/to/project
 ```
 
 ---
@@ -728,25 +587,9 @@ Display issue statistics grouped by workflow status category.
 mcp-coder gh-tool issue-stats [OPTIONS]
 ```
 
-**Options:**
-- `--filter CATEGORY` - Filter by category: `all` (default), `human`, `bot`
-- `--details` - Show individual issue details with links
-- `--project-dir PATH` - Project directory path (default: current directory)
+`--filter` limits the output to `all` (default), `human` or `bot` issues; `--details` lists the individual issues with links.
 
-**Examples:**
-```bash
-# Show all categories
-mcp-coder gh-tool issue-stats
-
-# Show only human action required
-mcp-coder gh-tool issue-stats --filter human
-
-# Show bot issues with details
-mcp-coder gh-tool issue-stats --filter bot --details
-```
-
-**Example Output:**
-```
+```text
 === Human Action Required ===
   status-01:created           5 issues
   status-04:plan-review       2 issues
@@ -760,500 +603,39 @@ Total: 16 open issues (13 valid, 3 errors)
 
 ---
 
-### check branch-status
-
-Check comprehensive branch readiness including CI status, rebase requirements, task completion, and GitHub labels.
-
-#### Synopsis
-
-```bash
-mcp-coder check branch-status [OPTIONS]
-```
-
-#### Options
-
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--ci-timeout SECONDS` - Wait up to N seconds for CI completion (default: 0 = no wait)
-- `--fix [N]` - Fix issues up to N times (default: 0 = no fix, --fix alone = 1)
-- `--llm-truncate` - Truncate output for LLM consumption
-- `--llm-method METHOD` - LLM provider for --fix (`claude`, `copilot`, or `langchain`)
-- `--mcp-config PATH` - Path to MCP configuration file
-- `--settings PATH` - Path to Claude Code settings file (e.g., `.claude/settings.local.json`). Forwarded to Claude via its `--settings` flag; overrides cwd-based settings discovery. Auto-detected from `<project_dir>/.claude/` if omitted. See [Configuration Guide](configuration/config.md#claude).
-- `--wait-for-pr` - Wait for PR creation, then proceed with normal branch-status check
-- `--pr-timeout SECONDS` - Max seconds to wait for PR to appear (default: 600) (only used with `--wait-for-pr`)
-- `--fail-on-reviews` - Exit non-zero unless PR reviews are proven clean; also renders the Review Gate header (default: off = informational)
-
-#### Exit Codes
-
-| Code | Meaning | Description |
-|------|---------|-------------|
-| 0 | Success | CI passed or still pending, or graceful scenarios (no CI configured, no wait requested) |
-| 1 | Failure | CI failed, `--wait-for-pr` expired without a PR appearing, or fix operations failed; the issue's linked branch is missing, ambiguous, or is not the current branch; or (with `--fail-on-reviews`) PR reviews block merge |
-| 2 | Technical Error or Undeterminable | Invalid arguments, Git errors, API errors, unexpected exceptions, missing GitHub token (CI unavailable); the linked-branch lookup could not be completed; or (with `--fail-on-reviews`) PR review state is undeterminable |
-
-> **Note:** the linked-branch causes are **not** gated on `--fail-on-reviews` — they apply whenever the branch name yields an issue number, so a default run can exit non-zero on a stale linked branch. GitHub's linked-branches list (the Development panel's "Create a branch" link) always wins. Only when it is empty are open PRs that close the issue (`Closes #N`) considered: one whose head is the current branch counts as `LINKED_VIA_PR`, which does not block (exit 0); if closing PRs exist but none matches, the state is `MISMATCH` (exit 1); with no closing PR either, it is `NOT_LINKED` (exit 1).
-
-> **Known limitation:** neither `--fail-on-reviews` nor the linked-branch check is evaluated when `--fix` resolves CI — the `--fix` success path returns before the exit-code gate.
-
-#### Behavior
-
-**Without --ci-timeout (Current Behavior)**
-Performs immediate snapshot check of current CI status without waiting.
-
-**With --ci-timeout (New)**
-Polls CI status every 15 seconds until completion or timeout:
-- Early exits when CI completes (success or failure)
-- Shows progress dots in human mode
-- Silent polling in LLM mode (--llm-truncate)
-- Returns current status on timeout
-
-**Without --fix (Read-Only)**
-Only checks and reports status, no automated fixes attempted.
-
-**With --fix (Single Fix, Current Behavior Preserved)**
-Attempts to fix CI failures once, no recheck after fix.
-
-**With --fix N (Retry Fixes, New)**
-Attempts to fix CI failures up to N times:
-- Waits for CI after each fix attempt
-- Stops early if CI passes
-- Shows attempt progress ("Fix attempt 2/3...")
-
-#### Examples
-
-##### Quick status check
-```bash
-mcp-coder check branch-status
-```
-
-##### Wait up to 300s for CI, then display results
-```bash
-mcp-coder check branch-status --ci-timeout 300
-```
-
-##### Wait and auto-fix once
-```bash
-mcp-coder check branch-status --ci-timeout 180 --fix
-```
-
-##### Wait and retry fixes up to 3 times
-```bash
-mcp-coder check branch-status --ci-timeout 180 --fix 3
-```
-
-##### LLM-optimized with waiting
-```bash
-mcp-coder check branch-status --ci-timeout 300 --llm-truncate
-```
-
-##### Scripting example
-```bash
-#!/bin/bash
-if mcp-coder check branch-status --ci-timeout 300; then
-  echo "CI passed, ready to merge"
-  exit 0
-else
-  echo "CI failed or timed out"
-  exit 1
-fi
-```
-
-#### Workflow Integration
-
-##### Manual Development Flow
-```bash
-# 1. Check status and wait for CI
-mcp-coder check branch-status --ci-timeout 180
-
-# 2. If CI fails, auto-fix with retry
-mcp-coder check branch-status --ci-timeout 180 --fix 3
-
-# 3. If passes, create PR
-mcp-coder create-pr
-```
-
-##### Automated Script Flow
-```bash
-# Wait for CI, fix if needed, exit with appropriate code
-mcp-coder check branch-status --ci-timeout 300 --fix 2
-EXIT_CODE=$?
-
-if [ $EXIT_CODE -eq 0 ]; then
-  echo "✓ Branch ready"
-  # Continue with PR creation or merge
-elif [ $EXIT_CODE -eq 1 ]; then
-  echo "✗ CI failed after fixes"
-  # Notify team or create issue
-else
-  echo "✗ Technical error"
-  # Alert on configuration/Git issues
-fi
-```
-
-#### Notes
-
-- **Polling Strategy**: Fixed 15-second intervals, no maximum timeout limit
-- **Early Exit**: Stops immediately when CI completes (success or failure)
-- **API Errors**: Treated as graceful exit (code 0) to avoid blocking workflows
-- **No CI Configured**: Returns code 0 (graceful exit)
-- **Progress Feedback**: Controlled by --llm-truncate (dots in human mode, silent in LLM mode)
-
----
-
-### check file-size
-
-Check file sizes against maximum line count.
-
-```bash
-mcp-coder check file-size [OPTIONS]
-```
-
-**Options:**
-- `--max-lines NUMBER` - Maximum lines per file (default: 600)
-- `--allowlist-file PATH` - Path to allowlist file (default: .large-files-allowlist)
-- `--generate-allowlist` - Output violating paths for piping to allowlist
-- `--project-dir PATH` - Project directory path (default: current directory)
-
-**Description:** Scan files in a project and report any that exceed the maximum line count. Binary files are automatically skipped. Files can be excluded from checking by adding them to an allowlist file.
-
-**Exit Codes:**
-- `0` - All files pass (or no violations when using `--generate-allowlist`)
-- `1` - One or more files exceed the line limit
-
-**Allowlist Format:**
-The allowlist file contains one path per line (relative to project directory):
-```
-# Comments start with #
-src/legacy/large_module.py
-tests/fixtures/big_test_data.py
-```
-
-**Examples:**
-```bash
-# Check all Python files with default 600 line limit
-mcp-coder check file-size
-
-# Use custom line limit
-mcp-coder check file-size --max-lines 400
-
-# Check specific project directory
-mcp-coder check file-size --project-dir /path/to/project
-
-# Generate allowlist from current violations
-mcp-coder check file-size --generate-allowlist > .large-files-allowlist
-
-# Use custom allowlist file
-mcp-coder check file-size --allowlist-file .my-allowlist
-```
-
-**Use Cases:**
-- **CI/CD Integration:** Add to pre-commit hooks or CI pipelines to enforce file size limits
-- **Codebase Cleanup:** Identify large files that may need refactoring
-- **Gradual Adoption:** Use `--generate-allowlist` to create an allowlist of existing large files, then enforce limits on new files
-
----
-
-### gh-tool checkout-issue-branch
-
-Checkout or create a branch linked to a GitHub issue.
-
-```bash
-mcp-coder gh-tool checkout-issue-branch ISSUE_NUMBER [OPTIONS]
-```
-
-**Arguments:**
-- `issue_number` - GitHub issue number (required)
-
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-
-**Description:** Checkout the branch for the given GitHub issue. Resolution order: linked branch, open PR referencing the issue, closed PR whose branch still exists, then branch-name pattern (`N-...` / `.../N_...`); otherwise it collects linked branches, open closing-PR heads and matching remote branches and checks out the single candidate; only when none exist is a new linked branch created. An existing PR's head branch is checked out rather than a duplicate branch created. Used by the automated workflows to land on the correct branch for an issue before running.
-
-**Exit codes:** `0` = branch checked out (found, single candidate, or created); `1` = issue not found, or branch creation failed; `2` = error (invalid project dir, no repo identifier, lookup or ls-remote failed, API error, git checkout failed); `3` = ambiguous: two or more candidate branches found (listed in log).
-
-**Examples:**
-```bash
-# Checkout (or create) the branch for issue #123
-mcp-coder gh-tool checkout-issue-branch 123
-
-# Target a specific project directory
-mcp-coder gh-tool checkout-issue-branch 123 --project-dir /path/to/project
-```
-
----
-
-### gh-tool get-base-branch
-
-Detect the base branch for the current feature branch.
-
-```bash
-mcp-coder gh-tool get-base-branch [OPTIONS]
-```
-
-**Options:**
-- `--project-dir PATH` - Project directory path (default: current directory)
-
-**Description:** Detects the appropriate base branch for git operations (diff, rebase) using a priority-based approach:
-
-1. **Linked issue's base branch** - Extracts issue number from branch name and checks the `### Base Branch` section in the issue body, if the issue body is trusted (see [Trust and Validation](repository-setup/github.md#trust-and-validation))
-2. **GitHub PR base branch** - If an open PR exists for the current branch
-3. **Git merge-base** - The branch point found via `git merge-base`
-4. **Default branch** - Falls back to the repository's default branch (main/master)
-
-**Exit Codes:**
-- `0` - Success, base branch printed to stdout
-- `1` - Could not detect base branch
-- `2` - Error (not a git repo, API failure, etc.)
-
-**Examples:**
-```bash
-# Detect base branch for current feature branch
-mcp-coder gh-tool get-base-branch
-
-# Use in shell scripts
-BASE_BRANCH=$(mcp-coder gh-tool get-base-branch)
-git diff ${BASE_BRANCH}...HEAD
-
-# Specify project directory
-mcp-coder gh-tool get-base-branch --project-dir /path/to/project
-```
-
-**Use Cases:**
-- CI scripts that need to compare against the correct parent branch
-- Workflows involving feature branches based on non-main branches
-
-> *Also available as an MCP tool in mcp-workspace.*
-
----
-
-### gh-tool set-status
-
-Set workflow status label on a GitHub issue.
-
-#### Synopsis
-
-```bash
-mcp-coder gh-tool set-status LABEL [OPTIONS]
-```
-
-#### Arguments
-
-- `label` - The status label to set (e.g., `status-05:plan-ready`) (required)
-
-#### Options
-
-- `--project-dir PATH` - Project directory path (default: current directory)
-- `--force` - Force status change even if transition is not allowed
-
-#### Description
-
-Sets a workflow status label on the GitHub issue linked to the current branch. Removes any existing status labels before applying the new one. The issue number is extracted from the branch name.
-
-#### Examples
-
-```bash
-# Set issue status to plan-ready
-mcp-coder gh-tool set-status status-05:plan-ready
-
-# Set issue status to ready for PR
-mcp-coder gh-tool set-status status-08:ready-pr
-
-# Force a status transition
-mcp-coder gh-tool set-status status-05:plan-ready --force
-
-# Specify project directory
-mcp-coder gh-tool set-status status-05:plan-ready --project-dir /path/to/project
-```
-
-#### Use Cases
-
-- **Slash commands** (`/plan_approve`, `/implementation_approve`, `/implementation_needs_rework`) use this to transition issue status
-- **Failure recovery** — reset issue status after automated workflow failures (see [Failure Handling](processes-prompts/processes/failure-handling.md))
-- **Manual workflow control** — override issue status when needed
-
----
-
-## git-tool
-
-Git utility commands.
-
 ### git-tool compact-diff
 
-Generate a compact diff between the current branch and its base branch,
-replacing moved code blocks with summary comments.
+Generate a diff between the current branch and its base branch, then apply a two-pass pipeline that replaces moved code blocks with concise summary comments. This reduces token usage when an LLM reviews large refactorings.
 
 ```bash
 mcp-coder git-tool compact-diff [OPTIONS]
 ```
 
-**Options:**
-- `--project-dir PATH` - Project directory (default: current directory)
-- `--base-branch BRANCH` - Base branch to diff against (default: auto-detected)
-- `--exclude PATTERN` - Exclude paths matching pattern (repeatable)
-- `--committed-only` - Show only committed changes (exclude uncommitted changes from output)
+- `--base-branch BRANCH` overrides the auto-detected base.
+- `--exclude PATTERN` excludes matching paths from both committed and uncommitted changes (repeatable).
+- `--committed-only` shows only committed changes. By default, uncommitted changes (staged, unstaged, untracked) follow in full diff format, not subject to compact suppression, under `=== STAGED CHANGES ===`, `=== UNSTAGED CHANGES ===` and `=== UNTRACKED FILES ===`. The section is skipped when the working directory is clean; with no committed changes, "No committed changes" is shown first.
 
-**Exit Codes:**
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success — compact diff printed to stdout |
-| 1 | Could not detect base branch |
-| 2 | Error (invalid repo, unexpected exception) |
-
-**Examples:**
 ```bash
-# Generate compact diff with uncommitted changes (default)
 mcp-coder git-tool compact-diff
-
-# Show only committed changes (exclude uncommitted)
-mcp-coder git-tool compact-diff --committed-only
-
-# Exclude conversation files from both committed and uncommitted
-mcp-coder git-tool compact-diff --exclude "pr_info/.conversations/**"
-
-# Exclude multiple patterns (log files and lock files)
-mcp-coder git-tool compact-diff --exclude "*.log" --exclude "*.lock"
-
-# Specify base branch explicitly
-mcp-coder git-tool compact-diff --base-branch main
-
-# Use in scripts (committed only, specific project)
 mcp-coder git-tool compact-diff --committed-only --project-dir /path/to/project
-
-# Exclude temp files from uncommitted changes
-mcp-coder git-tool compact-diff --exclude "*.tmp" --exclude "temp/**"
+mcp-coder git-tool compact-diff --exclude "*.log" --exclude "*.lock"
 ```
-
-**Description:** Produces a diff between the current branch and its base branch, then applies a two-pass pipeline to replace moved code blocks with concise summary comments. This reduces token usage when reviewing large refactoring changes with an LLM.
-
-By default, also shows uncommitted changes (staged, unstaged, and untracked files) in full diff format after the compact diff of committed changes. Use `--committed-only` to suppress uncommitted changes and show only committed changes.
-
-**Output Structure:**
-- **Committed changes** - Shown first in compact format (moved code blocks suppressed)
-- **Uncommitted changes** - Shown after in full format with subsections:
-  - `=== STAGED CHANGES ===` - Files staged for commit
-  - `=== UNSTAGED CHANGES ===` - Modified but not staged
-  - `=== UNTRACKED FILES ===` - New files not tracked by git
-
-**Notes:**
-- Uncommitted changes are shown in full diff format (NOT subject to compact diff suppression)
-- `--exclude` patterns apply to both committed and uncommitted changes
-- Uncommitted section is automatically skipped if working directory is clean
-- When no committed changes exist, shows "No committed changes" message before uncommitted section
 
 ---
 
-## Configuration and Setup
+## Common Patterns
 
-### MCP Configuration
-
-Many commands support the `--mcp-config` flag to specify MCP (Model Context Protocol) configuration:
+**Run the stages by hand:**
 
 ```bash
-# Platform-specific MCP configurations
-.mcp.linux.json    # Linux environments
-.mcp.windows.json  # Windows environments  
-.mcp.macos.json    # macOS environments
-```
-
-**Default configuration:** The `--mcp-config` flag is optional when a default
-is configured via the `MCP_CODER_MCP_CONFIG` environment variable or
-`[mcp] default_config_path` in `config.toml`. See
-[Configuration Guide](configuration/config.md) for details.
-
-**Commands supporting `--mcp-config`:**
-- `prompt`
-- `icoder`
-- `commit auto`
-- `implement`
-- `create-plan`
-- `create-pr`
-- `check branch-status`
-
-**Usage:**
-```bash
-mcp-coder prompt "Analyze code" --mcp-config .mcp.linux.json
-mcp-coder implement --mcp-config .mcp.windows.json
-```
-
-### Claude Code Settings
-
-Commands that drive Claude Code also accept `--settings <path>` to pin the
-Claude Code settings file (`.claude/settings.local.json` or
-`.claude/settings.json`). The path is forwarded to Claude via its native
-`--settings` flag and overrides cwd-based settings discovery. The file
-controls permissions, `enabledMcpjsonServers`, hooks, env, model, output
-style, and the rest of the Claude Code settings schema.
-
-**Default configuration:** `--settings` is optional when a default is set via
-the `MCP_CODER_CLAUDE_SETTINGS` environment variable or
-`[claude] default_settings_path` in `config.toml`. With no override,
-mcp-coder auto-detects `<project_dir>/.claude/settings.local.json` then
-`<project_dir>/.claude/settings.json`. See
-[Configuration Guide](configuration/config.md#claude) for the full
-resolution chain.
-
-**Commands supporting `--settings`:**
-- `prompt`
-- `icoder`
-- `implement`
-- `create-plan`
-- `create-pr`
-- `check branch-status`
-- `verify`
-
-**Usage:**
-```bash
-mcp-coder prompt "Analyze code" --mcp-config .mcp.json --settings .claude/settings.local.json
-mcp-coder implement --mcp-config .mcp.linux.json --settings .claude/settings.local.json
-```
-
-### First Time Setup
-
-Some commands require configuration on first run:
-
-```bash
-# Coordinator commands auto-create config template
-mcp-coder coordinator --dry-run --repo repo_name --branch-name main
-# Output: Created default config file at ~/.mcp_coder/config.toml
-```
-
-### Common Patterns
-
-**Development Workflow:**
-```bash
-# 1. Create implementation plan
 mcp-coder create-plan 123
-
-# 2. Execute implementation (with explicit flags)
 mcp-coder implement --update-issue-labels --post-issue-comments
-
-# 3. Create pull request
 mcp-coder create-pr --update-issue-labels --post-issue-comments
 ```
 
-**Session Continuation:**
-```bash
-# Start planning session
-mcp-coder prompt "Let's plan feature X" --store-response
+**Continue a prompt session:**
 
-# Continue later
+```bash
+mcp-coder prompt "Let's plan feature X" --store-response
 mcp-coder prompt "What's the next step?" --continue-session
 ```
-
-**Repository Automation:**
-```bash
-# Monitor all repositories for automation
-mcp-coder coordinator --all
-
-# Smoke-test one repo on Jenkins (triggers a real build; changes no issues or labels)
-mcp-coder coordinator --dry-run --repo mcp_coder --branch-name main
-```
-
----
-
-## See Also
-
-- **[Repository Setup](repository-setup/README.md)** - GitHub Actions, labels, and repository configuration
-- **[Configuration Guide](configuration/config.md)** - User config files and environment setup
-- **[Development Process](processes-prompts/development-process.md)** - Workflow methodology and best practices
