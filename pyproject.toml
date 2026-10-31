@@ -53,7 +53,7 @@ test = [
     # <9.2: under pytest 9.2.0 + pytest-xdist 3.8.0 the CI workers report the
     # undeselected collection and gw1 finishes with work pending (xdist
     # INTERNALERROR `assert not crashitem`) before any test runs.
-    "pytest<9.2",
+    "pytest<9.3",
     "pytest-asyncio",
     "pytest-xdist",
     "pytest-textual-snapshot>=1.0.0",
