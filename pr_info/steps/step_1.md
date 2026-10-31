@@ -1,0 +1,74 @@
+# Step 1 — Upstream integration + shared trust helper
+
+## LLM prompt
+
+> Read `pr_info/steps/summary.md`, then implement `pr_info/steps/step_1.md`.
+> Check the precondition first. Write the tests, then the code. Run pylint, mypy, and the fast pytest
+> set (`-n auto`, integration markers excluded), plus vulture. Format, then make exactly one commit.
+
+## Precondition
+
+Using `mcp__mcp-tools-py__search_library_files` (scope `mcp_workspace`) / `get_library_source`, check that the
+installed `mcp_workspace` has the public body-trust API from mcp-workspace #369: an `IssueManager`
+method that takes an `IssueData`, a status enum with trusted / untrusted / lookup-failed members,
+and a constructible result type with status and reason.
+
+- If it is missing: write one line to `pr_info/.blocked.txt`
+  (`mcp-workspace #369 body-trust API not installed`) and stop.
+- If the real names differ from the placeholders in `summary.md`, use the real names in this step and in all later steps.
+
+## WHERE
+
+- `src/mcp_coder/mcp_workspace_github.py` — re-export `BodyTrustStatus`, `BodyTrustResult`
+- `tests/test_mcp_workspace_github_exports.py` — export test
+- `vulture_whitelist.py` — entries for whatever vulture flags (e.g. enum members, result fields)
+- `pyproject.toml` — `"mcp-workspace>=<installed version>"` in `dependencies`
+- `src/mcp_coder/workflow_utils/issue_trust.py` — **new**
+- `tests/workflow_utils/test_issue_trust.py` — **new**
+
+## WHAT
+
+```python
+# workflow_utils/issue_trust.py
+__all__ = ["evaluate_body_trust"]
+
+def evaluate_body_trust(issue_manager: IssueManager, issue: IssueData) -> BodyTrustResult:
+    """Return the body-trust result for issue; fail closed.
+
+    Raises:
+        GitHubRateLimitError: If the lookup hit a GitHub rate limit.
+    """
+```
+
+## HOW
+
+- Import `BodyTrustResult`, `BodyTrustStatus`, `IssueData`, `IssueManager` from `mcp_coder.mcp_workspace_github`.
+- Import `raise_if_rate_limited` from `mcp_coder.workflow_utils.rate_limit`.
+- The helper does not log; callers log.
+
+## ALGORITHM
+
+```
+try:
+    return issue_manager.get_body_trust(issue)
+except Exception as exc:  # broad on purpose: fail closed
+    raise_if_rate_limited(exc)
+    return BodyTrustResult(status=BodyTrustStatus.LOOKUP_FAILED, reason=type(exc).__name__)
+```
+
+## DATA
+
+The upstream `BodyTrustResult`, returned unchanged on success. On a non-rate-limit exception:
+`BodyTrustResult(LOOKUP_FAILED, reason="<ExceptionTypeName>")`.
+
+## Tests (`tests/workflow_utils/test_issue_trust.py`)
+
+Use `MagicMock(spec=IssueManager)`.
+
+- Trusted and untrusted results are passed through unchanged (`is` the same object).
+- An upstream `LOOKUP_FAILED` result is passed through.
+- `RuntimeError("secret text")` → `LOOKUP_FAILED`, reason `"RuntimeError"`, and `"secret text"` is not in the reason.
+- `GitHubRateLimitError` → re-raised.
+- A raw rate-limit exception that `to_rate_limit_error` recognises (build it the way `tests/workflow_utils/test_rate_limit.py` does) → `GitHubRateLimitError`.
+
+Export test: parametrize `["BodyTrustStatus", "BodyTrustResult"]`; assert each is an attribute of the shim and listed in `__all__`.
