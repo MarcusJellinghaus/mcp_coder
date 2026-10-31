@@ -22,7 +22,11 @@ and a constructible result type with status and reason.
 - `src/mcp_coder/mcp_workspace_github.py` — re-export `BodyTrustStatus`, `BodyTrustResult`
 - `tests/test_mcp_workspace_github_exports.py` — export test
 - `vulture_whitelist.py` — entries for whatever vulture flags (e.g. enum members, result fields)
-- `pyproject.toml` — `"mcp-workspace>=<installed version>"` in `dependencies`
+- `pyproject.toml` — minimum `mcp-workspace` version, **only if released**. First check whether the installed
+  version, the one that has the body-trust API, is published on PyPI.
+  - If it is released: set `"mcp-workspace>=<that version>"` in `dependencies`.
+  - If it is not (for example, a git-HEAD build): leave `"mcp-workspace"` unpinned. The existing git override at
+    `pyproject.toml:411` supplies the API until the release.
 - `src/mcp_coder/workflow_utils/issue_trust.py` — **new**
 - `tests/workflow_utils/test_issue_trust.py` — **new**
 
