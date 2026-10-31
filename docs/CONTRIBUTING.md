@@ -7,6 +7,7 @@ MCP Coder is developed with MCP Coder: work starts from an issue and follows the
 Specific to this repo:
 
 - **Running your local source:** [Environments](environments/environments.md#special-case-mcp-coder-working-on-itself), [Installation](getting-started/installation.md)
+- **Using the Claude Code VS Code extension (MCP servers need env variables):** [Environments](environments/environments.md#using-the-claude-code-vs-code-extension)
 - **Checks and CI:** [Quality and Security Checks](repository-setup/quality-and-security-checks.md)
 - **Moving code, splitting large files:** [Safe Refactoring Guide](processes-prompts/refactoring-guide.md)
 - **Keeping the architecture overview current:** [Architecture Maintenance](architecture/architecture-maintenance.md)

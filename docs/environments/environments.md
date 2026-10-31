@@ -57,6 +57,7 @@ There are two paths that set up environment variables: batch launchers (for inte
 | `.vscodeclaude_start.bat` (coordinator) | `MCP_CODER_VENV_PATH` on PATH | activates project `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `claude.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
 | `claude_local.bat` | Discovers tool env via `MCP_CODER_VENV_PATH` or PATH lookup; verifies editable install | activates `.venv`, sets `VIRTUAL_ENV` | **Yes** |
+| VS Code extension | `env` block in `~/.claude/settings.json` (see below) | `MCP_CODER_PROJECT_DIR` defaults to `.` in `.mcp.json` | **Yes** |
 | `env.py` (`prepare_llm_environment()`) | Sets `MCP_CODER_VENV_DIR` from a pre-set value or `sys.prefix` (the running mcp-coder interpreter) | Sets `MCP_CODER_PROJECT_DIR` from `project_dir` arg; project Python reaches the servers via `${VIRTUAL_ENV}` in `.mcp.json` | **Yes** — tool env tracks the runtime, not the active venv |
 
 > All launcher scripts (`claude.bat`, `claude_local.bat`, `icoder_local.bat`) print MCP server versions (`mcp-workspace --version`, `mcp-tools-py --version`) at startup after tool verification.
@@ -107,6 +108,27 @@ Discovers the tool environment via `MCP_CODER_VENV_PATH` (if set) or PATH lookup
 ### How `claude_local.bat` Does It
 
 For local development: discovers the tool environment the same way as `claude.bat`, then activates the project `.venv`. Verifies that mcp-coder is editable-installed (pip `-e` mode) so local source changes take effect immediately.
+
+### Using the Claude Code VS Code Extension
+
+The extension does not run `claude.bat`, so the variables `.mcp.json` needs are unset and the MCP servers fail with "Connection closed". Set the tool env variables once per machine in the `env` block of `~/.claude/settings.json` (values are literal; `${...}` is not expanded there):
+
+```json
+{
+  "env": {
+    "MCP_CODER_VENV_PATH": "C:\\Jenkins\\environments\\mcp-coder-dev\\.venv\\Scripts",
+    "MCP_CODER_VENV_DIR": "C:\\Jenkins\\environments\\mcp-coder-dev\\.venv",
+    "VIRTUAL_ENV": "C:\\Jenkins\\environments\\mcp-coder-dev\\.venv",
+    "MCP_TIMEOUT": "30000"
+  }
+}
+```
+
+`MCP_CODER_PROJECT_DIR` is left unset: `.mcp.json` (and the Linux/macOS variants) default it to `.`. That relies on the extension starting MCP servers with the opened workspace folder as the working directory, so open the project root, not a subfolder, and expect trouble in multi-root workspaces. Reload the VS Code window afterwards and check `/mcp`; `claude mcp list` reports unset variables.
+
+`VIRTUAL_ENV` here is global, so every project's `mcp-tools-py` runs pytest, mypy and pylint in the tool env, not the project's own `.venv`. That is fine for mcp-coder itself; for a project with its own `.venv`, start Claude via `claude.bat` / `claude_local.bat` instead, or override `VIRTUAL_ENV` in that project's `.claude/settings.local.json` `env` block.
+
+Don't use the `claudeCode.environmentVariables` VS Code setting for this. It is machine-scoped, so a workspace `.vscode/settings.json` is ignored.
 
 ### How `reinstall_local.bat` Does It
 

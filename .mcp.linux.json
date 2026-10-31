@@ -5,7 +5,7 @@
       "command": "${MCP_CODER_VENV_PATH}/mcp-tools-py",
       "args": [
         "--project-dir",
-        "${MCP_CODER_PROJECT_DIR}",
+        "${MCP_CODER_PROJECT_DIR:-.}",
         "--python-executable",
         "${VIRTUAL_ENV}/bin/python",
         "--venv-path",
@@ -16,7 +16,7 @@
         "INFO"
       ],
       "env": {
-        "PYTHONPATH": "${MCP_CODER_PROJECT_DIR}/src"
+        "PYTHONPATH": "${MCP_CODER_PROJECT_DIR:-.}/src"
       },
       "alwaysLoad": true
     },
@@ -25,7 +25,7 @@
       "command": "${MCP_CODER_VENV_PATH}/mcp-workspace",
       "args": [
         "--project-dir",
-        "${MCP_CODER_PROJECT_DIR}",
+        "${MCP_CODER_PROJECT_DIR:-.}",
         "--log-level",
         "INFO",
         "--file-size-limit",
