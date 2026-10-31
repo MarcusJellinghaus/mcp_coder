@@ -11,7 +11,7 @@
 - `src/mcp_coder/workflows/vscodeclaude/issues.py` — new `find_untrusted_launch_keys`
 - `src/mcp_coder/workflows/vscodeclaude/status.py` — `display_status_table`
 - `src/mcp_coder/cli/commands/coordinator/commands_vscodeclaude.py` — `execute_coordinator_vscodeclaude_status`
-- `tests/cli/commands/coordinator/conftest.py` — add an autouse patch returning `set()`
+- `tests/cli/commands/coordinator/conftest.py` — add an autouse patch returning `set()` (target: see below)
 - `tests/workflows/vscodeclaude/test_status_untrusted.py` — **new**
 - `tests/cli/commands/coordinator/test_vscodeclaude_trust.py` — add status-command tests
 
@@ -70,8 +70,22 @@ return keys
 
 ## conftest.py (coordinator)
 
-Add an autouse patch of `mcp_coder.cli.commands.coordinator.commands_vscodeclaude.find_untrusted_launch_keys`
-returning `set()`, so existing status-command tests make no lookups.
+The command imports `find_untrusted_launch_keys` **inside the function**, next to the existing local
+`build_eligible_issues_with_branch_check` import. `commands_vscodeclaude` therefore has no module-level attribute of that name.
+The autouse patch targets the defining module, as `test_active_set_invariant.py` does:
+`mcp_coder.workflows.vscodeclaude.issues.find_untrusted_launch_keys`, returning `set()`, so existing status-command tests
+make no lookups. New command tests in `test_vscodeclaude_trust.py` override the same target.
+
+## Callers outside the coordinator tests
+
+`tests/workflows/vscodeclaude/test_active_set_invariant.py` and `test_explain.py` also call
+`execute_coordinator_vscodeclaude_status`. They need no change and no extra autouse patch:
+- `test_active_set_invariant.py` stubs `build_eligible_issues_with_branch_check` to `([], set())`, so the finder loops over
+  nothing and makes no lookup.
+- `test_explain.py` uses `--explain`, which returns before the finder is called.
+
+Do **not** add an autouse patch of the finder to `tests/workflows/vscodeclaude/conftest.py`: `test_status_untrusted.py`
+tests the real finder there.
 
 ## Tests
 

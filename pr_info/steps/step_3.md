@@ -68,7 +68,9 @@ Spec JSON gains `"untrusted_body": true|false`. `read_session_spec` needs no cha
 - `render_banner`, untrusted: contains `Issue #42` and the URL, does not contain the spec title, contains the warning.
   Untrusted + intervention: also contains `INTERVENTION_WARNING`.
 - `UNTRUSTED_STATUS_FILE_TEMPLATE` contains no `Branch:` and no `{title}`.
-- `orchestrate` (patch `subprocess.run`):
+- `orchestrate`: patch with the string target `mcp_coder.workflows.vscodeclaude.session_setup.subprocess.run`.
+  The new test module must **not** `import subprocess` (the `subprocess_isolation` contract in `.importlinter` exempts only
+  `test_session_setup_flow`). Use a `MagicMock` return value instead of `subprocess.CompletedProcess`.
   - untrusted with 2 commands → exactly one call, whose argv ends with `UNTRUSTED_REVIEW_PROMPT`; no first-step call;
   - untrusted + intervention → bare argv (same as `build_claude_argv(spec)`);
   - untrusted + no commands → no call;

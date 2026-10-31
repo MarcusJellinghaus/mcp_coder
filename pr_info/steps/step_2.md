@@ -68,7 +68,8 @@ Follow the setup in `test_commands.py` (patches for `IssueManager`, `get_cached_
 - `LOOKUP_FAILED` → not dispatched.
 - INFO summary names the skipped numbers, the reasons and the count. With nothing skipped: no summary record (`caplog`).
 - Issue without a workflow label → no trust lookup (call count equals the actionable issues).
-- Rate limit on the 2nd issue: the 1st is dispatched, the 2nd and 3rd are not, return code 0, the summary is still logged
-  when an earlier issue was skipped.
+- Rate limit mid-loop: issue 1 untrusted (skipped), issue 2 trusted (dispatched), issue 3's trust lookup raises
+  `GitHubRateLimitError`. Then issue 2 stays dispatched, issue 3 is not dispatched, the return code is 0, and the
+  `finally` summary is logged and names `#1`.
 - Early `return 1` (dispatch failure) after a skipped issue → summary still logged.
 - Fallback path: `get_cached_eligible_issues` raises a non-rate-limit error → `get_eligible_issues` result is gated too.

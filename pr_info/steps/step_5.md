@@ -15,8 +15,11 @@
 - `tests/workflows/vscodeclaude/test_session_launch_trust.py` — **new**
 - `tests/cli/commands/coordinator/test_vscodeclaude_trust.py` — **new** (intervention part)
 - existing callers in tests: `test_session_launch.py`, `test_session_launch_prepare.py`,
-  `test_launch_vscode_env_vars.py` (add `issue_manager=MagicMock()`), plus any assertion on
-  `prepare_and_launch_session` kwargs in `tests/cli/commands/coordinator/`
+  `test_launch_vscode_env_vars.py`, `test_rate_limit_reraise.py` (calls near lines 211 and 304) — add
+  `issue_manager=MagicMock()`
+- existing assertions on `prepare_and_launch_session` kwargs: `test_session_launch_process_issues.py`,
+  `tests/cli/commands/coordinator/test_vscodeclaude_cli.py` (around lines 460 and 478), plus any others in
+  `tests/cli/commands/coordinator/`
 
 ## WHAT
 
