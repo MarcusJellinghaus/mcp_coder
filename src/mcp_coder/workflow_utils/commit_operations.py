@@ -106,7 +106,7 @@ def generate_commit_message_with_llm(  # pylint: disable=too-many-statements
             return False, "", error_msg
 
         if not git_diff.strip():
-            error_msg = "No changes to commit. Ensure you have modified, added, or deleted files before running commit auto."
+            error_msg = "No changes to commit. Ensure you have modified, added, or deleted files before running commit."
             logger.warning(error_msg)
             return False, "", error_msg
 

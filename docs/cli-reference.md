@@ -45,7 +45,7 @@ Automated stages, normally dispatched by the coordinator. See the [Development P
 | Command | Description |
 |---------|-------------|
 | [`prompt`](#prompt) | Send prompt to configured LLM |
-| [`commit auto`](#commit-auto) | Auto-generate commit message using LLM |
+| [`commit`](#commit) | Auto-generate commit message using LLM |
 | [`check branch-status`](#check-branch-status) | Check branch readiness status and optionally apply fixes |
 | [`check file-size`](#check-file-size) | Check file sizes against maximum line count |
 | [`gh-tool checkout-issue-branch`](#gh-tool-checkout-issue-branch) | Checkout or create a branch linked to a GitHub issue |
@@ -429,20 +429,22 @@ mcp-coder prompt "Analyze code" --add-system-prompts --llm-method langchain
 
 ---
 
-### commit auto
+### commit
 
-Generate a commit message with the LLM and commit.
+Generate a commit message with the LLM, commit, and push.
 
 ```bash
-mcp-coder commit auto [OPTIONS]
+mcp-coder commit [OPTIONS]
 ```
 
-`--preview` shows the generated message and asks for confirmation before committing. `--push` pushes to origin after a successful commit.
+- `--preview` shows the generated message and asks for confirmation; cancelling exits 0 without committing.
+- Pushing to origin is on by default; `--no-push` skips it. If the push fails, including when there is no `origin` remote, the commit is kept and the command exits 2.
+- The command refuses to commit (exit 1, no commit) on a protected branch (`main`, `master`, or the detected default branch) or when HEAD is detached or unreadable. Switch to a feature branch and rerun.
 
 ```bash
-mcp-coder commit auto
-mcp-coder commit auto --preview
-mcp-coder commit auto --push
+mcp-coder commit
+mcp-coder commit --preview
+mcp-coder commit --no-push
 ```
 
 ---

@@ -332,7 +332,7 @@ class TestTrafficLogContext:
                 argparse.Namespace(command="gh-tool", gh_tool_subcommand="set-status"),
                 "gh-tool set-status",
             ),
-            (argparse.Namespace(command="commit", commit_mode="auto"), "commit auto"),
+            (argparse.Namespace(command="commit"), "commit"),
             (argparse.Namespace(command="coordinator"), "coordinator"),
         ],
     )
@@ -482,17 +482,16 @@ class TestHelpHintIntegration:
         assert expected_error in caplog.text
         assert "Try 'mcp-coder coordinator --help' for more information." in caplog.text
 
-    def test_commit_no_subcommand_shows_help_hint(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Test that commit without subcommand shows help hint."""
-        with caplog.at_level(logging.DEBUG):
+    def test_bare_commit_runs_commit_flow(self) -> None:
+        """Test that bare commit dispatches to the commit flow."""
+        with patch(
+            "mcp_coder.cli.main.execute_commit_auto", return_value=0
+        ) as mock_commit:
             with patch("sys.argv", ["mcp-coder", "commit"]):
                 result = main()
 
-        assert result == 1
-        assert "is not yet implemented" in caplog.text
-        assert "Try 'mcp-coder commit --help' for more information." in caplog.text
+        assert result == 0
+        mock_commit.assert_called_once()
 
 
 class TestFaulthandlerSafetyNet:

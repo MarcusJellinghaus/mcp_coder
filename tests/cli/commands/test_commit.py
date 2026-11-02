@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -11,24 +12,40 @@ from mcp_coder.cli.commands.commit import execute_commit_auto, validate_git_repo
 from mcp_coder.cli.main import create_parser
 
 
-class TestCommitAutoParserNoMcpConfig:
-    """Tests that --mcp-config is NOT accepted by commit auto."""
+@pytest.fixture(autouse=True)
+def _feature_branch() -> Iterator[None]:
+    """Run every test on a feature branch so the branch guard lets commits through."""
+    with (
+        patch(
+            "mcp_coder.cli.commands.commit.get_current_branch_name",
+            return_value="feature/x",
+        ),
+        patch(
+            "mcp_coder.cli.commands.commit.get_default_branch_name",
+            return_value="main",
+        ),
+    ):
+        yield
 
-    def test_commit_auto_no_mcp_config_arg(self) -> None:
-        """--mcp-config should not be accepted by commit auto parser."""
+
+class TestCommitParserNoMcpConfig:
+    """Tests that --mcp-config is NOT accepted by commit."""
+
+    def test_commit_no_mcp_config_arg(self) -> None:
+        """--mcp-config should not be accepted by commit parser."""
         parser = create_parser()
         with pytest.raises(SystemExit):
-            parser.parse_args(["commit", "auto", "--mcp-config", "some_config.json"])
+            parser.parse_args(["commit", "--mcp-config", "some_config.json"])
 
-    def test_commit_auto_accepts_llm_method(self) -> None:
-        """--llm-method should still be accepted by commit auto."""
+    def test_commit_accepts_llm_method(self) -> None:
+        """--llm-method should still be accepted by commit."""
         parser = create_parser()
-        args = parser.parse_args(["commit", "auto", "--llm-method", "langchain"])
+        args = parser.parse_args(["commit", "--llm-method", "langchain"])
         assert args.llm_method == "langchain"
 
 
 class TestExecuteCommitAutoResolveTuple:
-    """Tests that commit auto properly destructures resolve_llm_method tuple."""
+    """Tests that commit properly destructures resolve_llm_method tuple."""
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.resolve_llm_method")
@@ -79,7 +96,7 @@ class TestExecuteCommitAuto:
         mock_validate: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test successful commit auto execution."""
+        """Test successful commit execution."""
         # Setup mocks
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
@@ -119,7 +136,7 @@ class TestExecuteCommitAuto:
         capsys: pytest.CaptureFixture[str],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test commit auto with preview mode - user confirms."""
+        """Test commit with preview mode - user confirms."""
         # Setup mocks
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
@@ -163,7 +180,7 @@ class TestExecuteCommitAuto:
         capsys: pytest.CaptureFixture[str],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test commit auto with preview mode - empty input proceeds as default."""
+        """Test commit with preview mode - empty input proceeds as default."""
         # Setup mocks
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
@@ -201,7 +218,7 @@ class TestExecuteCommitAuto:
         capsys: pytest.CaptureFixture[str],
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test commit auto with preview mode - user cancels."""
+        """Test commit with preview mode - user cancels."""
         # Setup mocks
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
@@ -233,7 +250,7 @@ class TestExecuteCommitAuto:
         mock_validate: Mock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Test commit auto with preview mode - various cancel inputs."""
+        """Test commit with preview mode - various cancel inputs."""
         # Setup mocks
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
@@ -284,7 +301,7 @@ class TestExecuteCommitAuto:
     def test_execute_commit_auto_not_git_repo(
         self, mock_validate: Mock, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test commit auto in non-git directory."""
+        """Test commit in non-git directory."""
         mock_validate.return_value = (False, "Not a git repository")
 
         args = argparse.Namespace(preview=False, llm_method="claude", project_dir=None)
@@ -305,13 +322,13 @@ class TestExecuteCommitAuto:
         mock_validate: Mock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Test commit auto with no staged changes."""
+        """Test commit with no staged changes."""
         mock_validate.return_value = (True, None)
         mock_parse_llm.return_value = "claude"
         mock_generate.return_value = (
             False,
             "",
-            "No changes to commit. Ensure you have modified, added, or deleted files before running commit auto.",
+            "No changes to commit. Ensure you have modified, added, or deleted files before running commit.",
         )
 
         args = argparse.Namespace(preview=False, llm_method="claude", project_dir=None)
@@ -452,7 +469,7 @@ class TestValidateGitRepository:
 
 
 class TestCommitAutoClaudeCwd:
-    """Tests for Claude working directory handling in commit auto command."""
+    """Tests for Claude working directory handling in commit command."""
 
     @patch("mcp_coder.cli.commands.commit.validate_git_repository")
     @patch("mcp_coder.cli.commands.commit.parse_llm_method_from_args")

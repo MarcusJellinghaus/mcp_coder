@@ -26,6 +26,24 @@ from ..utils import (
 
 logger = logging.getLogger(__name__)
 
+_PROTECTED_BRANCHES = frozenset({"main", "master"})
+
+
+def _check_branch(project_dir: Path) -> tuple[str | None, bool]:
+    """Read the current branch and whether it is protected.
+
+    Returns:
+        (branch, is_protected). branch is None if the current branch cannot be
+        determined; the default branch is then not looked up.
+    """
+    branch = get_current_branch_name(project_dir)
+    if branch is None:
+        return None, False
+
+    default = get_default_branch_name(project_dir)
+    protected = _PROTECTED_BRANCHES | ({default} if default else set())
+    return branch, branch in protected
+
 
 def _push_after_commit(project_dir: Path) -> int:
     """Push the current branch to origin after a successful commit.
@@ -33,14 +51,11 @@ def _push_after_commit(project_dir: Path) -> int:
     Returns:
         Exit code (0 for success, 2 for failure).
     """
-    branch = get_current_branch_name(project_dir)
+    branch, is_protected = _check_branch(project_dir)
     if branch is None:
         logger.error("Cannot push: not on a branch")
         return 2
-
-    default = get_default_branch_name(project_dir)
-    blocked = {default} if default else {"main", "master"}
-    if branch in blocked:
+    if is_protected:
         logger.error("Refusing to push to protected branch '%s'", branch)
         return 2
 
@@ -61,12 +76,13 @@ def _push_after_commit(project_dir: Path) -> int:
 
 
 def execute_commit_auto(args: argparse.Namespace) -> int:
-    """Execute commit auto command with optional preview.
+    """Execute commit command with optional preview.
 
     Returns:
-        Exit code (0 for success, 1 for validation error, 2 for commit/LLM/push error).
+        Exit code (0 for success or preview cancelled, 1 for validation error or
+        refused branch, 2 for commit/LLM/push error).
     """
-    logger.info("Starting commit auto with preview=%s", args.preview)
+    logger.info("Starting commit with preview=%s", args.preview)
 
     project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
 
@@ -76,6 +92,18 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
     success, error = validate_git_repository(project_dir)
     if not success:
         logger.error("%s", error)
+        return 1
+
+    # Refuse protected branches / detached HEAD before the LLM call and preview
+    branch, is_protected = _check_branch(project_dir)
+    if branch is None:
+        logger.error(
+            "Refusing to commit: cannot determine current branch "
+            "(detached HEAD or unreadable HEAD)"
+        )
+        return 1
+    if is_protected:
+        logger.error("Refusing to commit on protected branch '%s'", branch)
         return 1
 
     # 2. Parse LLM method and generate commit message

@@ -91,12 +91,10 @@ def _command_name(args: argparse.Namespace) -> str:
     """Return the catalog name of the parsed command, e.g. "vscodeclaude launch".
 
     Returns:
-        The command name, followed by its subcommand or commit mode if any.
+        The command name, followed by its subcommand if any.
     """
     cmd = str(args.command)
-    sub = getattr(args, f"{cmd.replace('-', '_')}_subcommand", None) or getattr(
-        args, "commit_mode", None
-    )
+    sub = getattr(args, f"{cmd.replace('-', '_')}_subcommand", None)
     return f"{cmd} {sub}" if sub else cmd
 
 
@@ -302,21 +300,6 @@ def _handle_git_tool_command(args: argparse.Namespace) -> int:
         return 1
 
 
-def _handle_commit_command(args: argparse.Namespace) -> int:
-    """Handle commit subcommands.
-
-    Returns:
-        Exit code from the executed commit subcommand.
-    """
-    if args.commit_mode == "auto":
-        return execute_commit_auto(args)
-    else:
-        logger.debug(f"Commit mode '{args.commit_mode}' not yet implemented")
-        logger.error("Commit mode '%s' is not yet implemented.", args.commit_mode)
-        logger.log(OUTPUT, "Try 'mcp-coder commit --help' for more information.")
-        return 1
-
-
 def main() -> int:
     """Main CLI entry point.
 
@@ -365,8 +348,8 @@ def main() -> int:
             return execute_verify(args)
         elif args.command == "prompt":
             return execute_prompt(args)
-        elif args.command == "commit" and hasattr(args, "commit_mode"):
-            return _handle_commit_command(args)
+        elif args.command == "commit":
+            return execute_commit_auto(args)
         elif args.command == "implement":
             return execute_implement(args)
         elif args.command == "rebase":

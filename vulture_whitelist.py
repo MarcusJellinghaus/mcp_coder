@@ -528,3 +528,8 @@ _._trusted_body
 # tests/workflows/vscodeclaude/test_workspace_untrusted.py - fixture forcing
 # the Windows launcher path, pulled in via usefixtures("_windows").
 _._windows
+
+# tests/cli/commands/test_commit.py and test_commit_push.py - autouse fixture
+# patching get_current_branch_name/get_default_branch_name so commit tests run
+# on a feature branch past the protected-branch guard.
+_._feature_branch

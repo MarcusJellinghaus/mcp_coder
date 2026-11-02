@@ -1,5 +1,6 @@
 import argparse
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -8,6 +9,16 @@ import pytest
 from mcp_coder.cli.commands.commit import _push_after_commit, execute_commit_auto
 
 MODULE = "mcp_coder.cli.commands.commit"
+
+
+@pytest.fixture(autouse=True)
+def _feature_branch() -> Iterator[None]:
+    """Run every test on a feature branch unless the test patches otherwise."""
+    with (
+        patch(f"{MODULE}.get_current_branch_name", return_value="feature/x"),
+        patch(f"{MODULE}.get_default_branch_name", return_value="main"),
+    ):
+        yield
 
 
 class TestPushAfterCommit:
@@ -54,6 +65,7 @@ class TestPushAfterCommit:
             "feature/bar", Path("/test/repo"), set_upstream=True
         )
         assert "Pushed to origin/" in caplog.text
+        mock_current.assert_called_once()
 
     @patch(f"{MODULE}.get_current_branch_name", return_value="main")
     @patch(f"{MODULE}.get_default_branch_name", return_value="main")
@@ -97,6 +109,21 @@ class TestPushAfterCommit:
             result = _push_after_commit(Path("/test/repo"))
 
         assert result == 2
+
+    @patch(f"{MODULE}.get_current_branch_name", return_value="master")
+    @patch(f"{MODULE}.get_default_branch_name", return_value="main")
+    def test_push_refused_on_master_when_default_main(
+        self,
+        mock_default: Mock,
+        mock_current: Mock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Push is refused on 'master' even when the detected default is 'main'."""
+        with caplog.at_level(logging.ERROR):
+            result = _push_after_commit(Path("/test/repo"))
+
+        assert result == 2
+        assert "protected branch" in caplog.text
 
     @patch(f"{MODULE}.get_current_branch_name", return_value="feature/foo")
     @patch(f"{MODULE}.get_default_branch_name", return_value="main")
@@ -274,3 +301,53 @@ class TestCommitAutoPush:
 
         assert result == 2
         mock_push.assert_not_called()
+
+
+class TestCommitBranchGuard:
+    """Tests for the pre-commit branch refusal in execute_commit_auto."""
+
+    @pytest.mark.parametrize("push", [True, False])
+    @pytest.mark.parametrize(
+        ("current", "default"),
+        [
+            ("main", "main"),
+            ("master", "main"),
+            ("develop", "develop"),
+            (None, "main"),
+        ],
+    )
+    def test_commit_refused_before_llm_and_preview(
+        self,
+        current: str | None,
+        default: str,
+        push: bool,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Commit is refused (exit 1) before the LLM call, preview and push."""
+        args = argparse.Namespace(
+            preview=True, llm_method="claude", project_dir="/repo", push=push
+        )
+        with (
+            patch(f"{MODULE}.get_current_branch_name", return_value=current),
+            patch(
+                f"{MODULE}.get_default_branch_name", return_value=default
+            ) as mock_default,
+            patch(f"{MODULE}.validate_git_repository", return_value=(True, None)),
+            patch(f"{MODULE}.generate_commit_message_with_llm") as mock_generate,
+            patch(f"{MODULE}.commit_staged_files") as mock_commit,
+            patch(f"{MODULE}._push_after_commit") as mock_push,
+            patch("builtins.input") as mock_input,
+            caplog.at_level(logging.ERROR),
+        ):
+            result = execute_commit_auto(args)
+
+        assert result == 1
+        mock_generate.assert_not_called()
+        mock_commit.assert_not_called()
+        mock_input.assert_not_called()
+        mock_push.assert_not_called()
+        if current is not None:
+            assert "protected branch" in caplog.text
+        else:
+            assert "cannot determine current branch" in caplog.text
+            mock_default.assert_not_called()
