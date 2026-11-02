@@ -38,9 +38,9 @@ See [step_2.md](./steps/step_2.md)
 ### Step 3: Documentation
 See [step_3.md](./steps/step_3.md)
 
-- [ ] Implementation: update `docs/repository-setup/github.md` and `docs/repository-setup/quality-and-security-checks.md`
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update `docs/repository-setup/github.md` and `docs/repository-setup/quality-and-security-checks.md`
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ## Pull Request
 

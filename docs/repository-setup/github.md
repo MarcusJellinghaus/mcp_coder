@@ -25,7 +25,8 @@ token = "ghp_your_github_token_here"
 **Token options** (either one works):
 
 1. **Fine-grained PAT** (least privilege). Grant repository access to the target repos
-   with these read permissions, which are the ones `mcp-coder verify` probes:
+   with these read permissions. The list names the permissions behind its own rows of
+   `mcp-coder verify`; it is not every permission `verify` probes:
    - `Contents: Read`
    - `Administration: Read` (branch protection)
    - `Pull requests: Read`
@@ -46,9 +47,18 @@ token = "ghp_your_github_token_here"
    Effective rules do not expose bypass actors, so "protected" does not mean "nobody
    can bypass".
 
+   **Code scanning alerts (`check_branch_status`)** — to let `check_branch_status`
+   read code-scanning alerts, also grant `Code scanning alerts: Read`
+   (`security_events` read). The permission name is unconfirmed until a live check runs.
+   It is kept out of the list above.
+
 2. **Classic PAT** (simpler, broader). Use the `repo` scope (`public_repo` covers public
    repositories only). Classic scopes grant permissions in bundles, so a `repo`-scope
-   token satisfies all of the checks above.
+   token satisfies the permission-list checks above.
+   - `security_events` is the classic scope GitHub associates with code-scanning alerts;
+     it is not a confirmed requirement. The scope name is unverified: the live check
+     covers the fine-grained permission only.
+   - Whether `repo` also covers the code-scanning alerts endpoint is unverified.
 
 **How to create:** go to GitHub → Settings → Developer settings → Personal access
 tokens, choose *Fine-grained tokens* or *Tokens (classic)*, then add the token to the
@@ -65,11 +75,11 @@ config file.
 === GITHUB SECURITY =======================================================
   Dependabot config      [OK]   .github/dependabot.yml (pip: weekly)
   Dependabot alerts      [OK]   enabled
-  Dependabot security    [WARN] security updates disabled
+  Dependabot security    [ERR]  disabled
   Secret scanning        [ERR]  disabled
   Secret push protection [ERR]  disabled
   CodeQL workflow        [ERR]  no workflow step uses github/codeql-action
-  Code scanning alerts   [WARN] not configured (no CodeQL workflow)
+  Code scanning alerts   [ERR]  scope missing or Advanced Security not enabled
 ```
 
 Two local-file rows need no token:
@@ -79,17 +89,36 @@ Two local-file rows need no token:
   `github/codeql-action`.
 
 Four rows are API-backed and need `Administration: Read` on the GitHub token (the same
-permission already listed in the fine-grained PAT table above) — without it, they show
-`[WARN] not accessible` instead of a real on/off state:
+permission already listed in the fine-grained PAT table above). The rows that read
+`security_and_analysis` and lack Administration: Read show
+`[WARN] not accessible (<reason>)`.
 
 - Dependabot alerts
 - Dependabot security
 - Secret scanning
 - Secret push protection
 
-**Code scanning alerts** reflects only whether CodeQL is configured (from the row
-above); it does not query real alert counts — that needs a different permission scope
-and there is no repo with CodeQL enabled yet to verify it against.
+Code scanning alerts is also API-backed. It needs no Administration: Read, but needs
+`security_events` (Code scanning alerts: Read) and Advanced Security.
+
+Without a token, all five API-backed rows (the four above and code scanning) show
+`[WARN] not accessible (repository not accessible)`.
+
+**Code scanning alerts** probes whether the token can read code-scanning alerts
+(`GET .../code-scanning/alerts?per_page=1`). Its values name the scope and Advanced
+Security:
+
+- `[OK] scope present` — the token can read alerts.
+- `[ERR] scope missing or Advanced Security not enabled` — HTTP 403.
+- `[WARN] scope missing or not configured` — HTTP 404: the scope is missing. It may
+  also mean CodeQL is not enabled or has no analysis yet (unconfirmed). Granting the
+  scope does not fix a CodeQL-off 404.
+- `[WARN] not accessible (<reason>)` — rate limit, network or other error.
+
+`check_branch_status` skips the alerts when it cannot read them, in one of two forms:
+a `[skipped] alerts not checked (403)` line, or `alerts not checked: 403` inside a
+clean reviews line. 403 → scope missing or Advanced Security not enabled. 404 → scope
+missing; it may also mean CodeQL is not enabled or has no analysis yet (unconfirmed).
 
 The whole section is report-only and exit-neutral: it never fails the `verify`
 command. Turning features on or off happens in the GitHub web UI, not through `verify`.
