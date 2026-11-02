@@ -111,12 +111,14 @@ class TestFixConflictParser:
         parser = create_parser()
         return parser.parse_args(list(args))
 
-    def test_fix_conflict_parses_with_project_dir_only(self) -> None:
-        """fix-conflict has --project-dir and no LLM-related arguments."""
+    def test_fix_conflict_parses_with_llm_arguments(self) -> None:
+        """fix-conflict has --project-dir and the LLM-related arguments."""
         args = self._parse("fix-conflict")
         assert args.command == "fix-conflict"
         assert hasattr(args, "project_dir")
-        assert not hasattr(args, "llm_method")
+        assert hasattr(args, "llm_method")
+        assert hasattr(args, "mcp_config")
+        assert hasattr(args, "settings")
 
 
 class TestFixCiParser:

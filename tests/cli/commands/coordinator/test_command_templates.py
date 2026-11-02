@@ -468,3 +468,18 @@ class TestReviewTemplateVerbs:
             REVIEW_IMPLEMENTATION_COMMAND_WINDOWS,
         ):
             assert "--update-issue-labels" not in template
+
+
+class TestFixConflictTemplateLlmArgs:
+    """The fix-conflict templates set up the LLM rebase fallback."""
+
+    def test_templates_pass_mcp_config_and_timeout(self) -> None:
+        """Both templates pass --mcp-config and set MCP_TIMEOUT."""
+        for template in (FIX_CONFLICT_COMMAND_TEMPLATE, FIX_CONFLICT_COMMAND_WINDOWS):
+            assert "fix-conflict" in template
+            assert "--mcp-config .mcp.json" in template
+            assert "MCP_TIMEOUT=30000" in template
+
+    def test_linux_template_logs_claude_version(self) -> None:
+        """The Linux template logs the Claude CLI version."""
+        assert "which claude && claude --version" in FIX_CONFLICT_COMMAND_TEMPLATE

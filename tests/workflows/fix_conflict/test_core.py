@@ -1,4 +1,4 @@
-"""Tests for the mechanical fix_conflict workflow (rebase + poll + label transition)."""
+"""Tests for the fix_conflict workflow (rebase + poll + label transition)."""
 
 from pathlib import Path
 from typing import Any
@@ -15,6 +15,7 @@ _SHARED_HANDLER = "mcp_coder.workflow_utils.failure_handling.handle_workflow_fai
 _BRANCH_HEAD = "mcp_coder.workflow_utils.failure_handling._branch_head"
 PROJECT_DIR = Path("/fake/project")
 BRANCH_NAME = "123-fix-something"
+PROVIDER = "claude"
 _OK_OUTCOME = RebaseOutcome("ok", "main", "abc1234")
 
 
@@ -32,7 +33,7 @@ def _patch_all(
     pr_manager.find_pull_request_by_head.side_effect = mergeable_states
     return (
         patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
-        patch(f"{MODULE}._attempt_rebase_and_push", return_value=outcome),
+        patch(f"{MODULE}.rebase_with_llm_fallback", return_value=outcome),
         patch(f"{_REBASE_MODULE}.PullRequestManager", return_value=pr_manager),
         patch(_SHARED_HANDLER),
         patch(f"{MODULE}.apply_final_label", return_value=0),
@@ -84,6 +85,21 @@ def _patch_all(
             0,
             id="dirty_tree",
         ),
+        pytest.param(
+            [[{"mergeable_state": "dirty"}]],
+            RebaseOutcome(
+                "conflict",
+                "main",
+                "abc1234",
+                ("a.py",),
+                llm_detail="markers remain in a.py",
+            ),
+            "still conflicting",
+            ["**Reason:** conflict", "**LLM rebase:** markers remain in a.py"],
+            [],
+            0,
+            id="llm_detail",
+        ),
     ],
 )
 def test_unresolved_outcomes_go_to_pr_merge_conflict(
@@ -105,7 +121,7 @@ def test_unresolved_outcomes_go_to_pr_merge_conflict(
         patches[6] as mock_fail,
         patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")),
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 1
     mock_net.assert_not_called()
@@ -146,7 +162,7 @@ def test_settled_or_self_healing_outcomes_go_to_pr_created(
         patches[5] as mock_sleep,
         patches[6] as mock_fail,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 0
     mock_update.assert_called_once_with(
@@ -174,7 +190,7 @@ def test_auto_merge_success_path_runs_helper_chain(finish_code: int) -> None:
     ):
         calls.attach_mock(mock_resolve, "resolve")
         calls.attach_mock(mock_merge, "merge")
-        result = run_fix_conflict_workflow(PROJECT_DIR, auto_merge=True)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER, auto_merge=True)
 
     assert result == finish_code
     assert [c[0] for c in calls.mock_calls] == ["resolve", "merge"]
@@ -210,7 +226,7 @@ def test_auto_merge_verdict_path_skips_helper() -> None:
         patch(f"{MODULE}.run_auto_merge") as mock_merge,
         patch(f"{MODULE}.finish_auto_merge") as mock_finish,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR, auto_merge=True)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER, auto_merge=True)
 
     assert result == 1
     mock_fail.assert_called_once()
@@ -233,7 +249,7 @@ def test_auto_merge_off_does_not_call_helper() -> None:
         patch(f"{MODULE}.run_auto_merge") as mock_merge,
         patch(f"{MODULE}.finish_auto_merge") as mock_finish,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR, auto_merge=False)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER, auto_merge=False)
 
     assert result == 0
     mock_update.assert_called_once_with(
@@ -241,6 +257,27 @@ def test_auto_merge_off_does_not_call_helper() -> None:
     )
     mock_merge.assert_not_called()
     mock_finish.assert_not_called()
+
+
+def test_passes_llm_args_to_fallback_helper() -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "clean"}]])
+    with (
+        patches[0],
+        patches[2],
+        patches[3],
+        patches[4],
+        patches[5],
+        patches[6],
+        patches[1] as mock_rebase,
+    ):
+        result = run_fix_conflict_workflow(
+            PROJECT_DIR, PROVIDER, "mcp.json", "settings.json"
+        )
+
+    assert result == 0
+    mock_rebase.assert_called_once_with(
+        PROJECT_DIR, PROVIDER, "mcp.json", "settings.json"
+    )
 
 
 def test_final_label_failure_returns_1_without_net() -> None:
@@ -255,7 +292,7 @@ def test_final_label_failure_returns_1_without_net() -> None:
         patches[6] as mock_fail,
     ):
         mock_update.return_value = 1
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 1
     mock_update.assert_called_once()
@@ -267,11 +304,11 @@ def test_no_current_branch_returns_1_without_rebase() -> None:
     with (
         patch(f"{MODULE}.get_current_branch_name", return_value=None),
         patch(
-            f"{MODULE}._attempt_rebase_and_push",
+            f"{MODULE}.rebase_with_llm_fallback",
             return_value=RebaseOutcome("ok", "main", "abc1234"),
         ) as mock_rebase,
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 1
     mock_rebase.assert_not_called()
@@ -283,7 +320,7 @@ def test_unexpected_exception_is_caught_and_returns_1() -> None:
         patch(_SHARED_HANDLER) as mock_shared,
         patch(_BRANCH_HEAD, return_value=("feat", "abc1234")),
     ):
-        result = run_fix_conflict_workflow(PROJECT_DIR)
+        result = run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     assert result == 1
     mock_shared.assert_called_once()
@@ -299,7 +336,7 @@ def test_system_exit_is_netted_and_reraised() -> None:
         patch(_SHARED_HANDLER) as mock_shared,
     ):
         with pytest.raises(SystemExit):
-            run_fix_conflict_workflow(PROJECT_DIR)
+            run_fix_conflict_workflow(PROJECT_DIR, PROVIDER)
 
     mock_shared.assert_called_once()
     netted_failure = mock_shared.call_args[0][0]

@@ -52,9 +52,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 7: fix-conflict runs the LLM fallback — [step_7.md](./steps/step_7.md)
-- [ ] Implementation: tests + CLI args, workflow wiring, comment field, Jenkins templates
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + CLI args, workflow wiring, comment field, Jenkins templates
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 8: Label config: `status-72` and `status-74` — [step_8.md](./steps/step_8.md)
 - [ ] Implementation: tests + `status-72` timeout/description, `status-74` commands
