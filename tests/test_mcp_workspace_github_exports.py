@@ -44,3 +44,9 @@ def test_pull_request_cache_names_exported(name: str) -> None:
 def test_branch_lookup_names_exported(name: str) -> None:
     assert hasattr(shim, name)
     assert name in shim.__all__
+
+
+@pytest.mark.parametrize("name", ["BodyTrust", "BodyTrustResult"])
+def test_body_trust_names_exported(name: str) -> None:
+    assert hasattr(shim, name)
+    assert name in shim.__all__
