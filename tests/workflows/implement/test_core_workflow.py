@@ -1,5 +1,6 @@
 """Tests for implement workflow orchestration (label transitions, safety net, SIGTERM)."""
 
+import logging
 import os
 import signal
 import sys
@@ -9,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
@@ -205,7 +207,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
@@ -232,7 +234,7 @@ class TestRunImplementWorkflowLabelTransitions:
     @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
     @patch(
         "mcp_coder.workflows.implement.core._attempt_rebase_and_push",
-        return_value=True,
+        return_value=RebaseOutcome("ok"),
     )
     @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
     @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
@@ -299,7 +301,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
@@ -348,7 +350,7 @@ class TestRunImplementWorkflowLabelTransitions:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "no_tasks")
         mock_finalise.return_value = True
@@ -361,6 +363,48 @@ class TestRunImplementWorkflowLabelTransitions:
 
         assert result == 0
         mock_apply_label.assert_not_called()
+
+    @patch("mcp_coder.workflows.implement.core.apply_final_label", return_value=0)
+    @patch("mcp_coder.workflows.implement.core.check_and_fix_ci", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.run_finalisation", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core._attempt_rebase_and_push",
+        return_value=RebaseOutcome("dirty_tree"),
+    )
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    @patch(
+        "mcp_coder.workflows.implement.core.get_current_branch_name",
+        return_value="189-feature",
+    )
+    def test_rebase_outcome_reason_logged_and_workflow_continues(
+        self,
+        _mock_branch: MagicMock,
+        _mock_git_clean: MagicMock,
+        _mock_main_branch: MagicMock,
+        _mock_prereq: MagicMock,
+        _mock_rebase: MagicMock,
+        _mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        _mock_progress: MagicMock,
+        _mock_finalise: MagicMock,
+        _mock_ci: MagicMock,
+        _mock_apply_label: MagicMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A failed rebase is logged with its reason and never blocks the run."""
+        mock_process.return_value = TaskOutcome(False, "no_tasks")
+
+        with caplog.at_level(logging.DEBUG):
+            result = run_implement_workflow(Path("/project"), "claude")
+
+        assert result == 0
+        assert "Rebase result: dirty_tree" in caplog.text
+        mock_process.assert_called()
 
     @patch(_DELIBERATE_HANDLER)
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
@@ -408,7 +452,7 @@ class TestNoPostErrorProgressDisplay:
         mock_git_clean.return_value = True
         mock_main_branch.return_value = True
         mock_prereq.return_value = True
-        mock_rebase.return_value = True
+        mock_rebase.return_value = RebaseOutcome("ok")
         mock_prepare.return_value = True
         mock_process.return_value = TaskOutcome(False, "error")
 

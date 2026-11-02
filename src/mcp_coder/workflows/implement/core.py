@@ -13,6 +13,7 @@ from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import LLMTimeoutError
 from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailableError
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_full_status
+from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.utils.pyproject_config import get_implement_config
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
@@ -102,7 +103,8 @@ def run_implement_workflow(
         return 1
 
     # Step 1.5: Attempt rebase onto parent branch (never blocks workflow)
-    _attempt_rebase_and_push(project_dir)
+    rebase_outcome = _attempt_rebase_and_push(project_dir)
+    logger.log(OUTPUT, "Rebase result: %s", rebase_outcome.reason)
 
     # Mutable per-run task counter, plus a `fail` binding that carries the
     # shared per-run failure context so each deliberate failure site only

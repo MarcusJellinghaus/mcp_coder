@@ -67,9 +67,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 10: implement logs the rebase outcome reason (#430) — [step_10.md](./steps/step_10.md)
-- [ ] Implementation: tests + log rebase outcome reason
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + log rebase outcome reason
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 11: Documentation — [step_11.md](./steps/step_11.md)
 - [ ] Implementation: update docs listed in step
