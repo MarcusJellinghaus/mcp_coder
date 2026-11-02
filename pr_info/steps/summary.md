@@ -31,9 +31,10 @@ def _branch_refusal(project_dir: Path) -> tuple[bool, str] | None:
   `get_default_branch_name`.
 - No new class/dataclass — a plain optional tuple. Each caller formats its own
   message.
-- `_push_after_commit` keeps its existing early `branch is None` check and
-  message ("Cannot push: not on a branch") and replaces only the protected-set
-  computation with the helper ("Refusing to push to protected branch '<name>'").
+- `_push_after_commit` calls the helper once and picks its message from the
+  tuple: "Cannot push: not on a branch" or "Refusing to push to protected
+  branch '<name>'" (both existing messages kept). It then reads the branch name
+  for the push itself.
 
 ### Order of operations in `execute_commit_auto`
 

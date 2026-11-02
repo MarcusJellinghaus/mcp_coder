@@ -54,14 +54,22 @@ if refusal is not None:
 
 ### Push guard in `_push_after_commit`
 
-- Keep the existing `branch = get_current_branch_name(...)` / `if branch is None:`
-  block and its message "Cannot push: not on a branch" unchanged (exit 2).
-- Replace the `default` / `blocked` computation with:
+- Replace the leading `branch is None` check and the `default` / `blocked`
+  computation with a single `_branch_refusal` call; pick the message from the
+  tuple (both existing messages kept verbatim, exit 2):
   ```
-  if _branch_refusal(project_dir) is not None:
-      logger.error("Refusing to push to protected branch '%s'", branch)
+  refusal = _branch_refusal(project_dir)
+  if refusal is not None:
+      is_protected, name = refusal
+      if is_protected: logger.error("Refusing to push to protected branch '%s'", name)
+      else: logger.error("Cannot push: not on a branch")
+      return 2
+  branch = get_current_branch_name(project_dir)  # name needed for push_branch / log
+  if branch is None:  # defensive: HEAD changed since the check
+      logger.error("Cannot push: not on a branch")
       return 2
   ```
+- The rest (`has_remote_tracking_branch` / `push_branch` / `git_push`) is unchanged.
 
 ### Text updates
 
