@@ -30,7 +30,7 @@ COMMAND_DESCRIPTIONS: dict[str, str] = {
     "vscodeclaude launch": "Launch VSCode/Claude session for issues",
     "vscodeclaude status": "Show current VSCode/Claude sessions",
     "prompt": "Send prompt to configured LLM",
-    "commit auto": "Auto-generate commit message using LLM",
+    "commit": "Auto-generate commit message using LLM",
     "check branch-status": "Check branch readiness status and optionally apply fixes",
     "check file-size": "Check file sizes against maximum line count",
     "gh-tool checkout-issue-branch": "Checkout or create a branch linked to a GitHub issue",
@@ -66,7 +66,7 @@ COMMAND_CATEGORIES: list[tuple[str, list[str]]] = [
         "TOOLS",
         [
             "prompt",
-            "commit auto",
+            "commit",
             "check branch-status",
             "check file-size",
             "gh-tool checkout-issue-branch",

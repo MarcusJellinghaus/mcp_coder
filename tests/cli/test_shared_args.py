@@ -182,7 +182,7 @@ class TestLlmMethodMetavarIntegration:
         "path",
         [
             ("prompt",),
-            ("commit", "auto"),
+            ("commit",),
             ("implement",),
             ("create-plan",),
             ("create-pr",),

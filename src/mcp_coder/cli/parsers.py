@@ -113,29 +113,24 @@ def add_prompt_parser(subparsers: Any) -> None:
 
 
 def add_commit_parsers(subparsers: Any) -> None:
-    """Add commit command parsers (auto)."""
-    commit_parser = subparsers.add_parser("commit", help="Git commit operations")
-    commit_subparsers = commit_parser.add_subparsers(
-        dest="commit_mode", help="Available commit modes", metavar="MODE"
-    )
-
-    # commit auto command
-    auto_parser = commit_subparsers.add_parser(
-        "auto",
-        help=COMMAND_DESCRIPTIONS["commit auto"],
+    """Add the commit command parser."""
+    commit_parser = subparsers.add_parser(
+        "commit",
+        help=COMMAND_DESCRIPTIONS["commit"],
         formatter_class=WideHelpFormatter,
     )
-    auto_parser.add_argument(
+    commit_parser.add_argument(
         "--preview",
         action="store_true",
         help="Show generated message and ask for confirmation before committing",
     )
-    add_llm_method_arg(auto_parser)
-    add_project_dir_arg(auto_parser)
-    auto_parser.add_argument(
+    add_llm_method_arg(commit_parser)
+    add_project_dir_arg(commit_parser)
+    commit_parser.add_argument(
         "--push",
-        action="store_true",
-        help="Push to origin after successful commit",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Push to origin after commit; --no-push to skip",
     )
 
 

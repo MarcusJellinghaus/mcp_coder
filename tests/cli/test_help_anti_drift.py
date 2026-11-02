@@ -22,10 +22,10 @@ from mcp_coder.cli.command_catalog import (
 from mcp_coder.cli.commands.help import get_help_text
 from mcp_coder.cli.main import create_parser
 
-# The five parser tree nodes that only group subcommands (no direct action of
+# The four parser tree nodes that only group subcommands (no direct action of
 # their own) plus the suppressed synthetic ``help`` command. None of these are
 # leaves and none may appear in COMMAND_DESCRIPTIONS.
-GROUP_NAMES = frozenset({"commit", "check", "gh-tool", "git-tool", "vscodeclaude"})
+GROUP_NAMES = frozenset({"check", "gh-tool", "git-tool", "vscodeclaude"})
 SUPPRESSED_NAME = "help"
 
 _PROG_PREFIX = "mcp-coder "

@@ -16,7 +16,7 @@ from mcp_coder.cli.parsers import HelpHintArgumentParser
     "argv",
     [
         ["prompt", "hi", "--execution-dir", "/tmp/x"],
-        ["commit", "auto", "--execution-dir", "/tmp/x"],
+        ["commit", "--execution-dir", "/tmp/x"],
         ["implement", "--execution-dir", "/tmp/x"],
         ["review-plan", "--execution-dir", "/tmp/x"],
         ["review-implementation", "--execution-dir", "/tmp/x"],
@@ -261,21 +261,26 @@ class TestHelpHintArgumentParser:
 
 
 class TestCommitPushFlag:
-    """Tests for --push flag on commit auto."""
+    """Tests for --push/--no-push on commit."""
 
     def _parse(self, *args: str) -> argparse.Namespace:
         """Parse CLI args using the full parser."""
         parser = create_parser()
         return parser.parse_args(list(args))
 
-    def test_commit_auto_accepts_push_flag(self) -> None:
-        """commit auto --push sets args.push=True."""
-        args = self._parse("commit", "auto", "--push")
+    def test_commit_accepts_push_flag(self) -> None:
+        """commit --push sets args.push=True."""
+        args = self._parse("commit", "--push")
         assert args.push is True
 
-    def test_commit_auto_push_default_false(self) -> None:
-        """commit auto without --push defaults to False."""
-        args = self._parse("commit", "auto")
+    def test_commit_push_defaults_true(self) -> None:
+        """commit without a push flag defaults to True."""
+        args = self._parse("commit")
+        assert args.push is True
+
+    def test_commit_no_push_flag(self) -> None:
+        """commit --no-push sets args.push=False."""
+        args = self._parse("commit", "--no-push")
         assert args.push is False
 
 

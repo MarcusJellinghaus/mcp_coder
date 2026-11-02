@@ -55,7 +55,7 @@ def test_command_categories_contains_all_commands() -> None:
         "vscodeclaude launch",
         "vscodeclaude status",
         "prompt",
-        "commit auto",
+        "commit",
         "check branch-status",
         "check file-size",
         "gh-tool checkout-issue-branch",
@@ -76,7 +76,7 @@ def test_command_categories_contains_all_commands() -> None:
     tools_names = next(names for title, names in COMMAND_CATEGORIES if title == "TOOLS")
     assert tools_names == [
         "prompt",
-        "commit auto",
+        "commit",
         "check branch-status",
         "check file-size",
         "gh-tool checkout-issue-branch",

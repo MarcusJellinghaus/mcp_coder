@@ -396,8 +396,8 @@ class TestMcpConfigCLIParser:
         assert hasattr(args, "mcp_config")
         assert args.mcp_config == ".mcp.linux.json"
 
-    def test_commit_auto_parser_rejects_mcp_config(self) -> None:
-        """Verify commit auto command does NOT accept --mcp-config.
+    def test_commit_parser_rejects_mcp_config(self) -> None:
+        """Verify commit command does NOT accept --mcp-config.
 
         Commit message generation is text-in/text-out (diff → message),
         no MCP tool use is involved, so --mcp-config is not applicable.
@@ -405,7 +405,7 @@ class TestMcpConfigCLIParser:
         parser = create_parser()
 
         with pytest.raises(SystemExit):
-            parser.parse_args(["commit", "auto", "--mcp-config", ".mcp.linux.json"])
+            parser.parse_args(["commit", "--mcp-config", ".mcp.linux.json"])
 
     def test_mcp_config_is_optional(self) -> None:
         """Verify --mcp-config argument is optional (backward compatibility).
