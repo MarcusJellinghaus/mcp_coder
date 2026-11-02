@@ -31,9 +31,9 @@ See [step_1.md](./steps/step_1.md)
 ### Step 2: Tests that call the real probe
 See [step_2.md](./steps/step_2.md)
 
-- [ ] Implementation: new `tests/cli/commands/test_verify_github_security_probe.py` (code-scanning cases 200/403/404/error, repo-unresolvable case)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: new `tests/cli/commands/test_verify_github_security_probe.py` (code-scanning cases 200/403/404/error, repo-unresolvable case)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Documentation
 See [step_3.md](./steps/step_3.md)
