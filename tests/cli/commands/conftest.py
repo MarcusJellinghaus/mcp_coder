@@ -214,6 +214,11 @@ def _mock_verify_github_security() -> Generator[MagicMock, None, None]:
             "value": "enabled",
             "severity": "warning",
         },
+        "code_scanning_alerts": {
+            "ok": True,
+            "value": "scope present",
+            "severity": "warning",
+        },
     }
     with patch(
         "mcp_coder.cli.commands.verify_sections.verify_github_security",

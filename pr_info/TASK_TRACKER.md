@@ -24,9 +24,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ### Step 1: Row mapping helper and section wiring
 See [step_1.md](./steps/step_1.md)
 
-- [ ] Implementation: `_map_security_row` helper, remove `_derive_code_scanning_alerts`, wire `code_scanning_alerts` in `_print_github_security_section`, update tests and conftest default
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: `_map_security_row` helper, remove `_derive_code_scanning_alerts`, wire `code_scanning_alerts` in `_print_github_security_section`, update tests and conftest default
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: Tests that call the real probe
 See [step_2.md](./steps/step_2.md)

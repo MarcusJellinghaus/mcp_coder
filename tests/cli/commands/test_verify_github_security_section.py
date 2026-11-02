@@ -29,6 +29,7 @@ def _security_api_ok() -> dict[str, Any]:
         "dependabot_security_updates": dict(row),
         "secret_scanning": dict(row),
         "secret_scanning_push_protection": dict(row),
+        "code_scanning_alerts": dict(row),
     }
 
 
@@ -39,6 +40,7 @@ def _security_api_fail() -> dict[str, Any]:
         "dependabot_security_updates": dict(row),
         "secret_scanning": dict(row),
         "secret_scanning_push_protection": dict(row),
+        "code_scanning_alerts": dict(row),
     }
 
 
@@ -182,13 +184,18 @@ class TestGithubSecuritySection:
         _mock_log_mlflow: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """All four API-backed rows with ok=None/\"no token configured\" render as [WARN]."""
+        """All five API-backed rows with ok=None/\"no token configured\" render as [WARN].
+
+        Dependabot alerts, Dependabot security, Secret scanning, Secret push
+        protection, Code scanning alerts.
+        """
         row = {"ok": None, "value": "no token configured", "severity": "warning"}
         mock_security.return_value = {
             "dependabot_alerts": dict(row),
             "dependabot_security_updates": dict(row),
             "secret_scanning": dict(row),
             "secret_scanning_push_protection": dict(row),
+            "code_scanning_alerts": dict(row),
         }
         mock_provider.return_value = ("claude", "default")
         mock_claude.return_value = _claude_ok()
@@ -201,6 +208,6 @@ class TestGithubSecuritySection:
         no_token_rows = [
             line for line in output.splitlines() if "no token configured" in line
         ]
-        assert len(no_token_rows) == 4
+        assert len(no_token_rows) == 5
         assert all("[WARN]" in line for line in no_token_rows)
         assert result == 0
