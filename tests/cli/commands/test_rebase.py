@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from mcp_coder.cli.commands.rebase import _resolve_rebase_settings, execute_rebase
 from mcp_coder.cli.main import create_parser
+from mcp_coder.workflows.rebase import RebaseRunResult
 from mcp_coder.workflows.rebase_permissions import REBASE_LLM_PERMISSIONS
 
 
@@ -64,7 +65,10 @@ class TestExecuteRebase:
         args.base_branch = "main"
         return args
 
-    @patch("mcp_coder.workflows.rebase.run_rebase_workflow", return_value=2)
+    @patch(
+        "mcp_coder.workflows.rebase.run_rebase_workflow",
+        return_value=RebaseRunResult(2, "force-push rejected", push_rejected=True),
+    )
     @patch("mcp_coder.cli.commands.rebase._resolve_rebase_settings")
     @patch("mcp_coder.cli.commands.rebase.resolve_mcp_config_path")
     @patch("mcp_coder.cli.commands.rebase.parse_llm_method_from_args")

@@ -22,9 +22,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 ## Tasks
 
 ### Step 1: `run_rebase_workflow` returns a structured result — [step_1.md](./steps/step_1.md)
-- [ ] Implementation: tests + `RebaseRunResult` returned by `run_rebase_workflow`; CLI maps to exit code
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `RebaseRunResult` returned by `run_rebase_workflow`; CLI maps to exit code
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 2: pytest marker filter and explicit pytest timeout — [step_2.md](./steps/step_2.md)
 - [ ] Implementation: tests + `markers`/`timeout_seconds` threaded to the shim; prompt placeholder

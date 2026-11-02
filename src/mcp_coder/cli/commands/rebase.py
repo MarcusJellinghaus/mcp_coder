@@ -98,7 +98,7 @@ def execute_rebase(args: argparse.Namespace) -> int:
             args.base_branch,
             mcp_config,
             settings_file,
-        )
+        ).exit_code
 
     except ValueError as e:
         logger.error(f"Invalid project directory: {e}")

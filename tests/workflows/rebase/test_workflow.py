@@ -44,7 +44,7 @@ def test_preflight_error_returns_2_without_llm(
     """A failing pre-flight short-circuits to ``2`` and never calls the LLM."""
     monkeypatch.setattr(rebase_module, "_preflight", lambda _pd: "dirty tree")
 
-    assert _run(tmp_path) == 2
+    assert _run(tmp_path).exit_code == 2
     patched.prompt.assert_not_called()
 
 
@@ -63,7 +63,7 @@ def test_formatter_config_error_returns_2_without_llm(
         lambda _pd, warn_legacy_key=False: "No formatter declared: ...",
     )
 
-    assert _run(tmp_path) == 2
+    assert _run(tmp_path).exit_code == 2
     patched.prompt.assert_not_called()
     patched.formatters.assert_not_called()
 
@@ -82,7 +82,7 @@ def test_non_standard_base_without_arg_returns_2(
         ),
     )
 
-    assert _run(tmp_path) == 2
+    assert _run(tmp_path).exit_code == 2
     patched.prompt.assert_not_called()
 
 
@@ -98,7 +98,7 @@ def test_base_missing_on_origin_returns_2(
     pr_info_guard = MagicMock(return_value=None)
     monkeypatch.setattr(rebase_module, "_check_pr_info_absent_on_base", pr_info_guard)
 
-    assert _run(tmp_path) == 2
+    assert _run(tmp_path).exit_code == 2
     pr_info_guard.assert_not_called()
     patched.prompt.assert_not_called()
 
@@ -109,7 +109,7 @@ def test_no_op_when_not_needed_returns_0_without_checks(
     """``needs_rebase`` False (up-to-date) short-circuits to ``0`` before checks."""
     patched.needs.return_value = (False, "up-to-date")
 
-    assert _run(tmp_path) == 0
+    assert _run(tmp_path).exit_code == 0
     patched.all_checks.assert_not_called()
     patched.prompt.assert_not_called()
 
@@ -123,7 +123,7 @@ def test_needs_rebase_error_reason_returns_2(
         "error: target branch 'origin/main' not found",
     )
 
-    assert _run(tmp_path) == 2
+    assert _run(tmp_path).exit_code == 2
     patched.prompt.assert_not_called()
 
 
@@ -137,7 +137,7 @@ def test_pr_info_present_on_base_returns_2(
         lambda _pd, _b: "pr_info/ present on origin/main",
     )
 
-    assert _run(tmp_path) == 2
+    assert _run(tmp_path).exit_code == 2
     patched.rebase_start.assert_not_called()
 
 
@@ -160,7 +160,7 @@ def test_pr_info_listing_failure_returns_2(
         },
     )
 
-    assert _run(tmp_path) == 2
+    assert _run(tmp_path).exit_code == 2
     patched.rebase_start.assert_not_called()
     patched.all_checks.assert_not_called()
 
@@ -174,7 +174,7 @@ def test_baseline_check_run_error_returns_2_before_git(
     """A baseline infrastructure failure exits ``2`` with no git mutation."""
     patched.all_checks.side_effect = CheckRunError("pytest: failed to run")
 
-    assert _run(tmp_path) == 2
+    assert _run(tmp_path).exit_code == 2
     patched.rebase_start.assert_not_called()
     patched.prompt.assert_not_called()
 
@@ -185,7 +185,7 @@ def test_pre_existing_baseline_failures_do_not_block(
     """Identical failures before and after the rebase are not regressions."""
     patched.all_checks.side_effect = [set(_REGRESSION), set(_REGRESSION)]
 
-    assert _run(tmp_path) == 0
+    assert _run(tmp_path).exit_code == 0
     patched.prompt.assert_not_called()
     patched.push.assert_called_once()
 
@@ -197,7 +197,7 @@ def test_fast_path_clean_rebase_pushes_without_llm(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
     """Clean rebase + empty regression set → push, exit ``0``, zero LLM calls."""
-    assert _run(tmp_path) == 0
+    assert _run(tmp_path).exit_code == 0
     patched.rebase_start.assert_called_once_with(tmp_path, "origin/main")
     patched.push.assert_called_once()
     _args, kwargs = patched.push.call_args
@@ -216,7 +216,7 @@ def test_pr_info_only_conflict_auto_resolved_without_llm(
     _start_conflict_loop(patched)
     patched.blob_info.return_value = _blob_info("pr_info/TASK_TRACKER.md")
 
-    assert _run(tmp_path) == 0
+    assert _run(tmp_path).exit_code == 0
     patched.resolve_theirs.assert_called_once_with(tmp_path, "pr_info/TASK_TRACKER.md")
     patched.prompt.assert_not_called()
     patched.stage_all.assert_called_once_with(tmp_path)
@@ -231,7 +231,7 @@ def test_pr_info_resolution_failure_returns_1(
     patched.blob_info.return_value = _blob_info("pr_info/TASK_TRACKER.md")
     patched.resolve_theirs.return_value = _GIT_FAIL
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.push.assert_not_called()
     patched.abort.assert_called_once()
 
@@ -243,7 +243,7 @@ def test_mixed_conflict_calls_llm_with_non_pr_info_files(
     _start_conflict_loop(patched)
     patched.blob_info.return_value = _blob_info("pr_info/x.md", "src/a.py")
 
-    assert _run(tmp_path) == 0
+    assert _run(tmp_path).exit_code == 0
     patched.resolve_theirs.assert_called_once_with(tmp_path, "pr_info/x.md")
     patched.prompt.assert_called_once()
     assert patched.prompt.call_args.args[0] == "CONFLICT:src/a.py"
@@ -258,7 +258,7 @@ def test_markers_remaining_after_llm_returns_1(
     patched.blob_info.return_value = _blob_info("src/a.py")
     patched.has_markers.return_value = True
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.prompt.assert_called_once()
     patched.push.assert_not_called()
     patched.abort.assert_called_once()
@@ -273,7 +273,7 @@ def test_binary_conflict_returns_1_without_llm(
         "assets/img.png", binary=("assets/img.png",)
     )
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.prompt.assert_not_called()
     patched.abort.assert_called_once()
 
@@ -291,7 +291,7 @@ def test_conflict_blob_info_failure_returns_1(
         "entries": [],
     }
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.prompt.assert_not_called()
     patched.rebase_continue.assert_not_called()
     patched.abort.assert_called_once()
@@ -305,7 +305,7 @@ def test_same_file_three_stops_returns_1(
     patched.blob_info.return_value = _blob_info("src/a.py")
     patched.rebase_continue.return_value = _STOPPED  # every continue stops again
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     assert patched.prompt.call_count == 2  # the third stop aborts before the LLM
     patched.push.assert_not_called()
 
@@ -316,7 +316,7 @@ def test_rebase_error_status_returns_1(
     """A rebase ``error`` status (not left in progress) aborts with ``1``."""
     patched.rebase_start.return_value = _REBASE_ERROR
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.blob_info.assert_not_called()
     patched.prompt.assert_not_called()
     patched.push.assert_not_called()
@@ -329,7 +329,7 @@ def test_empty_commit_stop_skips_and_succeeds(
     _start_conflict_loop(patched)
     patched.has_staged.return_value = False
 
-    assert _run(tmp_path) == 0
+    assert _run(tmp_path).exit_code == 0
     patched.rebase_skip.assert_called_once_with(tmp_path)
     patched.prompt.assert_not_called()
     patched.push.assert_called_once()
@@ -342,7 +342,7 @@ def test_non_conflict_stop_with_staged_changes_returns_1(
     _start_conflict_loop(patched)
     patched.has_staged.return_value = True
 
-    assert _run(tmp_path) == 1
+    assert _run(tmp_path).exit_code == 1
     patched.rebase_skip.assert_not_called()
     patched.push.assert_not_called()
 
@@ -359,7 +359,7 @@ def test_session_id_threads_between_llm_calls(
     patched.rebase_continue.side_effect = [_STOPPED, _COMPLETED]
     patched.prompt.side_effect = [("r1", "sid-1"), ("r2", "sid-2")]
 
-    assert _run(tmp_path) == 0
+    assert _run(tmp_path).exit_code == 0
     assert patched.prompt.call_count == 2
     assert patched.prompt.call_args_list[0].args[1] is None
     assert patched.prompt.call_args_list[1].args[1] == "sid-1"
@@ -375,7 +375,7 @@ def test_output_logging_start_and_result(
 ) -> None:
     """A successful run logs the start and the pushed result at OUTPUT level."""
     with caplog.at_level(OUTPUT, logger="mcp_coder.workflows.rebase"):
-        assert _run(tmp_path) == 0
+        assert _run(tmp_path).exit_code == 0
 
     messages = [r.getMessage() for r in caplog.records if r.levelno == OUTPUT]
     assert any("Starting automated rebase" in m for m in messages)
@@ -388,7 +388,7 @@ def test_no_op_logs_nothing_to_do_at_output(
     """The up-to-date no-op logs its result at OUTPUT level (user-visible)."""
     patched.needs.return_value = (False, "up-to-date")
     with caplog.at_level(OUTPUT, logger="mcp_coder.workflows.rebase"):
-        assert _run(tmp_path) == 0
+        assert _run(tmp_path).exit_code == 0
 
     messages = [r.getMessage() for r in caplog.records if r.levelno == OUTPUT]
     assert any("nothing to do" in m for m in messages)
