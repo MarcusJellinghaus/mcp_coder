@@ -1,17 +1,23 @@
-"""Tests for the GITHUB SECURITY section's local-file checks.
+"""Tests for the GITHUB SECURITY section's local-file checks and row mapping.
 
 Split from the orchestration tests: these exercise the deterministic
-local-file checks directly, with no CLI wiring or mocked HTTP calls.
+local-file checks and the probe-row mapping directly, with no CLI wiring or
+mocked HTTP calls.
 """
 
 from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock
 
+import pytest
+
+from mcp_coder.cli.commands.verify_formatting import STATUS_SYMBOLS
 from mcp_coder.cli.commands.verify_sections import (
     _check_codeql_workflow,
     _check_dependabot_config,
-    _derive_code_scanning_alerts,
+    _map_security_row,
+    _print_github_security_section,
 )
-from mcp_coder.mcp_workspace_github import CheckResult
 
 
 def _write_dependabot(project_dir: Path, content: str) -> None:
@@ -282,27 +288,101 @@ class TestCheckCodeqlWorkflow:
         assert result["value"] == "found in b.yml"
 
 
-class TestDeriveCodeScanningAlerts:
-    """``_derive_code_scanning_alerts`` reflects the CodeQL row's ``ok`` only."""
+def _row(ok: bool | None, value: str, **extra: Any) -> dict[str, Any]:
+    return {"ok": ok, "value": value, "severity": "warning", **extra}
 
-    def test_codeql_present_yields_configured(self) -> None:
-        codeql_result = CheckResult(
-            ok=True, value="found in ci.yml", severity="warning"
-        )
 
-        result = _derive_code_scanning_alerts(codeql_result)
+class TestMapSecurityRow:
+    """``_map_security_row`` passes probe rows through, applying four rules."""
 
-        assert result["ok"] is None
-        assert "configured" in result["value"]
+    @pytest.mark.parametrize(
+        ("key", "row", "expected_ok", "expected_value"),
+        [
+            pytest.param(
+                "code_scanning_alerts",
+                _row(True, "scope present"),
+                True,
+                "scope present",
+                id="code-scanning-200",
+            ),
+            pytest.param(
+                "code_scanning_alerts",
+                _row(False, "scope missing or Advanced Security not enabled"),
+                False,
+                "scope missing or Advanced Security not enabled",
+                id="code-scanning-403",
+            ),
+            pytest.param(
+                "code_scanning_alerts",
+                _row(False, "scope missing or not configured"),
+                None,
+                "scope missing or not configured",
+                id="code-scanning-404",
+            ),
+            pytest.param(
+                "secret_scanning",
+                _row(False, "scope missing or not configured"),
+                False,
+                "scope missing or not configured",
+                id="404-demotion-is-code-scanning-only",
+            ),
+            pytest.param(
+                "code_scanning_alerts",
+                _row(None, "not accessible", error="network error: boom"),
+                None,
+                "not accessible (network error: boom)",
+                id="code-scanning-error",
+            ),
+            pytest.param(
+                "dependabot_alerts",
+                _row(None, "not checked", error="repository not accessible"),
+                None,
+                "not accessible (repository not accessible)",
+                id="repo-unresolvable",
+            ),
+            pytest.param(
+                "code_scanning_alerts",
+                None,
+                None,
+                "not accessible",
+                id="code-scanning-missing-key",
+            ),
+            pytest.param(
+                "code_scanning_alerts",
+                _row(False, "something reworded"),
+                False,
+                "something reworded",
+                id="code-scanning-unrecognised",
+            ),
+        ],
+    )
+    def test_mapping(
+        self,
+        key: str,
+        row: dict[str, Any] | None,
+        expected_ok: bool | None,
+        expected_value: str,
+    ) -> None:
+        result = _map_security_row(key, row)
 
-    def test_codeql_absent_yields_not_configured(self) -> None:
-        codeql_result = CheckResult(
-            ok=False,
-            value="no workflow step uses github/codeql-action",
-            severity="warning",
-        )
+        assert result["ok"] is expected_ok
+        assert result["value"] == expected_value
+        assert result["severity"] == "warning"
 
-        result = _derive_code_scanning_alerts(codeql_result)
 
-        assert result["ok"] is None
-        assert result["value"] == "not configured (no CodeQL workflow)"
+def test_section_missing_code_scanning_key_renders_warn(
+    tmp_path: Path,
+    _mock_verify_github_security: MagicMock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An older probe without ``code_scanning_alerts`` renders a WARN row."""
+    api = dict(_mock_verify_github_security.return_value)
+    del api["code_scanning_alerts"]
+    _mock_verify_github_security.return_value = api
+
+    _print_github_security_section(tmp_path, STATUS_SYMBOLS)
+    output = capsys.readouterr().out
+
+    line = next(line for line in output.splitlines() if "Code scanning alerts" in line)
+    assert "[WARN]" in line
+    assert "not accessible" in line

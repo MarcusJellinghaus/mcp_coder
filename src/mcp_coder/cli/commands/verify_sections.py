@@ -12,9 +12,10 @@ import logging
 import os
 import re
 import sys
+from collections.abc import Mapping
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import yaml
 
@@ -223,59 +224,71 @@ def _check_codeql_workflow(project_dir: Path) -> CheckResult:
     )
 
 
-def _derive_code_scanning_alerts(codeql_result: CheckResult) -> CheckResult:
-    """Derive the Code scanning alerts row from CodeQL presence only (no real counts).
+_NOT_ACCESSIBLE: dict[str, Any] = {
+    "ok": None,
+    "value": "not accessible",
+    "severity": "warning",
+}
+
+
+# Known false positive, accepted: the mcp-workspace probe returns normally on a
+# 3xx redirect, so it is reported like a 200 ("scope present").
+def _map_security_row(key: str, row: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Map one probe result to its GITHUB SECURITY row (pass-through + 4 rules).
+
+    Rules: a missing row becomes ``ok=None`` / ``"not accessible"``; an
+    ``ok=None`` ``"not checked"`` value reads ``"not accessible"``; the code
+    scanning 404 (``"scope missing or not configured"``) is demoted from
+    ``ok=False`` to ``ok=None``; an ``ok=None`` row with an ``error`` gets it
+    appended to the value. Anything else passes through unchanged.
 
     Args:
-        codeql_result: The ``_check_codeql_workflow`` result.
+        key: Probe result key (e.g. ``"code_scanning_alerts"``).
+        row: The probe's result for ``key``, or None if the key is absent.
 
     Returns:
-        A ``CheckResult``-shaped dict with ``ok=None`` always — it reflects
-        whether CodeQL is configured, never a verified alert count. Always
-        ``severity="warning"``.
+        A plain dict with ``ok``, ``value``, ``severity`` and optionally ``error``.
     """
-    # CheckResult.ok is typed as bool upstream, but this row is always
-    # unverified (ok=None) per the tri-state convention — cast past the
-    # mismatch rather than widening the shared upstream type.
-    if codeql_result["ok"] is True:
-        return cast(
-            CheckResult,
-            {
-                "ok": None,
-                "value": "configured (alert counts not checked)",
-                "severity": "warning",
-            },
-        )
-    return cast(
-        CheckResult,
-        {
-            "ok": None,
-            "value": "not configured (no CodeQL workflow)",
-            "severity": "warning",
-        },
-    )
+    entry = dict(row) if row is not None else dict(_NOT_ACCESSIBLE)
+    if entry["ok"] is None and entry["value"] == "not checked":
+        entry["value"] = "not accessible"
+    if (
+        key == "code_scanning_alerts"
+        and entry["ok"] is False
+        and entry["value"] == "scope missing or not configured"
+    ):
+        entry["ok"] = None
+    if entry["ok"] is None and entry.get("error"):
+        entry["value"] = f"{entry['value']} ({entry['error']})"
+    return entry
 
 
 def _print_github_security_section(project_dir: Path, symbols: dict[str, str]) -> None:
     """Merge local-file and API-backed security rows, print GITHUB SECURITY.
 
-    Calls `_check_codeql_workflow` once and reuses the result for both the
-    `codeql_workflow` row and the `_derive_code_scanning_alerts` input.
+    The five API-backed rows come from ``verify_github_security``, each
+    mapped through ``_map_security_row``.
     """
-    security_api_result = verify_github_security(project_dir)
-    codeql_result = _check_codeql_workflow(project_dir)
+    api = verify_github_security(project_dir)
     github_security_result: dict[str, Any] = {
         "dependabot_config": _check_dependabot_config(project_dir),
-        "dependabot_alerts": security_api_result["dependabot_alerts"],
-        "dependabot_security_updates": security_api_result[
-            "dependabot_security_updates"
-        ],
-        "secret_scanning": security_api_result["secret_scanning"],
-        "secret_scanning_push_protection": security_api_result[
-            "secret_scanning_push_protection"
-        ],
-        "codeql_workflow": codeql_result,
-        "code_scanning_alerts": _derive_code_scanning_alerts(codeql_result),
+        "dependabot_alerts": _map_security_row(
+            "dependabot_alerts", api.get("dependabot_alerts")
+        ),
+        "dependabot_security_updates": _map_security_row(
+            "dependabot_security_updates", api.get("dependabot_security_updates")
+        ),
+        "secret_scanning": _map_security_row(
+            "secret_scanning", api.get("secret_scanning")
+        ),
+        "secret_scanning_push_protection": _map_security_row(
+            "secret_scanning_push_protection",
+            api.get("secret_scanning_push_protection"),
+        ),
+        "codeql_workflow": _check_codeql_workflow(project_dir),
+        "code_scanning_alerts": _map_security_row(
+            "code_scanning_alerts", api.get("code_scanning_alerts")
+        ),
     }
     print(_format_section("GITHUB SECURITY", github_security_result, symbols))
 

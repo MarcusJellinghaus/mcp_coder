@@ -180,6 +180,10 @@ _._mock_verify_git
 # cli/commands/conftest.py - Autouse fixture to mock verify_github_security
 _._mock_verify_github_security
 
+# test_verify_github_security_probe.py - Set to None on a mock repo so the real
+# upstream verify_github_security probe reads it as absent
+_.security_and_analysis
+
 # test_verify_orchestration.py - Autouse fixture to mock verify_github per class
 _._mock_github
 

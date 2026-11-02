@@ -122,8 +122,9 @@ See [`pyproject.toml`](../../pyproject.toml) `[tool.pytest.ini_options]`.
 ## Repo settings
 
 `mcp-coder verify` reports the GITHUB SECURITY section (#1179, #1180), including the
-Dependabot rows; see [`github.md`](github.md#repo-security-configuration-checks). Branch
-rulesets (#1294) set the required status checks.
+Dependabot rows and the code-scanning alerts row; see
+[`github.md`](github.md#repo-security-configuration-checks). Branch rulesets (#1294) set
+the required status checks.
 
 **Job-name rule:** required status checks must match CI job names. Matrix entries report
 under their `name`. A renamed or removed job blocks every PR until the ruleset is updated.
