@@ -328,7 +328,8 @@ def _route_to_human(
 
     A rebase hand-off passes only ``rebase``; its reason selects Category,
     Reason and Next step from ``_REBASE_HANDOFF``, and the outcome adds the
-    Base line and the files involved.
+    Base line, the ``LLM rebase`` line (when the LLM fallback left a
+    ``llm_detail``) and the files involved.
 
     The flush is scoped to ``log_path``. The unresolved-rebase handoff is
     reached *because* the working tree was dirty, so committing the whole tree
@@ -365,6 +366,7 @@ def _route_to_human(
         ("Reason", reason),
         ("Base", _base_value(rebase)),
         ("Next step", next_step),
+        ("LLM rebase", rebase.llm_detail if rebase is not None else None),
     ]
     if rebase is not None and rebase.files:
         files_label = (

@@ -47,9 +47,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 6: Review uses the LLM fallback; hand-off shows the LLM reason — [step_6.md](./steps/step_6.md)
-- [ ] Implementation: tests + review wiring and `LLM rebase` field in hand-off comment
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + review wiring and `LLM rebase` field in hand-off comment
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 7: fix-conflict runs the LLM fallback — [step_7.md](./steps/step_7.md)
 - [ ] Implementation: tests + CLI args, workflow wiring, comment field, Jenkins templates

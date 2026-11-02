@@ -3,7 +3,7 @@
 These deterministic tests drive :func:`run_review_workflow` against
 ``REVIEW_IMPLEMENTATION`` (``run_after_steps=True``), so the ``_after_steps``
 hook exercises the real rebase gate and CI gate. The LLM (``prompt_llm``), the
-rebase step (``_attempt_rebase_and_push``), the CI step (``check_and_fix_ci``)
+rebase step (``rebase_with_llm_fallback``), the CI step (``check_and_fix_ci``)
 and base-branch detection (``detect_base_branch``) are all mocked.
 
 Call order per round mirrors Step 7:
@@ -85,7 +85,7 @@ def test_dismiss_rebase_clean_ci_green_succeeds(
     result = _run(tmp_path)
 
     assert result == 0
-    env.attempt_rebase_and_push.assert_called_once_with(tmp_path)
+    env.attempt_rebase_and_push.assert_called_once_with(tmp_path, "claude", None)
     env.check_and_fix_ci.assert_called_once()
     # CI reuses implement's headers, overriding only the session dir name.
     assert (
@@ -128,10 +128,10 @@ def test_dismiss_rebase_conflict_routes_to_needs_human(
     assert "rebase" in log
 
 
-def test_rebase_slot_references_issue_1266() -> None:
-    """The needs-human rebase slot points at the #1266 follow-up, not #1066."""
+def test_rebase_slot_has_no_stale_follow_up_markers() -> None:
+    """The rebase gate carries no #1066 / #1266 follow-up placeholders."""
     source = inspect.getsource(steps._after_steps)
-    assert "#1266" in source
+    assert "#1266" not in source
     assert "#1066" not in source
     assert "NotYetImplemented" not in source
 
@@ -643,7 +643,7 @@ def test_tasks_round_flushes_log_before_next_round_rebase(
     """
     at_rebase: list[tuple[int, int]] = []
 
-    def _rebase(_project_dir: Path) -> RebaseOutcome:
+    def _rebase(_project_dir: Path, *_args: object) -> RebaseOutcome:
         at_rebase.append((env.commit_paths.call_count, env.flush_push.call_count))
         return RebaseOutcome("ok", "main", "abc1234")
 
