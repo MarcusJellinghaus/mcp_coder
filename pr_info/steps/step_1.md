@@ -14,6 +14,8 @@
 - Tests: `tests/workflows/rebase/test_workflow.py`, `test_workflow_regression.py`,
   `test_workflow_safety_net.py`, `test_guards.py` (wherever the return value is
   asserted), `tests/cli/commands/test_rebase.py`
+- `tests/workflows/rebase/conftest.py` — wraps `run_rebase_workflow` (line 23) and
+  calls it (line 246); update for the `RebaseRunResult` return type
 
 ## WHAT
 

@@ -70,9 +70,9 @@ try:
         result = run_rebase_workflow(project_dir, provider, outcome.base_branch, mcp_config,
                                      settings, markers=AUTOMATED_EXCLUDED_MARKERS)
 except Exception as exc: return replace(outcome, llm_detail=f"LLM rebase crashed: {exception_summary(exc)}")
-if result.push_rejected: return replace(outcome, reason="push_failed", llm_detail=result.reason)
+if result.push_rejected: return replace(outcome, reason="push_failed", files=(), llm_detail=result.reason)
 if result.exit_code != 0: return replace(outcome, llm_detail=result.reason)
-if not push_changes(project_dir): return replace(outcome, reason="push_failed", llm_detail="LLM rebase succeeded, but the plain push was rejected")
+if not push_changes(project_dir): return replace(outcome, reason="push_failed", files=(), llm_detail="LLM rebase succeeded, but the plain push was rejected")
 return replace(outcome, reason="ok", llm_detail=result.reason)
 ```
 
@@ -91,6 +91,8 @@ Returns `RebaseOutcome`; `reason` is the git-only reason, `"ok"` or `"push_faile
   - LLM exit 0 + push ok → `ok`, `push_changes` called without `force_with_lease`.
   - LLM exit 0 + push rejected → `push_failed`.
   - `push_rejected=True` → `push_failed`, `llm_detail` = result reason.
+  - Both `push_failed` paths (from a git-only `conflict` outcome with files) → `files == ()`,
+    so hand-off comments don't list the conflict files as "Uncommitted files".
   - exit 1 / non-push exit 2 → git-only reason kept, `llm_detail` set.
   - `run_rebase_workflow` raises → git-only reason kept, `llm_detail` names the error.
   - guard problem → LLM not called, `llm_detail` set; `git_check_ignore` raising → same.

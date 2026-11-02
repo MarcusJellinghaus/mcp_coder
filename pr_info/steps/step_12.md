@@ -75,3 +75,5 @@ adding `.gitattributes` (`*.md text`); commit `.gitattributes`; rewrite / touch
   exists, tree clean, origin has the commit.
 - Same plus a real content change in `doc.md` → `dirty_tree`, nothing staged, no new commit.
 - A deleted tracked file → `dirty_tree`.
+- Stat-only dirt: touch an already-normalized `.md` file without changing its content
+  or line endings, so renormalizing stages nothing → `ok`, no new commit.
