@@ -40,7 +40,7 @@ def regenerate_session_files(session, issue) -> Path   # signature unchanged
 
 ## HOW
 
-- `from ...workflow_utils.issue_trust import evaluate_body_trust`; `BodyTrustStatus` via `...mcp_workspace_github`.
+- `from ...workflow_utils.issue_trust import evaluate_body_trust`; `BodyTrust` via `...mcp_workspace_github`.
 - `prepare_and_launch_session`: compute trust **before** `create_working_folder(folder_path)`.
   Pass `issue_title=display_title` to `create_workspace_file`, `create_startup_script` and `create_status_file`,
   and `untrusted_body=untrusted` to the latter two. Log untrusted launches at INFO
@@ -60,7 +60,7 @@ def regenerate_session_files(session, issue) -> Path   # signature unchanged
 
 ```
 result = evaluate_body_trust(issue_manager, issue)        # may raise GitHubRateLimitError
-untrusted = result.status is not BodyTrustStatus.TRUSTED
+untrusted = result.status is not BodyTrust.TRUSTED
 display_title = "" if untrusted else issue["title"]
 ...existing steps, passing display_title / untrusted_body...
 ```

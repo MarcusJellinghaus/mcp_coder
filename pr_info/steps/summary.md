@@ -17,14 +17,15 @@ The rule is implemented upstream (mcp-workspace #369). mcp_coder only consumes i
 | `vscodeclaude status` | Mark the "Create and start" row |
 | `create-plan` | Warn, keep running |
 
-## Upstream names (placeholders)
+## Upstream names (verified)
 
-The plan uses these names for the mcp-workspace #369 API. **Step 1 checks the real names.** If they differ, use the real names everywhere in later steps.
+mcp-workspace #369, merged as commit 359eea5. Verified against the source and the project `.venv`:
 
-- `IssueManager.get_body_trust(issue: IssueData) -> BodyTrustResult`
-- `BodyTrustStatus` enum: `TRUSTED`, `UNTRUSTED`, `LOOKUP_FAILED`
-- `BodyTrustResult` with `.status: BodyTrustStatus` and `.reason: str`; constructible as
+- `IssueManager.check_body_trust(issue: IssueData) -> BodyTrustResult`
+- `BodyTrust` enum: `TRUSTED`, `UNTRUSTED`, `LOOKUP_FAILED`
+- `BodyTrustResult` (NamedTuple) with `.status: BodyTrust` and `.reason: str`; constructible as
   `BodyTrustResult(status=..., reason=...)`
+- All three are re-exported from `mcp_workspace.github_operations.issues`.
 
 ## Architectural / design changes
 
@@ -33,7 +34,7 @@ The plan uses these names for the mcp-workspace #369 API. **Step 1 checks the re
    only `GitHubRateLimitError` (via `raise_if_rate_limited`). Any other exception becomes
    `LOOKUP_FAILED` with the exception **type name** as reason (no raw text in logs).
    It lives in `workflow_utils` because `cli` and `workflows` both use it, and `workflows` must not import `cli`.
-2. **Fail closed, compare by identity.** Callers test `result.status is BodyTrustStatus.TRUSTED`.
+2. **Fail closed, compare by identity.** Callers test `result.status is BodyTrust.TRUSTED`.
    A `MagicMock` result counts as not trusted, so a test that forgets the mock fails loudly.
 3. **No caching** of trust results anywhere. Every launch, restart and dispatch does a fresh lookup.
 4. **Coordinator gate**: one check per issue inside the dispatch loop of `execute_coordinator_run`,

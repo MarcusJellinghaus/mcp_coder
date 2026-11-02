@@ -8,25 +8,31 @@
 
 ## Precondition
 
-Using `mcp__mcp-tools-py__search_library_files` (scope `mcp_workspace`) / `get_library_source`, check that the
-installed `mcp_workspace` has the public body-trust API from mcp-workspace #369: an `IssueManager`
-method that takes an `IssueData`, a status enum with trusted / untrusted / lookup-failed members,
-and a constructible result type with status and reason.
+Check the project venv (`.venv`, not the Jenkins env, which the MCP search tools read) for the body-trust API
+from mcp-workspace #369:
 
-- If it is missing: write one line to `pr_info/.blocked.txt`
+```
+Select-String -Path ".venv\Lib\site-packages\mcp_workspace\github_operations\issues\body_trust.py" -Pattern "class BodyTrust\(|class BodyTrustResult\(|def check_body_trust\("
+```
+
+All three patterns must match.
+
+- If any is missing: write one line to `pr_info/.blocked.txt`
   (`mcp-workspace #369 body-trust API not installed`) and stop.
-- If the real names differ from the placeholders in `summary.md`, use the real names in this step and in all later steps.
+- Real names (verified against mcp-workspace commit 359eea5): `IssueManager.check_body_trust(issue) -> BodyTrustResult`;
+  enum `BodyTrust`; `BodyTrustResult`. Use these names in this step and in all later steps.
 
 ## WHERE
 
-- `src/mcp_coder/mcp_workspace_github.py` — re-export `BodyTrustStatus`, `BodyTrustResult`
+- `src/mcp_coder/mcp_workspace_github.py` — re-export `BodyTrust`, `BodyTrustResult`
 - `tests/test_mcp_workspace_github_exports.py` — export test
 - `vulture_whitelist.py` — entries for whatever vulture flags (e.g. enum members, result fields)
 - `pyproject.toml` — minimum `mcp-workspace` version, **only if released**. First check whether the installed
   version, the one that has the body-trust API, is published on PyPI.
   - If it is released: set `"mcp-workspace>=<that version>"` in `dependencies`.
   - If it is not (for example, a git-HEAD build): leave `"mcp-workspace"` unpinned. The existing git override at
-    `pyproject.toml:411` supplies the API until the release.
+    `pyproject.toml:411` supplies the API until the release. The installed build is git HEAD
+    (`0.1.14.dev41+g359eea5c7`); PyPI's latest is 0.1.13, so leave it unpinned.
 - `src/mcp_coder/workflow_utils/issue_trust.py` — **new**
 - `tests/workflow_utils/test_issue_trust.py` — **new**
 
@@ -46,7 +52,7 @@ def evaluate_body_trust(issue_manager: IssueManager, issue: IssueData) -> BodyTr
 
 ## HOW
 
-- Import `BodyTrustResult`, `BodyTrustStatus`, `IssueData`, `IssueManager` from `mcp_coder.mcp_workspace_github`.
+- Import `BodyTrustResult`, `BodyTrust`, `IssueData`, `IssueManager` from `mcp_coder.mcp_workspace_github`.
 - Import `raise_if_rate_limited` from `mcp_coder.workflow_utils.rate_limit`.
 - The helper does not log; callers log.
 
@@ -54,10 +60,10 @@ def evaluate_body_trust(issue_manager: IssueManager, issue: IssueData) -> BodyTr
 
 ```
 try:
-    return issue_manager.get_body_trust(issue)
+    return issue_manager.check_body_trust(issue)
 except Exception as exc:  # broad on purpose: fail closed
     raise_if_rate_limited(exc)
-    return BodyTrustResult(status=BodyTrustStatus.LOOKUP_FAILED, reason=type(exc).__name__)
+    return BodyTrustResult(status=BodyTrust.LOOKUP_FAILED, reason=type(exc).__name__)
 ```
 
 ## DATA
@@ -75,4 +81,4 @@ Use `MagicMock(spec=IssueManager)`.
 - `GitHubRateLimitError` → re-raised.
 - A raw rate-limit exception that `to_rate_limit_error` recognises (build it the way `tests/workflow_utils/test_rate_limit.py` does) → `GitHubRateLimitError`.
 
-Export test: parametrize `["BodyTrustStatus", "BodyTrustResult"]`; assert each is an attribute of the shim and listed in `__all__`.
+Export test: parametrize `["BodyTrust", "BodyTrustResult"]`; assert each is an attribute of the shim and listed in `__all__`.

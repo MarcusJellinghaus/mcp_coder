@@ -24,7 +24,7 @@ No new public function. Inside `execute_coordinator_run`, per repo:
 ## HOW
 
 - `from ....workflow_utils.issue_trust import evaluate_body_trust`
-- `BodyTrustStatus` / `BodyTrustResult` come from the existing `....mcp_workspace_github` import.
+- `BodyTrust` / `BodyTrustResult` come from the existing `....mcp_workspace_github` import.
 - The gate sits **outside** the dispatch `try`. A `GitHubRateLimitError` from it leaves the loop, the `finally` logs
   the summary, and the existing outer `except GitHubRateLimitError` logs the stop and returns 0.
   Issues already dispatched stay dispatched.
@@ -38,7 +38,7 @@ try:
     for issue in eligible_issues:
         ...label check (unchanged)...
         result = evaluate_body_trust(issue_manager, issue)
-        if result.status is not BodyTrustStatus.TRUSTED:
+        if result.status is not BodyTrust.TRUSTED:
             logger.debug("Issue #%d skipped: body %s (%s)", n, result.status.value, result.reason)
             skipped.append((n, result)); continue
         ...dispatch (unchanged)...
@@ -56,7 +56,7 @@ INFO line example:
 ## conftest.py
 
 An autouse fixture patches `mcp_coder.cli.commands.coordinator.commands.evaluate_body_trust` to return
-`BodyTrustResult(status=BodyTrustStatus.TRUSTED, reason="")`. It keeps the existing tests that patch
+`BodyTrustResult(status=BodyTrust.TRUSTED, reason="")`. It keeps the existing tests that patch
 `commands.IssueManager` green. New tests override it with their own `patch`.
 
 ## Tests (`test_commands_trust_gate.py`)

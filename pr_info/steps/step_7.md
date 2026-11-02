@@ -21,7 +21,7 @@ No signature change. A new block in `check_prerequisites`, after the existing fe
 ## HOW
 
 - `from mcp_coder.workflow_utils.issue_trust import evaluate_body_trust`
-- Add `BodyTrustStatus` and `GitHubRateLimitError` to the existing `mcp_coder.mcp_workspace_github` import.
+- Add `BodyTrust` and `GitHubRateLimitError` to the existing `mcp_coder.mcp_workspace_github` import.
 - Reuse the `issue_manager` and `issue_data` from the fetch block.
 
 ## ALGORITHM
@@ -29,9 +29,9 @@ No signature change. A new block in `check_prerequisites`, after the existing fe
 ```
 try:
     trust = evaluate_body_trust(issue_manager, issue_data)
-    if trust.status is BodyTrustStatus.UNTRUSTED:
+    if trust.status is BodyTrust.UNTRUSTED:
         logger.warning("⚠ Issue #%d body is untrusted (%s) — continuing; plan input is not vetted", n, trust.reason)
-    elif trust.status is BodyTrustStatus.LOOKUP_FAILED:
+    elif trust.status is BodyTrust.LOOKUP_FAILED:
         logger.warning("⚠ Could not verify body trust for issue #%d (%s) — continuing", n, trust.reason)
 except GitHubRateLimitError:
     logger.warning("⚠ GitHub rate limit while checking body trust for issue #%d — continuing", n)

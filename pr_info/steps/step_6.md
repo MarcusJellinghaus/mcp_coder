@@ -38,7 +38,7 @@ def display_status_table(..., issues_without_branch=None,
 
 ## HOW
 
-- `issues.py` imports `IssueManager`, `BodyTrustStatus` (shim) and `evaluate_body_trust` (`...workflow_utils.issue_trust`).
+- `issues.py` imports `IssueManager`, `BodyTrust` (shim) and `evaluate_body_trust` (`...workflow_utils.issue_trust`).
   It builds one `IssueManager` per repo, lazily, only when a row needs a lookup.
 - Command: inside the existing `try`, after the `--explain` return and after
   `build_eligible_issues_with_branch_check`, call
@@ -60,7 +60,7 @@ for repo, issue in eligible_issues:
     if repo_filter and repo.split("/")[-1] != repo_filter: continue
     if not is_status_eligible_for_session(get_issue_status(issue)): continue
     if repo not in managers: managers[repo] = IssueManager(repo_url=f"https://github.com/{repo}")
-    if evaluate_body_trust(managers[repo], issue).status is not BodyTrustStatus.TRUSTED: keys.add(key)
+    if evaluate_body_trust(managers[repo], issue).status is not BodyTrust.TRUSTED: keys.add(key)
 return keys
 ```
 
