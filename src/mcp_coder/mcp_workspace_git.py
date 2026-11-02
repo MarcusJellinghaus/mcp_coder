@@ -65,7 +65,7 @@ from mcp_workspace.git_operations.parent_branch_detection import (
 )
 
 # Read operations
-from mcp_workspace.git_operations.read_operations import git_diff
+from mcp_workspace.git_operations.read_operations import git_check_ignore, git_diff
 
 # Rebase
 from mcp_workspace.git_operations.rebase import (
@@ -147,6 +147,7 @@ __all__ = [
     "verify_git",
     "get_remote_branch_commit_sha",
     "git_diff",
+    "git_check_ignore",
     "probe_origin_branch",
     "list_remote_branches",
     "commit_paths",

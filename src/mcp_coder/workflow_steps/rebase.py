@@ -54,12 +54,15 @@ class RebaseOutcome:
         base_sha: Short SHA of ``origin/<base_branch>`` after the attempt.
         files: Uncommitted files (``dirty_tree``) or likely conflicting
             files (``conflict``); empty otherwise.
+        llm_detail: What the LLM rebase fallback did, or why it was skipped;
+            None when it did not run.
     """
 
     reason: RebaseReason
     base_branch: str | None = None
     base_sha: str | None = None
     files: tuple[str, ...] = ()
+    llm_detail: str | None = None
 
     @property
     def ok(self) -> bool:

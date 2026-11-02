@@ -42,9 +42,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 5: Shared helper `rebase_with_llm_fallback` — [step_5.md](./steps/step_5.md)
-- [ ] Implementation: tests + `rebase_with_llm_fallback`, `llm_detail`, `git_check_ignore` re-export
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `rebase_with_llm_fallback`, `llm_detail`, `git_check_ignore` re-export
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Review uses the LLM fallback; hand-off shows the LLM reason — [step_6.md](./steps/step_6.md)
 - [ ] Implementation: tests + review wiring and `LLM rebase` field in hand-off comment
