@@ -8,6 +8,7 @@ from typing import cast
 
 from ...mcp_workspace_git import get_current_branch_name
 from ...mcp_workspace_github import (
+    BodyTrust,
     BranchLookupCache,
     IssueBranchManager,
     IssueData,
@@ -22,6 +23,7 @@ from ...utils.pyproject_config import (
 )
 from ...utils.subprocess_runner import launch_process
 from ...utils.user_config import get_cache_refresh_minutes
+from ...workflow_utils.issue_trust import evaluate_body_trust
 from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import (
     get_github_username,
@@ -179,12 +181,33 @@ def launch_vscode(
         return launch_process(["code", *(str(path) for path in paths)])
 
 
+def _is_untrusted_body(issue_manager: IssueManager, issue: IssueData) -> bool:
+    """Look up body trust for issue; anything but TRUSTED counts as untrusted.
+
+    Returns:
+        True if the session must run in review-only mode.
+
+    Raises:
+        GitHubRateLimitError: If the lookup hit a GitHub rate limit.
+    """  # noqa: DOC502 - raised inside evaluate_body_trust
+    result = evaluate_body_trust(issue_manager, issue)
+    untrusted = result.status is not BodyTrust.TRUSTED
+    if untrusted:
+        logger.info(
+            "Issue #%d: untrusted body (%s) — review-only session",
+            issue["number"],
+            result.reason,
+        )
+    return untrusted
+
+
 def prepare_and_launch_session(
     issue: IssueData,
     repo_config: dict[str, str],
     vscodeclaude_config: VSCodeClaudeConfig,
     repo_vscodeclaude_config: RepoVSCodeClaudeConfig,
     branch_name: str | None,
+    issue_manager: IssueManager,
     is_intervention: bool = False,
     skip_github_install: bool = False,
 ) -> VSCodeClaudeSession:
@@ -196,6 +219,7 @@ def prepare_and_launch_session(
         vscodeclaude_config: VSCodeClaude config (workspace_base, etc.)
         repo_vscodeclaude_config: Per-repo setup commands
         branch_name: Branch to checkout (None = main)
+        issue_manager: Manager for the issue's repo, used for the body-trust lookup
         is_intervention: If True, intervention mode
         skip_github_install: If True, skip installing packages from GitHub
 
@@ -203,6 +227,7 @@ def prepare_and_launch_session(
         Created session data
 
     Steps:
+    0. Look up body trust (an untrusted body gets a review-only session)
     1. Create working folder
     2. Setup git repo
     3. Validate the target-repo contract
@@ -222,9 +247,12 @@ def prepare_and_launch_session(
     repo_short_name = get_repo_short_name(repo_config)
     repo_full_name = get_repo_full_name(repo_config)
     issue_number = issue["number"]
-    issue_title = issue["title"]
     issue_url = issue.get("url", "")
     status = get_issue_status(issue)
+
+    # Trust before any side effect: a rate limit here leaves no folder behind
+    untrusted = _is_untrusted_body(issue_manager, issue)
+    display_title = "" if untrusted else issue["title"]
 
     # Build folder path
     folder_path = get_working_folder_path(workspace_base, repo_short_name, issue_number)
@@ -262,7 +290,7 @@ def prepare_and_launch_session(
             workspace_base=workspace_base,
             folder_name=folder_name,
             issue_number=issue_number,
-            issue_title=issue_title,
+            issue_title=display_title,
             status=status,
             repo_name=repo_short_name,
         )
@@ -271,7 +299,7 @@ def prepare_and_launch_session(
         script_path = create_startup_script(
             folder_path=folder_path,
             issue_number=issue_number,
-            issue_title=issue_title,
+            issue_title=display_title,
             status=status,
             repo_name=repo_short_name,
             issue_url=issue_url,
@@ -279,6 +307,7 @@ def prepare_and_launch_session(
             timeout=DEFAULT_PROMPT_TIMEOUT,
             session_folder_path=folder_path,
             skip_github_install=skip_github_install,
+            untrusted_body=untrusted,
         )
 
         # Create VSCode task
@@ -288,12 +317,13 @@ def prepare_and_launch_session(
         create_status_file(
             folder_path=folder_path,
             issue_number=issue_number,
-            issue_title=issue_title,
+            issue_title=display_title,
             status=status,
             repo_full_name=repo_full_name,
             branch_name=branch_name or "main",
             issue_url=issue_url,
             is_intervention=is_intervention,
+            untrusted_body=untrusted,
         )
 
         # Launch VSCode (MCP environment variables are now set directly in startup script)
@@ -458,6 +488,7 @@ def process_eligible_issues(
                     vscodeclaude_config=vscodeclaude_config,
                     repo_vscodeclaude_config=repo_vscodeclaude_config,
                     branch_name=branch_name,
+                    issue_manager=issue_manager,
                     is_intervention=False,
                     skip_github_install=skip_github_install,
                 )
@@ -494,12 +525,18 @@ def regenerate_session_files(
     - VSCode task (.vscode/tasks.json)
     - Status file (.vscodeclaude_status.txt)
     - Workspace file (.code-workspace)
+
+    Body trust is looked up afresh on every call, before the first write, so a
+    rate limit leaves the existing files untouched.
     """
+    issue_manager = IssueManager(repo_url=f"https://github.com/{session['repo']}")
+    untrusted = _is_untrusted_body(issue_manager, issue)
+    display_title = "" if untrusted else issue["title"]
+
     folder_path = Path(session["folder"])
     repo_full_name = session["repo"]
     repo_short_name = get_repo_short_name_from_full(repo_full_name)
     issue_number = issue["number"]
-    issue_title = issue["title"]
     issue_url = issue.get("url", "")
     status = get_issue_status(issue)
     is_intervention = session.get("is_intervention", False)
@@ -511,13 +548,14 @@ def regenerate_session_files(
     script_path = create_startup_script(
         folder_path=folder_path,
         issue_number=issue_number,
-        issue_title=issue_title,
+        issue_title=display_title,
         status=status,
         repo_name=repo_short_name,
         issue_url=issue_url,
         is_intervention=is_intervention,
         timeout=DEFAULT_PROMPT_TIMEOUT,
         session_folder_path=folder_path,
+        untrusted_body=untrusted,
     )
 
     # Regenerate VSCode task
@@ -527,12 +565,13 @@ def regenerate_session_files(
     create_status_file(
         folder_path=folder_path,
         issue_number=issue_number,
-        issue_title=issue_title,
+        issue_title=display_title,
         status=status,
         repo_full_name=repo_full_name,
         branch_name=branch_name,
         issue_url=issue_url,
         is_intervention=is_intervention,
+        untrusted_body=untrusted,
     )
 
     # Regenerate workspace file
@@ -542,7 +581,7 @@ def regenerate_session_files(
         workspace_base=str(workspace_base),
         folder_name=folder_name,
         issue_number=issue_number,
-        issue_title=issue_title,
+        issue_title=display_title,
         status=status,
         repo_name=repo_short_name,
     )

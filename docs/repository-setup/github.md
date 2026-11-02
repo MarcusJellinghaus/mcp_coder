@@ -248,6 +248,7 @@ The section is honoured only when the issue body is trusted:
 - **Ref-name rule**: the value must be a valid git ref name ([`git check-ref-format`](https://git-scm.com/docs/git-check-ref-format)): no spaces or control characters; no `..`, `~`, `^`, `:`, `?`, `*`, `[`, `\`, `@{` or `//`; no leading `-` or `.`; no trailing `.`, `/` or `.lock`.
 - **Malformed** (multiple lines or an invalid ref name) in a trusted issue: mcp_coder commands ignore it silently, as if it were untrusted. Only mcp-workspace tools report it: the `check_branch_status` MALFORMED line / Review Gate, and `get_base_branch`.
 - **Workflows**: GitHub Actions that change labels apply the same trusted set; see [Label-Changing Workflows Must Gate on Author Trust](#label-changing-workflows-must-gate-on-author-trust).
+- **Whole body**: the same rule decides whether automated workflows run on the issue at all; see [Issue body trust](#issue-body-trust).
 
 **Fallback** when there is no usable section (missing, empty, untrusted or malformed):
 
@@ -310,6 +311,53 @@ Add new feature to main branch
 - Feature works
 - Tests pass
 ```
+
+## Issue body trust
+
+An issue body is LLM input with tool access. mcp-coder feeds it to an LLM only when the body is trusted.
+
+### Rule
+
+The body is trusted when the author is trusted (`OWNER`, `MEMBER`, `COLLABORATOR`, or listed in `[github] trusted_commenters`), **or** the last body editor is the token user or listed in `trusted_commenters`. Editor trust has no role check. Full rule: mcp-workspace README, [Commenter trust](https://github.com/MarcusJellinghaus/mcp-workspace#commenter-trust).
+
+A failed trust lookup is handled like an untrusted body.
+
+### Behaviour
+
+| Consumer | Untrusted body |
+|---|---|
+| `coordinator run` | Skips the issue for every workflow, including `fix-conflict` and `fix-ci`. One INFO summary per repo; no comment, no label change. |
+| `vscodeclaude launch` / restart | Opens a review-only session: a fixed prompt that tells Claude not to read the issue; banner and status file without title and `Branch:` line. |
+| `vscodeclaude status` | Marks the "Create and start" row `(untrusted body: review-only)`. |
+| `create-plan` | Logs a warning and runs. |
+
+### Accepting an external issue
+
+A maintainer accepts an issue by editing its body, which makes them the last editor. This works only if the maintainer is the token user the coordinator runs with, or is listed in `trusted_commenters`.
+
+- A machine or Jenkins token user that differs from the maintainer breaks this flow: list the maintainer in `trusted_commenters`.
+- Collaborator status of the editor does not help.
+- **Jenkins token user**: the `create-plan` job runs with its own credentials, so its trust verdict can differ from the coordinator's.
+- **Bots and machine authors** (`github-actions[bot]`, dependabot) at a `bot_pickup` status are no longer dispatched unless listed in `trusted_commenters`. This is a behaviour change.
+
+### Limitations
+
+- The title is not vetted, nor the branch name derived from it. A stranger can change the title after acceptance.
+- Time of check vs time of use: the Jenkins job re-reads the issue live.
+- If the untrusted author edits the body again, it becomes untrusted again.
+- Restart: if regenerating the session files fails with a non-rate-limit error, the old spec is reused. `tasks.json` (`runOn: folderOpen`) re-runs the stored spec on a manual reopen. Trust is recomputed only on a coordinator-driven launch or restart.
+- `github_issue_view` fences by *author* trust only, so an accepted body may still be fenced (fails safe).
+- Review-only protection ends once the user asks the agent to read the issue (e.g. `/issue_analyse`).
+
+### Cost
+
+Trust results are never cached.
+
+- Untrusted issues keep their label, so every coordinator run repeats one lookup and one summary entry per such issue.
+- A `/approve`d untrusted issue is explained only in the coordinator log.
+- `vscodeclaude status` makes one lookup per launchable row whose author is not trusted.
+
+**Stale cache:** a cached issue without `author_association`, written by a maintainer and never edited, stays skipped until the next full refresh (`cache_refresh_minutes`) or `--force-refresh`. A maintainer edit fixes it at once.
 
 ## GitHub Actions Setup
 

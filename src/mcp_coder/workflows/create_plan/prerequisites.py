@@ -10,6 +10,8 @@ from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import checkout_branch
 from mcp_coder.mcp_workspace_github import (
+    BodyTrust,
+    GitHubRateLimitError,
     IssueBranchManager,
     IssueData,
     IssueManager,
@@ -18,6 +20,7 @@ from mcp_coder.mcp_workspace_github import (
 from mcp_coder.utils.repo_config import get_repo_flag
 from mcp_coder.utils.text_io import write_lf_text
 from mcp_coder.workflow_utils.base_branch import check_base_branch_on_origin
+from mcp_coder.workflow_utils.issue_trust import evaluate_body_trust
 from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 
@@ -67,6 +70,28 @@ def check_prerequisites(project_dir: Path, issue_number: int) -> tuple[bool, Iss
     except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
         logger.error(f"✗ Error fetching issue #{issue_number}: {e}")
         return (False, empty_issue_data)
+
+    # Warn only: the plan run continues on an untrusted body
+    try:
+        trust = evaluate_body_trust(issue_manager, issue_data)
+        if trust.status is BodyTrust.UNTRUSTED:
+            logger.warning(
+                "⚠ Issue #%d body is untrusted (%s) — continuing; "
+                "plan input is not vetted",
+                issue_number,
+                trust.reason,
+            )
+        elif trust.status is BodyTrust.LOOKUP_FAILED:
+            logger.warning(
+                "⚠ Could not verify body trust for issue #%d (%s) — continuing",
+                issue_number,
+                trust.reason,
+            )
+    except GitHubRateLimitError:
+        logger.warning(
+            "⚠ GitHub rate limit while checking body trust for issue #%d — continuing",
+            issue_number,
+        )
 
     logger.info("All prerequisites passed")
     return (True, issue_data)

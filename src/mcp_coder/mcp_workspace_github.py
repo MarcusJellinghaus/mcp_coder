@@ -48,6 +48,8 @@ from mcp_workspace.github_operations.ci_results_manager import (
 
 # Issues subpackage
 from mcp_workspace.github_operations.issues import (
+    BodyTrust,
+    BodyTrustResult,
     BranchLookup,
     BranchLookupError,
     CommentData,
@@ -107,6 +109,8 @@ __all__: list[str] = [
     # Trust
     "get_trusted_commenters",
     "is_trusted_author",
+    "BodyTrust",
+    "BodyTrustResult",
     # Repository
     "RepoIdentifier",
     # Issues

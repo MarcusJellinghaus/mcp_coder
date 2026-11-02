@@ -507,3 +507,20 @@ _.fixture_patterns
 # tests/workflows/implement/test_core_failure_routing.py - autouse fixture
 # stubbing the final mypy pass so the round-cap tests never run real checks.
 _._stub_final_mypy_pass
+
+# tests/cli/commands/coordinator/conftest.py - autouse fixture patching
+# find_untrusted_launch_keys so the status command stays off GitHub.
+_._no_untrusted_launch_keys
+
+# tests/workflows/create_plan/test_prerequisites_trust.py - fixtures registered
+# via @pytest.fixture(name="issue") and name="manager", injected by pytest.
+_.fixture_issue
+_.fixture_manager
+
+# tests/workflows/vscodeclaude/conftest.py - autouse fixture making issue
+# bodies trusted and keeping IssueManager off GitHub.
+_._trusted_body
+
+# tests/workflows/vscodeclaude/test_workspace_untrusted.py - fixture forcing
+# the Windows launcher path, pulled in via usefixtures("_windows").
+_._windows

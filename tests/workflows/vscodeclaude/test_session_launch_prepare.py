@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -83,6 +84,7 @@ class TestPrepareAndLaunchSession:
             vscodeclaude_config=vscodeclaude_config,
             repo_vscodeclaude_config={},
             branch_name="main",
+            issue_manager=MagicMock(),
             is_intervention=False,
         )
 
@@ -136,6 +138,7 @@ class TestPrepareAndLaunchSession:
                 vscodeclaude_config=vscodeclaude_config,
                 repo_vscodeclaude_config={},
                 branch_name="main",
+                issue_manager=MagicMock(),
                 is_intervention=False,
             )
 
@@ -206,6 +209,7 @@ class TestPrepareAndLaunchSession:
                 vscodeclaude_config=vscodeclaude_config,
                 repo_vscodeclaude_config=repo_vscodeclaude_config,
                 branch_name="main",
+                issue_manager=MagicMock(),
                 is_intervention=False,
             )
 

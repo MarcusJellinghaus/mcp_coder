@@ -24,6 +24,6 @@ In scope are bypasses of intended restrictions, such as:
 
 ## Threat Model
 
-Issue bodies and comments from untrusted users are untrusted LLM input. mcp-coder only acts on issues and feedback from trusted authors (`OWNER`, `MEMBER`, `COLLABORATOR`, or allowlisted). Reports that bypass this are in scope.
+Issue bodies and comments from untrusted users are untrusted LLM input. An issue body must be trusted — by its author or its last editor — before automated workflows run on it; untrusted bodies are skipped or opened review-only. Feedback counts only from trusted authors (`OWNER`, `MEMBER`, `COLLABORATOR`, or allowlisted). Reports that bypass this are in scope.
 
-See [Trust and Validation](docs/repository-setup/github.md#trust-and-validation).
+See [Issue body trust](docs/repository-setup/github.md#issue-body-trust) and [Trust and Validation](docs/repository-setup/github.md#trust-and-validation).

@@ -301,6 +301,7 @@ class TestSkipGithubInstallThreading:
             vscodeclaude_config={"workspace_base": str(tmp_path), "max_sessions": 3},
             repo_vscodeclaude_config={},
             branch_name=None,
+            issue_manager=MagicMock(),
             skip_github_install=True,
         )
 
@@ -511,6 +512,7 @@ class TestSetupCommandsResolution:
             vscodeclaude_config={"workspace_base": str(tmp_path), "max_sessions": 3},
             repo_vscodeclaude_config=repo_cfg,  # type: ignore[arg-type]
             branch_name=None,
+            issue_manager=MagicMock(),
         )
 
         mock_validate.assert_called_once_with(expected_commands)
@@ -562,6 +564,7 @@ class TestSetupCommandsResolution:
             vscodeclaude_config={"workspace_base": str(tmp_path), "max_sessions": 3},
             repo_vscodeclaude_config=repo_cfg,  # type: ignore[arg-type]
             branch_name=None,
+            issue_manager=MagicMock(),
         )
 
         mock_run.assert_not_called()

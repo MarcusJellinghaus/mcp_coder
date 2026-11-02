@@ -8,6 +8,8 @@ import argparse
 import logging
 
 from ....mcp_workspace_github import (
+    BodyTrust,
+    BodyTrustResult,
     GitHubRateLimitError,
     IssueBranchManager,
     IssueManager,
@@ -22,6 +24,7 @@ from ....utils.user_config import (
     get_config_file_path,
     load_config,
 )
+from ....workflow_utils.issue_trust import evaluate_body_trust
 from ....workflow_utils.rate_limit import (
     as_rate_limit,
     log_rate_limit_stop,
@@ -280,58 +283,84 @@ def execute_coordinator_run(args: argparse.Namespace) -> int:
                 continue
 
             # Step 4d: Dispatch workflows for each eligible issue (fail-fast)
-            for issue in eligible_issues:
-                # Find current bot_pickup label to determine workflow
-                current_label = None
-                for label in issue["labels"]:
-                    if label in WORKFLOW_MAPPING:
-                        current_label = label
-                        break
+            skipped: list[tuple[int, BodyTrustResult]] = []
+            try:
+                for issue in eligible_issues:
+                    # Find current bot_pickup label to determine workflow
+                    current_label = None
+                    for label in issue["labels"]:
+                        if label in WORKFLOW_MAPPING:
+                            current_label = label
+                            break
 
-                if not current_label:
-                    logger.error(
-                        f"Issue #{issue['number']} has no workflow label, skipping"
-                    )
-                    continue
+                    if not current_label:
+                        logger.error(
+                            f"Issue #{issue['number']} has no workflow label, skipping"
+                        )
+                        continue
 
-                workflow_config = WORKFLOW_MAPPING[current_label]
-                workflow_name = workflow_config["workflow"]
+                    # Gate: never feed an untrusted body to a workflow.
+                    # Outside the dispatch try so a rate limit stops the run.
+                    trust = evaluate_body_trust(issue_manager, issue)
+                    if trust.status is not BodyTrust.TRUSTED:
+                        logger.debug(
+                            "Issue #%d skipped: body %s (%s)",
+                            issue["number"],
+                            trust.status.value,
+                            trust.reason,
+                        )
+                        skipped.append((issue["number"], trust))
+                        continue
 
-                try:
-                    if not dispatch_workflow(
-                        issue=issue,
-                        workflow_name=workflow_name,
-                        repo_config=validated_config,
-                        repo_name=repo_name,
-                        jenkins_client=jenkins_client,
-                        issue_manager=issue_manager,
-                        branch_manager=branch_manager,
-                        log_level=args.log_level,
-                    ):
-                        # Job started, label swap hit a rate limit
-                        return 1
+                    workflow_config = WORKFLOW_MAPPING[current_label]
+                    workflow_name = workflow_config["workflow"]
 
-                    # Update cache with new labels immediately after successful dispatch
                     try:
-                        update_issue_labels_in_cache(
-                            RepoIdentifier.from_full_name(repo_full_name),
-                            issue_number=issue["number"],
-                            old_label=current_label,
-                            new_label=workflow_config["next_label"],
-                        )
-                    except Exception as cache_error:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
-                        raise_if_rate_limited(cache_error)
-                        logger.warning(
-                            f"Cache update failed for issue #{issue['number']}: {cache_error}"
-                        )
+                        if not dispatch_workflow(
+                            issue=issue,
+                            workflow_name=workflow_name,
+                            repo_config=validated_config,
+                            repo_name=repo_name,
+                            jenkins_client=jenkins_client,
+                            issue_manager=issue_manager,
+                            branch_manager=branch_manager,
+                            log_level=args.log_level,
+                        ):
+                            # Job started, label swap hit a rate limit
+                            return 1
 
-                except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
-                    raise_if_rate_limited(e)
-                    # Fail-fast: log error and exit immediately
-                    logger.error(f"Failed processing issue #{issue['number']}: {e}")
-                    return 1
+                        # Update cache with new labels immediately after successful dispatch
+                        try:
+                            update_issue_labels_in_cache(
+                                RepoIdentifier.from_full_name(repo_full_name),
+                                issue_number=issue["number"],
+                                old_label=current_label,
+                                new_label=workflow_config["next_label"],
+                            )
+                        except Exception as cache_error:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+                            raise_if_rate_limited(cache_error)
+                            logger.warning(
+                                f"Cache update failed for issue #{issue['number']}: {cache_error}"
+                            )
 
-            logger.info(f"Successfully processed all issues in {repo_name}")
+                    except Exception as e:  # pylint: disable=broad-exception-caught  # TODO: narrow per sub-workflow error types
+                        raise_if_rate_limited(e)
+                        # Fail-fast: log error and exit immediately
+                        logger.error(f"Failed processing issue #{issue['number']}: {e}")
+                        return 1
+            finally:
+                if skipped:
+                    logger.info(
+                        "Skipped %d issue(s) in %s with untrusted body: %s",
+                        len(skipped),
+                        repo_name,
+                        ", ".join(
+                            f"#{number} ({result.status.value}: {result.reason})"
+                            for number, result in skipped
+                        ),
+                    )
+
+            logger.info(f"Finished processing eligible issues in {repo_name}")
 
         # Step 5: Success - all repos processed
         return 0

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_coder.mcp_workspace_github import BranchLookup
+from mcp_coder.mcp_workspace_github import BodyTrust, BodyTrustResult, BranchLookup
 from mcp_coder.workflows.vscodeclaude.assessment import (
     IssueFacts,
     assess_issue_state,
@@ -53,6 +53,23 @@ MOCK_VSCODECLAUDE_CONFIGS: dict[str, dict[str, Any]] = {
         "stage_short": "pr",
     },
 }
+
+
+@pytest.fixture(autouse=True)
+def _trusted_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Treat every issue body as trusted and keep IssueManager off GitHub.
+
+    Tests that need another trust result patch these names themselves.
+    """
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.session_launch.evaluate_body_trust",
+        MagicMock(
+            return_value=BodyTrustResult(status=BodyTrust.TRUSTED, reason="test")
+        ),
+    )
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.session_launch.IssueManager", MagicMock()
+    )
 
 
 def patch_branch_cache(
