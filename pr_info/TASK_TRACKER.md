@@ -21,6 +21,21 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Branch guard — refuse commits on protected branches / detached HEAD
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: tests (autouse branch fixtures, `TestCommitBranchGuard`, push-guard `master`/`main` case) + `_branch_refusal` helper, pre-commit check, push guard, text updates
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `mcp-coder commit` as a leaf command, push on by default, docs
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: test updates + leaf `commit` parser with `--push/--no-push` (default on), `main.py` dispatch, catalog key, `docs/cli-reference.md`
+- [ ] Quality checks: pylint, pytest (incl. `tests/docs` and mcp-config integration test), mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against base branch
+- [ ] PR summary prepared
