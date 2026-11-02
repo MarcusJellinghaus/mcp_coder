@@ -37,9 +37,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 4: Least-privilege settings file shared by CLI and automated callers — [step_4.md](./steps/step_4.md)
-- [ ] Implementation: tests + drop `move_file`; `rebase_settings_file` context manager
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + drop `move_file`; `rebase_settings_file` context manager
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Shared helper `rebase_with_llm_fallback` — [step_5.md](./steps/step_5.md)
 - [ ] Implementation: tests + `rebase_with_llm_fallback`, `llm_detail`, `git_check_ignore` re-export
