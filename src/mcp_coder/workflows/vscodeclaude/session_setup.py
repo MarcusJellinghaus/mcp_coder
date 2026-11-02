@@ -188,9 +188,10 @@ def build_claude_argv(
 def render_banner(spec: SessionSpec) -> str:
     """Render the session banner (plus intervention warning where applicable).
 
-    Reuses ``BANNER_TEMPLATE`` and, for intervention specs, appends the
+    Reuses ``BANNER_TEMPLATE`` (``UNTRUSTED_BANNER_TEMPLATE`` for an untrusted
+    issue body, which omits the title) and, for intervention specs, appends the
     ``INTERVENTION_WARNING`` block — restoring parity with the old
-    ``INTERVENTION_SCRIPT_*`` templates. Both templates are imported inside the
+    ``INTERVENTION_SCRIPT_*`` templates. The templates are imported inside the
     function to keep the top-level import light.
 
     Args:
@@ -199,16 +200,29 @@ def render_banner(spec: SessionSpec) -> str:
     Returns:
         The banner text ready to print to the UTF-8-forced terminal.
     """
-    from .templates import BANNER_TEMPLATE, INTERVENTION_WARNING
-
-    banner = BANNER_TEMPLATE.format(
-        emoji=spec.emoji,
-        issue_number=spec.issue_number,
-        title=spec.title,
-        repo=spec.repo,
-        status=spec.status,
-        issue_url=spec.issue_url,
+    from .templates import (
+        BANNER_TEMPLATE,
+        INTERVENTION_WARNING,
+        UNTRUSTED_BANNER_TEMPLATE,
     )
+
+    if spec.untrusted_body:
+        banner = UNTRUSTED_BANNER_TEMPLATE.format(
+            emoji=spec.emoji,
+            issue_number=spec.issue_number,
+            repo=spec.repo,
+            status=spec.status,
+            issue_url=spec.issue_url,
+        )
+    else:
+        banner = BANNER_TEMPLATE.format(
+            emoji=spec.emoji,
+            issue_number=spec.issue_number,
+            title=spec.title,
+            repo=spec.repo,
+            status=spec.status,
+            issue_url=spec.issue_url,
+        )
     if spec.is_intervention:
         banner += INTERVENTION_WARNING
     return banner
@@ -275,9 +289,11 @@ def orchestrate(spec: SessionSpec, cwd: Path, env: dict[str, str]) -> None:
     """Drive the interactive/automated ``claude`` flow for one session.
 
     Mirrors the flow shapes of the retired shell templates: intervention →
-    bare ``claude``; 0 commands → nothing (venv-only); 1 command → one
-    interactive ``claude``; multi → first automated step (session-id capture),
-    non-fatal middle steps, then a resumed interactive ``claude``.
+    bare ``claude``; 0 commands → nothing (venv-only); untrusted issue body →
+    one interactive ``claude`` with the fixed ``UNTRUSTED_REVIEW_PROMPT`` (no
+    automated steps); 1 command → one interactive ``claude``; multi → first
+    automated step (session-id capture), non-fatal middle steps, then a resumed
+    interactive ``claude``.
 
     Args:
         spec: The session spec.
@@ -290,6 +306,17 @@ def orchestrate(spec: SessionSpec, cwd: Path, env: dict[str, str]) -> None:
 
     cmds = spec.commands
     if not cmds:
+        return
+
+    if spec.untrusted_body:
+        from .templates import UNTRUSTED_REVIEW_PROMPT
+
+        subprocess.run(
+            build_claude_argv(spec, prompt=UNTRUSTED_REVIEW_PROMPT),
+            env=env,
+            cwd=str(cwd),
+            check=False,
+        )
         return
 
     if len(cmds) == 1:

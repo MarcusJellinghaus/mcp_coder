@@ -245,6 +245,8 @@ class SessionSpec:
     mcp_coder_install_path: str  # coordinator install dir (holds .venv)
     skip_github_install: bool
     is_intervention: bool
+    # Default keeps spec files written before this field loadable.
+    untrusted_body: bool = False
 
 
 # Filename for the per-session spec JSON written at launch time.
