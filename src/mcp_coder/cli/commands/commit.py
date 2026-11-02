@@ -29,20 +29,20 @@ logger = logging.getLogger(__name__)
 _PROTECTED_BRANCHES = frozenset({"main", "master"})
 
 
-def _branch_refusal(project_dir: Path) -> tuple[bool, str] | None:
-    """Check whether committing/pushing on the current branch is refused.
+def _check_branch(project_dir: Path) -> tuple[str | None, bool]:
+    """Read the current branch and whether it is protected.
 
     Returns:
-        None if the branch is allowed; (False, "") if the current branch cannot
-        be determined; (True, branch) if the branch is protected.
+        (branch, is_protected). branch is None if the current branch cannot be
+        determined; the default branch is then not looked up.
     """
     branch = get_current_branch_name(project_dir)
     if branch is None:
-        return (False, "")
+        return None, False
 
     default = get_default_branch_name(project_dir)
     protected = _PROTECTED_BRANCHES | ({default} if default else set())
-    return (True, branch) if branch in protected else None
+    return branch, branch in protected
 
 
 def _push_after_commit(project_dir: Path) -> int:
@@ -51,18 +51,12 @@ def _push_after_commit(project_dir: Path) -> int:
     Returns:
         Exit code (0 for success, 2 for failure).
     """
-    refusal = _branch_refusal(project_dir)
-    if refusal is not None:
-        is_protected, name = refusal
-        if is_protected:
-            logger.error("Refusing to push to protected branch '%s'", name)
-        else:
-            logger.error("Cannot push: not on a branch")
-        return 2
-
-    branch = get_current_branch_name(project_dir)
-    if branch is None:  # defensive: HEAD changed since the check
+    branch, is_protected = _check_branch(project_dir)
+    if branch is None:
         logger.error("Cannot push: not on a branch")
+        return 2
+    if is_protected:
+        logger.error("Refusing to push to protected branch '%s'", branch)
         return 2
 
     if not has_remote_tracking_branch(project_dir):
@@ -101,16 +95,15 @@ def execute_commit_auto(args: argparse.Namespace) -> int:
         return 1
 
     # Refuse protected branches / detached HEAD before the LLM call and preview
-    refusal = _branch_refusal(project_dir)
-    if refusal is not None:
-        is_protected, branch = refusal
-        if is_protected:
-            logger.error("Refusing to commit on protected branch '%s'", branch)
-        else:
-            logger.error(
-                "Refusing to commit: cannot determine current branch "
-                "(detached HEAD or unreadable HEAD)"
-            )
+    branch, is_protected = _check_branch(project_dir)
+    if branch is None:
+        logger.error(
+            "Refusing to commit: cannot determine current branch "
+            "(detached HEAD or unreadable HEAD)"
+        )
+        return 1
+    if is_protected:
+        logger.error("Refusing to commit on protected branch '%s'", branch)
         return 1
 
     # 2. Parse LLM method and generate commit message
