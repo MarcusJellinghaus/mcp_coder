@@ -32,9 +32,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 3: Marker retry once per conflict stop — [step_3.md](./steps/step_3.md)
-- [ ] Implementation: tests + one marker-retry per conflict stop
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + one marker-retry per conflict stop
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 4: Least-privilege settings file shared by CLI and automated callers — [step_4.md](./steps/step_4.md)
 - [ ] Implementation: tests + drop `move_file`; `rebase_settings_file` context manager

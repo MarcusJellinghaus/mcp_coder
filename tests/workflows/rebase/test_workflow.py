@@ -253,13 +253,13 @@ def test_mixed_conflict_calls_llm_with_non_pr_info_files(
 def test_markers_remaining_after_llm_returns_1(
     patched: SimpleNamespace, tmp_path: Path
 ) -> None:
-    """Conflict markers left behind by the LLM abort with ``1`` (rule 3)."""
+    """Conflict markers surviving the marker retry abort with ``1`` (rule 3)."""
     _start_conflict_loop(patched)
     patched.blob_info.return_value = _blob_info("src/a.py")
     patched.has_markers.return_value = True
 
     assert _run(tmp_path).exit_code == 1
-    patched.prompt.assert_called_once()
+    assert patched.prompt.call_count == 2  # conflict prompt + one marker retry
     patched.push.assert_not_called()
     patched.abort.assert_called_once()
 

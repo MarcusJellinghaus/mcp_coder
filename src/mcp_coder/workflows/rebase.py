@@ -252,6 +252,11 @@ _REGRESSION_PROMPT_HEADER = "Rebase Regression Fix"
 
 _ABSENT_SIDE_NOTE = "(absent — file does not exist on this side)"
 
+_MARKER_RETRY_PROMPT = (
+    "Conflict markers remain in: {files}. Edit these files so they contain the "
+    "final merged content with no conflict markers. Same tools and rules as before."
+)
+
 # Stage labels mirror the wording of the "Rebase Conflict Resolution" prompt.
 _STAGE_LABELS: tuple[tuple[int, str], ...] = (
     (1, "common ancestor (merge base)"),
@@ -569,6 +574,21 @@ def run_rebase_workflow(
                 unresolved = [
                     f for f in others if _has_conflict_markers(project_dir, f)
                 ]
+                if unresolved:
+                    # One retry per stop, resuming the same session.
+                    _, session_id = _prompt_in_session(
+                        _MARKER_RETRY_PROMPT.format(files=", ".join(unresolved)),
+                        session_id,
+                        project_dir=project_dir,
+                        provider=provider,
+                        env_vars=env_vars,
+                        mcp_config=mcp_config,
+                        settings_file=settings_file,
+                        step_name=f"conflict_{stop}_retry",
+                    )
+                    unresolved = [
+                        f for f in unresolved if _has_conflict_markers(project_dir, f)
+                    ]
                 if unresolved:
                     return _end(
                         1, f"conflict markers remain in {', '.join(unresolved)}"
