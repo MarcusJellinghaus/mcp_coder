@@ -266,6 +266,7 @@ def display_status_table(
     repo_filter: str | None = None,
     cached_issues_by_repo: dict[str, dict[int, IssueData]] | None = None,
     issues_without_branch: set[tuple[str, int]] | None = None,
+    untrusted_keys: set[tuple[str, int]] | None = None,
 ) -> None:
     """Print status table to stdout.
 
@@ -290,6 +291,10 @@ def display_status_table(
         issues_without_branch: Set of (repo_full_name, issue_number) tuples
                                for issues that require but lack a linked branch.
                                Used to show "-> Needs branch" indicator.
+        untrusted_keys: Set of (repo_full_name, issue_number) tuples for
+                        launchable issues whose body is not trusted. Marks
+                        "-> Create and start" rows as review-only. No GitHub
+                        calls are made here.
 
     Columns:
     - Repo
@@ -424,6 +429,8 @@ def display_status_table(
             action = "(awaiting merge)"
         else:
             action = "-> Create and start"
+            if untrusted_keys and (repo_name, issue["number"]) in untrusted_keys:
+                action += " (untrusted body: review-only)"
 
         # Add row to table
         rows.append([repo_short, issue_num, status, "-", "-", "-", action])

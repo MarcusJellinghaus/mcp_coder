@@ -20,3 +20,17 @@ def _trusted_issue_bodies() -> Iterator[MagicMock]:
         return_value=BodyTrustResult(status=BodyTrust.TRUSTED, reason=""),
     ) as mock_trust:
         yield mock_trust
+
+
+@pytest.fixture(autouse=True)
+def _no_untrusted_launch_keys() -> Iterator[MagicMock]:
+    """Keep the status command's trust lookups off GitHub.
+
+    Yields:
+        The patched ``find_untrusted_launch_keys``, returning an empty set.
+    """
+    with patch(
+        "mcp_coder.workflows.vscodeclaude.issues.find_untrusted_launch_keys",
+        return_value=set(),
+    ) as mock_finder:
+        yield mock_finder

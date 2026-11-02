@@ -6,6 +6,7 @@ from typing import Any
 
 from ...config.label_config import load_labels_config
 from ...mcp_workspace_github import (
+    BodyTrust,
     BranchLookupCache,
     BranchLookupError,
     GithubException,
@@ -16,12 +17,14 @@ from ...mcp_workspace_github import (
     get_all_cached_issues,
 )
 from ...utils.user_config import get_cache_refresh_minutes, load_config
+from ...workflow_utils.issue_trust import evaluate_body_trust
 from ...workflow_utils.rate_limit import raise_if_rate_limited
 from .config import (
     get_github_username,
     get_vscodeclaude_config,
 )
 from .helpers import get_issue_status
+from .types import VSCodeClaudeSession
 
 logger = logging.getLogger(__name__)
 
@@ -425,3 +428,49 @@ def build_eligible_issues_with_branch_check(
             continue
 
     return eligible_issues_list, issues_without_branch
+
+
+def find_untrusted_launch_keys(
+    eligible_issues: list[tuple[str, IssueData]],
+    sessions: list[VSCodeClaudeSession],
+    issues_without_branch: set[tuple[str, int]],
+    repo_filter: str | None,
+) -> set[tuple[str, int]]:
+    """Return (repo_full_name, number) of launchable rows whose body is not trusted.
+
+    Only rows the status table would show as "Create and start" are looked up:
+    rows with a session, rows needing a branch, rows of other repos and
+    status-ineligible rows are skipped. A failed lookup counts as untrusted.
+
+    Args:
+        eligible_issues: Eligible issues as (repo_full_name, issue) tuples
+        sessions: Current sessions; their issues are skipped
+        issues_without_branch: (repo_full_name, issue_number) of issues that
+            require but lack a linked branch; skipped
+        repo_filter: Optional short repo name; other repos are skipped
+
+    Returns:
+        Set of (repo_full_name, issue_number) for untrusted launchable rows.
+
+    Raises:
+        GitHubRateLimitError: If a trust lookup hit a GitHub rate limit.
+    """  # noqa: DOC502 - raised inside evaluate_body_trust
+    session_keys = {(s["repo"], s["issue_number"]) for s in sessions}
+    managers: dict[str, IssueManager] = {}
+    untrusted_keys: set[tuple[str, int]] = set()
+    for repo_full_name, issue in eligible_issues:
+        key = (repo_full_name, issue["number"])
+        if key in session_keys or key in issues_without_branch:
+            continue
+        if repo_filter and repo_full_name.split("/")[-1] != repo_filter:
+            continue
+        if not is_status_eligible_for_session(get_issue_status(issue)):
+            continue
+        if repo_full_name not in managers:
+            managers[repo_full_name] = IssueManager(
+                repo_url=f"https://github.com/{repo_full_name}"
+            )
+        trust = evaluate_body_trust(managers[repo_full_name], issue)
+        if trust.status is not BodyTrust.TRUSTED:
+            untrusted_keys.add(key)
+    return untrusted_keys

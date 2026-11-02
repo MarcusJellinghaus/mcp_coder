@@ -1,4 +1,4 @@
-"""vscodeclaude intervention mode: issue manager wiring and rate-limit stop."""
+"""vscodeclaude trust wiring: intervention mode and the status command."""
 
 import argparse
 import logging
@@ -9,6 +9,7 @@ import pytest
 
 from mcp_coder.cli.commands.coordinator.commands_vscodeclaude import (
     execute_coordinator_vscodeclaude,
+    execute_coordinator_vscodeclaude_status,
 )
 from mcp_coder.mcp_workspace_github import GithubException, GitHubRateLimitError
 
@@ -118,3 +119,85 @@ class TestInterventionTrust:
 
         with pytest.raises(RuntimeError, match="boom"):
             execute_coordinator_vscodeclaude(_intervene_args())
+
+
+@pytest.fixture
+def status_mocks(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+    """Patch every collaborator of the status command with a MagicMock."""
+    sessions = [{"repo": "owner/repo", "issue_number": 7}]
+    mocks = SimpleNamespace(
+        load_sessions=MagicMock(
+            return_value={"sessions": sessions, "last_updated": ""}
+        ),
+        load_config=MagicMock(return_value={"coordinator": {"repos": {"repo": {}}}}),
+        load_vscodeclaude_config=MagicMock(
+            return_value={"workspace_base": "/tmp", "max_sessions": 5}
+        ),
+        _build_cached_issues_by_repo=MagicMock(return_value=({}, set())),
+        build_assessments=MagicMock(return_value={}),
+        render_explain=MagicMock(return_value="EXPLAIN TEXT"),
+    )
+    for name, mock in vars(mocks).items():
+        monkeypatch.setattr(f"{_MOD}.{name}", mock)
+    mocks.sessions = sessions
+    mocks.eligible = [("owner/repo", {"number": 42})]
+    mocks.without_branch = {("owner/repo", 5)}
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.issues."
+        "build_eligible_issues_with_branch_check",
+        MagicMock(return_value=(mocks.eligible, mocks.without_branch)),
+    )
+    mocks.finder = MagicMock(return_value={("owner/repo", 42)})
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.issues.find_untrusted_launch_keys",
+        mocks.finder,
+    )
+    mocks.display_status_table = MagicMock()
+    monkeypatch.setattr(
+        "mcp_coder.workflows.vscodeclaude.status.display_status_table",
+        mocks.display_status_table,
+    )
+    return mocks
+
+
+class TestStatusTrust:
+    """execute_coordinator_vscodeclaude_status wiring of find_untrusted_launch_keys."""
+
+    def test_explain_skips_finder(self, status_mocks: SimpleNamespace) -> None:
+        result = execute_coordinator_vscodeclaude_status(
+            argparse.Namespace(repo=None, explain=True)
+        )
+
+        assert result == 0
+        status_mocks.finder.assert_not_called()
+
+    def test_finder_rate_limit_exits_zero_without_table(
+        self, status_mocks: SimpleNamespace, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        status_mocks.finder.side_effect = GitHubRateLimitError("limited")
+
+        with caplog.at_level(logging.DEBUG):
+            result = execute_coordinator_vscodeclaude_status(
+                argparse.Namespace(repo=None, explain=False)
+            )
+
+        assert result == 0
+        status_mocks.display_status_table.assert_not_called()
+        assert len(_stop_lines(caplog)) == 1
+
+    def test_finder_result_passed_to_display(
+        self, status_mocks: SimpleNamespace
+    ) -> None:
+        result = execute_coordinator_vscodeclaude_status(
+            argparse.Namespace(repo="repo", explain=False)
+        )
+
+        assert result == 0
+        status_mocks.finder.assert_called_once_with(
+            status_mocks.eligible,
+            status_mocks.sessions,
+            status_mocks.without_branch,
+            "repo",
+        )
+        kwargs = status_mocks.display_status_table.call_args.kwargs
+        assert kwargs["untrusted_keys"] == {("owner/repo", 42)}

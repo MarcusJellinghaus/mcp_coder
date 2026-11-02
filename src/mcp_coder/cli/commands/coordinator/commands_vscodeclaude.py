@@ -461,6 +461,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
     """
     from ....workflows.vscodeclaude.issues import (
         build_eligible_issues_with_branch_check,
+        find_untrusted_launch_keys,
     )
     from ....workflows.vscodeclaude.status import display_status_table
 
@@ -506,6 +507,11 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
                 repo_names, cached_issues_by_repo=cached_issues_by_repo
             )
         )
+
+        # Trust lookups only for rows the table shows as "Create and start".
+        untrusted_keys = find_untrusted_launch_keys(
+            eligible_issues, sessions, issues_without_branch, args.repo
+        )
     except Exception as exc:  # pylint: disable=broad-exception-caught
         log_rate_limit_stop(_rate_limit_or_raise(exc))
         return 0
@@ -519,6 +525,7 @@ def execute_coordinator_vscodeclaude_status(args: argparse.Namespace) -> int:
         repo_filter=args.repo,
         cached_issues_by_repo=cached_issues_by_repo,
         issues_without_branch=issues_without_branch,
+        untrusted_keys=untrusted_keys,
     )
 
     return 0
