@@ -494,6 +494,7 @@ def create_startup_script(
     mcp_coder_install_path: Path | None = None,
     session_folder_path: Path | None = None,  # pylint: disable=unused-argument
     skip_github_install: bool = False,
+    untrusted_body: bool = False,
 ) -> Path:
     """Serialize a session spec and write the thin launcher.
 
@@ -508,7 +509,8 @@ def create_startup_script(
     Args:
         folder_path: Working folder path (spec + launcher are written here)
         issue_number: GitHub issue number
-        issue_title: Issue title for banner
+        issue_title: Display title for the banner (the caller passes ``""``
+            for a session on an untrusted issue body)
         status: Status label
         repo_name: Repo short name
         issue_url: GitHub issue URL
@@ -521,6 +523,8 @@ def create_startup_script(
         skip_github_install: If True, thread ``--skip-overrides`` into the
             ``mcp-coder install`` argv at run time. Default False
             (auto-detect).
+        untrusted_body: If True, mark the spec for a review-only session on
+            an untrusted issue body. Default False.
 
     Returns:
         Path to created launcher script (.bat or .sh)
@@ -581,6 +585,7 @@ def create_startup_script(
         mcp_coder_install_path=str(mcp_coder_install_path),
         skip_github_install=skip_github_install,
         is_intervention=is_intervention,
+        untrusted_body=untrusted_body,
     )
     write_session_spec(folder_path, spec)
 
@@ -676,20 +681,29 @@ def create_status_file(
     branch_name: str,
     issue_url: str,
     is_intervention: bool,
+    untrusted_body: bool = False,
 ) -> None:
     """Create .vscodeclaude_status.txt in project root.
 
     Args:
         folder_path: Working folder path
         issue_number: GitHub issue number
-        issue_title: Issue title
+        issue_title: Display title (the caller passes ``""`` for a session on
+            an untrusted issue body)
         status: Status label
         repo_full_name: Full repo name (owner/repo)
         branch_name: Git branch name
         issue_url: GitHub issue URL
         is_intervention: If True, add intervention warning
+        untrusted_body: If True, use the untrusted template (no title, no
+            branch). Default False.
     """
-    from .templates import INTERVENTION_LINE, STATUS_FILE_TEMPLATE, STATUS_NOTE_TEMPLATE
+    from .templates import (
+        INTERVENTION_LINE,
+        STATUS_FILE_TEMPLATE,
+        STATUS_NOTE_TEMPLATE,
+        UNTRUSTED_STATUS_FILE_TEMPLATE,
+    )
 
     # Get emoji for status from config
     config = get_vscodeclaude_config(status)
@@ -698,8 +712,11 @@ def create_status_file(
     # Build intervention line if needed
     intervention_line = INTERVENTION_LINE if is_intervention else ""
 
-    # Format status file
-    content = STATUS_FILE_TEMPLATE.format(
+    # Format status file (str.format ignores kwargs a template doesn't use)
+    template = (
+        UNTRUSTED_STATUS_FILE_TEMPLATE if untrusted_body else STATUS_FILE_TEMPLATE
+    )
+    content = template.format(
         issue_number=issue_number,
         title=issue_title,
         status_emoji=status_emoji,
