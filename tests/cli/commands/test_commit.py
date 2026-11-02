@@ -3,12 +3,29 @@
 import argparse
 import logging
 from pathlib import Path
+from typing import Iterator
 from unittest.mock import Mock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.commit import execute_commit_auto, validate_git_repository
 from mcp_coder.cli.main import create_parser
+
+
+@pytest.fixture(autouse=True)
+def _feature_branch() -> Iterator[None]:
+    """Run every test on a feature branch so the branch guard lets commits through."""
+    with (
+        patch(
+            "mcp_coder.cli.commands.commit.get_current_branch_name",
+            return_value="feature/x",
+        ),
+        patch(
+            "mcp_coder.cli.commands.commit.get_default_branch_name",
+            return_value="main",
+        ),
+    ):
+        yield
 
 
 class TestCommitAutoParserNoMcpConfig:
@@ -311,7 +328,7 @@ class TestExecuteCommitAuto:
         mock_generate.return_value = (
             False,
             "",
-            "No changes to commit. Ensure you have modified, added, or deleted files before running commit auto.",
+            "No changes to commit. Ensure you have modified, added, or deleted files before running commit.",
         )
 
         args = argparse.Namespace(preview=False, llm_method="claude", project_dir=None)
