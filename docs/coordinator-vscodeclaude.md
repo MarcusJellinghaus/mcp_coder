@@ -119,7 +119,7 @@ An account that posts PRs or ❌ notes on the owner's behalf (e.g. a Jenkins mac
 
 This covers *authors* of PRs and notes. For *issue body editors* only the token user or `trusted_commenters` counts; see [Issue body trust](repository-setup/github.md#accepting-an-external-issue).
 
-`status-91` and the escalation labels `status-73`, `74`, `83` and `84` open an interactive session: `/pr_comment_triage` for `91`, `/check_branch_status` for the others. With [`auto_merge`](configuration/config.md#auto-merge), `status-99f:merge-failed` also opens `/check_branch_status`; `status-99:merged` is display-only. See [PR-health](processes-prompts/processes/71-pr-follow-up.md) for the full label flow.
+`status-91` and the escalation labels `status-73`, `74`, `83` and `84` open an interactive session: `/pr_comment_triage` for `91`, `/rebase` then `/check_branch_status` for `74`, `/check_branch_status` for the others. With [`auto_merge`](configuration/config.md#auto-merge), `status-99f:merge-failed` also opens `/check_branch_status`; `status-99:merged` is display-only. See [PR-health](processes-prompts/processes/71-pr-follow-up.md) for the full label flow.
 
 ### Session Lifecycle
 

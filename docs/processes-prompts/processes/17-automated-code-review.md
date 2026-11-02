@@ -32,6 +32,7 @@ The loop is the one described in [Automated plan review](14-automated-plan-revie
 
 - The reviewer fetches the diff (not the plan).
 - After fixes, `review-implementation` re-runs the shared rebase and CI steps before the next round.
+- The rebase gate runs the [LLM rebase](../../cli-reference.md#rebase) when the git-only rebase hits a conflict or fails. It hands off only if that fails too; the hand-off comment names the LLM rebase's reason.
 - Rebase-needed or still-red CI is a gate: it routes to needs-human or error, never success.
 - The log is `pr_info/implementation_review_log_{n}.md`.
 

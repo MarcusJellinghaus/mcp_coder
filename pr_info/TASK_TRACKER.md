@@ -72,9 +72,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 11: Documentation — [step_11.md](./steps/step_11.md)
-- [ ] Implementation: update docs listed in step
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: update docs listed in step
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 12: Renormalize a line-ending-only dirty tree (blocked on mcp-workspace#373) — [step_12.md](./steps/step_12.md)
 - [ ] Implementation: tests + line-ending-only dirt renormalized and committed in `_attempt_rebase_and_push`

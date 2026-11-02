@@ -38,6 +38,10 @@ Files that MCP Coder workflows expect to be gitignored:
 .vscodeclaude_session.json
 .vscodeclaude_start.bat
 .vscodeclaude_start.sh
+
+# mcp-coder session and log files
+.mcp-coder/
+logs/
 ```
 
 - **`.vscodeclaude_*` — written automatically.** `mcp-coder init` appends any
@@ -45,3 +49,9 @@ Files that MCP Coder workflows expect to be gitignored:
   VSCodeClaude session launch re-appends them as a safety net, so an uncommitted
   block shows up as a dirty `.gitignore` in every session folder.
 - **`.mcp.*.json` — add manually.** No tool writes this line.
+- **`.mcp-coder/` and `logs/` — add manually.** Required for the automated LLM
+  rebase: review and fix-conflict hand off to a human instead of running it
+  when `.mcp-coder/` is not ignored.
+
+The automated LLM rebase runs pytest in the mcp-coder tool environment
+(`sys.executable`), so the repo's test dependencies must be installed there.

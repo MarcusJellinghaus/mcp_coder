@@ -10,7 +10,7 @@ The `create-pr` workflow generates a PR summary, cleans up `pr_info/`, pushes th
 | `status-09:pr-creating` | bot_busy |
 | `status-10:pr-created` | human_action |
 
-`status-08:ready-pr` → `status-09:pr-creating` → `status-10:pr-created` (or `status-74` / `status-81`, or `status-99` / `status-99f` with `auto_merge`, see below)
+`status-08:ready-pr` → `status-09:pr-creating` → `status-10:pr-created` (or `status-71` / `status-81`, or `status-74` / `status-99` / `status-99f` with `auto_merge`, see below)
 
 ## Actor
 
@@ -35,11 +35,12 @@ Tier: automated. The coordinator dispatches `create-pr` on Jenkins (`WORKFLOW_MA
 | Outcome | Final label |
 |---|---|
 | CI green, CI timeout, no CI, `unknown` mergeability, API error | `status-10:pr-created` |
-| Still `dirty` after the rebase (CI wait skipped) | `status-74:pr-merge-conflict` |
+| Still `dirty` after the rebase (CI wait skipped) | `status-71:merge-conflict` (Jenkins runs `fix-conflict`) |
 | CI failed | `status-81:failing-ci` (Jenkins runs `fix-ci`) |
 | Crash after the PR exists | `status-10:pr-created` (crash comment posted) |
 | [`auto_merge`](../../configuration/config.md#auto-merge) on, CI green on HEAD, merged | `status-99:merged` |
 | `auto_merge` on, merge refused or errored | `status-99f:merge-failed` (comment posted) |
+| `auto_merge` on, rebase conflict at merge time | `status-74:pr-merge-conflict` |
 
 `74` and `99f` exit 1; the other outcomes exit 0.
 

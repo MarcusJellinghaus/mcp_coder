@@ -1,6 +1,6 @@
 # PR Follow-up
 
-While a PR waits at `status-10:pr-created`, the vscodeclaude coordinator checks it for merge conflicts, failing CI and review feedback. Conflicts and CI are fixed mechanically on Jenkins. Review feedback always goes to a human.
+While a PR waits at `status-10:pr-created`, the vscodeclaude coordinator checks it for merge conflicts, failing CI and review feedback. Conflicts and CI are fixed automatically on Jenkins. Review feedback always goes to a human.
 
 ## Labels
 
@@ -36,7 +36,7 @@ status-10:pr-created
 
 **Detection order at `status-10`:** conflict → CI → review comments. At most one acts per poll; the rest are re-checked next poll. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag.
 
-**First check is done by create-pr.** `create-pr` already checks conflicts and waits for CI once, setting `74` or `81` directly (see [PR Creation](08-pr-creation.md)). PR follow-up takes over for whatever it left at `status-10`: `unknown` mergeability, CI timeout or no CI — and for everything that happens later.
+**First check is done by create-pr.** `create-pr` already checks conflicts and waits for CI once, setting `71` or `81` directly (see [PR Creation](08-pr-creation.md)). PR follow-up takes over for whatever it left at `status-10`: `unknown` mergeability, CI timeout or no CI — and for everything that happens later.
 
 **Order matters.** Conflicts come first because a branch that is behind its base can itself make CI fail; fixing the symptom first would waste CI-fix attempts. Review comments come last.
 
@@ -47,22 +47,22 @@ status-10:pr-created
 | `status-71` / `status-81` | Automated. The coordinator dispatches Jenkins `fix-conflict` / `fix-ci`; the job sets the final label itself. Without Jenkins configured for a repo, the issue waits unprocessed. |
 | `status-91`, `status-73` / `74` / `83` / `84` | Interactive LLM session (vscodeclaude). |
 
-`fix-conflict` is a plain rebase with no LLM. `fix-ci` reuses the `implement` CI-fix loop. See [CLI Reference](../../cli-reference.md#fix-conflict).
+`fix-conflict` runs a git-only rebase, then the LLM rebase on a conflict or failed rebase. When it hands off at `status-74`, the comment includes the LLM rebase's reason. `fix-ci` reuses the `implement` CI-fix loop. See [CLI Reference](../../cli-reference.md#fix-conflict).
 
 ## Slash commands
 
 | Command | Purpose | Resulting label |
 |---|---|---|
 | [`/pr_comment_triage`](../../../.claude/skills/pr_comment_triage/SKILL.md) | Auto-launched at `status-91`. Triage each review item: fix, reply or decline | ends with `mcp-coder gh-tool set-status status-10:pr-created` |
-| [`/check_branch_status`](../../../.claude/skills/check_branch_status/SKILL.md) | Auto-launched at `status-73` / `74` / `83` / `84`. Shows CI, rebase need, tasks and labels | — |
-| [`/rebase`](../../../.claude/skills/rebase/SKILL.md) | Rebase onto the base branch by hand | — |
+| [`/check_branch_status`](../../../.claude/skills/check_branch_status/SKILL.md) | Auto-launched at `status-73` / `74` / `83` / `84` (at `74` after `/rebase`). Shows CI, rebase need, tasks and labels | — |
+| [`/rebase`](../../../.claude/skills/rebase/SKILL.md) | Auto-launched first at `status-74`. Rebase onto the base branch | — |
 
 ## Failure exits
 
 | Label | Cause | Recovery |
 |---|---|---|
 | `status-73:merge-conflict-failed` | `fix-conflict` crashed (`run_guarded` net) or the Jenkins job died without transitioning (watchdog) | `/check_branch_status`, fix, `mcp-coder gh-tool set-status status-10:pr-created` |
-| `status-74:pr-merge-conflict` | Still `dirty`, no open PR found, or `unknown` after a failed rebase. See the issue comment | Resolve manually (`/rebase` / `/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-74:pr-merge-conflict` | Still `dirty`, no open PR found, or `unknown` after a failed rebase (git-only and LLM). See the issue comment | Resolve manually (`/rebase` / `/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-83:ci-fix-failed` | `fix-ci` crashed or the job died | `/check_branch_status`, fix, `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) | Fix CI manually, then `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-99f:merge-failed` | `auto_merge` was refused (409, `blocked`, required approvals, squash disabled), errored, or its rebase failed. See the issue comment | `/check_branch_status`, fix the cause or merge by hand; or `mcp-coder gh-tool set-status status-10:pr-created` |

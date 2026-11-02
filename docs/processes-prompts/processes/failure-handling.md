@@ -43,7 +43,7 @@ Human. vscodeclaude opens a session on every failure label.
 
 ## Slash commands
 
-`/check_branch_status` is the entry command for every failure label. Exception: `status-17f-tasks` auto-launches `/implementation_finalise`.
+`/check_branch_status` is the entry command for every failure label. Exceptions: `status-17f-tasks` auto-launches `/implementation_finalise`; `status-74` opens with `/rebase`, then `/check_branch_status`.
 
 ## Failure exits
 
