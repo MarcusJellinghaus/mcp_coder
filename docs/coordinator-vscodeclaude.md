@@ -105,6 +105,8 @@ Issues must also:
 - Be assigned to the GitHub user that your token authenticates as (`[github] token` or `GITHUB_TOKEN`). Nothing else is configured: assign the issue to yourself, or no session opens.
 - Not already have an active session
 
+An issue whose body is untrusted opens a review-only session: a fixed prompt, and no title or branch in the banner and status file. See [Issue body trust](repository-setup/github.md#issue-body-trust).
+
 ### PR-health checks for `status-10:pr-created`
 
 `status-10:pr-created` issues never get a session themselves, but on every `coordinator vscodeclaude` run the coordinator checks each one's PR (live GitHub data, no local checkout needed). There is no internal loop — how often this happens depends on how often you run (or schedule) the command. The checks run whether or not a session slot is free. The checks run in a fixed order and at most one acts per poll — the rest are re-checked next poll:
@@ -114,6 +116,8 @@ Issues must also:
 3. **New review feedback** (unresolved thread, or a changes-requested review / PR comment newer than the last triage; comments whose first line contains ❌ are ignored) → `status-91:pr-review-comments`. Only items from trusted authors (`OWNER`, `MEMBER`, `COLLABORATOR`, or `[github] trusted_commenters`) on a PR whose author is trusted count. Untrusted feedback never escalates: the coordinator prints one line per issue (`untrusted PR feedback from @a — review manually`) and writes nothing to GitHub.
 
 An account that posts PRs or ❌ notes on the owner's behalf (e.g. a Jenkins machine user via `github_credentials_id`) must be `COLLABORATOR` or listed in `[github] trusted_commenters` on the vscodeclaude host — otherwise its ❌ notes are dropped from the status file and its PRs never reach `status-91`.
+
+This covers *authors* of PRs and notes. For *issue body editors* only the token user or `trusted_commenters` counts; see [Issue body trust](repository-setup/github.md#accepting-an-external-issue).
 
 `status-91` and the escalation labels `status-73`, `74`, `83` and `84` open an interactive session: `/pr_comment_triage` for `91`, `/check_branch_status` for the others. See [PR-health](processes-prompts/processes/71-pr-follow-up.md) for the full label flow.
 
@@ -155,6 +159,8 @@ Each session creates:
 | `.vscode/tasks.json` | Auto-run task on folder open |
 | `.vscodeclaude_status.txt` | Session status (gitignored) |
 
+For an untrusted issue body, the banner and `.vscodeclaude_status.txt` use an untrusted variant (warning line, no title, no `Branch:` line), and `title` in `.vscodeclaude_session.json` is blank.
+
 ### Session Storage
 
 Sessions are tracked in:
@@ -169,6 +175,7 @@ Sessions are tracked in:
 - **`vscodeclaude launch`**: cleanup and session bookkeeping still run; restart, PR-health checks and new launches are skipped until the next run.
 - **`vscodeclaude status`** (also with `--explain`) prints only the rate-limit line, no table.
 - A session whose issue state cannot be fetched is never treated as closed or stale.
+- [Issue body trust](repository-setup/github.md#issue-body-trust) lookups are never cached: one lookup per gated issue per run.
 
 Cache files live next to `.issues.json` (same directory, same repo prefix) and are shared by all processes:
 

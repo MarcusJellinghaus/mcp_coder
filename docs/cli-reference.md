@@ -191,6 +191,8 @@ mcp-coder create-plan ISSUE_NUMBER [OPTIONS]
 
 Normally dispatched by the coordinator for `status-02:awaiting-planning`. See [Plan creation](processes-prompts/processes/02-plan-creation.md).
 
+On an untrusted issue body it logs a warning and still runs. See [Issue body trust](repository-setup/github.md#issue-body-trust).
+
 ```bash
 mcp-coder create-plan 123
 mcp-coder create-plan 456 --update-issue-labels --post-issue-comments
@@ -332,6 +334,7 @@ mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]
 - `--all` processes every configured repository; `--repo NAME` one (the section name under `[coordinator.repos.*]`). They are mutually exclusive.
 - `--dry-run` runs a real Jenkins build of the executor job against `--branch-name`, without touching GitHub issues or labels. It needs `--repo` and `--branch-name`, and is the recommended first-run check for a newly configured repository. `--log-level-coordinator` sets the log level of the `mcp-coder` commands in that test script (default `DEBUG`).
 - `--force-refresh` bypasses the GitHub cache. See `cache_refresh_minutes` in the [Configuration Guide](configuration/config.md).
+- Issues with an untrusted body are skipped (no comment, no label change). See [Issue body trust](repository-setup/github.md#issue-body-trust).
 
 See [Jenkins Setup](repository-setup/jenkins.md) for the required permissions and credentials, and [Coordinator and VSCodeClaude](coordinator-vscodeclaude.md).
 

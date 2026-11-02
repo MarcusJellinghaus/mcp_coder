@@ -151,7 +151,7 @@ GitHub authentication, comment-trust and traffic-log settings.
 | ------- | ------ | ------------- |
 | `token` | string | GitHub personal access token. Env override: `GITHUB_TOKEN` |
 | `test_repo_url` | string | Repository used by GitHub integration tests. Env override: `GITHUB_TEST_REPO_URL` |
-| `trusted_commenters` | list of strings | Extra logins whose PR/issue comments are trusted, besides repo owners, members and collaborators (e.g. a CI machine user). See [mcp-workspace GitHub configuration](https://github.com/MarcusJellinghaus/mcp-workspace#github-configuration) |
+| `trusted_commenters` | list of strings | Extra logins whose PR/issue comments are trusted, besides repo owners, members and collaborators (e.g. a CI machine user). Also decides issue-body trust for authors and editors, including bots and machine users; see [Issue body trust](../repository-setup/github.md#issue-body-trust) and [mcp-workspace GitHub configuration](https://github.com/MarcusJellinghaus/mcp-workspace#github-configuration) |
 | `traffic_log` | boolean | Opt-in log of GitHub API requests. Only boolean `true` enables it |
 | `traffic_log_dir` | string | Directory for the traffic log. Default: `~/.mcp_coder/logs/github_traffic/`. One file per day: `github_requests_YYYY-MM-DD.log` |
 
