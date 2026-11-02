@@ -75,5 +75,8 @@ adding `.gitattributes` (`*.md text`); commit `.gitattributes`; rewrite / touch
   exists, tree clean, origin has the commit.
 - Same plus a real content change in `doc.md` → `dirty_tree`, nothing staged, no new commit.
 - A deleted tracked file → `dirty_tree`.
-- Stat-only dirt: touch an already-normalized `.md` file without changing its content
-  or line endings, so renormalizing stages nothing → `ok`, no new commit.
+- Stat-only dirt (no-commit branch): call `_clear_line_ending_dirt` directly on a
+  tracked, already-normalized `.md` file (its renormalize stages nothing; if git
+  stages it anyway, mock `has_staged_changes` to False) → returns True, HEAD SHA
+  unchanged (no commit created). Not via `_attempt_rebase_and_push`: git status
+  re-checks a touched clean file and reports nothing dirty, so the helper is never reached.
