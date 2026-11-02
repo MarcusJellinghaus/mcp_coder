@@ -3,8 +3,9 @@
 After the PR is opened, mergeability is checked before CI, in the same order
 as PR-health: a ``dirty`` PR gets one rebase-and-push, and if it is still
 ``dirty`` the CI wait is skipped because CI results on a conflicting branch
-are moot. Otherwise the CI run for the pushed HEAD is awaited. This phase
-only waits and applies a final label - it never fixes CI or conflicts.
+are moot, and the PR is handed to fix-conflict (``merge_conflict``).
+Otherwise the CI run for the pushed HEAD is awaited. This phase only waits
+and applies a final label - it never fixes CI or conflicts.
 """
 
 import logging
@@ -61,8 +62,9 @@ def run_post_creation(
         auto_merge: If True, squash-merge the PR on a real green.
 
     Returns:
-        Exit code: 1 on "pr_merge_conflict" / "merge_failed" or when the label
-        write fails, else 0 ("failing_ci" / "pr_created" / "merged").
+        Exit code: 1 on the auto-merge outcomes "pr_merge_conflict" /
+        "merge_failed" or when the label write fails, else 0 ("merge_conflict"
+        / "failing_ci" / "pr_created" / "merged").
     """
     head_before = get_latest_commit_sha(project_dir)
     label, verified_sha = _check_mergeability_and_ci(project_dir, branch, head_before)
@@ -102,13 +104,12 @@ def apply_post_creation_label(
 
     Args:
         project_dir: Path to the project directory.
-        label: Final label ID: "pr_merge_conflict", "failing_ci" or "pr_created".
+        label: Final label ID: "merge_conflict", "failing_ci" or "pr_created".
         issue_number: Issue linked to the branch, or None (label write skipped).
         update_issue_labels: If True, apply the label to the issue.
 
     Returns:
-        Exit code: 1 when the label write fails or the label is
-        "pr_merge_conflict" (status-74), else 0.
+        Exit code: 1 when the label write fails, else 0.
     """
     rc = 0
     if update_issue_labels and issue_number:
@@ -127,7 +128,7 @@ def apply_post_creation_label(
         logger.log(OUTPUT, "Create PR workflow completed with warnings")
     else:
         logger.log(OUTPUT, "Create PR workflow completed successfully!")
-    return rc or (1 if label == "pr_merge_conflict" else 0)
+    return rc
 
 
 def _check_mergeability_and_ci(
@@ -142,7 +143,7 @@ def _check_mergeability_and_ci(
             rebase succeeds locally but its push fails.
 
     Returns:
-        Tuple of the label ID ("pr_merge_conflict", "failing_ci" or
+        Tuple of the label ID ("merge_conflict", "failing_ci" or
         "pr_created") and the HEAD SHA CI really passed on, or None when CI
         was not verified green on HEAD.
     """
@@ -158,9 +159,11 @@ def _check_mergeability_and_ci(
         state = _poll_mergeable_state(project_dir, branch)
         if state == "dirty":
             logger.log(
-                OUTPUT, "PR still has merge conflicts after rebase; skipping CI wait"
+                OUTPUT,
+                "PR still has merge conflicts after rebase; skipping CI wait; "
+                "handing to fix-conflict",
             )
-            return "pr_merge_conflict", None
+            return "merge_conflict", None
 
     try:
         ci_manager = CIResultsManager(project_dir)

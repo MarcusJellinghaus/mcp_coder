@@ -62,9 +62,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 9: create_pr sends a still-`dirty` PR to fix-conflict — [step_9.md](./steps/step_9.md)
-- [ ] Implementation: tests + still `dirty` → `merge_conflict` (status-71)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + still `dirty` → `merge_conflict` (status-71)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 10: implement logs the rebase outcome reason (#430) — [step_10.md](./steps/step_10.md)
 - [ ] Implementation: tests + log rebase outcome reason

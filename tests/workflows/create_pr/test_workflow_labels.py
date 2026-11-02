@@ -449,25 +449,21 @@ def phase_a_ok() -> Iterator[dict[str, MagicMock]]:
 class TestPhaseB:
     """Phase B: post-creation checks and the final label."""
 
-    @pytest.mark.parametrize(
-        ("label", "expected"),
-        [("pr_created", 0), ("pr_merge_conflict", 1), ("failing_ci", 0)],
-    )
+    @pytest.mark.parametrize("label", ["pr_created", "merge_conflict", "failing_ci"])
     def test_final_label_from_post_creation(
         self,
         label: str,
-        expected: int,
         phase_a_ok: dict[str, MagicMock],
         mock_post_creation: MagicMock,
     ) -> None:
-        """The phase B check outcome becomes the final label; 74 exits 1."""
+        """The phase B check outcome becomes the final label."""
         mock_post_creation.return_value = (label, None)
 
         result = run_create_pr_workflow(
             Path("/test"), "claude", update_issue_labels=True
         )
 
-        assert result == expected
+        assert result == 0
         mock_post_creation.assert_called_once_with(
             Path("/test"), "feature-branch", "abc123"
         )
@@ -475,23 +471,19 @@ class TestPhaseB:
             Path("/test"), "pr_creating", label, 123
         )
 
-    @pytest.mark.parametrize(
-        ("label", "expected"),
-        [("pr_created", 0), ("pr_merge_conflict", 1), ("failing_ci", 0)],
-    )
+    @pytest.mark.parametrize("label", ["pr_created", "merge_conflict", "failing_ci"])
     def test_labels_off_still_runs_phase_b(
         self,
         label: str,
-        expected: int,
         phase_a_ok: dict[str, MagicMock],
         mock_post_creation: MagicMock,
     ) -> None:
-        """Phase B runs with update_issue_labels=False, sets no label; 74 exits 1."""
+        """Phase B runs with update_issue_labels=False and sets no label."""
         mock_post_creation.return_value = (label, None)
 
         result = run_create_pr_workflow(Path("/test"), "claude")
 
-        assert result == expected
+        assert result == 0
         mock_post_creation.assert_called_once()
         phase_a_ok["apply_label"].assert_not_called()
 
