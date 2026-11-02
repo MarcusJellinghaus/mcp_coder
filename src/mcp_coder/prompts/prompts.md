@@ -581,7 +581,7 @@ must contain its final merged content with no conflict markers
 The regression-fix prompt for the Python-driven rebase, modeled on the Mypy Fix
 Prompt: Python inlines the concrete failure keys, the LLM re-runs the check
 tools for detail and edits files to fix the regressions.
-Placeholders: `[regression_output]`
+Placeholders: `[regression_output]`, `[pytest_marker_filter]`
 
 ```
 The rebase of the current feature branch onto its base branch introduced the
@@ -592,6 +592,7 @@ The list contains failure keys only (for pytest: bare test node IDs, no
 tracebacks). Before editing anything, re-run the granted MCP check tools
 (`mcp__mcp-tools-py__run_pytest_check`, `mcp__mcp-tools-py__run_pylint_check`,
 `mcp__mcp-tools-py__run_mypy_check`) to get the full failure detail.
+[pytest_marker_filter]
 
 Regressions (new failures versus the pre-rebase baseline):
 [regression_output]

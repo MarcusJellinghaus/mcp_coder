@@ -31,6 +31,9 @@ findings must not read as regressions (regression = verification − baseline).
 
 _PYTEST_NON_FAILING_OUTCOMES = ("passed", "skipped", "xfailed", "xpassed")
 
+REBASE_PYTEST_TIMEOUT_SECONDS = 1800
+"""Whole-suite pytest budget; the library's 300 s default is too short."""
+
 
 def _pytest_failure_keys(results: dict[str, Any]) -> set[FailureKey]:
     """Reduce a pytest result dict to a set of failure keys.
@@ -102,11 +105,17 @@ def _mypy_failure_keys(result: MypyResult) -> set[FailureKey]:
     }
 
 
-def _run_all_checks(project_dir: Path) -> set[FailureKey]:
+def _run_all_checks(
+    project_dir: Path, markers: list[str] | None = None
+) -> set[FailureKey]:
     """Run pytest, pylint and mypy and union their failure keys.
 
     Findings (failed tests, lint messages, type errors) become keys; a check
     that fails to *run* raises ``CheckRunError`` naming the checker.
+
+    Args:
+        project_dir: Path to the project directory.
+        markers: Optional pytest ``-m`` expressions; ``None`` runs all tests.
 
     Returns:
         The union of failure keys across all three checks.
@@ -115,7 +124,16 @@ def _run_all_checks(project_dir: Path) -> set[FailureKey]:
         CheckRunError: If any check fails to run.
     """
     checkers: list[tuple[str, Callable[[], set[FailureKey]]]] = [
-        ("pytest", lambda: _pytest_failure_keys(run_pytest_check(project_dir))),
+        (
+            "pytest",
+            lambda: _pytest_failure_keys(
+                run_pytest_check(
+                    project_dir,
+                    markers=markers,
+                    timeout_seconds=REBASE_PYTEST_TIMEOUT_SECONDS,
+                )
+            ),
+        ),
         ("pylint", lambda: _pylint_failure_keys(run_pylint_check(project_dir))),
         ("mypy", lambda: _mypy_failure_keys(run_mypy_check(project_dir))),
     ]

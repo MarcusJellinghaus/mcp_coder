@@ -42,6 +42,35 @@ def test_regression_fixed_on_first_attempt(
     patched.push.assert_called_once()
 
 
+def test_markers_reach_every_check_run_and_fix_prompt(
+    patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``markers`` is passed to baseline, verification, re-check and the prompt."""
+    markers = ["not claude_cli_integration"]
+    fix_prompt = MagicMock(return_value="FIX:")
+    monkeypatch.setattr(rebase_module, "_build_regression_fix_prompt", fix_prompt)
+    patched.all_checks.side_effect = [set(), set(_REGRESSION), set()]
+
+    result = rebase_module.run_rebase_workflow(
+        tmp_path, provider="claude", markers=markers
+    )
+
+    assert result.exit_code == 0
+    assert [c.args for c in patched.all_checks.call_args_list] == [
+        (tmp_path, markers)
+    ] * 3
+    assert fix_prompt.call_args.args[1] == markers
+
+
+def test_no_markers_runs_unfiltered_checks(
+    patched: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Without ``markers`` (the CLI), every check run gets ``None``."""
+    assert _run(tmp_path).exit_code == 0
+    assert patched.all_checks.call_count == 2
+    assert all(c.args[1] is None for c in patched.all_checks.call_args_list)
+
+
 def test_regression_fix_formats_through_run_formatters(
     patched: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

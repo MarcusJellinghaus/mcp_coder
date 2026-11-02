@@ -97,6 +97,7 @@ def test_regression_fix_prompt_loads() -> None:
     prompt = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_HEADER)
     assert prompt.strip()
     assert "[regression_output]" in prompt
+    assert "[pytest_marker_filter]" in prompt
     assert "mcp__mcp-workspace__git" in prompt
 
 

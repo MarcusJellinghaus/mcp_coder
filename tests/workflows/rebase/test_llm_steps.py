@@ -201,6 +201,21 @@ class TestBuildRegressionFixPrompt:
         assert "pytest: tests/test_x.py::test_new" in prompt
         assert "[regression_output]" not in prompt
 
+    def test_markers_named_in_filter_text(self) -> None:
+        """With markers, the filter text names them and the placeholder is gone."""
+        prompt = _build_regression_fix_prompt(
+            "pytest: tests/test_x.py::test_new",
+            ["not claude_cli_integration", "not llm_integration"],
+        )
+        assert "[pytest_marker_filter]" not in prompt
+        assert 'markers=["not claude_cli_integration", "not llm_integration"]' in prompt
+
+    def test_no_markers_no_filter_text(self) -> None:
+        """Without markers, neither the placeholder nor any filter text remains."""
+        prompt = _build_regression_fix_prompt("pytest: tests/test_x.py::test_new")
+        assert "[pytest_marker_filter]" not in prompt
+        assert "markers=" not in prompt
+
 
 class TestFormatFailureKeys:
     """Deterministic sorted rendering (doubles as the stall-guard string)."""

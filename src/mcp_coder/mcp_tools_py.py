@@ -57,11 +57,18 @@ def run_format_code(
     return _run_format_code(sys.executable, project_root, target_dirs, steps=None)
 
 
-def run_pytest_check(project_dir: str | Path) -> dict[str, Any]:
-    """Run pytest with project defaults (no marker filter, library timeouts).
+def run_pytest_check(
+    project_dir: str | Path,
+    markers: list[str] | None = None,
+    timeout_seconds: int = 300,
+) -> dict[str, Any]:
+    """Run pytest with project defaults, optionally filtered by markers.
 
     Args:
         project_dir: Path to the project directory.
+        markers: Optional ``-m`` expressions (e.g. ``"not slow"``); the
+            library joins multiple entries with ``and``. ``None`` runs all.
+        timeout_seconds: Maximum seconds for the whole pytest run.
 
     Returns:
         Result dict from mcp_tools_py, unchanged. On a completed run it
@@ -74,6 +81,8 @@ def run_pytest_check(project_dir: str | Path) -> dict[str, Any]:
     return _check_code_with_pytest(
         project_dir=str(project_dir),
         python_executable=sys.executable,
+        markers=markers,
+        timeout_seconds=timeout_seconds,
     )
 
 

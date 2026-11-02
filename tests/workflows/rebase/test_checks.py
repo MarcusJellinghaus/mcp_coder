@@ -15,6 +15,7 @@ from mcp_tools_py.code_checker_pylint import PylintMessage, PylintResult
 from mcp_tools_py.code_checker_pytest import Collector, PytestReport, Summary, Test
 
 from mcp_coder.workflows.rebase_checks import (
+    REBASE_PYTEST_TIMEOUT_SECONDS,
     CheckRunError,
     _mypy_failure_keys,
     _pylint_failure_keys,
@@ -351,6 +352,30 @@ class TestRunAllChecks:
             ),
         ):
             assert _run_all_checks(tmp_path) == set()
+
+    def test_forwards_markers_and_rebase_timeout(self, tmp_path: Path) -> None:
+        """Markers and the rebase pytest timeout reach ``run_pytest_check``."""
+        with (
+            patch(
+                "mcp_coder.workflows.rebase_checks.run_pytest_check",
+                return_value=_pytest_results(_make_report()),
+            ) as mock_pytest,
+            patch(
+                "mcp_coder.workflows.rebase_checks.run_pylint_check",
+                return_value=PylintResult(return_code=0, messages=[]),
+            ),
+            patch(
+                "mcp_coder.workflows.rebase_checks.run_mypy_check",
+                return_value=MypyResult(return_code=0, messages=[]),
+            ),
+        ):
+            _run_all_checks(tmp_path, ["not x"])
+
+        mock_pytest.assert_called_once_with(
+            tmp_path,
+            markers=["not x"],
+            timeout_seconds=REBASE_PYTEST_TIMEOUT_SECONDS,
+        )
 
     def test_wrapper_exception_becomes_check_run_error(self, tmp_path: Path) -> None:
         """An unexpected exception from a wrapper is wrapped, naming the checker."""

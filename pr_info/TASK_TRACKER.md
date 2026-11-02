@@ -27,9 +27,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 2: pytest marker filter and explicit pytest timeout — [step_2.md](./steps/step_2.md)
-- [ ] Implementation: tests + `markers`/`timeout_seconds` threaded to the shim; prompt placeholder
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `markers`/`timeout_seconds` threaded to the shim; prompt placeholder
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 3: Marker retry once per conflict stop — [step_3.md](./steps/step_3.md)
 - [ ] Implementation: tests + one marker-retry per conflict stop

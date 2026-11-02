@@ -169,7 +169,9 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         lambda _pd, files: "CONFLICT:" + ",".join(files),
     )
     monkeypatch.setattr(
-        rebase_module, "_build_regression_fix_prompt", lambda text: "FIX:" + text
+        rebase_module,
+        "_build_regression_fix_prompt",
+        lambda text, _markers=None: "FIX:" + text,
     )
 
     # Checks + formatter.

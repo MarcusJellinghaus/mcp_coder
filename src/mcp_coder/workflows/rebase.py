@@ -10,6 +10,7 @@ repository state plus a set-difference of failure keys; the LLM never
 self-reports an outcome.
 """
 
+import json
 import logging
 from collections import Counter
 from dataclasses import dataclass
@@ -342,14 +343,28 @@ def _build_conflict_prompt(project_dir: Path, files: list[str]) -> str:
     return template.replace("[conflict_context]", "\n\n".join(blocks))
 
 
-def _build_regression_fix_prompt(regression_text: str) -> str:
+def _build_regression_fix_prompt(
+    regression_text: str, markers: list[str] | None = None
+) -> str:
     """Build the regression-fix prompt with the failure-key text inlined.
+
+    With ``markers``, the prompt tells the LLM to pass the same pytest marker
+    filter the deterministic checks used; without, the placeholder is removed.
 
     Returns:
         The assembled regression-fix prompt string.
     """
+    filter_text = ""
+    if markers:
+        filter_text = (
+            "When you run `mcp__mcp-tools-py__run_pytest_check`, pass "
+            f"markers={json.dumps(markers)} so tests that reach external "
+            "services are excluded."
+        )
     template = get_prompt(str(PROMPTS_FILE_PATH), _REGRESSION_PROMPT_HEADER)
-    return template.replace("[regression_output]", regression_text)
+    return template.replace("[regression_output]", regression_text).replace(
+        "[pytest_marker_filter]", filter_text
+    )
 
 
 def _format_failure_keys(keys: set[FailureKey]) -> str:
@@ -407,6 +422,7 @@ def run_rebase_workflow(
     base_branch: str | None = None,
     mcp_config: str | None = None,
     settings_file: str | None = None,
+    markers: list[str] | None = None,
 ) -> RebaseRunResult:
     """Orchestrate the automated rebase (Python-driven).
 
@@ -418,6 +434,9 @@ def run_rebase_workflow(
     abort safety net.
 
     See the exit-code contract in ``summary.md``.
+
+    ``markers`` (pytest ``-m`` expressions) filter every check run and are
+    passed on to the regression-fix prompt; ``None`` runs the full suite.
 
     Returns:
         A ``RebaseRunResult``: ``exit_code`` ``0`` (success or no-op), ``1``
@@ -462,7 +481,7 @@ def run_rebase_workflow(
 
     logger.log(OUTPUT, "Running baseline checks (pytest, pylint, mypy)...")
     try:
-        baseline = _run_all_checks(project_dir)
+        baseline = _run_all_checks(project_dir, markers)
     except CheckRunError as exc:
         # No git mutation has happened yet — plain infrastructure error.
         return _end(2, f"Baseline checks failed to run: {exc}")
@@ -557,7 +576,7 @@ def run_rebase_workflow(
             result = _stage_all_and_continue(project_dir)
 
         logger.log(OUTPUT, "Verifying no regression...")
-        regressions = _run_all_checks(project_dir) - baseline
+        regressions = _run_all_checks(project_dir, markers) - baseline
         attempt = 0
         last_text: str | None = None
         while regressions and attempt < _MAX_FIX_ATTEMPTS:
@@ -574,7 +593,7 @@ def run_rebase_workflow(
                 _MAX_FIX_ATTEMPTS,
             )
             _, session_id = _prompt_in_session(
-                _build_regression_fix_prompt(text),
+                _build_regression_fix_prompt(text, markers),
                 session_id,
                 project_dir=project_dir,
                 provider=provider,
@@ -589,7 +608,7 @@ def run_rebase_workflow(
             commit_all_changes(
                 f"fix: resolve regressions from rebase onto origin/{base}", project_dir
             )
-            regressions = _run_all_checks(project_dir) - baseline
+            regressions = _run_all_checks(project_dir, markers) - baseline
         if regressions:
             note = _restore_note(project_dir, pre_sha)
             return _end(1, f"{len(regressions)} unfixed regression(s){note}")
