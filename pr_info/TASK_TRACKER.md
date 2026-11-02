@@ -21,6 +21,28 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Row mapping helper and section wiring
+See [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `_map_security_row` helper, remove `_derive_code_scanning_alerts`, wire `code_scanning_alerts` in `_print_github_security_section`, update tests and conftest default
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: Tests that call the real probe
+See [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation: new `tests/cli/commands/test_verify_github_security_probe.py` (code-scanning cases 200/403/404/error, repo-unresolvable case)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: Documentation
+See [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation: update `docs/repository-setup/github.md` and `docs/repository-setup/quality-and-security-checks.md`
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against base branch
+- [ ] PR summary prepared
