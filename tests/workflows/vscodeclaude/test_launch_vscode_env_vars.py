@@ -6,6 +6,7 @@ of the session's project directory.
 """
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -179,6 +180,7 @@ class TestMCPEnvironmentVariablesBugFix:
             vscodeclaude_config=vscodeclaude_config,
             repo_vscodeclaude_config=repo_vscodeclaude_config,
             branch_name=None,
+            issue_manager=MagicMock(),
             is_intervention=False,
         )
 

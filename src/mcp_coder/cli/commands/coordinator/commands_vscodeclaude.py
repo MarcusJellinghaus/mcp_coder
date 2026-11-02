@@ -199,7 +199,11 @@ def execute_coordinator_vscodeclaude(args: argparse.Namespace) -> int:
             if not args.issue:
                 logger.error("--intervene requires --issue NUMBER")
                 return 1
-            return _handle_intervention_mode(args, vscodeclaude_config)
+            try:
+                return _handle_intervention_mode(args, vscodeclaude_config)
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                log_rate_limit_stop(_rate_limit_or_raise(exc))
+                return 0
 
         # Determine max sessions
         max_sessions = args.max_sessions or vscodeclaude_config["max_sessions"]
@@ -590,6 +594,7 @@ def _handle_intervention_mode(
         vscodeclaude_config=vscodeclaude_config,
         repo_vscodeclaude_config=repo_vscodeclaude_config,
         branch_name=branch_name,
+        issue_manager=issue_manager,
         is_intervention=True,
         skip_github_install=skip_github_install,
     )
