@@ -116,9 +116,9 @@
       "internal_id": "fixing_merge_conflict",
       "name": "status-72:fixing-merge-conflict",
       "color": "fb7185",
-      "description": "Mechanical rebase in progress to resolve merge conflict (auto/in-progress)",
+      "description": "Rebase in progress to resolve merge conflict (auto/in-progress)",
       "category": "bot_busy",
-      "stale_timeout_minutes": 30
+      "stale_timeout_minutes": 60
     },
     {
       "internal_id": "merge_conflict_failed",
@@ -147,7 +147,7 @@
         "emoji": "⚠️",
         "display_name": "PR MERGE CONFLICT",
         "stage_short": "pr-conflict",
-        "commands": ["/check_branch_status"],
+        "commands": ["/rebase", "/check_branch_status"],
         "requires_branch": true,
         "color": "red"
       }

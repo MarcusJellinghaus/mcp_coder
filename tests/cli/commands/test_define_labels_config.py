@@ -66,6 +66,7 @@ class TestStaleTimeoutConfiguration:
             "planning": 15,
             "implementing": 120,
             "pr_creating": 30,
+            "fixing_merge_conflict": 60,
         }
 
         for internal_id, expected_timeout in expected_timeouts.items():
@@ -78,3 +79,35 @@ class TestStaleTimeoutConfiguration:
                 f"stale_timeout_minutes for '{internal_id}' should be {expected_timeout}, "
                 f"got {actual_timeout}"
             )
+
+
+class TestMergeConflictLabels:
+    """Test the merge-conflict label family configuration."""
+
+    def test_fixing_merge_conflict_description_not_mechanical(
+        self, labels_config_path: Path
+    ) -> None:
+        """status-72 no longer describes the rebase as mechanical-only."""
+        labels_config = load_labels_config(labels_config_path)
+        labels_by_id = {
+            label["internal_id"]: label for label in labels_config["workflow_labels"]
+        }
+
+        assert "Mechanical" not in labels_by_id["fixing_merge_conflict"]["description"]
+
+    def test_merge_conflict_vscodeclaude_commands(
+        self, labels_config_path: Path
+    ) -> None:
+        """status-74 offers /rebase; status-73 keeps /check_branch_status only."""
+        labels_config = load_labels_config(labels_config_path)
+        labels_by_id = {
+            label["internal_id"]: label for label in labels_config["workflow_labels"]
+        }
+
+        assert labels_by_id["pr_merge_conflict"]["vscodeclaude"]["commands"] == [
+            "/rebase",
+            "/check_branch_status",
+        ]
+        assert labels_by_id["merge_conflict_failed"]["vscodeclaude"]["commands"] == [
+            "/check_branch_status"
+        ]

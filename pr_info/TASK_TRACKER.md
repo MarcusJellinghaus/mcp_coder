@@ -57,9 +57,9 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 - [x] Commit message prepared
 
 ### Step 8: Label config: `status-72` and `status-74` — [step_8.md](./steps/step_8.md)
-- [ ] Implementation: tests + `status-72` timeout/description, `status-74` commands
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation: tests + `status-72` timeout/description, `status-74` commands
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: create_pr sends a still-`dirty` PR to fix-conflict — [step_9.md](./steps/step_9.md)
 - [ ] Implementation: tests + still `dirty` → `merge_conflict` (status-71)
