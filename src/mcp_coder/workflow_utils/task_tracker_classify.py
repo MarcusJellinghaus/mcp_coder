@@ -7,6 +7,7 @@ its file line number.
 """
 
 import re
+from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -249,3 +250,77 @@ def describe_violations(violations: list[str]) -> str:
         " '## Tasks', followed by a '## Pull Request' section with checkboxes."
         " Expected format:\n\n" + EXPECTED_FORMAT
     )
+
+
+def _checkboxes(content: str) -> list[_Line]:
+    """Return checkbox records outside the instructions section."""
+    return [
+        r
+        for r in _scan_tracker(content)
+        if r.checked is not None and r.section != "instructions"
+    ]
+
+
+def has_completed_tasks(content: str) -> bool:
+    """Return True if any checkbox outside the instructions section is checked.
+
+    Args:
+        content: Full TASK_TRACKER.md content
+
+    Returns:
+        True if the tracker has at least one ``[x]`` task
+    """
+    return any(r.checked for r in _checkboxes(content))
+
+
+def check_restructure(original: str, restructured: str) -> list[str]:
+    """Check that a restructured tracker is valid and keeps the original's progress.
+
+    Every ``[x]`` line must survive unchanged, no ``[ ]`` line may be lost, and
+    steps containing ``[x]`` may not gain ``[ ]`` lines. ``[ ]`` lines in
+    ``## Pull Request`` or in steps without ``[x]`` are not restricted.
+
+    Args:
+        original: Tracker content before the restructure
+        restructured: Tracker content after the restructure
+
+    Returns:
+        Error strings; empty if the restructure is accepted
+    """
+    state, violations = classify_tracker_content(restructured)
+    if state is not TrackerState.POPULATED:
+        return violations or [
+            f"{TRACKER_LABEL}: restructured tracker is not populated"
+            f" (state: {state.value})"
+        ]
+
+    old = _checkboxes(original)
+    new = _checkboxes(restructured)
+    errors: list[str] = []
+
+    old_checked = Counter(r.name for r in old if r.checked)
+    new_checked = Counter(r.name for r in new if r.checked)
+    if old_checked != new_checked:
+        changed = sorted((old_checked - new_checked) + (new_checked - old_checked))
+        errors.append(
+            "[x] lines added, removed, reworded or toggled: "
+            + ", ".join(f"'{name}'" for name in changed)
+        )
+
+    old_open = Counter(r.name for r in old if r.checked is False)
+    new_open = Counter(r.name for r in new if r.checked is False)
+    for name, count in (old_open - new_open).items():
+        errors.append(f"'{name}': [ ] line removed, reworded or checked ({count}x)")
+
+    checked_steps = {r.step for r in new if r.checked and r.step is not None}
+    open_in_checked_steps = Counter(
+        r.name for r in new if r.checked is False and r.step in checked_steps
+    )
+    for name, count in open_in_checked_steps.items():
+        if count > old_open[name]:
+            errors.append(
+                f"'{name}': {count} unchecked under steps with [x],"
+                f" original has {old_open[name]}"
+            )
+
+    return errors
