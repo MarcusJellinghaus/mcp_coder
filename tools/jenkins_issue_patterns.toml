@@ -74,6 +74,10 @@ regex = 'review failed: general'
 id = "MC-IMPL-BLOCKED"
 regex = 'Category: implementation_blocked'
 
+[[signature]]
+id = "MC-IMPL-TRACKER-INVALID"
+regex = 'Stage: Task tracker validation'
+
 # When the trigger id matched, the first `text` match is checked against the
 # reasons below (case-insensitive). First match wins: specific before broad.
 [blocked]

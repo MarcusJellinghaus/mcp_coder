@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
+from mcp_coder.workflows.implement.task_tracker_prep import TrackerPrepError
 
 
 class TestRunImplementWorkflow:
@@ -140,7 +141,9 @@ class TestRunImplementWorkflow:
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
-        mock_prepare_tracker.return_value = False
+        mock_prepare_tracker.side_effect = TrackerPrepError(
+            "task_tracker_prep_failed", "prep failed"
+        )
 
         result = run_implement_workflow(Path("/test/project"), "claude")
 

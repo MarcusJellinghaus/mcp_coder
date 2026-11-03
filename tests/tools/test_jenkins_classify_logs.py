@@ -50,6 +50,11 @@ def test_classify_signature(patterns: object) -> None:
     ]
 
 
+def test_classify_tracker_invalid(patterns: object) -> None:
+    text = "Stage: Task tracker validation\n"
+    assert "MC-IMPL-TRACKER-INVALID" in jenkins_classify_logs.classify(text, patterns)
+
+
 def test_classify_no_match(patterns: object) -> None:
     assert jenkins_classify_logs.classify("all good\n", patterns) == []
 

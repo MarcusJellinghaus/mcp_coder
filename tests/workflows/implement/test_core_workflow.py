@@ -9,9 +9,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_utils.task_tracker import TASK_TRACKER_TEMPLATE
 from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
 from mcp_coder.workflows.implement.task_tracker_prep import (
+    TrackerPrepError,
     log_progress_summary,
     prepare_task_tracker,
 )
@@ -50,8 +52,7 @@ class TestIntegration:
     @patch("mcp_coder.workflows.implement.core.RUN_MYPY_AFTER_EACH_TASK", True)
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.commit_all_changes")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.has_implementation_tasks")
+    @patch("mcp_coder.workflows.implement.task_tracker_prep.commit_paths")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.get_full_status")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.store_session")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.prompt_llm")
@@ -70,30 +71,38 @@ class TestIntegration:
         mock_prompt_llm: MagicMock,
         mock_store_session: MagicMock,
         mock_get_status: MagicMock,
-        mock_has_tasks: MagicMock,
         mock_commit: MagicMock,
         mock_get_progress: MagicMock,
         mock_process_task: MagicMock,
         tmp_path: Path,
     ) -> None:
         """Test complete workflow execution from start to finish."""
-        # Create steps directory for prepare_task_tracker
+        # Create steps directory and an empty tracker for prepare_task_tracker
         steps_dir = tmp_path / "pr_info" / "steps"
         steps_dir.mkdir(parents=True)
+        tracker = tmp_path / "pr_info" / "TASK_TRACKER.md"
+        tracker.write_text(TASK_TRACKER_TEMPLATE, encoding="utf-8")
 
         # Setup prerequisite checks
         mock_check_git.return_value = True
         mock_check_branch.return_value = True
         mock_check_prereq.return_value = True
 
-        # Setup task tracker preparation
-        mock_has_tasks.side_effect = [False, True]  # First no tasks, then has tasks
+        # Setup task tracker preparation: the LLM populates the tracker
+        def populate(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+            tracker.write_text(
+                "## Tasks\n\n### Step 1: Setup\n- [ ] Task 1\n\n"
+                "## Pull Request\n- [ ] PR review\n",
+                encoding="utf-8",
+            )
+            return _make_llm_response("LLM updated task tracker")
+
         mock_prepare_env.return_value = {
             "MCP_CODER_PROJECT_DIR": str(tmp_path),
             "MCP_CODER_VENV_DIR": str(tmp_path / ".venv"),
         }
         mock_get_prompt.return_value = "Task tracker update prompt"
-        mock_prompt_llm.return_value = _make_llm_response("LLM updated task tracker")
+        mock_prompt_llm.side_effect = populate
         mock_get_status.return_value = {
             "staged": [],
             "modified": ["pr_info/TASK_TRACKER.md"],
@@ -128,7 +137,6 @@ class TestIntegration:
         mock_check_prereq.assert_called_once_with(tmp_path)
 
         # Verify task tracker was prepared
-        assert mock_has_tasks.call_count == 2
         mock_get_prompt.assert_called_once()
         mock_prompt_llm.assert_called_once()
         mock_commit.assert_called_once()
@@ -156,8 +164,8 @@ class TestIntegration:
         git_dir = tmp_path / ".git"
         git_dir.mkdir()
 
-        result = prepare_task_tracker(tmp_path, "claude")
-        assert result is False
+        with pytest.raises(TrackerPrepError):
+            prepare_task_tracker(tmp_path, "claude")
 
         # Test progress logging without data
         log_progress_summary(tmp_path)  # Should not raise exception
@@ -485,7 +493,8 @@ class TestWorkflowSafetyNet:
     @patch(_NET_HANDLER)
     @patch(_DELIBERATE_HANDLER)
     @patch(
-        "mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=False
+        "mcp_coder.workflows.implement.core.prepare_task_tracker",
+        side_effect=TrackerPrepError("task_tracker_prep_failed", "prep failed"),
     )
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
@@ -512,6 +521,34 @@ class TestWorkflowSafetyNet:
         )
         # The net did NOT fire (body returned 1 cleanly).
         mock_net.assert_not_called()
+
+    @patch("mcp_coder.workflows.implement.core._fail", return_value=1)
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_task_tracker",
+        side_effect=TrackerPrepError("general", "line 5: orphan checkbox"),
+    )
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_tracker_prep_error_routes_reason_and_stage(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_fail: MagicMock,
+    ) -> None:
+        """TrackerPrepError reason/stage/message are passed to fail()."""
+        result = run_implement_workflow(Path("/fake"), "claude")
+
+        assert result == 1
+        mock_fail.assert_called_once()
+        args, kwargs = mock_fail.call_args
+        assert args[1] == "general"
+        assert kwargs["stage"] == "Task tracker validation"
+        assert kwargs["message"] == "line 5: orphan checkbox"
 
     @patch(_NET_HANDLER)
     @patch(
@@ -547,6 +584,43 @@ class TestWorkflowSafetyNet:
         assert "**Build:** https://jenkins.example.com/job/1/console" in comment
         assert "### Uncommitted Changes" in comment
 
+    @patch(_NET_HANDLER)
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_task_tracker",
+        side_effect=RuntimeError("boom"),
+    )
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_safety_net_comment_uses_tracker_progress(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_handle: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """The net's comment reads done/total from the task tracker."""
+        tracker = tmp_path / "pr_info" / "TASK_TRACKER.md"
+        tracker.parent.mkdir(parents=True)
+        tracker.write_text(
+            "## Tasks\n\n### Step 1: Work\n- [x] Task A\n- [ ] Task B\n- [ ] Task C\n"
+            "\n## Pull Request\n- [ ] PR summary prepared\n",
+            encoding="utf-8",
+        )
+        with patch(
+            "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+            return_value="",
+        ):
+            result = run_implement_workflow(tmp_path, "claude")
+
+        assert result == 1
+        comment = mock_handle.call_args[0][1]
+        assert "**Progress:** 1/3 tasks completed" in comment
+
 
 class TestSigtermHandler:
     """Tests for SIGTERM handler registration and behavior (owned by run_guarded)."""
@@ -554,7 +628,8 @@ class TestSigtermHandler:
     @patch(_NET_SIGNAL)
     @patch(_DELIBERATE_HANDLER)
     @patch(
-        "mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=False
+        "mcp_coder.workflows.implement.core.prepare_task_tracker",
+        side_effect=TrackerPrepError("task_tracker_prep_failed", "prep failed"),
     )
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
@@ -581,7 +656,8 @@ class TestSigtermHandler:
     @patch(_NET_SIGNAL)
     @patch(_DELIBERATE_HANDLER)
     @patch(
-        "mcp_coder.workflows.implement.core.prepare_task_tracker", return_value=False
+        "mcp_coder.workflows.implement.core.prepare_task_tracker",
+        side_effect=TrackerPrepError("task_tracker_prep_failed", "prep failed"),
     )
     @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
     @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)

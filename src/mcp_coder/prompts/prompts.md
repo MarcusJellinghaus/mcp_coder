@@ -81,6 +81,50 @@ Add `## Pull Request` section at end with PR review and summary tasks.
 - End with `## Pull Request`
 ```
 
+### Task Tracker Restructure
+
+This prompt is used to repair the structure of an invalid TASK_TRACKER.md that already has checked tasks.
+
+#### Task Tracker Restructure Prompt
+
+```
+The file `pr_info/TASK_TRACKER.md` has an invalid structure. Fix its structure only.
+
+Problems found:
+[violations]
+
+Expected structure:
+[expected_format]
+
+RULES:
+- Edit `pr_info/TASK_TRACKER.md` only. Do not edit any other file.
+- Checkbox lines may be moved, but never deleted or reworded.
+- Never check or uncheck a checkbox.
+- Do not add a new checkbox under a step that already has a checked box.
+- Keep the `## Instructions for LLM` header and its section unchanged.
+- Other headers, blank lines and comments may be added, edited, moved or removed.
+```
+
+### Task Tracker Feedback
+
+This prompt is sent in the same session when the task tracker is still invalid after a previous edit.
+
+#### Task Tracker Feedback Prompt
+
+```
+The file `pr_info/TASK_TRACKER.md` is still invalid.
+
+Problems found:
+[violations]
+
+Expected structure:
+[expected_format]
+
+Fix `pr_info/TASK_TRACKER.md` only. Do not edit any other file.
+Do not check or uncheck any checkbox.
+Keep the `## Instructions for LLM` header and its section unchanged.
+```
+
 ### Implementation step
 
 This is the actual step where could should be written or modified. The actual task comes from task tracker and its links to the task description.
@@ -272,6 +316,7 @@ Also list the folders \ modules \ files that should be created or modified by th
 - Apply **KISS principle** - minimize complexity, maximize maintainability
 - Keep code changes minimal and follow best practices
 - If a step has a precondition that may not hold, phrase the failure action as "write one line to `pr_info/.blocked.txt` and stop" — never "stop and report", and never "document the problem". Prose in a step or plan file is not a report and the workflow cannot see it.
+- Do not edit `pr_info/TASK_TRACKER.md` — the implement workflow populates it from the step files.
 
 ### Each Step Must Specify:
 - **WHERE**: File paths and module structure

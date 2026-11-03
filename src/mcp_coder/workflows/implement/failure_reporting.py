@@ -19,6 +19,9 @@ from mcp_coder.workflow_utils.failure_handling import (
     get_diff_stat,
     handle_workflow_failure,
 )
+from mcp_coder.workflow_utils.task_tracker import get_task_counts
+
+from .constants import PR_INFO_DIR
 
 # Full implement failure taxonomy: reason string -> label ID in labels.json.
 FAILURE_LABELS: dict[str, str] = {
@@ -67,7 +70,7 @@ def append_detail(message: str, detail: str) -> str:
 
 @dataclass
 class Progress:
-    """Mutable task-progress holder bridging the body to the net's comment.
+    """Mutable per-run task counter (completed this run, round-cap total).
 
     Attributes:
         completed: Number of tasks completed so far.
@@ -78,29 +81,29 @@ class Progress:
     total: int = 0
 
 
-def _comment_parts(
-    reason: str, progress: Progress, project_dir: Path
-) -> tuple[list[CommentField], str]:
+def _comment_parts(reason: str, project_dir: Path) -> tuple[list[CommentField], str]:
     """Category + Progress fields and the ### Uncommitted Changes section.
 
     Shared by the deliberate :func:`_fail` path and the ``run_guarded`` net.
     The Category is rendered from :data:`CATEGORY_DISPLAY` (falling back to the
-    ``"general"`` display), not by title-casing ``reason``.
+    ``"general"`` display), not by title-casing ``reason``. Progress is the
+    done/total count read from the task tracker; it is omitted when the
+    tracker is missing, unparseable or has no tasks.
 
     Args:
         reason: Failure reason string (key of :data:`FAILURE_LABELS`).
-        progress: Mutable progress holder; Progress is omitted when total is 0.
         project_dir: Path to the project git repository.
 
     Returns:
         ``(fields, section)`` for :func:`build_failure_comment`.
     """
     category = CATEGORY_DISPLAY.get(reason, CATEGORY_DISPLAY["general"])
-    progress_value = (
-        f"{progress.completed}/{progress.total} tasks completed"
-        if progress.total > 0
-        else None
-    )
+    try:
+        total, done = get_task_counts(str(project_dir / PR_INFO_DIR))
+    except Exception:  # pylint: disable=broad-exception-caught
+        # Missing / unparseable tracker: the comment must still be posted.
+        total, done = 0, 0
+    progress_value = f"{done}/{total} tasks completed" if total > 0 else None
     diff = get_diff_stat(project_dir)
     section = f"### Uncommitted Changes\n```\n{diff or 'No uncommitted changes'}\n```"
     return [("Category", category), ("Progress", progress_value)], section
@@ -112,7 +115,6 @@ def _fail(
     *,
     stage: str,
     message: str,
-    progress: Progress,
     start_time: float,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
@@ -120,7 +122,7 @@ def _fail(
     """Handle a deliberate implement failure: build comment, set label, log.
 
     Maps ``reason`` to its stage-specific label via :data:`FAILURE_LABELS`,
-    builds the failure comment from the live progress/elapsed context, and
+    builds the failure comment from the tracker progress and elapsed time, and
     delegates to the shared :func:`handle_workflow_failure`.
 
     Args:
@@ -128,7 +130,6 @@ def _fail(
         reason: Failure reason string (key of :data:`FAILURE_LABELS`).
         stage: Workflow stage where the failure occurred.
         message: Human-readable error description.
-        progress: Mutable progress holder read for the comment.
         start_time: Workflow start timestamp; elapsed is derived from it.
         update_issue_labels: Whether to attempt a label transition.
         post_issue_comments: Whether to post a failure comment.
@@ -137,7 +138,7 @@ def _fail(
         Always ``1`` (a deliberate, terminal failure exit code).
     """
     elapsed = time.time() - start_time
-    fields, extra = _comment_parts(reason, progress, project_dir)
+    fields, extra = _comment_parts(reason, project_dir)
     comment_body = build_failure_comment(
         project_dir,
         title="Implementation",

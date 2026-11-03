@@ -9,6 +9,7 @@ from mcp_coder.workflow_utils.task_tracker import (
     _normalize_task_name,
     _parse_task_lines,
     get_incomplete_tasks,
+    get_task_counts,
 )
 from tests.workflow_utils.test_task_tracker import create_test_tracker_content
 
@@ -213,6 +214,49 @@ Some instructions here.
         assert "- [ ] PR task should be excluded" not in result
         assert "- [ ] Another PR task" not in result
         assert "- [ ] This should also be excluded" not in result
+
+    @pytest.mark.parametrize("end_header", ["## Pull Request", "### Pull Request"])
+    def test_exact_pull_request_header_ends_section(self, end_header: str) -> None:
+        """Test that an exact Pull Request header ends the section at ## and ###."""
+        content = f"""# Task Tracker
+
+## Tasks
+
+### Step 1: Setup
+- [ ] Setup task
+
+{end_header}
+- [ ] PR task
+"""
+        result = _find_implementation_section(content)
+        assert "- [ ] Setup task" in result
+        assert "- [ ] PR task" not in result
+
+    def test_step_title_containing_pull_request_does_not_end_section(self) -> None:
+        """Test that a step header mentioning "pull request" stays in the section."""
+        with TemporaryDirectory() as temp_dir:
+            tracker_path = Path(temp_dir) / "TASK_TRACKER.md"
+            content = """# Task Status Tracker
+
+## Tasks
+
+### Step 3: Add pull request template
+- [x] Create template file
+- [ ] Document template
+
+### Step 4: Wire template into workflow
+- [ ] Load template
+
+## Pull Request
+- [ ] PR review
+"""
+            tracker_path.write_text(content, encoding="utf-8")
+
+            incomplete = get_incomplete_tasks(temp_dir)
+            assert incomplete == ["Document template", "Load template"]
+
+            total, completed = get_task_counts(temp_dir)
+            assert (total, completed) == (3, 1)
 
     def test_empty_tasks_section(self) -> None:
         """Test that empty Tasks section returns empty string."""

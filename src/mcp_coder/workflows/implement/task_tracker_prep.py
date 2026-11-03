@@ -5,21 +5,65 @@ step-by-step progress summary.
 """
 
 import logging
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 from mcp_coder.constants import DEFAULT_IGNORED_BUILD_ARTIFACTS, PROMPTS_FILE_PATH
 from mcp_coder.llm.env import prepare_llm_environment
 from mcp_coder.llm.interface import prompt_llm
 from mcp_coder.llm.storage.session_storage import store_session
-from mcp_coder.mcp_workspace_git import commit_all_changes, get_full_status
+from mcp_coder.mcp_workspace_git import commit_paths, get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.workflow_utils.task_tracker import get_step_progress
+from mcp_coder.utils.text_io import write_lf_text
+from mcp_coder.workflow_utils.task_tracker import (
+    TASK_TRACKER_TEMPLATE,
+    get_step_progress,
+)
+from mcp_coder.workflow_utils.task_tracker_classify import (
+    EXPECTED_FORMAT,
+    TrackerState,
+    check_restructure,
+    classify_task_tracker,
+    classify_tracker_content,
+    describe_violations,
+    has_completed_tasks,
+)
 
-from .constants import LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS, PR_INFO_DIR
-from .prerequisites import has_implementation_tasks
+from .constants import (
+    LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
+    MAX_TRACKER_FEEDBACK_ROUNDS,
+    MAX_TRACKER_REPAIR_ATTEMPTS,
+    PR_INFO_DIR,
+)
 
 logger = logging.getLogger(__name__)
+
+TRACKER_FILE = f"{PR_INFO_DIR}/TASK_TRACKER.md"
+
+# Sends a prompt (resuming the given session) and returns the new session ID
+AskLLM = Callable[[str, str | None], str | None]
+
+# Failure reason -> stage label reported by the implement workflow
+PREP_STAGES = {
+    "task_tracker_prep_failed": "Task tracker preparation",
+    "general": "Task tracker validation",
+}
+
+
+class TrackerPrepError(Exception):
+    """Task tracker preparation failed.
+
+    Attributes:
+        reason: Failure reason passed to the workflow's ``fail``
+        stage: Stage label matching ``reason``
+    """
+
+    def __init__(self, reason: str, message: str) -> None:
+        super().__init__(message)
+        self.reason = reason
+        self.stage = PREP_STAGES[reason]
 
 
 def prepare_task_tracker(
@@ -27,7 +71,7 @@ def prepare_task_tracker(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-) -> bool:
+) -> None:
     """Prepare task tracker by populating it if it has no implementation steps.
 
     Args:
@@ -36,117 +80,291 @@ def prepare_task_tracker(
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
 
-    Returns:
-        bool: True if task tracker is ready (already had tasks or successfully updated), False on error
+    Raises:
+        TrackerPrepError: If the tracker is missing, invalid, or could not be populated
     """
     logger.info("Checking if task tracker needs preparation...")
 
     # Check if pr_info/steps/ directory exists
     steps_dir = project_dir / PR_INFO_DIR / "steps"
     if not steps_dir.exists():
-        logger.error(
-            f"Directory {steps_dir} does not exist. Please create implementation steps first."
+        message = (
+            f"Directory {steps_dir} does not exist."
+            " Please create implementation steps first."
         )
-        return False
+        logger.error(message)
+        raise TrackerPrepError("task_tracker_prep_failed", message)
 
-    # Check if task tracker already has implementation tasks
-    if has_implementation_tasks(project_dir):
+    pr_info_dir = str(project_dir / PR_INFO_DIR)
+    state, violations = classify_task_tracker(pr_info_dir)
+    if state is TrackerState.POPULATED:
         logger.info(
             "Task tracker already has implementation tasks. Skipping preparation."
         )
-        return True
-
-    logger.info(
-        "Task tracker has no implementation tasks. Generating tasks from implementation steps..."
+        return
+    if state is TrackerState.MISSING:
+        message = f"{TRACKER_FILE} not found"
+        logger.error(message)
+        raise TrackerPrepError("task_tracker_prep_failed", message)
+    reason = "general" if state is TrackerState.INVALID else "task_tracker_prep_failed"
+    tracker = project_dir / TRACKER_FILE
+    original = tracker.read_bytes()
+    ask: AskLLM = partial(
+        _ask_llm,
+        project_dir=project_dir,
+        provider=provider,
+        mcp_config=mcp_config,
+        settings_file=settings_file,
     )
-
+    done = False
     try:
-        # Get the Task Tracker Update Prompt
-        prompt_template = get_prompt(
-            str(PROMPTS_FILE_PATH), "Task Tracker Update Prompt"
+        if state is TrackerState.INVALID:
+            logger.warning(
+                "Task tracker structure is invalid, repairing:\n%s",
+                "\n".join(violations),
+            )
+            _repair(ask, project_dir, original.decode("utf-8"), violations)
+        else:
+            logger.info(
+                "Task tracker has no implementation tasks."
+                " Generating tasks from implementation steps..."
+            )
+            _populate(ask, project_dir, reason)
+
+        commit_result = commit_paths(
+            "TASK_TRACKER.md with implementation steps and PR tasks updated",
+            [tracker],
+            project_dir,
         )
+        if not commit_result["success"]:
+            raise TrackerPrepError(
+                reason,
+                f"Error committing task tracker changes: {commit_result['error']}",
+            )
+        done = True
+        logger.info("Task tracker updated and committed successfully")
 
-        # Prepare environment variables for LLM subprocess
-        env_vars = prepare_llm_environment(project_dir)
+    except TrackerPrepError as exc:
+        logger.error("%s", exc)
+        raise
+    except Exception as e:
+        message = f"Error preparing task tracker: {type(e).__name__}: {e}"
+        logger.error(message)
+        raise TrackerPrepError(reason, message) from e
+    finally:
+        # Never leave a half-edited tracker behind, even on SystemExit
+        if not done:
+            tracker.write_bytes(original)
 
-        # Call LLM with the prompt
-        branch_name = get_branch_name_for_logging(project_dir)
-        llm_response = prompt_llm(
-            prompt_template,
-            provider=provider,
-            # Inactivity budget (was wall-clock), kept below the CI step cap.
-            timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
-            env_vars=env_vars,
-            project_dir=str(project_dir),
-            mcp_config=mcp_config,
-            settings_file=settings_file,
+
+def _ask_llm(
+    prompt: str,
+    session_id: str | None,
+    *,
+    project_dir: Path,
+    provider: str,
+    mcp_config: str | None,
+    settings_file: str | None,
+) -> str | None:
+    """Send one task tracker prompt and store the session.
+
+    Args:
+        prompt: Prompt text
+        session_id: Session to resume, None to start a new one
+        project_dir: Path to the project directory
+        provider: LLM provider (e.g., 'claude')
+        mcp_config: Optional path to MCP configuration file
+        settings_file: Optional path to .claude/settings.local.json
+
+    Returns:
+        Session ID of the response, for the next call in the same session
+    """
+    branch_name = get_branch_name_for_logging(project_dir)
+    llm_response = prompt_llm(
+        prompt,
+        provider=provider,
+        session_id=session_id,
+        # Inactivity budget (was wall-clock), kept below the CI step cap.
+        timeout=LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
+        env_vars=prepare_llm_environment(project_dir),
+        project_dir=str(project_dir),
+        mcp_config=mcp_config,
+        settings_file=settings_file,
+        branch_name=branch_name,
+    )
+    try:
+        store_session(
+            llm_response,
+            prompt,
+            store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
+            step_name="task_tracker",
             branch_name=branch_name,
         )
-        response = llm_response["text"]
-        try:
-            store_session(
-                llm_response,
-                prompt_template,
-                store_path=str(project_dir / ".mcp-coder" / "implement_sessions"),
-                step_name="task_tracker",
-                branch_name=branch_name,
-            )
-        except Exception as e:
-            logger.warning("Failed to store task tracker session: %s", e)
-
-        if not response or not response.strip():
-            logger.error("LLM returned empty response for task tracker update")
-            return False
-
-        logger.info("LLM response received for task tracker update")
-
-        # Check what files changed using existing git_operations
-        status = get_full_status(project_dir)
-
-        # Only staged and modified files should contain TASK_TRACKER.md
-        all_changed = status["staged"] + status["modified"] + status["untracked"]
-
-        # Filter out auto-generated build artifacts (e.g., uv.lock)
-        ignore_set = set(DEFAULT_IGNORED_BUILD_ARTIFACTS)
-        all_changed = [f for f in all_changed if f not in ignore_set]
-
-        task_tracker_file = f"{PR_INFO_DIR}/TASK_TRACKER.md"
-
-        # Check if only TASK_TRACKER.md was modified (case-insensitive comparison)
-        if (
-            len(all_changed) != 1
-            or all_changed[0].casefold() != task_tracker_file.casefold()
-        ):
-            logger.error("Unexpected files were modified during task tracker update:")
-            logger.error(f"  Expected: [{task_tracker_file}]")
-            logger.error(f"  Found: {all_changed}")
-            return False
-
-        # Verify that task tracker now has implementation steps
-        if not has_implementation_tasks(project_dir):
-            logger.error(
-                "Task tracker still has no implementation steps after LLM update"
-            )
-            return False
-
-        # Commit the changes
-        commit_message = (
-            "TASK_TRACKER.md with implementation steps and PR tasks updated"
-        )
-        commit_result = commit_all_changes(commit_message, project_dir)
-
-        if not commit_result["success"]:
-            logger.error(
-                f"Error committing task tracker changes: {commit_result['error']}"
-            )
-            return False
-
-        logger.info("Task tracker updated and committed successfully")
-        return True
-
     except Exception as e:
-        logger.error(f"Error preparing task tracker: {e}")
-        return False
+        logger.warning("Failed to store task tracker session: %s", e)
+    return llm_response["session_id"]
+
+
+def _other_changed_files(project_dir: Path) -> list[str]:
+    """Return changed files other than the tracker and ignored build artifacts.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        Staged, modified and untracked paths; empty if only the tracker changed
+    """
+    status = get_full_status(project_dir)
+    all_changed = status["staged"] + status["modified"] + status["untracked"]
+    ignore_set = set(DEFAULT_IGNORED_BUILD_ARTIFACTS)
+    return [
+        f
+        for f in all_changed
+        if f not in ignore_set and f.casefold() != TRACKER_FILE.casefold()
+    ]
+
+
+def _llm_rounds(
+    ask: AskLLM,
+    project_dir: Path,
+    first_prompt: str,
+    check: Callable[[str], list[str]],
+    max_calls: int,
+    reason: str,
+) -> None:
+    """Run LLM calls in one session until ``check`` accepts the tracker.
+
+    After every call the changed-files guard runs first, then ``check``. On
+    errors the next call gets the feedback prompt with the errors.
+
+    Args:
+        ask: Sends a prompt in a session and returns the new session ID
+        project_dir: Path to the project directory
+        first_prompt: Prompt for the first call
+        check: Returns errors for the tracker content; empty means accepted
+        max_calls: Maximum number of LLM calls
+        reason: Failure reason for TrackerPrepError
+
+    Raises:
+        TrackerPrepError: If other files changed or the tracker is still
+            rejected after ``max_calls`` calls
+    """
+    tracker = project_dir / TRACKER_FILE
+    session_id: str | None = None
+    prompt = first_prompt
+    errors: list[str] = []
+    for _ in range(max_calls):
+        session_id = ask(prompt, session_id)
+
+        others = _other_changed_files(project_dir)
+        if others:
+            raise TrackerPrepError(
+                reason, f"LLM modified files other than {TRACKER_FILE}: {others}"
+            )
+
+        errors = check(tracker.read_text(encoding="utf-8"))
+        if not errors:
+            return
+        logger.warning(
+            "Task tracker still invalid after LLM call:\n%s", "\n".join(errors)
+        )
+        prompt = (
+            get_prompt(str(PROMPTS_FILE_PATH), "Task Tracker Feedback Prompt")
+            .replace("[violations]", describe_violations(errors))
+            .replace("[expected_format]", EXPECTED_FORMAT)
+        )
+
+    raise TrackerPrepError(
+        reason,
+        f"Task tracker still invalid after {max_calls} LLM calls:\n"
+        + describe_violations(errors),
+    )
+
+
+def _population_errors(content: str) -> list[str]:
+    """Return why ``content`` is not a populated tracker; empty if it is."""
+    state, violations = classify_tracker_content(content)
+    if state is TrackerState.POPULATED:
+        return []
+    if state is TrackerState.EMPTY:
+        return [f"{TRACKER_FILE}: no '### Step N:' sections were added"]
+    return violations
+
+
+def _populate(ask: AskLLM, project_dir: Path, reason: str) -> None:
+    """Let the LLM populate an EMPTY tracker, with feedback rounds.
+
+    ``_llm_rounds`` raises TrackerPrepError if the tracker could not be populated.
+
+    Args:
+        ask: Sends a prompt in a session and returns the new session ID
+        project_dir: Path to the project directory
+        reason: Failure reason for TrackerPrepError
+    """
+    _llm_rounds(
+        ask,
+        project_dir,
+        get_prompt(str(PROMPTS_FILE_PATH), "Task Tracker Update Prompt"),
+        _population_errors,
+        1 + MAX_TRACKER_FEEDBACK_ROUNDS,
+        reason,
+    )
+
+
+def _repair(
+    ask: AskLLM, project_dir: Path, original: str, violations: list[str]
+) -> None:
+    """Repair an INVALID tracker: reset to the template or let the LLM restructure.
+
+    Without ``[x]`` tasks the tracker is reset to the template and populated.
+    Otherwise the LLM restructures it; every attempt is checked against
+    ``original`` so no progress is lost.
+
+    Args:
+        ask: Sends a prompt in a session and returns the new session ID
+        project_dir: Path to the project directory
+        original: Tracker content before the repair
+        violations: Violations of the original tracker
+
+    Raises:
+        TrackerPrepError: If the tracker could not be repaired
+    """
+    tracker = project_dir / TRACKER_FILE
+    if not has_completed_tasks(original):
+        steps_dir = project_dir / PR_INFO_DIR / "steps"
+        if not any(steps_dir.glob("step_*.md")):
+            raise TrackerPrepError(
+                "general",
+                f"Cannot reset {TRACKER_FILE}: no {PR_INFO_DIR}/steps/step_*.md\n"
+                + describe_violations(violations),
+            )
+        logger.warning(
+            "Task tracker has no completed tasks. Resetting it to the template..."
+        )
+        write_lf_text(tracker, TASK_TRACKER_TEMPLATE)
+        _populate(ask, project_dir, "general")
+        return
+
+    logger.warning("Task tracker has completed tasks. Asking LLM to restructure...")
+    prompt = (
+        get_prompt(str(PROMPTS_FILE_PATH), "Task Tracker Restructure Prompt")
+        .replace("[violations]", describe_violations(violations))
+        .replace("[expected_format]", EXPECTED_FORMAT)
+    )
+    try:
+        _llm_rounds(
+            ask,
+            project_dir,
+            prompt,
+            lambda content: check_restructure(original, content),
+            MAX_TRACKER_REPAIR_ATTEMPTS,
+            "general",
+        )
+    except TrackerPrepError as exc:
+        raise TrackerPrepError(
+            "general",
+            f"{exc}\nOriginal violations:\n{describe_violations(violations)}",
+        ) from exc
 
 
 def log_progress_summary(project_dir: Path) -> None:
@@ -156,7 +374,7 @@ def log_progress_summary(project_dir: Path) -> None:
         project_dir: Path to the project directory
 
     Note:
-        Handles exceptions gracefully and logs debug messages for failures.
+        Handles exceptions gracefully and logs warnings for failures.
         Creates formatted progress summary with progress bars and completion percentages.
     """
     try:
@@ -164,7 +382,7 @@ def log_progress_summary(project_dir: Path) -> None:
         progress = get_step_progress(pr_info_dir)
 
         if not progress:
-            logger.debug("No step progress information available")
+            logger.warning("No step progress information available")
             return
 
         logger.info("=" * 60)
@@ -218,4 +436,4 @@ def log_progress_summary(project_dir: Path) -> None:
         logger.info("=" * 60)
 
     except Exception as e:
-        logger.debug(f"Could not generate progress summary: {e}")
+        logger.warning(f"Could not generate progress summary: {e}")

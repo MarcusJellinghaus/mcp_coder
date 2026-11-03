@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_utils.task_tracker_classify import TrackerState
 from mcp_coder.workflows.implement.prerequisites import (
     check_git_clean,
     check_main_branch,
     check_prerequisites,
-    has_implementation_tasks,
 )
 
 
@@ -129,61 +129,6 @@ class TestCheckPrerequisites:
         assert result is False
 
 
-class TestHasImplementationTasks:
-    """Test has_implementation_tasks function."""
-
-    @patch("mcp_coder.workflows.implement.prerequisites._find_implementation_section")
-    @patch("mcp_coder.workflows.implement.prerequisites._parse_task_lines")
-    @patch("mcp_coder.workflows.implement.prerequisites._read_task_tracker")
-    def test_has_implementation_tasks_true(
-        self,
-        mock_read: MagicMock,
-        mock_parse: MagicMock,
-        mock_find: MagicMock,
-    ) -> None:
-        """Test has_implementation_tasks returns True when tasks exist."""
-        mock_read.return_value = "mock content"
-        mock_find.return_value = "mock section"
-        mock_parse.return_value = [
-            MagicMock(name="Task 1", is_complete=False),
-            MagicMock(name="Task 2", is_complete=True),
-        ]
-
-        result = has_implementation_tasks(Path("/test/project"))
-
-        assert result is True
-        mock_read.assert_called_once_with(str(Path("/test/project") / "pr_info"))
-        mock_find.assert_called_once_with("mock content")
-        mock_parse.assert_called_once_with("mock section")
-
-    @patch("mcp_coder.workflows.implement.prerequisites._find_implementation_section")
-    @patch("mcp_coder.workflows.implement.prerequisites._parse_task_lines")
-    @patch("mcp_coder.workflows.implement.prerequisites._read_task_tracker")
-    def test_has_implementation_tasks_false(
-        self,
-        mock_read: MagicMock,
-        mock_parse: MagicMock,
-        mock_find: MagicMock,
-    ) -> None:
-        """Test has_implementation_tasks returns False when no tasks exist."""
-        mock_read.return_value = "mock content"
-        mock_find.return_value = "mock section"
-        mock_parse.return_value = []
-
-        result = has_implementation_tasks(Path("/test/project"))
-
-        assert result is False
-
-    @patch("mcp_coder.workflows.implement.prerequisites._read_task_tracker")
-    def test_has_implementation_tasks_exception(self, mock_read: MagicMock) -> None:
-        """Test has_implementation_tasks returns False on exception."""
-        mock_read.side_effect = Exception("File not found")
-
-        result = has_implementation_tasks(Path("/test/project"))
-
-        assert result is False
-
-
 class TestCheckPrerequisitesTaskTracker:
     """Tests for task tracker validation in check_prerequisites."""
 
@@ -227,10 +172,10 @@ class TestCheckPrerequisitesTaskTracker:
         assert result is True
         assert "Prerequisites check passed" in caplog.text
 
-    def test_validates_existing_tracker_failure(
+    def test_invalid_tracker_warns_and_passes(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test validation fails for invalid tracker structure."""
+        """Test an invalid tracker logs a WARNING but passes for prep to repair."""
         # Setup: git repo with TASK_TRACKER.md missing ## Tasks header
         git_dir = tmp_path / ".git"
         git_dir.mkdir()
@@ -244,12 +189,22 @@ class TestCheckPrerequisitesTaskTracker:
             "## Pull Request\n"
         )
 
-        # Call check_prerequisites()
-        result = check_prerequisites(tmp_path)
+        with caplog.at_level(
+            logging.WARNING, logger="mcp_coder.workflows.implement.prerequisites"
+        ):
+            result = check_prerequisites(tmp_path)
 
-        # Assert: returns False, logs error
-        assert result is False
-        assert "Invalid task tracker structure" in caplog.text
+        assert result is True
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("Invalid task tracker structure" in r.message for r in warnings)
+        assert "no '## Tasks' section" in caplog.text
+
+    def test_missing_tracker_fails(self, tmp_path: Path) -> None:
+        """Test returns False when pr_info/ exists but TASK_TRACKER.md does not."""
+        (tmp_path / ".git").mkdir()
+        (tmp_path / "pr_info").mkdir()
+
+        assert check_prerequisites(tmp_path) is False
 
 
 class TestIntegration:
@@ -273,20 +228,8 @@ class TestIntegration:
                 return_value="main",
             ),
             patch(
-                "mcp_coder.workflows.implement.prerequisites.validate_task_tracker",
-                return_value=None,
-            ),
-            patch(
-                "mcp_coder.workflows.implement.prerequisites._read_task_tracker",
-                return_value="content",
-            ),
-            patch(
-                "mcp_coder.workflows.implement.prerequisites._find_implementation_section",
-                return_value="section",
-            ),
-            patch(
-                "mcp_coder.workflows.implement.prerequisites._parse_task_lines",
-                return_value=[MagicMock()],
+                "mcp_coder.workflows.implement.prerequisites.classify_task_tracker",
+                return_value=(TrackerState.POPULATED, []),
             ),
         ):
             # Mock filesystem checks for check_prerequisites
@@ -295,7 +238,6 @@ class TestIntegration:
                 assert check_git_clean(project_dir) is True
                 assert check_main_branch(project_dir) is True
                 assert check_prerequisites(project_dir) is True
-                assert has_implementation_tasks(project_dir) is True
 
     def test_git_clean_fails_early_with_mocks(self) -> None:
         """Test early failure when git clean check fails."""

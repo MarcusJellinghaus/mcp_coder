@@ -50,7 +50,11 @@ from .task_processing import (
     process_task_with_retry,
     read_and_clear_blocked,
 )
-from .task_tracker_prep import log_progress_summary, prepare_task_tracker
+from .task_tracker_prep import (
+    TrackerPrepError,
+    log_progress_summary,
+    prepare_task_tracker,
+)
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -100,14 +104,13 @@ def run_implement_workflow(
     # Step 1.5: Attempt rebase onto parent branch (never blocks workflow)
     _attempt_rebase_and_push(project_dir)
 
-    # Mutable progress holder bridging the body to the net's comment, plus a
-    # `fail` binding that carries the shared per-run failure context so each
-    # deliberate failure site only supplies its reason/stage/message.
+    # Mutable per-run task counter, plus a `fail` binding that carries the
+    # shared per-run failure context so each deliberate failure site only
+    # supplies its reason/stage/message.
     progress = Progress()
     fail = partial(
         _fail,
         project_dir,
-        progress=progress,
         start_time=start_time,
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
@@ -124,12 +127,10 @@ def run_implement_workflow(
         implement_config = get_implement_config(project_dir)
 
         # Step 2: Prepare task tracker if needed
-        if not prepare_task_tracker(project_dir, provider, mcp_config, settings_file):
-            return fail(
-                "task_tracker_prep_failed",
-                stage="Task tracker preparation",
-                message="Failed to prepare task tracker",
-            )
+        try:
+            prepare_task_tracker(project_dir, provider, mcp_config, settings_file)
+        except TrackerPrepError as exc:
+            return fail(exc.reason, stage=exc.stage, message=str(exc))
 
         # Step 3: Show initial progress summary
         log_progress_summary(project_dir)
@@ -391,9 +392,9 @@ def run_implement_workflow(
     def build_comment(
         _outcome: GuardOutcome,
     ) -> tuple[list[CommentField], str | None]:
-        # Net (SIGTERM / unexpected exit) comment: same Category / live
+        # Net (SIGTERM / unexpected exit) comment: same Category / tracker
         # Progress / Uncommitted Changes parts as the deliberate path.
-        return _comment_parts("general", progress, project_dir)
+        return _comment_parts("general", project_dir)
 
     return run_guarded(
         body,

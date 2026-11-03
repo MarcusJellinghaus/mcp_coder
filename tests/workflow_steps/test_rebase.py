@@ -16,6 +16,9 @@ from mcp_coder.workflow_steps.rebase import (
     _reset_hard,
 )
 from mcp_coder.workflows.implement.core import run_implement_workflow
+from mcp_coder.workflows.implement.task_tracker_prep import TrackerPrepError
+
+_PREP_FAILED = TrackerPrepError("task_tracker_prep_failed", "prep failed")
 
 _MODULE = "mcp_coder.workflow_steps.rebase"
 _FULL_SHA = "abc1234def5678abc1234def5678abc1234def56"
@@ -526,7 +529,7 @@ class TestRebaseIntegration:
         mock_clean.return_value = True
         mock_branch.return_value = True
         mock_prereq.return_value = True
-        mock_prepare.return_value = False  # Stop here
+        mock_prepare.side_effect = _PREP_FAILED  # Stop here
         mock_get_target.return_value = "main"
         mock_rebase.return_value = True  # Rebase succeeds
         mock_push.return_value = True  # Push succeeds
@@ -557,7 +560,7 @@ class TestRebaseIntegration:
         mock_clean.return_value = True
         mock_branch.return_value = True
         mock_prereq.return_value = True
-        mock_prepare.return_value = False  # Stop here
+        mock_prepare.side_effect = _PREP_FAILED  # Stop here
         mock_get_target.return_value = "main"
         mock_rebase.return_value = True  # Rebase succeeds
         mock_push.return_value = True  # Push succeeds
@@ -588,7 +591,7 @@ class TestRebaseIntegration:
         mock_clean.return_value = True
         mock_branch.return_value = True
         mock_prereq.return_value = True
-        mock_prepare.return_value = False  # Stop workflow here to focus on rebase
+        mock_prepare.side_effect = _PREP_FAILED  # Stop workflow here to focus on rebase
         mock_get_target.return_value = "main"
         mock_rebase.return_value = False  # Rebase failed
 
@@ -599,7 +602,7 @@ class TestRebaseIntegration:
         mock_prepare.assert_called_once()
         # Push should not be called when rebase fails
         mock_push.assert_not_called()
-        # Result is 1 because prepare_task_tracker returns False, not because of rebase
+        # Result is 1 because prepare_task_tracker raises TrackerPrepError, not because of rebase
         assert result == 1
 
     @patch("mcp_coder.workflow_steps.rebase.rebase_onto_branch")
@@ -646,7 +649,7 @@ class TestRebaseIntegration:
         mock_clean.return_value = True
         mock_branch.return_value = True
         mock_prereq.return_value = True
-        mock_prepare.return_value = False  # Stop workflow here
+        mock_prepare.side_effect = _PREP_FAILED  # Stop workflow here
         mock_get_target.return_value = "main"
         mock_rebase.return_value = True  # Rebase succeeds
         mock_push.return_value = False  # Push fails
@@ -656,7 +659,7 @@ class TestRebaseIntegration:
 
         # Workflow should have continued to prepare_task_tracker
         mock_prepare.assert_called_once()
-        # Result is 1 because prepare_task_tracker returns False
+        # Result is 1 because prepare_task_tracker raises TrackerPrepError
         assert result == 1
 
 

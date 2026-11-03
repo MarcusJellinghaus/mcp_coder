@@ -9,14 +9,26 @@ from mcp_coder.workflows.implement.core import run_implement_workflow
 from mcp_coder.workflows.implement.failure_reporting import (
     CATEGORY_DISPLAY,
     FAILURE_LABELS,
-    Progress,
     _comment_parts,
     _fail,
     append_detail,
 )
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
+from mcp_coder.workflows.implement.task_tracker_prep import TrackerPrepError
 
 PROJECT = Path("/project")
+
+
+def _write_tracker(project_dir: Path, total: int, done: int) -> None:
+    """Write a valid pr_info/TASK_TRACKER.md with ``done`` of ``total`` checked."""
+    lines = ["# Task Status Tracker", "", "## Tasks", "", "### Step 1: Work", ""]
+    for i in range(total):
+        box = "x" if i < done else " "
+        lines.append(f"- [{box}] Task {i + 1}")
+    lines += ["", "## Pull Request", "- [ ] PR summary prepared", ""]
+    tracker = project_dir / "pr_info" / "TASK_TRACKER.md"
+    tracker.parent.mkdir(parents=True, exist_ok=True)
+    tracker.write_text("\n".join(lines), encoding="utf-8")
 
 
 def _fail_comment(
@@ -24,7 +36,7 @@ def _fail_comment(
     *,
     stage: str = "Test",
     message: str = "err",
-    progress: Progress | None = None,
+    project_dir: Path = PROJECT,
     diff_stat: str = "",
 ) -> str:
     """Run _fail with handle_workflow_failure mocked and return the comment."""
@@ -38,11 +50,10 @@ def _fail_comment(
         ) as mock_handle,
     ):
         _fail(
-            PROJECT,
+            project_dir,
             reason,
             stage=stage,
             message=message,
-            progress=progress or Progress(),
             start_time=time.time(),
         )
     comment: str = mock_handle.call_args[1]["comment_body"]
@@ -96,9 +107,9 @@ class TestCommentParts:
         "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
         return_value="",
     )
-    def test_general_no_progress_no_diff(self, _mock_diff: MagicMock) -> None:
-        """Category General, Progress None when total is 0, empty diff placeholder."""
-        fields, section = _comment_parts("general", Progress(), PROJECT)
+    def test_general_no_tracker_no_diff(self, _mock_diff: MagicMock) -> None:
+        """Category General, Progress None without a tracker, diff placeholder."""
+        fields, section = _comment_parts("general", PROJECT)
 
         assert fields == [("Category", "General"), ("Progress", None)]
         assert section == "### Uncommitted Changes\n```\nNo uncommitted changes\n```"
@@ -107,15 +118,33 @@ class TestCommentParts:
         "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
         return_value="file.py | 3 +++",
     )
-    def test_progress_and_diff(self, _mock_diff: MagicMock) -> None:
-        """Progress rendered when total > 0; diff stat goes into the section."""
-        fields, section = _comment_parts(
-            "timeout", Progress(completed=2, total=5), PROJECT
-        )
+    def test_progress_from_tracker_and_diff(
+        self, _mock_diff: MagicMock, tmp_path: Path
+    ) -> None:
+        """Progress is done/total read from the tracker; diff stat in the section."""
+        _write_tracker(tmp_path, total=21, done=5)
+
+        fields, section = _comment_parts("timeout", tmp_path)
 
         assert ("Category", "Llm Timeout") in fields
-        assert ("Progress", "2/5 tasks completed") in fields
+        assert ("Progress", "5/21 tasks completed") in fields
         assert "file.py | 3 +++" in section
+
+    @patch(
+        "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+        return_value="",
+    )
+    def test_tracker_without_tasks_section_omits_progress(
+        self, _mock_diff: MagicMock, tmp_path: Path
+    ) -> None:
+        """A tracker without ``## Tasks`` yields Progress None."""
+        tracker = tmp_path / "pr_info" / "TASK_TRACKER.md"
+        tracker.parent.mkdir(parents=True)
+        tracker.write_text("# Task Status Tracker\n\nNo tasks here.\n")
+
+        fields, _section = _comment_parts("general", tmp_path)
+
+        assert ("Progress", None) in fields
 
     @patch(
         "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
@@ -123,7 +152,7 @@ class TestCommentParts:
     )
     def test_unknown_reason_falls_back_to_general(self, _mock_diff: MagicMock) -> None:
         """An unmapped reason renders the 'general' display."""
-        fields, _section = _comment_parts("nope", Progress(), PROJECT)
+        fields, _section = _comment_parts("nope", PROJECT)
 
         assert fields[0] == ("Category", "General")
 
@@ -162,19 +191,19 @@ class TestFailComment:
 
         assert "**Category:** No Progress After Retries" in result
 
-    def test_includes_progress_when_set(self) -> None:
-        """Includes progress info when total > 0."""
+    def test_includes_tracker_progress(self, tmp_path: Path) -> None:
+        """Includes the tracker's done/total when it has tasks."""
+        _write_tracker(tmp_path, total=5, done=2)
+
         result = _fail_comment(
-            "timeout",
-            progress=Progress(completed=2, total=5),
-            diff_stat="file.py | 3 +++",
+            "timeout", project_dir=tmp_path, diff_stat="file.py | 3 +++"
         )
 
         assert "**Progress:** 2/5 tasks completed" in result
         assert "file.py | 3 +++" in result
 
-    def test_no_progress_when_zero_total(self) -> None:
-        """No progress line when total is 0."""
+    def test_no_progress_without_tracker(self) -> None:
+        """No progress line when the tracker cannot be read."""
         assert "Progress" not in _fail_comment()
 
     def test_includes_build_url_when_set(self) -> None:
@@ -211,7 +240,6 @@ class TestFail:
             "general",
             stage="test",
             message="failed",
-            progress=Progress(),
             start_time=time.time(),
         )
 
@@ -232,7 +260,6 @@ class TestFail:
             "general",
             stage="test",
             message="failed",
-            progress=Progress(),
             start_time=time.time(),
             update_issue_labels=True,
         )
@@ -258,7 +285,6 @@ class TestFail:
             "timeout",
             stage="Task implementation",
             message="timed out",
-            progress=Progress(),
             start_time=time.time(),
             update_issue_labels=True,
         )
@@ -281,7 +307,6 @@ class TestFail:
             "ci_fix_exhausted",
             stage="CI pipeline fix",
             message="CI failed",
-            progress=Progress(),
             start_time=time.time(),
             update_issue_labels=True,
         )
@@ -295,16 +320,17 @@ class TestFail:
         self,
         mock_diff: MagicMock,
         mock_handle: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """_fail passes a formatted comment carrying progress and diff stat."""
         mock_diff.return_value = "file.py | 3 +++"
+        _write_tracker(tmp_path, total=5, done=2)
 
         _fail(
-            Path("/project"),
+            tmp_path,
             "timeout",
             stage="Task implementation",
             message="timed out",
-            progress=Progress(completed=2, total=5),
             start_time=time.time(),
             update_issue_labels=True,
         )
@@ -330,7 +356,6 @@ class TestFail:
             "general",
             stage="test",
             message="failed",
-            progress=Progress(),
             start_time=time.time(),
             update_issue_labels=False,
         )
@@ -378,7 +403,10 @@ class TestDeliberateFailurePathsThroughWorkflow:
         mock_prereq.return_value = True
         mock_rebase.return_value = True
         mock_diff.return_value = ""
-        mock_prepare.return_value = False  # Trigger failure at task tracker preparation
+        # Trigger failure at task tracker preparation
+        mock_prepare.side_effect = TrackerPrepError(
+            "task_tracker_prep_failed", "prep failed"
+        )
 
         result = run_implement_workflow(Path("/fake"), "claude")
 
@@ -426,7 +454,9 @@ class TestDeliberateFailurePathsThroughWorkflow:
         mock_prereq.return_value = True
         mock_rebase.return_value = True
         mock_diff.return_value = ""
-        mock_prepare.return_value = False  # Trigger failure
+        mock_prepare.side_effect = TrackerPrepError(  # Trigger failure
+            "task_tracker_prep_failed", "prep failed"
+        )
 
         result = run_implement_workflow(Path("/fake"), "claude")
 
