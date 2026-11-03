@@ -118,7 +118,7 @@
       "color": "fb7185",
       "description": "Mechanical rebase in progress to resolve merge conflict (auto/in-progress)",
       "category": "bot_busy",
-      "stale_timeout_minutes": 15
+      "stale_timeout_minutes": 30
     },
     {
       "internal_id": "merge_conflict_failed",
@@ -585,6 +585,34 @@
         "display_name": "CODE REVIEW CI UNDETERMINABLE",
         "stage_short": "code-review-ci-unknown",
         "commands": ["/check_branch_status"],
+        "color": "red"
+      }
+    },
+    {
+      "internal_id": "merged",
+      "name": "status-99:merged",
+      "color": "0e8a16",
+      "description": "PR merged automatically after CI passed",
+      "category": "human_action",
+      "vscodeclaude": {
+        "emoji": "✅",
+        "display_name": "MERGED",
+        "stage_short": "merged"
+      }
+    },
+    {
+      "internal_id": "merge_failed",
+      "name": "status-99f:merge-failed",
+      "color": "b60205",
+      "description": "CI green but the PR could not be merged automatically",
+      "category": "human_action",
+      "failure": true,
+      "vscodeclaude": {
+        "emoji": "🔀",
+        "display_name": "MERGE FAILED",
+        "stage_short": "merge-fail",
+        "commands": ["/check_branch_status"],
+        "requires_branch": true,
         "color": "red"
       }
     }
