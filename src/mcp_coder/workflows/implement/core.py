@@ -104,14 +104,13 @@ def run_implement_workflow(
     # Step 1.5: Attempt rebase onto parent branch (never blocks workflow)
     _attempt_rebase_and_push(project_dir)
 
-    # Mutable progress holder bridging the body to the net's comment, plus a
-    # `fail` binding that carries the shared per-run failure context so each
-    # deliberate failure site only supplies its reason/stage/message.
+    # Mutable per-run task counter, plus a `fail` binding that carries the
+    # shared per-run failure context so each deliberate failure site only
+    # supplies its reason/stage/message.
     progress = Progress()
     fail = partial(
         _fail,
         project_dir,
-        progress=progress,
         start_time=start_time,
         update_issue_labels=update_issue_labels,
         post_issue_comments=post_issue_comments,
@@ -393,9 +392,9 @@ def run_implement_workflow(
     def build_comment(
         _outcome: GuardOutcome,
     ) -> tuple[list[CommentField], str | None]:
-        # Net (SIGTERM / unexpected exit) comment: same Category / live
+        # Net (SIGTERM / unexpected exit) comment: same Category / tracker
         # Progress / Uncommitted Changes parts as the deliberate path.
-        return _comment_parts("general", progress, project_dir)
+        return _comment_parts("general", project_dir)
 
     return run_guarded(
         body,

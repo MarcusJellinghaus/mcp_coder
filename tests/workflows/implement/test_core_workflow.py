@@ -584,6 +584,43 @@ class TestWorkflowSafetyNet:
         assert "**Build:** https://jenkins.example.com/job/1/console" in comment
         assert "### Uncommitted Changes" in comment
 
+    @patch(_NET_HANDLER)
+    @patch(
+        "mcp_coder.workflows.implement.core.prepare_task_tracker",
+        side_effect=RuntimeError("boom"),
+    )
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_main_branch", return_value=True)
+    @patch("mcp_coder.workflows.implement.core.check_git_clean", return_value=True)
+    def test_safety_net_comment_uses_tracker_progress(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_handle: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """The net's comment reads done/total from the task tracker."""
+        tracker = tmp_path / "pr_info" / "TASK_TRACKER.md"
+        tracker.parent.mkdir(parents=True)
+        tracker.write_text(
+            "## Tasks\n\n### Step 1: Work\n- [x] Task A\n- [ ] Task B\n- [ ] Task C\n"
+            "\n## Pull Request\n- [ ] PR summary prepared\n",
+            encoding="utf-8",
+        )
+        with patch(
+            "mcp_coder.workflows.implement.failure_reporting.get_diff_stat",
+            return_value="",
+        ):
+            result = run_implement_workflow(tmp_path, "claude")
+
+        assert result == 1
+        comment = mock_handle.call_args[0][1]
+        assert "**Progress:** 1/3 tasks completed" in comment
+
 
 class TestSigtermHandler:
     """Tests for SIGTERM handler registration and behavior (owned by run_guarded)."""
