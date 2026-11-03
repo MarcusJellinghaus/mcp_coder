@@ -17,8 +17,8 @@
 - `src/mcp_coder/cli/commands/create_pr.py` — pass `auto_merge=`
 - `src/mcp_coder/workflows/create_pr/core.py` — `run_create_pr_workflow(..., auto_merge: bool = False)`; `phase_b` forwards it plus `post_issue_comments`
 - `src/mcp_coder/workflows/create_pr/post_creation.py`
-- Tests: `tests/cli/test_workflow_parsers.py`, the test module of `resolve_issue_interaction_flags`
-  (search for it), `tests/cli/commands/test_create_pr.py`,
+- Tests: `tests/cli/test_workflow_parsers.py`, `tests/cli/test_utils.py`
+  (where `resolve_issue_interaction_flags` is tested; add the `resolve_auto_merge` tests there), `tests/cli/commands/test_create_pr.py`,
   `tests/workflows/create_pr/test_post_creation.py`; schema test in `tests/utils/` if one lists repo keys
 
 ## WHAT

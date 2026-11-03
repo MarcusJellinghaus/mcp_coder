@@ -100,7 +100,7 @@ Private helpers: `_pr_head_sha(project_dir, branch) -> str | None` (re-reads
 ## DATA — comment fields
 
 - `merge_failed`: `("Stage", "Auto-merge")`, `("Error", result["message"])`,
-  `("Merge outcome", result["outcome"])`, `("HTTP status", str(status) or None)`,
+  `("Merge outcome", result["outcome"])`, `("HTTP status", str(status) if status is not None else None)`,
   `("Mergeable state", state)`; with a failed rebase also `("Reason", rebase.reason)`,
   `("Base", rebase.base_branch)`. `None` values are dropped later by `build_failure_comment`.
 - `pr_merge_conflict`: `("Stage", "Auto-merge rebase")`, `("Reason", "conflict")`,

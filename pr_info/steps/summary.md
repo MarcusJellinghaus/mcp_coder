@@ -122,7 +122,7 @@ If the label write fails (`apply_final_label` returns 1), the exit code is 1.
 | `tests/workflows/fix_conflict/test_core.py` | 2, 7 |
 | `tests/test_mcp_workspace_github_smoke.py` (`__all__` 41 → 42) | 3 |
 | `tests/workflow_utils/` failure-handling tests | 4 |
-| `tests/cli/test_workflow_parsers.py`, `tests/cli/test_resolver_utils.py` (or the file testing `resolve_issue_interaction_flags`), `tests/cli/commands/test_create_pr.py` | 5 |
+| `tests/cli/test_workflow_parsers.py`, `tests/cli/test_utils.py` (where `resolve_issue_interaction_flags` is tested), `tests/cli/commands/test_create_pr.py` | 5 |
 | `tests/workflows/fix_ci/test_core.py`, `tests/cli/commands/test_fix_ci.py` | 6 |
 | `tests/cli/commands/test_fix_conflict.py` | 7 |
 
