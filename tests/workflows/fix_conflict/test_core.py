@@ -156,6 +156,93 @@ def test_settled_or_self_healing_outcomes_go_to_pr_created(
     assert mock_sleep.call_count == expected_sleeps
 
 
+@pytest.mark.parametrize("finish_code", [0, 1])
+def test_auto_merge_success_path_runs_helper_chain(finish_code: int) -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "clean"}]])
+    calls = MagicMock()
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4] as mock_update,
+        patches[5] as _mock_sleep,
+        patches[6] as mock_fail,
+        patch(f"{MODULE}.resolve_merge_issue_number", return_value=123) as mock_resolve,
+        patch(f"{MODULE}.run_auto_merge") as mock_merge,
+        patch(f"{MODULE}.finish_auto_merge", return_value=finish_code) as mock_finish,
+    ):
+        calls.attach_mock(mock_resolve, "resolve")
+        calls.attach_mock(mock_merge, "merge")
+        result = run_fix_conflict_workflow(PROJECT_DIR, auto_merge=True)
+
+    assert result == finish_code
+    assert [c[0] for c in calls.mock_calls] == ["resolve", "merge"]
+    mock_resolve.assert_called_once_with(PROJECT_DIR, BRANCH_NAME)
+    mock_merge.assert_called_once_with(PROJECT_DIR, BRANCH_NAME)
+    mock_finish.assert_called_once_with(
+        PROJECT_DIR,
+        mock_merge.return_value,
+        from_label_id="fixing_merge_conflict",
+        issue_number=123,
+        update_issue_labels=True,
+        post_issue_comments=True,
+    )
+    mock_update.assert_not_called()
+    mock_fail.assert_not_called()
+
+
+def test_auto_merge_verdict_path_skips_helper() -> None:
+    patches, _ = _patch_all(
+        [[{"mergeable_state": "dirty"}]],
+        RebaseOutcome("conflict", "main", "abc1234", ("a.py",)),
+    )
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4] as mock_update,
+        patches[5] as _mock_sleep,
+        patches[6] as mock_fail,
+        patch(_BRANCH_HEAD, return_value=(BRANCH_NAME, "abc1234")) as _mock_head,
+        patch(f"{MODULE}.resolve_merge_issue_number") as mock_resolve,
+        patch(f"{MODULE}.run_auto_merge") as mock_merge,
+        patch(f"{MODULE}.finish_auto_merge") as mock_finish,
+    ):
+        result = run_fix_conflict_workflow(PROJECT_DIR, auto_merge=True)
+
+    assert result == 1
+    mock_fail.assert_called_once()
+    mock_update.assert_not_called()
+    mock_resolve.assert_not_called()
+    mock_merge.assert_not_called()
+    mock_finish.assert_not_called()
+
+
+def test_auto_merge_off_does_not_call_helper() -> None:
+    patches, _ = _patch_all([[{"mergeable_state": "clean"}]])
+    with (
+        patches[0],
+        patches[1],
+        patches[2],
+        patches[3],
+        patches[4] as mock_update,
+        patches[5] as _mock_sleep,
+        patches[6] as _mock_fail,
+        patch(f"{MODULE}.run_auto_merge") as mock_merge,
+        patch(f"{MODULE}.finish_auto_merge") as mock_finish,
+    ):
+        result = run_fix_conflict_workflow(PROJECT_DIR, auto_merge=False)
+
+    assert result == 0
+    mock_update.assert_called_once_with(
+        PROJECT_DIR, "fixing_merge_conflict", "pr_created"
+    )
+    mock_merge.assert_not_called()
+    mock_finish.assert_not_called()
+
+
 def test_final_label_failure_returns_1_without_net() -> None:
     patches, _ = _patch_all([[{"mergeable_state": "clean"}]])
     with (

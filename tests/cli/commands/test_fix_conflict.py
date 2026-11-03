@@ -1,6 +1,7 @@
 """Tests for the fix-conflict CLI command handler."""
 
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -15,9 +16,19 @@ def _make_args() -> MagicMock:
     return args
 
 
+@pytest.fixture(autouse=True, name="mock_auto_merge")
+def fixture_mock_auto_merge() -> Iterator[MagicMock]:
+    """Resolve auto_merge to False without reading git or config."""
+    with patch(
+        "mcp_coder.cli.commands.fix_conflict.resolve_auto_merge", return_value=False
+    ) as mock_resolve:
+        yield mock_resolve
+
+
 class TestExecuteFixConflict:
     """Tests for execute_fix_conflict."""
 
+    @pytest.mark.parametrize("auto_merge", [True, False])
     @patch("mcp_coder.workflows.fix_conflict.core.run_fix_conflict_workflow")
     @patch("mcp_coder.cli.commands.fix_conflict.enable_crash_logging")
     @patch("mcp_coder.cli.commands.fix_conflict.log_command_startup")
@@ -28,19 +39,24 @@ class TestExecuteFixConflict:
         mock_log_startup: MagicMock,
         mock_crash_logging: MagicMock,
         mock_workflow: MagicMock,
+        auto_merge: bool,
+        mock_auto_merge: MagicMock,
     ) -> None:
-        """Resolves project dir and returns run_fix_conflict_workflow's exit code."""
+        """Resolves project dir and auto_merge, returns the workflow's exit code."""
         project_dir = Path("/test/project")
         mock_resolve_dir.return_value = project_dir
         mock_workflow.return_value = 0
+        mock_auto_merge.return_value = auto_merge
+        args = _make_args()
 
-        result = execute_fix_conflict(_make_args())
+        result = execute_fix_conflict(args)
 
         assert result == 0
         mock_resolve_dir.assert_called_once_with("/test/project")
         mock_log_startup.assert_called_once_with("fix-conflict", project_dir)
         mock_crash_logging.assert_called_once_with(project_dir, "fix-conflict")
-        mock_workflow.assert_called_once_with(project_dir)
+        mock_auto_merge.assert_called_once_with(args, project_dir)
+        mock_workflow.assert_called_once_with(project_dir, auto_merge=auto_merge)
 
     @patch("mcp_coder.workflows.fix_conflict.core.run_fix_conflict_workflow")
     @patch("mcp_coder.cli.commands.fix_conflict.enable_crash_logging")
@@ -135,7 +151,7 @@ class TestFixConflictCliIntegration:
         assert args.command == "fix-conflict"
 
     def test_fix_conflict_command_has_project_dir_only(self) -> None:
-        """fix-conflict has --project-dir but no LLM-related arguments."""
+        """fix-conflict has --project-dir and --auto-merge, no LLM arguments."""
         from mcp_coder.cli.main import create_parser
 
         parser = create_parser()

@@ -12,7 +12,7 @@ import logging
 from ...utils.crash_logging import enable_crash_logging
 from ...utils.log_utils import OUTPUT
 from ...workflows.utils import resolve_project_dir
-from ..utils import log_command_startup
+from ..utils import log_command_startup, resolve_auto_merge
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def execute_fix_conflict(args: argparse.Namespace) -> int:
     """Execute the fix-conflict workflow command.
 
     Args:
-        args: Parsed arguments with `project_dir`.
+        args: Parsed arguments with `project_dir` and `auto_merge`.
 
     Returns:
         int: exit code from run_fix_conflict_workflow (0/1), or 1 on a
@@ -31,11 +31,12 @@ def execute_fix_conflict(args: argparse.Namespace) -> int:
         project_dir = resolve_project_dir(args.project_dir)
         log_command_startup("fix-conflict", project_dir)
         enable_crash_logging(project_dir, "fix-conflict")
+        auto_merge = resolve_auto_merge(args, project_dir)
 
         # Import here to avoid circular dependency during module load
         from ...workflows.fix_conflict.core import run_fix_conflict_workflow
 
-        return run_fix_conflict_workflow(project_dir)
+        return run_fix_conflict_workflow(project_dir, auto_merge=auto_merge)
 
     except ValueError as e:
         logger.error(f"Invalid project directory: {e}")
