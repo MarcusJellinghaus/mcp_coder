@@ -52,7 +52,7 @@ class TestIntegration:
     @patch("mcp_coder.workflows.implement.core.RUN_MYPY_AFTER_EACH_TASK", True)
     @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
     @patch("mcp_coder.workflows.implement.core.get_step_progress")
-    @patch("mcp_coder.workflows.implement.task_tracker_prep.commit_all_changes")
+    @patch("mcp_coder.workflows.implement.task_tracker_prep.commit_paths")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.get_full_status")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.store_session")
     @patch("mcp_coder.workflows.implement.task_tracker_prep.prompt_llm")

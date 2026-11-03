@@ -38,3 +38,7 @@ RUN_MYPY_AFTER_EACH_TASK = False  # If False, mypy runs once after all tasks com
 # (process_task_with_retry in task_processing.py) to bound retries
 # when an LLM call produces zero file changes for a task.
 MAX_NO_CHANGE_RETRIES = 3  # Max LLM calls per task when zero changes detected
+
+# Task tracker preparation (task_tracker_prep.py)
+MAX_TRACKER_FEEDBACK_ROUNDS = 3  # Feedback calls after the initial population call
+MAX_TRACKER_REPAIR_ATTEMPTS = 3  # LLM restructure calls for an invalid tracker

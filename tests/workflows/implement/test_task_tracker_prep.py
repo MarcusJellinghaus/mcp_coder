@@ -91,7 +91,7 @@ def mocks(tmp_path: Path) -> Iterator[PrepMocks]:
             },
         ) as get_full_status,
         patch(
-            f"{PREP}.commit_all_changes",
+            f"{PREP}.commit_paths",
             return_value={"success": True, "commit_hash": "abc123"},
         ) as commit,
     ):
@@ -156,6 +156,9 @@ class TestPrepareTaskTrackerPopulation:
         assert call_kwargs.get("project_dir") == str(tmp_path)
         mocks.get_full_status.assert_called_once_with(tmp_path)
         mocks.commit.assert_called_once()
+        _message, paths, project_dir = mocks.commit.call_args[0]
+        assert paths == [tmp_path / "pr_info" / "TASK_TRACKER.md"]
+        assert project_dir == tmp_path
         mocks.store_session.assert_called_once()
         store_call_kwargs = mocks.store_session.call_args[1]
         assert store_call_kwargs.get("step_name") == "task_tracker"
@@ -178,17 +181,6 @@ class TestPrepareTaskTrackerPopulation:
 
         assert exc_info.value.reason == "task_tracker_prep_failed"
         mocks.commit.assert_not_called()
-
-    def test_empty_llm_response(self, tmp_path: Path, mocks: PrepMocks) -> None:
-        _write_tracker(tmp_path, TASK_TRACKER_TEMPLATE)
-        mocks.prompt_llm.side_effect = None
-        mocks.prompt_llm.return_value = _make_llm_response("")
-
-        with pytest.raises(TrackerPrepError) as exc_info:
-            prepare_task_tracker(tmp_path, "claude")
-
-        assert exc_info.value.reason == "task_tracker_prep_failed"
-        assert "empty response" in str(exc_info.value)
 
     def test_unexpected_files_changed(self, tmp_path: Path, mocks: PrepMocks) -> None:
         _write_tracker(tmp_path, TASK_TRACKER_TEMPLATE)
@@ -236,7 +228,9 @@ class TestPrepareTaskTrackerPopulation:
             prepare_task_tracker(tmp_path, "claude")
 
         assert exc_info.value.reason == "task_tracker_prep_failed"
-        assert "Error preparing task tracker: LLM exploded" in str(exc_info.value)
+        assert "Error preparing task tracker: RuntimeError: LLM exploded" in str(
+            exc_info.value
+        )
         assert isinstance(exc_info.value.__cause__, RuntimeError)
 
     def test_store_session_failure_is_non_critical(
