@@ -1,4 +1,4 @@
-# Step 1: `## Tasks` ends only at an exact "Pull Request" header
+# Step 1: Section boundary fix — `## Tasks` ends only at an exact end-marker header
 
 See `pr_info/steps/summary.md` (§4 of issue #1093).
 
