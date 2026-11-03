@@ -134,8 +134,8 @@ def _find_implementation_section(content: str) -> str:
                     start_line = i + 1  # Start after the header line
                     start_header = line.strip()
             else:
-                # Look for end marker: "pull request"
-                if "pull request" in header_text:
+                # Look for end marker: a header whose whole text is "pull request"
+                if header_text == "pull request":
                     end_line = i
                     end_header = line.strip()
                     break
