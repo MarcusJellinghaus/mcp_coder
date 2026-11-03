@@ -533,3 +533,8 @@ _._windows
 # patching get_current_branch_name/get_default_branch_name so commit tests run
 # on a feature branch past the protected-branch guard.
 _._feature_branch
+
+# tests/cli/commands/test_create_pr.py, test_fix_ci.py, test_fix_conflict.py -
+# autouse fixture registered via @pytest.fixture(name="mock_auto_merge") that
+# stubs resolve_auto_merge; injected by pytest.
+_.fixture_mock_auto_merge
