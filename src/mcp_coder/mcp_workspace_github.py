@@ -19,6 +19,7 @@ from mcp_workspace.github_operations import (
     GitHubRateLimitError,
     LabelData,
     LabelsManager,
+    MergeResult,
     PullRequestData,
     PullRequestManager,
     RepoIdentifier,
@@ -101,6 +102,7 @@ __all__: list[str] = [
     # PR
     "PullRequestManager",
     "PullRequestData",
+    "MergeResult",
     "PullRequestCache",
     "OpenPullRequest",
     "ChangesRequestedData",
