@@ -16,6 +16,7 @@ from mcp_coder.workflow_utils.failure_handling import (
     get_diff_stat,
     handle_workflow_failure,
     llm_failure_reason,
+    post_issue_comment,
 )
 
 
@@ -461,3 +462,46 @@ class TestHandleWorkflowFailure:
         )
 
         mock_issue_mgr_cls.assert_not_called()
+
+
+class TestPostIssueComment:
+    """Tests for post_issue_comment."""
+
+    @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
+    def test_posts_comment(self, mock_issue_mgr_cls: MagicMock) -> None:
+        post_issue_comment(Path("/fake"), 42, "Body")
+
+        mock_issue_mgr_cls.assert_called_once_with(Path("/fake"))
+        mock_issue_mgr_cls.return_value.add_comment.assert_called_once_with(42, "Body")
+
+    @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
+    def test_manager_creation_failure_logs_warning(
+        self, mock_issue_mgr_cls: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mock_issue_mgr_cls.side_effect = RuntimeError("no token")
+
+        with caplog.at_level(
+            "WARNING", logger="mcp_coder.workflow_utils.failure_handling"
+        ):
+            post_issue_comment(Path("/fake"), 42, "Body")
+
+        record = next(
+            r for r in caplog.records if "Failed to post comment" in r.getMessage()
+        )
+        assert record.levelno == logging.WARNING
+        assert "no token" in record.getMessage()
+
+    @patch("mcp_coder.workflow_utils.failure_handling.IssueManager")
+    def test_add_comment_failure_logs_warning(
+        self, mock_issue_mgr_cls: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        mock_issue_mgr_cls.return_value.add_comment.side_effect = RuntimeError(
+            "GitHub API error"
+        )
+
+        with caplog.at_level(
+            "WARNING", logger="mcp_coder.workflow_utils.failure_handling"
+        ):
+            post_issue_comment(Path("/fake"), 42, "Body")
+
+        assert "GitHub API error" in caplog.text

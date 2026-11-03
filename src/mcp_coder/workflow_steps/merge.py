@@ -30,13 +30,20 @@ from mcp_coder.workflow_steps.rebase import (
     _reset_hard,
 )
 from mcp_coder.workflow_utils.branch_linkage import is_branch_linked_to_issue
-from mcp_coder.workflow_utils.failure_handling import CommentField, exception_summary
+from mcp_coder.workflow_utils.failure_handling import (
+    CommentField,
+    build_failure_comment,
+    exception_summary,
+    post_issue_comment,
+)
+from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.rate_limit import as_rate_limit, log_rate_limit_stop
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "MergeOutcome",
+    "finish_auto_merge",
     "is_real_green",
     "resolve_merge_issue_number",
     "run_auto_merge",
@@ -276,3 +283,52 @@ def run_auto_merge(  # pylint: disable=too-many-return-statements
         raise
     # Unreachable: attempt 2 always returns; kept for type checkers.
     return MergeOutcome("pr_created")  # pragma: no cover
+
+
+_EXIT_1_LABELS = frozenset({"pr_merge_conflict", "merge_failed"})
+
+
+def finish_auto_merge(
+    project_dir: Path,
+    outcome: MergeOutcome,
+    *,
+    from_label_id: str,
+    issue_number: int | None,
+    update_issue_labels: bool,
+    post_issue_comments: bool,
+) -> int:
+    """Apply the outcome's label, post its failure comment, map the exit code.
+
+    The label is written before the comment; the comment is best-effort.
+
+    Args:
+        project_dir: Path to the project directory.
+        outcome: Result of :func:`run_auto_merge`.
+        from_label_id: Internal id of the workflow's busy label.
+        issue_number: Issue whose label is written; None skips the label
+            write and the comment.
+        update_issue_labels: Whether to write the final label.
+        post_issue_comments: Whether to post the failure comment.
+
+    Returns:
+        1 when the label write failed or the outcome is ``pr_merge_conflict``
+        / ``merge_failed``; otherwise 0.
+    """
+    rc = 0
+    if update_issue_labels:
+        if issue_number is None:
+            logger.warning("Skipping label update: branch not linked to an issue")
+        else:
+            rc = apply_final_label(
+                project_dir, from_label_id, outcome.label_id, issue_number
+            )
+    if outcome.comment_fields and post_issue_comments and issue_number is not None:
+        body = build_failure_comment(
+            project_dir,
+            title="Auto-merge",
+            kind="Failed",
+            fields=outcome.comment_fields,
+        )
+        post_issue_comment(project_dir, issue_number, body)
+    logger.log(OUTPUT, "Auto-merge outcome: %s", outcome.label_id)
+    return rc or (1 if outcome.label_id in _EXIT_1_LABELS else 0)
