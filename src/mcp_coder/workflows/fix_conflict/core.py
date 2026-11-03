@@ -60,10 +60,10 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
     """Rebase the current branch and resolve the merge-conflict escalation.
 
     Returns:
-        0 on every handled outcome: a settled non-dirty state, or "unknown"
-        after a successful rebase, goes to status-10; "dirty", no open PR,
-        or "unknown" after a failed rebase goes to status-74 with a comment.
-        1 when the current branch cannot be determined, when the status-10
+        0 on status-10: a settled non-dirty state, or "unknown" after a
+        successful rebase. 1 on status-74 ("dirty", no open PR, or "unknown"
+        after a failed rebase; posted with a comment), when the current
+        branch cannot be determined, when the status-10
         label could not be applied after one retry, or on a netted
         crash - the Jenkins shell template's watchdog line is a further
         safety net for a silent crash, this is just the reported exit code.
@@ -92,7 +92,7 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
 
         if verdict:
             _fail(project_dir, verdict, outcome)
-            return 0
+            return 1
         if state == "unknown":
             # Safe: status-10 detection re-checks "dirty" on every poll.
             logger.info(

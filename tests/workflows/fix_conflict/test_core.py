@@ -99,7 +99,7 @@ def test_unresolved_outcomes_go_to_pr_merge_conflict(
         patches[0],
         patches[1],
         patches[2],
-        patches[3],
+        patches[3] as mock_net,
         patches[4] as mock_update,
         patches[5] as mock_sleep,
         patches[6] as mock_fail,
@@ -107,7 +107,8 @@ def test_unresolved_outcomes_go_to_pr_merge_conflict(
     ):
         result = run_fix_conflict_workflow(PROJECT_DIR)
 
-    assert result == 0
+    assert result == 1
+    mock_net.assert_not_called()
     mock_fail.assert_called_once()
     assert mock_fail.call_args[0][0].category == "pr_merge_conflict"
     comment = mock_fail.call_args[0][1]

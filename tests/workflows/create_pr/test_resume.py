@@ -20,7 +20,6 @@ class _Mocks:
     cleanup: MagicMock
     resolve: MagicMock
     post_creation: MagicMock
-    update_label: MagicMock
     handle_failure: MagicMock
     git_clean: MagicMock
     prereqs: MagicMock
@@ -36,8 +35,7 @@ def mocks() -> Iterator[_Mocks]:
         patch(f"{_CORE}._find_open_pr", return_value=_PR) as find_pr,
         patch(f"{_CORE}._cleanup_commit_push", return_value=None) as cleanup,
         patch(f"{_CORE}._resolve_issue_from_pr", return_value=None) as resolve,
-        patch(f"{_CORE}.run_post_creation", return_value="pr_created") as post,
-        patch(f"{_CORE}.apply_final_label", return_value=0) as update_label,
+        patch(f"{_CORE}.run_post_creation", return_value=0) as post,
         patch(f"{_CORE}._handle_create_pr_failure") as handle_failure,
         patch(f"{_CORE}.get_current_branch_name", return_value="5-feat"),
         patch(f"{_CORE}.check_prerequisites") as prereqs,
@@ -54,7 +52,6 @@ def mocks() -> Iterator[_Mocks]:
             cleanup=cleanup,
             resolve=resolve,
             post_creation=post,
-            update_label=update_label,
             handle_failure=handle_failure,
             git_clean=git_clean,
             prereqs=prereqs,
@@ -76,10 +73,13 @@ class TestResumePath:
         mocks.create_pr.assert_not_called()
         mocks.cleanup.assert_not_called()
         mocks.post_creation.assert_called_once_with(
-            tmp_path, "5-feat", "claude", None, None
-        )
-        mocks.update_label.assert_called_once_with(
-            tmp_path, "pr_creating", "pr_created", 5
+            tmp_path,
+            "5-feat",
+            "claude",
+            None,
+            None,
+            issue_number=5,
+            update_issue_labels=True,
         )
 
     def test_pr_info_clean_runs_cleanup_then_phase_b(
@@ -145,7 +145,7 @@ class TestResumePath:
 
         assert result == 0
         mocks.handle_failure.assert_not_called()
-        assert mocks.update_label.call_args.args[3] == 5
+        assert mocks.post_creation.call_args.kwargs["issue_number"] == 5
 
     def test_no_resolve_without_label_updates(
         self, mocks: _Mocks, tmp_path: Path

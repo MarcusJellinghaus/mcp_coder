@@ -4,7 +4,7 @@ After the PR is opened, mergeability is checked before CI, in the same order
 as PR-health: a ``dirty`` PR gets one rebase-and-push, and if it is still
 ``dirty`` the CI wait is skipped because CI results on a conflicting branch
 are moot. Otherwise the CI run for the pushed HEAD is awaited. This phase
-only waits and reports a final label - it never fixes CI or conflicts.
+only waits and applies a final label - it never fixes CI or conflicts.
 """
 
 import logging
@@ -20,6 +20,7 @@ from mcp_coder.workflow_steps.rebase import (
     _poll_mergeable_state,
     _reset_hard,
 )
+from mcp_coder.workflow_utils.label_transitions import apply_final_label
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +31,15 @@ def run_post_creation(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-) -> str:
-    """Check mergeability, then wait for CI. No fixing.
+    *,
+    issue_number: int | None,
+    update_issue_labels: bool,
+) -> int:
+    """Check mergeability, wait for CI, then apply the final label. No fixing.
 
     If this phase pushed new commits (a rebase), the PR title/body is
     refreshed afterwards. The refresh is best-effort and never changes the
-    returned label.
+    final label.
 
     Args:
         project_dir: Path to the project directory.
@@ -43,17 +47,63 @@ def run_post_creation(
         provider: LLM provider used for the description refresh.
         mcp_config: Optional path to MCP configuration file.
         settings_file: Optional path to .claude/settings.local.json.
+        issue_number: Issue linked to the branch, or None.
+        update_issue_labels: If True, apply the final label to the issue.
 
     Returns:
-        Label ID for the final transition from pr_creating:
-        "pr_merge_conflict", "failing_ci" or "pr_created".
+        Exit code: 1 on "pr_merge_conflict" or when the label write fails,
+        else 0 ("failing_ci" / "pr_created").
     """
     head_before = get_latest_commit_sha(project_dir)
     label = _check_mergeability_and_ci(project_dir, branch, head_before)
     if get_latest_commit_sha(project_dir) != head_before:
         logger.log(OUTPUT, "New commits were pushed; refreshing PR description")
         refresh_pr_description(project_dir, branch, provider, mcp_config, settings_file)
-    return label
+    return apply_post_creation_label(
+        project_dir,
+        label,
+        issue_number=issue_number,
+        update_issue_labels=update_issue_labels,
+    )
+
+
+def apply_post_creation_label(
+    project_dir: Path,
+    label: str,
+    *,
+    issue_number: int | None,
+    update_issue_labels: bool,
+) -> int:
+    """Apply the final phase B label (pr_creating → label) and map the exit code.
+
+    Args:
+        project_dir: Path to the project directory.
+        label: Final label ID: "pr_merge_conflict", "failing_ci" or "pr_created".
+        issue_number: Issue linked to the branch, or None (label write skipped).
+        update_issue_labels: If True, apply the label to the issue.
+
+    Returns:
+        Exit code: 1 when the label write fails or the label is
+        "pr_merge_conflict" (status-74), else 0.
+    """
+    rc = 0
+    if update_issue_labels and issue_number:
+        logger.log(OUTPUT, "Updating GitHub issue label...")
+        rc = apply_final_label(project_dir, "pr_creating", label, issue_number)
+        if rc == 0:
+            logger.log(OUTPUT, "✓ Issue label updated: pr_creating → %s", label)
+    else:
+        if update_issue_labels:
+            logger.warning("Skipping label update: branch was not linked to an issue")
+        logger.log(OUTPUT, "Post-creation outcome: %s (label not updated)", label)
+
+    if rc != 0:
+        logger.error("Create PR workflow failed: final issue label not applied")
+    elif update_issue_labels and issue_number is None:
+        logger.log(OUTPUT, "Create PR workflow completed with warnings")
+    else:
+        logger.log(OUTPUT, "Create PR workflow completed successfully!")
+    return rc or (1 if label == "pr_merge_conflict" else 0)
 
 
 def _check_mergeability_and_ci(

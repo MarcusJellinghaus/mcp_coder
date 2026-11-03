@@ -111,7 +111,7 @@ class TestCreatePrFailureHandling:
         """Phase B never polls GitHub; these failures all end in phase A."""
         with patch(
             "mcp_coder.workflows.create_pr.core.run_post_creation",
-            return_value="pr_created",
+            return_value=0,
         ) as mock:
             yield mock
         mock.assert_not_called()

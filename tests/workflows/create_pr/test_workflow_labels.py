@@ -9,21 +9,23 @@ import pytest
 
 from mcp_coder.workflows.create_pr.core import run_create_pr_workflow
 
+_POST = "mcp_coder.workflows.create_pr.post_creation"
+
 
 @pytest.fixture(autouse=True)
 def mock_post_creation() -> Iterator[MagicMock]:
-    """Phase B never polls GitHub in these tests."""
-    with patch(
-        "mcp_coder.workflows.create_pr.core.run_post_creation",
-        return_value="pr_created",
-    ) as mock:
+    """Phase B never polls GitHub: the checks return a label, the label write runs."""
+    with (
+        patch(f"{_POST}.get_latest_commit_sha", return_value="abc123"),
+        patch(f"{_POST}._check_mergeability_and_ci", return_value="pr_created") as mock,
+    ):
         yield mock
 
 
 class TestIssueLabelLinkage:
     """Issue linkage, closing-references fallback and the final label."""
 
-    @patch("mcp_coder.workflows.create_pr.core.apply_final_label")
+    @patch(f"{_POST}.apply_final_label")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
     @patch("mcp_coder.workflows.create_pr.core.generate_pr_summary")
@@ -78,7 +80,7 @@ class TestIssueLabelLinkage:
             Path("/test"), "pr_creating", "pr_created", 123
         )
 
-    @patch("mcp_coder.workflows.create_pr.core.apply_final_label")
+    @patch(f"{_POST}.apply_final_label")
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -136,7 +138,7 @@ class TestIssueLabelLinkage:
         mock_validate.assert_called_once_with(Path("/test"))
         mock_apply_label.assert_not_called()
 
-    @patch("mcp_coder.workflows.create_pr.core.apply_final_label")
+    @patch(f"{_POST}.apply_final_label")
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -196,7 +198,7 @@ class TestIssueLabelLinkage:
         )
         assert "completed successfully!" in caplog.text
 
-    @patch("mcp_coder.workflows.create_pr.core.apply_final_label")
+    @patch(f"{_POST}.apply_final_label")
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -357,7 +359,7 @@ class TestIssueLabelLinkage:
         assert "completed with warnings" in caplog.text
         assert "completed successfully!" not in caplog.text
 
-    @patch("mcp_coder.workflows.create_pr.core.apply_final_label", return_value=0)
+    @patch(f"{_POST}.apply_final_label", return_value=0)
     @patch("mcp_coder.workflows.create_pr.core.PullRequestManager")
     @patch("mcp_coder.workflows.create_pr.core.validate_branch_issue_linkage")
     @patch("mcp_coder.workflows.create_pr.core.check_prerequisites")
@@ -428,12 +430,12 @@ def phase_a_ok() -> Iterator[dict[str, MagicMock]]:
         "base": ("detect_base_branch", "main"),
         "assignee": ("_add_pr_assignee_best_effort", None),
         "pr_manager": ("PullRequestManager", None),
-        "apply_label": ("apply_final_label", 0),
     }
     patchers = {
         key: patch(f"{_CORE}.{name}", return_value=value)
         for key, (name, value) in targets.items()
     }
+    patchers["apply_label"] = patch(f"{_POST}.apply_final_label", return_value=0)
     mocks = {key: p.start() for key, p in patchers.items()}
     try:
         yield mocks
@@ -445,39 +447,49 @@ def phase_a_ok() -> Iterator[dict[str, MagicMock]]:
 class TestPhaseB:
     """Phase B: post-creation checks and the final label."""
 
-    @pytest.mark.parametrize("label", ["pr_created", "pr_merge_conflict", "failing_ci"])
+    @pytest.mark.parametrize(
+        ("label", "expected"),
+        [("pr_created", 0), ("pr_merge_conflict", 1), ("failing_ci", 0)],
+    )
     def test_final_label_from_post_creation(
         self,
         label: str,
+        expected: int,
         phase_a_ok: dict[str, MagicMock],
         mock_post_creation: MagicMock,
     ) -> None:
-        """The outcome of run_post_creation becomes the final label; exit 0."""
+        """The phase B check outcome becomes the final label; 74 exits 1."""
         mock_post_creation.return_value = label
 
         result = run_create_pr_workflow(
             Path("/test"), "claude", update_issue_labels=True
         )
 
-        assert result == 0
+        assert result == expected
         mock_post_creation.assert_called_once_with(
-            Path("/test"), "feature-branch", "claude", None, None
+            Path("/test"), "feature-branch", "abc123"
         )
         phase_a_ok["apply_label"].assert_called_once_with(
             Path("/test"), "pr_creating", label, 123
         )
 
+    @pytest.mark.parametrize(
+        ("label", "expected"),
+        [("pr_created", 0), ("pr_merge_conflict", 1), ("failing_ci", 0)],
+    )
     def test_labels_off_still_runs_phase_b(
         self,
+        label: str,
+        expected: int,
         phase_a_ok: dict[str, MagicMock],
         mock_post_creation: MagicMock,
     ) -> None:
-        """Phase B runs with update_issue_labels=False, but sets no label."""
-        mock_post_creation.return_value = "failing_ci"
+        """Phase B runs with update_issue_labels=False, sets no label; 74 exits 1."""
+        mock_post_creation.return_value = label
 
         result = run_create_pr_workflow(Path("/test"), "claude")
 
-        assert result == 0
+        assert result == expected
         mock_post_creation.assert_called_once()
         phase_a_ok["apply_label"].assert_not_called()
 
