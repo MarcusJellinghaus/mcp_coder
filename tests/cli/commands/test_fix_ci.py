@@ -2,12 +2,71 @@
 
 import argparse
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.fix_ci import execute_fix_ci
+
+
+@pytest.fixture(autouse=True, name="mock_auto_merge")
+def fixture_mock_auto_merge() -> Iterator[Mock]:
+    """Resolve auto_merge to False without reading git or config."""
+    with patch(
+        "mcp_coder.cli.commands.fix_ci.resolve_auto_merge", return_value=False
+    ) as mock_resolve:
+        yield mock_resolve
+
+
+class TestExecuteFixCiAutoMerge:
+    """auto_merge is resolved and forwarded to the workflow."""
+
+    @pytest.mark.parametrize("auto_merge", [True, False])
+    @patch("mcp_coder.cli.commands.fix_ci.resolve_issue_interaction_flags")
+    @patch("mcp_coder.cli.commands.fix_ci.resolve_claude_cwd")
+    @patch("mcp_coder.cli.commands.fix_ci.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.fix_ci.run_fix_ci_workflow")
+    @patch("mcp_coder.cli.commands.fix_ci.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.fix_ci.parse_llm_method_from_args")
+    def test_auto_merge_forwarded(
+        self,
+        mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
+        mock_run_workflow: Mock,
+        mock_resolve_dir: Mock,
+        mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
+        auto_merge: bool,
+        mock_auto_merge: Mock,
+    ) -> None:
+        """The resolved auto_merge value reaches run_fix_ci_workflow."""
+        project_dir = Path("/test/project")
+        mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = project_dir
+        mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_parse_llm.return_value = "claude"
+        mock_resolve_flags.return_value = (True, True)
+        mock_run_workflow.return_value = 0
+        mock_auto_merge.return_value = auto_merge
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            llm_method="claude",
+            mcp_config=None,
+            settings=None,
+            update_issue_labels=None,
+            post_issue_comments=None,
+            auto_merge=auto_merge,
+        )
+
+        assert execute_fix_ci(args) == 0
+
+        mock_auto_merge.assert_called_once_with(args, project_dir)
+        mock_run_workflow.assert_called_once_with(
+            project_dir, "claude", None, None, True, True, auto_merge=auto_merge
+        )
 
 
 class TestExecuteFixCi:
@@ -54,7 +113,7 @@ class TestExecuteFixCi:
         mock_parse_llm.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, False, False
+            project_dir, "claude", None, None, False, False, auto_merge=False
         )
 
     @patch("mcp_coder.cli.commands.fix_ci.resolve_issue_interaction_flags")
@@ -94,7 +153,7 @@ class TestExecuteFixCi:
 
         assert result == 1
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, False, False
+            project_dir, "claude", None, None, False, False, auto_merge=False
         )
 
     @patch("mcp_coder.cli.commands.fix_ci.resolve_project_dir")

@@ -216,6 +216,7 @@ def add_fix_ci_parser(subparsers: Any) -> None:
         default=None,
         help="Post GitHub comments on workflow failure (default: from config)",
     )
+    add_auto_merge_arg(fix_ci_parser)
 
 
 def add_coordinator_parsers(subparsers: Any) -> None:

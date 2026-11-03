@@ -75,6 +75,81 @@ def test_ci_passes_no_label_update_when_disabled() -> None:
     mock_update.assert_not_called()
 
 
+class TestAutoMerge:
+    """With auto_merge on, a green fix loop hands over to the merge helper."""
+
+    @pytest.mark.parametrize("finish_rc", [0, 1])
+    def test_ci_ok_runs_merge_and_returns_finish_rc(self, finish_rc: int) -> None:
+        manager = MagicMock()
+        outcome = MagicMock(name="outcome")
+        with (
+            patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+            patch(f"{MODULE}.check_and_fix_ci", return_value=True),
+            patch(f"{MODULE}.apply_final_label") as mock_label,
+            patch(
+                f"{MODULE}.resolve_merge_issue_number", return_value=123
+            ) as mock_resolve,
+            patch(f"{MODULE}.run_auto_merge", return_value=outcome) as mock_merge,
+            patch(f"{MODULE}.finish_auto_merge", return_value=finish_rc) as mock_finish,
+        ):
+            manager.attach_mock(mock_resolve, "resolve")
+            manager.attach_mock(mock_merge, "merge")
+            manager.attach_mock(mock_finish, "finish")
+            result = run_fix_ci_workflow(
+                PROJECT_DIR,
+                "claude",
+                update_issue_labels=True,
+                post_issue_comments=False,
+                auto_merge=True,
+            )
+
+        assert result == finish_rc
+        assert [c[0] for c in manager.mock_calls] == ["resolve", "merge", "finish"]
+        mock_resolve.assert_called_once_with(PROJECT_DIR, BRANCH_NAME)
+        mock_merge.assert_called_once_with(PROJECT_DIR, BRANCH_NAME)
+        mock_finish.assert_called_once_with(
+            PROJECT_DIR,
+            outcome,
+            from_label_id="fixing_ci",
+            issue_number=123,
+            update_issue_labels=True,
+            post_issue_comments=False,
+        )
+        mock_label.assert_not_called()
+
+    def test_ci_not_ok_skips_merge(self) -> None:
+        with (
+            patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+            patch(f"{MODULE}.check_and_fix_ci", return_value=False),
+            patch(f"{MODULE}.handle_workflow_failure"),
+            patch(BRANCH_HEAD, return_value=("feat", "abc1234")),
+            patch(f"{MODULE}.resolve_merge_issue_number") as mock_resolve,
+            patch(f"{MODULE}.run_auto_merge") as mock_merge,
+            patch(f"{MODULE}.finish_auto_merge") as mock_finish,
+        ):
+            result = run_fix_ci_workflow(PROJECT_DIR, "claude", auto_merge=True)
+
+        assert result == 1
+        mock_resolve.assert_not_called()
+        mock_merge.assert_not_called()
+        mock_finish.assert_not_called()
+
+    def test_auto_merge_off_skips_merge(self) -> None:
+        with (
+            patch(f"{MODULE}.get_current_branch_name", return_value=BRANCH_NAME),
+            patch(f"{MODULE}.check_and_fix_ci", return_value=True),
+            patch(f"{MODULE}.apply_final_label", return_value=0) as mock_label,
+            patch(f"{MODULE}.run_auto_merge") as mock_merge,
+        ):
+            result = run_fix_ci_workflow(
+                PROJECT_DIR, "claude", update_issue_labels=True
+            )
+
+        assert result == 0
+        mock_merge.assert_not_called()
+        mock_label.assert_called_once_with(PROJECT_DIR, "fixing_ci", "pr_created")
+
+
 def test_ci_exhausted_posts_comment_and_sets_label(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
