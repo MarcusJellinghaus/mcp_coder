@@ -74,6 +74,7 @@ _CONFIG_SCHEMA: dict[str, dict[str, FieldDef]] = {
         "post_issue_comments": FieldDef(bool),
         "auto_review_plan": FieldDef(bool),
         "auto_review_implementation": FieldDef(bool),
+        "auto_merge": FieldDef(bool),
         "setup_commands_windows": FieldDef(list),
         "setup_commands_linux": FieldDef(list),
     },

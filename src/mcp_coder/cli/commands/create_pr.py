@@ -14,6 +14,7 @@ from ...workflows.utils import resolve_project_dir
 from ..utils import (
     log_command_startup,
     parse_llm_method_from_args,
+    resolve_auto_merge,
     resolve_claude_cwd,
     resolve_claude_settings_path,
     resolve_issue_interaction_flags,
@@ -62,6 +63,7 @@ def execute_create_pr(args: argparse.Namespace) -> int:
         update_issue_labels, post_issue_comments = resolve_issue_interaction_flags(
             args, project_dir
         )
+        auto_merge = resolve_auto_merge(args, project_dir)
 
         # Run the create-pr workflow
         return run_create_pr_workflow(
@@ -71,6 +73,7 @@ def execute_create_pr(args: argparse.Namespace) -> int:
             settings_file,
             update_issue_labels,
             post_issue_comments,
+            auto_merge=auto_merge,
         )
 
     except ValueError as e:

@@ -80,6 +80,8 @@ class TestResumePath:
             None,
             issue_number=5,
             update_issue_labels=True,
+            post_issue_comments=False,
+            auto_merge=False,
         )
 
     def test_pr_info_clean_runs_cleanup_then_phase_b(

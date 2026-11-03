@@ -15,6 +15,7 @@ from ..llm.session import parse_llm_method
 from ..llm.types import SUPPORTED_PROVIDERS
 from ..prompts.prompt_loader import claude_md_paths
 from ..utils.log_utils import OUTPUT
+from ..utils.repo_config import get_repo_flag
 from ..utils.user_config import find_repo_section_by_url, get_config_values
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ __all__ = [
     "log_command_startup",
     "parse_llm_method_from_args",
     "report_context_root",
+    "resolve_auto_merge",
     "resolve_issue_interaction_flags",
     "resolve_llm_method",
     "resolve_mcp_config_path",
@@ -111,6 +113,25 @@ def resolve_issue_interaction_flags(
     return (
         cli_labels if cli_labels is not None else cfg_labels,
         cli_comments if cli_comments is not None else cfg_comments,
+    )
+
+
+def resolve_auto_merge(args: argparse.Namespace, project_dir: Path) -> bool:
+    """Resolve the auto_merge setting.
+
+    Priority: CLI --auto-merge/--no-auto-merge (if not None) > config.toml
+    repo section ``auto_merge`` > False.
+
+    Args:
+        args: Parsed CLI args with auto_merge (bool | None from BooleanOptionalAction)
+        project_dir: Project directory for git remote URL detection
+
+    Returns:
+        True when the PR should be squash-merged once CI is green on HEAD.
+    """
+    cli_value: bool | None = getattr(args, "auto_merge", None)
+    return (
+        cli_value if cli_value is not None else get_repo_flag(project_dir, "auto_merge")
     )
 
 

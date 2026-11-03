@@ -14,6 +14,11 @@ from mcp_coder.mcp_workspace_git import get_latest_commit_sha
 from mcp_coder.mcp_workspace_github import CIResultsManager
 from mcp_coder.utils.log_utils import OUTPUT
 from mcp_coder.workflow_steps.ci import _poll_for_ci_completion
+from mcp_coder.workflow_steps.merge import (
+    finish_auto_merge,
+    is_real_green,
+    run_auto_merge,
+)
 from mcp_coder.workflow_steps.pr_description import refresh_pr_description
 from mcp_coder.workflow_steps.rebase import (
     _attempt_rebase_and_push,
@@ -34,12 +39,15 @@ def run_post_creation(
     *,
     issue_number: int | None,
     update_issue_labels: bool,
+    post_issue_comments: bool = False,
+    auto_merge: bool = False,
 ) -> int:
     """Check mergeability, wait for CI, then apply the final label. No fixing.
 
     If this phase pushed new commits (a rebase), the PR title/body is
     refreshed afterwards. The refresh is best-effort and never changes the
-    final label.
+    final label. With ``auto_merge`` on and CI really green on HEAD, the PR
+    is then squash-merged and the merge outcome decides the final label.
 
     Args:
         project_dir: Path to the project directory.
@@ -49,16 +57,32 @@ def run_post_creation(
         settings_file: Optional path to .claude/settings.local.json.
         issue_number: Issue linked to the branch, or None.
         update_issue_labels: If True, apply the final label to the issue.
+        post_issue_comments: If True, post the auto-merge failure comment.
+        auto_merge: If True, squash-merge the PR on a real green.
 
     Returns:
-        Exit code: 1 on "pr_merge_conflict" or when the label write fails,
-        else 0 ("failing_ci" / "pr_created").
+        Exit code: 1 on "pr_merge_conflict" / "merge_failed" or when the label
+        write fails, else 0 ("failing_ci" / "pr_created" / "merged").
     """
     head_before = get_latest_commit_sha(project_dir)
-    label = _check_mergeability_and_ci(project_dir, branch, head_before)
+    label, verified_sha = _check_mergeability_and_ci(project_dir, branch, head_before)
     if get_latest_commit_sha(project_dir) != head_before:
         logger.log(OUTPUT, "New commits were pushed; refreshing PR description")
         refresh_pr_description(project_dir, branch, provider, mcp_config, settings_file)
+    if auto_merge and label == "pr_created":
+        if verified_sha:
+            outcome = run_auto_merge(project_dir, branch, verified_sha=verified_sha)
+            return finish_auto_merge(
+                project_dir,
+                outcome,
+                from_label_id="pr_creating",
+                issue_number=issue_number,
+                update_issue_labels=update_issue_labels,
+                post_issue_comments=post_issue_comments,
+            )
+        logger.warning(
+            "Auto-merge skipped: CI not verified green on HEAD; keeping pr-created"
+        )
     return apply_post_creation_label(
         project_dir,
         label,
@@ -108,7 +132,7 @@ def apply_post_creation_label(
 
 def _check_mergeability_and_ci(
     project_dir: Path, branch: str, head_before: str | None
-) -> str:
+) -> tuple[str, str | None]:
     """Check mergeability (rebasing once on ``dirty``), then wait for CI.
 
     Args:
@@ -118,7 +142,9 @@ def _check_mergeability_and_ci(
             rebase succeeds locally but its push fails.
 
     Returns:
-        Label ID: "pr_merge_conflict", "failing_ci" or "pr_created".
+        Tuple of the label ID ("pr_merge_conflict", "failing_ci" or
+        "pr_created") and the HEAD SHA CI really passed on, or None when CI
+        was not verified green on HEAD.
     """
     state = _poll_mergeable_state(project_dir, branch)
     logger.log(OUTPUT, "PR mergeable_state: %s", state)
@@ -134,13 +160,13 @@ def _check_mergeability_and_ci(
             logger.log(
                 OUTPUT, "PR still has merge conflicts after rebase; skipping CI wait"
             )
-            return "pr_merge_conflict"
+            return "pr_merge_conflict", None
 
     try:
         ci_manager = CIResultsManager(project_dir)
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.info("CI_API_ERROR: could not create CI manager (%s)", e)
-        return "pr_created"
+        return "pr_created", None
 
     # Read after any rebase, so it is the HEAD that was actually pushed.
     expected_sha = get_latest_commit_sha(project_dir)
@@ -148,5 +174,6 @@ def _check_mergeability_and_ci(
         ci_manager, branch, expected_sha=expected_sha
     )
     if ci_status is not None and not ci_ok:
-        return "failing_ci"
-    return "pr_created"
+        return "failing_ci", None
+    verified = is_real_green(ci_status, ci_ok, expected_sha)
+    return "pr_created", (expected_sha if verified else None)

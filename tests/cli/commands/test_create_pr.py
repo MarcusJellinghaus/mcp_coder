@@ -7,12 +7,71 @@ run independently (like CLI integration checks) are always executed.
 
 import argparse
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
 from mcp_coder.cli.commands.create_pr import execute_create_pr
+
+
+@pytest.fixture(autouse=True, name="mock_auto_merge")
+def fixture_mock_auto_merge() -> Iterator[Mock]:
+    """Resolve auto_merge to False without reading git or config."""
+    with patch(
+        "mcp_coder.cli.commands.create_pr.resolve_auto_merge", return_value=False
+    ) as mock_resolve:
+        yield mock_resolve
+
+
+class TestExecuteCreatePrAutoMerge:
+    """auto_merge is resolved and forwarded to the workflow."""
+
+    @pytest.mark.parametrize("auto_merge", [True, False])
+    @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_claude_cwd")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
+    @patch("mcp_coder.cli.commands.create_pr.run_create_pr_workflow")
+    @patch("mcp_coder.cli.commands.create_pr.resolve_llm_method")
+    @patch("mcp_coder.cli.commands.create_pr.parse_llm_method_from_args")
+    def test_auto_merge_forwarded(
+        self,
+        mock_parse_llm: Mock,
+        mock_resolve_llm: Mock,
+        mock_run_workflow: Mock,
+        mock_resolve_dir: Mock,
+        mock_resolve_exec: Mock,
+        mock_resolve_flags: Mock,
+        auto_merge: bool,
+        mock_auto_merge: Mock,
+    ) -> None:
+        """The resolved auto_merge value reaches run_create_pr_workflow."""
+        project_dir = Path("/test/project")
+        mock_resolve_dir.return_value = project_dir
+        mock_resolve_exec.return_value = project_dir
+        mock_resolve_llm.return_value = ("claude", "cli argument")
+        mock_parse_llm.return_value = "claude"
+        mock_resolve_flags.return_value = (True, True)
+        mock_run_workflow.return_value = 0
+        mock_auto_merge.return_value = auto_merge
+
+        args = argparse.Namespace(
+            project_dir="/test/project",
+            llm_method="claude",
+            mcp_config=None,
+            settings=None,
+            update_issue_labels=None,
+            post_issue_comments=None,
+            auto_merge=auto_merge,
+        )
+
+        assert execute_create_pr(args) == 0
+
+        mock_auto_merge.assert_called_once_with(args, project_dir)
+        mock_run_workflow.assert_called_once_with(
+            project_dir, "claude", None, None, True, True, auto_merge=auto_merge
+        )
 
 
 class TestExecuteCreatePr:
@@ -65,7 +124,7 @@ class TestExecuteCreatePr:
         mock_parse_llm.assert_called_once_with("claude")
         mock_resolve_flags.assert_called_once_with(args, project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, False, False
+            project_dir, "claude", None, None, False, False, auto_merge=False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -108,7 +167,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, False, False
+            project_dir, "claude", None, None, False, False, auto_merge=False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -153,7 +212,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, False, False
+            project_dir, "claude", None, None, False, False, auto_merge=False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")
@@ -223,7 +282,7 @@ class TestExecuteCreatePr:
         mock_resolve_exec.assert_called_once_with(project_dir)
         mock_parse_llm.assert_called_once_with("claude")
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, False, False
+            project_dir, "claude", None, None, False, False, auto_merge=False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -265,7 +324,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("claude")
         mock_run_workflow.assert_called_with(
-            project_dir, "claude", None, None, False, False
+            project_dir, "claude", None, None, False, False, auto_merge=False
         )
 
         # Reset mocks
@@ -292,7 +351,7 @@ class TestExecuteCreatePr:
         assert result == 0
         mock_parse_llm.assert_called_with("langchain")
         mock_run_workflow.assert_called_with(
-            project_dir, "langchain", None, None, False, False
+            project_dir, "langchain", None, None, False, False, auto_merge=False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_issue_interaction_flags")
@@ -495,7 +554,7 @@ class TestCreatePrClaudeCwd:
         assert result == 0
         mock_resolve_exec.assert_called_once_with(project_dir)
         mock_run_workflow.assert_called_once_with(
-            project_dir, "claude", None, None, False, False
+            project_dir, "claude", None, None, False, False, auto_merge=False
         )
 
     @patch("mcp_coder.cli.commands.create_pr.resolve_project_dir")

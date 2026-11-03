@@ -264,6 +264,121 @@ class TestRunPostCreationLabel:
         )
 
 
+_GREEN: dict[str, Any] = {
+    "run": {"status": "completed", "commit_sha": "abc123"},
+    "jobs": [],
+}
+
+
+class TestRunPostCreationAutoMerge:
+    """run_post_creation hands a real green on HEAD to the auto-merge helper."""
+
+    @pytest.fixture
+    def merge(self, mocks: _Mocks) -> Iterator[tuple[MagicMock, MagicMock]]:
+        """Patch run_auto_merge / finish_auto_merge; attach them to the order mock."""
+        with (
+            patch(f"{_MODULE}.run_auto_merge") as run_merge,
+            patch(f"{_MODULE}.finish_auto_merge", return_value=7) as finish,
+        ):
+            mocks.order.attach_mock(run_merge, "run_merge")
+            yield run_merge, finish
+
+    def _run(self, auto_merge: bool) -> int:
+        return run_post_creation(
+            _PROJECT,
+            _BRANCH,
+            _PROVIDER,
+            issue_number=_ISSUE,
+            update_issue_labels=True,
+            post_issue_comments=True,
+            auto_merge=auto_merge,
+        )
+
+    def test_real_green_merges_after_refresh(
+        self, mocks: _Mocks, merge: tuple[MagicMock, MagicMock]
+    ) -> None:
+        """Real green + auto_merge → helper with verified_sha, after the refresh."""
+        run_merge, finish = merge
+        mocks.poll.side_effect = ["dirty", "clean"]
+        mocks.sha.side_effect = ["before", "abc123", "abc123"]
+        mocks.ci_poll.return_value = (_GREEN, True)
+
+        assert self._run(auto_merge=True) == 7
+
+        run_merge.assert_called_once_with(_PROJECT, _BRANCH, verified_sha="abc123")
+        finish.assert_called_once_with(
+            _PROJECT,
+            run_merge.return_value,
+            from_label_id="pr_creating",
+            issue_number=_ISSUE,
+            update_issue_labels=True,
+            post_issue_comments=True,
+        )
+        names = [c[0] for c in mocks.order.mock_calls]
+        assert names.index("refresh") < names.index("run_merge")
+        mocks.apply_label.assert_not_called()
+
+    def test_auto_merge_off_does_not_merge(
+        self, mocks: _Mocks, merge: tuple[MagicMock, MagicMock]
+    ) -> None:
+        """auto_merge=False → helper not called even on a real green."""
+        mocks.ci_poll.return_value = (_GREEN, True)
+
+        assert self._run(auto_merge=False) == 0
+
+        merge[0].assert_not_called()
+        mocks.apply_label.assert_called_once()
+        assert mocks.apply_label.call_args.args[1] == "pr_created"
+
+    @pytest.mark.parametrize(
+        "ci_result",
+        [
+            (None, True),
+            (_CI_STATUS, True),
+            ({"run": {"status": "completed", "commit_sha": "other"}, "jobs": []}, True),
+        ],
+        ids=["soft_pass", "no_commit_sha", "sha_mismatch"],
+    )
+    def test_not_verified_green_keeps_pr_created(
+        self,
+        mocks: _Mocks,
+        merge: tuple[MagicMock, MagicMock],
+        caplog: pytest.LogCaptureFixture,
+        ci_result: tuple[dict[str, Any] | None, bool],
+    ) -> None:
+        """Soft pass / mismatching commit_sha → no merge, warning, pr_created."""
+        mocks.ci_poll.return_value = ci_result
+
+        with caplog.at_level(logging.WARNING):
+            assert self._run(auto_merge=True) == 0
+
+        merge[0].assert_not_called()
+        assert "Auto-merge skipped" in caplog.text
+        assert mocks.apply_label.call_args.args[1] == "pr_created"
+
+    def test_failing_ci_does_not_merge(
+        self, mocks: _Mocks, merge: tuple[MagicMock, MagicMock]
+    ) -> None:
+        """failing_ci → helper not called."""
+        mocks.ci_poll.return_value = (_GREEN, False)
+
+        self._run(auto_merge=True)
+
+        merge[0].assert_not_called()
+        assert mocks.apply_label.call_args.args[1] == "failing_ci"
+
+    def test_merge_conflict_does_not_merge(
+        self, mocks: _Mocks, merge: tuple[MagicMock, MagicMock]
+    ) -> None:
+        """pr_merge_conflict → helper not called."""
+        mocks.poll.side_effect = ["dirty", "dirty"]
+
+        self._run(auto_merge=True)
+
+        merge[0].assert_not_called()
+        assert mocks.apply_label.call_args.args[1] == "pr_merge_conflict"
+
+
 class TestApplyPostCreationLabel:
     """Tests for apply_post_creation_label: final label write + exit code."""
 

@@ -529,6 +529,7 @@ def run_create_pr_workflow(
     settings_file: str | None = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
+    auto_merge: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates PR and cleans up repository.
 
@@ -539,6 +540,7 @@ def run_create_pr_workflow(
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         update_issue_labels: If True, update GitHub issue labels on success
         post_issue_comments: If True, post comments on the issue on failure
+        auto_merge: If True, squash-merge the PR once CI is really green on HEAD
 
     Returns:
         int: Exit code. 0 once the PR exists and phase B ends on pr_created
@@ -691,6 +693,8 @@ def run_create_pr_workflow(
             settings_file,
             issue_number=cached_issue_number,
             update_issue_labels=update_issue_labels,
+            post_issue_comments=post_issue_comments,
+            auto_merge=auto_merge,
         )
 
     rc = run_guarded(

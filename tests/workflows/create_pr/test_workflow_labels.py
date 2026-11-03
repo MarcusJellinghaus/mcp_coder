@@ -17,7 +17,9 @@ def mock_post_creation() -> Iterator[MagicMock]:
     """Phase B never polls GitHub: the checks return a label, the label write runs."""
     with (
         patch(f"{_POST}.get_latest_commit_sha", return_value="abc123"),
-        patch(f"{_POST}._check_mergeability_and_ci", return_value="pr_created") as mock,
+        patch(
+            f"{_POST}._check_mergeability_and_ci", return_value=("pr_created", None)
+        ) as mock,
     ):
         yield mock
 
@@ -459,7 +461,7 @@ class TestPhaseB:
         mock_post_creation: MagicMock,
     ) -> None:
         """The phase B check outcome becomes the final label; 74 exits 1."""
-        mock_post_creation.return_value = label
+        mock_post_creation.return_value = (label, None)
 
         result = run_create_pr_workflow(
             Path("/test"), "claude", update_issue_labels=True
@@ -485,7 +487,7 @@ class TestPhaseB:
         mock_post_creation: MagicMock,
     ) -> None:
         """Phase B runs with update_issue_labels=False, sets no label; 74 exits 1."""
-        mock_post_creation.return_value = label
+        mock_post_creation.return_value = (label, None)
 
         result = run_create_pr_workflow(Path("/test"), "claude")
 
