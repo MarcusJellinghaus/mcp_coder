@@ -95,6 +95,9 @@ except Exception as exc:
 Private helpers: `_pr_head_sha(project_dir, branch) -> str | None` (re-reads
 `find_pull_request_by_head`, returns the single PR's `head_sha` or `None`);
 `_failed(result, state=None, rebase=None) -> MergeOutcome` builds `merge_failed` with fields;
+a `refused` on the second attempt goes to `_failed(result)` without polling, so
+`mergeable_state` is deliberately absent from that `99f` comment (the issue includes it
+only "when it is known");
 `_conflict_fields(rebase)`.
 
 ## DATA — comment fields

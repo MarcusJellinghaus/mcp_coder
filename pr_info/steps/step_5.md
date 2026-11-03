@@ -52,6 +52,8 @@ if auto_merge and label == "pr_created" and verified_sha:
     outcome = run_auto_merge(project_dir, branch, verified_sha=verified_sha)
     return finish_auto_merge(project_dir, outcome, from_label_id="pr_creating", issue_number=issue_number,
                              update_issue_labels=update_issue_labels, post_issue_comments=post_issue_comments)
+if auto_merge and label == "pr_created" and not verified_sha:
+    logger.warning("Auto-merge skipped: CI not verified green on HEAD; keeping pr-created")
 return apply_post_creation_label(project_dir, label, issue_number=..., update_issue_labels=...)
 ```
 
@@ -78,7 +80,8 @@ return "pr_created", (expected_sha if is_real_green(ci_status, ci_ok, expected_s
 - `test_post_creation.py`: real green + `auto_merge=True` → `run_auto_merge` called with
   `verified_sha`, after `refresh_pr_description` (order mock), result of `finish_auto_merge`
   returned; `auto_merge=False` → helper not called; soft pass / green with mismatching
-  `commit_sha` → helper not called, `pr_created`; `failing_ci` / `pr_merge_conflict` →
+  `commit_sha` → helper not called, `pr_created`; soft pass + `auto_merge=True` → the
+  "Auto-merge skipped" warning is logged (`caplog`) and `pr_created` is applied; `failing_ci` / `pr_merge_conflict` →
   helper not called.
 
 ## Done when
