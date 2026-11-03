@@ -506,3 +506,43 @@ def test_review_supervisor_declares_json_decision_contract() -> None:
     assert "dismiss" in supervisor
     assert "tasks" in supervisor
     assert "escalate" in supervisor
+
+
+_TRACKER_REPAIR_PROMPTS = [
+    "Task Tracker Restructure Prompt",
+    "Task Tracker Feedback Prompt",
+]
+
+
+@pytest.mark.parametrize("prompt_name", _TRACKER_REPAIR_PROMPTS)
+def test_tracker_repair_prompt_has_placeholders(prompt_name: str) -> None:
+    """Restructure and feedback prompts carry both substitution placeholders."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), prompt_name)
+    assert "[violations]" in prompt
+    assert "[expected_format]" in prompt
+
+
+@pytest.mark.parametrize("prompt_name", _TRACKER_REPAIR_PROMPTS)
+def test_tracker_repair_prompt_has_no_header_lines(prompt_name: str) -> None:
+    """No body line starts with '#' - the header parser would pick it up."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), prompt_name)
+    assert not [line for line in prompt.splitlines() if line.strip().startswith("#")]
+
+
+@pytest.mark.parametrize(
+    "prompt_name",
+    [
+        "Task Tracker Update Prompt",
+        "Mypy Fix Prompt",
+        "Implementation Plan Creation",
+    ],
+)
+def test_existing_prompt_lookups_still_work(prompt_name: str) -> None:
+    """Adding prompt sections does not break existing lookups."""
+    assert len(get_prompt(str(PROMPTS_FILE_PATH), prompt_name).strip()) > 0
+
+
+def test_plan_creation_forbids_editing_task_tracker() -> None:
+    """The planner is told to leave the task tracker to the implement workflow."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), "Implementation Plan Creation")
+    assert "Do not edit `pr_info/TASK_TRACKER.md`" in prompt
