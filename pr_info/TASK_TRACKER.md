@@ -21,6 +21,13 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Split CI by event and document it — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation: `ci.yml` (`test` → `push-checks`, `architecture` → `pr-checks`, `if:` conditions, comments), `quality-and-security-checks.md` (`## CI events`, Architecture/Dependencies wording), `github.md` CI template
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues (plus `check_file_size` and the `architecture|\btest:` search in `ci.yml`)
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review full branch diff against `main`
+- [ ] PR summary prepared
