@@ -13,11 +13,14 @@ from mcp_coder.mcp_workspace_git import (
 )
 from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
 from mcp_coder.workflow_utils.task_tracker import (
-    TaskTrackerSectionNotFoundError,
     _find_implementation_section,
     _parse_task_lines,
     _read_task_tracker,
-    validate_task_tracker,
+)
+from mcp_coder.workflow_utils.task_tracker_classify import (
+    TrackerState,
+    classify_task_tracker,
+    describe_violations,
 )
 
 from .constants import PR_INFO_DIR
@@ -64,7 +67,8 @@ def check_prerequisites(project_dir: Path) -> bool:
 
     Now also handles TASK_TRACKER.md lifecycle:
     - Fails if pr_info/ folder is missing (must run create_plan first)
-    - Validates structure of existing TASK_TRACKER.md
+    - Classifies the structure of TASK_TRACKER.md; an invalid tracker only
+      logs a warning because task tracker prep repairs it
 
     Args:
         project_dir: Path to the project directory
@@ -96,13 +100,18 @@ def check_prerequisites(project_dir: Path) -> bool:
         logger.error(f"{task_tracker_path} not found")
         return False
 
-    # Validate existing structure
-    try:
-        validate_task_tracker(str(pr_info_path))
-        logger.info("Task tracker structure validated")
-    except TaskTrackerSectionNotFoundError as e:
-        logger.error(f"Invalid task tracker structure: {e}")
+    # Classify structure; an invalid tracker is repaired later by prep
+    state, violations = classify_task_tracker(str(pr_info_path))
+    if state is TrackerState.MISSING:
+        logger.error(f"{task_tracker_path} not found")
         return False
+    if state is TrackerState.INVALID:
+        logger.warning(
+            "Invalid task tracker structure; prep will try to repair it:\n%s",
+            describe_violations(violations),
+        )
+    else:
+        logger.info("Task tracker structure: %s", state.value)
 
     logger.info("Prerequisites check passed")
     return True

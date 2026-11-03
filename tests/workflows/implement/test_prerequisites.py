@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_coder.workflow_utils.task_tracker_classify import TrackerState
 from mcp_coder.workflows.implement.prerequisites import (
     check_git_clean,
     check_main_branch,
@@ -227,10 +228,10 @@ class TestCheckPrerequisitesTaskTracker:
         assert result is True
         assert "Prerequisites check passed" in caplog.text
 
-    def test_validates_existing_tracker_failure(
+    def test_invalid_tracker_warns_and_passes(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Test validation fails for invalid tracker structure."""
+        """Test an invalid tracker logs a WARNING but passes for prep to repair."""
         # Setup: git repo with TASK_TRACKER.md missing ## Tasks header
         git_dir = tmp_path / ".git"
         git_dir.mkdir()
@@ -244,12 +245,22 @@ class TestCheckPrerequisitesTaskTracker:
             "## Pull Request\n"
         )
 
-        # Call check_prerequisites()
-        result = check_prerequisites(tmp_path)
+        with caplog.at_level(
+            logging.WARNING, logger="mcp_coder.workflows.implement.prerequisites"
+        ):
+            result = check_prerequisites(tmp_path)
 
-        # Assert: returns False, logs error
-        assert result is False
-        assert "Invalid task tracker structure" in caplog.text
+        assert result is True
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("Invalid task tracker structure" in r.message for r in warnings)
+        assert "no '## Tasks' section" in caplog.text
+
+    def test_missing_tracker_fails(self, tmp_path: Path) -> None:
+        """Test returns False when pr_info/ exists but TASK_TRACKER.md does not."""
+        (tmp_path / ".git").mkdir()
+        (tmp_path / "pr_info").mkdir()
+
+        assert check_prerequisites(tmp_path) is False
 
 
 class TestIntegration:
@@ -273,8 +284,8 @@ class TestIntegration:
                 return_value="main",
             ),
             patch(
-                "mcp_coder.workflows.implement.prerequisites.validate_task_tracker",
-                return_value=None,
+                "mcp_coder.workflows.implement.prerequisites.classify_task_tracker",
+                return_value=(TrackerState.POPULATED, []),
             ),
             patch(
                 "mcp_coder.workflows.implement.prerequisites._read_task_tracker",
