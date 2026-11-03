@@ -100,7 +100,7 @@ Small files suit an LLM's limited context window. CI job `file-size` runs
 ## Dependencies
 
 deptry (#1176, `[tool.deptry]`) checks that declared dependencies match the imports in `src`;
-CI job `deptry`. Dependabot updates `pip` and `github-actions` dependencies. See
+CI job `deptry` runs on PR and main push / dispatch (see [CI events](#ci-events)). Dependabot updates `pip` and `github-actions` dependencies. See
 [`dependabot.yml`](../../.github/dependabot.yml). Why: [`enforcement.md`](../architecture/enforcement.md).
 
 ## Coverage
