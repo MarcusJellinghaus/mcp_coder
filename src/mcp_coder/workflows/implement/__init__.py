@@ -15,7 +15,6 @@ from .prerequisites import (
     check_git_clean,
     check_main_branch,
     check_prerequisites,
-    has_implementation_tasks,
 )
 from .task_processing import (
     check_and_fix_mypy,
@@ -27,7 +26,6 @@ __all__ = [
     "check_git_clean",
     "check_main_branch",
     "check_prerequisites",
-    "has_implementation_tasks",
     "check_and_fix_mypy",
     "commit_changes",
     "process_single_task",

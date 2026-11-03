@@ -15,6 +15,7 @@ from mcp_coder.workflows.implement.failure_reporting import (
     append_detail,
 )
 from mcp_coder.workflows.implement.task_processing import TaskOutcome
+from mcp_coder.workflows.implement.task_tracker_prep import TrackerPrepError
 
 PROJECT = Path("/project")
 
@@ -378,7 +379,10 @@ class TestDeliberateFailurePathsThroughWorkflow:
         mock_prereq.return_value = True
         mock_rebase.return_value = True
         mock_diff.return_value = ""
-        mock_prepare.return_value = False  # Trigger failure at task tracker preparation
+        # Trigger failure at task tracker preparation
+        mock_prepare.side_effect = TrackerPrepError(
+            "task_tracker_prep_failed", "prep failed"
+        )
 
         result = run_implement_workflow(Path("/fake"), "claude")
 
@@ -426,7 +430,9 @@ class TestDeliberateFailurePathsThroughWorkflow:
         mock_prereq.return_value = True
         mock_rebase.return_value = True
         mock_diff.return_value = ""
-        mock_prepare.return_value = False  # Trigger failure
+        mock_prepare.side_effect = TrackerPrepError(  # Trigger failure
+            "task_tracker_prep_failed", "prep failed"
+        )
 
         result = run_implement_workflow(Path("/fake"), "claude")
 

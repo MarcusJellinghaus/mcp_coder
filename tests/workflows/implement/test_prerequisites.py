@@ -11,7 +11,6 @@ from mcp_coder.workflows.implement.prerequisites import (
     check_git_clean,
     check_main_branch,
     check_prerequisites,
-    has_implementation_tasks,
 )
 
 
@@ -130,61 +129,6 @@ class TestCheckPrerequisites:
         assert result is False
 
 
-class TestHasImplementationTasks:
-    """Test has_implementation_tasks function."""
-
-    @patch("mcp_coder.workflows.implement.prerequisites._find_implementation_section")
-    @patch("mcp_coder.workflows.implement.prerequisites._parse_task_lines")
-    @patch("mcp_coder.workflows.implement.prerequisites._read_task_tracker")
-    def test_has_implementation_tasks_true(
-        self,
-        mock_read: MagicMock,
-        mock_parse: MagicMock,
-        mock_find: MagicMock,
-    ) -> None:
-        """Test has_implementation_tasks returns True when tasks exist."""
-        mock_read.return_value = "mock content"
-        mock_find.return_value = "mock section"
-        mock_parse.return_value = [
-            MagicMock(name="Task 1", is_complete=False),
-            MagicMock(name="Task 2", is_complete=True),
-        ]
-
-        result = has_implementation_tasks(Path("/test/project"))
-
-        assert result is True
-        mock_read.assert_called_once_with(str(Path("/test/project") / "pr_info"))
-        mock_find.assert_called_once_with("mock content")
-        mock_parse.assert_called_once_with("mock section")
-
-    @patch("mcp_coder.workflows.implement.prerequisites._find_implementation_section")
-    @patch("mcp_coder.workflows.implement.prerequisites._parse_task_lines")
-    @patch("mcp_coder.workflows.implement.prerequisites._read_task_tracker")
-    def test_has_implementation_tasks_false(
-        self,
-        mock_read: MagicMock,
-        mock_parse: MagicMock,
-        mock_find: MagicMock,
-    ) -> None:
-        """Test has_implementation_tasks returns False when no tasks exist."""
-        mock_read.return_value = "mock content"
-        mock_find.return_value = "mock section"
-        mock_parse.return_value = []
-
-        result = has_implementation_tasks(Path("/test/project"))
-
-        assert result is False
-
-    @patch("mcp_coder.workflows.implement.prerequisites._read_task_tracker")
-    def test_has_implementation_tasks_exception(self, mock_read: MagicMock) -> None:
-        """Test has_implementation_tasks returns False on exception."""
-        mock_read.side_effect = Exception("File not found")
-
-        result = has_implementation_tasks(Path("/test/project"))
-
-        assert result is False
-
-
 class TestCheckPrerequisitesTaskTracker:
     """Tests for task tracker validation in check_prerequisites."""
 
@@ -287,18 +231,6 @@ class TestIntegration:
                 "mcp_coder.workflows.implement.prerequisites.classify_task_tracker",
                 return_value=(TrackerState.POPULATED, []),
             ),
-            patch(
-                "mcp_coder.workflows.implement.prerequisites._read_task_tracker",
-                return_value="content",
-            ),
-            patch(
-                "mcp_coder.workflows.implement.prerequisites._find_implementation_section",
-                return_value="section",
-            ),
-            patch(
-                "mcp_coder.workflows.implement.prerequisites._parse_task_lines",
-                return_value=[MagicMock()],
-            ),
         ):
             # Mock filesystem checks for check_prerequisites
             with patch.object(Path, "exists", return_value=True):
@@ -306,7 +238,6 @@ class TestIntegration:
                 assert check_git_clean(project_dir) is True
                 assert check_main_branch(project_dir) is True
                 assert check_prerequisites(project_dir) is True
-                assert has_implementation_tasks(project_dir) is True
 
     def test_git_clean_fails_early_with_mocks(self) -> None:
         """Test early failure when git clean check fails."""

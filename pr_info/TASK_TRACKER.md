@@ -47,9 +47,9 @@ See [step_4.md](./steps/step_4.md)
 
 ### Step 5: Typed prep failure, classifier decision, core wiring
 See [step_5.md](./steps/step_5.md)
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 6: Changed-files guard, byte restore, LLM feedback rounds
 See [step_6.md](./steps/step_6.md)

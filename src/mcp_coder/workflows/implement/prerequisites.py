@@ -12,11 +12,6 @@ from mcp_coder.mcp_workspace_git import (
     get_default_branch_name,
 )
 from mcp_coder.workflow_steps.prerequisites import check_git_clean, is_branch_not_base
-from mcp_coder.workflow_utils.task_tracker import (
-    _find_implementation_section,
-    _parse_task_lines,
-    _read_task_tracker,
-)
 from mcp_coder.workflow_utils.task_tracker_classify import (
     TrackerState,
     classify_task_tracker,
@@ -33,7 +28,6 @@ __all__ = [
     "check_git_clean",
     "check_main_branch",
     "check_prerequisites",
-    "has_implementation_tasks",
 ]
 
 
@@ -115,31 +109,3 @@ def check_prerequisites(project_dir: Path) -> bool:
 
     logger.info("Prerequisites check passed")
     return True
-
-
-def has_implementation_tasks(project_dir: Path) -> bool:
-    """Check if TASK_TRACKER.md has any implementation tasks (complete or incomplete).
-
-    Args:
-        project_dir: Path to the project directory
-
-    Returns:
-        True if implementation tasks exist, False otherwise
-
-    Note:
-        Uses internal task tracker functions to parse the file.
-        Returns False if any exception occurs during parsing.
-    """
-    try:
-        # Use internal functions to check for ANY tasks (complete or incomplete)
-        pr_info_dir = str(project_dir / PR_INFO_DIR)
-        content = _read_task_tracker(pr_info_dir)
-        section_content = _find_implementation_section(content)
-        all_tasks = _parse_task_lines(section_content)
-
-        # Return True if there are any tasks at all (complete or incomplete)
-        return len(all_tasks) > 0
-    except Exception:  # pylint: disable=broad-exception-caught  # TODO: narrow exception type
-        # If any exception occurs (file not found, section not found, etc.),
-        # it means there are no proper implementation tasks
-        return False

@@ -50,7 +50,11 @@ from .task_processing import (
     process_task_with_retry,
     read_and_clear_blocked,
 )
-from .task_tracker_prep import log_progress_summary, prepare_task_tracker
+from .task_tracker_prep import (
+    TrackerPrepError,
+    log_progress_summary,
+    prepare_task_tracker,
+)
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -124,12 +128,10 @@ def run_implement_workflow(
         implement_config = get_implement_config(project_dir)
 
         # Step 2: Prepare task tracker if needed
-        if not prepare_task_tracker(project_dir, provider, mcp_config, settings_file):
-            return fail(
-                "task_tracker_prep_failed",
-                stage="Task tracker preparation",
-                message="Failed to prepare task tracker",
-            )
+        try:
+            prepare_task_tracker(project_dir, provider, mcp_config, settings_file)
+        except TrackerPrepError as exc:
+            return fail(exc.reason, stage=exc.stage, message=str(exc))
 
         # Step 3: Show initial progress summary
         log_progress_summary(project_dir)

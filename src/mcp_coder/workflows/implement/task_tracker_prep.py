@@ -15,11 +15,37 @@ from mcp_coder.mcp_workspace_git import commit_all_changes, get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
 from mcp_coder.workflow_utils.task_tracker import get_step_progress
+from mcp_coder.workflow_utils.task_tracker_classify import (
+    TrackerState,
+    classify_task_tracker,
+    describe_violations,
+)
 
 from .constants import LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS, PR_INFO_DIR
-from .prerequisites import has_implementation_tasks
 
 logger = logging.getLogger(__name__)
+
+TRACKER_FILE = f"{PR_INFO_DIR}/TASK_TRACKER.md"
+
+# Failure reason -> stage label reported by the implement workflow
+PREP_STAGES = {
+    "task_tracker_prep_failed": "Task tracker preparation",
+    "general": "Task tracker validation",
+}
+
+
+class TrackerPrepError(Exception):
+    """Task tracker preparation failed.
+
+    Attributes:
+        reason: Failure reason passed to the workflow's ``fail``
+        stage: Stage label matching ``reason``
+    """
+
+    def __init__(self, reason: str, message: str) -> None:
+        super().__init__(message)
+        self.reason = reason
+        self.stage = PREP_STAGES[reason]
 
 
 def prepare_task_tracker(
@@ -27,7 +53,7 @@ def prepare_task_tracker(
     provider: str,
     mcp_config: str | None = None,
     settings_file: str | None = None,
-) -> bool:
+) -> None:
     """Prepare task tracker by populating it if it has no implementation steps.
 
     Args:
@@ -36,25 +62,36 @@ def prepare_task_tracker(
         mcp_config: Optional path to MCP configuration file
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
 
-    Returns:
-        bool: True if task tracker is ready (already had tasks or successfully updated), False on error
+    Raises:
+        TrackerPrepError: If the tracker is missing, invalid, or could not be populated
     """
     logger.info("Checking if task tracker needs preparation...")
 
     # Check if pr_info/steps/ directory exists
     steps_dir = project_dir / PR_INFO_DIR / "steps"
     if not steps_dir.exists():
-        logger.error(
-            f"Directory {steps_dir} does not exist. Please create implementation steps first."
+        message = (
+            f"Directory {steps_dir} does not exist."
+            " Please create implementation steps first."
         )
-        return False
+        logger.error(message)
+        raise TrackerPrepError("task_tracker_prep_failed", message)
 
-    # Check if task tracker already has implementation tasks
-    if has_implementation_tasks(project_dir):
+    pr_info_dir = str(project_dir / PR_INFO_DIR)
+    state, violations = classify_task_tracker(pr_info_dir)
+    if state is TrackerState.POPULATED:
         logger.info(
             "Task tracker already has implementation tasks. Skipping preparation."
         )
-        return True
+        return
+    if state is TrackerState.MISSING:
+        message = f"{TRACKER_FILE} not found"
+        logger.error(message)
+        raise TrackerPrepError("task_tracker_prep_failed", message)
+    if state is TrackerState.INVALID:
+        message = describe_violations(violations)
+        logger.error("Invalid task tracker structure:\n%s", message)
+        raise TrackerPrepError("general", message)
 
     logger.info(
         "Task tracker has no implementation tasks. Generating tasks from implementation steps..."
@@ -95,8 +132,10 @@ def prepare_task_tracker(
             logger.warning("Failed to store task tracker session: %s", e)
 
         if not response or not response.strip():
-            logger.error("LLM returned empty response for task tracker update")
-            return False
+            raise TrackerPrepError(
+                "task_tracker_prep_failed",
+                "LLM returned empty response for task tracker update",
+            )
 
         logger.info("LLM response received for task tracker update")
 
@@ -110,24 +149,25 @@ def prepare_task_tracker(
         ignore_set = set(DEFAULT_IGNORED_BUILD_ARTIFACTS)
         all_changed = [f for f in all_changed if f not in ignore_set]
 
-        task_tracker_file = f"{PR_INFO_DIR}/TASK_TRACKER.md"
-
         # Check if only TASK_TRACKER.md was modified (case-insensitive comparison)
         if (
             len(all_changed) != 1
-            or all_changed[0].casefold() != task_tracker_file.casefold()
+            or all_changed[0].casefold() != TRACKER_FILE.casefold()
         ):
-            logger.error("Unexpected files were modified during task tracker update:")
-            logger.error(f"  Expected: [{task_tracker_file}]")
-            logger.error(f"  Found: {all_changed}")
-            return False
-
-        # Verify that task tracker now has implementation steps
-        if not has_implementation_tasks(project_dir):
-            logger.error(
-                "Task tracker still has no implementation steps after LLM update"
+            raise TrackerPrepError(
+                "task_tracker_prep_failed",
+                "Unexpected files were modified during task tracker update:"
+                f" expected [{TRACKER_FILE}], found {all_changed}",
             )
-            return False
+
+        # Verify that task tracker now has a valid step structure
+        state, violations = classify_task_tracker(pr_info_dir)
+        if state is not TrackerState.POPULATED:
+            raise TrackerPrepError(
+                "task_tracker_prep_failed",
+                f"Task tracker is {state.value} after LLM update:\n"
+                + describe_violations(violations),
+            )
 
         # Commit the changes
         commit_message = (
@@ -136,17 +176,20 @@ def prepare_task_tracker(
         commit_result = commit_all_changes(commit_message, project_dir)
 
         if not commit_result["success"]:
-            logger.error(
-                f"Error committing task tracker changes: {commit_result['error']}"
+            raise TrackerPrepError(
+                "task_tracker_prep_failed",
+                f"Error committing task tracker changes: {commit_result['error']}",
             )
-            return False
 
         logger.info("Task tracker updated and committed successfully")
-        return True
 
+    except TrackerPrepError as exc:
+        logger.error("%s", exc)
+        raise
     except Exception as e:
-        logger.error(f"Error preparing task tracker: {e}")
-        return False
+        message = f"Error preparing task tracker: {e}"
+        logger.error(message)
+        raise TrackerPrepError("task_tracker_prep_failed", message) from e
 
 
 def log_progress_summary(project_dir: Path) -> None:
