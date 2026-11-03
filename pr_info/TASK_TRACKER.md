@@ -21,6 +21,55 @@ This tracks **Feature Implementation** consisting of multiple **Tasks**.
 
 ## Tasks
 
-<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->
+### Step 1: Labels `merged` / `merge_failed`, `72` stale timeout, workflow-matrix cards — [step_1.md](./steps/step_1.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 2: `74` exits 1 everywhere; phase B final label moves into `post_creation.py` — [step_2.md](./steps/step_2.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 3: `workflow_steps/merge.py`: `run_auto_merge` (+ `MergeResult` re-export) — [step_3.md](./steps/step_3.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 4: `finish_auto_merge` + best-effort `post_issue_comment` — [step_4.md](./steps/step_4.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 5: `auto_merge` flag resolution + create-pr wiring — [step_5.md](./steps/step_5.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 6: fix-ci wiring — [step_6.md](./steps/step_6.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 7: fix-conflict wiring — [step_7.md](./steps/step_7.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
+
+### Step 8: Docs — [step_8.md](./steps/step_8.md)
+
+- [ ] Implementation (tests + production code)
+- [ ] Quality checks: pylint, pytest, mypy — fix all issues
+- [ ] Commit message prepared
 
 ## Pull Request
+
+- [ ] PR review: review all changes against the base branch
+- [ ] PR summary prepared
