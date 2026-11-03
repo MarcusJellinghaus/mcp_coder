@@ -22,7 +22,7 @@ state, v = classify_tracker_content(restructured); if state != POPULATED: return
 old = [l for l in _scan_tracker(original) if l.checked is not None and l.section != "instructions"]; new = same
 if Counter(checked names old) != Counter(checked names new): error "[x] lines added, removed, reworded or toggled"
 missing = Counter(unchecked old) - Counter(unchecked new): error per name "[ ] line removed, reworded or checked"
-x_steps = {l.step for l in new if l.checked}
+x_steps = {l.step for l in new if l.checked and l.step is not None}  # PR-section [x] has step None
 for name, n in Counter(unchecked new in x_steps).items(): if n > Counter(unchecked old)[name]: error
 ```
 `[ ]` lines in `## Pull Request` or in steps without `[x]` are not restricted.
@@ -35,6 +35,8 @@ Error strings name the task, e.g. `"'commit message prepared': 3 unchecked under
   tracker with one `[x]` → True; flat list without `[x]` → False.
 - Accepted: `## Step 1` tracker → `## Tasks` + `### Step 1:` + `## Pull Request` with checkbox
   lines moved verbatim; new `[ ]` in `## Pull Request`.
+- Accepted: `## Pull Request` contains an `[x]` line and the restructure adds new `[ ]` PR
+  tasks (PR `[ ]` lines stay unrestricted even when a PR checkbox is checked).
 - Rejected: a deleted checkbox; a reworded checkbox; `[ ]`→`[x]`; `[x]`→`[ ]`; an added `[x]`;
   an added `[ ]` under a step with `[x]`; "Commit message prepared" `[ ]` count under steps
   with `[x]` higher than in the original; a result that is not POPULATED.

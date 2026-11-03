@@ -75,7 +75,9 @@ degraded observability.
 2. Classifier + prerequisites, remove `validate_task_tracker`
 3. Restructure check (pure functions)
 4. Prompts
-5. Prep rewrite: exception, guard, restore, LLM rounds, population, core wiring, Jenkins signature
-6. Repair: reset and restructure
-7. Louder progress logging
-8. Failure-comment progress from the tracker
+5. Typed prep failure: `TrackerPrepError`, classifier decision, core wiring, remove
+   `has_implementation_tasks`, Jenkins signature
+6. Changed-files guard, byte restore, `_llm_rounds` feedback loop, `commit_paths`
+7. Repair: reset and restructure
+8. Louder progress logging
+9. Failure-comment progress from the tracker

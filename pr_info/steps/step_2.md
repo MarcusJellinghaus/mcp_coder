@@ -40,9 +40,12 @@ def describe_violations(violations: list[str]) -> str: ...  # lines + "Tasks mus
   Headers: `re.match(r"^(#{1,6})\s+(.*)", line.strip())`.
 - Sections: a level-2 header with exact text "Instructions for LLM" → instructions;
   "Tasks" → tasks; "Pull Request" → pull_request.
-  While in tasks, every header except an exact "Pull Request" `##` keeps the section "tasks";
-  those headers are violations. After pull_request, the next `##` header switches to "other".
-  `step` is reset on every `##` header.
+  While in tasks, the section ends on the same headers as the step-1 parser: any header with
+  two or more `#` (`##`, `###`, `####`, ...) whose whole text is "Pull Request"
+  (case-insensitive) switches to pull_request and counts as the `## Pull Request` section.
+  Every other header inside tasks keeps the section "tasks" and is a violation unless it is a
+  strict step header. After pull_request, the next `##` header switches to "other".
+  `step` is reset on every `##` header and on the header that ends tasks.
 - `check_prerequisites`: keep the existing missing-file check (MISSING → `return False`).
   Then `state, violations = classify_task_tracker(str(pr_info_path))`. If INVALID:
   `logger.warning("Invalid task tracker structure; prep will try to repair it:\n%s", describe_violations(violations))`.
@@ -76,6 +79,11 @@ Violation string: `"pr_info/TASK_TRACKER.md line 26: checkbox found outside any 
   step without checkboxes; `### Notes`, `## Code Review` and `#### Notes` inside `## Tasks`;
   `### Step N:` after `## Pull Request`; missing `## Pull Request`; `## Pull Request` without checkbox.
 - Template + `### Step 1: x` placed after `## Pull Request` → INVALID (not EMPTY).
+- Classifier and parser agree on the `## Tasks` end, parametrized over `## Pull Request`,
+  `### Pull Request` and `#### Pull Request`: a populated tracker whose PR header uses that
+  level classifies as POPULATED, the checkboxes the scanner puts in "tasks" match
+  `get_task_counts()` (which reads `_find_implementation_section`), and the checkbox after the
+  PR header is in "pull_request".
 - No file → MISSING.
 - Violations carry file line numbers (assert `"line 26"`-style text for a known fixture).
 - `check_prerequisites`: INVALID → True and a WARNING in `caplog`; missing tracker → False.

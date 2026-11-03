@@ -1,45 +1,30 @@
-# Step 8: Failure-comment progress from the tracker
+# Step 8: Louder progress-summary degradation
 
-See `pr_info/steps/summary.md` (§6 of issue #1093, #1107).
+See `pr_info/steps/summary.md` (§5 of issue #1093).
 
 ## WHERE
-- `src/mcp_coder/workflows/implement/failure_reporting.py`: `_comment_parts`, `_fail`
-- `src/mcp_coder/workflows/implement/core.py`: the `fail` partial and `build_comment`
-- Tests: `tests/workflows/implement/test_failure_reporting.py`, affected `test_core*.py`
+- `src/mcp_coder/workflows/implement/task_tracker_prep.py`: `log_progress_summary`
+- Tests: `tests/workflows/implement/test_task_tracker_prep.py`
 
 ## WHAT
-```python
-def _comment_parts(reason: str, project_dir: Path) -> tuple[list[CommentField], str]: ...
-def _fail(project_dir, reason, *, stage, message, start_time,
-          update_issue_labels=False, post_issue_comments=False) -> int: ...
-```
-`progress` is no longer a parameter of either. `Progress` stays in `failure_reporting.py`;
-`core.py` still uses it for the final mypy gate (`completed`) and `round_cap` (`total`).
+No signature change: `log_progress_summary(project_dir: Path) -> None`.
 
 ## HOW
-- `_comment_parts` reads `get_task_counts(str(project_dir / PR_INFO_DIR))`
-  (`from mcp_coder.workflow_utils.task_tracker import get_task_counts`, `from .constants import PR_INFO_DIR`).
-- `core.py`: remove `progress=progress` from `partial(_fail, ...)`; `build_comment` calls
-  `_comment_parts("general", project_dir)`.
+- `logger.debug("No step progress information available")` → `logger.warning(...)`.
+- `except Exception as e: logger.debug(f"Could not generate progress summary: {e}")` → `logger.warning(...)`.
+- Update the docstring note ("logs debug messages") accordingly.
 
 ## ALGORITHM
-```
-try: total, done = get_task_counts(pr_info)
-except Exception: total, done = 0, 0   # missing / unparseable tracker
-progress_value = f"{done}/{total} tasks completed" if total > 0 else None
-```
+None.
 
 ## DATA
-Fields unchanged in shape: `[("Category", ...), ("Progress", value_or_None)]` plus the Uncommitted Changes section.
+Unchanged.
 
 ## Tests (write first)
-- A tracker with 21 tasks, 5 checked → Progress `"5/21 tasks completed"`.
-- No tracker / tracker without `## Tasks` → Progress value `None` (line omitted by the builder).
-- Net-path `build_comment` uses the same tracker-sourced value.
-- Update existing tests that built `Progress(...)` for the comment.
+- `get_step_progress` patched to return `{}` → a WARNING record "No step progress information available" (`caplog`).
+- `get_step_progress` patched to raise → a WARNING record "Could not generate progress summary".
 
 ## LLM prompt
 > Read `pr_info/steps/summary.md` and `pr_info/steps/step_8.md`. Implement step 8 only:
-> write the tests first, then make `_comment_parts` take done/total from `get_task_counts()`
-> (omitted when unreadable), drop the `progress` parameter from `_comment_parts` / `_fail`
-> and update `core.py`. Run pylint, pytest (`-n auto`, unit markers) and mypy.
+> write the two caplog tests first, then raise both log calls in `log_progress_summary`
+> from DEBUG to WARNING. Run pylint, pytest (`-n auto`, unit markers) and mypy.
