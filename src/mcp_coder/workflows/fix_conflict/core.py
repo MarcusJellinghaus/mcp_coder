@@ -10,6 +10,11 @@ import logging
 from pathlib import Path
 
 from mcp_coder.mcp_workspace_git import get_current_branch_name
+from mcp_coder.workflow_steps.merge import (
+    finish_auto_merge,
+    resolve_merge_issue_number,
+    run_auto_merge,
+)
 from mcp_coder.workflow_steps.rebase import (
     RebaseOutcome,
     _attempt_rebase_and_push,
@@ -56,17 +61,24 @@ def _fail(project_dir: Path, verdict: str, outcome: RebaseOutcome) -> None:
     )
 
 
-def run_fix_conflict_workflow(project_dir: Path) -> int:
+def run_fix_conflict_workflow(project_dir: Path, auto_merge: bool = False) -> int:
     """Rebase the current branch and resolve the merge-conflict escalation.
 
+    With ``auto_merge``, a resolved conflict hands over to the auto-merge
+    helper instead of returning to status-10; its CI poll waits for CI on
+    the rebased HEAD before merging.
+
     Returns:
-        0 on every handled outcome: a settled non-dirty state, or "unknown"
-        after a successful rebase, goes to status-10; "dirty", no open PR,
-        or "unknown" after a failed rebase goes to status-74 with a comment.
-        1 when the current branch cannot be determined, when the status-10
+        0 on status-10: a settled non-dirty state, or "unknown" after a
+        successful rebase. 1 on status-74 ("dirty", no open PR, or "unknown"
+        after a failed rebase; posted with a comment), when the current
+        branch cannot be determined, when the status-10
         label could not be applied after one retry, or on a netted
         crash - the Jenkins shell template's watchdog line is a further
         safety net for a silent crash, this is just the reported exit code.
+        With ``auto_merge``, a resolved conflict's exit code follows the
+        merge outcome: 0 on merged / pr_created / failing_ci, 1 on
+        pr_merge_conflict / merge_failed or a failed label write.
     """
 
     def body() -> int:
@@ -92,12 +104,23 @@ def run_fix_conflict_workflow(project_dir: Path) -> int:
 
         if verdict:
             _fail(project_dir, verdict, outcome)
-            return 0
+            return 1
         if state == "unknown":
             # Safe: status-10 detection re-checks "dirty" on every poll.
             logger.info(
                 "mergeable_state still unknown after poll cap but rebase "
                 "succeeded - returning to status-10"
+            )
+        if auto_merge:
+            issue_number = resolve_merge_issue_number(project_dir, branch)
+            merge_outcome = run_auto_merge(project_dir, branch)
+            return finish_auto_merge(
+                project_dir,
+                merge_outcome,
+                from_label_id="fixing_merge_conflict",
+                issue_number=issue_number,
+                update_issue_labels=True,
+                post_issue_comments=True,
             )
         return apply_final_label(project_dir, "fixing_merge_conflict", "pr_created")
 

@@ -15,6 +15,17 @@ from .shared_args import (
 )
 
 
+def add_auto_merge_arg(parser: argparse.ArgumentParser) -> None:
+    """Add the --auto-merge/--no-auto-merge flag."""
+    parser.add_argument(
+        "--auto-merge",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Squash-merge the PR once CI is green on HEAD "
+        "(default: from config, else off)",
+    )
+
+
 def add_implement_parser(subparsers: Any) -> None:
     """Add the implement command parser."""
     implement_parser = subparsers.add_parser(
@@ -169,16 +180,18 @@ def add_create_pr_parser(subparsers: Any) -> None:
         default=None,
         help="Post GitHub comments on workflow failure (default: from config)",
     )
+    add_auto_merge_arg(create_pr_parser)
 
 
 def add_fix_conflict_parser(subparsers: Any) -> None:
-    """Add the fix-conflict command parser (project-dir only, no LLM args)."""
+    """Add the fix-conflict parser (project-dir and --auto-merge, no LLM args)."""
     fix_conflict_parser = subparsers.add_parser(
         "fix-conflict",
         help=COMMAND_DESCRIPTIONS["fix-conflict"],
         formatter_class=WideHelpFormatter,
     )
     add_project_dir_arg(fix_conflict_parser)
+    add_auto_merge_arg(fix_conflict_parser)
 
 
 def add_fix_ci_parser(subparsers: Any) -> None:
@@ -204,6 +217,7 @@ def add_fix_ci_parser(subparsers: Any) -> None:
         default=None,
         help="Post GitHub comments on workflow failure (default: from config)",
     )
+    add_auto_merge_arg(fix_ci_parser)
 
 
 def add_coordinator_parsers(subparsers: Any) -> None:

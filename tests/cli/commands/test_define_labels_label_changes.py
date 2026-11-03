@@ -305,10 +305,10 @@ class TestApplyLabels:
         # Verify: Result contains expected changes
         assert "status-01:created" in result["updated"]
         assert "status-99:obsolete" in result["deleted"]
-        assert len(result["created"]) == 45  # 45 new labels (46 total - 1 existing)
+        assert len(result["created"]) == 47  # 47 new labels (48 total - 1 existing)
 
         # Verify: API methods were called for changes
-        assert mock_labels_manager.create_label.call_count == 45
+        assert mock_labels_manager.create_label.call_count == 47
         assert mock_labels_manager.update_label.call_count == 1
         assert mock_labels_manager.delete_label.call_count == 1
 
@@ -363,7 +363,7 @@ class TestApplyLabels:
         # Verify: Result contains expected changes
         assert "status-01:created" in result["updated"]
         assert "status-99:obsolete" in result["deleted"]
-        assert len(result["created"]) == 45
+        assert len(result["created"]) == 47
 
         # Verify: NO API write methods were called in dry-run mode
         mock_labels_manager.create_label.assert_not_called()

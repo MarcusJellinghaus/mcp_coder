@@ -43,7 +43,6 @@ from mcp_coder.workflow_utils.failure_handling import (
     llm_failure_reason,
     run_guarded,
 )
-from mcp_coder.workflow_utils.label_transitions import apply_final_label
 from mcp_coder.workflow_utils.task_tracker import (
     TaskTrackerFileNotFoundError,
     get_incomplete_tasks,
@@ -55,7 +54,10 @@ from mcp_coder.workflows.create_pr.helpers import (
     handle_create_pr_failure as _handle_create_pr_failure_impl,
 )
 from mcp_coder.workflows.create_pr.helpers import parse_pr_summary as parse_pr_summary
-from mcp_coder.workflows.create_pr.post_creation import run_post_creation
+from mcp_coder.workflows.create_pr.post_creation import (
+    apply_post_creation_label,
+    run_post_creation,
+)
 from mcp_coder.workflows.create_pr.pre_creation import (
     _find_open_pr,
     _rebase_if_needed,
@@ -527,6 +529,7 @@ def run_create_pr_workflow(
     settings_file: str | None = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
+    auto_merge: bool = False,
 ) -> int:
     """Main workflow orchestration function - creates PR and cleans up repository.
 
@@ -537,11 +540,14 @@ def run_create_pr_workflow(
         settings_file: Optional path to .claude/settings.local.json; forwarded to prompt_llm.
         update_issue_labels: If True, update GitHub issue labels on success
         post_issue_comments: If True, post comments on the issue on failure
+        auto_merge: If True, squash-merge the PR once CI is really green on HEAD
 
     Returns:
-        int: Exit code. 0 once the PR exists and every phase B outcome was
-        handled (final label pr_created / pr_merge_conflict / failing_ci,
-        i.e. 10 / 74 / 81); 1 when phase A fails or either phase crashes.
+        int: Exit code. 0 once the PR exists and phase B ends on pr_created
+        or failing_ci (10 / 81); 1 when phase B ends on pr_merge_conflict
+        (74) - with or without ``update_issue_labels`` - when the final
+        label could not be applied, when phase A fails, or when either
+        phase crashes.
 
     Note:
         The workflow runs as two phases, each wrapped in :func:`run_guarded`.
@@ -673,34 +679,23 @@ def run_create_pr_workflow(
         branch = get_current_branch_name(project_dir)
         if branch is None:
             logger.error("Could not determine current branch; skipping PR checks")
-            label = "pr_created"
-        else:
-            label = run_post_creation(
-                project_dir, branch, provider, mcp_config, settings_file
+            return apply_post_creation_label(
+                project_dir,
+                "pr_created",
+                issue_number=cached_issue_number,
+                update_issue_labels=update_issue_labels,
             )
-
-        rc = 0
-        if update_issue_labels and cached_issue_number:
-            logger.log(OUTPUT, "Updating GitHub issue label...")
-            rc = apply_final_label(
-                project_dir, "pr_creating", label, cached_issue_number
-            )
-            if rc == 0:
-                logger.log(OUTPUT, "✓ Issue label updated: pr_creating → %s", label)
-        else:
-            if update_issue_labels:
-                logger.warning(
-                    "Skipping label update: branch was not linked to an issue"
-                )
-            logger.log(OUTPUT, "Post-creation outcome: %s (label not updated)", label)
-
-        if rc != 0:
-            logger.error("Create PR workflow failed: final issue label not applied")
-        elif update_issue_labels and cached_issue_number is None:
-            logger.log(OUTPUT, "Create PR workflow completed with warnings")
-        else:
-            logger.log(OUTPUT, "Create PR workflow completed successfully!")
-        return rc
+        return run_post_creation(
+            project_dir,
+            branch,
+            provider,
+            mcp_config,
+            settings_file,
+            issue_number=cached_issue_number,
+            update_issue_labels=update_issue_labels,
+            post_issue_comments=post_issue_comments,
+            auto_merge=auto_merge,
+        )
 
     rc = run_guarded(
         phase_a,

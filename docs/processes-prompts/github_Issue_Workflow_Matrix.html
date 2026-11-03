@@ -248,6 +248,8 @@
         .status-ci-fix-failed { --label-color: #e99695; }
         .status-pr-ci-failed { --label-color: #b60205; }
         .status-pr-review-comments { --label-color: #b60205; }
+        .status-merged { --label-color: #0e8a16; }
+        .status-merge-failed { --label-color: #b60205; }
 
         /* Additional failure labels */
         .status-planning-llm-timeout { --label-color: #e99695; }
@@ -735,6 +737,36 @@
                     <div class="label-commands">
                         <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
                         <div>&#x270b; Manual / exit: fix CI → <code>set-status status-10:pr-created</code></div>
+                    </div>
+                    <div class="status-badge badge-failed">Failed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 6b: PR merge, auto_merge (99 / 99f) -->
+        <div class="row-label">PR merge (auto_merge) — 99 / 99f</div>
+        <div class="workflow-row">
+            <div class="cell-empty"></div>
+            <div class="cell-empty"></div>
+
+            <div class="label-card highlight-blue status-merged">
+                <div class="step-number">99</div>
+                <div class="label-name">status-99:merged</div>
+                <div class="label-description">PR merged automatically after CI passed</div>
+                <div class="label-commands">
+                    <div>&#x270b; Manual / exit: issue done; closes on merge into default branch</div>
+                </div>
+                <div class="status-badge badge-human">Done</div>
+            </div>
+
+            <div class="failed-stack">
+                <div class="label-card highlight-red status-merge-failed">
+                    <div class="step-number">99f</div>
+                    <div class="label-name">status-99f:merge-failed</div>
+                    <div class="label-description">CI green but the PR could not be merged automatically</div>
+                    <div class="label-commands">
+                        <div class="auto-command">&#x25b6; Auto: <code>/check_branch_status</code></div>
+                        <div>&#x270b; Manual / exit: merge manually → close the issue</div>
                     </div>
                     <div class="status-badge badge-failed">Failed</div>
                 </div>

@@ -68,6 +68,41 @@ class TestBooleanOptionalFlags:
             assert args.post_issue_comments is None
 
 
+class TestAutoMergeFlag:
+    """Tests for the --auto-merge/--no-auto-merge flag."""
+
+    @pytest.mark.parametrize(
+        ("flags", "expected"),
+        [(["--auto-merge"], True), (["--no-auto-merge"], False), ([], None)],
+    )
+    def test_create_pr_auto_merge(
+        self, flags: list[str], expected: bool | None
+    ) -> None:
+        """create-pr parses --auto-merge as True / False / None."""
+        args = create_parser().parse_args(["create-pr", *flags])
+        assert args.auto_merge is expected
+
+    @pytest.mark.parametrize(
+        ("flags", "expected"),
+        [(["--auto-merge"], True), (["--no-auto-merge"], False), ([], None)],
+    )
+    def test_fix_ci_auto_merge(self, flags: list[str], expected: bool | None) -> None:
+        """fix-ci parses --auto-merge as True / False / None."""
+        args = create_parser().parse_args(["fix-ci", *flags])
+        assert args.auto_merge is expected
+
+    @pytest.mark.parametrize(
+        ("flags", "expected"),
+        [([], None), (["--auto-merge"], True), (["--no-auto-merge"], False)],
+    )
+    def test_fix_conflict_auto_merge(
+        self, flags: list[str], expected: bool | None
+    ) -> None:
+        """fix-conflict parses --auto-merge as True / False / None."""
+        args = create_parser().parse_args(["fix-conflict", *flags])
+        assert args.auto_merge is expected
+
+
 class TestFixConflictParser:
     """Tests for the fix-conflict subparser wiring."""
 

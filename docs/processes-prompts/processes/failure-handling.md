@@ -10,6 +10,7 @@ Index of every failure label. Recovery steps live in the owner doc, not here.
 | `status-74:pr-merge-conflict` | PR follow-up (merge conflict) | [71-pr-follow-up.md](71-pr-follow-up.md#failure-exits) |
 | `status-83:ci-fix-failed` | PR follow-up (CI fix, crash) | [71-pr-follow-up.md](71-pr-follow-up.md#failure-exits) |
 | `status-84:pr-ci-failed` | PR follow-up (CI fix) | [71-pr-follow-up.md](71-pr-follow-up.md#failure-exits) |
+| `status-99f:merge-failed` | Auto-merge (create-pr, fix-ci, fix-conflict) | [71-pr-follow-up.md](71-pr-follow-up.md#failure-exits) |
 | `status-03f-timeout:planning-llm-timeout` | Plan creation | [02-plan-creation.md](02-plan-creation.md#failure-exits) |
 | `status-03f-mcp:planning-mcp-unavailable` | Plan creation | [02-plan-creation.md](02-plan-creation.md#failure-exits) |
 | `status-03f-prereq:planning-prereq-failed` | Plan creation | [02-plan-creation.md](02-plan-creation.md#failure-exits) |

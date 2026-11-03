@@ -154,6 +154,24 @@ class TestConfigTypeValidation:
             result[("coordinator.repos.myrepo", "auto_review_implementation")] is False
         )
 
+    def test_auto_merge_parses_as_boolean(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """auto_merge parses as a native boolean."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text(
+            "[coordinator.repos.myrepo]\n"
+            'repo_url = "https://example.com"\n'
+            "auto_merge = true\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "mcp_coder.utils.user_config.get_config_file_path", lambda: config_file
+        )
+
+        result = get_config_values([("coordinator.repos.myrepo", "auto_merge", None)])
+        assert result[("coordinator.repos.myrepo", "auto_merge")] is True
+
     def test_auto_review_plan_wrong_type_raises_valueerror(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

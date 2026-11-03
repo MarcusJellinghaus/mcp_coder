@@ -646,6 +646,7 @@ executor_os = "windows"
 | `post_issue_comments` | boolean | Post GitHub comments on workflow failure | No | `true` |
 | `auto_review_plan` | boolean | Gate automated plan review (routes create-plan success to `status-14:plan-review-bot` for coordinator pickup). | No | `false` |
 | `auto_review_implementation` | boolean | Gate automated implementation review (routes implement success to `status-17:code-review-bot` for coordinator pickup). | No | `false` |
+| `auto_merge` | boolean | Squash-merge the PR after CI passes on its HEAD (`create-pr`, `fix-ci`, `fix-conflict`). See [Auto-merge](#auto-merge). | No | `false` |
 | `setup_commands_windows` | list | Shell commands run during environment setup on Windows executors | No | — |
 | `setup_commands_linux` | list | Shell commands run during environment setup on Linux executors | No | — |
 
@@ -660,7 +661,35 @@ update_issue_labels = true
 post_issue_comments = true
 auto_review_plan = true
 auto_review_implementation = true
+auto_merge = true
 ```
+
+#### Auto-merge
+
+With `auto_merge = true`, `create-pr`, `fix-ci` and `fix-conflict` squash-merge the PR themselves, but only after a real green: a completed, successful CI run for the PR's current HEAD commit. The merge is guarded by the HEAD SHA; on `dirty` / `behind` the helper rebases once and retries. Outcomes:
+
+| Outcome | Label | Exit |
+|---|---|---|
+| Merged | `status-99:merged` | 0 |
+| No green on HEAD yet (no PR, soft pass, HEAD moved, rate limit) | `status-10:pr-created` | 0 |
+| CI red on HEAD | `status-81:failing-ci` | 0 |
+| Rebase hit a conflict | `status-74:pr-merge-conflict` + comment | 1 |
+| Merge refused or errored (409, `blocked`, auth, failed rebase, refusal on retry) | `status-99f:merge-failed` + comment | 1 |
+
+`--auto-merge` / `--no-auto-merge` override the config for one run.
+
+> ⚠️ **Auto-merge removes the merge as the last human step.** Bot-written code is merged without review unless branch protection requires approvals — and then every run ends on `99f`. Pair it with the [issue-body trust gate](../repository-setup/github.md#issue-body-trust) ([#1375](https://github.com/MarcusJellinghaus/mcp_coder/issues/1375)).
+
+Caveats:
+
+- Set it in the `config.toml` of the **Jenkins executor**, which runs the workflows — not only on your workstation.
+- Enable squash merging on the repository, or every run ends on `99f`. Enable "Automatically delete head branches" too.
+- Required review approvals → always `99f`.
+- Recommended: branch protection with the PR checks required. Without it, a check that starts after the green run was read can be bypassed (false-green race).
+- Never merges: repositories without CI; skipped, neutral or action-required runs; CI runs longer than the 12.5-minute poll cap.
+- A CI run must appear for the pushed SHA within ~105 s, else the wait soft-passes and the issue stays on `status-10`.
+- Rate limit: the issue may stay on its busy label; the Jenkins fallback label applies.
+- Branch not linked to an issue → label write skipped (the merge still runs); after a merge, the Jenkins fallback label applies.
 
 **Repository naming:**
 

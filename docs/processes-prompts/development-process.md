@@ -99,7 +99,7 @@ Full state machine incl. failure labels: [workflow matrix](https://htmlpreview.g
 | Implementation | `status-05:plan-ready` | Automated (`implement`) | `/implementation_finalise`, `/commit_push`, `/check_branch_status` | [implementation](processes/05-implementation.md) |
 | Code review | `status-07:code-review` | Interactive LLM session | `/implementation_review_supervisor`, `/implementation_review`, `/discuss`, `/implementation_approve`, `/implementation_needs_rework`, `/implementation_new_tasks`, `/implementation_finalise`, `/commit_push` | [code-review](processes/07-code-review.md) |
 | PR creation | `status-08:ready-pr` | Automated (`create-pr`) | none | [pr-creation](processes/08-pr-creation.md) |
-| PR merge | `status-10:pr-created` | GitHub UI | `/check_branch_status` | [pr-merge](processes/10-pr-merge.md) |
+| PR merge | `status-10:pr-created` | GitHub UI; automated with [`auto_merge`](../configuration/config.md#auto-merge) (→ `status-99`) | `/check_branch_status` | [pr-merge](processes/10-pr-merge.md) |
 | PR follow-up | `status-71`, `status-81`, `status-91` | Automated (71, 81); interactive LLM session (91) | `/pr_comment_triage`, `/check_branch_status`, `/rebase` | [pr-follow-up](processes/71-pr-follow-up.md) |
 | Automated plan review | `status-14` (with `auto_review_plan`) | Automated (`review-plan`) | `/check_branch_status` | [automated-plan-review](processes/14-automated-plan-review.md) |
 | Automated code review | `status-17` (with `auto_review_implementation`) | Automated (`review-implementation`) | `/check_branch_status`, `/implementation_finalise` | [automated-code-review](processes/17-automated-code-review.md) |

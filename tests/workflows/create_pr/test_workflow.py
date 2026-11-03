@@ -15,7 +15,7 @@ def mock_post_creation() -> Iterator[MagicMock]:
     """Phase B never polls GitHub in these tests."""
     with patch(
         "mcp_coder.workflows.create_pr.core.run_post_creation",
-        return_value="pr_created",
+        return_value=0,
     ) as mock:
         yield mock
 

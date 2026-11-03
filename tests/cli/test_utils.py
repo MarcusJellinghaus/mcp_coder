@@ -9,6 +9,7 @@ import pytest
 from mcp_coder.cli.utils import (
     log_command_startup,
     parse_llm_method_from_args,
+    resolve_auto_merge,
     resolve_issue_interaction_flags,
     resolve_llm_method,
 )
@@ -477,6 +478,34 @@ class TestResolveIssueInteractionFlags:
         )
         result = resolve_issue_interaction_flags(args, Path("/tmp/project"))
         assert result == (True, True)
+
+
+class TestResolveAutoMerge:
+    """Test cases for resolve_auto_merge."""
+
+    @pytest.mark.parametrize("cli_value", [True, False])
+    @pytest.mark.parametrize("cfg_value", [True, False])
+    def test_cli_value_wins(self, cli_value: bool, cfg_value: bool) -> None:
+        """A CLI True/False overrides the config flag."""
+        args = MagicMock(spec=["auto_merge"], auto_merge=cli_value)
+        with patch(
+            "mcp_coder.cli.utils.get_repo_flag", return_value=cfg_value
+        ) as mock_flag:
+            assert resolve_auto_merge(args, Path("/tmp/project")) is cli_value
+        mock_flag.assert_not_called()
+
+    @pytest.mark.parametrize("cfg_value", [True, False])
+    def test_cli_none_uses_config(self, cfg_value: bool) -> None:
+        """CLI None (or attribute absent) → the repo config flag."""
+        for args in (
+            MagicMock(spec=["auto_merge"], auto_merge=None),
+            MagicMock(spec=[]),
+        ):
+            with patch(
+                "mcp_coder.cli.utils.get_repo_flag", return_value=cfg_value
+            ) as mock_flag:
+                assert resolve_auto_merge(args, Path("/tmp/project")) is cfg_value
+            mock_flag.assert_called_once_with(Path("/tmp/project"), "auto_merge")
 
 
 class TestResolveLlmMethodCopilot:

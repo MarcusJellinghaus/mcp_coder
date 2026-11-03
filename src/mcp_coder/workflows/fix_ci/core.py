@@ -13,6 +13,11 @@ from mcp_coder.llm.providers.claude.claude_code_cli import McpServersUnavailable
 from mcp_coder.mcp_workspace_git import get_current_branch_name, get_latest_commit_sha
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
 from mcp_coder.workflow_steps.commit import check_formatter_config
+from mcp_coder.workflow_steps.merge import (
+    finish_auto_merge,
+    resolve_merge_issue_number,
+    run_auto_merge,
+)
 from mcp_coder.workflow_steps.pr_description import refresh_pr_description
 from mcp_coder.workflow_utils.failure_handling import (
     WorkflowFailure,
@@ -69,11 +74,15 @@ def run_fix_ci_workflow(
     settings_file: str | None = None,
     update_issue_labels: bool = False,
     post_issue_comments: bool = False,
+    auto_merge: bool = False,
 ) -> int:
     """Run the CI auto-fix loop for status-82:fixing-ci.
 
+    With ``auto_merge``, a passing CI hands over to the auto-merge helper.
+
     Returns:
-        0 on CI passing, 1 on any handled or netted failure.
+        0 on CI passing, 1 on any handled or netted failure. With
+        ``auto_merge``, a passing CI's exit code follows the merge outcome.
     """
 
     def body() -> int:
@@ -124,6 +133,17 @@ def run_fix_ci_workflow(
 
         _refresh_if_pushed()
         if ci_ok:
+            if auto_merge:
+                issue_number = resolve_merge_issue_number(project_dir, branch)
+                outcome = run_auto_merge(project_dir, branch)
+                return finish_auto_merge(
+                    project_dir,
+                    outcome,
+                    from_label_id="fixing_ci",
+                    issue_number=issue_number,
+                    update_issue_labels=update_issue_labels,
+                    post_issue_comments=post_issue_comments,
+                )
             if update_issue_labels:
                 return apply_final_label(project_dir, "fixing_ci", "pr_created")
             return 0

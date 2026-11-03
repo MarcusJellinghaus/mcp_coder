@@ -320,6 +320,20 @@ def handle_workflow_failure(
                 logger.warning("Failed to post failure comment: %s", exc)
 
 
+def post_issue_comment(project_dir: Path, issue_number: int, body: str) -> None:
+    """Post a comment on the issue. Best-effort: logs a warning on failure, never raises.
+
+    Args:
+        project_dir: Path to the project git repository.
+        issue_number: Issue to comment on.
+        body: Comment body in Markdown.
+    """
+    try:
+        IssueManager(project_dir).add_comment(issue_number, body)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to post comment: %s", exc)
+
+
 @dataclass(frozen=True)
 class GuardOutcome:
     """Context describing an escape netted by :func:`run_guarded`.

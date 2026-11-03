@@ -287,9 +287,14 @@ mcp-coder create-pr [OPTIONS]
 
 **Description refresh.** If the post-creation rebase pushed new commits, the PR title and body are regenerated from the full branch diff (closing references kept). This is best-effort and never changes the label or exit code. `fix-ci` refreshes the same way when its fixes pushed commits.
 
+**Auto-merge.** `--auto-merge` / `--no-auto-merge` (default: the repo's `auto_merge` flag, else off). When on and CI is green on HEAD, the PR is squash-merged after the description refresh → `status-99:merged`, or `status-99f:merge-failed` with a comment when GitHub refuses. Same flag and outcomes on `fix-ci` and `fix-conflict`; caveats in [Auto-merge](configuration/config.md#auto-merge).
+
+**Exit codes** (create-pr, fix-ci, fix-conflict): 0 for `status-99`, `status-10`, `status-81`; 1 for `status-74` and `status-99f`.
+
 ```bash
 mcp-coder create-pr
 mcp-coder create-pr --update-issue-labels --post-issue-comments
+mcp-coder create-pr --auto-merge
 ```
 
 ---
@@ -299,13 +304,15 @@ mcp-coder create-pr --update-issue-labels --post-issue-comments
 Rebase a PR onto its base branch to resolve a merge conflict. Jenkins-dispatched for `status-71:merge-conflict` (see [PR follow-up](processes-prompts/processes/71-pr-follow-up.md)); normally run by the coordinator, not by hand.
 
 ```bash
-mcp-coder fix-conflict [--project-dir PATH]
+mcp-coder fix-conflict [--project-dir PATH] [--auto-merge | --no-auto-merge]
 ```
 
 Runs the mechanical rebase only, with no LLM. It then re-reads the PR's `mergeable_state` (polling every 5 s, up to 30 s, while GitHub reports `unknown`) and sets the label itself:
 
 - settled and not `dirty`, or still `unknown` after a successful rebase → `status-10:pr-created`;
-- still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase or push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, base, conflicting and uncommitted files).
+- still conflicting (`dirty`), no open PR found, or still `unknown` after a failed rebase or push → `status-74:pr-merge-conflict` with a "Fix Conflict Failed" comment (verdict, rebase reason, base, conflicting and uncommitted files). Exits 1.
+
+With `--auto-merge`, the success path then waits for CI on HEAD and squash-merges → `status-99:merged` / `status-99f:merge-failed` (see [create-pr](#create-pr)).
 
 Crashes are caught by `run_guarded()`, which comments and sets `status-73:merge-conflict-failed`.
 
@@ -319,7 +326,7 @@ Run the CI auto-fix loop on a PR with failing CI. Jenkins-dispatched for `status
 mcp-coder fix-ci [OPTIONS]
 ```
 
-Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the issue to `status-10:pr-created`. Exhausted fix attempts, an LLM timeout or an unavailable MCP server post a comment (the Category line gives the reason) and set `status-84:pr-ci-failed`. Unexpected crashes are caught by `run_guarded()`, which comments and sets `status-83:ci-fix-failed`.
+Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the issue to `status-10:pr-created`; with `--auto-merge`, it squash-merges instead → `status-99:merged` / `status-99f:merge-failed`, or `status-81:failing-ci` if CI on HEAD turns out red (see [create-pr](#create-pr)). Exhausted fix attempts, an LLM timeout or an unavailable MCP server post a comment (the Category line gives the reason) and set `status-84:pr-ci-failed`. Unexpected crashes are caught by `run_guarded()`, which comments and sets `status-83:ci-fix-failed`.
 
 ---
 

@@ -64,9 +64,9 @@ class TestWorkflowLabelsFromConfig:
         # Load the actual config to test against
         labels_config = load_labels_config(labels_config_path)
 
-        # Verify we have exactly 46 labels
-        assert len(labels_config["workflow_labels"]) == 46, (
-            "Config should contain exactly 46 workflow labels"
+        # Verify we have exactly 48 labels
+        assert len(labels_config["workflow_labels"]) == 48, (
+            "Config should contain exactly 48 workflow labels"
         )
 
         # Verify each label has correct structure
@@ -150,6 +150,8 @@ class TestWorkflowLabelsFromConfig:
             "status-17f-mcp:code-review-mcp-unavailable",
             "status-17f-tasks:code-review-open-tasks",
             "status-17f-ci-unknown:code-review-ci-unknown",
+            "status-99:merged",
+            "status-99f:merge-failed",
         ]
 
         actual_names = [label["name"] for label in labels_config["workflow_labels"]]
