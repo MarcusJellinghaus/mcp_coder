@@ -1,4 +1,4 @@
-"""Tests for task tracker LLM rounds: feedback, changed-files guard, byte restore."""
+"""Tests for task tracker LLM rounds, guard, byte restore and INVALID repair."""
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -40,9 +40,36 @@ EMPTY_CRLF = TASK_TRACKER_TEMPLATE.replace("\n", "\r\n").encode("utf-8")
 TRACKER_ONLY = {"staged": [], "modified": ["pr_info/TASK_TRACKER.md"], "untracked": []}
 
 
+# Title plus "## Instructions for LLM" block of the template; contains an [x] line.
+INSTRUCTIONS = TASK_TRACKER_TEMPLATE.split("## Tasks")[0]
+
+# Issue #1146: flat checkboxes under "## Tasks", nothing checked
+FLAT_1146 = TASK_TRACKER_TEMPLATE.replace(
+    "<!-- Tasks populated from pr_info/steps/ by prepare_task_tracker -->",
+    "- [ ] Do the thing\n- [ ] Do another thing",
+)
+
+# "## Step N" headers inside "## Tasks", one task checked
+STEP_TRACKER = (
+    INSTRUCTIONS + "## Tasks\n\n"
+    "## Step 1: Setup\n"
+    "- [x] Implementation\n"
+    "- [ ] Commit message prepared\n\n"
+    "## Step 2: More\n"
+    "- [ ] Implementation\n"
+    "- [ ] Commit message prepared\n\n"
+    "## Pull Request\n"
+    "- [ ] PR review\n"
+)
+
+RESTRUCTURED = STEP_TRACKER.replace("## Step ", "### Step ")
+
+
 def _prompts(_path: str, name: str) -> str:
     if name == "Task Tracker Feedback Prompt":
         return "FEEDBACK\n[violations]\n[expected_format]"
+    if name == "Task Tracker Restructure Prompt":
+        return "RESTRUCTURE\n[violations]\n[expected_format]"
     return "UPDATE PROMPT"
 
 
@@ -229,3 +256,163 @@ class TestGuardAndRestore:
 
         assert "boom" in str(exc_info.value)
         assert mocks.tracker.read_bytes() == EMPTY_CRLF
+
+
+def _set_original(mocks: RoundMocks, content: str) -> bytes:
+    """Write ``content`` as the original tracker and return its bytes."""
+    original = content.encode("utf-8")
+    mocks.tracker.write_bytes(original)
+    return original
+
+
+class TestResetRepair:
+    """INVALID tracker without [x]: reset to the template, then populate."""
+
+    def test_resets_before_llm_and_populates(self, mocks: RoundMocks) -> None:
+        _set_original(mocks, FLAT_1146)
+        (mocks.tracker.parent / "steps" / "step_1.md").write_text("# Step 1")
+        seen: list[str] = []
+
+        def populate(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+            seen.append(mocks.tracker.read_text(encoding="utf-8"))
+            mocks.tracker.write_text(POPULATED, encoding="utf-8")
+            return _response()
+
+        mocks.prompt_llm.side_effect = populate
+
+        prepare_task_tracker(mocks.tracker.parents[1], "claude")
+
+        assert seen == [TASK_TRACKER_TEMPLATE]
+        assert _prompt_text(mocks.prompt_llm.call_args_list[0]) == "UPDATE PROMPT"
+        mocks.commit.assert_called_once()
+        assert mocks.tracker.read_text(encoding="utf-8") == POPULATED
+
+    def test_no_step_files_fails_without_llm(self, mocks: RoundMocks) -> None:
+        original = _set_original(mocks, FLAT_1146)
+        (mocks.tracker.parent / "steps" / "summary.md").write_text("# Summary")
+
+        with pytest.raises(TrackerPrepError) as exc_info:
+            prepare_task_tracker(mocks.tracker.parents[1], "claude")
+
+        assert exc_info.value.reason == "general"
+        assert "step_*.md" in str(exc_info.value)
+        mocks.prompt_llm.assert_not_called()
+        mocks.commit.assert_not_called()
+        assert mocks.tracker.read_bytes() == original
+
+    def test_population_still_invalid_restores(self, mocks: RoundMocks) -> None:
+        original = _set_original(mocks, FLAT_1146)
+        (mocks.tracker.parent / "steps" / "step_1.md").write_text("# Step 1")
+        mocks.llm_writes(INVALID)
+
+        with pytest.raises(TrackerPrepError) as exc_info:
+            prepare_task_tracker(mocks.tracker.parents[1], "claude")
+
+        assert exc_info.value.reason == "general"
+        assert exc_info.value.stage == "Task tracker validation"
+        assert mocks.prompt_llm.call_count == 4
+        mocks.commit.assert_not_called()
+        assert mocks.tracker.read_bytes() == original
+
+
+class TestRestructureRepair:
+    """INVALID tracker with [x]: LLM restructure checked against the original."""
+
+    def test_restructure_success(self, mocks: RoundMocks) -> None:
+        _set_original(mocks, STEP_TRACKER)
+        seen: list[str] = []
+
+        def restructure(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+            seen.append(mocks.tracker.read_text(encoding="utf-8"))
+            mocks.tracker.write_text(RESTRUCTURED, encoding="utf-8")
+            return _response()
+
+        mocks.prompt_llm.side_effect = restructure
+
+        prepare_task_tracker(mocks.tracker.parents[1], "claude")
+
+        assert seen == [STEP_TRACKER]
+        first = _prompt_text(mocks.prompt_llm.call_args_list[0])
+        assert first.startswith("RESTRUCTURE")
+        assert "[violations]" not in first
+        assert "[expected_format]" not in first
+        assert "pr_info/TASK_TRACKER.md line 24" in first
+        assert mocks.prompt_llm.call_count == 1
+        mocks.commit.assert_called_once()
+        assert "- [x] Implementation" in mocks.tracker.read_text(encoding="utf-8")
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            RESTRUCTURED.replace("- [x] Implementation", "- [ ] Implementation"),
+            RESTRUCTURED.replace("- [x] Implementation\n", ""),
+            RESTRUCTURED.replace("- [x] Implementation", "- [x] Implemented it"),
+            RESTRUCTURED.replace(
+                "- [x] Implementation\n", "- [x] Implementation\n- [ ] Extra task\n"
+            ),
+        ],
+        ids=["toggled", "deleted", "reworded", "added_under_checked_step"],
+    )
+    def test_bad_restructure_fails_after_three_attempts(
+        self, mocks: RoundMocks, bad: str
+    ) -> None:
+        original = _set_original(mocks, STEP_TRACKER)
+        mocks.llm_writes(bad)
+
+        with pytest.raises(TrackerPrepError) as exc_info:
+            prepare_task_tracker(mocks.tracker.parents[1], "claude")
+
+        exc = exc_info.value
+        assert exc.reason == "general"
+        assert "after 3 LLM calls" in str(exc)
+        assert "Original violations:" in str(exc)
+        assert "pr_info/TASK_TRACKER.md line 24" in str(exc)
+        calls = mocks.prompt_llm.call_args_list
+        assert len(calls) == 3
+        assert calls[0].kwargs["session_id"] is None
+        assert all(c.kwargs["session_id"] == "session-1" for c in calls[1:])
+        mocks.commit.assert_not_called()
+        assert mocks.tracker.read_bytes() == original
+
+    def test_unchanged_tracker_is_failed_attempt(self, mocks: RoundMocks) -> None:
+        original = _set_original(mocks, STEP_TRACKER)
+        mocks.prompt_llm.return_value = _response()
+
+        with pytest.raises(TrackerPrepError) as exc_info:
+            prepare_task_tracker(mocks.tracker.parents[1], "claude")
+
+        assert "after 3 LLM calls" in str(exc_info.value)
+        assert mocks.prompt_llm.call_count == 3
+        assert mocks.tracker.read_bytes() == original
+
+    def test_guard_trip_fails_immediately(self, mocks: RoundMocks) -> None:
+        original = _set_original(mocks, STEP_TRACKER)
+        mocks.llm_writes(RESTRUCTURED)
+        mocks.get_full_status.return_value = {
+            "staged": [],
+            "modified": ["pr_info/TASK_TRACKER.md"],
+            "untracked": ["notes.md"],
+        }
+
+        with pytest.raises(TrackerPrepError) as exc_info:
+            prepare_task_tracker(mocks.tracker.parents[1], "claude")
+
+        assert exc_info.value.reason == "general"
+        assert "notes.md" in str(exc_info.value)
+        assert mocks.prompt_llm.call_count == 1
+        mocks.commit.assert_not_called()
+        assert mocks.tracker.read_bytes() == original
+
+    def test_system_exit_restores(self, mocks: RoundMocks) -> None:
+        original = _set_original(mocks, STEP_TRACKER)
+
+        def modify_then_exit(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+            mocks.tracker.write_text(RESTRUCTURED, encoding="utf-8")
+            raise SystemExit(1)
+
+        mocks.prompt_llm.side_effect = modify_then_exit
+
+        with pytest.raises(SystemExit):
+            prepare_task_tracker(mocks.tracker.parents[1], "claude")
+
+        assert mocks.tracker.read_bytes() == original

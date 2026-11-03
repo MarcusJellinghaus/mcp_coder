@@ -16,18 +16,25 @@ from mcp_coder.llm.storage.session_storage import store_session
 from mcp_coder.mcp_workspace_git import commit_paths, get_full_status
 from mcp_coder.prompt_manager import get_prompt
 from mcp_coder.utils.git_utils import get_branch_name_for_logging
-from mcp_coder.workflow_utils.task_tracker import get_step_progress
+from mcp_coder.utils.text_io import write_lf_text
+from mcp_coder.workflow_utils.task_tracker import (
+    TASK_TRACKER_TEMPLATE,
+    get_step_progress,
+)
 from mcp_coder.workflow_utils.task_tracker_classify import (
     EXPECTED_FORMAT,
     TrackerState,
+    check_restructure,
     classify_task_tracker,
     classify_tracker_content,
     describe_violations,
+    has_completed_tasks,
 )
 
 from .constants import (
     LLM_TASK_TRACKER_PREPARATION_TIMEOUT_SECONDS,
     MAX_TRACKER_FEEDBACK_ROUNDS,
+    MAX_TRACKER_REPAIR_ATTEMPTS,
     PR_INFO_DIR,
 )
 
@@ -112,13 +119,17 @@ def prepare_task_tracker(
     done = False
     try:
         if state is TrackerState.INVALID:
-            raise TrackerPrepError(reason, describe_violations(violations))
-
-        logger.info(
-            "Task tracker has no implementation tasks."
-            " Generating tasks from implementation steps..."
-        )
-        _populate(ask, project_dir, reason)
+            logger.warning(
+                "Task tracker structure is invalid, repairing:\n%s",
+                "\n".join(violations),
+            )
+            _repair(ask, project_dir, original.decode("utf-8"), violations)
+        else:
+            logger.info(
+                "Task tracker has no implementation tasks."
+                " Generating tasks from implementation steps..."
+            )
+            _populate(ask, project_dir, reason)
 
         commit_result = commit_paths(
             "TASK_TRACKER.md with implementation steps and PR tasks updated",
@@ -298,6 +309,62 @@ def _populate(ask: AskLLM, project_dir: Path, reason: str) -> None:
         1 + MAX_TRACKER_FEEDBACK_ROUNDS,
         reason,
     )
+
+
+def _repair(
+    ask: AskLLM, project_dir: Path, original: str, violations: list[str]
+) -> None:
+    """Repair an INVALID tracker: reset to the template or let the LLM restructure.
+
+    Without ``[x]`` tasks the tracker is reset to the template and populated.
+    Otherwise the LLM restructures it; every attempt is checked against
+    ``original`` so no progress is lost.
+
+    Args:
+        ask: Sends a prompt in a session and returns the new session ID
+        project_dir: Path to the project directory
+        original: Tracker content before the repair
+        violations: Violations of the original tracker
+
+    Raises:
+        TrackerPrepError: If the tracker could not be repaired
+    """
+    tracker = project_dir / TRACKER_FILE
+    if not has_completed_tasks(original):
+        steps_dir = project_dir / PR_INFO_DIR / "steps"
+        if not any(steps_dir.glob("step_*.md")):
+            raise TrackerPrepError(
+                "general",
+                f"Cannot reset {TRACKER_FILE}: no {PR_INFO_DIR}/steps/step_*.md\n"
+                + describe_violations(violations),
+            )
+        logger.warning(
+            "Task tracker has no completed tasks. Resetting it to the template..."
+        )
+        write_lf_text(tracker, TASK_TRACKER_TEMPLATE)
+        _populate(ask, project_dir, "general")
+        return
+
+    logger.warning("Task tracker has completed tasks. Asking LLM to restructure...")
+    prompt = (
+        get_prompt(str(PROMPTS_FILE_PATH), "Task Tracker Restructure Prompt")
+        .replace("[violations]", describe_violations(violations))
+        .replace("[expected_format]", EXPECTED_FORMAT)
+    )
+    try:
+        _llm_rounds(
+            ask,
+            project_dir,
+            prompt,
+            lambda content: check_restructure(original, content),
+            MAX_TRACKER_REPAIR_ATTEMPTS,
+            "general",
+        )
+    except TrackerPrepError as exc:
+        raise TrackerPrepError(
+            "general",
+            f"{exc}\nOriginal violations:\n{describe_violations(violations)}",
+        ) from exc
 
 
 def log_progress_summary(project_dir: Path) -> None:
