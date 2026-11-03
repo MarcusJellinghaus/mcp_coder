@@ -101,7 +101,8 @@ RULES:
 - Checkbox lines may be moved, but never deleted or reworded.
 - Never check or uncheck a checkbox.
 - Do not add a new checkbox under a step that already has a checked box.
-- Headers, blank lines and comments may be added, edited, moved or removed.
+- Keep the `## Instructions for LLM` header and its section unchanged.
+- Other headers, blank lines and comments may be added, edited, moved or removed.
 ```
 
 ### Task Tracker Feedback
@@ -121,6 +122,7 @@ Expected structure:
 
 Fix `pr_info/TASK_TRACKER.md` only. Do not edit any other file.
 Do not check or uncheck any checkbox.
+Keep the `## Instructions for LLM` header and its section unchanged.
 ```
 
 ### Implementation step

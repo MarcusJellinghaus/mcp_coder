@@ -546,3 +546,12 @@ def test_plan_creation_forbids_editing_task_tracker() -> None:
     """The planner is told to leave the task tracker to the implement workflow."""
     prompt = get_prompt(str(PROMPTS_FILE_PATH), "Implementation Plan Creation")
     assert "Do not edit `pr_info/TASK_TRACKER.md`" in prompt
+
+
+@pytest.mark.parametrize("prompt_name", _TRACKER_REPAIR_PROMPTS)
+def test_tracker_repair_prompt_preserves_instructions(prompt_name: str) -> None:
+    """The instructions section must survive: its [x] lines are only excluded there."""
+    prompt = get_prompt(str(PROMPTS_FILE_PATH), prompt_name)
+    assert "Keep the `## Instructions for LLM` header and its section unchanged" in (
+        prompt
+    )

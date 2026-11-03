@@ -128,7 +128,10 @@ class TestPrepareTaskTrackerDecision:
         mocks.prompt_llm.assert_not_called()
         mocks.commit.assert_not_called()
 
-    def test_invalid_fails_without_llm(self, tmp_path: Path, mocks: PrepMocks) -> None:
+    def test_invalid_without_step_files_fails_without_llm(
+        self, tmp_path: Path, mocks: PrepMocks
+    ) -> None:
+        """No pr_info/steps/step_*.md files, so the reset path is unavailable."""
         tracker = _write_tracker(tmp_path, INVALID)
 
         with pytest.raises(TrackerPrepError) as exc_info:
