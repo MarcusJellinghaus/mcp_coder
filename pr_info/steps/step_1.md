@@ -66,11 +66,11 @@ locally; the CI run on the pushed branch is the syntax check.
            - {name: "tach", cmd: "tach --version && ./tools/tach_check.sh"}
            - {name: "deptry", cmd: "deptry --version && ./tools/deptry_check.sh"}
      name: ${{ matrix.check.name }}
-     steps:  # identical to the old `architecture` steps (checkout, uv, python 3.11,
-             # install `.[dev,langchain]` with SPECS, environment info, run cmd)
+     steps:  # as the old `architecture` steps (checkout, uv, python 3.11, install with SPECS,
+             # environment info, run cmd), except the install line
    ```
-   Use the same `matrix.check.install || '.[dev,langchain]'` install line as `push-checks`, so
-   both matrices share one step block shape.
+   Install line: use `matrix.check.install || '.[dev,langchain]'`, as in `push-checks`, so both
+   matrices share one step block shape.
 5. **`unit-tests`** and **`integration-tests`**: add the comment above each job, no condition:
    ```yaml
    # Runs on push and PR: coverage needs it in the PR run.
