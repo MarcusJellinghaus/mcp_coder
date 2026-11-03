@@ -374,7 +374,7 @@ def log_progress_summary(project_dir: Path) -> None:
         project_dir: Path to the project directory
 
     Note:
-        Handles exceptions gracefully and logs debug messages for failures.
+        Handles exceptions gracefully and logs warnings for failures.
         Creates formatted progress summary with progress bars and completion percentages.
     """
     try:
@@ -382,7 +382,7 @@ def log_progress_summary(project_dir: Path) -> None:
         progress = get_step_progress(pr_info_dir)
 
         if not progress:
-            logger.debug("No step progress information available")
+            logger.warning("No step progress information available")
             return
 
         logger.info("=" * 60)
@@ -436,4 +436,4 @@ def log_progress_summary(project_dir: Path) -> None:
         logger.info("=" * 60)
 
     except Exception as e:
-        logger.debug(f"Could not generate progress summary: {e}")
+        logger.warning(f"Could not generate progress summary: {e}")

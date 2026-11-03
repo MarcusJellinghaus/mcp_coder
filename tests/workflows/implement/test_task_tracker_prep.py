@@ -272,3 +272,35 @@ class TestLogProgressSummary:
         mock_get_progress.assert_called_once_with(
             str(Path("/test/project") / "pr_info")
         )
+
+    @patch(f"{PREP}.get_step_progress")
+    def test_log_progress_summary_empty_warns(
+        self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Empty progress is logged at WARNING level."""
+        mock_get_progress.return_value = {}
+
+        with caplog.at_level("WARNING"):
+            log_progress_summary(Path("/test/project"))
+
+        assert any(
+            r.levelname == "WARNING"
+            and "No step progress information available" in r.getMessage()
+            for r in caplog.records
+        )
+
+    @patch(f"{PREP}.get_step_progress")
+    def test_log_progress_summary_exception_warns(
+        self, mock_get_progress: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A progress failure is logged at WARNING level."""
+        mock_get_progress.side_effect = Exception("Progress error")
+
+        with caplog.at_level("WARNING"):
+            log_progress_summary(Path("/test/project"))
+
+        assert any(
+            r.levelname == "WARNING"
+            and "Could not generate progress summary" in r.getMessage()
+            for r in caplog.records
+        )
