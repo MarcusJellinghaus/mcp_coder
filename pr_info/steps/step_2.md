@@ -45,6 +45,9 @@ def describe_violations(violations: list[str]) -> str: ...  # lines + "Tasks mus
   (case-insensitive) switches to pull_request and counts as the `## Pull Request` section.
   Every other header inside tasks keeps the section "tasks" and is a violation unless it is a
   strict step header. After pull_request, the next `##` header switches to "other".
+  Outside `## Tasks`, every level-2 header ends the current section; a level-2 header that is
+  not Tasks or Pull Request (or Instructions for LLM) starts an "other" section. So a
+  `## Step N` header after `## Instructions for LLM` leaves "instructions" and its `[x]` lines count.
   `step` is reset on every `##` header and on the header that ends tasks.
 - `check_prerequisites`: keep the existing missing-file check (MISSING → `return False`).
   Then `state, violations = classify_task_tracker(str(pr_info_path))`. If INVALID:

@@ -45,8 +45,10 @@ None returned; failures raise `TrackerPrepError("general", ...)`, success falls 
   LLM populates → commit; success.
 - Same, but only `summary.md` in `pr_info/steps/` → `TrackerPrepError("general")`, no LLM call, tracker restored.
 - Reset + population still invalid after 4 calls → reason `general`, tracker bytes restored.
-- `## Step N` tracker with an `[x]` → restructure path (no reset); LLM writes a valid
-  restructure → POPULATED, the `[x]` line is present, commit.
+- `## Step N` tracker built from `TASK_TRACKER_TEMPLATE`'s `## Instructions for LLM` block
+  followed by `## Step 1` containing an `[x]` line → restructure path, not reset (assert the
+  first `prompt_llm` call gets the restructure prompt and the tracker was not reset to the
+  template); LLM writes a valid restructure → POPULATED, the `[x]` line is present, commit.
 - Restructure that toggles / deletes / rewords a checkbox, or adds `[ ]` under a step with
   `[x]` → failed attempt; 3 failed attempts → `TrackerPrepError("general")`, `prompt_llm`
   called 3 times with one session, tracker restored, and the message contains the original

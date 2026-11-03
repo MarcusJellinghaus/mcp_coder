@@ -32,7 +32,8 @@ Error strings name the task, e.g. `"'commit message prepared': 3 unchecked under
 
 ## Tests (write first)
 - `has_completed_tasks`: template → False (its instruction `[x]` is ignored); `## Step N`
-  tracker with one `[x]` → True; flat list without `[x]` → False.
+  tracker built from `TASK_TRACKER_TEMPLATE`'s `## Instructions for LLM` block followed by
+  `## Step 1` containing an `[x]` line → True; flat list without `[x]` → False.
 - Accepted: `## Step 1` tracker → `## Tasks` + `### Step 1:` + `## Pull Request` with checkbox
   lines moved verbatim; new `[ ]` in `## Pull Request`.
 - Accepted: `## Pull Request` contains an `[x]` line and the restructure adds new `[ ]` PR
