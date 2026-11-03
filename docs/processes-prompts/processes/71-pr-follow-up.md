@@ -32,6 +32,8 @@ status-10:pr-created
   └─ review feedback  → status-91  (human, /pr_comment_triage) → status-10:pr-created
 ```
 
+**With [`auto_merge`](../../configuration/config.md#auto-merge)**, the green ends of `fix-conflict` and `fix-ci` squash-merge the PR instead of returning to `status-10`: merged → `status-99:merged`; refused or errored → `status-99f:merge-failed` (human, `/check_branch_status`). A merge-time rebase conflict → `status-74`; CI red on HEAD → `status-81`.
+
 **Detection order at `status-10`:** conflict → CI → review comments. At most one acts per poll; the rest are re-checked next poll. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag.
 
 **First check is done by create-pr.** `create-pr` already checks conflicts and waits for CI once, setting `74` or `81` directly (see [PR Creation](08-pr-creation.md)). PR follow-up takes over for whatever it left at `status-10`: `unknown` mergeability, CI timeout or no CI — and for everything that happens later.
@@ -63,6 +65,7 @@ status-10:pr-created
 | `status-74:pr-merge-conflict` | Still `dirty`, no open PR found, or `unknown` after a failed rebase. See the issue comment | Resolve manually (`/rebase` / `/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-83:ci-fix-failed` | `fix-ci` crashed or the job died | `/check_branch_status`, fix, `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) | Fix CI manually, then `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-99f:merge-failed` | `auto_merge` was refused (409, `blocked`, required approvals, squash disabled), errored, or its rebase failed. See the issue comment | `/check_branch_status`, fix the cause or merge by hand; or `mcp-coder gh-tool set-status status-10:pr-created` |
 | — (label stays `status-72` / `status-82`) | Current branch could not be determined → exit 1 | Check the Jenkins log; set `status-71:merge-conflict` / `status-81:failing-ci` to retry |
 
 ## Review feedback rules

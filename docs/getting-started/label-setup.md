@@ -329,8 +329,10 @@ After a PR is created (`status-10:pr-created`), the coordinator checks it on eve
 | `status-83:ci-fix-failed` | The CI-fix job crashed (crash watchdog) — needs a human |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, or LLM timeout / MCP unavailable — needs a human |
 | `status-91:pr-review-comments` | Outstanding review feedback (unresolved thread, untriaged changes-requested review, new PR comment; ❌-first-line comments ignored; trusted authors on trusted-author PRs only) — human triage via `/pr_comment_triage` |
+| `status-99:merged` | PR squash-merged by `auto_merge` (display-only) |
+| `status-99f:merge-failed` | `auto_merge` could not merge (refused, error, failed rebase) — needs a human via `/check_branch_status` |
 
-Successful automated fixes return the issue to `status-10:pr-created`. Like the other bot labels, `71`/`81` wait unprocessed if Jenkins is not configured for the repo.
+Successful automated fixes return the issue to `status-10:pr-created`, or — with [`auto_merge`](../configuration/config.md#auto-merge) on — to `status-99` / `status-99f`. A custom `labels-config` must add `merged` and `merge_failed` and re-run `define-labels`; otherwise the label write fails after a successful merge. Like the other bot labels, `71`/`81` wait unprocessed if Jenkins is not configured for the repo.
 
 ### Optional Automated Review Labels
 

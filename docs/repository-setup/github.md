@@ -230,6 +230,9 @@ Default timeouts:
 | status-09:pr-creating | 30 minutes |
 | status-14i:plan-reviewing | 30 minutes |
 | status-17i:code-reviewing | 120 minutes |
+| status-72:fixing-merge-conflict | 30 minutes (two CI waits with `auto_merge`) |
+
+`09` with `auto_merge` can take ≈ 35 minutes in the worst case; the stale warning is accepted.
 
 The `status-14i` / `status-17i` labels are the in-progress states for the optional automated review workflows (enabled via `auto_review_plan` / `auto_review_implementation`).
 

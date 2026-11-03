@@ -88,7 +88,7 @@ Inside the orchestration band the order is also fixed: `workflows` on top, then 
 | `cli` | Argument parsing and command routing. Commands are thin and one per file. |
 | `icoder` | Interactive terminal chat. Logic lives in a Textual-free core; the UI is a thin shell, which keeps it testable. |
 | `workflows` | `implement`, `create_plan`, `create_pr`, `fix_ci`, `fix_conflict`, `review`, `vscodeclaude`. Each owns its labels, config and failure categories. |
-| `workflow_steps`, `workflow_utils`, `checks`, `services` | Reusable pieces under the workflows. Primitives never import upward. |
+| `workflow_steps`, `workflow_utils`, `checks`, `services` | Reusable pieces under the workflows. Primitives never import upward. `workflow_steps/merge.py` is the shared auto-merge step for `create_pr`, `fix_ci` and `fix_conflict`. |
 | `llm` | One interface over Claude Code CLI (primary), Copilot CLI and LangChain. Owns streaming, session storage and logging of LLM calls. |
 | `prompts`, `prompt_manager` | Prompt templates and the system and project prompts layered on them. |
 | `install` | Provisions a target environment for `mcp-coder install`. Reads policy from the target's `pyproject.toml`. |

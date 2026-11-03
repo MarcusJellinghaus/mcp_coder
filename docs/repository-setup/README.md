@@ -28,6 +28,7 @@ This guide covers the **mandatory** and **optional** components for integrating 
 - [ ] For unattended runs: add a `[jenkins]` section and a `[coordinator.repos.<name>]` section (`repo_url`, `executor_job_path`, `github_credentials_id`), and set up the Jenkins executor job ([Jenkins setup](jenkins.md)). Without Jenkins, run the stages by hand
   - Labels advance and failures are commented on the issue by default. Set `update_issue_labels = false` or `post_issue_comments = false` for the repo to opt out
   - Optional: `auto_review_plan` and `auto_review_implementation` (default `false`) replace the interactive review with an automated one that hands over to you when it needs a human
+  - Optional: `auto_merge` (default `false`) squash-merges the PR once CI is green on HEAD — read the [caveats](../configuration/config.md#auto-merge) first
 - [ ] Run `mcp-coder verify` in the repository, then test the workflow with a sample issue (see [Testing Your Setup](#testing-your-setup))
 
 ## Detail Documentation
