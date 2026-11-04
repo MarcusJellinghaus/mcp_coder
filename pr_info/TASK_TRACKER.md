@@ -103,5 +103,5 @@ Details: [step_10.md](./steps/step_10.md)
 
 ## Pull Request
 
-- [ ] PR review: review the full branch diff against the base branch
+- [x] PR review: review the full branch diff against the base branch
 - [ ] PR summary prepared
