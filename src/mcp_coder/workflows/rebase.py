@@ -653,7 +653,7 @@ def run_rebase_workflow(
         # completed, so the finally net cannot restore — explicit reset.
         note = _restore_note(project_dir, pre_sha)
         logger.error("Verification checks failed to run: %s", exc)
-        return _end(1, f"checks failed to run{note}")
+        return _end(1, f"Verification checks failed to run: {exc}{note}")
     except Exception as exc:  # pylint: disable=broad-exception-caught
         # LLM failure/timeout or unexpected error. Mid-rebase: the finally net
         # aborts. Post-rebase (regression-fix phase): explicit reset — same

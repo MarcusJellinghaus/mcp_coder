@@ -291,7 +291,7 @@ mcp-coder create-pr [OPTIONS]
 
 **Auto-merge.** `--auto-merge` / `--no-auto-merge` (default: the repo's `auto_merge` flag, else off). When on and CI is green on HEAD, the PR is squash-merged after the description refresh → `status-99:merged`, or `status-99f:merge-failed` with a comment when GitHub refuses. Same flag and outcomes on `fix-ci` and `fix-conflict`; caveats in [Auto-merge](configuration/config.md#auto-merge).
 
-**Exit codes** (create-pr, fix-ci, fix-conflict): 0 for `status-99`, `status-10`, `status-81`; 1 for `status-74` and `status-99f`.
+**Exit codes** (create-pr, fix-ci, fix-conflict): 0 for `status-99`, `status-10`, `status-81`, and for `status-71` once create-pr has written it; 1 for `status-74` and `status-99f`, and for a create-pr run that leaves a still-conflicting PR with no label written.
 
 ```bash
 mcp-coder create-pr

@@ -6,6 +6,7 @@ from ``implement/rebase.py`` so multiple workflows can share it.
 """
 
 import logging
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,7 @@ from mcp_coder.mcp_workspace_git import (
     commit_paths,
     get_full_status,
     get_remote_branch_commit_sha,
+    git_diff,
     has_staged_changes,
     is_staged_diff_cr_only,
     probe_rebase_conflicts,
@@ -108,6 +110,28 @@ def _uncommitted_tracked_files(project_dir: Path) -> list[str]:
     return sorted(set(status["staged"] + status["modified"]))
 
 
+def _staged_diff_adds_cr(project_dir: Path) -> bool:
+    """Return True if the staged diff adds a line ending in CR.
+
+    ``is_staged_diff_cr_only`` passes in both directions; this tells CRLF -> LF
+    (a normalization) from LF -> CRLF (no ``text`` attribute, so the CRLF working
+    copy would be committed as is). The whole index is inspected: everything
+    staged is among the dirty files handled together.
+
+    Args:
+        project_dir: Path to the project directory
+
+    Returns:
+        True if any added line of the staged diff ends in CR.
+    """
+    diff = git_diff(
+        project_dir, args=["--cached"], compact=False, max_lines=sys.maxsize
+    )
+    return any(
+        line.startswith("+") and line.endswith("\r") for line in diff.split("\n")
+    )
+
+
 def _clear_line_ending_dirt(project_dir: Path, files: list[str]) -> bool:
     """Renormalize ``files``; commit if anything is staged. All-or-nothing.
 
@@ -117,7 +141,8 @@ def _clear_line_ending_dirt(project_dir: Path, files: list[str]) -> bool:
 
     Returns:
         True when the tree no longer blocks the rebase; False (paths unstaged
-        again) when any file has a real change, is deleted, or git fails.
+        again) when any file has a real change, is deleted, would gain CRs in
+        the commit, or git fails.
     """
     # git cannot stage a deletion through --renormalize, and a deletion is a
     # real change anyway.
@@ -127,7 +152,11 @@ def _clear_line_ending_dirt(project_dir: Path, files: list[str]) -> bool:
     paths = [project_dir / f for f in files]
     try:
         renormalized = renormalize_paths(paths, project_dir)["success"]
-        if renormalized and is_staged_diff_cr_only(paths, project_dir):
+        if (
+            renormalized
+            and is_staged_diff_cr_only(paths, project_dir)
+            and not _staged_diff_adds_cr(project_dir)
+        ):
             if not has_staged_changes(project_dir):
                 return True  # Stat-only dirt: nothing to commit.
             commit = commit_paths("chore: renormalize line endings", paths, project_dir)

@@ -102,6 +102,25 @@ class TestAttemptRebaseWithLineEndingDirt:
         origin = Repo(tmp_path / "origin.git")
         assert origin.commit("feature").hexsha == repo.head.commit.hexsha
 
+    def test_lf_blob_with_crlf_working_copy_is_dirty_tree(
+        self, crlf_repo: tuple[Repo, Path]
+    ) -> None:
+        """Test a file with no ``text`` attribute is not committed with CRLF."""
+        repo, project_dir = crlf_repo
+        _commit(repo, "Normalize doc", "doc.md")
+        (project_dir / "plain.txt").write_bytes(b"line one\nline two\n")
+        _commit(repo, "Add LF file", "plain.txt")
+        head_before = repo.head.commit.hexsha
+        _rewrite(project_dir / "plain.txt", _CRLF_CONTENT)
+        assert repo.git.status("--porcelain") == " M plain.txt"
+
+        outcome = _attempt_rebase_and_push(project_dir)
+
+        assert outcome == RebaseOutcome("dirty_tree", files=("plain.txt",))
+        assert _staged(repo) == ""
+        assert repo.head.commit.hexsha == head_before
+        assert (project_dir / "plain.txt").read_bytes() == _CRLF_CONTENT
+
     def test_real_change_is_dirty_tree(self, crlf_repo: tuple[Repo, Path]) -> None:
         """Test a content change on top of CRLF blocks and leaves nothing staged."""
         repo, project_dir = crlf_repo

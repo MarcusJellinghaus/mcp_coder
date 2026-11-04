@@ -124,7 +124,10 @@ def test_verification_check_run_error_resets_and_returns_1(
     """A verification infrastructure failure resets to ``pre_sha`` (exit 1)."""
     patched.all_checks.side_effect = [set(), CheckRunError("pylint: failed to run")]
 
-    assert _run(tmp_path).exit_code == 1
+    result = _run(tmp_path)
+
+    assert result.exit_code == 1
+    assert "pylint: failed to run" in result.reason
     patched.reset.assert_called_once_with(tmp_path, "presha")
     patched.push.assert_not_called()
 
