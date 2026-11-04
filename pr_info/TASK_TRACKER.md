@@ -81,9 +81,9 @@ Details: [step_7.md](./steps/step_7.md)
 
 Details: [step_8.md](./steps/step_8.md)
 
-- [ ] Implementation (tests + production code)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (tests + production code)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 9: A no-change CI fix counts as a failed attempt
 

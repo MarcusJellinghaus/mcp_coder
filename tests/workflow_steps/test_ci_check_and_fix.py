@@ -1,4 +1,4 @@
-"""Tests for check_and_fix_ci and _read_problem_description (workflow_steps/ci.py)."""
+"""Tests for check_and_fix_ci (ci.py) and _read_problem_description (ci_fix_helpers.py)."""
 
 from pathlib import Path
 from typing import Any
@@ -322,7 +322,7 @@ class TestReadProblemDescription:
 
     def test_empty_file_uses_fallback(self, tmp_path: Path) -> None:
         """Empty temp file should return fallback response."""
-        from mcp_coder.workflow_steps.ci import (
+        from mcp_coder.workflow_steps.ci_fix_helpers import (
             _read_problem_description,
         )
 
@@ -336,7 +336,7 @@ class TestReadProblemDescription:
 
     def test_whitespace_only_file_uses_fallback(self, tmp_path: Path) -> None:
         """File with only whitespace should return fallback response."""
-        from mcp_coder.workflow_steps.ci import (
+        from mcp_coder.workflow_steps.ci_fix_helpers import (
             _read_problem_description,
         )
 
@@ -350,7 +350,7 @@ class TestReadProblemDescription:
 
     def test_file_with_content_returns_content(self, tmp_path: Path) -> None:
         """File with content should return that content."""
-        from mcp_coder.workflow_steps.ci import (
+        from mcp_coder.workflow_steps.ci_fix_helpers import (
             _read_problem_description,
         )
 
@@ -364,7 +364,7 @@ class TestReadProblemDescription:
 
     def test_missing_file_uses_fallback(self, tmp_path: Path) -> None:
         """Missing temp file should return fallback response."""
-        from mcp_coder.workflow_steps.ci import (
+        from mcp_coder.workflow_steps.ci_fix_helpers import (
             _read_problem_description,
         )
 
