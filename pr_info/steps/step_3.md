@@ -51,10 +51,12 @@ code-scanning tool. Do not promise a wait for CodeQL.
 ## ALGORITHM
 
 ```
-fix pushed or dismissal requested → wait for CI on the last push (best effort)
+fix pushed or user confirms dismissal → if this session pushed, wait for CI on the last push (best effort); no push, no CI wait
 re-run /check_branch_status
 [alert] listed or [unavailable] alerts → report, do not set status, stay at status-91
-otherwise (including [skipped]) → set-status status-10:pr-created
+otherwise (including [skipped]), only once the other "When done" gates pass → set-status status-10:pr-created
+  gates: CI green; every item handled; no blocks_merge from non-withheld items
+  (a changes-requested review that was replied to or fixed still does not block, as the skill says today)
 ```
 
 ## DATA

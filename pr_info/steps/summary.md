@@ -111,6 +111,7 @@ _check_alert_gate(project_dir, pr_number, sha) -> MergeOutcome | None   # None =
 
 ### Modified: docs
 
+- `README.md`
 - `docs/architecture/architecture.md`
 - `docs/cli-reference.md`
 - `docs/configuration/config.md`

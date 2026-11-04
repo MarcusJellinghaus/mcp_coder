@@ -28,6 +28,7 @@ The order everywhere is: merge conflict → failing CI → alerts → review com
 | `docs/processes-prompts/processes/71-pr-follow-up.md` | Intro sentence; ASCII diagram (add alerts → `status-91`); "Detection order" line; "Order matters … Review comments come last"; `/pr_comment_triage` row of the slash-commands table; "Review feedback rules": remove "Code-scanning alerts are excluded" and add alerts as a live-state trigger; "Trusted authors only": alerts have no author, only the PR-author check applies; "Triage session": alert handling, and no `status-10` while an alert is open |
 | `docs/coordinator-vscodeclaude.md` | Numbered list: alerts step 3, review feedback step 4; document `untrusted PR author @x — review comments and alerts not checked` |
 | `docs/getting-started/label-setup.md` | Intro order sentence; `status-91` row |
+| `README.md` | "Follow-up after the PR" bullet (line 17) and "Merge" step (line 88): add code-scanning alerts to what comes back |
 | `docs/cli-reference.md` | Coordinator paragraph (line 335) |
 | `docs/architecture/architecture.md` | PR health bullet |
 | `docs/processes-prompts/claude_cheat_sheet.md` | PR follow-up list (line 77) and `/pr_comment_triage` row (line 32) |

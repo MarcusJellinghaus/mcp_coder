@@ -48,6 +48,9 @@ def _check_alert_gate(project_dir: Path, pr_number: int, sha: str) -> MergeOutco
       return blocked
   ```
 
+- `sha` is `str | None` in `run_auto_merge`, and `_check_alert_gate` takes `str`. Narrow it in
+  the head-SHA guard: `if sha is None or _pr_head_sha(project_dir, branch) != sha:`. The guard
+  still returns `pr_created`; a `None` never reaches it today, because `is_real_green` rejects it.
 - New imports in `merge.py`: `time`, and from `mcp_coder.workflow_steps.constants`:
   `CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS`, `CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS`,
   `CI_POLL_INTERVAL_SECONDS`, `CODE_SCANNING_MAX_POLL_ATTEMPTS`.
@@ -108,7 +111,9 @@ alerts: Read`, or code scanning is not enabled".
   `merge_pull_request` is not called.
 
 `test_merge_alerts.py` has its own fixture patching `PullRequestManager`, `CIResultsManager`,
-`get_latest_commit_sha`, `_poll_for_ci_completion` and `f"{_MODULE}.time.sleep"`. Use
+`get_latest_commit_sha`, `_poll_for_ci_completion`, `_poll_mergeable_state`,
+`_attempt_rebase_and_push`, `_reset_hard` and `f"{_MODULE}.time.sleep"`, so no test reaches
+real rebase code. Use
 parametrized `side_effect` sequences where possible.
 
 Wait:
