@@ -35,7 +35,12 @@ from mcp_coder.workflow_steps.commit import (
     run_formatters,
 )
 
-from .ci_fix_helpers import _read_problem_description
+from .ci_fix_helpers import (
+    CIFixState,
+    _read_problem_description,
+    discard_if_no_change,
+    read_head,
+)
 from .constants import (
     CI_EXPECTED_SHA_MAX_POLL_ATTEMPTS,
     CI_LOOKUP_FAILED_MAX_POLL_ATTEMPTS,
@@ -180,6 +185,8 @@ def _run_ci_fix(
     problem_description: str,
     fix_attempt: int,
     branch_name: str | None = None,
+    *,
+    state: CIFixState | None = None,
 ) -> bool:
     """Attempt to fix CI failure. Returns True if push succeeded.
 
@@ -188,6 +195,7 @@ def _run_ci_fix(
         problem_description: Description of the problem from analysis phase
         fix_attempt: Current fix attempt number (0-indexed)
         branch_name: Optional git branch name for session logging
+        state: Per-run state of the fix loop, shared across attempts
 
     Returns:
         True if fix was successfully committed and pushed, False otherwise
@@ -202,6 +210,9 @@ def _run_ci_fix(
     except Exception as e:
         logger.error(f"Failed to load CI fix prompt: {e}")
         return False
+
+    # Per attempt: a per-run baseline would read an earlier attempt's commit as a change
+    head_before = read_head(config.project_dir)
 
     # Call LLM with fix prompt
     try:
@@ -247,8 +258,13 @@ def _run_ci_fix(
     # Run formatters (non-critical, continue even if fails)
     run_formatters(config.project_dir)
 
+    if discard_if_no_change(config.project_dir, head_before):
+        if not (state and state.push_pending):
+            logger.warning("CI fix produced no changes")
+            return False
+        logger.info("CI fix produced no changes; retrying the earlier failed push")
     # Commit changes (same session params as the fix-phase LLM call)
-    if not commit_changes(
+    elif not commit_changes(
         config.project_dir,
         config.provider,
         mcp_config=config.mcp_config,
@@ -259,9 +275,13 @@ def _run_ci_fix(
 
     # Push changes
     if not push_changes(config.project_dir, raise_on_rejected=True):
+        if state:
+            state.push_pending = True
         logger.error("Git push failed during CI fix")
         return False
 
+    if state:
+        state.push_pending = False
     return True
 
 
@@ -517,6 +537,8 @@ def _run_ci_analysis_and_fix(
     ci_status: CIStatusData,
     ci_manager: CIResultsManager,
     fix_attempt: int,
+    *,
+    state: CIFixState | None = None,
 ) -> tuple[bool, bool | None]:
     """Run CI failure analysis and attempt a fix.
 
@@ -525,6 +547,7 @@ def _run_ci_analysis_and_fix(
         ci_status: Current CI status dict
         ci_manager: CIResultsManager instance
         fix_attempt: Current fix attempt number (0-indexed)
+        state: Per-run state of the fix loop, shared across attempts
 
     Returns:
         Tuple of (should_continue, return_value):
@@ -562,7 +585,9 @@ def _run_ci_analysis_and_fix(
         return True, None  # Consumes this attempt
 
     # Run fix phase
-    fix_succeeded = _run_ci_fix(config, problem_description, fix_attempt, branch_name)
+    fix_succeeded = _run_ci_fix(
+        config, problem_description, fix_attempt, branch_name, state=state
+    )
 
     if not fix_succeeded:
         return True, None  # Continue to next attempt
@@ -663,6 +688,8 @@ def check_and_fix_ci(
         session_dir_name=session_dir_name,
     )
 
+    state = CIFixState()
+
     for fix_attempt in range(CI_MAX_FIX_ATTEMPTS):
         run_sha = ci_status.get("run", {}).get("commit_sha") or "unknown"
         logger.info(
@@ -674,6 +701,7 @@ def check_and_fix_ci(
             ci_status,
             ci_manager,
             fix_attempt,
+            state=state,
         )
 
         if return_value is not None:
