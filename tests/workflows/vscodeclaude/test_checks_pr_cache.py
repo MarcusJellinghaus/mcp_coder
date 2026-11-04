@@ -41,9 +41,7 @@ class TestPullRequestCacheRouting:
         pr_manager_cls.assert_called_once_with(repo_url="https://github.com/owner/repo")
         cache_cls.load.assert_called_once_with(pr_manager)
 
-    def test_all_five_queries_go_to_cache(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_all_six_queries_go_to_cache(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _, _, ci_manager, pr_cache = _setup(monkeypatch)
         pr = _make_pr(7)
         pr_cache.find_pr.return_value = pr
@@ -58,6 +56,7 @@ class TestPullRequestCacheRouting:
         pr_cache.find_pr.assert_called_once_with("999-fix")
         pr_cache.mergeable_state.assert_called_once_with(pr, issue)
         pr_cache.ci_status.assert_called_once_with(pr, issue)
+        pr_cache.alerts.assert_called_once_with(pr, issue)
         pr_cache.feedback.assert_called_once_with(pr, issue)
         pr_cache.label_events.assert_called_once_with(pr, issue)
         ci_manager.get_latest_ci_status.assert_not_called()

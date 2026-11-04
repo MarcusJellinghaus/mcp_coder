@@ -1,4 +1,7 @@
-"""PR health checks for status-10 issues: merge conflicts, CI, and review comments."""
+"""PR health checks for status-10 issues.
+
+Covers merge conflicts, CI, code-scanning alerts, and review comments.
+"""
 
 import logging
 
@@ -182,6 +185,49 @@ def _check_ci(
         return False
 
 
+def _check_alerts(
+    issue: IssueData,
+    pr: OpenPullRequest,
+    pr_cache: PullRequestCache,
+    issue_manager: IssueManager,
+    repo_name: str,
+    target_label_name: str,
+    trusted: frozenset[str],
+) -> bool:
+    """Escalate a status-10 PR to status-91 on open code-scanning alerts.
+
+    Only on a PR whose author is trusted; ``_check_review_comments`` logs the
+    untrusted-author line. Alerts count only once ``final`` is true, because
+    until every CI run on the head completed GitHub still reports the previous
+    commit's alerts. Skipped results (403/404) always carry no alerts.
+
+    Never raises, except ``GitHubRateLimitError``: any other failure is
+    logged and swallowed so one bad issue can't block the rest of the batch
+    this poll.
+
+    Returns:
+        True iff open alerts were detected (label update attempted).
+    """
+    try:
+        if not is_trusted_author(pr["user"], pr["author_association"], trusted):
+            return False
+        result = pr_cache.alerts(pr, issue)
+        if not (result["final"] and result["alerts"]):
+            return False
+        _escalate(
+            issue, issue_manager, "pr_review_comments", target_label_name, repo_name
+        )
+        return True
+    except Exception as exc:  # pylint: disable=broad-exception-caught  # non-blocking by design
+        raise_if_rate_limited(exc)
+        logger.warning(
+            "Failed to check alerts for issue #%d: %s",
+            issue["number"],
+            exc,
+        )
+        return False
+
+
 def _check_review_comments(
     issue: IssueData,
     pr: OpenPullRequest,
@@ -214,7 +260,8 @@ def _check_review_comments(
         if not is_trusted_author(pr["user"], pr["author_association"], trusted):
             logger.log(
                 OUTPUT,
-                "PR-health: %s #%d: untrusted PR author @%s — review comments not checked",
+                "PR-health: %s #%d: untrusted PR author @%s"
+                " — review comments and alerts not checked",
                 repo_name,
                 issue["number"],
                 pr["user"],
@@ -296,7 +343,7 @@ def check_pr_health(
 
     Never raises, except ``GitHubRateLimitError``, which propagates.
 
-    Checks run in a fixed order — merge conflict, failing CI, review
+    Checks run in a fixed order — merge conflict, failing CI, alerts, review
     comments — and stop at the first hit, so each issue gets at most one
     label change per poll. All PR queries go through one run-scoped
     ``PullRequestCache`` and branch lookups through one ``BranchLookupCache``,
@@ -359,6 +406,18 @@ def check_pr_health(
                     issue_manager,
                     repo_name,
                     label_names["failing_ci"],
+                )
+                or (
+                    pr is not None
+                    and _check_alerts(
+                        issue,
+                        pr,
+                        pr_cache,
+                        issue_manager,
+                        repo_name,
+                        label_names["pr_review_comments"],
+                        trusted,
+                    )
                 )
                 or (
                     pr is not None

@@ -20,7 +20,7 @@ linked config files, docs and issues.
 | [Security scanning](#security-scanning) | ruff `S`, `PLE2502`, CodeQL, OpenSSF Scorecard | Find insecure code and supply-chain risks | `run_ruff_check`; CodeQL/Scorecard — | [`pyproject.toml`](../../pyproject.toml), [`scorecard.yml`](../../.github/workflows/scorecard.yml), #1170, #1177 |
 | [Tests](#tests) | pytest | Behaviour stays correct | `run_pytest_check` | [`pyproject.toml`](../../pyproject.toml), [`ci.yml`](../../.github/workflows/ci.yml) |
 | [Repo hygiene](#repo-hygiene) | CI job, `tools/check_*.py` | Keep scratch files, URL deps and forbidden calls out | — | [`ci.yml`](../../.github/workflows/ci.yml), [`check_no_url_deps.py`](../../tools/check_no_url_deps.py), [`check_forbidden_calls.py`](../../tools/check_forbidden_calls.py) |
-| [Repo settings](#repo-settings) | `mcp-coder verify`, branch rulesets | GitHub security features and required checks are on | — | [`github.md`](github.md#repo-security-configuration-checks), #1179, #1180, #1294 |
+| [Repo settings](#repo-settings) | `mcp-coder verify` | Report whether GitHub security features are on; `main` has no required checks | — | [`github.md`](github.md#repo-security-configuration-checks), #1179, #1180, #1294 |
 | [Badges](#badges) | README badges | Check state visible at a glance | — | [`github.md`](github.md#readme-badges), #1291 |
 
 ## Principles
@@ -140,11 +140,13 @@ See [`pyproject.toml`](../../pyproject.toml) `[tool.pytest.ini_options]`.
 
 `mcp-coder verify` reports the GITHUB SECURITY section (#1179, #1180), including the
 Dependabot rows and the code-scanning alerts row; see
-[`github.md`](github.md#repo-security-configuration-checks). Branch rulesets (#1294) set
-the required status checks.
+[`github.md`](github.md#repo-security-configuration-checks). `main` has no required status
+checks and the `protect main` ruleset (#1294) is disabled (checked 2026-11-04), so nothing
+on GitHub blocks a merge on a failing check.
 
-**Job-name rule:** required status checks must match CI job names. Matrix entries report
-under their `name`. A renamed or removed job blocks every PR until the ruleset is updated.
+**Job-name rule:** if required status checks are turned on, they must match CI job names.
+Matrix entries report under their `name`. A renamed or removed job then blocks every PR
+until the ruleset is updated.
 
 ## Badges
 

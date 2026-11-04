@@ -289,7 +289,7 @@ mcp-coder create-pr [OPTIONS]
 
 **Description refresh.** If the post-creation rebase pushed new commits, the PR title and body are regenerated from the full branch diff (closing references kept). This is best-effort and never changes the label or exit code. `fix-ci` refreshes the same way when its fixes pushed commits.
 
-**Auto-merge.** `--auto-merge` / `--no-auto-merge` (default: the repo's `auto_merge` flag, else off). When on and CI is green on HEAD, the PR is squash-merged after the description refresh → `status-99:merged`, or `status-99f:merge-failed` with a comment when GitHub refuses. Same flag and outcomes on `fix-ci` and `fix-conflict`; caveats in [Auto-merge](configuration/config.md#auto-merge).
+**Auto-merge.** `--auto-merge` / `--no-auto-merge` (default: the repo's `auto_merge` flag, else off). When on and CI is green on HEAD, the PR is squash-merged after the description refresh → `status-99:merged`, or `status-99f:merge-failed` with a comment when GitHub refuses. An open code-scanning alert blocks the merge (→ `status-10:pr-created`), and so does a failed alert check (→ `status-99f` with a comment); skipped alerts (403/404) merge with a warning. Same flag and outcomes on `fix-ci` and `fix-conflict`; caveats in [Auto-merge](configuration/config.md#auto-merge).
 
 **Exit codes** (create-pr, fix-ci, fix-conflict): 0 for `status-99`, `status-10`, `status-81`, and for `status-71` once create-pr has written it; 1 for `status-74` and `status-99f`, and for a create-pr run that leaves a still-conflicting PR with no label written.
 
@@ -334,7 +334,7 @@ Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the i
 
 ### coordinator
 
-Monitor GitHub issues and dispatch workflows (create-plan, implement, create-pr, and the optional review-plan and review-implementation) as Jenkins jobs, based on each issue's status label. It also checks open PRs and routes merge conflicts, failing CI and review comments. Repositories come from `[coordinator.repos.*]` in `config.toml`; Jenkins access from `[jenkins]`.
+Monitor GitHub issues and dispatch workflows (create-plan, implement, create-pr, and the optional review-plan and review-implementation) as Jenkins jobs, based on each issue's status label. It also checks open PRs and routes merge conflicts, failing CI, code-scanning alerts and review comments. Repositories come from `[coordinator.repos.*]` in `config.toml`; Jenkins access from `[jenkins]`.
 
 ```bash
 mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]

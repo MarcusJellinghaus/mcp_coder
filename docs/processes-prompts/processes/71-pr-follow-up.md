@@ -1,6 +1,6 @@
 # PR Follow-up
 
-While a PR waits at `status-10:pr-created`, the vscodeclaude coordinator checks it for merge conflicts, failing CI and review feedback. Conflicts and CI are fixed automatically on Jenkins. Review feedback always goes to a human.
+While a PR waits at `status-10:pr-created`, the vscodeclaude coordinator checks it for merge conflicts, failing CI, code-scanning alerts and review feedback. Conflicts and CI are fixed automatically on Jenkins. Alerts and review feedback always go to a human.
 
 ## Labels
 
@@ -29,16 +29,17 @@ status-10:pr-created
   │                        ├─ CI green         → status-10:pr-created
   │                        ├─ fix exhausted / LLM timeout / MCP unavailable / formatter-config error → status-84  (human)
   │                        └─ job crashed      → status-83  (human)
+  ├─ open alerts      → status-91  (human, /pr_comment_triage) → status-10:pr-created
   └─ review feedback  → status-91  (human, /pr_comment_triage) → status-10:pr-created
 ```
 
-**With [`auto_merge`](../../configuration/config.md#auto-merge)**, the green ends of `fix-conflict` and `fix-ci` squash-merge the PR instead of returning to `status-10`: merged → `status-99:merged`; refused or errored → `status-99f:merge-failed` (human, `/check_branch_status`). A merge-time rebase conflict → `status-74`; CI red on HEAD → `status-81`.
+**With [`auto_merge`](../../configuration/config.md#auto-merge)**, the green ends of `fix-conflict` and `fix-ci` squash-merge the PR instead of returning to `status-10`: merged → `status-99:merged`; refused or errored → `status-99f:merge-failed` (human, `/check_branch_status`). A merge-time rebase conflict → `status-74`; CI red on HEAD → `status-81`; a failed alert check → `status-99f`. An open code-scanning alert → `status-10`, which the coordinator escalates to `status-91`; after triage the PR needs a manual merge, unless a later `fix-conflict` or `fix-ci` run merges it.
 
-**Detection order at `status-10`:** conflict → CI → review comments. At most one acts per poll; the rest are re-checked next poll. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag.
+**Detection order at `status-10`:** conflict → CI → alerts → review comments. At most one acts per poll; the rest are re-checked next poll. Detection uses live GitHub data only (no local checkout) and is always active — there is no config flag.
 
 **First check is done by create-pr.** `create-pr` already checks conflicts and waits for CI once, setting `71` or `81` directly (see [PR Creation](08-pr-creation.md)). PR follow-up takes over for whatever it left at `status-10`: `unknown` mergeability, CI timeout or no CI — and for everything that happens later.
 
-**Order matters.** Conflicts come first because a branch that is behind its base can itself make CI fail; fixing the symptom first would waste CI-fix attempts. Review comments come last.
+**Order matters.** Conflicts come first because a branch that is behind its base can itself make CI fail; fixing the symptom first would waste CI-fix attempts. Alerts follow CI because they are read only once every CI run on the head has completed; until then GitHub still reports the previous commit's alerts. Review comments come last.
 
 ## Actor
 
@@ -53,7 +54,7 @@ status-10:pr-created
 
 | Command | Purpose | Resulting label |
 |---|---|---|
-| [`/pr_comment_triage`](../../../.claude/skills/pr_comment_triage/SKILL.md) | Auto-launched at `status-91`. Triage each review item: fix, reply or decline | ends with `mcp-coder gh-tool set-status status-10:pr-created` |
+| [`/pr_comment_triage`](../../../.claude/skills/pr_comment_triage/SKILL.md) | Auto-launched at `status-91`. Triage each review item: fix, reply or decline. Each code-scanning alert: fix, or explain a false positive and wait for the user to dismiss it | ends with `mcp-coder gh-tool set-status status-10:pr-created`, only once no alert is open |
 | [`/check_branch_status`](../../../.claude/skills/check_branch_status/SKILL.md) | Auto-launched at `status-73` / `74` / `83` / `84` (at `74` after `/rebase`). Shows CI, rebase need, tasks and labels | — |
 | [`/rebase`](../../../.claude/skills/rebase/SKILL.md) | Auto-launched first at `status-74`. Rebase onto the base branch | — |
 
@@ -65,13 +66,13 @@ status-10:pr-created
 | `status-74:pr-merge-conflict` | Still `dirty`, no open PR found, or `unknown` after a failed rebase (git-only and LLM). See the issue comment | Resolve manually (`/rebase` / `/check_branch_status`), then `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-83:ci-fix-failed` | `fix-ci` crashed or the job died | `/check_branch_status`, fix, `mcp-coder gh-tool set-status status-10:pr-created` |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) | Fix CI manually, then `mcp-coder gh-tool set-status status-10:pr-created` |
-| `status-99f:merge-failed` | `auto_merge` was refused (409, `blocked`, required approvals, squash disabled), errored, or its rebase failed. See the issue comment | `/check_branch_status`, fix the cause or merge by hand; or `mcp-coder gh-tool set-status status-10:pr-created` |
+| `status-99f:merge-failed` | `auto_merge` was refused (409, `blocked`, required approvals, squash disabled), errored, its rebase failed, or its alert check failed. See the issue comment | `/check_branch_status`, fix the cause or merge by hand; or `mcp-coder gh-tool set-status status-10:pr-created` |
 | — (label stays `status-72` / `status-82`) | Current branch could not be determined → exit 1 | Check the Jenkins log; set `status-71:merge-conflict` / `status-81:failing-ci` to retry |
 
 ## Review feedback rules
 
-**Review feedback is never auto-fixed.** Answering a human reviewer is a judgment call, and a wrong automated answer is public. `status-91` triggers on any unresolved review thread, or on a changes-requested review or top-level PR comment that has not been triaged yet. Code-scanning alerts are excluded. Unresolved threads use GitHub's own live state. Changes-requested reviews and conversation comments count only if newer than the last time the issue returned to `status-10` after a `status-91`, or always if it has never been through `status-91` (reviews by `submitted_at`, comments by `created_at`; derived from the issue's label history, nothing is stored locally), so a review already triaged does not re-trigger. Comments whose first line contains ❌ are skipped — that is mcp-coder's marker for its own notes, so a human comment starting that way is ignored too.
+**Review feedback is never auto-fixed.** Answering a human reviewer is a judgment call, and a wrong automated answer is public. Alerts are not auto-fixed either: `fix-ci` works from failed-run logs, an alert has none, and real versus false positive needs a human. `status-91` triggers on any unresolved review thread, any open code-scanning alert, or on a changes-requested review or top-level PR comment that has not been triaged yet. Unresolved threads and alerts use GitHub's own live state, so a fixed or dismissed alert simply drops out. Alerts count only once every CI run on the head has completed; a skipped alert query (403/404, e.g. no code scanning on the repo) does not escalate. Changes-requested reviews and conversation comments count only if newer than the last time the issue returned to `status-10` after a `status-91`, or always if it has never been through `status-91` (reviews by `submitted_at`, comments by `created_at`; derived from the issue's label history, nothing is stored locally), so a review already triaged does not re-trigger. Comments whose first line contains ❌ are skipped — that is mcp-coder's marker for its own notes, so a human comment starting that way is ignored too.
 
-**Trusted authors only.** `status-91` fires only on items from trusted authors (`OWNER`, `MEMBER`, `COLLABORATOR`, or `[github] trusted_commenters` — see [Configuration](../../configuration/config.md)) on PRs whose author is trusted. Untrusted feedback never escalates: the coordinator prints one line per issue (`untrusted PR feedback from @a — review manually`) and writes nothing to GitHub.
+**Trusted authors only.** `status-91` fires only on items from trusted authors (`OWNER`, `MEMBER`, `COLLABORATOR`, or `[github] trusted_commenters` — see [Configuration](../../configuration/config.md)) on PRs whose author is trusted. Alerts have no author, so only the PR-author check applies to them. Untrusted feedback never escalates: the coordinator prints one line per issue (`untrusted PR feedback from @a — review manually`) and writes nothing to GitHub.
 
-**Triage session.** `/pr_comment_triage` starts with `/check_branch_status`, then for each item either fixes (quality checks, commit, push), replies or declines. Inline replies are used for review threads; a general PR comment for conversation comments and changes-requested reviews, which carry no thread id. Addressed threads are resolved so they do not re-trigger `status-91`. A changes-requested review that has been answered or fixed does not block `status-10`; it stays listed until the reviewer re-reviews. Items from untrusted authors are withheld from the session: never fixed, replied to or resolved, and they do not block `status-10`. When nothing is left, the session re-runs `/check_branch_status`, then sets `status-10:pr-created`.
+**Triage session.** `/pr_comment_triage` starts with `/check_branch_status`, then for each item either fixes (quality checks, commit, push), replies or declines. Inline replies are used for review threads; a general PR comment for conversation comments and changes-requested reviews, which carry no thread id. Addressed threads are resolved so they do not re-trigger `status-91`. A changes-requested review that has been answered or fixed does not block `status-10`; it stays listed until the reviewer re-reviews. A real alert is fixed and pushed. For a false positive the session explains why in a PR comment, asks the user to dismiss the alert in the GitHub UI and waits; it never dismisses an alert itself. Items from untrusted authors are withheld from the session: never fixed, replied to or resolved, and they do not block `status-10`. When nothing is left, the session re-runs `/check_branch_status`, then sets `status-10:pr-created`. It never does so while an alert is open, because the coordinator would re-escalate on the next poll; if the user leaves, the issue stays at `status-91`.

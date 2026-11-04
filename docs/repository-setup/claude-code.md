@@ -73,7 +73,7 @@ Skills provide structured workflows for common tasks. Run `mcp-coder init` to de
 
 | Command | Purpose |
 |---------|---------|
-| `/pr_comment_triage` | Triage new PR comments and review threads: fix, reply or decline, resolve threads, then return the issue to `status-10:pr-created` |
+| `/pr_comment_triage` | Triage new PR comments, review threads and code-scanning alerts: fix, reply or decline, resolve threads, then return the issue to `status-10:pr-created` once no alert is open |
 
 **Meta:**
 

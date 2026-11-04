@@ -637,7 +637,7 @@
         <!-- Row 4: Complete (10) -->
         <div class="row-label">Complete</div>
         <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
-            You decide merge. While a PR waits here the coordinator checks it for conflicts, failing CI and review feedback (rows below).
+            You decide merge. While a PR waits here the coordinator checks it for conflicts, failing CI, code-scanning alerts and review feedback (rows below).
         </div>
         <div class="workflow-row-final">
             <div class="label-card highlight-blue status-pr-created">
@@ -773,8 +773,8 @@
             </div>
         </div>
 
-        <!-- Row 7: PR follow-up, review comments (91) -->
-        <div class="row-label">PR follow-up: review comments — /pr_comment_triage</div>
+        <!-- Row 7: PR follow-up, code-scanning alerts and review comments (91) -->
+        <div class="row-label">PR follow-up: code-scanning alerts and review comments — /pr_comment_triage</div>
         <div style="color: #718096; font-size: 0.9rem; line-height: 1.4; margin: 0 0 12px;">
             Never auto-fixed. 91 → 10 when <code>/pr_comment_triage</code> ends with <code>set-status status-10:pr-created</code>.
         </div>
@@ -782,7 +782,7 @@
             <div class="label-card highlight-blue status-pr-review-comments">
                 <div class="step-number">91</div>
                 <div class="label-name">status-91:pr-review-comments</div>
-                <div class="label-description">PR has new review comments, unresolved threads, or a changes-requested review</div>
+                <div class="label-description">PR has review comments, unresolved threads, changes requested, or code-scanning alerts</div>
                 <div class="label-commands">
                     <div class="auto-command">&#x25b6; Auto: <code>/pr_comment_triage</code></div>
                     <div>&#x270b; Manual / exit: exits via <code>/pr_comment_triage</code> → 10</div>

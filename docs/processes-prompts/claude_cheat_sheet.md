@@ -29,7 +29,7 @@ For a complete overview of the process, see [development-process.md](development
 | `/implementation_needs_rework` | Return to implementation for fixes |
 | `/implementation_approve` | Approve code to create PR |
 | **PR follow-up** | |
-| `/pr_comment_triage` | Triage new PR comments and review threads: fix, reply or decline, then resolve |
+| `/pr_comment_triage` | Triage new PR comments, review threads and code-scanning alerts: fix, reply or decline, then resolve |
 | `/rebase` | Rebase branch onto base branch |
 | **General** | |
 | `/discuss` | Step-by-step Q&A on open questions, on any topic |
@@ -74,6 +74,7 @@ For a complete overview of the process, see [development-process.md](development
 
    - merge conflict → bot `fix-conflict`
    - failing CI → bot `fix-ci`
+   - code-scanning alerts → `/pr_comment_triage`
    - review comments → `/pr_comment_triage`
 
    > 🤖 *bot: mcp-coder coordinate → `fix-conflict` / `fix-ci`*
@@ -159,6 +160,6 @@ Once the conflict or CI problem is fixed by hand, hand the PR back with `mcp-cod
 | `status-74:pr-merge-conflict` | LLM rebase failed or the PR is still conflicting, or no open PR found (see the issue comment) |
 | `status-83:ci-fix-failed` | `fix-ci` crashed, or the job died |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) |
-| `status-99f:merge-failed` | `auto_merge` could not merge: refused, error, or failed rebase (see the issue comment) |
+| `status-99f:merge-failed` | `auto_merge` could not merge: refused, error, failed rebase, or failed alert check (see the issue comment) |
 
 `status-99:merged` means `auto_merge` squash-merged the PR — nothing to do.
