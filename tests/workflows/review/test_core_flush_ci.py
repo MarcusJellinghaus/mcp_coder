@@ -3,6 +3,9 @@
 Split out of ``test_core_after_steps``. Drives :func:`run_review_workflow`
 against ``REVIEW_IMPLEMENTATION`` with the real ``check_and_fix_ci`` and a fake
 GitHub CI whose newest run lags behind the pushed commit.
+
+Also covers the CI gate stopping the run on a rejected push (#1376), with
+``check_and_fix_ci`` mocked.
 """
 
 import time
@@ -13,6 +16,7 @@ import pytest
 
 from mcp_coder.checks.branch_status import CIStatus
 from mcp_coder.workflow_steps import ci
+from mcp_coder.workflow_steps.commit import PUSH_REJECTED_ERROR, PushRejectedError
 from mcp_coder.workflows.review import steps
 from mcp_coder.workflows.review.config import REVIEW_IMPLEMENTATION
 from tests.workflows.review.conftest import (
@@ -111,3 +115,68 @@ def test_dismiss_round_waits_for_the_flush_commit_s_own_ci_run(
     env.handle_workflow_failure.assert_not_called()
     _, to_id = _label_transition(env.apply_final_label)
     assert to_id == REVIEW_IMPLEMENTATION.success_label_id
+
+
+_REJECTED_MESSAGE = f"{PUSH_REJECTED_ERROR}: ! [rejected] feat -> feat (fetch first)"
+
+
+def _error_field(comment: str) -> str:
+    """Return the value of the failure comment's Error field."""
+    prefix = "**Error:** "
+    lines = [line for line in comment.splitlines() if line.startswith(prefix)]
+    assert len(lines) == 1
+    return lines[0].removeprefix(prefix)
+
+
+def test_rejected_push_on_dismiss_gate_fails_as_branch_moved(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """The dismiss gate reports a rejected push under the CI label."""
+    env.check_and_fix_ci.side_effect = PushRejectedError(_REJECTED_MESSAGE)
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    assert _run(tmp_path) == 1
+
+    env.handle_workflow_failure.assert_called_once()
+    failure, comment = env.handle_workflow_failure.call_args.args[:2]
+    assert failure.category == "code_review_ci"
+    assert "**Category:** Branch moved" in comment.splitlines()
+    assert _error_field(comment) == _REJECTED_MESSAGE
+    assert "PushRejectedError:" not in comment
+    assert "status-17:code-review-bot" in comment
+
+
+def test_rejected_push_mid_loop_is_terminal(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """A `tasks` round stops: no further rebase and no second reviewer round."""
+    env.check_and_fix_ci.side_effect = PushRejectedError(_REJECTED_MESSAGE)
+    env.prompt_llm.side_effect = [
+        _reviewer(),
+        _resp(_TASKS),
+        _reviewer(session_id="rev-1"),
+    ]
+
+    assert _run(tmp_path) == 1
+
+    env.handle_workflow_failure.assert_called_once()
+    failure = env.handle_workflow_failure.call_args.args[0]
+    assert failure.category == "code_review_ci"
+    assert env.attempt_rebase_and_push.call_count == 1
+    assert env.prompt_llm.call_count == 3
+
+
+def test_rejected_push_long_status_line_is_capped_after_the_sentence(
+    env: SimpleNamespace, tmp_path: Path
+) -> None:
+    """The cap only trims the status line, because the sentence comes first."""
+    env.check_and_fix_ci.side_effect = PushRejectedError(
+        f"{PUSH_REJECTED_ERROR}: ! [rejected] {'b' * 400} -> feat (fetch first)"
+    )
+    env.prompt_llm.side_effect = [_reviewer(), _resp(_DISMISS)]
+
+    assert _run(tmp_path) == 1
+
+    error = _error_field(env.handle_workflow_failure.call_args.args[1])
+    assert len(error) <= 300
+    assert error.startswith(f"{PUSH_REJECTED_ERROR}: ! [rejected] ")

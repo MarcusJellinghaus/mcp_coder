@@ -19,7 +19,11 @@ from mcp_coder.mcp_workspace_git import (
     unstage_paths,
 )
 from mcp_coder.mcp_workspace_github import IssueManager
-from mcp_coder.workflow_steps.commit import push_changes
+from mcp_coder.workflow_steps.commit import (
+    BRANCH_MOVED_NEXT_STEP,
+    PUSH_REJECTED_ERROR,
+    push_changes,
+)
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.failure_handling import (
     CommentField,
@@ -48,6 +52,7 @@ _FAIL_REASONS: dict[str, tuple[str, str]] = {
     "ci_unknown": ("CI not proven green", "CI could not be proven green"),
     "commit-failed": ("Commit failed", "Committing the review fixes failed"),
     "push-failed": ("Push failed", "Pushing the review fixes failed"),
+    "branch_moved": ("Branch moved", PUSH_REJECTED_ERROR),
 }
 
 # reason -> (Category, Reason, Next step)
@@ -131,7 +136,7 @@ def _fail(
     :func:`build_failure_comment`: Category and the default Error sentence come
     from ``_FAIL_REASONS`` (unknown reasons fall back to ``general``), Stage
     names the lane plus the round when given, and Verdict / Elapsed are added
-    when supplied.
+    when supplied. ``branch_moved`` also adds a Next step with the recovery.
 
     Args:
         config: The review workflow config (provides busy + failure labels).
@@ -171,6 +176,11 @@ def _fail(
         if round_number is not None
         else config.display_name
     )
+    next_step = (
+        f"{BRANCH_MOVED_NEXT_STEP} Then set `status-17:code-review-bot`."
+        if reason == "branch_moved"
+        else None
+    )
     comment_body = build_failure_comment(
         project_dir,
         title=config.display_name,
@@ -180,6 +190,7 @@ def _fail(
             ("Stage", stage),
             ("Error", error_text),
             ("Verdict", verdict.decision if verdict else None),
+            ("Next step", next_step),
         ],
         elapsed=elapsed,
     )

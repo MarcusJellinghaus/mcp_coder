@@ -91,6 +91,7 @@ REVIEW_IMPLEMENTATION = ReviewConfig(
         "ci": "code_review_ci",
         "tasks": "code_review_open_tasks",
         "ci_unknown": "code_review_ci_unknown",
+        "branch_moved": "code_review_ci",
     },
     strict_from_round=3,
     tie_break="default to better code quality",

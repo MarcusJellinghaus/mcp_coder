@@ -22,6 +22,7 @@ from mcp_coder.mcp_workspace_git import (
     get_latest_commit_sha,
 )
 from mcp_coder.workflow_steps.ci import check_and_fix_ci
+from mcp_coder.workflow_steps.commit import PushRejectedError
 from mcp_coder.workflow_steps.rebase import RebaseOutcome
 from mcp_coder.workflow_utils.base_branch import detect_base_branch
 from mcp_coder.workflow_utils.failure_handling import (
@@ -101,10 +102,11 @@ def _after_steps(
 
     Returns:
         ``(reason, outcome, detail)``. ``reason`` is a failure reason
-        (``"rebase"`` / ``"ci"`` / ``"timeout"`` / ``"mcp_unavailable"`` /
-        ``"general"``) or ``None`` when the after-steps are clean or there is
-        nothing to do. ``outcome`` is the :class:`RebaseOutcome` of the rebase
-        gate, or ``None`` when the lane has no after-steps. ``detail`` is a
+        (``"rebase"`` / ``"ci"`` / ``"branch_moved"`` / ``"timeout"`` /
+        ``"mcp_unavailable"`` / ``"general"``) or ``None`` when the after-steps
+        are clean or there is nothing to do. ``outcome`` is the
+        :class:`RebaseOutcome` of the rebase gate, or ``None`` when the lane has
+        no after-steps. ``detail`` is a
         comment-ready summary of the exception the CI call raised, ``None``
         otherwise; callers pass it only to the failure comment, never to the
         committed round log. The broadened ``except`` scoped to the CI call
@@ -144,6 +146,9 @@ def _after_steps(
             session_dir_name=config.session_dir_name,
             expected_sha=pushed_sha,
         )
+    except PushRejectedError as exc:
+        logger.error("CI fix push was rejected; failing the review: %s", exc)
+        return "branch_moved", outcome, comment_safe(str(exc))
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.error("CI gate raised; failing the review", exc_info=True)
         reason = llm_failure_reason(exc) or "general"
