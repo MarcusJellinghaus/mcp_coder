@@ -334,7 +334,7 @@ Reuses the same `check_and_fix_ci` loop as `implement`. CI passing returns the i
 
 ### coordinator
 
-Monitor GitHub issues and dispatch workflows (create-plan, implement, create-pr, and the optional review-plan and review-implementation) as Jenkins jobs, based on each issue's status label. It also checks open PRs and routes merge conflicts, failing CI and review comments. Repositories come from `[coordinator.repos.*]` in `config.toml`; Jenkins access from `[jenkins]`.
+Monitor GitHub issues and dispatch workflows (create-plan, implement, create-pr, and the optional review-plan and review-implementation) as Jenkins jobs, based on each issue's status label. It also checks open PRs and routes merge conflicts, failing CI, code-scanning alerts and review comments. Repositories come from `[coordinator.repos.*]` in `config.toml`; Jenkins access from `[jenkins]`.
 
 ```bash
 mcp-coder coordinator (--all | --repo REPO_NAME) [OPTIONS]

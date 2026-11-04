@@ -34,4 +34,4 @@ Major rework: add tasks and set `status-05:plan-ready`.
 
 ## Failure exits
 
-None — human stage. Conflicts, CI failures and review comments while waiting are handled by PR follow-up.
+None — human stage. Conflicts, CI failures, code-scanning alerts and review comments while waiting are handled by PR follow-up.

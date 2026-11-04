@@ -203,7 +203,7 @@
       "internal_id": "pr_review_comments",
       "name": "status-91:pr-review-comments",
       "color": "b60205",
-      "description": "PR has new review comments, unresolved threads, or a changes-requested review",
+      "description": "PR has review comments, unresolved threads, changes requested, or code-scanning alerts",
       "category": "human_action",
       "vscodeclaude": {
         "emoji": "💬",

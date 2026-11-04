@@ -316,7 +316,7 @@ The default workflow uses these status labels:
 
 ### PR-Health Labels
 
-After a PR is created (`status-10:pr-created`), the coordinator checks it on every poll and moves the issue to one of these labels when it needs attention. They are always active — no config flag. Conflicts are checked before CI, CI before review comments.
+After a PR is created (`status-10:pr-created`), the coordinator checks it on every poll and moves the issue to one of these labels when it needs attention. They are always active — no config flag. Conflicts are checked before CI, CI before code-scanning alerts, alerts before review comments.
 
 | Label | Description |
 |-------|-------------|
@@ -328,7 +328,7 @@ After a PR is created (`status-10:pr-created`), the coordinator checks it on eve
 | `status-82:fixing-ci` | CI auto-fix loop in progress (auto/in-progress) |
 | `status-83:ci-fix-failed` | The CI-fix job crashed (crash watchdog) — needs a human |
 | `status-84:pr-ci-failed` | Fix attempts exhausted, or LLM timeout / MCP unavailable — needs a human |
-| `status-91:pr-review-comments` | Outstanding review feedback (unresolved thread, untriaged changes-requested review, new PR comment; ❌-first-line comments ignored; trusted authors on trusted-author PRs only) — human triage via `/pr_comment_triage` |
+| `status-91:pr-review-comments` | Outstanding review feedback (unresolved thread, untriaged changes-requested review, new PR comment; ❌-first-line comments ignored; trusted authors on trusted-author PRs only) or open code-scanning alerts (trusted-author PRs only) — human triage via `/pr_comment_triage` |
 | `status-99:merged` | PR squash-merged by `auto_merge` (display-only) |
 | `status-99f:merge-failed` | `auto_merge` could not merge (refused, error, failed rebase) — needs a human via `/check_branch_status` |
 

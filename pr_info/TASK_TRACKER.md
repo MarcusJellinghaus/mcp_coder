@@ -49,9 +49,9 @@ Details: [step_3.md](./steps/step_3.md)
 
 Details: [step_4.md](./steps/step_4.md)
 
-- [ ] Implementation (label test + `labels.json` + docs)
-- [ ] Quality checks: pylint, pytest, mypy — fix all issues
-- [ ] Commit message prepared
+- [x] Implementation (label test + `labels.json` + docs)
+- [x] Quality checks: pylint, pytest, mypy — fix all issues
+- [x] Commit message prepared
 
 ### Step 5: Auto-merge and token docs
 

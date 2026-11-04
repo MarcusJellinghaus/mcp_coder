@@ -14,7 +14,7 @@ Every change to MCP Coder itself passes these checks ([details](docs/repository-
 - **Control and visibility.** Each stage ends in a written hand-over document: the refined issue, the plan, step files, commits, review comments. You can inspect or correct at every point.
 - **Quality gates on every step.** pylint, mypy and pytest run after each implementation step, mcp-coder re-checks mypy itself once all steps are done, and every plan step carries its own tests, planned before the code. Tests are part of the review.
 - **Fewer tokens, shorter conversations.** Instead of one large implementation conversation, the work is split into small steps, each starting with a fresh context and only the hand-over documents it needs. This should reduce token consumption.
-- **Follow-up after the PR.** The coordinator watches open PRs: merge conflicts and failing CI are fixed automatically, review comments are routed to you.
+- **Follow-up after the PR.** The coordinator watches open PRs: merge conflicts and failing CI are fixed automatically, code-scanning alerts and review comments are routed to you.
 - **Trust boundaries.** `/approve` and PR feedback only count from trusted authors (owner, member, collaborator). A watchdog moves crashed jobs to a failure label, so no issue silently sits at "in progress".
 
 ## Why a structured process
@@ -85,7 +85,7 @@ The full checklist, with every config key, is in [Repository Setup](docs/reposit
 2. **Assign it to yourself and refine it.** `mcp-coder vscodeclaude launch` opens a VS Code Claude session for every issue that is assigned to you (the GitHub user of your token) and has a status that needs a human. It starts the right slash command: `/issue_analyse` then `/discuss` for a new issue. Approve in the session (`/issue_approve`) or comment `/approve` on GitHub.
 3. **Let the coordinator run the next stage.** `mcp-coder coordinator --all` dispatches planning, implementation and PR creation as the label advances.
 4. **Review the plan and the code.** `vscodeclaude` opens sessions again for `status-04:plan-review` and `status-07:code-review`, again only for issues assigned to you. Use `/plan_review` and `/implementation_review`, or the `_supervisor` variants that run the review through subagents, then approve.
-5. **Merge.** Conflicts, failing CI and review comments come back as labelled issues.
+5. **Merge.** Conflicts, failing CI, code-scanning alerts and review comments come back as labelled issues.
 
 Slash commands per stage: [Development Process](docs/processes-prompts/development-process.md) and the [cheat sheet](docs/processes-prompts/claude_cheat_sheet.md). Running a single stage by hand (`create-plan`, `implement`, `create-pr`): [CLI Reference](docs/cli-reference.md). Details on sessions and the coordinator: [Coordinator and VSCodeClaude](docs/coordinator-vscodeclaude.md).
 

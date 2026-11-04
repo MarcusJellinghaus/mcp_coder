@@ -177,6 +177,18 @@ def test_pr_review_comments_label_definition() -> None:
     assert label["vscodeclaude"]["requires_branch"] is True
 
 
+def test_pr_review_comments_description_mentions_alerts() -> None:
+    """The status-91 description covers code-scanning alerts within the limit."""
+    config = load_labels_config(get_labels_config_path(None))
+    validate_labels_config(config)
+    label = next(
+        entry
+        for entry in config["workflow_labels"]
+        if entry["internal_id"] == "pr_review_comments"
+    )
+    assert "code-scanning alerts" in label["description"]
+
+
 ERROR_STATUS_IDS = [
     "planning_failed",
     "implementing_failed",
