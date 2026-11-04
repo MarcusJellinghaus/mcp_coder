@@ -457,8 +457,9 @@ def run_rebase_workflow(
         A ``RebaseRunResult``: ``exit_code`` ``0`` (success or no-op), ``1``
         (aborted -> needs-human) or ``2`` (error / push rejected /
         ``origin/<branch>`` has commits this checkout does not have), a
-        human-readable ``reason``, and ``push_rejected`` set only when the
-        force-push was rejected.
+        human-readable ``reason``, ``push_rejected`` set only when the
+        force-push was rejected, and ``branch_check`` set to ``"moved"`` or
+        ``"error"`` only when the branch-moved check stopped the run.
     """
     logger.log(OUTPUT, "Starting automated rebase...")
 

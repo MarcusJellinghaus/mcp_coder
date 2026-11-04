@@ -73,7 +73,9 @@ def _fail(project_dir: Path, verdict: str, outcome: RebaseOutcome) -> None:
     )
 
 
-def _post_branch_moved_comment(project_dir: Path, branch: str) -> None:
+def _post_branch_moved_comment(
+    project_dir: Path, branch: str, outcome: RebaseOutcome
+) -> None:
     """Post the settled-state comment for a rebase stopped by a moved branch."""
     issue_number = extract_issue_number_from_branch(branch)
     if issue_number is None:
@@ -83,8 +85,9 @@ def _post_branch_moved_comment(project_dir: Path, branch: str) -> None:
         title="Fix Conflict",
         kind="Failed",
         fields=[
-            ("Stage", "Mechanical rebase"),
+            ("Stage", "Rebase"),
             ("Reason", BRANCH_MOVED_REASON),
+            ("LLM rebase", outcome.llm_detail),
             ("Next step", BRANCH_MOVED_NEXT_STEP),
         ],
     )
@@ -152,7 +155,7 @@ def run_fix_conflict_workflow(
             _fail(project_dir, verdict, outcome)
             return 1
         if outcome.reason == "branch_moved":
-            _post_branch_moved_comment(project_dir, branch)
+            _post_branch_moved_comment(project_dir, branch, outcome)
         if state == "unknown":
             # Safe: status-10 detection re-checks "dirty" on every poll.
             logger.info(

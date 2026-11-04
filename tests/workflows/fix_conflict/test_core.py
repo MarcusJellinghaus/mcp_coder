@@ -350,7 +350,11 @@ def test_other_reason_verdict_has_no_next_step() -> None:
 
 
 def test_branch_moved_without_verdict_comments_and_goes_to_pr_created() -> None:
-    patches, _ = _patch_all([[{"mergeable_state": "clean"}]], _BRANCH_MOVED_OUTCOME)
+    llm_detail = "Branch check failed; nothing pushed; pre-rebase state restored"
+    patches, _ = _patch_all(
+        [[{"mergeable_state": "clean"}]],
+        RebaseOutcome("branch_moved", "main", "abc1234", llm_detail=llm_detail),
+    )
     with (
         patches[0],
         patches[1],
@@ -370,8 +374,9 @@ def test_branch_moved_without_verdict_comments_and_goes_to_pr_created() -> None:
     assert project_dir == PROJECT_DIR
     assert issue_number == 123
     assert comment.splitlines()[0] == "## ❌ Fix Conflict Failed"
-    assert "**Stage:** Mechanical rebase" in comment
+    assert "**Stage:** Rebase" in comment
     assert f"**Reason:** {BRANCH_MOVED_REASON}" in comment
+    assert f"**LLM rebase:** {llm_detail}" in comment
     assert f"**Next step:** {BRANCH_MOVED_NEXT_STEP}" in comment
     mock_update.assert_called_once_with(
         PROJECT_DIR, "fixing_merge_conflict", "pr_created"
