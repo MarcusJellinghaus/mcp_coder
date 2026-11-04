@@ -120,7 +120,7 @@ Restart with `mcp-coder gh-tool set-status status-05:plan-ready`.
 | Failure label | Reason |
 |---------------|--------|
 | `status-06f:implementing-failed` | General implementation failure |
-| `status-06f-ci:ci-fix-needed` | CI exhausted 3 fix attempts |
+| `status-06f-ci:ci-fix-needed` | CI exhausted fix attempts, or branch moved during the CI fix (see the comment's Category line; check the new commit on the branch, then set `status-05:plan-ready`) |
 | `status-06f-timeout:llm-timeout` | LLM API timeout |
 | `status-06f-prep:task-tracker-prep-failed` | Task tracker preparation failed |
 | `status-06f-mcp:mcp-unavailable` | MCP server unavailable |
@@ -134,7 +134,7 @@ Restart with `mcp-coder gh-tool set-status status-17:code-review-bot`.
 | Failure label | Reason |
 |---------------|--------|
 | `status-17f:code-review-failed` | Generic error or unparseable verdict |
-| `status-17f-ci:code-review-ci-fix-needed` | CI still red at the rounds cap |
+| `status-17f-ci:code-review-ci-fix-needed` | CI still red at the rounds cap, or branch moved during the CI fix (see the comment's Category line; check the new commit on the branch, then set `status-17:code-review-bot`) |
 | `status-17f-timeout:code-review-llm-timeout` | LLM API timeout |
 | `status-17f-mcp:code-review-mcp-unavailable` | MCP server unavailable |
 | `status-17f-tasks:code-review-open-tasks` | `## Tasks` in `TASK_TRACKER.md` still has unchecked items; run `/implementation_finalise` first |
@@ -159,7 +159,7 @@ Once the conflict or CI problem is fixed by hand, hand the PR back with `mcp-cod
 | `status-73:merge-conflict-failed` | `fix-conflict` crashed, or the Jenkins job died |
 | `status-74:pr-merge-conflict` | LLM rebase failed or the PR is still conflicting, or no open PR found (see the issue comment) |
 | `status-83:ci-fix-failed` | `fix-ci` crashed, or the job died |
-| `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, or formatter-config error (see the comment's Category line) |
+| `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout, MCP unavailable, formatter-config error, or branch moved (see the comment's Category line; branch moved: check the new commit on the branch, then set `status-10:pr-created`) |
 | `status-99f:merge-failed` | `auto_merge` could not merge: refused, error, failed rebase, or failed alert check (see the issue comment) |
 
 `status-99:merged` means `auto_merge` squash-merged the PR — nothing to do.

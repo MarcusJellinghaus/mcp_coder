@@ -65,7 +65,7 @@ Recovery for all: fix the cause, then `mcp-coder gh-tool set-status status-05:pl
 | Label | Cause | Recovery |
 |---|---|---|
 | `status-06f:implementing-failed` | General implementation failure | `mcp-coder gh-tool set-status status-05:plan-ready` |
-| `status-06f-ci:ci-fix-needed` | CI exhausted 3 fix attempts | `mcp-coder gh-tool set-status status-05:plan-ready` |
+| `status-06f-ci:ci-fix-needed` | CI exhausted fix attempts, or branch moved during the CI fix (see the comment's Category line) | `mcp-coder gh-tool set-status status-05:plan-ready`. Branch moved: check the new commit on the branch first |
 | `status-06f-timeout:llm-timeout` | LLM API timeout during implementation | `mcp-coder gh-tool set-status status-05:plan-ready` |
 | `status-06f-prep:task-tracker-prep-failed` | Task tracker preparation failed | `mcp-coder gh-tool set-status status-05:plan-ready` |
 | `status-06f-mcp:mcp-unavailable` | MCP server unavailable during implementation | `mcp-coder gh-tool set-status status-05:plan-ready` |

@@ -327,7 +327,7 @@ After a PR is created (`status-10:pr-created`), the coordinator checks it on eve
 | `status-81:failing-ci` | PR's CI is failing; picked up by the bot for `fix-ci` |
 | `status-82:fixing-ci` | CI auto-fix loop in progress (auto/in-progress) |
 | `status-83:ci-fix-failed` | The CI-fix job crashed (crash watchdog) — needs a human |
-| `status-84:pr-ci-failed` | Fix attempts exhausted, or LLM timeout / MCP unavailable — needs a human |
+| `status-84:pr-ci-failed` | Fix attempts exhausted, LLM timeout / MCP unavailable, or branch moved during the CI fix (see the comment's Category line) — needs a human. Branch moved: check the new commit on the branch, then set `status-10:pr-created` |
 | `status-91:pr-review-comments` | Outstanding review feedback (unresolved thread, untriaged changes-requested review, new PR comment; ❌-first-line comments ignored; trusted authors on trusted-author PRs only) or open code-scanning alerts (trusted-author PRs only) — human triage via `/pr_comment_triage` |
 | `status-99:merged` | PR squash-merged by `auto_merge` (display-only) |
 | `status-99f:merge-failed` | `auto_merge` could not merge (refused, error, failed rebase, failed alert check) — needs a human via `/check_branch_status` |

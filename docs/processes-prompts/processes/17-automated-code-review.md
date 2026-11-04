@@ -52,7 +52,7 @@ Enabling `auto_review_implementation` presumes the repo has CI: the lane leans o
 | Label | Cause | Recovery |
 |---|---|---|
 | `status-17f:code-review-failed` | Automated code review failed (generic error / unparseable verdict) | `mcp-coder gh-tool set-status status-17:code-review-bot` |
-| `status-17f-ci:code-review-ci-fix-needed` | CI still red at the rounds cap | `mcp-coder gh-tool set-status status-17:code-review-bot` |
+| `status-17f-ci:code-review-ci-fix-needed` | CI still red at the rounds cap, or branch moved during the CI fix (see the comment's Category line) | `mcp-coder gh-tool set-status status-17:code-review-bot`. Branch moved: check the new commit on the branch first |
 | `status-17f-timeout:code-review-llm-timeout` | LLM API timeout during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-mcp:code-review-mcp-unavailable` | MCP server unavailable during automated code review | `mcp-coder gh-tool set-status status-17:code-review-bot` |
 | `status-17f-tasks:code-review-open-tasks` | `review-implementation` refused to start because `## Tasks` in `TASK_TRACKER.md` still has unchecked items | Run `/implementation_finalise`, then `mcp-coder gh-tool set-status status-17:code-review-bot` |
