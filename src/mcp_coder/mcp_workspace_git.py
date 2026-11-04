@@ -98,11 +98,13 @@ from mcp_workspace.git_operations.repository_status import (
     get_working_tree_status,
     has_staged_changes,
     is_git_repository,
+    is_staged_diff_cr_only,
     is_working_directory_clean,
 )
 
 # Staging
 from mcp_workspace.git_operations.staging import (
+    renormalize_paths,
     stage_all_changes,
     stage_specific_files,
     unstage_paths,
@@ -171,4 +173,6 @@ __all__ = [
     "read_conflict_stage",
     "resolve_take_theirs_or_remove",
     "has_staged_changes",
+    "is_staged_diff_cr_only",
+    "renormalize_paths",
 ]
