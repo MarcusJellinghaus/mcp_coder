@@ -24,7 +24,13 @@ from mcp_coder.workflow_steps.commit import (
     PUSH_REJECTED_ERROR,
     push_changes,
 )
-from mcp_coder.workflow_steps.rebase import RebaseOutcome
+from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_NEXT_STEP as REBASE_BRANCH_MOVED_NEXT_STEP,
+)
+from mcp_coder.workflow_steps.rebase import (
+    BRANCH_MOVED_REASON,
+    RebaseOutcome,
+)
 from mcp_coder.workflow_utils.failure_handling import (
     CommentField,
     WorkflowFailure,
@@ -84,10 +90,16 @@ _REBASE_HANDOFF: dict[str, tuple[str, str, str]] = {
         "`/rebase` (may be a conflict that only appears while replaying "
         "commits); check the job log",
     ),
+    "branch_moved": (
+        "Branch moved",
+        BRANCH_MOVED_REASON,
+        REBASE_BRANCH_MOVED_NEXT_STEP,
+    ),
     "push_failed": (
-        "Push failed after rebase",
-        "Rebase succeeded, but the force-with-lease push failed",
-        "Fetch, check for foreign commits, then `git push --force-with-lease`",
+        "Rebase not pushed",
+        "Rebase was not pushed",
+        "Check the job log and `origin/<branch>`, update or discard the local "
+        "checkout, then re-run",
     ),
 }
 
