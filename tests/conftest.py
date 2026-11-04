@@ -72,6 +72,108 @@ def setup_git_config(repo: git.Repo) -> None:
         config.set_value("user", "email", "test@example.com")
 
 
+class BareRemote:
+    """Bare ``origin`` with ``local`` and ``foreign`` clones on branch ``feature``.
+
+    ``main`` holds one commit and ``feature`` one more. ``local`` is the checkout
+    under test; ``foreign`` plays someone else pushing to the same remote.
+
+    Attributes:
+        local: Clone under test.
+        local_dir: Path of the ``local`` checkout.
+        foreign: Clone standing in for another person.
+    """
+
+    def __init__(self, root: Path) -> None:
+        """Create the bare repo, seed its branches and clone it twice.
+
+        Args:
+            root: Empty directory to create the repositories in.
+        """
+        bare_dir = root / "remote.git"
+        self._bare = git.Repo.init(bare_dir, bare=True, initial_branch="main")
+
+        seed = git.Repo.clone_from(bare_dir, root / "seed")
+        setup_git_config(seed)
+        seed.git.checkout("-b", "main")
+        self._commit(seed, "base")
+        seed.git.push("-u", "origin", "main")
+        seed.git.checkout("-b", "feature")
+        self._commit(seed, "feat1")
+        seed.git.push("-u", "origin", "feature")
+        seed.close()
+
+        self.local_dir = root / "local"
+        self.local = git.Repo.clone_from(bare_dir, self.local_dir, branch="feature")
+        setup_git_config(self.local)
+        self.foreign = git.Repo.clone_from(bare_dir, root / "foreign", branch="feature")
+        setup_git_config(self.foreign)
+
+    @staticmethod
+    def _commit(repo: git.Repo, name: str) -> str:
+        """Commit a new file called ``<name>.txt`` and return the commit's SHA."""
+        Path(repo.working_dir, f"{name}.txt").write_text(name, encoding="utf-8")
+        repo.git.add(f"{name}.txt")
+        repo.git.commit("-m", name)
+        return repo.head.commit.hexsha
+
+    def commit_local(self, name: str) -> str:
+        """Commit a new file in ``local`` without pushing it."""
+        return self._commit(self.local, name)
+
+    def push_foreign(self, name: str) -> str:
+        """Commit and push from ``foreign`` to ``feature``."""
+        sha = self._commit(self.foreign, name)
+        self.foreign.git.push("origin", "feature")
+        return sha
+
+    def rewrite_remote(self) -> str:
+        """Rewrite ``feature`` on the remote, as someone else's rebase would.
+
+        The message changes because ``--no-edit`` alone can reproduce the same
+        SHA within the same second.
+        """
+        self.foreign.git.commit("--amend", "-m", "rewritten by someone else")
+        self.foreign.git.push("--force", "origin", "feature")
+        return self.foreign.head.commit.hexsha
+
+    def move_base(self, name: str) -> str:
+        """Commit and push to ``main`` from ``foreign``, then return to ``feature``."""
+        self.foreign.git.checkout("main")
+        sha = self._commit(self.foreign, name)
+        self.foreign.git.push("origin", "main")
+        self.foreign.git.checkout("feature")
+        return sha
+
+    def remote_sha(self, branch: str = "feature") -> str:
+        """Return the branch's SHA in the bare repo."""
+        return str(self._bare.git.rev_parse(f"refs/heads/{branch}"))
+
+    def remote_log(self, branch: str = "feature") -> list[str]:
+        """Return the branch's SHAs in the bare repo, newest first."""
+        return str(self._bare.git.rev_list(f"refs/heads/{branch}")).split()
+
+    def close(self) -> None:
+        """Close all repositories."""
+        for repo in (self.local, self.foreign, self._bare):
+            repo.close()
+
+
+@pytest.fixture
+def bare_remote(tmp_path: Path) -> Generator[BareRemote, None, None]:
+    """Provide a bare remote with two clones of its ``feature`` branch.
+
+    Args:
+        tmp_path: Pytest temporary directory fixture
+
+    Yields:
+        BareRemote: The remote, its clones and helpers to move them.
+    """
+    remote = BareRemote(tmp_path)
+    yield remote
+    remote.close()
+
+
 @pytest.fixture(autouse=True)
 def reset_logging() -> Generator[None, None, None]:
     """Reset logging configuration before and after each test.

@@ -69,6 +69,38 @@ class TestRunImplementWorkflowFailureRouting:
     @patch("mcp_coder.workflows.implement.core.check_prerequisites")
     @patch("mcp_coder.workflows.implement.core.check_main_branch")
     @patch("mcp_coder.workflows.implement.core.check_git_clean")
+    def test_branch_moved_rebase_outcome_continues_workflow(
+        self,
+        mock_git_clean: MagicMock,
+        mock_main_branch: MagicMock,
+        mock_prereq: MagicMock,
+        mock_rebase: MagicMock,
+        mock_prepare: MagicMock,
+        mock_process: MagicMock,
+        mock_progress: MagicMock,
+        mock_handle_failure: MagicMock,
+    ) -> None:
+        """A branch_moved rebase outcome does not stop implement."""
+        mock_git_clean.return_value = True
+        mock_main_branch.return_value = True
+        mock_prereq.return_value = True
+        mock_rebase.return_value = RebaseOutcome("branch_moved", "main", "abc1234")
+        mock_prepare.return_value = True
+        mock_process.return_value = TaskOutcome(False, "timeout")
+
+        run_implement_workflow(Path("/project"), "claude")
+
+        mock_rebase.assert_called_once()
+        mock_process.assert_called()
+
+    @patch(_DELIBERATE_HANDLER)
+    @patch("mcp_coder.workflows.implement.core.log_progress_summary")
+    @patch("mcp_coder.workflows.implement.core.process_task_with_retry")
+    @patch("mcp_coder.workflows.implement.core.prepare_task_tracker")
+    @patch("mcp_coder.workflows.implement.core._attempt_rebase_and_push")
+    @patch("mcp_coder.workflows.implement.core.check_prerequisites")
+    @patch("mcp_coder.workflows.implement.core.check_main_branch")
+    @patch("mcp_coder.workflows.implement.core.check_git_clean")
     def test_mcp_unavailable_calls_handle_failure_with_mcp_unavailable(
         self,
         mock_git_clean: MagicMock,

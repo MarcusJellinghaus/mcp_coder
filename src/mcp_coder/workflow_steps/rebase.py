@@ -14,9 +14,12 @@ from typing import Literal
 
 from mcp_coder.mcp_workspace_git import (
     commit_paths,
+    get_current_branch_name,
     get_full_status,
+    get_latest_commit_sha,
     get_remote_branch_commit_sha,
     git_diff,
+    git_merge_base,
     has_staged_changes,
     is_staged_diff_cr_only,
     probe_rebase_conflicts,
@@ -43,7 +46,17 @@ RebaseReason = Literal[
     "conflict",
     "rebase_failed",
     "push_failed",
+    "branch_moved",
 ]
+
+BranchCheck = Literal["passed", "moved", "skipped", "error"]
+
+BRANCH_MOVED_REASON = "`origin/<branch>` has commits this checkout does not have"
+BRANCH_MOVED_NEXT_STEP = (
+    "Check `origin/<branch>` for new commits, update or discard the local "
+    "checkout, then re-run"
+)
+_COULD_NOT_VERIFY = "Could not verify `origin/<branch>`; not pushing"
 
 _POLL_ATTEMPTS = 6
 _POLL_INTERVAL_SECONDS = 5
@@ -207,6 +220,46 @@ def _classify_failed_rebase(
     return "rebase_failed", ()
 
 
+def _check_branch_not_moved(project_dir: Path, pre_sha: str) -> BranchCheck:
+    """Check that ``origin/<branch>`` holds nothing this checkout lacks. Never raises.
+
+    The fetch inside a rebase refreshes ``origin/<branch>``, which lets a later
+    ``--force-with-lease`` overwrite someone else's commits. This needs no network
+    call. It compares the ref's SHA, because a tag named ``origin/<branch>`` would
+    make a comparison by name pass wrongly. All logging happens here, so callers
+    only branch on the status.
+
+    Args:
+        project_dir: Path to the project directory
+        pre_sha: HEAD before the rebase; a normal rebase rewrites the later HEAD
+
+    Returns:
+        ``"passed"`` when the remote SHA is an ancestor of ``pre_sha``, ``"moved"``
+        when it is not, ``"skipped"`` when the remote ref is absent (the lease
+        remains the backstop) and ``"error"`` when the check could not run.
+    """
+    try:
+        branch = get_current_branch_name(project_dir)
+        if branch is None:
+            logger.warning(_COULD_NOT_VERIFY)
+            return "error"
+        remote_sha = get_remote_branch_commit_sha(project_dir, branch)
+        if remote_sha is None:
+            logger.debug("No origin/%s to check; relying on the lease", branch)
+            return "skipped"
+        result = git_merge_base(project_dir, ["--is-ancestor", remote_sha, pre_sha])
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.warning(_COULD_NOT_VERIFY, exc_info=True)
+        return "error"
+    if result == "true":
+        return "passed"
+    if result == "false":
+        logger.warning("%s. %s", BRANCH_MOVED_REASON, BRANCH_MOVED_NEXT_STEP)
+        return "moved"
+    logger.warning(_COULD_NOT_VERIFY)
+    return "error"
+
+
 def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
     """Attempt to rebase onto parent branch and push. Never fails workflow.
 
@@ -222,7 +275,10 @@ def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
         files with more than line-ending changes; untracked files alone do
         not count), ``"no_base"`` (no target
         detected), ``"base_missing"`` (base not on origin), ``"conflict"`` /
-        ``"rebase_failed"`` (rebase did not complete) or ``"push_failed"``.
+        ``"rebase_failed"`` (rebase did not complete), ``"branch_moved"``
+        (``origin/<branch>`` has commits this checkout does not have; rebase
+        undone, nothing pushed) or ``"push_failed"`` (the push failed, or the
+        branch check could not run; in that case rebase undone, nothing pushed).
     """
     # Checked before target detection: detect_base_branch fetches from the
     # remote, and there is no point paying for it when the rebase cannot start.
@@ -248,6 +304,11 @@ def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
         logger.warning("Skipping rebase: %s", missing_err)
         return RebaseOutcome("base_missing", target)
 
+    pre_sha = get_latest_commit_sha(project_dir)
+    if pre_sha is None:
+        logger.warning("Skipping rebase: could not read HEAD")
+        return RebaseOutcome("rebase_failed", target, _base_sha(project_dir, target))
+
     logger.info("Rebasing onto origin/%s...", target)
     rebased = rebase_onto_branch(project_dir, target)
     sha = _base_sha(project_dir, target)
@@ -255,11 +316,20 @@ def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
         reason, files = _classify_failed_rebase(project_dir, target)
         return RebaseOutcome(reason, target, sha, files)
 
+    # Checked after the rebase, whose own fetch could outdate an earlier check.
+    status = _check_branch_not_moved(project_dir, pre_sha)
+    if status in ("moved", "error"):
+        # Reset here: implement, fix-conflict and review do not on a failed outcome.
+        _reset_hard(project_dir, pre_sha)
+        return RebaseOutcome(
+            "branch_moved" if status == "moved" else "push_failed", target, sha
+        )
+
     # Push rebased branch with force_with_lease
     if not push_changes(project_dir, force_with_lease=True):
         logger.warning(
-            "Rebase succeeded but push failed - "
-            "manual push with --force-with-lease may be required"
+            "Rebase succeeded but push failed - check origin/<branch> before "
+            "re-running; do not fetch and push with --force-with-lease"
         )
         return RebaseOutcome("push_failed", target, sha)
     return RebaseOutcome("ok", target, sha)
@@ -268,8 +338,8 @@ def _attempt_rebase_and_push(project_dir: Path) -> RebaseOutcome:
 def _reset_hard(project_dir: Path, sha: str) -> bool:
     """Reset the current branch to ``sha`` (``git reset --hard``). Never raises.
 
-    Used to undo a rebase whose push failed, so local HEAD matches the
-    remote again.
+    Used to undo a rebase whose push failed or that the branch check stopped,
+    so local HEAD matches its state before the rebase again.
 
     Args:
         project_dir: Path to the project directory
