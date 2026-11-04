@@ -37,8 +37,8 @@ PUSH_REJECTED_ERROR = "Push rejected because the branch moved on the remote"
 BRANCH_MOVED_NEXT_STEP = (
     "The CI fix commit was not pushed. A Jenkins run's checkout is discarded, "
     "so the fix is lost and a re-run starts from the new branch tip. If this run "
-    "came from a local checkout, discard that commit before re-running, because "
-    "re-running from that checkout can overwrite the new commit. "
+    "came from a local checkout, discard all unpushed commits before re-running, "
+    "because re-running from that checkout can overwrite the new commit. "
     "Check the new commit on the branch."
 )
 
